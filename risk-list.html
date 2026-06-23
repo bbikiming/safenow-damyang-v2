@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>평가 목록 - 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <style>
+
+        /* 페이지 헤더 행 (타이틀 + 등록 버튼) */
+        .rsk-page-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .rsk-page-head .rsk-page-titles { flex: 1; }
+
+        /* .rsk-filter-row 는 style.css §20 (글로벌)에 정의됨 — 인라인 제거 */
+
+        /* 평가명 셀 보조 정보 (출처 · 트리거 · 시행확인) */
+        .cell-main {
+            display: flex; flex-direction: column; gap: 4px;
+            min-width: 0;
+        }
+        .cell-main .cell-title {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 14px; color: var(--text-black);
+        }
+        .cell-main .cell-title strong {
+            font-weight: 600;
+        }
+        .cell-main .cell-meta {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 12px; color: var(--text-lightgray);
+            flex-wrap: wrap;
+        }
+        .cell-main .cell-meta .dot {
+            width: 3px; height: 3px; border-radius: 50%;
+            background: var(--text-lightgray);
+            flex-shrink: 0;
+        }
+
+        /* 작은 메타 배지(type-tag·label-conf·trigger-tag·source-tag)는 style.css §20에 정의 */
+
+
+        /* 시안 알림 헤더 블록 — 빨강 pill + 그 아래 강조행 — 표 위 위치 */
+        .rsk-alert-stack {
+            display: flex; flex-direction: column;
+            gap: 0;
+        }
+        .rsk-alert-stack .alert-pill {
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+            padding: 10px 24px;
+        }
+    </style>
+</head>
+<body data-dy-page="sbm-risk">
+    <main>
+        <!-- ─── 페이지 타이틀 + 우상단 등록 버튼 (한 줄 배치 필요로 자동 주입 미사용) ─── -->
+        <div class="rsk-page-head">
+            <div class="rsk-page-titles">
+                <div class="dy-page-title">
+                    <span class="dy-page-dot"></span>
+                    <h1>평가 목록</h1>
+                </div>
+                <div class="dy-page-subtitle">정기·수시·최초 위험성평가 등록 및 진행 관리</div>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button class="btn btn-primary" type="button" id="tour-create" onclick="window.location.href='risk-create.html';">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/><path d="M12 2v4M5 5l2 2M19 5l-2 2"/></svg>
+                    정기평가 생성
+                </button>
+                <button class="btn-register" type="button" onclick="window.location.href='risk-form.html'">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    수시평가 등록
+                </button>
+            </div>
+        </div>
+
+        <!-- ─── 연도 정기평가 차수 진입 (개편안 §4.1 — 연도 1건 + 유해·위험요인별 하위) ─── -->
+        <a id="tour-regular-banner" href="risk-regular.html" style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 20px; margin:12px 0 4px; background:var(--status-info-bg); border:1px solid var(--status-info-border); border-radius:var(--radius-button); text-decoration:none;">
+            <span style="display:flex; align-items:center; gap:10px; font-size:14px; color:var(--status-info-fg); font-weight:600;">
+                <span class="chip-cat cat-regular">정기</span>
+                2026년 정기 위험성평가 — 유해·위험요인별 평가 7건 (검토완료 1 · 진행률 14%)
+            </span>
+            <span style="font-size:13px; color:var(--status-info-fg); font-weight:700; white-space:nowrap;">차수 열기 →</span>
+        </a>
+
+        <!-- ─── 필터 + 검색 (한 줄) ─── -->
+        <div class="rsk-filter-row">
+            <div class="form-group">
+                <span class="form-label-inline">부서</span>
+                <select class="select">
+                    <option>전체</option>
+                    <option>건설과 ★</option>
+                    <option>공공시설사업소 ★</option>
+                    <option>환경과</option>
+                    <option>문화체육과 ★</option>
+                    <option>물순환사업소 ★</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <span class="form-label-inline">관리대상</span>
+                <select class="select">
+                    <option>전체</option>
+                    <option>군청 청사</option>
+                    <option>군민체육관</option>
+                    <option>담양읍 행정복지센터</option>
+                    <option>물순환사업소 본관</option>
+                    <option>환경자원시설</option>
+                    <option>죽녹원</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <span class="form-label-inline">유형</span>
+                <select class="select">
+                    <option>전체</option>
+                    <option>정기</option>
+                    <option>최초</option>
+                    <option>수시</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <span class="form-label-inline">상태</span>
+                <select class="select">
+                    <option>전체</option>
+                    <option>사전준비</option>
+                    <option>진행중</option>
+                    <option>완료</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <span class="form-label-inline">기간</span>
+                <select class="select">
+                    <option>전체</option>
+                    <option>진행중</option>
+                    <option>올해</option>
+                    <option>지난 6개월</option>
+                </select>
+            </div>
+            <div class="search-bar">
+                <input class="search-input" type="text" placeholder="평가명 검색 (0.3초 자동 검색)">
+                <button class="search-submit" type="button">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    검색
+                </button>
+            </div>
+            <button class="clear-filters" type="button" onclick="window.DYLayout._soon(event, '필터 초기화')">초기화</button>
+        </div>
+
+        <!-- ─── 테이블 ─── -->
+        <section style="background:white; border:1px solid var(--card-line); border-radius:20px; overflow:hidden;">
+            <table class="table-figma">
+                <colgroup>
+                    <col><col style="width:160px;"><col style="width:120px;"><col style="width:140px;"><col style="width:140px;"><col style="width:110px;"><col style="width:120px;">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>평가명</th>
+                        <th>관리대상</th>
+                        <th>상태</th>
+                        <th>기간</th>
+                        <th>담당부서</th>
+                        <th>담당자</th>
+                        <th>결재</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- ─── 기한초과 강조 행 (배경 색상으로 구분) ─── -->
+                    <tr class="row-link row-highlight-danger">
+                        <td>
+                            <div class="cell-with-chip">
+                                <span class="chip-cat cat-regular">정기</span>
+                                <div class="cell-main">
+                                    <div class="cell-title"><strong>2025 청사 정기 위험성평가</strong></div>
+                                    <div class="cell-meta">
+                                        <span class="source-tag auto">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                                            정기 자동
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>군청 청사 <span class="type-tag">시설</span></td>
+                        <td><span class="chip-status info">진행중</span></td>
+                        <td>
+                            <span class="date-danger">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                2026-03-18
+                            </span>
+                        </td>
+                        <td>건설과 ★</td>
+                        <td>김민수</td>
+                        <td><span class="chip-status info">결재 진행중</span></td>
+                    </tr>
+                    <tr class="row-link row-highlight-danger">
+                        <td>
+                            <div class="cell-with-chip">
+                                <span class="chip-cat cat-special">수시</span>
+                                <div class="cell-main">
+                                    <div class="cell-title"><strong>밀폐공간 작업 위험성평가</strong></div>
+                                    <div class="cell-meta">
+                                        <span class="label-conf">수시</span>
+                                        <span class="trigger-tag accident">사고</span>
+                                        <span class="dot"></span>
+                                        <span class="source-tag">수동</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>환경자원시설 <span class="type-tag">업무</span></td>
+                        <td><span class="chip-status success">완료</span></td>
+                        <td>
+                            <span class="date-danger">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                2025-07-01
+                            </span>
+                        </td>
+                        <td>환경과</td>
+                        <td>김미래</td>
+                        <td><span class="chip-status success">완료</span></td>
+                    </tr>
+                    <!-- ─── 일반 행 ─── -->
+                    <tr class="row-link">
+                        <td>
+                            <div class="cell-with-chip">
+                                <span class="chip-cat cat-special">수시</span>
+                                <div class="cell-main">
+                                    <div class="cell-title">고소작업 위험성평가</div>
+                                    <div class="cell-meta">
+                                        <span class="label-conf">수시</span>
+                                        <span class="trigger-tag change">중대변경</span>
+                                        <span class="dot"></span>
+                                        <span class="source-tag">수동</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>군민체육관 <span class="type-tag">시설</span></td>
+                        <td><span class="chip-status success">완료</span></td>
+                        <td>2026-02-20</td>
+                        <td>공공시설사업소 ★</td>
+                        <td>정하나</td>
+                        <td><span class="chip-status success">완료</span></td>
+                    </tr>
+                    <tr class="row-link">
+                        <td>
+                            <div class="cell-with-chip">
+                                <span class="chip-cat cat-regular">정기</span>
+                                <div class="cell-main">
+                                    <div class="cell-title">소방설비 정기점검 위험성평가</div>
+                                    <div class="cell-meta">
+                                        <span class="source-tag auto">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                                            정기 자동
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>담양읍 행정복지센터 <span class="type-tag">시설</span></td>
+                        <td><span class="chip-status success">완료</span></td>
+                        <td>2026-03-25</td>
+                        <td>공공시설사업소 ★</td>
+                        <td>이지영</td>
+                        <td><span class="chip-status success">완료</span></td>
+                    </tr>
+                    <tr class="row-link">
+                        <td>
+                            <div class="cell-with-chip">
+                                <span class="chip-cat cat-special">수시</span>
+                                <div class="cell-main">
+                                    <div class="cell-title">화학물질 취급 위험성평가</div>
+                                    <div class="cell-meta">
+                                        <span class="label-conf">수시</span>
+                                        <span class="trigger-tag complaint">민원</span>
+                                        <span class="dot"></span>
+                                        <span class="source-tag">수동</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>환경자원시설 <span class="type-tag">업무</span></td>
+                        <td><span class="chip-status info">진행중</span></td>
+                        <td>2026-03-28</td>
+                        <td>환경과</td>
+                        <td>박성민</td>
+                        <td><span class="chip-status info">결재 진행중</span></td>
+                    </tr>
+                    <tr class="row-link">
+                        <td>
+                            <div class="cell-with-chip">
+                                <span class="chip-cat cat-regular">정기</span>
+                                <div class="cell-main">
+                                    <div class="cell-title">홍수·침수 시설 위험성평가</div>
+                                    <div class="cell-meta">
+                                        <span class="source-tag auto">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                                            정기 자동
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>물순환사업소 본관 <span class="type-tag">시설</span></td>
+                        <td><span class="chip-status success">완료</span></td>
+                        <td>2026-01-10</td>
+                        <td>건설과 ★</td>
+                        <td>최성호</td>
+                        <td><span class="chip-status success">완료</span></td>
+                    </tr>
+                    <tr class="row-link">
+                        <td>
+                            <div class="cell-with-chip">
+                                <span class="chip-cat cat-regular">정기</span>
+                                <div class="cell-main">
+                                    <div class="cell-title">전기설비 안전점검 위험성평가</div>
+                                    <div class="cell-meta">
+                                        <span class="source-tag auto">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                                            정기 자동
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>군청 청사 <span class="type-tag">시설</span></td>
+                        <td><span class="chip-status neutral">사전준비</span></td>
+                        <td>2026-03-30</td>
+                        <td>공공시설사업소 ★</td>
+                        <td>오준혁</td>
+                        <td><span class="chip-status neutral">미요청</span></td>
+                    </tr>
+                    <tr class="row-link">
+                        <td>
+                            <div class="cell-with-chip">
+                                <span class="chip-cat cat-special">수시</span>
+                                <div class="cell-main">
+                                    <div class="cell-title">굴삭기·중장비 작업 위험성평가</div>
+                                    <div class="cell-meta">
+                                        <span class="label-conf">수시</span>
+                                        <span class="trigger-tag change">중대변경</span>
+                                        <span class="dot"></span>
+                                        <span class="source-tag auto">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                                            e호조 자동
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>군청 주차장 보강공사 <span class="type-tag">사업</span></td>
+                        <td><span class="chip-status success">완료</span></td>
+                        <td>2026-02-05</td>
+                        <td>공공시설사업소 ★</td>
+                        <td>김동현</td>
+                        <td><span class="chip-status success">완료</span></td>
+                    </tr>
+                    <tr class="row-link">
+                        <td>
+                            <div class="cell-with-chip">
+                                <span class="chip-cat cat-regular">정기</span>
+                                <div class="cell-main">
+                                    <div class="cell-title">공원·광장 시설물 위험성평가</div>
+                                    <div class="cell-meta">
+                                        <span class="source-tag auto">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                                            정기 자동
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>죽녹원 <span class="type-tag">시설</span></td>
+                        <td><span class="chip-status success">완료</span></td>
+                        <td>2026-01-20</td>
+                        <td>문화체육과 ★</td>
+                        <td>신예지</td>
+                        <td><span class="chip-status success">완료</span></td>
+                    </tr>
+                    <tr class="row-link">
+                        <td>
+                            <div class="cell-with-chip">
+                                <span class="chip-cat cat-special">수시</span>
+                                <div class="cell-main">
+                                    <div class="cell-title">옥상 누수 보수공사 위험성평가</div>
+                                    <div class="cell-meta">
+                                        <span class="label-conf">수시</span>
+                                        <span class="trigger-tag etc">기타</span>
+                                        <span class="dot"></span>
+                                        <span class="source-tag">수동</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>물순환사업소 본관 <span class="type-tag">사업</span></td>
+                        <td><span class="chip-status danger">반려</span></td>
+                        <td>2025-07-01</td>
+                        <td>환경과</td>
+                        <td>박성민</td>
+                        <td><span class="chip-status danger">반려</span></td>
+                    </tr>
+                    <tr class="row-link">
+                        <td>
+                            <div class="cell-with-chip">
+                                <span class="chip-cat cat-initial">최초</span>
+                                <div class="cell-main">
+                                    <div class="cell-title">담양읍 행정복지센터 최초 위험성평가</div>
+                                    <div class="cell-meta">
+                                        <span class="label-conf">최초</span>
+                                        <span class="dot"></span>
+                                        <span class="source-tag auto">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                                            최초 자동
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>담양읍 행정복지센터 <span class="type-tag">시설</span></td>
+                        <td><span class="chip-status success">완료</span></td>
+                        <td>2026-01-02</td>
+                        <td>건설과 ★</td>
+                        <td>최성호</td>
+                        <td><span class="chip-status success">완료</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- 페이지네이션 -->
+        <!-- 페이지네이션 (layout.js가 자동 렌더) -->
+        <div data-pagination data-current="1" data-total="4"></div>
+    </main>
+
+    <!-- 토스트 -->
+    <div id="toast" class="toast" role="status"></div>
+
+    <script src="./js/layout.js"></script>
+
+    <!-- ─── 행 클릭 → 상태값에 맞는 상세(risk-regular)로 이동 ─── -->
+    <script>
+    (function () {
+        'use strict';
+        var STMAP = { '진행중':'in_progress', '완료':'done', '사전준비':'preparing', '반려':'rejected' };
+        document.querySelectorAll('table.table-figma tbody tr.row-link').forEach(function (tr) {
+            tr.style.cursor = 'pointer';
+            tr.addEventListener('click', function (e) {
+                if (e.target.closest('a,button')) return;
+                var nameEl = tr.querySelector('.cell-title');
+                var name = nameEl ? nameEl.textContent.trim() : '위험성평가';
+                var cat = (tr.querySelector('.chip-cat') || {}).textContent || '정기';
+                // 상태 컬럼(3번째 td)의 chip-status 텍스트
+                var tds = tr.querySelectorAll('td');
+                var stTxt = tds[2] && tds[2].querySelector('.chip-status') ? tds[2].querySelector('.chip-status').textContent.trim() : '진행중';
+                var status = STMAP[stTxt] || 'in_progress';
+                var type = (cat.indexOf('수시') >= 0) ? 'special' : 'regular';
+                var dept = tds[4] ? tds[4].textContent.trim() : '';
+                var owner = tds[5] ? tds[5].textContent.trim() : '';
+                var q = 'name=' + encodeURIComponent(name) + '&status=' + status + '&type=' + type +
+                        '&cat=' + encodeURIComponent(cat.trim()) + '&dept=' + encodeURIComponent(dept) + '&owner=' + encodeURIComponent(owner);
+                window.location.href = 'risk-regular.html?' + q;
+            });
+        });
+    })();
+    </script>
+
+    <!-- ============================================================ -->
+    <!-- 신규 제출 평가 prefix 표시 — risk-checklist.html 제출 후 진입 -->
+    <!-- 기존 .chip-cat / .chip-status / .source-tag / .cell-main 컨벤션 사용 -->
+    <!-- ============================================================ -->
+    <style>
+        /* 방금 제출된 행 — 기존 row-link 컨벤션 위에 강조만 추가 */
+        .row-just-submitted {
+            background: var(--status-success-bg);
+        }
+        .row-just-submitted:hover {
+            background: var(--status-success-bg);
+        }
+        .row-just-submitted td {
+            border-top: 1px solid var(--status-success-border);
+            border-bottom: 1px solid var(--status-success-border);
+        }
+        .row-just-submitted td:first-child {
+            border-left: 3px solid var(--status-success-fg);
+        }
+        @keyframes rsk-row-flash {
+            0%, 30%   { background: var(--status-warning-bg); }
+            60%, 100% { background: var(--status-success-bg); }
+        }
+        .row-just-submitted.row-flash {
+            animation: rsk-row-flash 2.4s ease-out;
+        }
+        .badge-just-submitted {
+            display: inline-flex; align-items: center; gap: 4px;
+            background: var(--status-warning-fg);
+            color: #fff;
+            padding: 2px 8px;
+            border-radius: var(--radius-md);
+            font-size: 11px;
+            font-weight: 700;
+            margin-left: 6px;
+            letter-spacing: -0.2px;
+        }
+        /* 통계 메타 inline */
+        .submission-stats {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 11px;
+            color: var(--text-gray);
+        }
+        .submission-stats .stat-o { color: var(--status-success-fg); font-weight: 700; }
+        .submission-stats .stat-x { color: var(--status-danger-fg); font-weight: 700; }
+        .submission-stats .stat-na { color: var(--text-lightgray); font-weight: 600; }
+    </style>
+    <script>
+    (function () {
+        'use strict';
+
+        function escapeHtml(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+                return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+            });
+        }
+
+        /** category enum → 기존 chip-cat 클래스 매핑 */
+        function chipCatClass(cat) {
+            if (cat === 'special') return 'cat-special';
+            if (cat === 'initial') return 'cat-initial';
+            return 'cat-regular';
+        }
+
+        /** status enum → 기존 chip-status 클래스 매핑 */
+        function chipStatusClass(st) {
+            if (st === 'done')      return 'success';
+            if (st === 'rejected')  return 'danger';
+            if (st === 'preparing') return 'neutral';
+            return 'info';   // in_progress / 기본
+        }
+
+        /** submission 1건 → 기존 .table-figma 컨벤션 행 HTML */
+        function renderSubmissionRow(s, opts) {
+            opts = opts || {};
+            var classes = ['row-link'];
+            if (opts.fresh) classes.push('row-just-submitted', 'row-flash');
+
+            // 방금 제출 뱃지
+            var freshBadge = opts.fresh
+                ? '<span class="badge-just-submitted">방금 제출됨</span>'
+                : '';
+
+            // 통계 (O / X / NA)
+            var stats =
+              '<span class="submission-stats">' +
+                '총 ' + s.total + '건' +
+                ' · <span class="stat-o">O ' + s.o_count + '</span>' +
+                ' · <span class="stat-x">X ' + s.x_count + '</span>' +
+                ' · <span class="stat-na">NA ' + s.na_count + '</span>' +
+              '</span>';
+
+            return '' +
+            '<tr class="' + classes.join(' ') + '" onclick="window.location.href=\'risk-checklist.html\'">' +
+              '<td>' +
+                '<div class="cell-with-chip">' +
+                  '<span class="chip-cat ' + chipCatClass(s.category) + '">' + escapeHtml(s.category_label) + '</span>' +
+                  '<div class="cell-main">' +
+                    '<div class="cell-title">' +
+                      '<strong>' + escapeHtml(s.title) + '</strong>' +
+                      freshBadge +
+                    '</div>' +
+                    '<div class="cell-meta">' +
+                      '<span class="source-tag">' + escapeHtml(s.method_label) + '</span>' +
+                      '<span class="dot"></span>' +
+                      stats +
+                      (s.submitted_at ? '<span class="dot"></span><span>' + escapeHtml(s.submitted_at) + ' 제출</span>' : '') +
+                    '</div>' +
+                  '</div>' +
+                '</div>' +
+              '</td>' +
+              '<td>' + escapeHtml(s.target) + ' <span class="type-tag">' + escapeHtml(s.target_type || '시설') + '</span></td>' +
+              '<td><span class="chip-status ' + chipStatusClass(s.status) + '">' + escapeHtml(s.status_label) + '</span></td>' +
+              '<td>' + escapeHtml(s.period) + '</td>' +
+              '<td>' + escapeHtml(s.department) + '</td>' +
+              '<td>' + escapeHtml(s.owner) + '</td>' +
+              '<td><span class="chip-status ' + chipStatusClass(s.approval) + '">' + escapeHtml(s.approval_label) + '</span></td>' +
+            '</tr>';
+        }
+
+        function init() {
+            var submissions;
+            try { submissions = JSON.parse(localStorage.getItem('damyangRskSubmissions') || '[]'); }
+            catch (e) { submissions = []; }
+            if (!submissions || submissions.length === 0) return;
+
+            var tbody = document.querySelector('section table.table-figma tbody');
+            if (!tbody) return;
+
+            // URL 파라미터로 방금 제출 여부 확인
+            var params = new URLSearchParams(window.location.search);
+            var fromSubmit = params.get('from') === 'submit';
+            var freshId = params.get('id');
+
+            // 누적된 모든 제출은 목록 맨 위에 prefix (최신순)
+            // 방금 제출 1건은 row-just-submitted 강조
+            var html = submissions.map(function (s) {
+                return renderSubmissionRow(s, { fresh: fromSubmit && s.id === freshId });
+            }).join('');
+
+            tbody.insertAdjacentHTML('afterbegin', html);
+
+            // 방금 제출 시 강조·스크롤·토스트
+            if (fromSubmit && freshId) {
+                setTimeout(function () {
+                    var freshRow = tbody.querySelector('.row-just-submitted');
+                    if (freshRow) {
+                        freshRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    var t = document.getElementById('toast');
+                    if (t) {
+                        t.textContent = '✓ 평가가 정상 제출되어 목록에 추가되었습니다. (결재 진행 중)';
+                        t.classList.add('show');
+                        setTimeout(function () { t.classList.remove('show'); }, 3600);
+                    }
+                    // URL 파라미터 제거 (새로고침해도 다시 강조 X)
+                    if (window.history && window.history.replaceState) {
+                        window.history.replaceState({}, '', 'risk-list.html');
+                    }
+                }, 250);
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+
+        // 데모용 — 콘솔에서 제출 이력 초기화
+        window.RskList = {
+            clearSubmissions: function () {
+                try {
+                    localStorage.removeItem('damyangRskSubmissions');
+                    location.reload();
+                } catch (e) {}
+            }
+        };
+    })();
+    </script>
+    <script src="./js/risk-tour.js"></script>
+</body>
+</html>

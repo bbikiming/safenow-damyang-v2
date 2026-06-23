@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>문서 상세 - 담양군 중대재해예방통합관리시스템 v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="docs-preset">
+    <main>
+        <!-- 브레드크럼 -->
+        <nav class="dd-breadcrumb" id="dd-breadcrumb" aria-label="위치"></nav>
+
+        <div class="dd-grid">
+            <!-- 좌측: 문서 상세 (첨부=미리보기 / 전자문서=입력폼) -->
+            <section class="dd-main" id="dd-main"></section>
+
+            <!-- 우측: 기준·선행·후행 문서 -->
+            <aside class="dd-side" id="dd-side"></aside>
+        </div>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/data.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/edoc-templates.js"></script>
+    <script src="./js/edoc.js"></script>
+    <script src="./js/sets-data.js"></script>
+    <script src="./js/sets-data-v2.js"></script>
+    <script src="./js/doc-register.js"></script>
+    <script src="./js/doc-detail.js"></script>
+</body>
+</html>

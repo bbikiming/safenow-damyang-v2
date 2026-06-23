@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리대상 현황 - 담양군 중대재해예방통합관리시스템 v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="base-targets" data-page-title="관리대상 현황" data-page-subtitle="기본정보 > 관리대상 — 사업장 · 공중이용시설 · 원료·제조물 (SFR-002 · FMS 연계)">
+    <main>
+        <div class="tabs" id="tgt-tabs">
+            <button class="tab active" data-tab="biz">사업장 (23)</button>
+            <button class="tab" data-tab="facility">공중이용시설 (47)</button>
+            <button class="tab" data-tab="material">원료·제조물 (6)</button>
+        </div>
+
+        <section data-pane="biz">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">사업장 목록</span>
+                    <button class="btn btn-primary btn-sm" onclick="DYV2.toast('사업장 등록 (프로토타입)')">+ 등록</button>
+                </div>
+                <div class="card-body" style="overflow-x:auto;">
+                    <table class="table-figma">
+                        <thead><tr><th>사업장명</th><th>구분</th><th>소관부서</th><th>상시근로자</th><th>위험성평가</th><th>관리</th></tr></thead>
+                        <tbody>
+                            <tr><td style="font-weight:600;">담양군청사</td><td><span class="chip-mini pdca">청사</span></td><td>행정과</td><td>612명</td><td><span class="chip-mini st-done">완료</span></td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('사업장 상세 (프로토타입)')">상세</button></td></tr>
+                            <tr><td style="font-weight:600;">하수처리장</td><td><span class="chip-mini pdca">환경기초시설</span></td><td>환경과</td><td>28명</td><td><span class="chip-mini st-done">완료</span></td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('사업장 상세 (프로토타입)')">상세</button></td></tr>
+                            <tr><td style="font-weight:600;">생활자원회수센터</td><td><span class="chip-mini pdca">환경기초시설</span></td><td>환경과</td><td>19명</td><td><span class="chip-mini st-doing">진행</span></td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('사업장 상세 (프로토타입)')">상세</button></td></tr>
+                            <tr><td style="font-weight:600;">상수도사업소</td><td><span class="chip-mini pdca">사업소</span></td><td>상하수도과</td><td>34명</td><td><span class="chip-mini st-done">완료</span></td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('사업장 상세 (프로토타입)')">상세</button></td></tr>
+                            <tr><td style="font-weight:600;">농업기술센터</td><td><span class="chip-mini pdca">사업소</span></td><td>농업기술센터</td><td>47명</td><td><span class="chip-mini st-todo">미시행</span></td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('사업장 상세 (프로토타입)')">상세</button></td></tr>
+                        </tbody>
+                    </table>
+                    <p style="font-size:12px; color:var(--text-gray); margin-top:10px;">외 18개소 — 페이지네이션 생략 (프로토타입)</p>
+                </div>
+            </div>
+        </section>
+
+        <section data-pane="facility" style="display:none;">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">공중이용시설 목록 <span class="chip-mini wt-elec" style="margin-left:6px;">FMS 연계</span></span>
+                    <button class="btn btn-secondary btn-sm" onclick="DYV2.toast('FMS 시설 정보 동기화 (프로토타입)')">FMS 동기화</button>
+                </div>
+                <div class="card-body" style="overflow-x:auto;">
+                    <table class="table-figma">
+                        <thead><tr><th>시설명</th><th>유형</th><th>연면적</th><th>FMS 연계</th><th>최근 점검 문서</th><th>관리</th></tr></thead>
+                        <tbody>
+                            <tr><td style="font-weight:600;">담양군민체육관</td><td>체육시설</td><td>4,820㎡</td><td><span class="link-status-dot ok"></span> 정상</td><td>2026-05-30</td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('시설 상세 (프로토타입)')">상세</button></td></tr>
+                            <tr><td style="font-weight:600;">죽녹원 방문자센터</td><td>관광휴게시설</td><td>2,140㎡</td><td><span class="link-status-dot ok"></span> 정상</td><td>2026-05-22</td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('시설 상세 (프로토타입)')">상세</button></td></tr>
+                            <tr><td style="font-weight:600;">군립도서관</td><td>도서관</td><td>3,360㎡</td><td><span class="link-status-dot warn"></span> 수동 입력</td><td>2026-04-18</td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('시설 상세 (프로토타입)')">상세</button></td></tr>
+                            <tr><td style="font-weight:600;">공설운동장</td><td>체육시설</td><td>12,400㎡</td><td><span class="link-status-dot ok"></span> 정상</td><td>2026-06-02</td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('시설 상세 (프로토타입)')">상세</button></td></tr>
+                        </tbody>
+                    </table>
+                    <p style="font-size:12px; color:var(--text-gray); margin-top:10px;">외 43개소 — 페이지네이션 생략 (프로토타입)</p>
+                </div>
+            </div>
+        </section>
+
+        <section data-pane="material" style="display:none;">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">원료·제조물 목록</span>
+                    <button class="btn btn-primary btn-sm" onclick="DYV2.toast('원료·제조물 등록 (프로토타입)')">+ 등록</button>
+                </div>
+                <div class="card-body" style="overflow-x:auto;">
+                    <table class="table-figma">
+                        <thead><tr><th>품목</th><th>구분</th><th>사용처</th><th>MSDS</th><th>관리</th></tr></thead>
+                        <tbody>
+                            <tr><td style="font-weight:600;">수처리 약품 (PAC)</td><td>화학물질</td><td>정수장</td><td><span class="chip-mini st-done">비치</span></td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('품목 상세 (프로토타입)')">상세</button></td></tr>
+                            <tr><td style="font-weight:600;">차아염소산나트륨</td><td>화학물질</td><td>정수장·하수처리장</td><td><span class="chip-mini st-done">비치</span></td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('품목 상세 (프로토타입)')">상세</button></td></tr>
+                            <tr><td style="font-weight:600;">제설제 (염화칼슘)</td><td>자재</td><td>도로 제설</td><td><span class="chip-mini st-doing">갱신 중</span></td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('품목 상세 (프로토타입)')">상세</button></td></tr>
+                            <tr><td style="font-weight:600;">급식 식자재 (공공급식)</td><td>제조물</td><td>군청 구내식당</td><td><span class="chip-mini wt">해당 없음</span></td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('품목 상세 (프로토타입)')">상세</button></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/data.js"></script>
+    <script src="./js/common.js"></script>
+    <script>
+        (function () {
+            const tabs = document.querySelectorAll('#tgt-tabs .tab');
+            function show(name) {
+                tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+                document.querySelectorAll('[data-pane]').forEach(p => p.style.display = p.dataset.pane === name ? '' : 'none');
+            }
+            tabs.forEach(t => t.addEventListener('click', () => show(t.dataset.tab)));
+            const init = new URLSearchParams(location.search).get('tab');
+            if (init) show(init);
+        })();
+    </script>
+</body>
+</html>

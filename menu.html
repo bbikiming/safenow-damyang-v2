@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>안전보건관리체계 - 담양군 중대재해예방통합관리시스템 v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="sbm-policy">
+    <script>
+        /* 공통 레이아웃 1개를 대메뉴들이 공유 — ?m= 파라미터로 데이터만 주입.
+           위험성평가(risk)·유해·위험요인 관리(hazard)는 기존 프로토타입 UX 전용 화면으로 리다이렉트. */
+        (function () {
+            var m = new URLSearchParams(location.search).get('m') || 'policy';
+            document.body.setAttribute('data-dy-page', 'sbm-' + m);
+        })();
+    </script>
+    <main>
+        <div class="dy-page-title"><span class="dy-page-dot"></span><h1 id="sbm-title">…</h1></div>
+        <div class="dy-page-subtitle" id="sbm-subtitle"></div>
+
+        <!-- ① 요약 바: 이행률 · 시기도래 뱃지 · 담당부서 -->
+        <div class="sbm-summary" id="sbm-summary"></div>
+
+        <!-- ② 탭: 업무 기능(기본) / 문서 — 담당자는 "할 일"로 진입, 문서 분류는 업무문서 메뉴에서 -->
+        <div class="tabs" id="sbm-tabs" role="tablist">
+            <button class="tab active" data-tab="program" role="tab">업무 기능</button>
+            <button class="tab" data-tab="docs" role="tab">문서</button>
+        </div>
+
+        <section id="pane-program" data-pane="program"></section>
+        <section id="pane-docs" data-pane="docs" style="display:none;"></section>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/data.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/edoc-templates.js"></script>
+    <script src="./js/edoc.js"></script>
+    <script src="./js/sets-data.js"></script>
+    <script src="./js/setlist.js"></script>
+    <script src="./js/menu.js"></script>
+</body>
+</html>

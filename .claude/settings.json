@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/docs/screen-definitions/_lint_hook.py\"",
+            "timeout": 30,
+            "statusMessage": "화면 정의서 규칙 검사 중…"
+          }
+        ]
+      }
+    ]
+  }
+}

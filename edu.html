@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>안전보건교육 - 담양군 중대재해예방통합관리시스템 v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+    <style>
+        .edu-card {
+            border: 1px solid var(--card-line); border-radius: var(--radius-card);
+            background: #fff; padding: 16px 18px; margin-bottom: 12px;
+            display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+        }
+        .edu-card-main { flex: 1; min-width: 240px; }
+        .edu-card-name { font-size: 14px; font-weight: 700; }
+        .edu-card-meta { font-size: 12px; color: var(--text-gray); margin-top: 4px; display: flex; gap: 10px; flex-wrap: wrap; }
+        .edu-att { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+        .edu-att .progress { width: 90px; }
+    </style>
+</head>
+<body data-dy-page="sbm-edu" data-page-title="안전보건교육" data-page-subtitle="안전보건관리체계 > 안전보건교육 · SFR-004·010 — 교육 등록 → 대상자 알림 → 출석 → 결과 확정(온나라) → 이수 자동 반영">
+    <main>
+        <div class="sbm-summary" id="edu-summary"></div>
+
+        <div class="tabs" id="edu-tabs" role="tablist">
+            <button class="tab active" data-tab="schedule" role="tab">교육 일정</button>
+            <button class="tab" data-tab="people" role="tab">이수 현황</button>
+            <button class="tab" data-tab="catalog" role="tab">과정 관리</button>
+        </div>
+
+        <section data-pane="schedule">
+            <div class="v2-toolbar">
+                <select class="select" id="edu-f-status"><option value="">상태 전체</option><option>예정</option><option>실시완료</option><option>확정</option></select>
+                <span class="spacer"></span>
+                <button class="btn btn-primary" onclick="EDU.openCreate()">+ 교육 등록</button>
+            </div>
+            <div id="edu-cards"></div>
+        </section>
+
+        <section data-pane="people" style="display:none;">
+            <div class="card"><div class="card-header">
+                <span class="card-title">개인별 이수 현황 (법정기준 대비)</span>
+                <button class="btn btn-secondary btn-sm" onclick="EDU.notifyIncomplete()">미이수자 알림 발송</button>
+            </div><div class="card-body" style="overflow-x:auto;">
+                <div class="v2-toolbar">
+                    <select class="select" id="edu-f-dept"><option value="">부서 전체</option></select>
+                </div>
+                <table class="table-figma">
+                    <thead><tr><th>성명</th><th>부서</th><th>직종</th><th>이수 시간 / 법정기준</th><th>최근 이수</th><th>상태</th></tr></thead>
+                    <tbody id="edu-people"></tbody>
+                </table>
+            </div></div>
+        </section>
+
+        <section data-pane="catalog" style="display:none;">
+            <div class="card" style="margin-bottom:16px;"><div class="card-header">
+                <span class="card-title">교육 과정 카탈로그 (11종 — 산안법 §29·§32)</span>
+                <button class="btn btn-primary btn-sm" onclick="EDU.openCheck()">반기 교육 점검표 작성</button>
+            </div><div class="card-body" style="overflow-x:auto;">
+                <table class="table-figma">
+                    <thead><tr><th>과정</th><th>주기</th><th>법정 시간</th><th>대상</th><th>올해 실시</th></tr></thead>
+                    <tbody id="edu-catalog"></tbody>
+                </table>
+                <p style="font-size:11.5px; color:var(--text-gray); margin-top:10px;">과정별 (계획 P / 결과 C) 전자문서가 자동 짝지어집니다 — 엑셀 분류본 교육 문서 37건 흡수.</p>
+            </div></div>
+        </section>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/data.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/edoc-templates.js"></script>
+    <script src="./js/edoc.js"></script>
+    <script src="./js/edu.js"></script>
+</body>
+</html>

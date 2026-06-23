@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>정기 위험성평가 생성 - 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <style>
+        .rc-section { background:#fff; border:1px solid var(--card-line); border-radius:var(--radius-card); margin-bottom:16px; overflow:hidden; }
+        .rc-head { padding:14px 20px; border-bottom:1px solid var(--card-line); display:flex; align-items:center; gap:8px; }
+        .rc-step-no { width:24px; height:24px; border-radius:50%; background:var(--main); color:#fff; font-size:13px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .rc-head-title { font-size:15px; font-weight:700; color:var(--text-black); }
+        .rc-head-desc { font-size:12px; color:var(--text-gray); margin-left:4px; }
+        .rc-body { padding:18px 20px; }
+
+        /* 기본정보 */
+        .rc-info-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+        @media (max-width:767px){ .rc-info-grid{ grid-template-columns:1fr; } }
+        .rc-field-label { font-size:12px; font-weight:700; color:var(--text-black); margin-bottom:5px; display:block; }
+        .rc-input { width:100%; padding:9px 12px; border:1px solid var(--card-line); border-radius:var(--radius-md); font-size:13px; font-family:inherit; }
+        .rc-input[readonly] { background:#fafafa; color:var(--text-gray); }
+
+        /* 평가방법 카드 */
+        .rc-method-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+        @media (max-width:900px){ .rc-method-grid{ grid-template-columns:repeat(2,1fr); } }
+        @media (max-width:560px){ .rc-method-grid{ grid-template-columns:1fr; } }
+        .rc-method { position:relative; display:block; padding:14px; border:1.5px solid var(--card-line); border-radius:var(--radius-md); cursor:pointer; transition:all .15s; }
+        .rc-method:hover { border-color:var(--main-light); background:#fafafa; }
+        .rc-method input { position:absolute; opacity:0; }
+        .rc-method:has(input:checked) { border-color:var(--main); background:var(--status-success-bg); box-shadow:0 0 0 2px rgba(32,159,132,.15); }
+        .rc-method-name { font-size:14px; font-weight:700; color:var(--text-black); display:flex; align-items:center; gap:6px; }
+        .rc-method-desc { font-size:12px; color:var(--text-gray); margin-top:5px; line-height:1.5; }
+        .rc-method-badge { font-size:10px; font-weight:700; padding:1px 7px; border-radius:var(--radius-full); background:var(--main); color:#fff; }
+        .rc-method-soon { font-size:10px; color:var(--text-lightgray); border:1px solid var(--card-line); padding:1px 7px; border-radius:var(--radius-full); }
+        .rc-method.disabled { opacity:.5; cursor:not-allowed; }
+        .rc-method.disabled:hover { border-color:var(--card-line); background:#fff; }
+        .rc-check-ico { position:absolute; top:12px; right:12px; width:20px; height:20px; border-radius:50%; background:var(--main); color:#fff; display:none; align-items:center; justify-content:center; }
+        .rc-method:has(input:checked) .rc-check-ico { display:inline-flex; }
+
+        /* 유해·위험요인 선택 */
+        .rc-proc-toolbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; flex-wrap:wrap; gap:8px; }
+        .rc-proc-count { font-size:13px; color:var(--text-gray); }
+        .rc-proc-count b { color:var(--main); font-weight:800; }
+        .rc-proc-row { display:flex; align-items:center; gap:12px; padding:12px 14px; border:1px solid var(--card-line); border-radius:var(--radius-md); margin-bottom:8px; transition:all .12s; }
+        .rc-proc-row.on { border-color:var(--status-success-border); background:var(--status-success-bg); }
+        .rc-proc-row.off { opacity:.5; }
+        .rc-proc-row.locked { background:#fafafa; opacity:.7; }
+        .rc-proc-check { width:20px; height:20px; flex-shrink:0; accent-color:var(--main); cursor:pointer; }
+        .rc-proc-main { flex:1; min-width:0; }
+        .rc-proc-name { font-size:14px; font-weight:600; color:var(--text-black); }
+        .rc-proc-meta { font-size:12px; color:var(--text-lightgray); margin-top:2px; }
+        .rc-proc-tags { display:flex; gap:6px; align-items:center; flex-shrink:0; }
+
+        .rc-foot { display:flex; justify-content:flex-end; gap:8px; padding:16px 0 8px; }
+        .toast.show { opacity:1; transform:translateY(0); }
+    </style>
+</head>
+<body data-dy-page="sbm-risk"
+      data-page-title="정기 위험성평가 생성"
+      data-page-subtitle="평가 방법 선택 → 대상 유해·위험요인 선택 → 생성 (RSK02-N)"
+      data-back-href="risk-list.html"
+      data-back-label="평가 목록">
+    <main>
+        <!-- STEP A: 평가 기본정보 -->
+        <section class="rc-section">
+            <div class="rc-head"><span class="rc-step-no">1</span><span class="rc-head-title">평가 기본정보</span></div>
+            <div class="rc-body">
+                <div class="rc-info-grid">
+                    <div><label class="rc-field-label">평가명</label><input class="rc-input" type="text" id="rc-name" value="2026년 정기 위험성평가"></div>
+                    <div><label class="rc-field-label">평가 연도</label><input class="rc-input" type="text" value="2026" readonly></div>
+                    <div><label class="rc-field-label">총괄담당자</label><input class="rc-input" type="text" value="김안전 (물순환사업소 · SHM)" readonly></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- STEP B: 평가 방법 선택 (2단계) -->
+        <section class="rc-section" id="rc-method-section">
+            <div class="rc-head"><span class="rc-step-no">2</span><span class="rc-head-title">평가 방법 선택</span><span class="rc-head-desc">평가 방식에 따라 작성 화면이 달라집니다</span></div>
+            <div class="rc-body">
+                <div class="rc-method-grid">
+                    <label class="rc-method">
+                        <input type="radio" name="rc-method" value="CHECKLIST" checked>
+                        <span class="rc-check-ico"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                        <span class="rc-method-name">체크리스트법 <span class="rc-method-badge">구현됨 · 추천</span></span>
+                        <span class="rc-method-desc">위험요인을 O / X / 해당없음으로 점검. X 항목은 개선조치를 입력합니다. (산안기준규칙 기반)</span>
+                    </label>
+                    <label class="rc-method">
+                        <input type="radio" name="rc-method" value="4M">
+                        <span class="rc-check-ico"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                        <span class="rc-method-name">4M 위험성평가</span>
+                        <span class="rc-method-desc">Man·Machine·Media·Management 4축 분석 (KOSHA M-15-2023)</span>
+                    </label>
+                    <label class="rc-method">
+                        <input type="radio" name="rc-method" value="MATRIX">
+                        <span class="rc-check-ico"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
+                        <span class="rc-method-name">위험성 매트릭스</span>
+                        <span class="rc-method-desc">빈도 × 강도 5×5 점수화 → 5등급 산정</span>
+                    </label>
+                    <label class="rc-method disabled">
+                        <input type="radio" name="rc-method" value="KRAS" disabled>
+                        <span class="rc-method-name">KRAS <span class="rc-method-soon">준비중</span></span>
+                        <span class="rc-method-desc">KOSHA 작업분류표 기반</span>
+                    </label>
+                    <label class="rc-method disabled">
+                        <input type="radio" name="rc-method" value="JSA" disabled>
+                        <span class="rc-method-name">JSA <span class="rc-method-soon">준비중</span></span>
+                        <span class="rc-method-desc">작업단계 분해 분석</span>
+                    </label>
+                </div>
+            </div>
+        </section>
+
+        <!-- STEP C: 대상 유해·위험요인 선택 (3단계) -->
+        <section class="rc-section">
+            <div class="rc-head"><span class="rc-step-no">3</span><span class="rc-head-title">대상 유해·위험요인 선택</span><span class="rc-head-desc">활성 유해·위험요인이 자동 선택됩니다 · 제외할 유해·위험요인은 체크 해제</span></div>
+            <div class="rc-body">
+                <div class="rc-proc-toolbar">
+                    <span class="rc-proc-count">선택 <b id="rc-sel-count">7</b> / 활성 7개 유해·위험요인</span>
+                    <div style="display:flex; gap:6px;">
+                        <button class="btn btn-outline btn-sm" type="button" id="rc-select-all">전체 선택</button>
+                        <button class="btn btn-outline btn-sm" type="button" id="rc-select-none">전체 해제</button>
+                    </div>
+                </div>
+                <div id="rc-proc-list">
+                    <!-- 활성 유해·위험요인 7 -->
+                    <label class="rc-proc-row on"><input type="checkbox" class="rc-proc-check" checked><div class="rc-proc-main"><div class="rc-proc-name">정수장 약품투입 유해·위험요인</div><div class="rc-proc-meta">담당 김안전 · 위험요인 12건</div></div><div class="rc-proc-tags"><span class="type-tag">물순환사업소 ★</span></div></label>
+                    <label class="rc-proc-row on"><input type="checkbox" class="rc-proc-check" checked><div class="rc-proc-main"><div class="rc-proc-name">정수장 설비정비 유해·위험요인</div><div class="rc-proc-meta">담당 이정비 · 위험요인 11건</div></div><div class="rc-proc-tags"><span class="type-tag">물순환사업소 ★</span></div></label>
+                    <label class="rc-proc-row on"><input type="checkbox" class="rc-proc-check" checked><div class="rc-proc-main"><div class="rc-proc-name">시설관리 유해·위험요인</div><div class="rc-proc-meta">담당 박시설 · 위험요인 9건</div></div><div class="rc-proc-tags"><span class="type-tag">공공시설사업소 ★</span></div></label>
+                    <label class="rc-proc-row on"><input type="checkbox" class="rc-proc-check" checked><div class="rc-proc-main"><div class="rc-proc-name">전기설비 점검 유해·위험요인</div><div class="rc-proc-meta">담당 최전기 · 위험요인 7건</div></div><div class="rc-proc-tags"><span class="type-tag">공공시설사업소 ★</span></div></label>
+                    <label class="rc-proc-row on"><input type="checkbox" class="rc-proc-check" checked><div class="rc-proc-main"><div class="rc-proc-name">도로보수 유해·위험요인</div><div class="rc-proc-meta">담당 정도로 · 위험요인 8건</div></div><div class="rc-proc-tags"><span class="type-tag">건설과 ★</span></div></label>
+                    <label class="rc-proc-row on"><input type="checkbox" class="rc-proc-check" checked><div class="rc-proc-main"><div class="rc-proc-name">환경시설 운영 유해·위험요인</div><div class="rc-proc-meta">담당 한환경 · 위험요인 9건</div></div><div class="rc-proc-tags"><span class="type-tag">환경과</span></div></label>
+                    <label class="rc-proc-row on"><input type="checkbox" class="rc-proc-check" checked><div class="rc-proc-main"><div class="rc-proc-name">행사·축제 운영 유해·위험요인</div><div class="rc-proc-meta">담당 신축제 · 위험요인 7건 · 신규</div></div><div class="rc-proc-tags"><span class="type-tag">문화관광과</span></div></label>
+                    <!-- 비활성 1 (잠금) -->
+                    <label class="rc-proc-row locked"><input type="checkbox" class="rc-proc-check" disabled><div class="rc-proc-main"><div class="rc-proc-name">구 노후정수장 운영 유해·위험요인</div><div class="rc-proc-meta">비활성(폐쇄) · 대상 제외 · 이력 보존</div></div><div class="rc-proc-tags"><span class="chip-status neutral">비활성</span></div></label>
+                </div>
+            </div>
+        </section>
+
+        <div class="rc-foot">
+            <button class="btn btn-secondary" type="button" onclick="window.location.href='risk-list.html'">취소</button>
+            <button class="btn btn-primary" type="button" id="rc-create">정기평가 생성</button>
+        </div>
+    </main>
+
+    <div id="toast" class="toast" role="status"></div>
+    <script src="./js/layout.js"></script>
+    <script>
+    (function () {
+        'use strict';
+        function activeRows() { return Array.prototype.slice.call(document.querySelectorAll('.rc-proc-row:not(.locked)')); }
+        function recount() {
+            var n = 0;
+            activeRows().forEach(function (row) {
+                var cb = row.querySelector('.rc-proc-check');
+                var on = cb.checked;
+                row.classList.toggle('on', on);
+                row.classList.toggle('off', !on);
+                if (on) n++;
+            });
+            var el = document.getElementById('rc-sel-count');
+            if (el) el.textContent = n;
+            return n;
+        }
+        document.querySelectorAll('.rc-proc-check').forEach(function (cb) {
+            if (!cb.disabled) cb.addEventListener('change', recount);
+        });
+        document.getElementById('rc-select-all').addEventListener('click', function () {
+            activeRows().forEach(function (r) { r.querySelector('.rc-proc-check').checked = true; }); recount();
+        });
+        document.getElementById('rc-select-none').addEventListener('click', function () {
+            activeRows().forEach(function (r) { r.querySelector('.rc-proc-check').checked = false; }); recount();
+        });
+        document.getElementById('rc-create').addEventListener('click', function () {
+            var n = recount();
+            if (n === 0) {
+                var t = document.getElementById('toast');
+                t.textContent = '대상 유해·위험요인을 1개 이상 선택하세요.'; t.classList.add('show');
+                setTimeout(function () { t.classList.remove('show'); }, 2400);
+                return;
+            }
+            var method = (document.querySelector('input[name="rc-method"]:checked') || {}).value || 'CHECKLIST';
+            var methodLabel = { CHECKLIST: '체크리스트법', '4M': '4M', MATRIX: '위험성 매트릭스' }[method] || method;
+            alert('✓ 2026년 정기 위험성평가가 생성되었습니다.\n\n· 평가 방법: ' + methodLabel + '\n· 대상 유해·위험요인: ' + n + '개 (유해·위험요인별 평가 자동 생성)\n· 담당자 자동 배정 · 최신 확정자료 승계 완료\n\n[확인] 시 평가 상세로 이동합니다.');
+            // 평가방법을 risk-regular로 전달
+            try { localStorage.setItem('rskCreateMethod', method); } catch (e) {}
+            window.location.href = 'risk-regular.html?from=create&method=' + method + '&count=' + n;
+        });
+        recount();
+    })();
+    </script>
+    <script src="./js/risk-tour.js"></script>
+</body>
+</html>

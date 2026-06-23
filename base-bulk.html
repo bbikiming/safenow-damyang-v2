@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>데이터 일괄등록 - 담양군 중대재해예방통합관리시스템 v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="base-bulk" data-page-title="데이터 일괄등록" data-page-subtitle="기본정보 > 데이터 일괄등록 — 엑셀 서식 업로드 + 유효성 체크 (SFR-016)">
+    <main>
+        <div class="card" style="margin-bottom:16px;">
+            <div class="card-header"><span class="card-title">1. 서식 다운로드</span></div>
+            <div class="card-body" style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button class="btn btn-outline" onclick="DYV2.toast('사업장 서식 다운로드 (프로토타입)')">사업장 서식.xlsx</button>
+                <button class="btn btn-outline" onclick="DYV2.toast('공중이용시설 서식 다운로드 (프로토타입)')">공중이용시설 서식.xlsx</button>
+                <button class="btn btn-outline" onclick="DYV2.toast('구성원·인력 서식 다운로드 (프로토타입)')">구성원·인력 서식.xlsx</button>
+                <button class="btn btn-outline" onclick="DYV2.toast('기준문서 목록 서식 다운로드 (프로토타입)')">기준문서 목록 서식.xlsx</button>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px;">
+            <div class="card-header"><span class="card-title">2. 엑셀 업로드</span></div>
+            <div class="card-body">
+                <div class="upload-drop" onclick="showResult()">
+                    엑셀 파일을 끌어다 놓거나 클릭하여 업로드<br>
+                    <span style="font-size:11px;">.xlsx · 최대 10MB · 업로드 즉시 유효성 체크가 실행됩니다</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" id="bulk-result" style="display:none;">
+            <div class="card-header">
+                <span class="card-title">3. 유효성 체크 결과 — 공중이용시설 서식.xlsx (47행)</span>
+                <button class="btn btn-primary btn-sm" onclick="DYV2.toast('정상 44행 반영 완료 (프로토타입)')">정상 행 반영 (44)</button>
+            </div>
+            <div class="card-body">
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:14px;">
+                    <div class="statbox success"><div class="statbox-num">44</div><div class="statbox-label">정상</div></div>
+                    <div class="statbox danger"><div class="statbox-num">2</div><div class="statbox-label">오류</div></div>
+                    <div class="statbox warning"><div class="statbox-num">1</div><div class="statbox-label">중복 의심</div></div>
+                </div>
+                <table class="table-figma">
+                    <thead><tr><th>행</th><th>시설명</th><th>판정</th><th>사유</th></tr></thead>
+                    <tbody>
+                        <tr><td>12</td><td>○○경로당</td><td><span class="chip-mini st-todo">오류</span></td><td>연면적 누락 (필수값)</td></tr>
+                        <tr><td>31</td><td>△△마을회관</td><td><span class="chip-mini st-todo">오류</span></td><td>시설 유형 코드 불일치 ("회관" → 허용값 아님)</td></tr>
+                        <tr><td>40</td><td>군민체육관</td><td><span class="chip-mini st-doing">중복 의심</span></td><td>기존 등록 시설과 명칭·주소 동일</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/data.js"></script>
+    <script src="./js/common.js"></script>
+    <script>
+        function showResult() {
+            document.getElementById('bulk-result').style.display = '';
+            DYV2.toast('업로드 완료 — 유효성 체크 결과를 확인하세요 (프로토타입)');
+            document.getElementById('bulk-result').scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>

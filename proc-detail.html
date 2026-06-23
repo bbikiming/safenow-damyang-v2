@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>유해·위험요인 상세 - 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <style>
+        /* 기본정보 그리드 */
+        .proc-info-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr);
+            gap: 0; border: 1px solid var(--card-line); border-radius: var(--radius-card);
+            overflow: hidden; background: #fff;
+        }
+        @media (max-width: 767px) { .proc-info-grid { grid-template-columns: repeat(2, 1fr); } }
+        .proc-info-cell {
+            padding: 14px 18px; border-right: 1px solid var(--card-line); border-bottom: 1px solid var(--card-line);
+        }
+        .proc-info-label { font-size: 12px; color: var(--text-gray); margin-bottom: 4px; }
+        .proc-info-value { font-size: 14px; font-weight: 600; color: var(--text-black); }
+
+        /* 마스터 안내 배너 (info) */
+        .proc-master-note {
+            display: flex; align-items: center; gap: 10px;
+            padding: 12px 16px; margin: 14px 0;
+            background: var(--status-info-bg); border: 1px solid var(--status-info-border);
+            border-radius: var(--radius-button); color: var(--status-info-fg);
+            font-size: 13px; line-height: 1.5;
+        }
+        .proc-master-note svg { flex-shrink: 0; }
+
+        /* 서브 탭 */
+        .sub-tabs { display: flex; gap: 4px; border-bottom: 2px solid var(--card-line); margin: 18px 0 0; flex-wrap: wrap; }
+        .sub-tab {
+            padding: 10px 16px; font-size: 14px; font-weight: 600; color: var(--text-gray);
+            background: transparent; border: none; border-bottom: 3px solid transparent;
+            cursor: pointer; margin-bottom: -2px;
+        }
+        .sub-tab:hover { color: var(--text-black); }
+        .sub-tab.active { color: var(--main); border-bottom-color: var(--main); }
+        .sub-tab .cnt {
+            display: inline-block; margin-left: 4px; padding: 0 6px;
+            font-size: 11px; background: var(--gray-100); color: var(--text-gray); border-radius: 8px;
+        }
+        .sub-tab.active .cnt { background: var(--status-info-bg); color: var(--main); }
+
+        .settings-panel { display: none; padding-top: 16px; }
+        .settings-panel.is-active { display: block; }
+
+        /* 카드 헤더 (제목 + 추가 버튼) */
+        .proc-card-head {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 20px; border-bottom: 1px solid var(--card-line);
+        }
+        .proc-card-title { font-size: 15px; font-weight: 700; color: var(--text-black); }
+        .proc-card-desc { font-size: 12px; color: var(--text-gray); margin-top: 2px; }
+
+        /* 위험요인 출처 배지 */
+        .src-badge { display:inline-block; padding:2px 8px; border-radius:var(--radius-md); font-size:11px; font-weight:600; }
+        .src-badge.sif    { background:var(--status-danger-bg); color:var(--status-danger-fg); border:1px solid var(--status-danger-border); }
+        .src-badge.own    { background:var(--status-purple-bg); color:var(--status-purple-fg); border:1px solid var(--status-purple-border); }
+        .src-badge.kosha  { background:var(--status-info-bg); color:var(--status-info-fg); border:1px solid var(--status-info-border); }
+
+        /* 위험성 수준 칩 */
+        .lvl { display:inline-block; padding:2px 8px; border-radius:var(--radius-md); font-size:11px; font-weight:700; }
+        .lvl.high { background:var(--status-danger-bg); color:var(--status-danger-fg); }
+        .lvl.mid  { background:var(--status-warning-bg); color:var(--status-warning-fg); }
+        .lvl.low  { background:var(--status-success-bg); color:var(--status-success-fg); }
+
+        .tbl-mini { width:100%; border-collapse:collapse; }
+        .tbl-mini th { background:#fafafa; padding:10px 12px; font-size:12px; font-weight:700; color:var(--text-gray); text-align:left; border-bottom:1px solid var(--card-line); }
+        .tbl-mini td { padding:11px 12px; font-size:13px; border-bottom:1px solid var(--card-line); vertical-align:top; line-height:1.5; }
+        .tbl-mini tr:hover td { background:#fafafa; }
+
+        /* 시설·설비 구분 배지 */
+        .fac-type { display:inline-block; padding:2px 9px; border-radius:var(--radius-md); font-size:11px; font-weight:600; }
+        .fac-type.machine { background:var(--status-info-bg); color:var(--status-info-fg); border:1px solid var(--status-info-border); }
+        .fac-type.place   { background:var(--gray-100); color:var(--text-gray); border:1px solid var(--card-line); }
+        .fac-type.safety  { background:var(--status-success-bg); color:var(--status-success-fg); border:1px solid var(--status-success-border); }
+
+        .pill-tag { display:inline-block; padding:3px 10px; margin:0 4px 4px 0; background:var(--gray-100); border-radius:var(--radius-pill); font-size:12px; color:var(--text-black); }
+        .pill-tag.danger { background:var(--status-danger-bg); color:var(--status-danger-fg); border:1px solid var(--status-danger-border); }
+
+        /* 작업 ▸ 설비·유해요인 계층 */
+        .proc-work { border:1px solid var(--card-line); border-radius:var(--radius-md); margin-bottom:10px; overflow:hidden; }
+        .proc-work-head { display:flex; align-items:center; gap:8px; padding:10px 14px; background:#fafafa; border-bottom:1px solid var(--card-line); }
+        .proc-work-no { font-size:11px; font-weight:700; color:#fff; background:var(--main); padding:2px 8px; border-radius:var(--radius-full); }
+        .proc-work-name { font-size:14px; font-weight:700; color:var(--text-black); }
+        .proc-work-body { display:grid; grid-template-columns:1fr 1fr; gap:0; }
+        @media (max-width:600px){ .proc-work-body{ grid-template-columns:1fr; } }
+        .proc-work-col { padding:12px 14px; }
+        .proc-work-col:first-child { border-right:1px solid var(--card-line); }
+        @media (max-width:600px){ .proc-work-col:first-child{ border-right:none; border-bottom:1px solid var(--card-line); } }
+        .proc-work-label { display:block; font-size:11px; font-weight:700; color:var(--text-gray); margin-bottom:7px; }
+
+        /* 변경이력 */
+        .hist-item { display:flex; gap:12px; padding:12px 0; border-bottom:1px solid var(--card-line); font-size:13px; }
+        .hist-date { width:120px; color:var(--text-gray); flex-shrink:0; }
+        .hist-body { flex:1; }
+        .hist-tag { display:inline-block; padding:1px 7px; border-radius:var(--radius-md); font-size:11px; font-weight:600; margin-right:6px; }
+        .hist-tag.add { background:var(--status-success-bg); color:var(--status-success-fg); }
+        .hist-tag.mod { background:var(--status-warning-bg); color:var(--status-warning-fg); }
+        .hist-tag.del { background:var(--status-neutral-bg); color:var(--status-neutral-fg); }
+    </style>
+</head>
+<body data-dy-page="sbm-hazard"
+      data-page-title="유해·위험요인 상세"
+      data-page-subtitle="정수장 약품투입 유해·위험요인 — 기준정보 마스터 (PRC02-D)"
+      data-back-href="proc-list.html"
+      data-back-label="유해·위험요인 관리">
+    <main>
+        <!-- ─── 마스터 안내 ─── -->
+        <div class="proc-master-note">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <div>여기서 등록한 작업·시설설비·유해위험요인·표준 개선조치는 <strong>정기 위험성평가 생성 시 자동으로 불러와집니다.</strong> 평가 결과(점검·판단)는 위험성평가 메뉴에서 입력합니다.</div>
+        </div>
+
+        <!-- ─── 기본정보 ─── -->
+        <section class="proc-info-grid">
+            <div class="proc-info-cell"><div class="proc-info-label">유해·위험요인명</div><div class="proc-info-value">정수장 약품투입 유해·위험요인</div></div>
+            <div class="proc-info-cell"><div class="proc-info-label">담당부서</div><div class="proc-info-value">물순환사업소 ★</div></div>
+            <div class="proc-info-cell"><div class="proc-info-label">유해·위험요인 담당자</div><div class="proc-info-value">김안전 <span style="font-weight:400; color:var(--text-gray); font-size:12px;">(SHM)</span></div></div>
+            <div class="proc-info-cell"><div class="proc-info-label">사용여부</div><div class="proc-info-value"><span class="chip-status success">활성</span> <span style="font-size:12px; color:var(--text-gray);">정기평가 대상</span></div></div>
+            <div class="proc-info-cell" style="border-bottom:none;"><div class="proc-info-label">관련 관리대상(시설)</div><div class="proc-info-value">신계 정수장 <span class="type-tag">시설</span></div></div>
+            <div class="proc-info-cell" style="border-bottom:none;"><div class="proc-info-label">최근 정기평가 반영</div><div class="proc-info-value">2026년 정기 (예정)</div></div>
+            <div class="proc-info-cell" style="border-bottom:none;"><div class="proc-info-label">대표 사진</div><div class="proc-info-value" style="font-weight:400; color:var(--text-lightgray); font-size:12px;">선택 첨부 (미등록)</div></div>
+            <div class="proc-info-cell" style="border-bottom:none; border-right:none;"><div class="proc-info-label">최근 변경</div><div class="proc-info-value" style="font-weight:400; font-size:13px;">2026-01-15 · 김안전</div></div>
+        </section>
+
+        <!-- ─── 서브 탭 ─── -->
+        <div class="sub-tabs" role="tablist">
+            <button class="sub-tab active" type="button" data-panel="work"     onclick="window.ProcDetail.tab('work')">작업 <span class="cnt">3</span></button>
+            <button class="sub-tab"        type="button" data-panel="facility" onclick="window.ProcDetail.tab('facility')">시설·설비 <span class="cnt">5</span></button>
+            <button class="sub-tab"        type="button" data-panel="material" onclick="window.ProcDetail.tab('material')">물질 <span class="cnt">3</span></button>
+            <button class="sub-tab"        type="button" data-panel="hazard"   onclick="window.ProcDetail.tab('hazard')">유해위험요인 <span class="cnt">12</span></button>
+            <button class="sub-tab"        type="button" data-panel="history"  onclick="window.ProcDetail.tab('history')">변경 이력</button>
+        </div>
+
+        <!-- ① 작업 -->
+        <div class="settings-panel is-active" data-panel="work">
+            <section class="card" style="padding:0;">
+                <div class="proc-card-head">
+                    <div><div class="proc-card-title">유해·위험요인 구조 — 작업 ▸ 설비 · 유해위험요인</div><div class="proc-card-desc">유해·위험요인 하위 작업마다 사용 설비와 예상 유해위험요인이 등록되어 있습니다 (위험성평가 시 자동 로드)</div></div>
+                    <button class="btn btn-outline btn-sm" type="button" onclick="window.DYLayout._soon(event, '작업 추가')">+ 작업 추가</button>
+                </div>
+                <div style="padding:8px 20px 16px;">
+                    <!-- 작업 1 -->
+                    <div class="proc-work">
+                        <div class="proc-work-head"><span class="proc-work-no">작업 1</span><span class="proc-work-name">염소 봄베 교체</span></div>
+                        <div class="proc-work-body">
+                            <div class="proc-work-col"><span class="proc-work-label">🛠 설비·시설</span><span class="pill-tag">염소 봄베·투입기</span><span class="pill-tag">누출 감지기</span><span class="pill-tag">비상 샤워·세안 설비</span></div>
+                            <div class="proc-work-col"><span class="proc-work-label">⚠ 유해위험요인</span><span class="pill-tag danger">질식(염소 누출)</span><span class="pill-tag danger">중독</span></div>
+                        </div>
+                    </div>
+                    <!-- 작업 2 -->
+                    <div class="proc-work">
+                        <div class="proc-work-head"><span class="proc-work-no">작업 2</span><span class="proc-work-name">응집제(PAC) 투입</span></div>
+                        <div class="proc-work-body">
+                            <div class="proc-work-col"><span class="proc-work-label">🛠 설비·시설</span><span class="pill-tag">PAC 정량펌프</span><span class="pill-tag">약품 저장탱크</span></div>
+                            <div class="proc-work-col"><span class="proc-work-label">⚠ 유해위험요인</span><span class="pill-tag danger">화상·부식(비산)</span><span class="pill-tag danger">중독·화학</span></div>
+                        </div>
+                    </div>
+                    <!-- 작업 3 -->
+                    <div class="proc-work">
+                        <div class="proc-work-head"><span class="proc-work-no">작업 3</span><span class="proc-work-name">약품 저장탱크 보충·청소</span></div>
+                        <div class="proc-work-body">
+                            <div class="proc-work-col"><span class="proc-work-label">🛠 설비·시설</span><span class="pill-tag">약품 저장탱크</span><span class="pill-tag">환기설비</span></div>
+                            <div class="proc-work-col"><span class="proc-work-label">⚠ 유해위험요인</span><span class="pill-tag danger">질식(밀폐공간)</span><span class="pill-tag danger">전도·미끄러짐</span></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ② 시설·설비 -->
+        <div class="settings-panel" data-panel="facility">
+            <section class="card" style="padding:0;">
+                <div class="proc-card-head">
+                    <div><div class="proc-card-title">시설·설비</div><div class="proc-card-desc">이 유해·위험요인에서 사용하는 기계·기구·설비·장소</div></div>
+                    <button class="btn btn-outline btn-sm" type="button" onclick="window.DYLayout._soon(event, '시설·설비 추가')">+ 설비 추가</button>
+                </div>
+                <table class="tbl-mini">
+                    <thead><tr><th style="width:200px;">시설·설비명</th><th style="width:120px;">구분</th><th style="width:160px;">관련 작업</th><th>비고 (점검·관리)</th></tr></thead>
+                    <tbody>
+                        <tr><td><strong>염소 봄베·투입기</strong></td><td><span class="fac-type machine">기계·기구</span></td><td>염소 봄베 교체</td><td>안전검사 대상 · 연 1회 정밀점검</td></tr>
+                        <tr><td><strong>PAC 정량펌프</strong></td><td><span class="fac-type machine">기계·기구</span></td><td>응집제 투입</td><td>월 1회 작동 점검</td></tr>
+                        <tr><td><strong>약품 저장탱크</strong></td><td><span class="fac-type place">장소·설비</span></td><td>약품 보충·청소</td><td>밀폐공간 · 진입 시 작업허가</td></tr>
+                        <tr><td><strong>누출 감지기</strong></td><td><span class="fac-type safety">안전장치</span></td><td>염소 봄베 교체</td><td>상시 가동 · 분기 교정</td></tr>
+                        <tr><td><strong>비상 샤워·세안 설비</strong></td><td><span class="fac-type safety">안전장치</span></td><td>전 작업 공통</td><td>주 1회 수압·작동 점검</td></tr>
+                    </tbody>
+                </table>
+            </section>
+        </div>
+
+        <!-- ③ 물질 -->
+        <div class="settings-panel" data-panel="material">
+            <section class="card" style="padding:0;">
+                <div class="proc-card-head">
+                    <div><div class="proc-card-title">취급 물질</div><div class="proc-card-desc">화학물질·원재료·가스·분진 등 (MSDS 연계)</div></div>
+                    <button class="btn btn-outline btn-sm" type="button" onclick="window.DYLayout._soon(event, '물질 추가')">+ 물질 추가</button>
+                </div>
+                <table class="tbl-mini">
+                    <thead><tr><th style="width:160px;">물질명</th><th style="width:120px;">분류</th><th>비고 (MSDS)</th></tr></thead>
+                    <tbody>
+                        <tr><td>염소 (Cl₂)</td><td><span class="lvl high">유독성 가스</span></td><td>MSDS 비치 · 누출 시 비상대응 매뉴얼 연계</td></tr>
+                        <tr><td>폴리염화알루미늄 (PAC)</td><td><span class="lvl mid">부식성</span></td><td>피부·눈 접촉 주의 · 보호구 착용</td></tr>
+                        <tr><td>차아염소산나트륨</td><td><span class="lvl mid">부식성</span></td><td>환기 필요 · 산성 물질과 격리 보관</td></tr>
+                    </tbody>
+                </table>
+            </section>
+        </div>
+
+        <!-- ④ 유해위험요인 (핵심) -->
+        <div class="settings-panel" data-panel="hazard">
+            <section class="card" style="padding:0;">
+                <div class="proc-card-head">
+                    <div>
+                        <div class="proc-card-title">유해위험요인 · 표준 개선조치</div>
+                        <div class="proc-card-desc">정기평가 생성 시 이 목록이 평가의 기본 위험요인으로 자동 로드됩니다 · 출처: KOSHA SIF(사망사례) 라이브러리 + 자체</div>
+                    </div>
+                    <button class="btn btn-primary btn-sm" type="button" id="proc-sif-open">
+                        + 표준 위험요인 추가 <span style="background:rgba(255,255,255,.25); padding:1px 6px; border-radius:8px; font-size:11px; margin-left:4px;">SIF 추천</span>
+                    </button>
+                </div>
+                <table class="tbl-mini">
+                    <thead>
+                        <tr>
+                            <th style="width:150px;">유해위험요인</th>
+                            <th>발생 상황</th>
+                            <th>표준 개선조치</th>
+                            <th style="width:90px; text-align:center;">기본 위험성</th>
+                            <th style="width:90px;">출처</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>질식</strong> (염소 누출)</td>
+                            <td>염소 봄베 교체 작업 중 가스 누출로 흡입</td>
+                            <td>누출 감지기 상시 가동 · 방독마스크(산성가스용) 착용 · 2인 1조 · 비상 샤워 동선 확보</td>
+                            <td style="text-align:center;"><span class="lvl high">높음</span></td>
+                            <td><span class="src-badge sif">SIF</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>중독·화학</strong></td>
+                            <td>PAC·차염 취급 중 피부·눈 접촉</td>
+                            <td>내화학 보호구 착용 · 비상 세안설비 · MSDS 게시·교육</td>
+                            <td style="text-align:center;"><span class="lvl mid">보통</span></td>
+                            <td><span class="src-badge kosha">KOSHA</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>질식</strong> (밀폐공간)</td>
+                            <td>약품 저장탱크 내부 청소 시 산소결핍</td>
+                            <td>진입 전 산소·유해가스 측정 · 환기 · 송기마스크 · 외부 감시자 · 작업허가서</td>
+                            <td style="text-align:center;"><span class="lvl high">높음</span></td>
+                            <td><span class="src-badge sif">SIF</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>화상·부식</strong></td>
+                            <td>약품 투입 중 비산·튐</td>
+                            <td>보안경·안면보호구 착용 · 정량펌프 자동화 · 비상 세안</td>
+                            <td style="text-align:center;"><span class="lvl mid">보통</span></td>
+                            <td><span class="src-badge own">자체</span></td>
+                        </tr>
+                        <tr>
+                            <td><strong>전도·미끄러짐</strong></td>
+                            <td>약품 누출로 바닥 미끄러움</td>
+                            <td>미끄럼방지 바닥 처리 · 누출 즉시 세척 · 경고표지</td>
+                            <td style="text-align:center;"><span class="lvl low">낮음</span></td>
+                            <td><span class="src-badge own">자체</span></td>
+                        </tr>
+                        <tr>
+                            <td colspan="5" style="text-align:center; color:var(--text-lightgray); font-size:12px; padding:14px;">… 외 7건 (총 12건)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+        </div>
+
+        <!-- ⑤ 변경 이력 -->
+        <div class="settings-panel" data-panel="history">
+            <section class="card">
+                <div class="card-header"><h2 class="card-title">변경 이력</h2><span class="text-muted" style="font-size:13px;">위험성평가 결과로 추가·변경·제외된 이력</span></div>
+                <div class="card-body">
+                    <div class="hist-item">
+                        <div class="hist-date">2026-01-15</div>
+                        <div class="hist-body"><span class="hist-tag add">추가</span> <strong>"질식(밀폐공간)"</strong> 위험요인 추가 — 2025년 하반기 수시평가 결과 반영 · 김안전</div>
+                    </div>
+                    <div class="hist-item">
+                        <div class="hist-date">2025-08-22</div>
+                        <div class="hist-body"><span class="hist-tag mod">변경</span> <strong>"질식(염소 누출)"</strong> 표준 개선조치에 "비상 샤워 동선 확보" 추가 · 박안전</div>
+                    </div>
+                    <div class="hist-item">
+                        <div class="hist-date">2025-04-01</div>
+                        <div class="hist-body"><span class="hist-tag add">추가</span> 유해·위험요인 최초 등록 — 작업 3건·설비 5건·위험요인 10건 · 김안전</div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- ─── 푸터 ─── -->
+        <div class="detail-footer">
+            <button class="btn btn-secondary" type="button" onclick="window.location.href='proc-list.html'">목록</button>
+            <button class="btn btn-primary" type="button" onclick="window.DYLayout._soon(event, '유해·위험요인 수정 (PRC02-F)')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                유해·위험요인 수정
+            </button>
+        </div>
+    </main>
+
+    <!-- ═══ SIF 자동추천 모달 (콜드스타트 해소) ═══ -->
+    <div id="proc-sif-modal" class="pe-modal" role="dialog" aria-labelledby="proc-sif-title" style="position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; z-index:1000; padding:24px;">
+        <div style="background:#fff; border-radius:12px; width:100%; max-width:880px; max-height:88vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 10px 40px rgba(0,0,0,.2);">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 22px; border-bottom:1px solid var(--card-line);">
+                <div id="proc-sif-title" style="font-size:16px; font-weight:700; color:var(--text-black);">
+                    🔍 표준 유해위험요인 추가 — KOSHA SIF 라이브러리
+                    <span style="font-size:11px; color:var(--text-gray); font-weight:normal; margin-left:6px;">사망사례 4,432건 기반 추천</span>
+                </div>
+                <button type="button" id="proc-sif-close" style="width:30px; height:30px; border:none; background:transparent; cursor:pointer; color:var(--text-gray); border-radius:6px;">✕</button>
+            </div>
+            <div style="padding:16px 22px; overflow-y:auto; flex:1;">
+                <div style="font-size:12px; color:var(--text-gray); margin-bottom:12px; line-height:1.5;">
+                    <strong style="color:var(--status-info-fg);">정수장 약품투입 유해·위험요인</strong>에 맞는 위험요인을 자동 추천했습니다. 체크하면 유해·위험요인 기준정보에 추가되어, 정기평가 생성 시 자동 로드됩니다.
+                </div>
+                <input type="text" id="proc-sif-search" placeholder="🔎 키워드 검색 (예: 질식, 화학, 끼임, 추락)" style="width:100%; padding:9px 12px; border:1px solid var(--card-line); border-radius:var(--radius-md); font-size:13px; margin-bottom:12px;">
+                <div id="proc-sif-list"></div>
+            </div>
+            <div style="padding:12px 22px; border-top:1px solid var(--card-line); display:flex; justify-content:space-between; align-items:center; gap:8px; background:#fafafa;">
+                <span id="proc-sif-count" style="font-size:13px; color:var(--text-gray);">선택 <strong style="color:var(--main);">0</strong>건</span>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn btn-secondary" type="button" id="proc-sif-cancel">취소</button>
+                    <button class="btn btn-primary" type="button" id="proc-sif-add">선택 항목 추가</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast" role="status"></div>
+    <script src="./js/layout.js"></script>
+    <script src="./js/risk-sif-data.js"></script>
+    <script>
+    (function () {
+        'use strict';
+        function tab(name) {
+            document.querySelectorAll('.sub-tab').forEach(function (b) {
+                b.classList.toggle('active', b.dataset.panel === name);
+            });
+            document.querySelectorAll('.settings-panel').forEach(function (p) {
+                p.classList.toggle('is-active', p.dataset.panel === name);
+            });
+        }
+        window.ProcDetail = { tab: tab };
+
+        // ─── SIF 자동추천 모달 ───
+        function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+        function trunc(s,n){ s=String(s||''); return s.length>n?s.slice(0,n)+'…':s; }
+        function toast(m){ var t=document.getElementById('toast'); if(!t)return; t.textContent=m; t.classList.add('show'); setTimeout(function(){t.classList.remove('show');},2600); }
+
+        function render(list){
+            var el = document.getElementById('proc-sif-list');
+            if(!list || !list.length){ el.innerHTML='<div style="padding:28px; text-align:center; color:var(--text-gray); font-size:13px;">조건에 맞는 위험요인이 없습니다.</div>'; return; }
+            el.innerHTML = list.map(function(s){
+                var sev = s.severity_hint>=5 ? '<span style="background:var(--status-danger-bg); color:var(--status-danger-fg); border:1px solid var(--status-danger-border); padding:1px 6px; border-radius:var(--radius-md); font-size:10px; font-weight:700;">사망사례</span>' : '';
+                return '<label style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border:1px solid var(--card-line); border-radius:var(--radius-md); margin-bottom:6px; cursor:pointer;" class="proc-sif-item">' +
+                    '<input type="checkbox" data-id="'+s.id+'" style="margin-top:3px; flex-shrink:0;">' +
+                    '<div style="flex:1; min-width:0;">' +
+                        '<div style="font-size:13px; font-weight:600; color:var(--text-black); display:flex; align-items:center; gap:6px;">'+esc(s.high_risk_situation)+' '+sev+'</div>' +
+                        '<div style="font-size:12px; color:var(--text-gray); margin-top:3px; line-height:1.5;">'+esc(trunc(s.incident_summary,90))+'</div>' +
+                        '<div style="font-size:11px; color:var(--text-lightgray); margin-top:3px;">🛠 '+esc(s.causing_object)+' · '+esc(s.id)+'</div>' +
+                    '</div></label>';
+            }).join('');
+            el.querySelectorAll('.proc-sif-item input').forEach(function(cb){
+                cb.addEventListener('change', function(){
+                    cb.closest('.proc-sif-item').style.background = cb.checked ? 'var(--status-success-bg)' : '';
+                    cb.closest('.proc-sif-item').style.borderColor = cb.checked ? 'var(--status-success-border)' : 'var(--card-line)';
+                    count();
+                });
+            });
+        }
+        function count(){
+            var n = document.querySelectorAll('#proc-sif-list input:checked').length;
+            var el = document.getElementById('proc-sif-count');
+            if(el) el.innerHTML = '선택 <strong style="color:var(--main);">'+n+'</strong>건';
+        }
+        function open(){
+            var list = window.RskSifData ? window.RskSifData.recommend({ dept:'물순환사업소 ★', targetType:'시설' }) : [];
+            render(list);
+            count();
+            document.getElementById('proc-sif-modal').style.display='flex';
+            document.body.style.overflow='hidden';
+        }
+        function close(){ document.getElementById('proc-sif-modal').style.display='none'; document.body.style.overflow=''; }
+
+        var openBtn = document.getElementById('proc-sif-open');
+        if(openBtn) openBtn.addEventListener('click', open);
+        document.getElementById('proc-sif-close').addEventListener('click', close);
+        document.getElementById('proc-sif-cancel').addEventListener('click', close);
+        document.getElementById('proc-sif-search').addEventListener('input', function(e){
+            var q = e.target.value;
+            var list = q && window.RskSifData ? window.RskSifData.search(q) : (window.RskSifData ? window.RskSifData.recommend({dept:'물순환사업소 ★', targetType:'시설'}) : []);
+            render(list); count();
+        });
+        document.getElementById('proc-sif-add').addEventListener('click', function(){
+            var n = document.querySelectorAll('#proc-sif-list input:checked').length;
+            if(!n){ toast('추가할 위험요인을 선택하세요.'); return; }
+            close();
+            toast('✓ 표준 유해위험요인 '+n+'건이 유해·위험요인에 추가되었습니다. (정기평가 생성 시 자동 로드)');
+        });
+    })();
+    </script>
+    <script src="./js/risk-tour.js"></script>
+</body>
+</html>

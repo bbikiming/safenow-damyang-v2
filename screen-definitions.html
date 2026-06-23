@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>화면 정의서 (개발용) — 담양군 중대재해 통합관리 시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+    <!-- 마크다운 렌더러 / ZIP (CDN — 기존 Tailwind CDN 로딩 방식과 동일) -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <style>
+        /* ── 화면 정의서 뷰어 전용(scoped: sd-) — 기존 페이지 영향 없음 ── */
+        html, body.sd-body { height: 100%; margin: 0; background: var(--page-bg, #f2f4f3); color: var(--text-black, #333); }
+        .sd-body { display: flex; flex-direction: column; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif; }
+
+        .sd-topbar { display: flex; align-items: center; gap: 14px; padding: 10px 18px; background: var(--brand-700, #1c7865); color: #fff; flex-shrink: 0; }
+        .sd-topbar h1 { font-size: 15px; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 8px; }
+        .sd-topbar .sd-devbadge { background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.35); font-size: 11px; padding: 1px 8px; border-radius: 10px; font-weight: 600; }
+        .sd-topbar .sd-meta { font-size: 12px; opacity: .9; }
+        .sd-topbar .sd-spacer { flex: 1; }
+        .sd-topbar button { font-size: 12px; }
+
+        .sd-main { flex: 1; display: flex; min-height: 0; }
+
+        /* 좌측 목록 */
+        .sd-left { width: 340px; flex-shrink: 0; border-right: 1px solid var(--card-line, #e3e3e3); background: #fff; display: flex; flex-direction: column; min-height: 0; }
+        .sd-filters { padding: 12px; border-bottom: 1px solid var(--card-line, #e3e3e3); display: flex; flex-direction: column; gap: 8px; }
+        .sd-filters input, .sd-filters select { width: 100%; box-sizing: border-box; border: 1px solid var(--gray-300, #e3e3e3); border-radius: 6px; padding: 7px 9px; font-size: 13px; background: #fff; }
+        .sd-filters input:focus, .sd-filters select:focus { outline: none; border-color: var(--main, #209f84); }
+        .sd-filters .sd-filter-row { display: flex; gap: 8px; }
+        .sd-list { overflow-y: auto; flex: 1; padding: 6px 0 24px; }
+        .sd-group-title { font-size: 11px; font-weight: 700; color: var(--text-gray, #777); padding: 12px 14px 4px; letter-spacing: .02em; text-transform: none; position: sticky; top: 0; background: #fff; z-index: 1; }
+        .sd-item { display: flex; flex-direction: column; gap: 3px; padding: 8px 14px; cursor: pointer; border-left: 3px solid transparent; }
+        .sd-item:hover { background: var(--brand-50, #f2faf6); }
+        .sd-item.active { background: var(--brand-100, #e8f5f2); border-left-color: var(--main, #209f84); }
+        .sd-item.is-pending .sd-name { color: var(--text-gray, #999); font-weight: 500; }
+        .sd-item.is-pending .sd-id { color: var(--text-lightgray, #b3b3b3); }
+        .sd-item .sd-item-top { display: flex; align-items: center; gap: 6px; }
+        .sd-item .sd-id { font-size: 11px; color: var(--main-dark, #1c7865); font-weight: 700; font-variant-numeric: tabular-nums; }
+        .sd-item .sd-name { font-size: 13px; font-weight: 600; color: var(--text-black, #333); line-height: 1.3; }
+        .sd-item .sd-item-bot { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .sd-badge { font-size: 10px; padding: 1px 6px; border-radius: 9px; font-weight: 600; line-height: 1.6; white-space: nowrap; }
+        .sd-badge.type { background: var(--gray-200, #ededed); color: var(--text-gray, #777); }
+        .sd-badge.need { background: var(--status-danger-bg, #fbf3f3); color: var(--status-danger-fg, #df5959); }
+        .sd-badge.need.zero { background: var(--status-success-bg, #e8f5f2); color: var(--status-success-fg, #209f84); }
+        .sd-badge.pending { background: var(--status-warning-bg, #fff9ef); color: var(--status-warning-fg, #ea8f56); }
+        .sd-badge.ready { background: var(--status-success-bg, #e8f5f2); color: var(--status-success-fg, #209f84); }
+        .sd-empty-list { padding: 24px 14px; color: var(--text-gray, #777); font-size: 13px; }
+
+        /* 우측 본문 */
+        .sd-right { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+        .sd-head { padding: 14px 20px 10px; border-bottom: 1px solid var(--card-line, #e3e3e3); background: #fff; }
+        .sd-head .sd-head-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .sd-head .sd-h-id { font-size: 12px; font-weight: 700; color: var(--main-dark, #1c7865); }
+        .sd-head .sd-h-name { font-size: 18px; font-weight: 700; margin: 0; }
+        .sd-head .sd-h-sub { font-size: 12px; color: var(--text-gray, #777); margin-top: 4px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+        .sd-head .sd-h-url code { background: var(--gray-100, #ededed); padding: 1px 6px; border-radius: 4px; font-size: 11px; }
+        .sd-head .sd-h-actions { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+
+        .sd-tabs { display: flex; align-items: center; gap: 4px; padding: 8px 20px 0; border-bottom: 1px solid var(--card-line, #e3e3e3); background: #fff; }
+        .sd-tab { border: none; background: none; padding: 8px 14px; font-size: 13px; font-weight: 600; color: var(--text-gray, #777); cursor: pointer; border-bottom: 2px solid transparent; }
+        .sd-tab.active { color: var(--main, #209f84); border-bottom-color: var(--main, #209f84); }
+        .sd-toolbar { margin-left: auto; display: flex; gap: 6px; padding-bottom: 6px; }
+
+        .sd-content { flex: 1; overflow: auto; padding: 22px 28px 60px; }
+        .sd-pending { color: var(--text-gray, #777); font-size: 14px; background: var(--status-warning-bg, #fff9ef); border: 1px dashed var(--status-warning-border, #f9c2ab); border-radius: 8px; padding: 28px; text-align: center; }
+        .sd-pending b { color: var(--status-warning-fg, #ea8f56); }
+
+        /* 원문 탭 */
+        .sd-raw { white-space: pre; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; line-height: 1.65; background: #fbfdfc; border: 1px solid var(--card-line, #e3e3e3); border-radius: 8px; padding: 16px; overflow: auto; color: #2b3b37; }
+
+        /* 마크다운 미리보기 */
+        .sd-md { font-size: 14px; line-height: 1.7; color: var(--text-black, #333); max-width: 980px; }
+        .sd-md h1 { font-size: 22px; font-weight: 800; margin: 4px 0 14px; padding-bottom: 8px; border-bottom: 2px solid var(--brand-100, #e8f5f2); }
+        .sd-md h2 { font-size: 17px; font-weight: 700; margin: 26px 0 10px; color: var(--main-dark, #1c7865); }
+        .sd-md h3 { font-size: 15px; font-weight: 700; margin: 18px 0 8px; }
+        .sd-md p { margin: 8px 0; }
+        .sd-md ul, .sd-md ol { margin: 8px 0; padding-left: 22px; }
+        .sd-md li { margin: 3px 0; }
+        .sd-md blockquote { margin: 10px 0; padding: 8px 14px; border-left: 3px solid var(--main-light, #65c8b3); background: var(--brand-50, #f2faf6); color: var(--text-gray, #555); border-radius: 0 6px 6px 0; }
+        .sd-md blockquote p { margin: 3px 0; }
+        .sd-md code { background: var(--gray-100, #ededed); padding: 1px 5px; border-radius: 4px; font-size: 12.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+        .sd-md pre { background: #2b3b37; color: #e8f5f2; padding: 14px; border-radius: 8px; overflow: auto; }
+        .sd-md pre code { background: none; color: inherit; padding: 0; }
+        .sd-md hr { border: none; border-top: 1px solid var(--card-line, #e3e3e3); margin: 22px 0; }
+        .sd-tablewrap { overflow-x: auto; margin: 12px 0; border: 1px solid var(--card-line, #e3e3e3); border-radius: 8px; }
+        .sd-md table { border-collapse: collapse; width: 100%; font-size: 13px; }
+        .sd-md th, .sd-md td { border: 1px solid var(--gray-200, #ededed); padding: 7px 10px; text-align: left; vertical-align: top; }
+        .sd-md th { background: var(--brand-50, #f2faf6); font-weight: 700; white-space: nowrap; }
+        .sd-md tbody tr:nth-child(even) { background: #fafbfb; }
+        mark.sd-need { background: #ffe3e3; color: #c0392b; font-weight: 700; padding: 0 3px; border-radius: 3px; }
+
+        /* 토스트 */
+        .sd-toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px); background: #222; color: #fff; padding: 11px 20px; border-radius: 24px; font-size: 13px; opacity: 0; pointer-events: none; transition: all .25s; z-index: 9999; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
+        .sd-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .sd-toast.err { background: var(--status-danger-fg, #df5959); }
+
+        .sd-btn { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--gray-300, #e3e3e3); background: #fff; color: var(--text-black, #333); border-radius: 6px; padding: 6px 11px; font-size: 12px; font-weight: 600; cursor: pointer; line-height: 1.2; }
+        .sd-btn:hover { border-color: var(--main, #209f84); color: var(--main-dark, #1c7865); }
+        .sd-btn.primary { background: var(--main, #209f84); border-color: var(--main, #209f84); color: #fff; }
+        .sd-btn.primary:hover { background: var(--main-dark, #1c7865); color: #fff; }
+        .sd-btn.ghost-light { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.4); color: #fff; }
+        .sd-btn:disabled { opacity: .45; cursor: not-allowed; }
+        .sd-navbtns { display: flex; gap: 4px; }
+    </style>
+</head>
+<body class="sd-body">
+    <header class="sd-topbar">
+        <h1>📄 화면 정의서 <span class="sd-devbadge">개발용</span></h1>
+        <span class="sd-meta" id="sd-topmeta"></span>
+        <span class="sd-spacer"></span>
+        <button class="sd-btn ghost-light" id="sd-zip-btn">⬇ 전체 다운로드 (ZIP)</button>
+    </header>
+
+    <div class="sd-main">
+        <aside class="sd-left">
+            <div class="sd-filters">
+                <input type="text" id="sd-search" placeholder="화면명 · 화면 ID 검색" autocomplete="off">
+                <div class="sd-filter-row">
+                    <select id="sd-filter-menu"><option value="">전체 메뉴</option></select>
+                    <select id="sd-filter-type"><option value="">전체 유형</option></select>
+                </div>
+                <select id="sd-filter-status">
+                    <option value="">작성 상태 전체</option>
+                    <option value="done">작성됨만</option>
+                    <option value="todo">미작성만</option>
+                </select>
+            </div>
+            <div class="sd-list" id="sd-list"></div>
+        </aside>
+
+        <section class="sd-right">
+            <div class="sd-head" id="sd-head"></div>
+            <div class="sd-tabs">
+                <button class="sd-tab active" data-tab="preview">미리보기</button>
+                <button class="sd-tab" data-tab="raw">원문</button>
+                <div class="sd-toolbar">
+                    <button class="sd-btn" id="sd-copy-btn">📋 복사</button>
+                    <button class="sd-btn" id="sd-dl-btn">⬇ MD 다운로드</button>
+                </div>
+            </div>
+            <div class="sd-content" id="sd-content"></div>
+        </section>
+    </div>
+
+    <div class="sd-toast" id="sd-toast"></div>
+
+    <script src="./js/screen-defs-data.js?v=20260623b"></script>
+    <script src="./js/screen-definitions.js?v=20260623b"></script>
+</body>
+</html>

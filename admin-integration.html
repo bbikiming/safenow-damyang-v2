@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>연계 관리 - 담양군 중대재해예방통합관리시스템 v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="admin-integration" data-page-title="연계 관리" data-page-subtitle="시스템 관리 > 연계 관리 — 온나라 · FMS · e호조 · 행정포털 상태 모니터링 (SIR-001 목업)">
+    <main>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; margin-bottom:16px;">
+            <div class="card"><div class="card-body">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;"><span class="link-status-dot ok"></span><b style="font-size:14px;">온나라 (문서·결재)</b></div>
+                <p style="font-size:12px; color:var(--text-gray);">경영방침·총괄보고서 결재 연동<br>마지막 호출: 06-11 09:02 · 정상</p>
+            </div></div>
+            <div class="card"><div class="card-body">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;"><span class="link-status-dot ok"></span><b style="font-size:14px;">FMS (시설물관리)</b></div>
+                <p style="font-size:12px; color:var(--text-gray);">공중이용시설 정보 일 1회 동기화<br>마지막 동기화: 06-11 06:00 · 47건</p>
+            </div></div>
+            <div class="card"><div class="card-body">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;"><span class="link-status-dot warn"></span><b style="font-size:14px;">e호조 (재정)</b></div>
+                <p style="font-size:12px; color:var(--text-gray);">도급 사업·예산 집행 정보 연계<br>지연: 06-10 배치 1건 재시도 대기</p>
+            </div></div>
+            <div class="card"><div class="card-body">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;"><span class="link-status-dot ok"></span><b style="font-size:14px;">행정포털 (SSO·조직도)</b></div>
+                <p style="font-size:12px; color:var(--text-gray);">SSO 인증 + 조직도·인사 정보<br>마지막 동기화: 06-11 06:00 · 정상</p>
+            </div></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">연계 로그</span>
+                <button class="btn btn-secondary btn-sm" onclick="DYV2.toast('실패 건 재시도 (프로토타입)')">실패 재시도</button>
+            </div>
+            <div class="card-body" style="overflow-x:auto;">
+                <table class="table-figma">
+                    <thead><tr><th>일시</th><th>시스템</th><th>작업</th><th>건수</th><th>결과</th></tr></thead>
+                    <tbody>
+                        <tr><td>06-11 09:02</td><td>온나라</td><td>결재 상태 조회</td><td>2</td><td><span class="chip-mini st-done">성공</span></td></tr>
+                        <tr><td>06-11 06:00</td><td>FMS</td><td>시설 정보 동기화</td><td>47</td><td><span class="chip-mini st-done">성공</span></td></tr>
+                        <tr><td>06-11 06:00</td><td>행정포털</td><td>조직도 동기화</td><td>612</td><td><span class="chip-mini st-done">성공</span></td></tr>
+                        <tr><td>06-10 22:00</td><td>e호조</td><td>집행 정보 배치</td><td>18</td><td><span class="chip-mini st-todo">1건 실패</span></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/data.js"></script>
+    <script src="./js/common.js"></script>
+</body>
+</html>

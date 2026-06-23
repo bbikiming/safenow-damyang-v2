@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>프리셋 양식 관리 - 담양군 중대재해예방통합관리시스템 v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="admin-presets" data-page-title="프리셋 양식 관리" data-page-subtitle="시스템 관리 > 프리셋 양식 관리 — 관리자가 전자문서 양식(레이블·필드)을 생성하면 사용자가 [이행문서 등록]에서 입력 (전자문서 59건 흡수 · v2 차별 포인트)">
+    <main>
+        <div class="dsh-grid" style="grid-template-columns: 1fr 1.2fr;">
+            <!-- 양식 목록 -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">양식 목록</span>
+                    <button class="btn btn-primary btn-sm" onclick="newPreset()">+ 새 양식</button>
+                </div>
+                <div class="card-body">
+                    <table class="table-figma">
+                        <thead><tr><th>양식명</th><th>대메뉴</th><th>필드</th><th>사용</th><th></th></tr></thead>
+                        <tbody id="preset-list"></tbody>
+                    </table>
+                    <p style="font-size:11.5px; color:var(--text-gray); margin-top:10px;">
+                        양식을 만들면 해당 전자문서들이 <a href="docs-preset.html" style="color:var(--main); font-weight:700;">이행문서 등록</a> 메뉴에서 이 양식으로 입력됩니다 — 문서별 하드코딩 화면 없음.
+                    </p>
+                </div>
+            </div>
+
+            <!-- 양식 빌더 -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title" id="builder-title">양식 빌더</span>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn btn-secondary btn-sm" onclick="previewPreset()">미리보기</button>
+                        <button class="btn btn-primary btn-sm" onclick="DYV2.toast('양식이 저장되었습니다 (프로토타입)')">저장</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="preset-form-grid" style="margin-bottom:16px;">
+                        <span class="k">양식명</span><input type="text" id="b-name" value="계획·실적 공통 양식">
+                        <span class="k">적용 대메뉴</span>
+                        <select id="b-menu"><option>공통 (전체)</option><option>경영방침</option><option>조직</option><option>안전보건교육</option><option>의견청취</option><option>이행관리</option></select>
+                    </div>
+                    <p style="font-size:12px; font-weight:700; color:var(--text-gray); margin-bottom:8px;">필드 구성 <span style="font-weight:400;">— 행 추가로 레이블·유형·필수 여부를 정의</span></p>
+                    <div id="b-fields"></div>
+                    <button class="btn btn-outline btn-sm" onclick="addField()" style="margin-top:6px;">+ 필드 추가</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/data.js"></script>
+    <script src="./js/common.js"></script>
+    <script>
+        /* 프리셋 양식 CRUD 목업 — 전자문서 59건을 소수의 공통 양식으로 흡수 */
+        const PRESETS = [
+            { name: '계획·실적 공통 양식', menu: '공통', fields: 6, used: 31 },
+            { name: '회의록 양식 (위원회·협의체)', menu: '의견청취', fields: 5, used: 9 },
+            { name: '점검표 양식 (O/X·텍스트)', menu: '이행관리', fields: 7, used: 8 },
+            { name: '교육 결과 양식', menu: '안전보건교육', fields: 6, used: 7 },
+            { name: '평가·후속조치 양식', menu: '조직', fields: 5, used: 4 },
+        ];
+        const FIELD_TYPES = ['텍스트', '문장(여러 줄)', '날짜', '선택(드롭다운)', 'O/X 판정', '파일 첨부'];
+        let fields = [
+            { label: '대상 연도·주기', type: '선택(드롭다운)', req: true },
+            { label: '작성일', type: '날짜', req: true },
+            { label: '담당부서·작성자', type: '텍스트', req: true },
+            { label: '주요 내용', type: '문장(여러 줄)', req: true },
+            { label: '점검자 확인', type: 'O/X 판정', req: false },
+            { label: '증빙 첨부', type: '파일 첨부', req: false },
+        ];
+
+        function renderList() {
+            document.getElementById('preset-list').innerHTML = PRESETS.map((p, i) =>
+                '<tr><td style="font-weight:600;">' + p.name + '</td>' +
+                '<td><span class="chip-mini pdca">' + p.menu + '</span></td>' +
+                '<td>' + p.fields + '개</td><td>' + p.used + '건</td>' +
+                '<td class="col-action">' +
+                '<button class="btn btn-sm btn-outline" onclick="loadPreset(' + i + ')">편집</button>' +
+                '<button class="btn btn-sm btn-secondary" onclick="DYV2.toast(\'양식 삭제 — 사용 중 문서가 있으면 보관 처리 (프로토타입)\')">삭제</button>' +
+                '</td></tr>'
+            ).join('');
+        }
+        function renderFields() {
+            document.getElementById('b-fields').innerHTML = fields.map((f, i) =>
+                '<div class="preset-field-row">' +
+                '<span class="drag">⠿</span>' +
+                '<input type="text" value="' + f.label + '" style="border:1px solid var(--card-line); border-radius:6px; padding:6px 9px; font-size:12.5px;" onchange="fields[' + i + '].label=this.value">' +
+                '<select style="border:1px solid var(--card-line); border-radius:6px; padding:6px; font-size:12px;" onchange="fields[' + i + '].type=this.value">' +
+                    FIELD_TYPES.map(t => '<option' + (t === f.type ? ' selected' : '') + '>' + t + '</option>').join('') +
+                '</select>' +
+                '<label style="font-size:11.5px; display:flex; align-items:center; gap:4px;"><input type="checkbox"' + (f.req ? ' checked' : '') + ' onchange="fields[' + i + '].req=this.checked"> 필수</label>' +
+                '<button class="btn btn-sm btn-secondary" onclick="fields.splice(' + i + ',1); renderFields();">삭제</button>' +
+                '</div>'
+            ).join('');
+        }
+        function addField() { fields.push({ label: '새 필드', type: '텍스트', req: false }); renderFields(); }
+        function loadPreset(i) {
+            document.getElementById('b-name').value = PRESETS[i].name;
+            document.getElementById('builder-title').textContent = '양식 빌더 — ' + PRESETS[i].name;
+            DYV2.toast('"' + PRESETS[i].name + '" 양식을 불러왔습니다 (프로토타입)');
+        }
+        function newPreset() {
+            document.getElementById('b-name').value = '새 양식';
+            fields = [{ label: '작성일', type: '날짜', req: true }];
+            renderFields();
+        }
+        function previewPreset() {
+            const body = '<div class="preset-form-grid">' + fields.map(f => {
+                const k = '<span class="k">' + f.label + (f.req ? ' <b style="color:var(--status-danger-fg)">*</b>' : '') + '</span>';
+                if (f.type === '날짜') return k + '<input type="date">';
+                if (f.type === '문장(여러 줄)') return k + '<textarea placeholder="입력"></textarea>';
+                if (f.type === '선택(드롭다운)') return k + '<select><option>2026년 · 연간</option></select>';
+                if (f.type === 'O/X 판정') return k + '<div><label style="margin-right:12px;"><input type="radio" name="p' + f.label + '"> O</label><label><input type="radio" name="p' + f.label + '"> X</label></div>';
+                if (f.type === '파일 첨부') return k + '<div class="upload-drop" style="padding:14px;">파일 첨부 (다중 가능)</div>';
+                return k + '<input type="text" placeholder="입력">';
+            }).join('') + '</div>';
+            DYV2.openModal('양식 미리보기 — 사용자에게 보이는 등록폼', body,
+                '<button class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>');
+        }
+        renderList(); renderFields();
+    </script>
+</body>
+</html>

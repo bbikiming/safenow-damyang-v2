@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>현황 통계 - 담양군 중대재해예방통합관리시스템 v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="stats" data-page-title="현황 통계" data-page-subtitle="통계·보고 > 현황 통계 — 연도·기간 조회 · 시각화 · 엑셀 다운로드 (SFR-018)">
+    <main>
+        <div class="v2-toolbar">
+            <div class="form-group"><span class="form-label-inline">연도</span>
+                <select class="select"><option>2026년</option><option>2025년</option></select>
+            </div>
+            <div class="form-group"><span class="form-label-inline">기간</span>
+                <select class="select"><option>상반기</option><option>하반기</option><option>전체</option></select>
+            </div>
+            <div class="form-group"><span class="form-label-inline">대메뉴</span>
+                <select class="select" id="st-menu"><option value="">전체</option></select>
+            </div>
+            <span class="spacer"></span>
+            <button class="btn btn-secondary" onclick="DYV2.toast('엑셀 다운로드 (프로토타입)')">엑셀 다운로드</button>
+        </div>
+
+        <div id="st-summary" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:16px;"></div>
+
+        <div class="dsh-grid">
+            <div class="card">
+                <div class="card-header"><span class="card-title">대메뉴별 문서 분포 (실측 424건)</span></div>
+                <div class="card-body" id="st-dist"></div>
+            </div>
+            <div class="card">
+                <div class="card-header"><span class="card-title">처리유형 · 업무구분</span></div>
+                <div class="card-body" id="st-types"></div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+            <div class="card-header"><span class="card-title">대메뉴별 이행 현황표</span></div>
+            <div class="card-body" style="overflow-x:auto;">
+                <table class="table-figma">
+                    <thead><tr><th>대메뉴</th><th>전체</th><th>완료</th><th>진행</th><th>미시행</th><th>이행률</th></tr></thead>
+                    <tbody id="st-table"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/data.js"></script>
+    <script src="./js/common.js"></script>
+    <script>
+        (function () {
+            const V = DYV2;
+            const ALL = V.docs();
+            const sel = document.getElementById('st-menu');
+            Object.keys(V.MENUS).forEach(k => {
+                const o = document.createElement('option'); o.value = k; o.textContent = V.MENUS[k].label; sel.appendChild(o);
+            });
+
+            document.getElementById('st-summary').innerHTML =
+                '<div class="statbox neutral"><div class="statbox-num">' + ALL.length + '</div><div class="statbox-label">전체 문서</div></div>' +
+                '<div class="statbox info"><div class="statbox-num">' + ALL.filter(d => d.law === '중처법').length + '</div><div class="statbox-label">중처법</div></div>' +
+                '<div class="statbox success"><div class="statbox-num">' + ALL.filter(d => d.law === '산안법').length + '</div><div class="statbox-label">산안법</div></div>' +
+                '<div class="statbox warning"><div class="statbox-num">' + ALL.filter(d => d.daemenu === '확인필요').length + '</div><div class="statbox-label">확인필요</div></div>';
+
+            /* 대메뉴별 분포 가로 막대 */
+            const counts = Object.keys(V.MENUS).map(k => [V.MENUS[k].label, V.byMenu(k).length, k]);
+            counts.push(['확인필요 (미배치)', ALL.filter(d => d.daemenu === '확인필요').length, '']);
+            const max = Math.max(...counts.map(c => c[1]));
+            document.getElementById('st-dist').innerHTML = counts.sort((a, b) => b[1] - a[1]).map(([label, n, key]) =>
+                '<div class="dsh-rate-row">' +
+                '<span class="rate-label">' + label + '</span>' +
+                '<div class="progress"><div class="progress-bar ' + (key ? 'green' : 'warning') + '" style="width:' + Math.round(n / max * 100) + '%"></div></div>' +
+                '<span class="rate-num">' + n + '</span></div>'
+            ).join('');
+
+            /* 처리유형 / 업무구분 분포 */
+            function dist(field, pairs) {
+                return pairs.map(([label, cls]) => {
+                    const n = ALL.filter(d => d[field] === label).length;
+                    return '<div class="dsh-rate-row"><span class="rate-label">' + label + '</span>' +
+                        '<div class="progress"><div class="progress-bar ' + cls + '" style="width:' + Math.round(n / ALL.length * 100) + '%"></div></div>' +
+                        '<span class="rate-num">' + n + '</span></div>';
+                }).join('');
+            }
+            document.getElementById('st-types').innerHTML =
+                '<p style="font-size:12px; font-weight:700; color:var(--text-gray); margin-bottom:4px;">처리유형</p>' +
+                dist('processType', [['프로그램', 'green'], ['전자문서', 'info'], ['첨부파일', 'warning']]) +
+                '<p style="font-size:12px; font-weight:700; color:var(--text-gray); margin:12px 0 4px;">업무구분</p>' +
+                dist('workType', [['프로그램', 'green'], ['이행', 'info'], ['첨부', 'warning']]);
+
+            /* 이행 현황표 */
+            document.getElementById('st-table').innerHTML = Object.keys(V.MENUS).map(k => {
+                const docs = V.byMenu(k).filter(d => d.workType !== '첨부');
+                const c = s => docs.filter(d => d.status === s).length;
+                const rate = V.complianceRate(k);
+                return '<tr><td style="font-weight:600;"><a href="' + V.MENUS[k].href + '" style="color:var(--main);">' + V.MENUS[k].label + '</a></td>' +
+                    '<td>' + docs.length + '</td><td>' + c('완료') + '</td><td>' + c('진행') + '</td><td>' + c('미시행') + '</td>' +
+                    '<td><b style="color:var(--main-dark);">' + rate + '%</b></td></tr>';
+            }).join('');
+        })();
+    </script>
+</body>
+</html>

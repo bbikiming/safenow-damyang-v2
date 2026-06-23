@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>보고서·제증명 - 담양군 중대재해예방통합관리시스템 v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="reports" data-page-title="보고서·제증명" data-page-subtitle="통계·보고 > 보고서·제증명 — 총괄보고서 출력 (SFR-021)">
+    <main>
+        <div class="dsh-grid">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">총괄보고서 미리보기 — 2026년 상반기</span>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn btn-secondary btn-sm" onclick="DYV2.toast('PDF 출력 (프로토타입)')">PDF 출력</button>
+                        <button class="btn btn-primary btn-sm" onclick="DYV2.toast('온나라 결재 상신 (프로토타입)')">온나라 결재</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div style="position:relative; border:1px solid var(--card-line); border-radius:var(--radius-md); padding:34px 38px; background:#fff; min-height:480px; overflow:hidden;">
+                        <!-- 워터마크 자리 -->
+                        <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none;">
+                            <span style="font-size:64px; font-weight:800; color:rgba(32,159,132,0.07); transform:rotate(-24deg); white-space:nowrap;">담양군 대외주의 · WATERMARK</span>
+                        </div>
+                        <p style="text-align:center; font-size:19px; font-weight:800; margin-bottom:6px;">2026년 상반기 중대재해예방 추진실적 총괄보고서</p>
+                        <p style="text-align:center; font-size:12px; color:var(--text-gray); margin-bottom:26px;">담양군 재난안전과 중대재해팀 · 출력일 2026-06-11</p>
+                        <table class="table-figma" style="margin-bottom:20px;">
+                            <thead><tr><th>구분</th><th>내용</th></tr></thead>
+                            <tbody>
+                                <tr><td style="font-weight:600;">경영방침</td><td>2026년 안전·보건 목표 수립 및 공표 (이행률 표 자동 삽입)</td></tr>
+                                <tr><td style="font-weight:600;">위험성평가</td><td>정기 1회 · 수시 2회 실시, 유해·위험요인 24건 개선</td></tr>
+                                <tr><td style="font-weight:600;">안전보건교육</td><td>정기·특별교육 14회, 이수율 87%</td></tr>
+                                <tr><td style="font-weight:600;">의견청취</td><td>의견 23건 접수, 15건 조치 완료</td></tr>
+                                <tr><td style="font-weight:600;">개선조치</td><td>전 메뉴 A(조치) 문서 집계 — 조치 완료율 자동 산출</td></tr>
+                            </tbody>
+                        </table>
+                        <p style="font-size:12px; color:var(--text-gray);">※ 본 보고서는 각 대메뉴 이행 데이터에서 자동 생성됩니다. (프로토타입 — 양식·항목은 협의 후 확정)</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><span class="card-title">출력 이력</span></div>
+                <div class="card-body">
+                    <table class="table-figma">
+                        <thead><tr><th>보고서</th><th>출력일</th><th>출력자</th></tr></thead>
+                        <tbody>
+                            <tr><td style="font-weight:600;">1분기 총괄보고서</td><td>2026-04-05</td><td>박안전</td></tr>
+                            <tr><td style="font-weight:600;">2025년 연간 총괄보고서</td><td>2026-01-12</td><td>김중대</td></tr>
+                            <tr><td style="font-weight:600;">의무이행 점검 결과 보고</td><td>2025-12-28</td><td>박안전</td></tr>
+                        </tbody>
+                    </table>
+                    <p style="font-size:11.5px; color:var(--text-gray); margin-top:10px;">모든 출력물에는 워터마크와 출력자·출력일시가 기록됩니다.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/data.js"></script>
+    <script src="./js/common.js"></script>
+</body>
+</html>

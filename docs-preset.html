@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>업무 목록 - 담양군 중대재해예방통합관리시스템 v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="docs-preset" data-page-title="업무 목록" data-page-subtitle="업무문서 > 업무 목록 — 세트 단위 문서 현황 · 세트 하위 PDCA 단계 구분 · 분류 버전 전환(기존 ↔ 법적의무 재분류 v2)">
+    <main>
+        <div id="setlist"></div>
+        <p style="font-size:11.5px; color:var(--text-gray); margin-top:4px;">
+            <b>법적의무 재분류 v2</b>는 「PDCA 재분류결과(법적 의무 기준)」 — 9대메뉴·53세트·429문서 기준입니다.
+            상단에서 <b>기존 분류</b>로 전환하면 종전 51세트 구성으로 볼 수 있습니다.
+            전자문서는 [입력], 첨부는 [미리보기], 프로그램은 [이동]으로 상세 화면이 열립니다.
+        </p>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/data.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/edoc-templates.js"></script>
+    <script src="./js/edoc.js"></script>
+    <script src="./js/sets-data.js"></script>
+    <script src="./js/sets-data-v2.js"></script>
+    <script src="./js/doc-register.js"></script>
+    <script src="./js/setlist.js"></script>
+    <script>
+        /* 기본 v2(신규 재분류) 표시 · ?ver=v1 또는 토글로 기존 분류 전환 · ?menu= 딥링크 */
+        (function () {
+            const params = new URLSearchParams(location.search);
+            const ver = params.get('ver') === 'v1' ? 'v1' : 'v2';
+            const mk = params.get('menu');
+            const el = document.getElementById('setlist');
+            DYSETLIST.render(el, { version: ver });
+            if (mk) {
+                const btn = el.querySelector('#sl-tabs button[data-mk="' + mk + '"]');
+                if (btn) btn.click();
+            }
+        })();
+    </script>
+</body>
+</html>

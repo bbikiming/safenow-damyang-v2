@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>업무문서 관리 구조 & 플로우 — 원페이퍼</title>
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet">
+<style>
+  :root{
+    --main:#209f84; --main-dark:#1c7865; --main-d2:#005140; --main-light:#65c8b3;
+    --b100:#e8f5f2; --ink:#222; --gray:#666; --line:#e3e3e3; --bg:#f2f4f3;
+    --elec:#009adb; --elec-bg:#eaf7ff; --attach:#777; --attach-bg:#ededed;
+    --prog:#7e3cc6; --prog-bg:#f4ecfb; --warn:#ea8f56; --warn-bg:#fff9ef; --danger:#df5959;
+  }
+  *{box-sizing:border-box;}
+  body{font-family:'Pretendard',-apple-system,sans-serif; margin:0; background:var(--bg); color:var(--ink); -webkit-print-color-adjust:exact; print-color-adjust:exact;}
+  .page{max-width:1180px; margin:0 auto; padding:26px 30px 50px;}
+  .head{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; border-bottom:3px solid var(--main); padding-bottom:14px; margin-bottom:22px;}
+  .head h1{font-size:24px; font-weight:800; margin:0 0 5px;}
+  .head .sub{font-size:13px; color:var(--gray);}
+  .head .meta{font-size:11.5px; color:var(--gray); text-align:right; line-height:1.7; flex-shrink:0;}
+  .badge{display:inline-block; background:var(--b100); color:var(--main-dark); font-size:11px; font-weight:700; padding:3px 10px; border-radius:50px;}
+  h2{font-size:15px; font-weight:800; margin:0 0 12px; padding-left:10px; border-left:4px solid var(--main); line-height:1.2;}
+  h2 small{font-weight:500; color:var(--gray); font-size:11.5px; margin-left:6px;}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:14px;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+  .card{background:#fff; border:1px solid var(--line); border-radius:12px; padding:15px 17px;}
+  section{margin-bottom:24px;}
+  .kpi{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;}
+  .kpi .box{flex:1; min-width:110px; background:#fff; border:1px solid var(--line); border-radius:11px; padding:12px 14px; text-align:center;}
+  .kpi .n{font-size:22px; font-weight:800; color:var(--main-dark);}
+  .kpi .l{font-size:11px; color:var(--gray); margin-top:3px;}
+  .chip{display:inline-block; font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:4px; line-height:1.7;}
+  .c-elec{background:var(--elec-bg); color:var(--elec);}
+  .c-attach{background:var(--attach-bg); color:var(--attach);}
+  .c-prog{background:var(--prog-bg); color:var(--prog);}
+  .c-pdca{background:var(--b100); color:var(--main-dark);}
+  .lead{font-size:12.5px; font-weight:700; color:var(--main-dark); margin-bottom:6px;}
+  .desc{font-size:12px; color:#444; line-height:1.65;}
+  .desc b{color:var(--ink);}
+  /* 데이터 구조 트리 */
+  .tree{display:flex; align-items:stretch; gap:0; font-size:11.5px;}
+  .tnode{background:#fff; border:1.5px solid var(--line); border-radius:9px; padding:9px 11px; align-self:center;}
+  .tnode.m{border-color:var(--main); background:var(--b100);}
+  .tnode .t{font-weight:800; color:var(--ink);}
+  .tnode .s{color:var(--gray); font-size:10.5px; margin-top:2px;}
+  .tarrow{align-self:center; color:var(--main-light); font-size:22px; padding:0 10px; font-weight:700;}
+  .tcol{display:flex; flex-direction:column; gap:7px; justify-content:center;}
+  /* 플로우 화살표 다이어그램 */
+  .flow{display:flex; align-items:stretch; gap:0; flex-wrap:wrap;}
+  .step{flex:1; min-width:0; background:#fff; border:1.5px solid var(--line); border-radius:10px; padding:11px 12px; position:relative;}
+  .step .sn{font-size:10px; font-weight:800; color:var(--main); }
+  .step .st{font-size:12.5px; font-weight:700; margin:3px 0 4px;}
+  .step .sd{font-size:11px; color:var(--gray); line-height:1.5;}
+  .farrow{align-self:center; color:var(--main); font-size:20px; font-weight:800; padding:0 7px;}
+  /* 상세 페이지 미니 목업 */
+  .mock{border:1px solid var(--line); border-radius:10px; overflow:hidden; background:#fff; font-size:10.5px;}
+  .mock .bc{background:var(--bg); padding:6px 10px; color:var(--gray); border-bottom:1px solid var(--line);}
+  .mock .body{display:flex; gap:8px; padding:10px;}
+  .mock .l{flex:2; border:1px solid var(--line); border-radius:7px; padding:9px;}
+  .mock .r{flex:1; display:flex; flex-direction:column; gap:6px;}
+  .mock .rc{border:1px solid var(--line); border-radius:7px; padding:7px 8px;}
+  .mock .rc .rt{font-weight:800; font-size:10px; margin-bottom:4px;}
+  .mock .ln{height:6px; background:var(--bg); border-radius:3px; margin:4px 0;}
+  .mock .ln.w70{width:70%;} .mock .ln.w50{width:50%;} .mock .ln.w90{width:90%;}
+  .mock .tag{display:inline-block; font-size:9px; padding:1px 6px; border-radius:3px; background:var(--b100); color:var(--main-dark); font-weight:700;}
+  table.kv{width:100%; border-collapse:collapse; font-size:11.5px;}
+  table.kv td{padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:top;}
+  table.kv td.k{width:90px; color:var(--gray); font-weight:700; white-space:nowrap;}
+  .note{font-size:11px; color:var(--gray); margin-top:8px; line-height:1.6;}
+  .foot{margin-top:26px; padding-top:12px; border-top:1px solid var(--line); font-size:10.5px; color:var(--gray); text-align:center;}
+  .url{color:var(--main-dark); font-weight:700;}
+  .branch{display:flex; gap:8px; margin-top:8px;}
+  .branch .bx{flex:1; border:1px solid var(--line); border-radius:8px; padding:8px 9px; font-size:11px; line-height:1.5;}
+  .branch .bx .bt{font-weight:800; font-size:11px; margin-bottom:3px;}
+  @media print{ body{background:#fff;} .page{padding:0;} section{break-inside:avoid;} }
+  @media (max-width:820px){ .grid3,.grid2{grid-template-columns:1fr;} .flow{flex-direction:column;} .farrow{transform:rotate(90deg); padding:4px 0;} .tree{flex-direction:column;} .tarrow{transform:rotate(90deg); padding:4px 0;} }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="head">
+    <div>
+      <span class="badge">담양군 중대재해예방 통합관리시스템 v2</span>
+      <h1 style="margin-top:8px;">서류는 이렇게 모아서 관리합니다 — 한눈에 보는 안내서</h1>
+      <div class="sub">관련 서류를 '묶음(세트)'으로 모아, 목록에서 보고 → 클릭해서 작성·확인하는 구조입니다.</div>
+    </div>
+    <div class="meta">
+      작성 2026-06-11<br>구축 ㈜다온플레이스<br>
+      <span class="url">safenow-damyang-v2.vercel.app</span>
+    </div>
+  </div>
+
+  <!-- 0. 핵심 요약 KPI -->
+  <div class="kpi">
+    <div class="box"><div class="n">424</div><div class="l">관리해야 할 서류 수<br><span style="font-size:9.5px;">법으로 갖춰야 하는 모든 문서</span></div></div>
+    <div class="box"><div class="n">51</div><div class="l">서류 묶음(세트)<br><span style="font-size:9.5px;">관련 서류끼리 모은 단위</span></div></div>
+    <div class="box"><div class="n">3</div><div class="l">서류 작성 방식<br><span style="font-size:9.5px;">화면 입력·파일 첨부·전용 화면</span></div></div>
+    <div class="box"><div class="n">4단계</div><div class="l">일 처리 순서(PDCA)<br><span style="font-size:9.5px;">계획→실행→점검→조치</span></div></div>
+    <div class="box"><div class="n">2가지</div><div class="l">보는 방식<br><span style="font-size:9.5px;">표로 보기 ↔ 카드로 보기</span></div></div>
+  </div>
+
+  <!-- 1. 데이터 구조 -->
+  <section>
+    <h2>1. 서류는 어떻게 정리돼 있나요? <small>큰 분야 → 서류 묶음 → 낱장 서류, 큰 서랍 안에 작은 폴더가 들어있는 구조예요</small></h2>
+    <div class="card">
+      <div class="tree">
+        <div class="tnode m" style="text-align:center;"><div class="t">① 9개 분야</div><div class="s">업무를 9개로 나눔<br>경영방침·조직·위험성평가<br>·유해위험·교육·의견청취<br>·도급·개선조치·이행관리</div></div>
+        <div class="tarrow">›</div>
+        <div class="tcol">
+          <div class="tnode"><span class="t">② 서류 묶음(세트)</span><div class="s">한 가지 일을 끝내려면 여러 서류가 필요해요. 그 서류들을 한 폴더에 모은 것이 '세트'입니다.<br>예) 위험성평가: 준비 → 실시 → 개선대책 → 확인, 순서대로 이어집니다.</div></div>
+          <div class="tnode"><span class="t">↳ 기본문서(S0)</span> <span class="chip c-attach">먼저 갖출 토대</span><div class="s">그 분야의 절차서·규정처럼 바탕이 되는 서류</div></div>
+        </div>
+        <div class="tarrow">›</div>
+        <div class="tcol">
+          <div class="tnode"><span class="t">③ 낱장 서류</span> <span class="chip c-pdca">계획</span><span class="chip c-pdca" style="margin-left:2px;">점검</span><span class="chip c-pdca" style="margin-left:2px;">조치</span><div class="s">서류마다 '일 처리 순서(계획·실행·점검·조치)' 표시가 붙어요</div></div>
+          <div class="tnode"><div class="s" style="margin-bottom:4px; font-weight:700; color:var(--ink);">작성 방식 3가지</div><span class="chip c-elec">화면에 입력</span> <span class="chip c-attach" style="margin-left:2px;">파일 첨부</span> <span class="chip c-prog" style="margin-left:2px;">전용 화면</span><div class="s">서류 성격에 따라 입력하는 방법이 달라요</div></div>
+        </div>
+      </div>
+      <div class="note">💡 <b>쉽게 말하면</b> — '9개 분야' 안에 '서류 묶음(세트)'이 있고, 묶음 안에 '낱장 서류'가 들어 있습니다. 서류끼리는 <b>먼저 할 것 → 나중에 할 것</b> 순서로 이어져 있어, 빠뜨리지 않고 차례대로 처리할 수 있어요. <span style="opacity:.75;">(묶음 구성과 순서는 담당자 회의와 업무 흐름도로 검증한 내용입니다.)</span></div>
+    </div>
+  </section>
+
+  <!-- 2. 두 가지 보기 -->
+  <section>
+    <h2>2. 같은 내용을 두 가지 방식으로 봅니다 <small>표로 볼지, 카드로 볼지만 다를 뿐 내용은 똑같아요 (한쪽을 고치면 다른 쪽도 같이 바뀜)</small></h2>
+    <div class="grid2">
+      <div class="card">
+        <div class="lead">📋 업무 목록 <span style="font-weight:500; color:var(--gray);">(표로 보기)</span></div>
+        <div class="desc">서류 묶음(세트)별로 어떤 서류가 있는지 <b>표로 차근차근</b> 보여줍니다. 빠진 게 없는지 <b>꼼꼼히 챙길 때</b> 좋아요. 엑셀 표처럼 익숙합니다.</div>
+        <div class="mock" style="margin-top:9px;">
+          <div class="body" style="display:block; padding:9px;">
+            <div style="background:var(--bg); border-radius:5px; padding:5px 8px; font-weight:800; font-size:10px;"><span class="tag">위험성평가</span> 세트2 평가 실시·결과·공유 · 14건 · 선행:세트1</div>
+            <table class="kv" style="margin-top:4px;"><tr><td class="k" style="color:var(--main-dark); font-weight:800; width:54px;">C 점검</td><td>정기 위험성평가 결과 <span class="tag">진행</span></td></tr><tr><td class="k" style="color:var(--main-dark); font-weight:800;">A 조치</td><td>평가 결과 조치계획 <span class="tag">완료</span></td></tr></table>
+          </div>
+        </div>
+        <div class="note">🔍 분야·담당자·상태로 걸러서 찾을 수 있어요</div>
+      </div>
+      <div class="card">
+        <div class="lead">🗂 이행 목록 <span style="font-weight:500; color:var(--gray);">(카드로 보기)</span></div>
+        <div class="desc">서류 묶음을 <b>카드 한 장씩</b>으로 보여줍니다. 막대그래프로 <b>얼마나 끝났는지(진행률)</b>가 한눈에 보여, 진행 상황을 빠르게 살필 때 좋아요.</div>
+        <div class="mock" style="margin-top:9px;"><div class="body" style="padding:9px;">
+          <div style="flex:1; border:1px solid var(--line); border-radius:7px; padding:8px;">
+            <div style="font-weight:800; font-size:10px;">세트2 평가 실시·결과</div>
+            <div style="display:flex; align-items:center; gap:5px; margin:5px 0;"><div style="flex:1; height:5px; background:var(--bg); border-radius:3px; overflow:hidden;"><div style="width:60%; height:100%; background:var(--main);"></div></div><b style="font-size:9px; color:var(--main-dark);">60%</b></div>
+            <div style="font-size:9.5px; color:var(--main-dark); font-weight:800;">● C 점검</div>
+            <div style="font-size:9.5px; padding-left:8px;">정기 위험성평가 결과 <span class="tag">진행</span></div>
+            <div style="font-size:9px; color:var(--gray); margin-top:5px; border-top:1px solid var(--line); padding-top:4px;">👤 박안전 · <span class="tag">위험성평가</span></div>
+          </div>
+        </div></div>
+        <div class="note">👆 카드나 서류 이름을 누르면 그 서류 화면으로 들어갑니다</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. 문서 상세 -->
+  <section>
+    <h2>3. 서류를 누르면 나오는 화면 <small>서류마다 작성 방식이 달라서, 누르면 그에 맞는 화면이 열립니다</small></h2>
+    <div class="grid2" style="grid-template-columns:1.15fr 0.85fr;">
+      <div class="card">
+        <div class="mock">
+          <div class="bc">업무문서 › 업무목록 › <b>위험성평가</b> › 세트2 평가 실시 › 정기 위험성평가 결과 &nbsp;<span style="color:var(--main);">← 지금 내 위치(눌러서 되돌아가기)</span></div>
+          <div class="body">
+            <div class="l">
+              <div><span class="tag">전자문서</span> <span class="tag" style="background:var(--elec-bg); color:var(--elec);">활성</span> <span style="float:right; color:var(--gray);">Ver.2.1</span></div>
+              <div style="font-weight:800; font-size:11px; margin:6px 0;">정기 위험성평가 결과</div>
+              <table class="kv"><tr><td class="k">문서번호</td><td>RSK-S2-03</td></tr><tr><td class="k">담당</td><td>박안전 · 안전건설과</td></tr></table>
+              <div style="margin-top:6px; font-weight:700; font-size:10px; color:var(--main-dark);">▣ 가운데: 작성·보기 영역</div>
+              <div class="ln w90"></div><div class="ln w70"></div><div class="ln w50"></div>
+            </div>
+            <div class="r">
+              <div class="rc"><div class="rt">🔖 근거가 되는 서류</div><div style="color:var(--gray);">관련 법·기본문서</div></div>
+              <div class="rc"><div class="rt">↑ 먼저 한 서류</div><div style="color:var(--gray);">앞 단계: 평가 준비</div></div>
+              <div class="rc"><div class="rt">↓ 다음에 할 서류</div><div style="color:var(--gray);">뒷 단계: 개선대책</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="note"><b>가운데</b>에서 서류를 작성·확인하고, <b>오른쪽</b>에는 이 서류와 이어지는 <b>앞·뒤 서류와 근거 서류</b>가 자동으로 나옵니다. 눌러서 바로 오갈 수 있어, 흐름을 놓치지 않아요.</div>
+      </div>
+      <div class="card">
+        <div class="lead">가운데 화면은 서류 종류에 따라 달라요</div>
+        <div class="branch" style="flex-direction:column;">
+          <div class="bx"><div class="bt"><span class="chip c-attach">파일 첨부 서류</span> → 미리보기</div>이미 만든 문서를 그 자리에서 미리 보고, 내려받거나 새 파일로 교체할 수 있어요</div>
+          <div class="bx"><div class="bt"><span class="chip c-elec">화면 입력 서류</span> → 입력칸</div>준비된 양식의 빈칸을 채워 바로 작성 — 임시저장 → 등록 → 확정 순서</div>
+          <div class="bx"><div class="bt"><span class="chip c-prog">전용 화면 서류</span> → 바로가기</div>위험성평가처럼 별도 화면이 있는 업무는 그 화면으로 연결돼요</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. 전자문서 상태 흐름 + 연계 -->
+  <section>
+    <h2>4. 서류 하나가 만들어지는 과정 <small>작성 → 등록 → 확정(결재)까지, 확정하면 다음 일까지 자동으로 이어집니다</small></h2>
+    <div class="card">
+      <div class="flow">
+        <div class="step"><div class="sn">1단계</div><div class="st">작성 중</div><div class="sd">빈칸을 채우며 작성해요. 임시저장하고 언제든 고칠 수 있어요</div></div>
+        <div class="farrow">→</div>
+        <div class="step"><div class="sn">2단계</div><div class="st">등록</div><div class="sd">다 쓰면 등록. 확정 전까지는 아직 수정 가능해요</div></div>
+        <div class="farrow">→</div>
+        <div class="step" style="border-color:var(--main);"><div class="sn" style="color:var(--main-dark);">3단계</div><div class="st">확정 → 온나라 결재</div><div class="sd">'확정'을 누르면 온나라(전자결재)로 자동으로 올라가요. 이후엔 내용이 잠겨요</div></div>
+        <div class="farrow">⇒</div>
+        <div class="step" style="background:var(--warn-bg); border-color:var(--warn);"><div class="sn" style="color:var(--warn);">자동으로</div><div class="st">개선할 일 등록</div><div class="sd">점검에서 <b>'미흡'</b>이 나오면, 따로 적지 않아도 '개선조치' 목록에 자동으로 올라가요</div></div>
+      </div>
+      <div class="note">💡 손이 덜 가도록 <b>시스템이 알아서 이어줍니다</b> — 누가 언제 무엇을 했는지 기록이 남고, 결재(온나라)·예산·계약(e호조) 같은 다른 시스템 정보도 불러와 연결되며, 기한이 다가오면 문자·메일로 알려줍니다.</div>
+    </div>
+  </section>
+
+  <!-- 5. 진입 경로 -->
+  <section>
+    <h2>5. 한 문장으로 쓰는 순서</h2>
+    <div class="card" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:12px; font-weight:700;">
+      <span class="chip c-pdca" style="font-size:11px; padding:4px 10px;">업무문서 메뉴 열기</span><span class="farrow" style="font-size:15px;">→</span>
+      <span>표(업무목록) <span style="color:var(--gray); font-weight:500;">또는</span> 카드(이행목록)로 보기</span><span class="farrow" style="font-size:15px;">→</span>
+      <span>처리할 <b style="color:var(--main-dark);">서류 누르기</b></span><span class="farrow" style="font-size:15px;">→</span>
+      <span>열린 화면에서</span>
+      <span class="branch" style="display:inline-flex; gap:5px; margin:0;">
+        <span class="chip c-attach">미리보기</span><span class="chip c-elec">작성·확정</span><span class="chip c-prog">전용화면</span>
+      </span>
+      <span class="farrow" style="font-size:15px;">↻</span>
+      <span style="color:var(--gray); font-weight:500;">오른쪽 앞·뒤 서류로 계속 이동</span>
+    </div>
+  </section>
+
+  <div class="foot">
+    담양군 중대재해예방 통합관리시스템 v2 · 업무문서 관리 원페이퍼 — 구축 ㈜다온플레이스 · 발주 담양군청(재난안전과 중대재해팀)<br>
+    직접 둘러보기: <span class="url">safenow-damyang-v2.vercel.app/docs-preset.html</span> (표로 보기) · <span class="url">/docs-exec.html</span> (카드로 보기) · <span class="url">/doc-detail.html</span> (서류 화면)
+  </div>
+
+</div>
+</body>
+</html>

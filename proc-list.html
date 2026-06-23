@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>유해·위험요인 관리 - 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <style>
+        /* 페이지 헤더 행 (타이틀 + 등록 버튼) */
+        .proc-page-head {
+            display: flex; align-items: flex-start; justify-content: space-between;
+            gap: 12px;
+        }
+        .proc-page-head .proc-page-titles { flex: 1; }
+
+        /* 마스터 안내 배너 */
+        .proc-intro-banner {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 12px 16px;
+            background: var(--status-info-bg);
+            border: 1px solid var(--status-info-border);
+            border-radius: var(--radius-button);
+            color: var(--status-info-fg);
+            font-size: 13px;
+            line-height: 1.6;
+            margin: 12px 0 16px;
+        }
+        .proc-intro-banner svg { flex-shrink: 0; margin-top: 2px; }
+        .proc-intro-banner strong { font-weight: 700; }
+
+        /* KPI 요약 카드 */
+        .proc-kpi-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr);
+            gap: 12px; margin-bottom: 16px;
+        }
+        @media (max-width: 767px) { .proc-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+        .proc-kpi {
+            background: #fff; border: 1px solid var(--card-line);
+            border-radius: var(--radius-card); padding: 16px 18px;
+        }
+        .proc-kpi-label { font-size: 13px; color: var(--text-gray); margin-bottom: 6px; }
+        .proc-kpi-value { font-size: 26px; font-weight: 800; color: var(--main); letter-spacing: -0.8px; }
+        .proc-kpi-value .unit { font-size: 14px; font-weight: 600; color: var(--text-gray); margin-left: 2px; }
+
+        /* 유해·위험요인명 셀 */
+        .proc-cell-main { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+        .proc-cell-title { font-size: 14px; font-weight: 600; color: var(--text-black); }
+        .proc-cell-meta { font-size: 12px; color: var(--text-lightgray); }
+
+        /* 카운트 배지 */
+        .proc-count {
+            display: inline-flex; align-items: center; gap: 3px;
+            font-size: 13px; color: var(--text-black);
+        }
+        .proc-count.zero { color: var(--text-lightgray); }
+        .proc-count .ico { color: var(--text-lightgray); }
+
+        /* 사용여부 칩은 chip-status 재사용 */
+    </style>
+</head>
+<body data-dy-page="sbm-hazard">
+    <main>
+        <!-- ─── 페이지 타이틀 + 우상단 등록 ─── -->
+        <div class="proc-page-head">
+            <div class="proc-page-titles">
+                <div class="dy-page-title">
+                    <span class="dy-page-dot"></span>
+                    <h1>유해·위험요인 관리</h1>
+                </div>
+                <div class="dy-page-subtitle">위험성평가 기준정보 — 유해·위험요인·작업·시설설비·유해위험요인·담당자 마스터 (PRC01-L)</div>
+            </div>
+            <button class="btn-register" type="button" onclick="window.DYLayout._soon(event, '유해·위험요인 등록 (PRC02-F)')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                유해·위험요인 등록
+            </button>
+        </div>
+
+        <!-- ─── 마스터 안내 배너 ─── -->
+        <div class="proc-intro-banner">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <div>
+                <strong>유해·위험요인관리는 위험성평가의 기준정보(마스터)입니다.</strong> 여기에 유해·위험요인·작업·유해위험요인·표준 개선조치를 미리 등록해 두면,
+                <strong>정기 위험성평가 생성 시 활성 유해·위험요인이 자동으로 불러와져</strong> 평가가 시작됩니다. (평가 결과 입력 화면이 아닙니다)
+            </div>
+        </div>
+
+        <!-- ─── KPI 요약 ─── -->
+        <section class="proc-kpi-grid">
+            <div class="proc-kpi">
+                <div class="proc-kpi-label">전체 유해·위험요인</div>
+                <div class="proc-kpi-value">8<span class="unit">개</span></div>
+            </div>
+            <div class="proc-kpi">
+                <div class="proc-kpi-label">활성 유해·위험요인 <span style="color:var(--status-success-fg);">(정기평가 대상)</span></div>
+                <div class="proc-kpi-value">7<span class="unit">개</span></div>
+            </div>
+            <div class="proc-kpi">
+                <div class="proc-kpi-label">비활성 유해·위험요인</div>
+                <div class="proc-kpi-value">1<span class="unit">개</span></div>
+            </div>
+            <div class="proc-kpi">
+                <div class="proc-kpi-label">등록 유해위험요인 합계</div>
+                <div class="proc-kpi-value">63<span class="unit">건</span></div>
+            </div>
+        </section>
+
+        <!-- ─── 필터 + 검색 ─── -->
+        <div class="rsk-filter-row">
+            <div class="form-group">
+                <span class="form-label-inline">담당부서</span>
+                <select class="select">
+                    <option>전체</option>
+                    <option>물순환사업소 ★</option>
+                    <option>공공시설사업소 ★</option>
+                    <option>건설과 ★</option>
+                    <option>환경과</option>
+                    <option>문화관광과</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <span class="form-label-inline">사용여부</span>
+                <select class="select">
+                    <option>전체</option>
+                    <option>활성</option>
+                    <option>비활성</option>
+                </select>
+            </div>
+            <div class="search-bar">
+                <input class="search-input" type="text" placeholder="유해·위험요인명·작업명 검색">
+                <button class="search-submit" type="button">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    검색
+                </button>
+            </div>
+            <button class="clear-filters" type="button" onclick="window.DYLayout._soon(event, '필터 초기화')">초기화</button>
+        </div>
+
+        <!-- ─── 유해·위험요인 목록 테이블 ─── -->
+        <section style="background:white; border:1px solid var(--card-line); border-radius:20px; overflow:hidden;">
+            <table class="table-figma">
+                <colgroup>
+                    <col><col style="width:150px;"><col style="width:110px;"><col style="width:80px;"><col style="width:90px;"><col style="width:110px;"><col style="width:90px;"><col style="width:130px;">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>유해·위험요인명</th>
+                        <th>담당부서</th>
+                        <th>유해·위험요인 담당자</th>
+                        <th style="text-align:center;">작업</th>
+                        <th style="text-align:center;">시설·설비</th>
+                        <th style="text-align:center;">유해위험요인</th>
+                        <th style="text-align:center;">사용여부</th>
+                        <th>최근 변경</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="row-link" onclick="window.location.href='proc-detail.html'">
+                        <td>
+                            <div class="proc-cell-main">
+                                <div class="proc-cell-title">정수장 약품투입 유해·위험요인</div>
+                                <div class="proc-cell-meta">염소·응집제 투입 · 약품탱크 취급</div>
+                            </div>
+                        </td>
+                        <td>물순환사업소 ★</td>
+                        <td>김안전</td>
+                        <td style="text-align:center;"><span class="proc-count">3</span></td>
+                        <td style="text-align:center;"><span class="proc-count">5</span></td>
+                        <td style="text-align:center;"><span class="proc-count">12</span></td>
+                        <td style="text-align:center;"><span class="chip-status success">활성</span></td>
+                        <td>2026-01-15 · 김안전</td>
+                    </tr>
+                    <tr class="row-link" onclick="window.location.href='proc-detail.html'">
+                        <td>
+                            <div class="proc-cell-main">
+                                <div class="proc-cell-title">정수장 설비정비 유해·위험요인</div>
+                                <div class="proc-cell-meta">펌프·배관·밸브 정비 · 밀폐공간 진입</div>
+                            </div>
+                        </td>
+                        <td>물순환사업소 ★</td>
+                        <td>이정비</td>
+                        <td style="text-align:center;"><span class="proc-count">4</span></td>
+                        <td style="text-align:center;"><span class="proc-count">8</span></td>
+                        <td style="text-align:center;"><span class="proc-count">11</span></td>
+                        <td style="text-align:center;"><span class="chip-status success">활성</span></td>
+                        <td>2026-02-03 · 이정비</td>
+                    </tr>
+                    <tr class="row-link" onclick="window.location.href='proc-detail.html'">
+                        <td>
+                            <div class="proc-cell-main">
+                                <div class="proc-cell-title">시설관리 유해·위험요인</div>
+                                <div class="proc-cell-meta">청사·체육관 점검·보수 · 고소작업</div>
+                            </div>
+                        </td>
+                        <td>공공시설사업소 ★</td>
+                        <td>박시설</td>
+                        <td style="text-align:center;"><span class="proc-count">5</span></td>
+                        <td style="text-align:center;"><span class="proc-count">6</span></td>
+                        <td style="text-align:center;"><span class="proc-count">9</span></td>
+                        <td style="text-align:center;"><span class="chip-status success">활성</span></td>
+                        <td>2026-01-20 · 박시설</td>
+                    </tr>
+                    <tr class="row-link" onclick="window.location.href='proc-detail.html'">
+                        <td>
+                            <div class="proc-cell-main">
+                                <div class="proc-cell-title">전기설비 점검 유해·위험요인</div>
+                                <div class="proc-cell-meta">배전반·변압기 점검 · 활선·정전작업</div>
+                            </div>
+                        </td>
+                        <td>공공시설사업소 ★</td>
+                        <td>최전기</td>
+                        <td style="text-align:center;"><span class="proc-count">3</span></td>
+                        <td style="text-align:center;"><span class="proc-count">4</span></td>
+                        <td style="text-align:center;"><span class="proc-count">7</span></td>
+                        <td style="text-align:center;"><span class="chip-status success">활성</span></td>
+                        <td>2026-01-20 · 박시설</td>
+                    </tr>
+                    <tr class="row-link" onclick="window.location.href='proc-detail.html'">
+                        <td>
+                            <div class="proc-cell-main">
+                                <div class="proc-cell-title">도로보수 유해·위험요인</div>
+                                <div class="proc-cell-meta">포트홀·포장 보수 · 차량·중장비 작업</div>
+                            </div>
+                        </td>
+                        <td>건설과 ★</td>
+                        <td>정도로</td>
+                        <td style="text-align:center;"><span class="proc-count">4</span></td>
+                        <td style="text-align:center;"><span class="proc-count">7</span></td>
+                        <td style="text-align:center;"><span class="proc-count">8</span></td>
+                        <td style="text-align:center;"><span class="chip-status success">활성</span></td>
+                        <td>2026-02-10 · 정도로</td>
+                    </tr>
+                    <tr class="row-link" onclick="window.location.href='proc-detail.html'">
+                        <td>
+                            <div class="proc-cell-main">
+                                <div class="proc-cell-title">환경시설 운영 유해·위험요인</div>
+                                <div class="proc-cell-meta">폐기물·하수 처리 · 밀폐공간·유해가스</div>
+                            </div>
+                        </td>
+                        <td>환경과</td>
+                        <td>한환경</td>
+                        <td style="text-align:center;"><span class="proc-count">3</span></td>
+                        <td style="text-align:center;"><span class="proc-count">6</span></td>
+                        <td style="text-align:center;"><span class="proc-count">9</span></td>
+                        <td style="text-align:center;"><span class="chip-status success">활성</span></td>
+                        <td>2026-01-28 · 한환경</td>
+                    </tr>
+                    <tr class="row-link" onclick="window.location.href='proc-detail.html'">
+                        <td>
+                            <div class="proc-cell-main">
+                                <div class="proc-cell-title">행사·축제 운영 유해·위험요인</div>
+                                <div class="proc-cell-meta">가설무대·전기 · 구조물 설치</div>
+                            </div>
+                        </td>
+                        <td>문화관광과</td>
+                        <td>신축제</td>
+                        <td style="text-align:center;"><span class="proc-count">2</span></td>
+                        <td style="text-align:center;"><span class="proc-count">3</span></td>
+                        <td style="text-align:center;"><span class="proc-count">7</span></td>
+                        <td style="text-align:center;"><span class="chip-status success">활성</span></td>
+                        <td>2026-03-05 · 신축제</td>
+                    </tr>
+                    <tr class="row-link" onclick="window.location.href='proc-detail.html'">
+                        <td>
+                            <div class="proc-cell-main">
+                                <div class="proc-cell-title">구 노후정수장 운영 유해·위험요인</div>
+                                <div class="proc-cell-meta">2025-12 폐쇄 · 이력 보존</div>
+                            </div>
+                        </td>
+                        <td>물순환사업소 ★</td>
+                        <td>—</td>
+                        <td style="text-align:center;"><span class="proc-count zero">0</span></td>
+                        <td style="text-align:center;"><span class="proc-count zero">0</span></td>
+                        <td style="text-align:center;"><span class="proc-count">5</span></td>
+                        <td style="text-align:center;"><span class="chip-status neutral">비활성</span></td>
+                        <td>2025-12-20 · 김안전</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- 페이지네이션 (layout.js 자동 렌더) -->
+        <div data-pagination data-current="1" data-total="1"></div>
+    </main>
+
+    <div id="toast" class="toast" role="status"></div>
+    <script src="./js/layout.js"></script>
+    <script src="./js/risk-tour.js"></script>
+</body>
+</html>

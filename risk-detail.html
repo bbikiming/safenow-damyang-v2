@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>평가 상세 - 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <style>
+        /* RSK02-D 전용 보강 */
+        .rsk-detail-target-tags {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: 8px;
+        }
+        .factor-table th,
+        .factor-table td {
+            font-size: 13px;
+        }
+        .factor-table .col-no { width: 50px; text-align: center; }
+        .factor-table .col-stage { width: 100px; }
+        .factor-table .col-decision { width: 90px; text-align: center; }
+        .factor-table .col-score { width: 130px; }
+        .factor-table .col-badge { width: 110px; }
+        .factor-table .col-action { width: 60px; text-align: center; }
+        .factor-table td.center { text-align: center; }
+
+        /* 결재 카드 */
+        .approval-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 14px 18px;
+            background: var(--status-info-bg);
+            border: 1px solid var(--status-info-border);
+            border-radius: var(--radius-button);
+        }
+        .approval-card-text {
+            font-size: 13px;
+            color: var(--status-info-fg);
+        }
+        .approval-card-text strong {
+            font-weight: 700;
+        }
+
+        /* 행 삭제 버튼 */
+        .row-delete-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px; height: 28px;
+            background: transparent;
+            border: 1px solid var(--card-line);
+            border-radius: 6px;
+            color: var(--text-gray);
+            cursor: pointer;
+        }
+        .row-delete-btn:hover {
+            background: var(--status-danger-bg);
+            border-color: var(--status-danger-border);
+            color: var(--status-danger-fg);
+        }
+
+        /* ─── 4M 축 뱃지 (Man·Machine·Media·Management) ─── */
+        .m4-axis-badge {
+            display: inline-flex; align-items: center;
+            padding: 2px 8px;
+            font-size: 11px; font-weight: 700;
+            border-radius: var(--radius-md);
+            border: 1px solid;
+            letter-spacing: -0.2px;
+        }
+        .m4-axis-badge.m4-man        { background: var(--status-info-bg);    border-color: var(--status-info-border);    color: var(--status-info-fg); }
+        .m4-axis-badge.m4-machine    { background: var(--status-warning-bg); border-color: var(--status-warning-border); color: var(--status-warning-fg); }
+        .m4-axis-badge.m4-media      { background: var(--status-success-bg); border-color: var(--status-success-border); color: var(--status-success-fg); }
+        .m4-axis-badge.m4-management { background: var(--status-purple-bg);  border-color: var(--status-purple-border);  color: var(--status-purple-fg); }
+        .m4-axis-help {
+            font-size: 11px; color: var(--text-gray);
+            margin-right: 8px;
+        }
+        /* 위험요인 셀의 4M 뱃지 (작게) */
+        td .m4-axis-badge {
+            font-size: 10px; padding: 1px 6px;
+            margin-left: 4px; vertical-align: middle;
+        }
+
+        /* ─── 5단계 법령 매핑 ─── */
+        .step-legal-map {
+            margin-top: 12px;
+            padding: 12px 16px;
+            background: var(--status-info-bg);
+            border: 1px solid var(--status-info-border);
+            border-radius: var(--radius-button);
+        }
+        .step-legal-title {
+            font-size: 12px; font-weight: 700;
+            color: var(--status-info-fg);
+            margin-bottom: 8px;
+        }
+        .step-legal-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            font-size: 11px;
+        }
+        @media (max-width: 1023px) { .step-legal-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 600px)  { .step-legal-grid { grid-template-columns: 1fr; } }
+        .step-legal-item {
+            display: flex; flex-direction: column; gap: 2px;
+            padding: 8px 10px;
+            background: #fff;
+            border: 1px solid var(--status-info-border);
+            border-radius: var(--radius-md);
+            line-height: 1.4;
+        }
+        .step-legal-item strong { font-size: 12px; color: var(--text-black); }
+        .step-legal-item span   { font-size: 11px; color: var(--status-info-fg); font-weight: 600; }
+        .step-legal-item small  { font-size: 10px; color: var(--text-gray); }
+
+        /* ─── 단계 토글 (프로토타입 데모 전용) ─── */
+        body[data-rsk-stage="prepare"]  [data-stage-show]:not([data-stage-show~="prepare"]),
+        body[data-rsk-stage="progress"] [data-stage-show]:not([data-stage-show~="progress"]),
+        body[data-rsk-stage="done"]     [data-stage-show]:not([data-stage-show~="done"]) {
+            display: none !important;
+        }
+
+        /* PREPARE 단계 — 위험요인 빈 상태 */
+        .rsk-empty {
+            padding: 48px 20px;
+            text-align: center;
+        }
+        .rsk-empty-icon {
+            width: 56px; height: 56px;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: var(--brand-100);
+            color: var(--main-dark);
+            border-radius: 14px;
+            margin-bottom: 14px;
+        }
+        .rsk-empty h3 {
+            font-size: 15px; font-weight: 700;
+            color: var(--text-black);
+            margin-bottom: 6px;
+        }
+        .rsk-empty p {
+            font-size: 13px; color: var(--text-gray);
+            margin-bottom: 16px;
+        }
+
+        /* DONE 단계 — 완료 배너 */
+        .rsk-done-banner {
+            display: flex; align-items: center; gap: 12px;
+            padding: 14px 18px;
+            background: var(--status-success-bg);
+            border: 1px solid var(--status-success-border);
+            border-radius: var(--radius-button);
+            color: var(--status-success-fg);
+            font-size: 13px;
+        }
+        .rsk-done-banner strong { font-weight: 700; }
+
+        /* PREPARE 단계 — 시작 안내 배너 */
+        .rsk-prepare-banner {
+            display: flex; align-items: center; gap: 12px;
+            padding: 14px 18px;
+            background: var(--status-info-bg);
+            border: 1px solid var(--status-info-border);
+            border-radius: var(--radius-button);
+            color: var(--status-info-fg);
+            font-size: 13px;
+        }
+        .rsk-prepare-banner strong { font-weight: 700; }
+    </style>
+</head>
+<body data-dy-page="sbm-risk" data-rsk-stage="progress">
+    <main>
+        <!-- ─── 시민재해 적용 범위 안내 (v0.2) ─── -->
+        <div class="info-banner civil-disaster-scope" style="background:var(--status-warning-bg); border-left:4px solid var(--status-warning-fg); padding:12px 16px; margin:12px 0; border-radius:4px;">
+            <strong>⚠️ 중대시민재해 적용 범위 (v0.2)</strong><br>
+            본 시스템은 <strong>구조상 결함만</strong> 등록합니다. 천재지변(적설·태풍·결빙 등)은 본 시스템 범위 외이며 별도 재난 대응 매뉴얼에 따릅니다.
+            <small style="display:block; margin-top:4px; color:var(--text-gray);">2026.05.19 회의 결정 — ISS-M-01</small>
+        </div>
+
+        <!-- ─── 상단 툴바: [← 목록] / [PDF 출력] ─── -->
+        <div class="detail-topbar">
+            <a class="detail-back-link" href="risk-list.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                평가 목록
+            </a>
+            <button class="btn btn-secondary" type="button" onclick="window.DYLayout._soon(event, 'PDF 출력')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                PDF 출력
+            </button>
+        </div>
+
+        <!-- ─── 페이지 헤더 (카테고리 chip + 제목 + 우측 결재 상태) ─── -->
+        <section class="detail-header">
+            <div class="detail-header-main">
+                <div class="detail-header-row">
+                    <span class="chip-cat cat-regular">정기</span>
+                    <h1>신계정수장 위험성평가 2026 (RSK02-D)</h1>
+                </div>
+                <div class="detail-header-subtitle">
+                    신계 정수장 · 시설 · 시설물안전법 + 유해화학물질 (중복) · 2종 · 물순환사업소
+                </div>
+            </div>
+            <span class="chip-status info detail-header-status">결재 진행중</span>
+        </section>
+
+        <!-- ─── 스텝 인디케이터 (PRD §2.10 — 5단계 위험성평가 프로세스) ─── -->
+        <section class="step-indicator">
+            <!-- PREPARE: ① 사전준비 단계 (진행 시작 전) -->
+            <div class="step-indicator-track" data-stage-show="prepare">
+                <div class="step-indicator-item is-current">
+                    <div class="step-indicator-num">1</div>
+                    <div class="step-indicator-label">① 사전준비</div>
+                </div>
+                <div class="step-indicator-connector"></div>
+                <div class="step-indicator-item">
+                    <div class="step-indicator-num">2</div>
+                    <div class="step-indicator-label">② 위험요인 파악</div>
+                </div>
+                <div class="step-indicator-connector"></div>
+                <div class="step-indicator-item">
+                    <div class="step-indicator-num">3</div>
+                    <div class="step-indicator-label">③ 위험성 추정</div>
+                </div>
+                <div class="step-indicator-connector"></div>
+                <div class="step-indicator-item">
+                    <div class="step-indicator-num">4</div>
+                    <div class="step-indicator-label">④ 위험성 결정</div>
+                </div>
+                <div class="step-indicator-connector"></div>
+                <div class="step-indicator-item">
+                    <div class="step-indicator-num">5</div>
+                    <div class="step-indicator-label">⑤ 감소대책 수립·실행</div>
+                </div>
+            </div>
+
+            <!-- PROGRESS: ③ 위험성 추정 진행 중 -->
+            <div class="step-indicator-track" data-stage-show="progress">
+                <div class="step-indicator-item is-done">
+                    <div class="step-indicator-num">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    <div class="step-indicator-label">① 사전준비</div>
+                </div>
+                <div class="step-indicator-connector is-done"></div>
+                <div class="step-indicator-item is-done">
+                    <div class="step-indicator-num">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </div>
+                    <div class="step-indicator-label">② 위험요인 파악</div>
+                </div>
+                <div class="step-indicator-connector is-done"></div>
+                <div class="step-indicator-item is-current">
+                    <div class="step-indicator-num">3</div>
+                    <div class="step-indicator-label">③ 위험성 추정</div>
+                </div>
+                <div class="step-indicator-connector"></div>
+                <div class="step-indicator-item">
+                    <div class="step-indicator-num">4</div>
+                    <div class="step-indicator-label">④ 위험성 결정</div>
+                </div>
+                <div class="step-indicator-connector"></div>
+                <div class="step-indicator-item">
+                    <div class="step-indicator-num">5</div>
+                    <div class="step-indicator-label">⑤ 감소대책 수립·실행</div>
+                </div>
+            </div>
+
+            <!-- DONE: 모든 단계 완료 -->
+            <div class="step-indicator-track" data-stage-show="done">
+                <div class="step-indicator-item is-done">
+                    <div class="step-indicator-num"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+                    <div class="step-indicator-label">① 사전준비</div>
+                </div>
+                <div class="step-indicator-connector is-done"></div>
+                <div class="step-indicator-item is-done">
+                    <div class="step-indicator-num"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+                    <div class="step-indicator-label">② 위험요인 파악</div>
+                </div>
+                <div class="step-indicator-connector is-done"></div>
+                <div class="step-indicator-item is-done">
+                    <div class="step-indicator-num"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+                    <div class="step-indicator-label">③ 위험성 추정</div>
+                </div>
+                <div class="step-indicator-connector is-done"></div>
+                <div class="step-indicator-item is-done">
+                    <div class="step-indicator-num"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+                    <div class="step-indicator-label">④ 위험성 결정</div>
+                </div>
+                <div class="step-indicator-connector is-done"></div>
+                <div class="step-indicator-item is-done">
+                    <div class="step-indicator-num"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+                    <div class="step-indicator-label">⑤ 감소대책 수립·실행</div>
+                </div>
+            </div>
+
+            <!-- 5단계 절차 법령 매핑 (산안법 §36 — KOSHA 위험성평가 지침) -->
+            <div class="step-legal-map">
+                <div class="step-legal-title">📜 5단계 절차 법령 근거</div>
+                <div class="step-legal-grid">
+                    <div class="step-legal-item"><strong>① 사전준비</strong> <span>산안법 §36 1항 + KOSHA 지침 §3.1</span> <small>평가범위·구성원·기법 선정 의무</small></div>
+                    <div class="step-legal-item"><strong>② 위험요인 파악</strong> <span>산안법 §36 1항 + KOSHA 지침 §3.2</span> <small>4M 또는 작업분류 기반 식별</small></div>
+                    <div class="step-legal-item"><strong>③ 위험성 추정</strong> <span>산안법 §36 1항 + KOSHA 지침 §3.3</span> <small>빈도×강도 5×5 매트릭스</small></div>
+                    <div class="step-legal-item"><strong>④ 위험성 결정</strong> <span>산안법 §36 1항 + KOSHA 지침 §3.4</span> <small>허용/감소필요/중지 분류</small></div>
+                    <div class="step-legal-item"><strong>⑤ 감소대책</strong> <span>산안법 §36 1항 + 중처법 §4</span> <small>대책 수립·기록·보존 의무</small></div>
+                </div>
+            </div>
+
+            <div class="step-indicator-substage">
+                실시주체별 역할 — <strong>관리책임자</strong>(군수): 총괄·인원배치 · <strong>관리감독자</strong>(물순환소장): 평가 실시 · <strong>안전관리자</strong>(대한산업안전협회 위탁): 평가기법 교육 · <strong>위험성평가 담당자</strong>(부서 SHM): 실시계획 · <strong>작업자</strong>: 의견제시
+            </div>
+        </section>
+
+        <!-- ─── 단계별 안내 배너 (PREPARE / DONE 전용) ─── -->
+        <div class="rsk-prepare-banner" data-stage-show="prepare">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <div style="flex:1;">
+                <strong>사전준비 단계입니다.</strong> 참여자·기법·기간 등 기본정보 확인 후 [평가 시작] 버튼으로 진행을 시작하세요. 진행 시작 후 위험요인 등록·평가가 가능합니다.
+            </div>
+        </div>
+        <div class="rsk-done-banner" data-stage-show="done">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <div style="flex:1;">
+                <strong>완료된 평가입니다 (2026-05-31 종료 처리).</strong> 위험요인은 읽기 전용이며, 감소대책 이행은 개선조치(IMP)에서 별도 추적됩니다.
+            </div>
+        </div>
+
+        <!-- ─── 기본정보 카드 ─── -->
+        <section class="card">
+            <div class="card-header">
+                <h2 class="card-title">기본정보</h2>
+            </div>
+            <div class="info-grid">
+                <div class="info-grid-row">
+                    <span class="info-grid-label">관리대상</span>
+                    <span class="info-grid-value">
+                        신계 정수장 (염소투입·저장시설 포함)
+                        <span class="type-tag">시설</span>
+                        <span class="type-tag">시설물안전법</span>
+                        <span class="type-tag">2종</span>
+                        <span class="type-tag" style="background:var(--status-warning-bg); color:var(--status-warning-fg);">유해화학물질 중복</span>
+                    </span>
+                </div>
+                <div class="info-grid-row">
+                    <span class="info-grid-label">평가유형</span>
+                    <span class="info-grid-value">
+                        <span class="chip-cat cat-regular">정기 (연 1회)</span>
+                        <span class="text-gray">+ 수시 평가 가능</span>
+                    </span>
+                </div>
+                <div class="info-grid-row">
+                    <span class="info-grid-label">평가 기법</span>
+                    <span class="info-grid-value">
+                        <strong>4M 위험성평가</strong>
+                        <span style="font-size:11px; color:var(--text-gray); margin-left:6px;">— KOSHA 4M 기술지침 <a href="https://kosha.or.kr/kosha/data/rskassessmentd.do" target="_blank" style="color:var(--main); text-decoration:underline;">M-15-2023</a> · 산안법 §36 1항</span>
+                        <div style="margin-top:6px; display:flex; gap:6px; flex-wrap:wrap;">
+                            <span class="m4-axis-badge m4-man">Man</span><span class="m4-axis-help">인적요인</span>
+                            <span class="m4-axis-badge m4-machine">Machine</span><span class="m4-axis-help">기계·설비</span>
+                            <span class="m4-axis-badge m4-media">Media</span><span class="m4-axis-help">작업환경</span>
+                            <span class="m4-axis-badge m4-management">Management</span><span class="m4-axis-help">관리체계</span>
+                        </div>
+                        <a href="risk-checklist.html" style="margin-top:10px; display:inline-flex; align-items:center; gap:4px; padding:3px 10px; background:var(--status-info-bg); border:1px solid var(--status-info-border); border-radius:4px; font-size:12px; color:var(--status-info-fg); text-decoration:none; font-weight:600;">
+                            📋 체크리스트 모드로 보기
+                            <span style="font-size:10px; color:var(--text-gray); font-weight:normal;">(RSK02-C)</span>
+                        </a>
+                    </span>
+                </div>
+                <div class="info-grid-row">
+                    <span class="info-grid-label">평가 기간</span>
+                    <span class="info-grid-value">2026-04-01 ~ 2026-05-31 <span class="text-gray">(D-12)</span></span>
+                </div>
+                <div class="info-grid-row">
+                    <span class="info-grid-label">담당자</span>
+                    <span class="info-grid-value">김안전 <span class="text-gray">(물순환사업소 · 위험성평가 담당자)</span></span>
+                </div>
+                <div class="info-grid-row">
+                    <span class="info-grid-label">참여자</span>
+                    <span class="info-grid-value">물순환소장(관리감독자), 대한산업안전협회 안전관리자, 작업자 4명</span>
+                </div>
+                <div class="info-grid-row">
+                    <span class="info-grid-label">출처</span>
+                    <span class="info-grid-value">
+                        <span class="source-tag auto">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                            정기 자동
+                        </span>
+                    </span>
+                </div>
+                <div class="info-grid-row">
+                    <span class="info-grid-label">결재 상태</span>
+                    <span class="info-grid-value">
+                        <span class="chip-status info">결재 진행중</span>
+                        <button class="approval-action" type="button" onclick="window.DYLayout._soon(event, '결재 결과 업데이트')">결재 결과 업데이트</button>
+                    </span>
+                </div>
+                <div class="info-grid-row span-2 last-row">
+                    <span class="info-grid-label">결재 안내</span>
+                    <div class="info-grid-value" style="width:100%; display:block;">
+                        <div class="approval-card">
+                            <div class="approval-card-text">
+                                <strong>온나라 시스템</strong>에서 결재 진행 후 본 시스템에서 결재 결과 상태를 업데이트하세요. 결재 요청 일시: <strong>2026-04-28 14:20</strong>
+                            </div>
+                            <button class="approval-action secondary" type="button" onclick="window.DYLayout._soon(event, '온나라 결재 진행하기')">
+                                온나라 열기
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── 위험요인 목록 ─── -->
+        <section class="card">
+            <div class="card-header">
+                <h2 class="card-title">위험요인 목록</h2>
+                <button class="btn-register" type="button" data-stage-show="progress" data-rsk-add-factor>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    위험요인 추가 <span style="background:var(--status-warning-fg); color:#fff; padding:1px 6px; border-radius:8px; font-size:11px; margin-left:4px;">SIF 추천</span>
+                </button>
+            </div>
+            <div class="card-body" style="padding:0;">
+                <table class="table-figma factor-table">
+                    <thead>
+                        <tr>
+                            <th class="col-no">No</th>
+                            <th class="col-stage">단계/구역</th>
+                            <th>위험요인</th>
+                            <th class="col-score">위험성 추정 <span style="color:var(--text-lightgray);font-weight:400;">(빈도×강도)</span></th>
+                            <th class="col-decision">위험성 결정</th>
+                            <th>감소대책</th>
+                            <th class="col-badge">단계</th>
+                            <th class="col-action"></th>
+                        </tr>
+                    </thead>
+                    <!-- ===== PREPARE: 빈 상태 ===== -->
+                    <tbody data-stage-show="prepare">
+                        <tr>
+                            <td colspan="8" style="padding:0;">
+                                <div class="rsk-empty">
+                                    <div class="rsk-empty-icon">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                                    </div>
+                                    <h3>아직 위험요인이 등록되지 않았습니다</h3>
+                                    <p>사전준비 단계에서는 기본정보·참여자만 확인합니다.<br>[평가 시작] 후 위험요인을 1건 이상 등록해야 결재 요청이 가능합니다.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+
+                    <!-- ===== PROGRESS: 진행 중 (다양한 factor_stage) ===== -->
+                    <tbody data-stage-show="progress">
+                        <!-- 행 1: 불허 + 감소대책 + 자동 생성된 개선조치 -->
+                        <tr>
+                            <td class="center">1</td>
+                            <td><span class="inline-text">본관 2층 전기실</span><span class="m4-axis-badge m4-machine" title="4M: Machine (기계·설비)">Machine</span></td>
+                            <td><span class="inline-text">전기 누전·감전 위험</span></td>
+                            <td>
+                                <span class="risk-score">
+                                    <span class="risk-score-value mid">9</span>
+                                    <span class="risk-score-formula">3 × 3</span>
+                                </span>
+                            </td>
+                            <td class="center">
+                                <span class="risk-decision reject">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                    불허
+                                </span>
+                            </td>
+                            <td>
+                                <div style="display:flex; flex-direction:column; gap:4px;">
+                                    <span class="inline-text">분기별 절연저항 점검 + 누전차단기 교체</span>
+                                    <a class="improvement-link" href="menu.html?m=improve">→ 개선조치 imp-1</a>
+                                </div>
+                            </td>
+                            <td><span class="factor-stage controlled">대책수립됨</span></td>
+                            <td class="center">
+                                <button class="row-delete-btn" type="button" onclick="event.stopPropagation(); window.DYLayout._soon(event, '위험요인 삭제');" aria-label="삭제">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
+                                </button>
+                            </td>
+                        </tr>
+                        <!-- 행 2: 허용 + 감소대책 없음 -->
+                        <tr>
+                            <td class="center">2</td>
+                            <td><span class="inline-text">본관 옥상</span><span class="m4-axis-badge m4-media" title="4M: Media (작업환경·고소)">Media</span></td>
+                            <td><span class="inline-text">옥상 보수 작업 시 추락 위험</span></td>
+                            <td>
+                                <span class="risk-score">
+                                    <span class="risk-score-value low">6</span>
+                                    <span class="risk-score-formula">2 × 3</span>
+                                </span>
+                            </td>
+                            <td class="center">
+                                <span class="risk-decision accept">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/></svg>
+                                    허용
+                                </span>
+                            </td>
+                            <td><span class="inline-text empty">— (허용)</span></td>
+                            <td><span class="factor-stage evaluated">결정됨</span></td>
+                            <td class="center">
+                                <button class="row-delete-btn" type="button" onclick="event.stopPropagation(); window.DYLayout._soon(event, '위험요인 삭제');" aria-label="삭제">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
+                                </button>
+                            </td>
+                        </tr>
+                        <!-- 행 3: 불허 + 감소대책 + 개선조치 -->
+                        <tr>
+                            <td class="center">3</td>
+                            <td><span class="inline-text">지하 보일러실</span><span class="m4-axis-badge m4-machine" title="4M: Machine (가스·보일러)">Machine</span></td>
+                            <td><span class="inline-text">가스 누출 및 화재·폭발 위험</span></td>
+                            <td>
+                                <span class="risk-score">
+                                    <span class="risk-score-value high">12</span>
+                                    <span class="risk-score-formula">3 × 4</span>
+                                </span>
+                            </td>
+                            <td class="center">
+                                <span class="risk-decision reject">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                    불허
+                                </span>
+                            </td>
+                            <td>
+                                <div style="display:flex; flex-direction:column; gap:4px;">
+                                    <span class="inline-text">가스누출 감지기 추가 설치 + 월 1회 점검 정례화</span>
+                                    <a class="improvement-link" href="menu.html?m=improve">→ 개선조치 imp-2</a>
+                                </div>
+                            </td>
+                            <td><span class="factor-stage controlled">대책수립됨</span></td>
+                            <td class="center">
+                                <button class="row-delete-btn" type="button" onclick="event.stopPropagation(); window.DYLayout._soon(event, '위험요인 삭제');" aria-label="삭제">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
+                                </button>
+                            </td>
+                        </tr>
+                        <!-- 행 4: 추정만 됨 (미결정) -->
+                        <tr>
+                            <td class="center">4</td>
+                            <td><span class="inline-text">본관 1층 민원실 출입구</span><span class="m4-axis-badge m4-media" title="4M: Media (작업환경·미끄러짐)">Media</span></td>
+                            <td><span class="inline-text">우천 시 바닥 미끄러짐</span></td>
+                            <td>
+                                <span class="risk-score">
+                                    <span class="risk-score-value low">4</span>
+                                    <span class="risk-score-formula">2 × 2</span>
+                                </span>
+                            </td>
+                            <td class="center">
+                                <span class="inline-text empty">미결정</span>
+                            </td>
+                            <td><span class="inline-text empty">—</span></td>
+                            <td><span class="factor-stage estimated">추정됨</span></td>
+                            <td class="center">
+                                <button class="row-delete-btn" type="button" onclick="event.stopPropagation(); window.DYLayout._soon(event, '위험요인 삭제');" aria-label="삭제">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
+                                </button>
+                            </td>
+                        </tr>
+                        <!-- 행 5: 파악만 됨 -->
+                        <tr>
+                            <td class="center">5</td>
+                            <td><span class="inline-text">본관 5층 옥상 출입구</span><span class="m4-axis-badge m4-management" title="4M: Management (관리체계·정리정돈)">Management</span></td>
+                            <td><span class="inline-text">자재 적재로 인한 낙하물 위험</span></td>
+                            <td>
+                                <span class="inline-text empty">미추정</span>
+                            </td>
+                            <td class="center"><span class="inline-text empty">—</span></td>
+                            <td><span class="inline-text empty">—</span></td>
+                            <td><span class="factor-stage identified">파악됨</span></td>
+                            <td class="center">
+                                <button class="row-delete-btn" type="button" onclick="event.stopPropagation(); window.DYLayout._soon(event, '위험요인 삭제');" aria-label="삭제">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+
+                    <!-- ===== DONE: 모든 위험요인 대책 수립됨 (읽기 전용) ===== -->
+                    <tbody data-stage-show="done">
+                        <tr>
+                            <td class="center">1</td>
+                            <td><span class="inline-text">본관 2층 전기실</span><span class="m4-axis-badge m4-machine" title="4M: Machine (기계·설비)">Machine</span></td>
+                            <td><span class="inline-text">전기 누전·감전 위험</span></td>
+                            <td>
+                                <span class="risk-score">
+                                    <span class="risk-score-value mid">9</span>
+                                    <span class="risk-score-formula">3 × 3</span>
+                                </span>
+                            </td>
+                            <td class="center">
+                                <span class="risk-decision reject">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                    불허
+                                </span>
+                            </td>
+                            <td>
+                                <div style="display:flex; flex-direction:column; gap:4px;">
+                                    <span class="inline-text">분기별 절연저항 점검 + 누전차단기 교체</span>
+                                    <a class="improvement-link" href="menu.html?m=improve">→ 개선조치 imp-1</a>
+                                </div>
+                            </td>
+                            <td><span class="factor-stage controlled">대책수립됨</span></td>
+                            <td class="center"><span class="text-lightgray" style="font-size:11px;">—</span></td>
+                        </tr>
+                        <tr>
+                            <td class="center">2</td>
+                            <td><span class="inline-text">본관 옥상</span><span class="m4-axis-badge m4-media" title="4M: Media (작업환경·고소)">Media</span></td>
+                            <td><span class="inline-text">옥상 보수 작업 시 추락 위험</span></td>
+                            <td>
+                                <span class="risk-score">
+                                    <span class="risk-score-value low">6</span>
+                                    <span class="risk-score-formula">2 × 3</span>
+                                </span>
+                            </td>
+                            <td class="center">
+                                <span class="risk-decision accept">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/></svg>
+                                    허용
+                                </span>
+                            </td>
+                            <td><span class="inline-text empty">— (허용)</span></td>
+                            <td><span class="factor-stage evaluated">결정됨</span></td>
+                            <td class="center"><span class="text-lightgray" style="font-size:11px;">—</span></td>
+                        </tr>
+                        <tr>
+                            <td class="center">3</td>
+                            <td><span class="inline-text">지하 보일러실</span><span class="m4-axis-badge m4-machine" title="4M: Machine (가스·보일러)">Machine</span></td>
+                            <td><span class="inline-text">가스 누출 및 화재·폭발 위험</span></td>
+                            <td>
+                                <span class="risk-score">
+                                    <span class="risk-score-value high">12</span>
+                                    <span class="risk-score-formula">3 × 4</span>
+                                </span>
+                            </td>
+                            <td class="center">
+                                <span class="risk-decision reject">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                    불허
+                                </span>
+                            </td>
+                            <td>
+                                <div style="display:flex; flex-direction:column; gap:4px;">
+                                    <span class="inline-text">가스누출 감지기 추가 설치 + 월 1회 점검 정례화</span>
+                                    <a class="improvement-link" href="menu.html?m=improve">→ 개선조치 imp-2</a>
+                                </div>
+                            </td>
+                            <td><span class="factor-stage controlled">대책수립됨</span></td>
+                            <td class="center"><span class="text-lightgray" style="font-size:11px;">—</span></td>
+                        </tr>
+                        <tr>
+                            <td class="center">4</td>
+                            <td><span class="inline-text">본관 1층 민원실 출입구</span><span class="m4-axis-badge m4-media" title="4M: Media (작업환경·미끄러짐)">Media</span></td>
+                            <td><span class="inline-text">우천 시 바닥 미끄러짐</span></td>
+                            <td>
+                                <span class="risk-score">
+                                    <span class="risk-score-value low">4</span>
+                                    <span class="risk-score-formula">2 × 2</span>
+                                </span>
+                            </td>
+                            <td class="center">
+                                <span class="risk-decision reject">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                    불허
+                                </span>
+                            </td>
+                            <td>
+                                <div style="display:flex; flex-direction:column; gap:4px;">
+                                    <span class="inline-text">우천 시 미끄럼 방지 매트 비치 + 안내판 게시</span>
+                                    <a class="improvement-link" href="menu.html?m=improve">→ 개선조치 imp-3</a>
+                                </div>
+                            </td>
+                            <td><span class="factor-stage controlled">대책수립됨</span></td>
+                            <td class="center"><span class="text-lightgray" style="font-size:11px;">—</span></td>
+                        </tr>
+                        <tr>
+                            <td class="center">5</td>
+                            <td><span class="inline-text">본관 5층 옥상 출입구</span><span class="m4-axis-badge m4-management" title="4M: Management (관리체계·정리정돈)">Management</span></td>
+                            <td><span class="inline-text">자재 적재로 인한 낙하물 위험</span></td>
+                            <td>
+                                <span class="risk-score">
+                                    <span class="risk-score-value mid">8</span>
+                                    <span class="risk-score-formula">2 × 4</span>
+                                </span>
+                            </td>
+                            <td class="center">
+                                <span class="risk-decision reject">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                    불허
+                                </span>
+                            </td>
+                            <td>
+                                <div style="display:flex; flex-direction:column; gap:4px;">
+                                    <span class="inline-text">옥상 적재 금지 표지 + 월 1회 정리 점검</span>
+                                    <a class="improvement-link" href="menu.html?m=improve">→ 개선조치 imp-4</a>
+                                </div>
+                            </td>
+                            <td><span class="factor-stage controlled">대책수립됨</span></td>
+                            <td class="center"><span class="text-lightgray" style="font-size:11px;">—</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ─── 개선조치 현황 (해당 평가 관련) ─── -->
+        <section class="card">
+            <div class="card-header">
+                <h2 class="card-title">개선조치 현황</h2>
+                <a class="text-muted" href="menu.html?m=improve" style="font-size:14px;">전체보기 →</a>
+            </div>
+            <div class="card-body">
+                <div class="statbox-grid cols-3">
+                    <div class="statbox danger">
+                        <div class="statbox-num">0</div>
+                        <div class="statbox-label">기한초과</div>
+                    </div>
+                    <div class="statbox warning">
+                        <div class="statbox-num">2</div>
+                        <div class="statbox-label">조치중</div>
+                    </div>
+                    <div class="statbox neutral">
+                        <div class="statbox-num">0</div>
+                        <div class="statbox-label">예정</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── 문서 출처 (v0.2) ─── -->
+        <section class="card">
+            <div class="card-header">
+                <h2 class="card-title">문서 출처 <span class="hint-tag" style="background:var(--status-info-bg); color:var(--status-info-fg); padding:2px 8px; border-radius:4px; font-size:11px; margin-left:4px;">v0.2</span></h2>
+            </div>
+            <div class="form-group document-source" style="padding:14px 18px;">
+                <div class="radio-group" style="display:flex; gap:16px; flex-wrap:wrap; font-size:13px;">
+                    <label><input type="radio" name="doc_source" value="ORIGIN_SYSTEM" checked> 시스템 원본</label>
+                    <label><input type="radio" name="doc_source" value="ONNARA_COPY"> 온나라 사본</label>
+                    <label><input type="radio" name="doc_source" value="EXTERNAL_PDF"> 외부 PDF</label>
+                    <label><input type="radio" name="doc_source" value="HWP_LEGACY"> HWP 기존</label>
+                </div>
+                <small class="form-hint" style="display:block; margin-top:8px; color:var(--text-gray); font-size:11px;">신규 결재 문서=시스템 원본 / 온나라 결재 사본=온나라 사본 / 외부 위탁 결과=외부 PDF / 기존 HWP=HWP 기존</small>
+            </div>
+        </section>
+
+        <!-- ─── 하단 액션 푸터 (단계별 변형) ─── -->
+        <div class="detail-footer" data-stage-show="prepare">
+            <button class="btn btn-secondary" type="button" onclick="window.location.href='risk-form.html?mode=edit'">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                수정
+            </button>
+            <button class="btn btn-primary" type="button" onclick="window.RskStage.set('progress'); window.DYLayout._soon(event, '평가 시작 → cycle_stage=IN_PROGRESS');">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                평가 시작
+            </button>
+        </div>
+        <div class="detail-footer" data-stage-show="progress">
+            <button class="btn btn-secondary" type="button" onclick="window.location.href='risk-form.html?mode=edit'">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                수정
+            </button>
+            <button class="btn btn-primary" type="button" onclick="window.DYLayout._soon(event, '결재요청')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                결재요청
+            </button>
+            <button class="btn btn-success is-disabled" type="button" title="미판단 위험요인 2건 · 감소대책 미수립 1건 — 종료 조건 미충족" disabled>
+                종료 처리
+            </button>
+        </div>
+        <div class="detail-footer" data-stage-show="done">
+            <button class="btn btn-secondary is-disabled" type="button" title="완료된 평가는 수정할 수 없습니다" disabled>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                수정
+            </button>
+            <button class="btn btn-primary" type="button" onclick="window.DYLayout._soon(event, 'PDF 출력')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                PDF 출력
+            </button>
+            <button class="btn btn-success is-disabled" type="button" title="이미 종료 처리된 평가입니다" disabled>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                종료 완료
+            </button>
+        </div>
+    </main>
+
+    <!-- 토스트 -->
+    <div id="toast" class="toast" role="status"></div>
+
+    <script src="./js/layout.js"></script>
+    <script>
+    /* ─── 단계 토글 (프로토타입 임시) ─── */
+    (function () {
+        'use strict';
+        const KEY = 'dy-rsk-stage';
+        const STAGES = {
+            prepare:  '① 사전준비',
+            progress: '② 진행중',
+            done:     '③ 완료',
+        };
+
+        function applyStage(val) {
+            if (!STAGES[val]) val = 'progress';
+            document.body.setAttribute('data-rsk-stage', val);
+            try { localStorage.setItem(KEY, val); } catch (e) {}
+            const select = document.querySelector('.dy-stage-switcher select');
+            if (select && select.value !== val) select.value = val;
+        }
+
+        function injectSwitcher() {
+            const inner = document.querySelector('.dy-sidebar-inner');
+            if (!inner || inner.querySelector('.dy-stage-switcher')) return;
+
+            const current = (function () {
+                try { return localStorage.getItem(KEY) || 'progress'; }
+                catch (e) { return 'progress'; }
+            })();
+
+            const wrap = document.createElement('div');
+            wrap.className = 'dy-role-switcher dy-stage-switcher';
+            wrap.innerHTML =
+                '<span class="dy-role-switcher-label">단계 전환 (임시)</span>' +
+                '<select>' +
+                    Object.keys(STAGES).map(k =>
+                        `<option value="${k}"${k === current ? ' selected' : ''}>${STAGES[k]}</option>`
+                    ).join('') +
+                '</select>' +
+                '<span class="dy-role-switcher-help">RSK02-D cycle_stage 변형 (프로토타입 둘러보기용)</span>';
+            inner.appendChild(wrap);
+
+            applyStage(current);
+            wrap.querySelector('select').addEventListener('change', e => applyStage(e.target.value));
+        }
+
+        window.RskStage = { set: applyStage };
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', injectSwitcher);
+        } else {
+            injectSwitcher();
+        }
+    })();
+    </script>
+
+    <!-- ============================================================ -->
+    <!-- 위험성평가 모듈 v0.1 — SIF 추천·매트릭스·감소대책 (PRD §7,9) -->
+    <!-- ============================================================ -->
+
+    <style>
+        /* ─── 모달 기본 ─── */
+        .rsk-modal {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center; justify-content: center;
+            z-index: 1000;
+            padding: 24px;
+        }
+        .rsk-modal.is-open { display: flex; }
+        .rsk-modal-dialog {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            max-width: 1200px; width: 100%;
+            max-height: 90vh;
+            display: flex; flex-direction: column;
+            overflow: hidden;
+        }
+        .rsk-modal-dialog.small { max-width: 640px; }
+        .rsk-modal-dialog.medium { max-width: 820px; }
+        .rsk-modal-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--card-line);
+            flex-shrink: 0;
+        }
+        .rsk-modal-title {
+            font-size: 16px; font-weight: 700;
+            color: var(--text-black);
+        }
+        .rsk-modal-close {
+            width: 32px; height: 32px;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: transparent; border: none; cursor: pointer;
+            color: var(--text-gray);
+            border-radius: 6px;
+        }
+        .rsk-modal-close:hover { background: var(--gray-100); color: var(--text-black); }
+        .rsk-modal-body {
+            padding: 20px 24px;
+            overflow-y: auto;
+            flex: 1;
+        }
+        .rsk-modal-footer {
+            padding: 12px 24px;
+            border-top: 1px solid var(--card-line);
+            display: flex; justify-content: flex-end; gap: 8px;
+            flex-shrink: 0;
+            background: #fafafa;
+        }
+
+        /* ─── SIF 모달 — 좌우 분할 ─── */
+        .rsk-sif-layout {
+            display: grid;
+            grid-template-columns: 1.4fr 1fr;
+            gap: 20px;
+            height: 100%;
+        }
+        @media (max-width: 1024px) {
+            .rsk-sif-layout { grid-template-columns: 1fr; }
+        }
+        .rsk-sif-left, .rsk-sif-right {
+            display: flex; flex-direction: column;
+            min-width: 0;
+        }
+        .rsk-sif-right {
+            border-left: 1px solid var(--card-line);
+            padding-left: 20px;
+        }
+        @media (max-width: 1024px) {
+            .rsk-sif-right { border-left: none; border-top: 1px solid var(--card-line); padding-left: 0; padding-top: 20px; }
+        }
+
+        /* ─── 좌측: 필터바 ─── */
+        .rsk-sif-filter {
+            display: flex; gap: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .rsk-sif-filter input, .rsk-sif-filter select {
+            padding: 8px 12px;
+            border: 1px solid var(--card-line);
+            border-radius: 6px;
+            font-size: 13px;
+            background: #fff;
+        }
+        .rsk-sif-filter input { flex: 1; min-width: 200px; }
+        .rsk-sif-help {
+            font-size: 12px; color: var(--text-gray);
+            margin-bottom: 8px;
+        }
+
+        /* ─── 좌측: SIF 카드 그리드 ─── */
+        .rsk-sif-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 10px;
+            overflow-y: auto;
+            max-height: 460px;
+            padding: 4px;
+        }
+        .rsk-sif-empty {
+            grid-column: 1 / -1;
+            padding: 32px 20px;
+            text-align: center;
+            color: var(--text-gray);
+            font-size: 13px;
+            background: var(--gray-100);
+            border-radius: 8px;
+        }
+        .rsk-sif-card {
+            border: 1px solid var(--card-line);
+            border-radius: 8px;
+            padding: 12px;
+            background: #fff;
+            transition: all 0.15s;
+            display: flex; flex-direction: column;
+            gap: 6px;
+            font-size: 12px;
+        }
+        .rsk-sif-card:hover { border-color: var(--main); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .rsk-sif-card.state-adopt { border-color: var(--status-warning-fg); background: var(--status-warning-bg); }
+        .rsk-sif-card.state-review { border-color: var(--status-info-fg); background: var(--status-info-bg); }
+        .rsk-sif-card-header {
+            display: flex; justify-content: space-between; align-items: center;
+            gap: 6px;
+        }
+        .rsk-sif-id {
+            font-size: 11px; color: var(--text-gray);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .rsk-sif-badge {
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-size: 10px; font-weight: 700;
+        }
+        .rsk-sif-badge.danger { background: var(--status-danger-bg); color: var(--status-danger-fg); border: 1px solid var(--status-danger-border); }
+        .rsk-sif-badge.warning { background: var(--status-warning-bg); color: var(--status-warning-fg); border: 1px solid var(--status-warning-border); }
+        .rsk-sif-badge.info { background: var(--status-info-bg); color: var(--status-info-fg); border: 1px solid var(--status-info-border); }
+        .rsk-sif-card-title {
+            font-size: 13px; font-weight: 700;
+            color: var(--text-black);
+            line-height: 1.4;
+        }
+        .rsk-sif-card-summary {
+            font-size: 12px;
+            color: var(--text-gray);
+            line-height: 1.5;
+        }
+        .rsk-sif-card-meta {
+            display: flex; gap: 4px; flex-wrap: wrap;
+            margin-top: 2px;
+        }
+        .rsk-sif-tag {
+            font-size: 10px; padding: 2px 6px;
+            background: var(--gray-100);
+            border-radius: 4px;
+            color: var(--text-gray);
+        }
+        .rsk-sif-card-actions {
+            display: flex; gap: 4px;
+            margin-top: 6px;
+        }
+        .rsk-sif-btn {
+            flex: 1;
+            padding: 5px 4px;
+            border: 1px solid var(--card-line);
+            background: #fff;
+            border-radius: 4px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+        .rsk-sif-btn-adopt:hover { background: var(--status-warning-bg); border-color: var(--status-warning-fg); color: var(--status-warning-fg); }
+        .rsk-sif-btn-review:hover { background: var(--status-info-bg); border-color: var(--status-info-fg); color: var(--status-info-fg); }
+        .rsk-sif-btn-reject:hover { background: #f5f5f5; }
+        .rsk-sif-card.state-adopt .rsk-sif-btn-adopt { background: var(--status-warning-fg); color: #fff; border-color: var(--status-warning-fg); }
+        .rsk-sif-card.state-review .rsk-sif-btn-review { background: var(--status-info-fg); color: #fff; border-color: var(--status-info-fg); }
+
+        /* ─── 자체 추가 입력 ─── */
+        .rsk-sif-custom {
+            display: flex; gap: 6px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed var(--card-line);
+        }
+        .rsk-sif-custom input {
+            flex: 1; padding: 8px 12px;
+            border: 1px solid var(--card-line);
+            border-radius: 6px;
+            font-size: 13px;
+        }
+        .rsk-sif-custom button {
+            padding: 8px 16px;
+            background: var(--main); color: #fff;
+            border: none; border-radius: 6px;
+            font-size: 13px; font-weight: 600; cursor: pointer;
+        }
+
+        /* ─── 우측: 채택된 풀 ─── */
+        .rsk-sif-counter {
+            padding: 10px 12px;
+            background: var(--status-warning-bg);
+            border: 1px solid var(--status-warning-border);
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+        .rsk-pool-table {
+            width: 100%;
+            font-size: 12px;
+            border-collapse: collapse;
+        }
+        .rsk-pool-table th {
+            background: var(--gray-100);
+            padding: 6px 8px;
+            border-bottom: 1px solid var(--card-line);
+            text-align: left;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-gray);
+        }
+        .rsk-pool-table td {
+            padding: 8px;
+            border-bottom: 1px solid var(--card-line);
+            vertical-align: top;
+        }
+        .rsk-pool-table .center { text-align: center; }
+        .rsk-pool-empty {
+            padding: 32px 16px;
+            text-align: center;
+            color: var(--text-gray);
+            font-size: 12px;
+        }
+        .rsk-pool-origin {
+            display: inline-block;
+            padding: 1px 5px;
+            font-size: 10px;
+            border-radius: 3px;
+            margin-bottom: 2px;
+        }
+        .rsk-pool-origin.sif { background: var(--status-warning-bg); color: var(--status-warning-fg); }
+        .rsk-pool-origin.custom { background: var(--status-info-bg); color: var(--status-info-fg); }
+        .rsk-pool-title { font-weight: 600; line-height: 1.4; }
+        .rsk-pool-score-btn {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid;
+            background: #fff;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .rsk-pool-score-btn.empty {
+            border-color: var(--card-line); color: var(--text-gray); background: #fafafa;
+        }
+        .rsk-pool-score-btn.empty:hover { background: var(--gray-200); }
+        .rsk-pool-del {
+            background: transparent; border: 1px solid var(--card-line);
+            border-radius: 4px; width: 24px; height: 24px;
+            cursor: pointer; color: var(--text-gray);
+        }
+        .rsk-pool-del:hover { background: var(--status-danger-bg); border-color: var(--status-danger-border); color: var(--status-danger-fg); }
+        .rsk-pool-disabled { font-size: 11px; color: var(--text-lightgray); }
+        .rsk-pool-action-summary {
+            display: flex; align-items: center; gap: 4px;
+            font-size: 11px; color: var(--text-gray);
+        }
+        .rsk-link-btn {
+            padding: 4px 8px;
+            background: transparent;
+            border: 1px solid var(--main);
+            color: var(--main);
+            border-radius: 4px;
+            font-size: 11px; cursor: pointer;
+        }
+        .rsk-link-btn:hover { background: var(--main); color: #fff; }
+        .rsk-link-btn.warning { border-color: var(--status-warning-fg); color: var(--status-warning-fg); }
+        .rsk-link-btn.warning:hover { background: var(--status-warning-fg); color: #fff; }
+
+        /* ─── 매트릭스 모달 ─── */
+        .rsk-matrix-target-row {
+            padding: 10px 14px;
+            background: #fafafa;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+        .rsk-matrix-target-row strong { color: var(--text-black); }
+        .rsk-matrix-section {
+            margin-bottom: 16px;
+        }
+        .rsk-matrix-section-title {
+            font-size: 13px; font-weight: 700;
+            color: var(--text-black);
+            margin-bottom: 8px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .rsk-matrix-section-help {
+            font-size: 11px; color: var(--text-gray);
+            font-weight: normal;
+        }
+        .rsk-matrix-radios {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 6px;
+        }
+        .rsk-matrix-radios label {
+            display: flex; flex-direction: column;
+            gap: 4px;
+            padding: 8px;
+            border: 1px solid var(--card-line);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            text-align: center;
+            transition: all 0.1s;
+            background: #fff;
+        }
+        .rsk-matrix-radios label:hover { border-color: var(--main); background: #fafafa; }
+        .rsk-matrix-radios input { margin: 0 auto; }
+        .rsk-matrix-radios input:checked + .rsk-matrix-radio-num {
+            color: var(--main); font-weight: 700;
+        }
+        .rsk-matrix-radios label:has(input:checked) {
+            border-color: var(--main); background: var(--status-info-bg);
+        }
+        .rsk-matrix-radio-num { font-size: 16px; font-weight: 600; }
+        .rsk-matrix-radio-desc { font-size: 11px; color: var(--text-gray); }
+
+        .rsk-matrix-preview-empty {
+            padding: 16px;
+            background: var(--gray-100);
+            border-radius: 6px;
+            text-align: center;
+            color: var(--text-gray);
+            font-size: 13px;
+        }
+        .rsk-matrix-result-card {
+            padding: 14px 16px;
+            border: 2px solid;
+            border-radius: 8px;
+        }
+        .rsk-matrix-score-row {
+            display: flex; align-items: center; gap: 12px;
+            margin-bottom: 8px;
+        }
+        .rsk-matrix-formula { font-size: 14px; color: var(--text-gray); }
+        .rsk-matrix-score { font-size: 28px; font-weight: 800; }
+        .rsk-matrix-level {
+            margin-left: auto;
+            padding: 4px 12px;
+            color: #fff;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 14px;
+        }
+        .rsk-matrix-banner { font-size: 13px; font-weight: 600; }
+        .rsk-matrix-due {
+            margin-top: 6px;
+            font-size: 12px; color: var(--text-gray);
+        }
+
+        /* ─── 감소대책 모달 ─── */
+        .rsk-action-check {
+            display: flex; align-items: flex-start; gap: 8px;
+            padding: 10px 12px;
+            border: 1px solid var(--card-line);
+            border-radius: 6px;
+            margin-bottom: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            line-height: 1.5;
+            transition: background 0.1s;
+        }
+        .rsk-action-check:hover { background: #fafafa; }
+        .rsk-action-check:has(input:checked) {
+            background: var(--status-success-bg);
+            border-color: var(--status-success-fg);
+        }
+        .rsk-action-check input { margin-top: 3px; flex-shrink: 0; }
+        .rsk-action-empty {
+            padding: 16px;
+            background: var(--gray-100);
+            border-radius: 6px;
+            color: var(--text-gray);
+            font-size: 12px;
+            text-align: center;
+        }
+        .rsk-actions-custom-area {
+            margin-top: 16px;
+        }
+        .rsk-actions-custom-area textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 10px 12px;
+            border: 1px solid var(--card-line);
+            border-radius: 6px;
+            font-size: 13px;
+            font-family: inherit;
+            resize: vertical;
+        }
+
+        /* ─── 버튼 ─── */
+        .rsk-btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: 1px solid;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .rsk-btn-primary {
+            background: var(--main); color: #fff; border-color: var(--main);
+        }
+        .rsk-btn-primary:hover { background: var(--main-dark); }
+        .rsk-btn-secondary {
+            background: #fff; color: var(--text-black); border-color: var(--card-line);
+        }
+        .rsk-btn-secondary:hover { background: #fafafa; }
+        .rsk-btn-success {
+            background: var(--status-success-fg); color: #fff; border-color: var(--status-success-fg);
+        }
+        .rsk-btn-success:hover { background: var(--main-dark); }
+
+        /* Toast */
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+
+    <!-- ════════ SIF 추천 모달 (RSK02-S) ════════ -->
+    <div id="rsk-sif-modal" class="rsk-modal" role="dialog" aria-labelledby="rsk-sif-modal-title">
+        <div class="rsk-modal-dialog">
+            <div class="rsk-modal-header">
+                <div class="rsk-modal-title" id="rsk-sif-modal-title">
+                    🔍 위험요인 추가 — SIF 추천 시나리오 + 자체 입력
+                    <span style="font-size:11px; color:var(--text-gray); font-weight:normal; margin-left:8px;">PRD §7</span>
+                </div>
+                <button class="rsk-modal-close" data-rsk-modal-close="rsk-sif-modal" aria-label="닫기">✕</button>
+            </div>
+            <div class="rsk-modal-body">
+                <div class="rsk-sif-layout">
+                    <!-- 좌측: 추천 카드 그리드 -->
+                    <div class="rsk-sif-left">
+                        <div class="rsk-sif-help">
+                            KOSHA 산업재해 고위험요인(SIF) 4,432건에서 담양군 시설 관리에 적합한 시나리오 20건을 큐레이션했습니다.
+                            <strong>해당함</strong>으로 채택한 시나리오는 우측 풀에 자동 추가됩니다.
+                        </div>
+                        <div class="rsk-sif-filter">
+                            <input type="text" id="rsk-sif-search" placeholder="🔎 키워드 검색 (예: 추락, 감전, 사다리, 굴착기)">
+                            <select id="rsk-sif-dept">
+                                <option value="">전체 부서</option>
+                                <option value="공공시설사업소 ★" selected>공공시설사업소 ★</option>
+                                <option value="물순환사업소 ★">물순환사업소 ★</option>
+                                <option value="건설과 ★">건설과 ★</option>
+                                <option value="환경과">환경과</option>
+                                <option value="안전총괄과">안전총괄과</option>
+                                <option value="문화관광과">문화관광과</option>
+                            </select>
+                        </div>
+                        <div id="rsk-sif-grid" class="rsk-sif-grid"></div>
+                        <div class="rsk-sif-custom">
+                            <input type="text" id="rsk-sif-custom-input" placeholder="✏️ SIF에 없는 위험요인을 직접 입력 (예: 청사 옥상 펜스 부식)">
+                            <button id="rsk-sif-custom-add" type="button">자체 추가</button>
+                        </div>
+                    </div>
+
+                    <!-- 우측: 채택된 풀 -->
+                    <div class="rsk-sif-right">
+                        <div class="rsk-modal-title" style="font-size:14px; margin-bottom:10px;">📋 채택된 위험요인 풀</div>
+                        <div id="rsk-sif-counter" class="rsk-sif-counter">
+                            <strong>해당함 0</strong> · 검토중 0 · 자체추가 0 · 총 위험요인 풀 <strong>0</strong>건
+                        </div>
+                        <table class="rsk-pool-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:32px;">#</th>
+                                    <th>위험요인</th>
+                                    <th style="width:90px;">기인물</th>
+                                    <th style="width:110px;">점수·등급</th>
+                                    <th style="width:130px;">감소대책</th>
+                                    <th style="width:36px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="rsk-factor-pool-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="rsk-modal-footer">
+                <button class="rsk-btn rsk-btn-secondary" data-rsk-modal-close="rsk-sif-modal" type="button">닫기</button>
+                <button id="rsk-sif-commit" class="rsk-btn rsk-btn-primary" type="button">✓ 위험요인 풀에 반영</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════ 매트릭스 점수 모달 (RSK02-M) ════════ -->
+    <div id="rsk-matrix-modal" class="rsk-modal" role="dialog" aria-labelledby="rsk-matrix-modal-title">
+        <div class="rsk-modal-dialog medium">
+            <div class="rsk-modal-header">
+                <div class="rsk-modal-title" id="rsk-matrix-modal-title">
+                    ⚖️ 위험성 추정 — 5×5 매트릭스
+                    <span style="font-size:11px; color:var(--text-gray); font-weight:normal; margin-left:8px;">PRD §5.3</span>
+                </div>
+                <button class="rsk-modal-close" data-rsk-modal-close="rsk-matrix-modal" aria-label="닫기">✕</button>
+            </div>
+            <div class="rsk-modal-body">
+                <div class="rsk-matrix-target-row">
+                    <span style="color:var(--text-gray); font-size:12px;">위험요인 :</span>
+                    <strong id="rsk-matrix-target"></strong>
+                </div>
+
+                <div class="rsk-matrix-section">
+                    <div class="rsk-matrix-section-title">
+                        빈도 (가능성)
+                        <span class="rsk-matrix-section-help">사고 발생 가능성 — 작업의 빈도·시간·확률</span>
+                    </div>
+                    <div class="rsk-matrix-radios">
+                        <label><input type="radio" name="m-frequency" value="1"><span class="rsk-matrix-radio-num">1</span><span class="rsk-matrix-radio-desc">매우낮음<br>연1회</span></label>
+                        <label><input type="radio" name="m-frequency" value="2"><span class="rsk-matrix-radio-num">2</span><span class="rsk-matrix-radio-desc">낮음<br>분기1회</span></label>
+                        <label><input type="radio" name="m-frequency" value="3"><span class="rsk-matrix-radio-num">3</span><span class="rsk-matrix-radio-desc">보통<br>월1회</span></label>
+                        <label><input type="radio" name="m-frequency" value="4"><span class="rsk-matrix-radio-num">4</span><span class="rsk-matrix-radio-desc">높음<br>주1회</span></label>
+                        <label><input type="radio" name="m-frequency" value="5"><span class="rsk-matrix-radio-num">5</span><span class="rsk-matrix-radio-desc">매우높음<br>매일</span></label>
+                    </div>
+                </div>
+
+                <div class="rsk-matrix-section">
+                    <div class="rsk-matrix-section-title">
+                        강도 (중대성)
+                        <span class="rsk-matrix-section-help">사고 발생 시 부상·건강장해 정도</span>
+                    </div>
+                    <div class="rsk-matrix-radios">
+                        <label><input type="radio" name="m-severity" value="1"><span class="rsk-matrix-radio-num">1</span><span class="rsk-matrix-radio-desc">경미<br>응급조치</span></label>
+                        <label><input type="radio" name="m-severity" value="2"><span class="rsk-matrix-radio-num">2</span><span class="rsk-matrix-radio-desc">경상<br>1~3일 치료</span></label>
+                        <label><input type="radio" name="m-severity" value="3"><span class="rsk-matrix-radio-num">3</span><span class="rsk-matrix-radio-desc">중대<br>휴업 1주↑</span></label>
+                        <label><input type="radio" name="m-severity" value="4"><span class="rsk-matrix-radio-num">4</span><span class="rsk-matrix-radio-desc">중상해<br>장해 가능</span></label>
+                        <label><input type="radio" name="m-severity" value="5"><span class="rsk-matrix-radio-num">5</span><span class="rsk-matrix-radio-desc">사망<br>중대재해</span></label>
+                    </div>
+                </div>
+
+                <div id="rsk-matrix-result">
+                    <div class="rsk-matrix-preview-empty">빈도와 강도를 모두 선택하면 위험점수·등급·권장 기한이 표시됩니다.</div>
+                </div>
+            </div>
+            <div class="rsk-modal-footer">
+                <button class="rsk-btn rsk-btn-secondary" data-rsk-modal-close="rsk-matrix-modal" type="button">취소</button>
+                <button id="rsk-matrix-save" class="rsk-btn rsk-btn-primary" type="button">✓ 점수 저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════ 감소대책 모달 (RSK02-A) ════════ -->
+    <div id="rsk-actions-modal" class="rsk-modal" role="dialog" aria-labelledby="rsk-actions-modal-title">
+        <div class="rsk-modal-dialog medium">
+            <div class="rsk-modal-header">
+                <div class="rsk-modal-title" id="rsk-actions-modal-title">
+                    🛡 감소대책 수립 → 개선조치(IMP) 자동 생성
+                    <span style="font-size:11px; color:var(--text-gray); font-weight:normal; margin-left:8px;">PRD §9.4</span>
+                </div>
+                <button class="rsk-modal-close" data-rsk-modal-close="rsk-actions-modal" aria-label="닫기">✕</button>
+            </div>
+            <div class="rsk-modal-body">
+                <div class="rsk-matrix-target-row">
+                    <div style="margin-bottom:6px;"><span style="color:var(--text-gray); font-size:12px;">위험요인 :</span> <strong id="rsk-actions-target"></strong></div>
+                    <div style="font-size:12px;"><span style="color:var(--text-gray);">등급 :</span> <span id="rsk-actions-level"></span></div>
+                </div>
+
+                <div class="rsk-matrix-section-title" style="margin-top:8px;">
+                    ① KOSHA 권장 감소대책 (체크박스로 선택)
+                    <span class="rsk-matrix-section-help">SIF 사례에서 도출된 검증된 대책. 여러 개 선택 가능</span>
+                </div>
+                <div id="rsk-actions-kosha-list" style="margin-bottom:16px;"></div>
+
+                <div class="rsk-matrix-section-title">
+                    ② 자체 대책 (선택)
+                    <span class="rsk-matrix-section-help">담양군 현장 상황에 맞춘 추가 대책</span>
+                </div>
+                <div class="rsk-actions-custom-area">
+                    <textarea id="rsk-actions-custom" placeholder="예: 담양군 청사 옥상은 진입 통제 자물쇠 설치 + 분기 1회 외주 정밀점검"></textarea>
+                </div>
+
+                <div style="margin-top:14px; padding:10px 12px; background:var(--status-info-bg); border:1px solid var(--status-info-border); border-radius:6px; font-size:12px; color:var(--status-info-fg);">
+                    💡 [<strong>저장 + IMP 생성</strong>] 클릭 시 개선조치(IMP) 모듈에 자동 등록되어 추적됩니다.
+                    기한은 등급별 권장 정책(매우높음 30일·높음 60일·보통 90일)으로 자동 설정됩니다.
+                </div>
+            </div>
+            <div class="rsk-modal-footer">
+                <button class="rsk-btn rsk-btn-secondary" data-rsk-modal-close="rsk-actions-modal" type="button">취소</button>
+                <button id="rsk-actions-save" class="rsk-btn rsk-btn-secondary" type="button">대책만 저장</button>
+                <button id="rsk-actions-save-imp" class="rsk-btn rsk-btn-success" type="button">✓ 저장 + IMP 생성</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="./js/risk-sif-data.js"></script>
+    <script src="./js/risk-assessment.js"></script>
+</body>
+</html>

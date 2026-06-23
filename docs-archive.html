@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>기준문서함 - 담양군 중대재해예방통합관리시스템 v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="docs-archive" data-page-title="기준문서함" data-page-subtitle="업무문서 > 기준문서함 — 첨부(보관) 문서 일괄 관리 · 대메뉴별 필터 · 버전 이력 · 다중 첨부">
+    <main>
+        <div id="archive-stats" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin-bottom:16px;"></div>
+
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title" id="archive-count">기준문서함</span>
+                <button class="btn btn-primary btn-sm" onclick="DYV2.toast('기준문서 업로드 — 다중 첨부 가능 (프로토타입)')">+ 문서 업로드 (다중)</button>
+            </div>
+            <div class="card-body">
+                <div class="v2-toolbar">
+                    <select class="select" id="f-menu">
+                        <option value="">대메뉴 전체</option>
+                    </select>
+                    <select class="select" id="f-law">
+                        <option value="">법령 전체</option>
+                        <option>중처법</option>
+                        <option>산안법</option>
+                    </select>
+                    <select class="select" id="f-flag">
+                        <option value="">표시 전체</option>
+                        <option value="unassigned">분류 미확정 (노란 뱃지)</option>
+                        <option value="second">2차 검토 대상 (점검 계열)</option>
+                    </select>
+                    <div class="search-bar">
+                        <input class="search-input" id="f-q" type="text" placeholder="문서명 검색">
+                        <button class="search-submit" type="button">검색</button>
+                    </div>
+                    <span class="spacer"></span>
+                    <span class="v2-todo">TODO 안전점검 프로그램 메뉴 승격 여부 — 2차 검토 (회의 보류 결정)</span>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table class="table-figma">
+                        <thead><tr><th>문서명</th><th>대메뉴</th><th>법령</th><th>표시</th><th>버전</th><th>최종 수정</th><th>관리</th></tr></thead>
+                        <tbody id="archive-tbody"></tbody>
+                    </table>
+                </div>
+                <p style="font-size:12px; color:var(--text-gray); margin-top:10px;" id="archive-note"></p>
+            </div>
+        </div>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/data.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/edoc-templates.js"></script>
+    <script src="./js/edoc.js"></script>
+    <script>
+        /* 기준문서함 = workType=첨부 전체 + 확인필요(분류 미확정) 124건 일괄 수용
+         * 확인필요 → 노란 "분류 미확정" 뱃지 / 점검 계열 → "2차 검토 대상" 뱃지 */
+        (function () {
+            const V = DYV2;
+            const ALL = V.docs().filter(d => d.workType === '첨부' || d.daemenu === '확인필요');
+            const PAGE = 20;
+            let shownLimit = PAGE;
+
+            const unassigned = ALL.filter(d => d.daemenu === '확인필요');
+            const second = ALL.filter(d => d.secondReview);
+            document.getElementById('archive-stats').innerHTML =
+                '<div class="statbox neutral"><div class="statbox-num">' + ALL.length + '</div><div class="statbox-label">보관 문서 전체</div></div>' +
+                '<div class="statbox warning"><div class="statbox-num">' + unassigned.length + '</div><div class="statbox-label">분류 미확정 (확인필요)</div></div>' +
+                '<div class="statbox info"><div class="statbox-num">' + second.length + '</div><div class="statbox-label">2차 검토 대상 (점검 계열)</div></div>' +
+                '<div class="statbox success"><div class="statbox-num">' + (ALL.length - unassigned.length) + '</div><div class="statbox-label">대메뉴 확정</div></div>';
+
+            /* 대메뉴 필터 옵션 — 실데이터 기준 자동 생성 */
+            const menus = [...new Set(ALL.map(d => d.daemenu))];
+            const fMenu = document.getElementById('f-menu');
+            menus.forEach(m => {
+                const o = document.createElement('option');
+                o.value = m; o.textContent = m + ' (' + ALL.filter(d => d.daemenu === m).length + ')';
+                fMenu.appendChild(o);
+            });
+
+            function flags(d) {
+                let h = '';
+                if (d.daemenu === '확인필요') h += V.unassignedBadge() + ' ';
+                if (d.secondReview) h += V.secondReviewBadge();
+                return h || '-';
+            }
+            function render() {
+                const m = fMenu.value;
+                const law = document.getElementById('f-law').value;
+                const flag = document.getElementById('f-flag').value;
+                const q = document.getElementById('f-q').value.trim();
+                const list = ALL.filter(d =>
+                    (!m || d.daemenu === m) &&
+                    (!law || d.law === law) &&
+                    (flag !== 'unassigned' || d.daemenu === '확인필요') &&
+                    (flag !== 'second' || d.secondReview) &&
+                    (!q || d.name.indexOf(q) >= 0)
+                );
+                const shown = list.slice(0, shownLimit);
+                document.getElementById('archive-count').textContent = '기준문서함 (' + list.length + '건)';
+                document.getElementById('archive-tbody').innerHTML = shown.map(d =>
+                    '<tr>' +
+                    '<td style="font-weight:600; max-width:420px;">' + V.esc(d.name) + '</td>' +
+                    '<td>' + (d.daemenu === '확인필요' ? '<span class="chip-mini wt">미배치</span>' : '<a href="menu.html?m=' + d.menuKey + '&tab=docs" class="chip-mini pdca" style="text-decoration:none;">' + V.esc(d.daemenu) + '</a>') + '</td>' +
+                    '<td>' + V.lawChip(d.law) + '</td>' +
+                    '<td>' + flags(d) + '</td>' +
+                    '<td>' + V.esc(d.version) + '</td>' +
+                    '<td>' + V.esc(d.updated) + '</td>' +
+                    '<td class="col-action"><button class="btn btn-sm btn-outline" onclick="DYV2.openDoc(\'' + d.id + '\')">업로드</button></td>' +
+                    '</tr>'
+                ).join('') || '<tr><td colspan="7"><div class="v2-empty">조건에 맞는 문서가 없습니다.</div></td></tr>';
+                document.getElementById('archive-note').innerHTML = list.length > shown.length
+                    ? shown.length + ' / ' + list.length + '건 표시 — <a href="#" style="color:var(--main); font-weight:700;" onclick="DYV2._more(); return false;">더 보기</a>'
+                    : list.length + '건 전체 표시';
+            }
+            DYV2._more = function () { shownLimit += PAGE; render(); };
+            ['f-menu', 'f-law', 'f-flag'].forEach(id =>
+                document.getElementById(id).addEventListener('change', () => { shownLimit = PAGE; render(); }));
+            document.getElementById('f-q').addEventListener('input', () => { shownLimit = PAGE; render(); });
+
+            /* 대시보드 딥링크 ?filter=unassigned */
+            if (new URLSearchParams(location.search).get('filter') === 'unassigned') {
+                document.getElementById('f-flag').value = 'unassigned';
+            }
+            render();
+        })();
+    </script>
+</body>
+</html>

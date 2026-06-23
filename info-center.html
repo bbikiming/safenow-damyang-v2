@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>정보센터 - 담양군 중대재해예방통합관리시스템 v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="info-center" data-page-title="정보센터" data-page-subtitle="통계·보고 > 정보센터 — 공지사항 · 자료실 · 우수사례 · 통합검색">
+    <main>
+        <div class="v2-toolbar">
+            <div class="search-bar" style="flex:1; max-width:520px;">
+                <input class="search-input" type="text" placeholder="통합검색 — 공지·자료·우수사례·문서명">
+                <button class="search-submit" type="button" onclick="DYV2.toast('통합검색 (프로토타입)')">검색</button>
+            </div>
+        </div>
+
+        <div class="tabs" id="info-tabs">
+            <button class="tab active" data-tab="notice">공지사항</button>
+            <button class="tab" data-tab="archive">자료실</button>
+            <button class="tab" data-tab="best">우수사례</button>
+        </div>
+
+        <section data-pane="notice">
+            <div class="card"><div class="card-body">
+                <table class="table-figma">
+                    <thead><tr><th>제목</th><th>작성</th><th>등록일</th><th>조회</th></tr></thead>
+                    <tbody>
+                        <tr><td style="font-weight:600;">[필독] 2026년 상반기 의무이행 점검 일정 안내</td><td>재난안전과</td><td>2026-06-02</td><td>214</td></tr>
+                        <tr><td style="font-weight:600;">위험성평가 담당자 교육 신청 안내 (6/20)</td><td>재난안전과</td><td>2026-05-28</td><td>167</td></tr>
+                        <tr><td style="font-weight:600;">시스템 정기 점검에 따른 일시 중단 안내</td><td>시스템 관리자</td><td>2026-05-20</td><td>98</td></tr>
+                    </tbody>
+                </table>
+            </div></div>
+        </section>
+
+        <section data-pane="archive" style="display:none;">
+            <div class="card"><div class="card-body">
+                <table class="table-figma">
+                    <thead><tr><th>자료명</th><th>구분</th><th>등록일</th><th></th></tr></thead>
+                    <tbody>
+                        <tr><td style="font-weight:600;">중대재해처벌법 해설서 (고용노동부)</td><td>법령</td><td>2026-03-02</td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('다운로드 (프로토타입)')">다운로드</button></td></tr>
+                        <tr><td style="font-weight:600;">지자체 위험성평가 실무 가이드</td><td>지침</td><td>2026-02-14</td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('다운로드 (프로토타입)')">다운로드</button></td></tr>
+                        <tr><td style="font-weight:600;">TBM(작업 전 안전점검회의) 표준 양식</td><td>양식</td><td>2026-01-30</td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('다운로드 (프로토타입)')">다운로드</button></td></tr>
+                    </tbody>
+                </table>
+            </div></div>
+        </section>
+
+        <section data-pane="best" style="display:none;">
+            <div class="card"><div class="card-body">
+                <table class="table-figma">
+                    <thead><tr><th>사례</th><th>부서</th><th>등록일</th><th>추천</th></tr></thead>
+                    <tbody>
+                        <tr><td style="font-weight:600;">밀폐공간 작업 2인 1조 + 가스측정 정착 사례</td><td>환경과</td><td>2026-05-15</td><td>12</td></tr>
+                        <tr><td style="font-weight:600;">QR 신고함 도입으로 종사자 신고 3배 증가</td><td>재난안전과</td><td>2026-04-22</td><td>9</td></tr>
+                    </tbody>
+                </table>
+            </div></div>
+        </section>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/data.js"></script>
+    <script src="./js/common.js"></script>
+    <script>
+        (function () {
+            const tabs = document.querySelectorAll('#info-tabs .tab');
+            tabs.forEach(t => t.addEventListener('click', () => {
+                tabs.forEach(x => x.classList.toggle('active', x === t));
+                document.querySelectorAll('[data-pane]').forEach(p => p.style.display = p.dataset.pane === t.dataset.tab ? '' : 'none');
+            }));
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>정기 위험성평가 - 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <style>
+        /* 차수 헤더 */
+        .reg-header {
+            background: #fff; border: 1px solid var(--card-line); border-radius: var(--radius-card);
+            padding: 18px 22px; margin-bottom: 16px;
+        }
+        .reg-header-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+        .reg-title { font-size: 19px; font-weight: 800; color: var(--text-black); letter-spacing: -0.6px; display: flex; align-items: center; gap: 8px; }
+        .reg-meta { font-size: 13px; color: var(--text-gray); margin-top: 6px; }
+        .reg-meta strong { color: var(--text-black); }
+
+        /* 자동 생성 결과 배너 */
+        .reg-autobanner {
+            background: var(--status-success-bg); border: 1px solid var(--status-success-border);
+            border-radius: var(--radius-button); padding: 14px 18px; margin-bottom: 16px;
+        }
+        .reg-autobanner-title { font-size: 14px; font-weight: 700; color: var(--status-success-fg); display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+        .reg-autobanner-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 18px; }
+        @media (max-width: 767px) { .reg-autobanner-list { grid-template-columns: 1fr; } }
+        .reg-autobanner-item { font-size: 12.5px; color: var(--text-black); display: flex; align-items: flex-start; gap: 6px; line-height: 1.5; }
+        .reg-autobanner-item .ok { color: var(--status-success-fg); font-weight: 800; flex-shrink: 0; }
+
+        /* 진행률 KPI */
+        .reg-kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px; }
+        @media (max-width: 767px) { .reg-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+        .reg-kpi { background: #fff; border: 1px solid var(--card-line); border-radius: var(--radius-statbox); padding: 14px 16px; text-align: center; }
+        .reg-kpi-num { font-size: 24px; font-weight: 800; letter-spacing: -0.6px; }
+        .reg-kpi-label { font-size: 12px; color: var(--text-gray); margin-top: 2px; }
+        .reg-kpi.total .reg-kpi-num { color: var(--text-black); }
+        .reg-kpi.todo  .reg-kpi-num { color: var(--text-lightgray); }
+        .reg-kpi.doing .reg-kpi-num { color: var(--status-info-fg); }
+        .reg-kpi.review .reg-kpi-num { color: var(--status-warning-fg); }
+        .reg-kpi.done  .reg-kpi-num { color: var(--status-success-fg); }
+
+        /* 진행률 바 */
+        .reg-progress-wrap { display:flex; align-items:center; gap:12px; background:#fff; border:1px solid var(--card-line); border-radius:var(--radius-button); padding:12px 18px; margin-bottom:16px; }
+        .reg-progress-track { flex:1; height:10px; background:var(--gray-100); border-radius:var(--radius-full); overflow:hidden; }
+        .reg-progress-fill { height:100%; background:linear-gradient(90deg, var(--status-success-fg), var(--status-info-fg)); border-radius:var(--radius-full); }
+        .reg-progress-text { font-size:13px; font-weight:700; color:var(--text-black); white-space:nowrap; }
+
+        /* 기준자료 출처 배지 */
+        .base-badge { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:var(--radius-md); font-size:11px; font-weight:600; }
+        .base-badge.regular { background:var(--status-info-bg); color:var(--status-info-fg); border:1px solid var(--status-info-border); }
+        .base-badge.special { background:var(--status-purple-bg); color:var(--status-purple-fg); border:1px solid var(--status-purple-border); }
+        .base-badge.none    { background:var(--status-neutral-bg); color:var(--status-neutral-fg); border:1px solid var(--status-neutral-border); }
+
+        /* 유해·위험요인 평가명 셀 */
+        .pcell { display:flex; flex-direction:column; gap:3px; }
+        .pcell-title { font-size:14px; font-weight:600; color:var(--text-black); }
+        .pcell-dept { font-size:12px; color:var(--text-lightgray); }
+
+        /* 마스터-디테일: 선택 행 강조 */
+        .rr-proc.is-selected td { background:var(--status-success-bg) !important; }
+        .rr-proc.is-selected td:first-child { box-shadow:inset 3px 0 0 var(--main); }
+
+        /* 하단 빈 상태 */
+        .rr-empty { text-align:center; padding:30px 16px; }
+        .rr-empty p { font-size:13px; color:var(--text-gray); margin-top:10px; line-height:1.6; }
+
+        /* 위험요인 테이블 */
+        .rr-ftable { width:100%; border-collapse:collapse; }
+        .rr-ftable th { background:#fafafa; padding:9px 12px; font-size:12px; font-weight:700; color:var(--text-gray); text-align:left; border-bottom:1px solid var(--card-line); }
+        .rr-ftable th.center, .rr-ftable td.center { text-align:center; }
+        .rr-ftable td { padding:11px 12px; font-size:13px; border-bottom:1px solid var(--card-line); vertical-align:top; }
+        .rr-ftable tr:hover td { background:#fafafa; }
+        .rr-fsub { font-size:12px; color:var(--text-lightgray); margin-top:2px; }
+        .rr-lvl { display:inline-block; padding:2px 9px; border-radius:var(--radius-md); font-size:11px; font-weight:700; }
+        .rr-lvl.high { background:var(--status-danger-bg); color:var(--status-danger-fg); }
+        .rr-lvl.mid  { background:var(--status-warning-bg); color:var(--status-warning-fg); }
+        .rr-lvl.low  { background:var(--status-success-bg); color:var(--status-success-fg); }
+        .rr-src { display:inline-block; padding:1px 7px; border-radius:var(--radius-md); font-size:10px; font-weight:700; }
+        .rr-src.sif { background:var(--status-danger-bg); color:var(--status-danger-fg); }
+        .rr-src.kosha { background:var(--status-info-bg); color:var(--status-info-fg); }
+        .rr-src.own { background:var(--status-purple-bg); color:var(--status-purple-fg); }
+        .rr-detail-foot { padding:14px 0 2px; text-align:right; }
+
+        /* 추가 모달 */
+        .rr-modal { position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; z-index:1000; padding:24px; }
+        .rr-modal.is-open { display:flex; }
+        .rr-modal-box { background:#fff; border-radius:12px; width:100%; max-width:520px; box-shadow:0 10px 40px rgba(0,0,0,.2); overflow:hidden; }
+        .rr-modal-head { display:flex; align-items:center; justify-content:space-between; padding:16px 22px; border-bottom:1px solid var(--card-line); }
+        .rr-modal-title { font-size:16px; font-weight:700; color:var(--text-black); }
+        .rr-modal-close { width:30px; height:30px; border:none; background:transparent; cursor:pointer; color:var(--text-gray); border-radius:6px; }
+        .rr-modal-close:hover { background:var(--gray-100); }
+        .rr-modal-body { padding:18px 22px; }
+        .rr-modal-foot { padding:12px 22px; border-top:1px solid var(--card-line); display:flex; justify-content:flex-end; gap:8px; background:#fafafa; }
+        .rr-mfield { margin-bottom:14px; }
+        .rr-mlabel { font-size:12px; font-weight:700; color:var(--text-black); margin-bottom:5px; display:block; }
+        .rr-input { width:100%; padding:9px 12px; border:1px solid var(--card-line); border-radius:var(--radius-md); font-size:13px; font-family:inherit; }
+        .rr-lvl-row { display:flex; gap:16px; font-size:13px; }
+        .rr-lvl-row label { display:inline-flex; align-items:center; gap:5px; cursor:pointer; }
+    </style>
+</head>
+<body data-dy-page="sbm-risk"
+      data-page-title="정기 위험성평가"
+      data-page-subtitle="연 1회 · 전체 활성 유해·위험요인 대상 — 유해·위험요인별 하위 평가 (RSK05-R)"
+      data-back-href="risk-list.html"
+      data-back-label="평가 목록">
+    <main>
+        <!-- ─── 차수 헤더 ─── -->
+        <div class="reg-header">
+            <div class="reg-header-top">
+                <div>
+                    <div class="reg-title">
+                        <span class="chip-cat cat-regular">정기</span>
+                        2026년 정기 위험성평가
+                    </div>
+                    <div class="reg-meta">
+                        생성일 <strong>2026-06-02</strong> · 총괄담당자 <strong>김안전 (물순환사업소 · SHM)</strong> · 상태 <span class="chip-status info">진행중</span>
+                    </div>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button class="btn btn-outline" type="button" onclick="window.DYLayout._soon(event, 'PDF 출력 — 2026년 정기 위험성평가 종합')">PDF</button>
+                    <button class="btn btn-primary" type="button" onclick="window.DYLayout._soon(event, '총괄 검토 요청 → 상태=검토중')">총괄 검토 요청</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ─── 상태 배너 (상태별 동적 표시) ─── -->
+        <div id="rr-status-banner" style="display:none; padding:12px 16px; margin-bottom:14px; border-radius:var(--radius-button); font-size:13px; line-height:1.6; align-items:center; gap:10px;"></div>
+
+        <!-- ─── 자동 생성 결과 (개편안 §4.2) ─── -->
+        <div class="reg-autobanner" id="rr-autobanner">
+            <div class="reg-autobanner-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                정기평가 생성 시 자동 처리 완료
+            </div>
+            <div class="reg-autobanner-list">
+                <div class="reg-autobanner-item"><span class="ok">✓</span> 활성 유해·위험요인 <strong style="margin:0 3px;">7개</strong> 자동 불러옴 (비활성 1개 제외)</div>
+                <div class="reg-autobanner-item"><span class="ok">✓</span> 유해·위험요인 담당자 <strong style="margin:0 3px;">7명</strong> 자동 배정</div>
+                <div class="reg-autobanner-item"><span class="ok">✓</span> 유해·위험요인별 최신 확정 평가자료 승계 (수시 우선)</div>
+                <div class="reg-autobanner-item"><span class="ok">✓</span> 신규 유해·위험요인 <strong style="margin:0 3px;">1개</strong>는 신규 작성 상태로 생성</div>
+                <div class="reg-autobanner-item"><span class="ok">✓</span> 비활성·폐쇄 유해·위험요인은 대상 제외 (이력 보존)</div>
+                <div class="reg-autobanner-item"><span class="ok">✓</span> 유해·위험요인별 유해위험요인·표준 개선조치 마스터에서 로드</div>
+            </div>
+        </div>
+
+        <!-- ─── 진행 현황 KPI (개편안 §12.2 유해·위험요인별 평가 상태) ─── -->
+        <section class="reg-kpi-grid">
+            <div class="reg-kpi total"><div class="reg-kpi-num">7</div><div class="reg-kpi-label">전체 유해·위험요인</div></div>
+            <div class="reg-kpi todo"><div class="reg-kpi-num">3</div><div class="reg-kpi-label">미작성·점검중</div></div>
+            <div class="reg-kpi doing"><div class="reg-kpi-num">2</div><div class="reg-kpi-label">작성중</div></div>
+            <div class="reg-kpi review"><div class="reg-kpi-num">1</div><div class="reg-kpi-label">검토요청</div></div>
+            <div class="reg-kpi done"><div class="reg-kpi-num">1</div><div class="reg-kpi-label">검토완료</div></div>
+        </section>
+
+        <div class="reg-progress-wrap">
+            <span class="reg-progress-text">진행률</span>
+            <div class="reg-progress-track"><div class="reg-progress-fill" style="width:14%;"></div></div>
+            <span class="reg-progress-text">14% (검토완료 1 / 전체 7)</span>
+        </div>
+
+        <!-- ─── 유해·위험요인별 하위 평가 목록 ─── -->
+        <section style="background:white; border:1px solid var(--card-line); border-radius:20px; overflow:hidden;">
+            <div style="padding:14px 20px; border-bottom:1px solid var(--card-line); display:flex; align-items:center; justify-content:space-between;">
+                <div>
+                    <div style="font-size:15px; font-weight:700; color:var(--text-black);">유해·위험요인별 평가 목록</div>
+                    <div style="font-size:12px; color:var(--text-gray); margin-top:2px;">유해·위험요인을 <strong>클릭하면 아래에 그 유해·위험요인의 위험요인 목록</strong>이 표시됩니다 · [작성]은 전체 작성 화면</div>
+                </div>
+            </div>
+            <table class="table-figma">
+                <colgroup>
+                    <col><col style="width:110px;"><col style="width:170px;"><col style="width:110px;"><col style="width:120px;"><col style="width:90px;">
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>유해·위험요인 평가</th>
+                        <th>담당자</th>
+                        <th>기준 평가자료 (최신 확정)</th>
+                        <th style="text-align:center;">현장점검</th>
+                        <th style="text-align:center;">평가 상태</th>
+                        <th style="text-align:center;">작성</th>
+                    </tr>
+                </thead>
+                <tbody id="rr-proc-tbody">
+                    <tr class="row-link rr-proc" data-proc="p1" onclick="window.RskReg.select('p1')">
+                        <td><div class="pcell"><span class="pcell-title">정수장 약품투입 유해·위험요인 평가</span><span class="pcell-dept">물순환사업소 ★ · 위험요인 5건</span></div></td>
+                        <td>김안전</td>
+                        <td><span class="base-badge regular">2025년 정기</span></td>
+                        <td style="text-align:center;"><span class="chip-status success">점검완료</span></td>
+                        <td style="text-align:center;"><span class="chip-status warning">검토요청</span></td>
+                        <td style="text-align:center;"><a class="btn btn-outline btn-sm" href="risk-process-eval.html" onclick="event.stopPropagation();">작성</a></td>
+                    </tr>
+                    <tr class="row-link rr-proc" data-proc="p2" onclick="window.RskReg.select('p2')">
+                        <td><div class="pcell"><span class="pcell-title">정수장 설비정비 유해·위험요인 평가</span><span class="pcell-dept">물순환사업소 ★ · 위험요인 4건</span></div></td>
+                        <td>이정비</td>
+                        <td><span class="base-badge special">2025 하반기 수시</span></td>
+                        <td style="text-align:center;"><span class="chip-status info">점검중</span></td>
+                        <td style="text-align:center;"><span class="chip-status info">작성중</span></td>
+                        <td style="text-align:center;"><a class="btn btn-outline btn-sm" href="risk-process-eval.html" onclick="event.stopPropagation();">작성</a></td>
+                    </tr>
+                    <tr class="row-link rr-proc" data-proc="p3" onclick="window.RskReg.select('p3')">
+                        <td><div class="pcell"><span class="pcell-title">시설관리 유해·위험요인 평가</span><span class="pcell-dept">공공시설사업소 ★ · 위험요인 3건</span></div></td>
+                        <td>박시설</td>
+                        <td><span class="base-badge regular">2025년 정기</span></td>
+                        <td style="text-align:center;"><span class="chip-status info">점검중</span></td>
+                        <td style="text-align:center;"><span class="chip-status info">작성중</span></td>
+                        <td style="text-align:center;"><a class="btn btn-outline btn-sm" href="risk-process-eval.html" onclick="event.stopPropagation();">작성</a></td>
+                    </tr>
+                    <tr class="row-link rr-proc" data-proc="p4" onclick="window.RskReg.select('p4')">
+                        <td><div class="pcell"><span class="pcell-title">전기설비 점검 유해·위험요인 평가</span><span class="pcell-dept">공공시설사업소 ★ · 위험요인 3건</span></div></td>
+                        <td>최전기</td>
+                        <td><span class="base-badge regular">2025년 정기</span></td>
+                        <td style="text-align:center;"><span class="chip-status neutral">미점검</span></td>
+                        <td style="text-align:center;"><span class="chip-status neutral">미작성</span></td>
+                        <td style="text-align:center;"><a class="btn btn-outline btn-sm" href="risk-process-eval.html" onclick="event.stopPropagation();">작성</a></td>
+                    </tr>
+                    <tr class="row-link rr-proc" data-proc="p5" onclick="window.RskReg.select('p5')">
+                        <td><div class="pcell"><span class="pcell-title">도로보수 유해·위험요인 평가</span><span class="pcell-dept">건설과 ★ · 위험요인 3건</span></div></td>
+                        <td>정도로</td>
+                        <td><span class="base-badge regular">2025년 정기</span></td>
+                        <td style="text-align:center;"><span class="chip-status neutral">미점검</span></td>
+                        <td style="text-align:center;"><span class="chip-status neutral">미작성</span></td>
+                        <td style="text-align:center;"><a class="btn btn-outline btn-sm" href="risk-process-eval.html" onclick="event.stopPropagation();">작성</a></td>
+                    </tr>
+                    <tr class="row-link rr-proc" data-proc="p6" onclick="window.RskReg.select('p6')">
+                        <td><div class="pcell"><span class="pcell-title">환경시설 운영 유해·위험요인 평가</span><span class="pcell-dept">환경과 · 위험요인 3건</span></div></td>
+                        <td>한환경</td>
+                        <td><span class="base-badge regular">2025년 정기</span></td>
+                        <td style="text-align:center;"><span class="chip-status neutral">미점검</span></td>
+                        <td style="text-align:center;"><span class="chip-status neutral">미작성</span></td>
+                        <td style="text-align:center;"><a class="btn btn-outline btn-sm" href="risk-process-eval.html" onclick="event.stopPropagation();">작성</a></td>
+                    </tr>
+                    <tr class="row-link rr-proc" data-proc="p7" onclick="window.RskReg.select('p7')">
+                        <td><div class="pcell"><span class="pcell-title">행사·축제 운영 유해·위험요인 평가</span><span class="pcell-dept">문화관광과 · 위험요인 3건</span></div></td>
+                        <td>신축제</td>
+                        <td><span class="base-badge none">신규 (이력 없음)</span></td>
+                        <td style="text-align:center;"><span class="chip-status success">점검완료</span></td>
+                        <td style="text-align:center;"><span class="chip-status success">검토완료</span></td>
+                        <td style="text-align:center;"><a class="btn btn-outline btn-sm" href="risk-process-eval.html" onclick="event.stopPropagation();">보기</a></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- ─── 하단: 선택 유해·위험요인의 위험요인 (마스터-디테일) ─── -->
+        <section id="rr-detail" class="card" style="margin-top:16px;">
+            <div class="card-header" id="rr-detail-head">
+                <h2 class="card-title" id="rr-detail-title">위험요인 목록</h2>
+                <button class="btn btn-primary btn-sm" type="button" id="rr-add-btn" style="display:none;">+ 위험요인 추가</button>
+            </div>
+            <div class="card-body" id="rr-detail-body">
+                <div class="rr-empty">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--text-lightgray)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                    <p>위에서 <strong>유해·위험요인을 클릭</strong>하면, 그 유해·위험요인의 위험요인 목록이 여기에 표시됩니다.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── 최신자료 승계 안내 (개편안 §5) ─── -->
+        <div class="proc-master-note" style="display:flex; align-items:flex-start; gap:10px; padding:12px 16px; margin-top:16px; background:var(--status-info-bg); border:1px solid var(--status-info-border); border-radius:var(--radius-button); color:var(--status-info-fg); font-size:13px; line-height:1.6;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <div><strong>기준 평가자료</strong>는 직전 정기평가가 아니라, <strong>유해·위험요인별로 가장 최근 확정된 평가</strong>를 승계합니다. 예: <em>정수장 설비정비 유해·위험요인</em>은 2025 하반기 수시평가(신규 설비)가 있어 <strong>수시평가 결과를 우선</strong> 불러왔습니다. (개편안 §5)</div>
+        </div>
+
+        <!-- ─── 유해·위험요인 기준정보 반영 검토 (개편안 §14 — 순환 구조) ─── -->
+        <section id="tour-reflect" class="card" style="margin-top:16px; border:1px solid var(--status-warning-border);">
+            <div class="card-header" style="background:var(--status-warning-bg);">
+                <h2 class="card-title" style="display:flex; align-items:center; gap:6px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--status-warning-fg)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    유해·위험요인 기준정보 반영 검토
+                </h2>
+                <span class="text-muted" style="font-size:13px;">최종 완료 전 검토 — 평가 중 발견된 신규·변경 위험요인을 유해·위험요인관리에 반영</span>
+            </div>
+            <div class="card-body">
+                <div style="font-size:13px; color:var(--text-gray); margin-bottom:12px; line-height:1.6;">
+                    이번 정기평가에서 <strong style="color:var(--text-black);">유해·위험요인 기준정보 반영이 필요한 항목 3건</strong>이 있습니다. 검토 후 유해·위험요인관리에 반영하면 다음 평가부터 기본 항목으로 사용됩니다. <span style="color:var(--text-lightgray);">(개편안 §14)</span>
+                </div>
+                <table class="tbl-mini" style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:#fafafa;">
+                            <th style="padding:9px 12px; font-size:12px; font-weight:700; color:var(--text-gray); text-align:left; border-bottom:1px solid var(--card-line);">유형</th>
+                            <th style="padding:9px 12px; font-size:12px; font-weight:700; color:var(--text-gray); text-align:left; border-bottom:1px solid var(--card-line);">유해·위험요인 / 위험요인</th>
+                            <th style="padding:9px 12px; font-size:12px; font-weight:700; color:var(--text-gray); text-align:left; border-bottom:1px solid var(--card-line);">처리</th>
+                            <th style="padding:9px 12px; font-size:12px; font-weight:700; color:var(--text-gray); text-align:center; border-bottom:1px solid var(--card-line); width:110px;">반영</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="padding:11px 12px; font-size:13px; border-bottom:1px solid var(--card-line);"><span class="hist-tag add" style="display:inline-block; padding:1px 7px; border-radius:var(--radius-md); font-size:11px; font-weight:600; background:var(--status-success-bg); color:var(--status-success-fg);">신규</span></td>
+                            <td style="padding:11px 12px; font-size:13px; border-bottom:1px solid var(--card-line);"><strong>정수장 설비정비 유해·위험요인</strong> · 정전기 발화 위험</td>
+                            <td style="padding:11px 12px; font-size:13px; border-bottom:1px solid var(--card-line); color:var(--text-gray);">반복 가능성 높음 → 기준정보 반영 권장</td>
+                            <td style="padding:11px 12px; text-align:center; border-bottom:1px solid var(--card-line);"><button class="btn btn-outline btn-sm" type="button" onclick="window.location.href='proc-detail.html'">유해·위험요인관리 반영</button></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:11px 12px; font-size:13px; border-bottom:1px solid var(--card-line);"><span style="display:inline-block; padding:1px 7px; border-radius:var(--radius-md); font-size:11px; font-weight:600; background:var(--status-warning-bg); color:var(--status-warning-fg);">변경</span></td>
+                            <td style="padding:11px 12px; font-size:13px; border-bottom:1px solid var(--card-line);"><strong>정수장 약품투입 유해·위험요인</strong> · 염소 누출 개선조치 보강</td>
+                            <td style="padding:11px 12px; font-size:13px; border-bottom:1px solid var(--card-line); color:var(--text-gray);">표준 개선조치에 "환기팬 선가동" 추가</td>
+                            <td style="padding:11px 12px; text-align:center; border-bottom:1px solid var(--card-line);"><button class="btn btn-outline btn-sm" type="button" onclick="window.location.href='proc-detail.html'">유해·위험요인관리 반영</button></td>
+                        </tr>
+                        <tr>
+                            <td style="padding:11px 12px; font-size:13px;"><span style="display:inline-block; padding:1px 7px; border-radius:var(--radius-md); font-size:11px; font-weight:600; background:var(--status-neutral-bg); color:var(--status-neutral-fg);">제외</span></td>
+                            <td style="padding:11px 12px; font-size:13px;"><strong>구 노후정수장 운영 유해·위험요인</strong> · 폐쇄</td>
+                            <td style="padding:11px 12px; font-size:13px; color:var(--text-gray);">설비 철거 → 시설·설비 비활성 처리 검토</td>
+                            <td style="padding:11px 12px; text-align:center;"><button class="btn btn-outline btn-sm" type="button" onclick="window.DYLayout._soon(event, '비활성 처리')">비활성 처리</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- ─── 완료 조건 안내 (개편안 §11) ─── -->
+        <div class="detail-footer">
+            <button class="btn btn-secondary" type="button" onclick="window.location.href='risk-list.html'">목록</button>
+            <button class="btn btn-success is-disabled" type="button" disabled title="전체 유해·위험요인 검토완료 + 최종 서명 후 완료 가능 (현재 1/7)">
+                최종 완료 (1/7)
+            </button>
+        </div>
+    </main>
+
+    <!-- ═══ 위험요인 추가 모달 ═══ -->
+    <div id="rr-add-modal" class="rr-modal" role="dialog">
+        <div class="rr-modal-box">
+            <div class="rr-modal-head">
+                <div class="rr-modal-title">+ 위험요인 추가 <span id="rr-add-proc" style="font-size:12px; color:var(--text-gray); font-weight:normal;"></span></div>
+                <button class="rr-modal-close" id="rr-add-close" type="button">✕</button>
+            </div>
+            <div class="rr-modal-body">
+                <div class="rr-mfield">
+                    <label class="rr-mlabel">위험요인명 <span style="color:var(--status-danger-fg);">*</span></label>
+                    <input class="rr-input" id="rr-add-name" placeholder="예: 정전기 발화, 소음 노출">
+                </div>
+                <div class="rr-mfield">
+                    <label class="rr-mlabel">발생 상황 (선택)</label>
+                    <input class="rr-input" id="rr-add-sit" placeholder="언제·어디서 발생하는지">
+                </div>
+                <div class="rr-mfield">
+                    <label class="rr-mlabel">위험성 수준</label>
+                    <div class="rr-lvl-row">
+                        <label><input type="radio" name="rr-add-lvl" value="low"> 낮음</label>
+                        <label><input type="radio" name="rr-add-lvl" value="mid" checked> 보통</label>
+                        <label><input type="radio" name="rr-add-lvl" value="high"> 높음</label>
+                    </div>
+                </div>
+                <div style="font-size:12px; color:var(--status-info-fg); background:var(--status-info-bg); border:1px solid var(--status-info-border); border-radius:var(--radius-md); padding:9px 12px; line-height:1.5;">
+                    💡 이 평가에 추가됩니다. 반복 발생하는 위험요인은 평가 완료 시 <b>유해·위험요인 기준정보 반영</b>으로 다음 평가에도 적용할 수 있어요.
+                </div>
+            </div>
+            <div class="rr-modal-foot">
+                <button class="btn btn-secondary" id="rr-add-cancel" type="button">취소</button>
+                <button class="btn btn-primary" id="rr-add-save" type="button">추가</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast" role="status"></div>
+    <script src="./js/layout.js"></script>
+    <script>
+    /* ─── 마스터-디테일: 유해·위험요인 클릭 → 하단 위험요인 목록 + 추가 ─── */
+    (function () {
+        'use strict';
+        var PROC = {
+            p1: { name:'정수장 약품투입 유해·위험요인', factors:[
+                {n:'질식 (염소 누출)', s:'염소 봄베 교체', lv:'high', src:'SIF'},
+                {n:'질식 (밀폐공간)', s:'약품 저장탱크 청소', lv:'high', src:'SIF'},
+                {n:'중독·화학 (PAC·차염 접촉)', s:'응집제 취급', lv:'mid', src:'KOSHA'},
+                {n:'화상·부식 (비산)', s:'약품 투입 중 비산', lv:'mid', src:'자체'},
+                {n:'전도·미끄러짐', s:'약품 누출 바닥', lv:'low', src:'자체'} ]},
+            p2: { name:'정수장 설비정비 유해·위험요인', factors:[
+                {n:'끼임 (회전체)', s:'펌프 정비 중', lv:'high', src:'SIF'},
+                {n:'감전', s:'전동 설비 정비', lv:'mid', src:'KOSHA'},
+                {n:'질식 (밀폐공간)', s:'배관 내부 작업', lv:'high', src:'SIF'},
+                {n:'추락', s:'고소 배관 정비', lv:'mid', src:'자체'} ]},
+            p3: { name:'시설관리 유해·위험요인', factors:[
+                {n:'추락 (고소작업)', s:'옥상·외벽 점검', lv:'high', src:'SIF'},
+                {n:'사다리 전도', s:'등기구 교체', lv:'mid', src:'KOSHA'},
+                {n:'낙하물', s:'천장 작업', lv:'mid', src:'자체'} ]},
+            p4: { name:'전기설비 점검 유해·위험요인', factors:[
+                {n:'감전', s:'활선 점검', lv:'high', src:'SIF'},
+                {n:'아크 화상', s:'배전반 작업', lv:'mid', src:'KOSHA'},
+                {n:'정전작업 누락', s:'점검 전 절차', lv:'high', src:'자체'} ]},
+            p5: { name:'도로보수 유해·위험요인', factors:[
+                {n:'차량 충돌', s:'도로 작업 중', lv:'high', src:'SIF'},
+                {n:'중장비 협착', s:'굴착기 작업', lv:'high', src:'SIF'},
+                {n:'분진 노출', s:'절단 작업', lv:'mid', src:'자체'} ]},
+            p6: { name:'환경시설 운영 유해·위험요인', factors:[
+                {n:'유해가스 질식', s:'폐기물 저장조', lv:'high', src:'SIF'},
+                {n:'미생물 감염', s:'하수 처리', lv:'mid', src:'KOSHA'},
+                {n:'회전체 끼임', s:'처리설비 정비', lv:'mid', src:'자체'} ]},
+            p7: { name:'행사·축제 운영 유해·위험요인', factors:[
+                {n:'가설물 붕괴', s:'무대 설치', lv:'high', src:'SIF'},
+                {n:'전기 과부하', s:'가설 전기', lv:'mid', src:'KOSHA'},
+                {n:'군중 밀집', s:'행사 운영', lv:'mid', src:'자체'} ]}
+        };
+        var LV = { high:['high','높음'], mid:['mid','보통'], low:['low','낮음'] };
+        var current = null;
+
+        function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+        function toast(m){ var t=document.getElementById('toast'); if(!t)return; t.textContent=m; t.classList.add('show'); setTimeout(function(){t.classList.remove('show');},2400); }
+
+        function select(pid){
+            current = pid;
+            document.querySelectorAll('.rr-proc').forEach(function(r){ r.classList.toggle('is-selected', r.dataset.proc===pid); });
+            renderDetail();
+            document.getElementById('rr-detail').scrollIntoView({behavior:'smooth', block:'nearest'});
+        }
+
+        function renderDetail(){
+            var p = PROC[current];
+            document.getElementById('rr-detail-title').textContent = p.name + ' — 위험요인 ' + p.factors.length + '건';
+            document.getElementById('rr-add-btn').style.display = 'inline-flex';
+            var rows = p.factors.map(function(f, i){
+                var lv = LV[f.lv];
+                return '<tr>' +
+                    '<td class="center">' + (i+1) + '</td>' +
+                    '<td><strong>' + esc(f.n) + '</strong><div class="rr-fsub">' + esc(f.s) + '</div></td>' +
+                    '<td class="center"><span class="rr-lvl ' + lv[0] + '">' + lv[1] + '</span></td>' +
+                    '<td class="center"><span class="rr-src ' + (f.src==='SIF'?'sif':f.src==='KOSHA'?'kosha':'own') + '">' + esc(f.src) + '</span></td>' +
+                  '</tr>';
+            }).join('');
+            document.getElementById('rr-detail-body').innerHTML =
+                '<table class="rr-ftable"><thead><tr>' +
+                  '<th class="center" style="width:44px;">No</th><th>위험요인</th><th class="center" style="width:80px;">위험성</th><th class="center" style="width:90px;">출처</th>' +
+                '</tr></thead><tbody>' + rows + '</tbody></table>' +
+                '<div class="rr-detail-foot"><a class="btn btn-outline btn-sm" href="risk-process-eval.html">전체 작성 화면에서 점검 →</a></div>';
+        }
+
+        function openAdd(){
+            if(!current){ toast('먼저 유해·위험요인을 선택하세요.'); return; }
+            document.getElementById('rr-add-proc').textContent = '· ' + PROC[current].name;
+            document.getElementById('rr-add-name').value='';
+            document.getElementById('rr-add-sit').value='';
+            document.getElementById('rr-add-modal').classList.add('is-open');
+            document.body.style.overflow='hidden';
+            setTimeout(function(){ document.getElementById('rr-add-name').focus(); }, 50);
+        }
+        function closeAdd(){ document.getElementById('rr-add-modal').classList.remove('is-open'); document.body.style.overflow=''; }
+        function saveAdd(){
+            var name=(document.getElementById('rr-add-name').value||'').trim();
+            if(!name){ toast('위험요인명을 입력하세요.'); return; }
+            var lv=(document.querySelector('input[name="rr-add-lvl"]:checked')||{}).value||'mid';
+            var sit=(document.getElementById('rr-add-sit').value||'').trim();
+            PROC[current].factors.push({ n:name, s:sit||'직접 추가', lv:lv, src:'자체' });
+            // 상단 행의 건수도 갱신
+            var row=document.querySelector('.rr-proc[data-proc="'+current+'"] .pcell-dept');
+            if(row) row.textContent = row.textContent.replace(/위험요인 \d+건/, '위험요인 '+PROC[current].factors.length+'건');
+            closeAdd();
+            renderDetail();
+            toast('위험요인 "'+name+'" 추가됨');
+        }
+
+        // ─── 상태값에 맞는 상세 화면 프리셋 ───
+        function applyPreset() {
+            var p = new URLSearchParams(location.search);
+            var name = p.get('name'), status = p.get('status'), type = p.get('type'), cat = p.get('cat'), owner = p.get('owner'), dept = p.get('dept');
+            if (!status && !name) return;  // 직접 진입 시 기본(진행중) 유지
+
+            // 제목·카테고리 칩
+            var catCls = cat && cat.indexOf('수시') >= 0 ? 'cat-special' : (cat && cat.indexOf('최초') >= 0 ? 'cat-initial' : 'cat-regular');
+            var catLabel = cat || '정기';
+            var titleEl = document.querySelector('.reg-title');
+            if (titleEl && name) titleEl.innerHTML = '<span class="chip-cat ' + catCls + '">' + esc(catLabel) + '</span> ' + esc(name);
+            // 메타(담당자/총괄)
+            var metaEl = document.querySelector('.reg-meta');
+
+            // type=special: 유해·위험요인 1건만 표시
+            var rows = Array.prototype.slice.call(document.querySelectorAll('.rr-proc'));
+            if (type === 'special') {
+                rows.forEach(function (r, i) { r.style.display = i === 0 ? '' : 'none'; });
+                rows = [rows[0]];
+                var ab = document.getElementById('rr-autobanner'); if (ab) ab.style.display = 'none';  // 수시: 7개 자동로드 문구 부적합
+                var note = document.querySelector('.proc-master-note'); if (note) note.style.display = 'none';  // 최신자료 승계 안내도 숨김
+            }
+
+            var STATUS = {
+                preparing: { chip:'neutral', label:'사전준비', check:['neutral','미점검'], state:['neutral','미작성'], pct:0, doneN:0 },
+                in_progress:{ chip:'info', label:'진행중', mixed:true },
+                review:    { chip:'warning', label:'검토중', mixed:true },
+                done:      { chip:'success', label:'완료', check:['success','점검완료'], state:['success','검토완료'], pct:100, doneN: rows.length },
+                rejected:  { chip:'danger', label:'반려', mixed:true }
+            };
+            var cfg = STATUS[status] || STATUS.in_progress;
+
+            // 헤더 상태칩
+            var hChip = document.querySelector('.reg-meta .chip-status');
+            if (hChip) { hChip.className = 'chip-status ' + cfg.chip; hChip.textContent = cfg.label; }
+
+            // 유해·위험요인 행 상태 일괄 (mixed가 아니면 통일)
+            if (!cfg.mixed) {
+                rows.forEach(function (r) {
+                    var tds = r.querySelectorAll('td');
+                    if (tds[3]) tds[3].innerHTML = '<span class="chip-status ' + cfg.check[0] + '">' + cfg.check[1] + '</span>';
+                    if (tds[4]) tds[4].innerHTML = '<span class="chip-status ' + cfg.state[0] + '">' + cfg.state[1] + '</span>';
+                });
+            }
+
+            // KPI·진행률
+            var total = rows.length;
+            var doneN = cfg.mixed ? (status === 'rejected' ? 0 : 1) : cfg.doneN;
+            var pct = cfg.mixed ? Math.round(doneN / total * 100) : cfg.pct;
+            setKpi(total, status, doneN);
+            var fill = document.querySelector('.reg-progress-fill'); if (fill) fill.style.width = pct + '%';
+            var ptxt = document.querySelectorAll('.reg-progress-text')[1];
+            if (ptxt) ptxt.textContent = pct + '% (검토완료 ' + doneN + ' / 전체 ' + total + ')';
+
+            // 상태 배너
+            var sb = document.getElementById('rr-status-banner');
+            var auto = document.getElementById('rr-autobanner');
+            if (status === 'done') {
+                showBanner(sb, 'success', '✓ <strong>완료된 평가입니다.</strong> 모든 유해·위험요인 검토완료 · 결재 완료. 위험요인은 읽기 전용이며, 개선조치는 별도 추적됩니다.');
+                if (auto) auto.style.display = 'none';
+                setFooter('done');
+            } else if (status === 'rejected') {
+                showBanner(sb, 'danger', '✕ <strong>반려된 평가입니다.</strong> 반려 사유: 일부 유해·위험요인의 위험요인 판단 근거 부족. 보완 후 재상신하세요.');
+                setFooter('rejected');
+            } else if (status === 'preparing') {
+                showBanner(sb, 'info', 'ℹ <strong>사전준비 단계입니다.</strong> 유해·위험요인·담당자·기준자료가 준비되었습니다. 각 유해·위험요인 [작성]으로 현장점검을 시작하세요.');
+                if (auto) auto.style.display = '';
+            }
+        }
+        function setKpi(total, status, doneN) {
+            var map = { total: total, todo: 0, doing: 0, review: 0, done: doneN };
+            if (status === 'preparing') map.todo = total;
+            else if (status === 'done') map.done = total;
+            else if (status === 'rejected') { map.todo = Math.max(0, total - 1); map.review = 1; }
+            else { map.todo = Math.max(0, total - 3); map.doing = Math.min(2, total); map.review = total > 2 ? 1 : 0; map.done = doneN; }
+            ['total','todo','doing','review','done'].forEach(function (k) {
+                var el = document.querySelector('.reg-kpi.' + k + ' .reg-kpi-num');
+                if (el) el.textContent = map[k];
+            });
+        }
+        function showBanner(el, tone, html) {
+            if (!el) return;
+            var c = { success:['var(--status-success-bg)','var(--status-success-border)','var(--status-success-fg)'],
+                      danger:['var(--status-danger-bg)','var(--status-danger-border)','var(--status-danger-fg)'],
+                      info:['var(--status-info-bg)','var(--status-info-border)','var(--status-info-fg)'] }[tone];
+            el.style.display = 'flex';
+            el.style.background = c[0]; el.style.border = '1px solid ' + c[1]; el.style.color = c[2];
+            el.innerHTML = html;
+        }
+        function setFooter(status) {
+            var done = document.querySelector('.detail-footer .btn-success');
+            var review = document.querySelector('.detail-footer'); // 헤더의 검토요청 버튼은 별개
+            if (status === 'done' && done) { done.removeAttribute('disabled'); done.classList.remove('is-disabled'); done.textContent = '✓ 완료됨'; done.title = ''; }
+        }
+
+        document.addEventListener('DOMContentLoaded', function(){
+            document.getElementById('rr-add-btn').addEventListener('click', openAdd);
+            document.getElementById('rr-add-close').addEventListener('click', closeAdd);
+            document.getElementById('rr-add-cancel').addEventListener('click', closeAdd);
+            document.getElementById('rr-add-save').addEventListener('click', saveAdd);
+            applyPreset();
+        });
+
+        window.RskReg = { select: select };
+    })();
+    </script>
+    <script>
+    (function () {
+        'use strict';
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('from') === 'create') {
+            setTimeout(function () {
+                var t = document.getElementById('toast');
+                if (t) {
+                    t.textContent = '✓ 2026년 정기 위험성평가 생성 완료 — 활성 유해·위험요인 7개 자동 로드';
+                    t.classList.add('show');
+                    setTimeout(function () { t.classList.remove('show'); }, 3600);
+                }
+                if (window.history && window.history.replaceState) {
+                    window.history.replaceState({}, '', 'risk-regular.html');
+                }
+            }, 250);
+        }
+    })();
+    </script>
+    <script src="./js/risk-tour.js"></script>
+</body>
+</html>

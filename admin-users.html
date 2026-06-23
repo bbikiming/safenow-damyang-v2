@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>사용자·권한 - 담양군 중대재해예방통합관리시스템 v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="admin-users" data-page-title="사용자·권한" data-page-subtitle="시스템 관리 > 사용자·권한 — SSO·행정포털 조직도 연동 (SFR-015)">
+    <main>
+        <div class="card" style="margin-bottom:16px;">
+            <div class="card-body" style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                <span class="chip-mini wt-elec">SSO 연동</span>
+                <span style="font-size:13px; color:var(--text-gray);">행정포털 SSO로 로그인 — 계정·부서는 조직도 연동으로 자동 동기화 (마지막 동기화: 2026-06-11 06:00)</span>
+                <span class="spacer" style="flex:1;"></span>
+                <button class="btn btn-secondary btn-sm" onclick="DYV2.toast('조직도 수동 동기화 (프로토타입)')">조직도 동기화</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">사용자 목록</span>
+                <div class="search-bar"><input class="search-input" type="text" placeholder="성명·부서 검색"><button class="search-submit" type="button">검색</button></div>
+            </div>
+            <div class="card-body" style="overflow-x:auto;">
+                <table class="table-figma">
+                    <thead><tr><th>성명</th><th>부서 (조직도 연동)</th><th>권한</th><th>담당 대메뉴</th><th>최근 접속</th><th></th></tr></thead>
+                    <tbody>
+                        <tr><td style="font-weight:600;">박안전</td><td>재난안전과 중대재해팀</td><td><span class="chip-mini wt-program">시스템 관리자</span></td><td>전체</td><td>2026-06-11 09:12</td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('권한 편집 (프로토타입)')">권한</button></td></tr>
+                        <tr><td style="font-weight:600;">김중대</td><td>재난안전과 중대재해팀</td><td><span class="chip-mini wt-elec">총괄 담당</span></td><td>경영방침·위험성평가·개선조치</td><td>2026-06-11 08:47</td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('권한 편집 (프로토타입)')">권한</button></td></tr>
+                        <tr><td style="font-weight:600;">이보건</td><td>보건소</td><td><span class="chip-mini pdca">부서 담당</span></td><td>안전보건교육</td><td>2026-06-10 17:30</td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('권한 편집 (프로토타입)')">권한</button></td></tr>
+                        <tr><td style="font-weight:600;">최회계</td><td>회계과</td><td><span class="chip-mini pdca">부서 담당</span></td><td>도급관리</td><td>2026-06-09 11:05</td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('권한 편집 (프로토타입)')">권한</button></td></tr>
+                        <tr><td style="font-weight:600;">정환경</td><td>환경과</td><td><span class="chip-mini pdca">부서 담당</span></td><td>유해·위험요인 관리</td><td>2026-06-08 14:21</td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('권한 편집 (프로토타입)')">권한</button></td></tr>
+                        <tr><td style="font-weight:600;">한열람</td><td>기획예산실</td><td><span class="chip-mini wt">열람</span></td><td>통계·보고</td><td>2026-06-02 10:00</td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('권한 편집 (프로토타입)')">권한</button></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+            <div class="card-header"><span class="card-title">권한 등급</span></div>
+            <div class="card-body">
+                <table class="table-figma">
+                    <thead><tr><th>등급</th><th>범위</th></tr></thead>
+                    <tbody>
+                        <tr><td><span class="chip-mini wt-program">시스템 관리자</span></td><td>전체 메뉴 + 시스템 관리 (프리셋 양식·알림·연계·권한)</td></tr>
+                        <tr><td><span class="chip-mini wt-elec">총괄 담당</span></td><td>전 대메뉴 등록·마감 + 통계·보고</td></tr>
+                        <tr><td><span class="chip-mini pdca">부서 담당</span></td><td>담당 대메뉴 등록·수정 + 기준문서함 업로드</td></tr>
+                        <tr><td><span class="chip-mini wt">열람</span></td><td>대시보드·통계 조회만</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/data.js"></script>
+    <script src="./js/common.js"></script>
+</body>
+</html>

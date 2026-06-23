@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이행 목록 - 담양군 중대재해예방통합관리시스템 v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="docs-exec" data-page-title="이행 목록" data-page-subtitle="업무문서 > 이행 목록 — 업무 목록과 같은 세트를 격자 카드로 한눈에 (진행률 · PDCA 단계) · 분류 버전 전환">
+    <main>
+        <div id="setlist"></div>
+        <p style="font-size:11.5px; color:var(--text-gray); margin-top:4px;">
+            <a href="docs-preset.html" style="color:var(--main); font-weight:700;">업무 목록</a>과 동일한 세트·문서 데이터를 카드형으로 봅니다.
+            상단 토글로 <b>법적의무 재분류 v2(9대메뉴·53세트)</b> ↔ <b>기존 분류</b>를 전환할 수 있습니다.
+        </p>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/data.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/edoc-templates.js"></script>
+    <script src="./js/edoc.js"></script>
+    <script src="./js/sets-data.js"></script>
+    <script src="./js/sets-data-v2.js"></script>
+    <script src="./js/doc-register.js"></script>
+    <script src="./js/setlist.js"></script>
+    <script>
+        /* 업무 목록과 같은 데이터·필터 — 렌더만 격자 카드형. 기본 v2 표시 */
+        (function () {
+            const params = new URLSearchParams(location.search);
+            const ver = params.get('ver') === 'v1' ? 'v1' : 'v2';
+            const mk = params.get('menu');
+            const el = document.getElementById('setlist');
+            DYSETLIST.render(el, { layout: 'grid', version: ver });
+            if (mk) {
+                const btn = el.querySelector('#sl-tabs button[data-mk="' + mk + '"]');
+                if (btn) btn.click();
+            }
+        })();
+    </script>
+</body>
+</html>
