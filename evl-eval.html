@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>인력 평가 - 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+    <style>
+        /* ─── EVL01-L · 업무수행 평가현황 (담양) ─── */
+
+        /* 평가개요 메타 */
+        .ev-overview-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+
+        .ev-bar {
+            display:flex; align-items:center; gap:12px;
+            padding:12px 16px;
+            background:white; border:1px solid var(--card-line);
+            border-radius:var(--radius-button);
+        }
+        .ev-bar .lbl { font-size:13px; font-weight:600; color:var(--text-gray); }
+        .ev-bar select {
+            padding:7px 30px 7px 12px; font-size:14px; font-weight:600;
+            border:1px solid var(--card-line); border-radius:var(--radius-button);
+            color:var(--main-dark2); background:white;
+        }
+        .ev-bar .spacer { margin-left:auto; font-size:12px; color:var(--text-gray); }
+        .ev-bar .spacer strong { color:var(--main-dark); font-weight:700; }
+        .ev-date-input {
+            padding:6px 10px; font-size:13px; border:1px solid var(--card-line);
+            border-radius:var(--radius-button); color:var(--text-black);
+        }
+
+        /* ─ 평가결과 매트릭스 ─ */
+        .ev-matrix { width:100%; border-collapse:collapse; font-size:13px; }
+        .ev-matrix th, .ev-matrix td {
+            border:1px solid var(--card-line); padding:10px 12px; text-align:center;
+            vertical-align:middle;
+        }
+        .ev-matrix thead th {
+            background:var(--gray-100); color:var(--text-black);
+            font-weight:700; font-size:12px; white-space:nowrap;
+        }
+        .ev-matrix thead .grp-h1 { background:var(--brand-100); color:var(--main-dark2); }
+        .ev-matrix thead .grp-h2 { background:#eef2f7; color:#3b5168; }
+        .ev-matrix td.ev-role { font-weight:700; color:var(--main-dark2); white-space:nowrap; }
+        .ev-matrix td.ev-name { font-weight:600; color:var(--text-black); white-space:nowrap; }
+        .ev-matrix td.ev-name .sub { display:block; font-size:12px; color:var(--text-gray); font-weight:500; margin-top:2px; }
+        .ev-matrix td.ev-eor { font-weight:600; color:var(--text-black); }
+        .ev-matrix .ev-cell-empty { color:var(--text-lightgray); }
+        .ev-col-div { border-left:2px solid var(--card-line) !important; }
+
+        /* 결과 등급 배지 = 표준 .chip-status 재사용 (gradeBadge 참고) */
+
+        /* 미니 버튼 (평가자 선택 / 평가등록) */
+        .ev-mini {
+            display:inline-flex; align-items:center; justify-content:center; gap:4px;
+            padding:5px 12px; font-size:12px; font-weight:600;
+            border:1px solid var(--card-line); border-radius:var(--radius-button);
+            background:white; color:var(--text-gray); cursor:pointer; white-space:nowrap;
+            transition:all .12s ease;
+        }
+        .ev-mini:hover { border-color:var(--main); color:var(--main-dark); }
+        .ev-mini.primary { background:var(--main); border-color:var(--main); color:white; }
+        .ev-mini.primary:hover { background:var(--main-dark); }
+        .ev-mini:disabled { opacity:.55; cursor:not-allowed; background:var(--gray-100); color:var(--text-lightgray); border-color:var(--card-line); }
+
+        .ev-help {
+            display:flex; align-items:center; gap:8px;
+            margin-top:12px; font-size:12px; color:var(--text-gray);
+        }
+        .ev-help .me { color:var(--main-dark); font-weight:700; }
+
+        /* ─── 공통 모달 ─── */
+        .ev-modal-backdrop {
+            position:fixed; inset:0; background:rgba(15,23,42,.5);
+            display:none; align-items:center; justify-content:center;
+            z-index:100; padding:20px;
+        }
+        .ev-modal-backdrop.is-open { display:flex; }
+        .ev-modal {
+            background:white; border-radius:var(--radius-card);
+            width:100%; max-width:660px; max-height:88vh;
+            display:flex; flex-direction:column;
+            box-shadow:0 16px 40px rgba(0,0,0,.22);
+        }
+        .ev-modal-header { padding:18px 24px; border-bottom:1px solid var(--card-line); display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+        .ev-modal-title { font-size:18px; font-weight:700; color:var(--main-dark2); }
+        .ev-modal-sub { font-size:12px; color:var(--text-gray); margin-top:4px; }
+        .ev-modal-close { width:32px; height:32px; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; background:none; border:none; cursor:pointer; color:var(--text-gray); border-radius:8px; }
+        .ev-modal-close:hover { background:var(--gray-100); color:var(--text-black); }
+        .ev-modal-body { padding:16px 24px; overflow-y:auto; flex:1; }
+        .ev-modal-footer { padding:14px 24px; border-top:1px solid var(--card-line); display:flex; align-items:center; justify-content:space-between; gap:8px; }
+        .ev-modal-footer .stat { font-size:12px; color:var(--text-gray); }
+        .ev-modal-footer .stat strong { color:var(--main-dark); font-weight:700; }
+        .ev-modal-footer .btns { display:flex; gap:8px; margin-left:auto; }
+
+        /* 평가기준 안내 */
+        .ev-criteria { display:flex; flex-direction:column; gap:5px; padding:12px 14px; background:var(--brand-50); border:1px solid var(--status-success-border); border-radius:var(--radius-button); margin-bottom:16px; }
+        .ev-criteria .row { font-size:12px; color:var(--text-black); line-height:1.5; }
+        .ev-criteria .row b { display:inline-block; min-width:42px; font-weight:700; }
+        .ev-criteria .row.good b   { color:var(--status-success-fg); }
+        .ev-criteria .row.normal b { color:var(--text-gray); }
+        .ev-criteria .row.poor b   { color:var(--status-danger-fg); }
+
+        /* 평가표 항목 */
+        .ev-item { display:grid; grid-template-columns:26px 1fr auto; gap:12px; align-items:center; padding:13px 0; border-bottom:1px solid var(--card-line); }
+        .ev-item:last-child { border-bottom:none; }
+        .ev-item-no { width:24px; height:24px; border-radius:7px; background:var(--brand-100); color:var(--main-dark2); font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; }
+        .ev-item-task { font-size:13px; color:var(--text-black); line-height:1.45; }
+        .ev-judge-group { display:inline-flex; gap:14px; }
+        .ev-judge-label { display:inline-flex; align-items:center; gap:5px; cursor:pointer; font-size:13px; }
+        .ev-judge-label input { accent-color:var(--main); width:15px; height:15px; cursor:pointer; }
+        .ev-judge-label span { color:var(--text-gray); }
+        .ev-judge-label.poor   input:checked + span { color:var(--status-danger-fg); font-weight:700; }
+        .ev-judge-label.normal input:checked + span { color:var(--text-black); font-weight:700; }
+        .ev-judge-label.good   input:checked + span { color:var(--status-success-fg); font-weight:700; }
+
+        /* ─── 평가자 선택(조직도) 모달 ─── */
+        .evp-modal { max-width:720px; height:82vh; }
+        .evp-body { display:grid; grid-template-columns:1fr 1fr; flex:1; min-height:0; }
+        .evp-left  { border-right:1px solid var(--card-line); display:flex; flex-direction:column; min-height:0; }
+        .evp-right { display:flex; flex-direction:column; min-height:0; background:#fafbfb; }
+        .evp-pane-head { padding:12px 16px; border-bottom:1px solid var(--card-line); }
+        .evp-pane-head .t { font-size:13px; font-weight:700; color:var(--main-dark2); margin-bottom:8px; display:block; }
+        .evp-search { width:100%; padding:7px 10px; font-size:13px; border:1px solid var(--card-line); border-radius:var(--radius-button); }
+        .evp-search:focus { outline:none; border-color:var(--main); }
+        .evp-scroll { padding:10px 12px; overflow-y:auto; flex:1; min-height:0; }
+
+        /* org-tree (org-chart.html 재사용) */
+        .org-tree { font-size:14px; }
+        .org-tree-node { display:flex; flex-direction:column; }
+        .org-tree-row { display:flex; align-items:center; gap:6px; padding:8px 10px; border-radius:8px; cursor:pointer; user-select:none; transition:background .12s ease; }
+        .org-tree-row:hover { background:var(--brand-100); }
+        .org-tree-row.is-selected { background:var(--brand-100); box-shadow:inset 3px 0 0 var(--main); }
+        .org-tree-row.is-group { cursor:default; }
+        .org-tree-row.is-group:hover { background:transparent; }
+        .org-tree-toggle { width:18px; height:18px; display:inline-flex; align-items:center; justify-content:center; color:var(--text-lightgray); flex-shrink:0; }
+        .org-tree-toggle.is-placeholder { visibility:hidden; }
+        .org-tree-icon { width:18px; height:18px; display:inline-flex; align-items:center; justify-content:center; color:var(--main); flex-shrink:0; }
+        .org-tree-icon.root { color:var(--main-dark); }
+        .org-tree-name { flex:1; display:flex; align-items:center; gap:6px; font-weight:500; color:var(--text-black); min-width:0; }
+        .org-tree-name .name { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .org-tree-count { font-size:12px; color:var(--text-gray); white-space:nowrap; font-variant-numeric:tabular-nums; }
+        .org-tree-children { display:flex; flex-direction:column; margin-left:22px; border-left:1px dashed var(--card-line); padding-left:4px; }
+
+        /* 부서원 목록 (팀 · 이름) */
+        .evp-members-head { font-size:12px; color:var(--text-gray); margin-bottom:10px; }
+        .evp-members-head strong { color:var(--main-dark2); font-weight:700; }
+        .evp-member { display:flex; align-items:center; gap:10px; padding:9px 11px; border:1px solid var(--card-line); border-radius:var(--radius-button); margin-bottom:6px; cursor:pointer; background:white; transition:all .12s ease; }
+        .evp-member:hover { border-color:var(--main); }
+        .evp-member.is-checked { border-color:var(--main); background:var(--brand-100); }
+        .evp-member input { accent-color:var(--main); width:16px; height:16px; flex-shrink:0; }
+        .evp-member-text { font-size:13px; color:var(--text-black); }
+        .evp-member-text .team { color:var(--text-gray); }
+        .evp-member-text strong { font-weight:700; }
+        .evp-empty { color:var(--text-lightgray); font-size:13px; text-align:center; padding:30px 0; }
+
+        /* ─── 결재 문서 / PDF 미리보기 모달 ─── */
+        #doc-modal { z-index:120; }
+        .doc-shell { background:#eef1f4; border-radius:var(--radius-card); width:100%; max-width:880px; height:92vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 16px 40px rgba(0,0,0,.28); }
+        .doc-toolbar { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:11px 18px; background:var(--main-dark2); color:white; flex-wrap:wrap; }
+        .doc-toolbar-title { font-size:14px; font-weight:700; display:flex; align-items:center; gap:7px; white-space:nowrap; flex-shrink:0; }
+        .doc-toolbar-btns { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+        .doc-tb-btn { display:inline-flex; align-items:center; gap:5px; padding:6px 12px; font-size:12px; font-weight:600; border-radius:var(--radius-button); border:1px solid rgba(255,255,255,.4); background:transparent; color:white; cursor:pointer; white-space:nowrap; }
+        .doc-tb-btn:hover { background:rgba(255,255,255,.14); }
+        .doc-tb-btn.primary { background:white; color:var(--main-dark2); border-color:white; }
+        .doc-tb-btn.primary:hover { background:var(--brand-100); }
+        .doc-tb-btn:disabled { opacity:.45; cursor:not-allowed; }
+        .doc-banner { align-items:center; gap:10px; padding:10px 18px; background:var(--status-info-bg); color:var(--status-info-fg); font-size:12px; border-bottom:1px solid var(--status-info-border); line-height:1.5; }
+        .doc-banner strong { font-weight:700; }
+        .doc-scroll { flex:1; overflow-y:auto; padding:24px; display:flex; justify-content:center; }
+        .doc-paper { background:white; width:100%; max-width:720px; min-height:900px; padding:44px 48px; box-shadow:0 2px 10px rgba(0,0,0,.12); position:relative; font-size:13px; color:#1c1c1c; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+        .doc-approval-wrap { display:flex; justify-content:flex-end; margin-bottom:8px; }
+        .doc-approval-box { display:flex; border:1px solid #333; }
+        .doc-approval-box .col { display:flex; flex-direction:column; min-width:58px; text-align:center; border-right:1px solid #333; }
+        .doc-approval-box .col:last-child { border-right:none; }
+        .doc-approval-box .ttl { font-size:12px; padding:3px 4px; border-bottom:1px solid #333; background:#f3f3f3; }
+        .doc-approval-box .sig { height:44px; display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--text-gray); }
+        .doc-org { font-size:12px; color:var(--text-gray); letter-spacing:1px; }
+        .doc-title { text-align:center; font-size:22px; font-weight:700; letter-spacing:5px; margin:6px 0 20px; color:#111; }
+        .doc-section-h { font-size:13px; font-weight:700; margin:18px 0 7px; padding-left:8px; border-left:3px solid var(--main); }
+        .doc-table { width:100%; border-collapse:collapse; font-size:12px; }
+        .doc-table th, .doc-table td { border:1px solid #b9b9b9; padding:6px 9px; }
+        .doc-table th { background:#f4f6f5; font-weight:700; text-align:center; }
+        .doc-table td.k { background:#f8f9f9; font-weight:600; width:96px; }
+        .doc-table td.c { text-align:center; }
+        .doc-grade-good { color:var(--status-success-fg); font-weight:700; }
+        .doc-grade-normal { color:var(--text-gray); font-weight:700; }
+        .doc-grade-poor { color:var(--status-danger-fg); font-weight:700; }
+        .doc-summary { margin-top:14px; padding:11px 14px; border:1px solid var(--main); border-radius:6px; background:var(--brand-50); display:flex; align-items:center; gap:10px; font-size:13px; }
+        .doc-summary .lbl { font-weight:700; color:var(--main-dark2); }
+        .doc-foot { margin-top:26px; font-size:12px; color:var(--text-gray); border-top:1px solid #ddd; padding-top:10px; line-height:1.6; }
+        .doc-stamp { position:absolute; top:200px; right:54px; width:90px; height:90px; border:3px solid var(--status-danger-fg); color:var(--status-danger-fg); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:700; transform:rotate(-15deg); opacity:.7; }
+
+        @media (max-width: 1023px) {
+            .evp-body { grid-template-columns:1fr; }
+            .evp-left { border-right:none; border-bottom:1px solid var(--card-line); }
+            .ev-matrix { font-size:12px; }
+            .ev-matrix th, .ev-matrix td { padding:8px 6px; }
+        }
+
+        /* 인쇄 / PDF 저장: 결재 문서 모달이 열려 있을 때만 그 문서만 출력 (닫혀 있으면 일반 페이지 인쇄) */
+        @media print {
+            body:has(#doc-modal.is-open) * { visibility:hidden !important; }
+            #doc-modal.is-open, #doc-modal.is-open * { visibility:visible !important; }
+            #doc-modal.is-open { position:absolute; top:0; left:0; right:0; background:white; display:block !important; padding:0; z-index:9999; }
+            #doc-modal.is-open .doc-shell { box-shadow:none; max-width:none; height:auto; background:white; display:block; }
+            #doc-modal.is-open .doc-toolbar, #doc-modal.is-open .doc-banner { display:none !important; }
+            #doc-modal.is-open .doc-scroll { overflow:visible; padding:0; display:block; }
+            #doc-modal.is-open .doc-paper { box-shadow:none; max-width:none; min-height:auto; margin:0 auto; padding:10mm 8mm; }
+        }
+    </style>
+</head>
+<body data-dy-page="evl-eval"
+      data-page-title="인력 평가"
+      data-page-subtitle="인력 평가 > 인력 평가 — 안전보건관리책임자·관리감독자 업무수행평가 · 반기 1회 (SFR-009)">
+    <main>
+
+        <!-- ─── 평가개요 ─── -->
+        <section class="card" style="overflow:visible;">
+            <div class="card-header">
+                <div class="ev-overview-head" style="flex:1;">
+                    <h2 class="card-title">평가개요</h2>
+                    <button class="btn btn-secondary btn-sm" type="button" onclick="window.EVL.openApproval()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                        결재상신
+                    </button>
+                </div>
+            </div>
+            <div class="info-grid">
+                <div class="info-grid-row">
+                    <span class="info-grid-label">관련 법조항</span>
+                    <span class="info-grid-value">중대재해처벌법 시행령 제4조제1항제5호 <span class="text-gray">· 산업안전보건법 §15(책임자) · §16(관리감독자)</span></span>
+                </div>
+                <div class="info-grid-row">
+                    <span class="info-grid-label">평가주기</span>
+                    <span class="info-grid-value">반기 1회 <span class="text-gray">(상반기 4~6월 / 하반기 10~12월)</span></span>
+                </div>
+                <div class="info-grid-row">
+                    <span class="info-grid-label">평가일자</span>
+                    <span class="info-grid-value">평가 등록 시 자동 기록 <span class="text-gray">· 피평가자별 실제 평가일은 아래 매트릭스·이력의 ‘평가일자’ 열 참조</span></span>
+                </div>
+                <div class="info-grid-row last-row">
+                    <span class="info-grid-label">평가방법</span>
+                    <span class="info-grid-value">안전보건 관계 법령에 따른 업무수행 여부를 <strong>평가항목별 세부평가기준</strong>(양호·보통·미흡)으로 점검</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── 평가결과 매트릭스 ─── -->
+        <section class="card">
+            <div class="card-header">
+                <h2 class="card-title">평가 결과</h2>
+                <div class="ev-bar" style="border:none; padding:0; gap:8px;">
+                    <span class="lbl">부서</span>
+                    <select id="ev-dept" onchange="window.EVL.changeDept(this.value)">
+                        <option>건설과</option>
+                        <option>공공시설사업소</option>
+                        <option>환경과</option>
+                    </select>
+                </div>
+            </div>
+            <div style="padding:16px 22px;">
+                <div style="overflow-x:auto;">
+                    <table class="ev-matrix">
+                        <thead>
+                            <tr>
+                                <th rowspan="2">구분</th>
+                                <th rowspan="2">피평가자</th>
+                                <th class="grp-h1 ev-col-div" colspan="3">상반기 (H1)</th>
+                                <th class="grp-h2 ev-col-div" colspan="3">하반기 (H2)</th>
+                            </tr>
+                            <tr>
+                                <th class="grp-h1 ev-col-div">평가자</th>
+                                <th class="grp-h1">평가일자</th>
+                                <th class="grp-h1">평가</th>
+                                <th class="grp-h2 ev-col-div">평가자</th>
+                                <th class="grp-h2">평가일자</th>
+                                <th class="grp-h2">평가</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ev-matrix-body"></tbody>
+                    </table>
+                </div>
+                <div class="ev-help">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    <span><strong>평가등록</strong>은 배정된 평가자 본인만 활성화됩니다. 현재 로그인: <span class="me">박안전</span> (재난안전과 중대재해팀)</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ─── 평가 이력 (사이클 누적) ─── -->
+        <section class="card">
+            <div class="card-header">
+                <h2 class="card-title">평가 이력</h2>
+                <span class="text-muted" style="font-size:13px;">완료된 평가 <strong id="hist-count">0</strong>건 · 반기 사이클 누적</span>
+            </div>
+            <div style="padding:14px 22px;">
+                <div class="rsk-filter-row">
+                    <div class="form-group">
+                        <span class="form-label-inline">사이클</span>
+                        <select class="select" id="hist-f-cycle" onchange="window.EVL.filterHistory()">
+                            <option>전체</option><option>2026 하반기</option><option>2026 상반기</option><option>2025 하반기</option><option>2025 상반기</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <span class="form-label-inline">부서</span>
+                        <select class="select" id="hist-f-dept" onchange="window.EVL.filterHistory()">
+                            <option>전체</option><option>건설과</option><option>공공시설사업소</option><option>환경과</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <span class="form-label-inline">구분</span>
+                        <select class="select" id="hist-f-role" onchange="window.EVL.filterHistory()">
+                            <option>전체</option><option>안전보건관리책임자</option><option>관리감독자</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <span class="form-label-inline">결과</span>
+                        <select class="select" id="hist-f-result" onchange="window.EVL.filterHistory()">
+                            <option>전체</option><option>양호</option><option>보통</option><option>미흡</option>
+                        </select>
+                    </div>
+                    <div class="search-bar">
+                        <input class="search-input" type="text" id="hist-f-q" placeholder="피평가자 이름 검색" oninput="window.EVL.filterHistory()">
+                        <button class="search-submit" type="button" onclick="window.EVL.filterHistory()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            검색
+                        </button>
+                    </div>
+                    <button class="clear-filters" type="button" onclick="window.EVL.resetHistoryFilters()">초기화</button>
+                </div>
+                <div style="overflow-x:auto; margin-top:12px;">
+                    <table class="table-figma">
+                        <colgroup>
+                            <col style="width:108px;"><col style="width:118px;"><col style="width:130px;"><col style="width:150px;"><col><col style="width:88px;"><col style="width:84px;"><col style="width:70px;">
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th>평가일자</th><th>사이클</th><th>부서</th><th>구분</th><th>피평가자</th><th>평가자</th><th style="text-align:center;">결과</th><th style="text-align:center;">상세</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ev-history-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ═══ 평가등록 모달 (EVL02-D) ═══ -->
+    <div class="ev-modal-backdrop" id="eval-modal">
+        <div class="ev-modal" role="dialog" aria-modal="true">
+            <div class="ev-modal-header">
+                <div>
+                    <div class="ev-modal-title" id="eval-title">평가표</div>
+                    <div class="ev-modal-sub" id="eval-sub"></div>
+                </div>
+                <button type="button" class="ev-modal-close" onclick="window.EVL.closeEval()" aria-label="닫기">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="ev-modal-body">
+                <div class="ev-criteria">
+                    <div class="row good"><b>양호</b> 법령에 따른 업무수행으로 안전보건목표 달성·재해예방 기여</div>
+                    <div class="row normal"><b>보통</b> 법령에 따른 업무를 적절하게 수행</div>
+                    <div class="row poor"><b>미흡</b> 법령에 따른 업무를 일부 수행하지 않음</div>
+                    <div class="row" style="margin-top:5px; border-top:1px solid var(--status-success-border); padding-top:7px; color:var(--text-gray);"><b style="min-width:42px; color:var(--main-dark2);">종합</b> 미흡 항목이 1개라도 있으면 「미흡」, 전 항목 양호면 「양호」, 그 외 「보통」으로 자동 산출</div>
+                </div>
+                <div id="eval-items"></div>
+            </div>
+            <div class="ev-modal-footer">
+                <span class="stat" id="eval-foot-stat">평가 항목 <strong id="eval-progress">0/0</strong></span>
+                <div class="btns">
+                    <button class="btn btn-secondary" id="eval-pdf" type="button" style="display:none;" onclick="window.EVL.openDocFromView()">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        PDF 미리보기
+                    </button>
+                    <button class="btn btn-outline" type="button" onclick="window.EVL.closeEval()">닫기</button>
+                    <button class="btn btn-primary" id="eval-save" type="button" onclick="window.EVL.saveEval()">저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ 평가자 선택 모달 (조직도 뷰 재사용, EVL04-M) ═══ -->
+    <div class="ev-modal-backdrop" id="picker-modal">
+        <div class="ev-modal evp-modal" role="dialog" aria-modal="true">
+            <div class="ev-modal-header">
+                <div>
+                    <div class="ev-modal-title">평가자 선택</div>
+                    <div class="ev-modal-sub" id="picker-sub">조직도에서 평가자 1명을 선택하세요</div>
+                </div>
+                <button type="button" class="ev-modal-close" onclick="window.EVL.closePicker()" aria-label="닫기">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+            </div>
+            <div class="evp-body">
+                <div class="evp-left">
+                    <div class="evp-pane-head">
+                        <span class="t">부서</span>
+                        <input class="evp-search" type="search" id="picker-search" placeholder="부서명 검색" oninput="window.EVL.searchTree(this.value)">
+                    </div>
+                    <div class="evp-scroll"><div id="picker-tree" class="org-tree"></div></div>
+                </div>
+                <div class="evp-right">
+                    <div class="evp-pane-head"><span class="t">부서원</span></div>
+                    <div class="evp-scroll"><div id="picker-members"></div></div>
+                </div>
+            </div>
+            <div class="ev-modal-footer">
+                <span class="stat" id="picker-selected">선택 안 됨</span>
+                <div class="btns">
+                    <button class="btn btn-outline" type="button" onclick="window.EVL.closePicker()">취소</button>
+                    <button class="btn btn-primary" type="button" id="picker-confirm" onclick="window.EVL.confirmPicker()" disabled>선택</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ 결재 문서 / PDF 미리보기 모달 ═══ -->
+    <div class="ev-modal-backdrop" id="doc-modal">
+        <div class="doc-shell" role="dialog" aria-modal="true" aria-label="결재 문서 미리보기">
+            <div class="doc-toolbar">
+                <div class="doc-toolbar-title">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    <span id="doc-toolbar-title-text">결재 문서 미리보기</span>
+                </div>
+                <div class="doc-toolbar-btns" id="doc-toolbar-btns"></div>
+            </div>
+            <div class="doc-banner" id="doc-banner" style="display:none;"></div>
+            <div class="doc-scroll">
+                <div class="doc-paper" id="doc-paper"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast" role="status"></div>
+
+    <script src="./js/layout.js"></script>
+    <script>
+    (function () {
+        'use strict';
+
+        const CURRENT_USER = '박안전';
+        const TODAY = '2026-06-30';
+
+        /* ─── 공식 평가 항목 (담양 기능요구사항) ─── */
+        const ITEMS = {
+            RESPONSIBLE: [
+                '사업장 산재 예방 계획 수립',
+                '안전보건관리규정의 작성 및 변경',
+                '안전보건교육 이행, 작업환경측정 등 작업환경의 점검 및 개선',
+                '종사자의 건강진단 등 건강관리',
+                '산업재해 원인조사 및 재발방지 대책 수립',
+                '산업재해에 관한 통계의 기록 및 유지관리',
+                '안전장치 및 보호구 구입 시 적격품 여부 확인',
+                '위험성평가 실시 등',
+            ],
+            SUPERVISOR: [
+                '종사자 안전보건에 관한 사항 확인',
+                '사업장 내 기계기구 또는 설비의 안전보건 점검 및 이상 유무 확인',
+                '보호장치 및 방호장치 점검 및 착용·사용 교육·지도',
+                '산업재해에 관한 보고, 안전보건관리자 등 지도·조언에 대한 이행',
+                '유해위험요인의 파악 및 개선조치 여부 확인',
+            ],
+        };
+        const GRADES = ['미흡', '보통', '양호'];
+        const GKEY = { '미흡': 'poor', '보통': 'normal', '양호': 'good' };
+
+        function cell(evaluator) { return { evaluator: evaluator || null, date: null, result: null, grades: null }; }
+
+        /* ─── 부서별 피평가자(책임자·관리감독자) ─── */
+        const DEPTS = {
+            '건설과': [
+                { id: 'c-r1', role: 'RESPONSIBLE', roleLabel: '안전보건관리책임자', name: '신과장', team: '부서장',     H1: cell('박안전'), H2: cell('박안전') },
+                { id: 'c-s1', role: 'SUPERVISOR',  roleLabel: '관리감독자',         name: '김도현', team: '안전관리팀', H1: cell('박안전'), H2: cell(null) },
+                { id: 'c-s2', role: 'SUPERVISOR',  roleLabel: '관리감독자',         name: '박서준', team: '시설관리팀', H1: cell('김안전'), H2: cell(null) },
+                { id: 'c-s3', role: 'SUPERVISOR',  roleLabel: '관리감독자',         name: '이준호', team: '도로관리팀', H1: cell(null),     H2: cell(null) },
+            ],
+            '공공시설사업소': [
+                { id: 'g-r1', role: 'RESPONSIBLE', roleLabel: '안전보건관리책임자', name: '정소장', team: '부서장',     H1: cell('박안전'), H2: cell(null) },
+                { id: 'g-s1', role: 'SUPERVISOR',  roleLabel: '관리감독자',         name: '민설비', team: '환경시설팀', H1: cell(null),     H2: cell(null) },
+                { id: 'g-s2', role: 'SUPERVISOR',  roleLabel: '관리감독자',         name: '한운영', team: '시설운영팀', H1: cell(null),     H2: cell(null) },
+            ],
+            '환경과': [
+                { id: 'e-r1', role: 'RESPONSIBLE', roleLabel: '안전보건관리책임자', name: '윤환경', team: '부서장',     H1: cell(null),     H2: cell(null) },
+                { id: 'e-s1', role: 'SUPERVISOR',  roleLabel: '관리감독자',         name: '정수빈', team: '자원순환팀', H1: cell(null),     H2: cell(null) },
+                { id: 'e-s2', role: 'SUPERVISOR',  roleLabel: '관리감독자',         name: '김지도', team: '환경지도팀', H1: cell(null),     H2: cell(null) },
+            ],
+        };
+        let currentDept = '건설과';
+        const rowsOf = () => DEPTS[currentDept];
+        const findRow = (id) => rowsOf().find(r => r.id === id);
+
+        /* ─── 조직도(평가자 선택) 데이터 — org-chart.html TREE 축약 + 부서원(팀·이름) ─── */
+        const PICK_TREE = [{
+            id: 'root', name: '담양군청', children: [
+                { id: 'bonchung', name: '본청', children: [
+                    { id: '건설과',     name: '건설과',     members: [
+                        { team: '안전관리팀', name: '박안전' }, { team: '안전관리팀', name: '김도현' },
+                        { team: '시설관리팀', name: '박서준' }, { team: '도로관리팀', name: '이준호' } ] },
+                    { id: '환경과',     name: '환경과',     members: [
+                        { team: '환경지도팀', name: '김지도' }, { team: '자원순환팀', name: '정수빈' } ] },
+                    { id: '문화체육과', name: '문화체육과', members: [
+                        { team: '체육시설팀', name: '한지훈' }, { team: '문화시설팀', name: '오세영' } ] },
+                    { id: '재무과',     name: '재무과',     members: [
+                        { team: '회계팀',     name: '최재무' }, { team: '세정팀',     name: '강세무' } ] },
+                ]},
+                { id: 'jiksok', name: '직속기관', children: [
+                    { id: '보건소', name: '보건소', members: [
+                        { team: '보건행정과', name: '백지영' }, { team: '건강증진과', name: '곽문석' } ] },
+                ]},
+                { id: 'saubso', name: '사업소', children: [
+                    { id: '공공시설사업소', name: '공공시설사업소', members: [
+                        { team: '시설운영팀', name: '한운영' }, { team: '환경시설팀', name: '민설비' } ] },
+                    { id: '물순환사업소',   name: '물순환사업소',   members: [
+                        { team: '정수팀',     name: '하정수' }, { team: '수질관리팀', name: '오수질' } ] },
+                ]},
+            ]
+        }];
+
+        const SVG = {
+            building: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22V12h6v10"/><path d="M8 6h.01M12 6h.01M16 6h.01M8 10h.01M16 10h.01"/></svg>',
+            team:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M17 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M1 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2"/></svg>',
+        };
+
+        /* =========================================================
+         * 평가 이력 (완료 평가 누적)
+         * ========================================================= */
+        function makeGrades(role, result) {
+            const n = role === 'RESPONSIBLE' ? 8 : 5;
+            const g = new Array(n).fill('양호');
+            if (result === '보통') { g[1] = '보통'; g[3] = '보통'; }
+            else if (result === '미흡') { g[2] = '미흡'; }
+            return g;
+        }
+        function rec(date, cycle, dept, role, roleLabel, name, team, evaluator, result) {
+            return { date: date, cycle: cycle, dept: dept, role: role, roleLabel: roleLabel, name: name, team: team, evaluator: evaluator, result: result, grades: makeGrades(role, result) };
+        }
+        const HISTORY = [
+            rec('2025-12-22', '2025 하반기', '건설과',         'RESPONSIBLE', '안전보건관리책임자', '신과장', '부서장',     '박안전', '양호'),
+            rec('2025-12-22', '2025 하반기', '건설과',         'SUPERVISOR',  '관리감독자',         '김도현', '안전관리팀', '박안전', '보통'),
+            rec('2025-12-20', '2025 하반기', '건설과',         'SUPERVISOR',  '관리감독자',         '박서준', '시설관리팀', '김안전', '양호'),
+            rec('2025-12-19', '2025 하반기', '환경과',         'SUPERVISOR',  '관리감독자',         '정수빈', '자원순환팀', '김안전', '미흡'),
+            rec('2025-12-18', '2025 하반기', '공공시설사업소', 'RESPONSIBLE', '안전보건관리책임자', '정소장', '부서장',     '박안전', '양호'),
+            rec('2025-06-25', '2025 상반기', '건설과',         'RESPONSIBLE', '안전보건관리책임자', '신과장', '부서장',     '박안전', '보통'),
+            rec('2025-06-24', '2025 상반기', '건설과',         'SUPERVISOR',  '관리감독자',         '김도현', '안전관리팀', '박안전', '양호'),
+        ];
+
+        const histBody$ = document.getElementById('ev-history-body');
+        function histKey(r) { return r.dept + '|' + r.cycle + '|' + r.name + '|' + r.roleLabel; }
+        function histVal(id) { const el = document.getElementById(id); return el ? el.value : '전체'; }
+        function renderHistory() {
+            const fq = (document.getElementById('hist-f-q').value || '').trim();
+            const fc = histVal('hist-f-cycle'), fd = histVal('hist-f-dept'), fr = histVal('hist-f-role'), fres = histVal('hist-f-result');
+            const list = HISTORY.filter(r =>
+                (fc === '전체' || r.cycle === fc) &&
+                (fd === '전체' || r.dept === fd) &&
+                (fr === '전체' || r.roleLabel === fr) &&
+                (fres === '전체' || r.result === fres) &&
+                (!fq || r.name.indexOf(fq) >= 0)
+            );
+            document.getElementById('hist-count').textContent = list.length;
+            if (!list.length) {
+                histBody$.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-lightgray); padding:24px;">평가 이력이 없습니다</td></tr>';
+                return;
+            }
+            histBody$.innerHTML = list.map(r => {
+                const idx = HISTORY.indexOf(r);
+                return '<tr>' +
+                    '<td>' + r.date + '</td>' +
+                    '<td>' + r.cycle + '</td>' +
+                    '<td>' + r.dept + '</td>' +
+                    '<td>' + r.roleLabel + '</td>' +
+                    '<td style="font-weight:600; white-space:nowrap;">' + r.name + ' <span style="color:var(--text-gray); font-weight:400;">' + r.team + '</span></td>' +
+                    '<td>' + r.evaluator + '</td>' +
+                    '<td style="text-align:center;">' + gradeBadge(r.result) + '</td>' +
+                    '<td style="text-align:center;"><button class="table-action-btn" onclick="window.EVL.viewHistory(' + idx + ')">보기</button></td>' +
+                '</tr>';
+            }).join('');
+        }
+
+        /* =========================================================
+         * 매트릭스 렌더
+         * ========================================================= */
+        const body$ = document.getElementById('ev-matrix-body');
+
+        const GRADE_CHIP = { '양호': 'success', '보통': 'neutral', '미흡': 'danger' };
+        function gradeBadge(g) {
+            if (!g || !GRADE_CHIP[g]) return '<span class="ev-cell-empty">미산출</span>';
+            return '<span class="chip-status ' + GRADE_CHIP[g] + '">' + g + '</span>';
+        }
+
+        function halfCell(row, h, firstOfHalf) {
+            const c = row[h];
+            const divCls = firstOfHalf ? ' ev-col-div' : '';
+            // 평가자
+            let evCell;
+            if (c.evaluator) {
+                evCell = '<td class="ev-eor' + divCls + '">' + c.evaluator + '</td>';
+            } else {
+                evCell = '<td class="' + divCls.trim() + '"><button class="ev-mini" onclick="window.EVL.openPicker(\'' + row.id + '\',\'' + h + '\')">평가자 선택</button></td>';
+            }
+            // 평가일자
+            const dateCell = '<td>' + (c.date ? c.date : '<span class="ev-cell-empty">-</span>') + '</td>';
+            // 평가
+            let resCell;
+            if (c.result) {
+                resCell = '<td>' + gradeBadge(c.result) + '</td>';
+            } else if (c.evaluator === CURRENT_USER) {
+                resCell = '<td><button class="ev-mini primary" onclick="window.EVL.openEval(\'' + row.id + '\',\'' + h + '\')">평가등록</button></td>';
+            } else if (c.evaluator) {
+                resCell = '<td><button class="ev-mini" disabled title="배정된 평가자만 등록할 수 있습니다">평가등록</button></td>';
+            } else {
+                resCell = '<td><span class="ev-cell-empty">-</span></td>';
+            }
+            return evCell + dateCell + resCell;
+        }
+
+        function renderMatrix() {
+            body$.innerHTML = rowsOf().map(row => {
+                return '<tr>' +
+                    '<td class="ev-role">' + row.roleLabel + '</td>' +
+                    '<td class="ev-name">' + row.name + '<span class="sub">' + row.team + '</span></td>' +
+                    halfCell(row, 'H1', true) +
+                    halfCell(row, 'H2', true) +
+                '</tr>';
+            }).join('');
+        }
+
+        /* =========================================================
+         * 평가등록 모달
+         * ========================================================= */
+        const evalModal$ = document.getElementById('eval-modal');
+        const evalItems$ = document.getElementById('eval-items');
+        let evalCtx = null;
+        let evalMode = 'edit';
+
+        function buildItems(items, grades, disabled) {
+            return items.map((t, i) => {
+                const g = grades ? grades[i] : null;
+                const radios = GRADES.map(gr =>
+                    '<label class="ev-judge-label ' + GKEY[gr] + '"><input type="radio" name="g' + i + '" value="' + gr + '"' +
+                    (g === gr ? ' checked' : '') + (disabled ? ' disabled' : ' onchange="window.EVL.tickEval()"') + '><span>' + gr + '</span></label>'
+                ).join('');
+                return '<div class="ev-item"><div class="ev-item-no">' + (i + 1) + '</div>' +
+                       '<div class="ev-item-task">' + t + '</div>' +
+                       '<div class="ev-judge-group">' + radios + '</div></div>';
+            }).join('');
+        }
+
+        function openEval(rowId, half) {
+            const row = findRow(rowId);
+            const c = row[half];
+            evalCtx = { rowId, half };
+            evalMode = 'edit';
+            document.getElementById('eval-title').textContent = (half === 'H1' ? '상반기' : '하반기') + ' · ' + row.roleLabel + ' 평가표';
+            document.getElementById('eval-sub').textContent = '피평가자 ' + row.name + ' (' + row.team + ') · 평가자 ' + (c.evaluator || '-');
+            evalItems$.innerHTML = buildItems(ITEMS[row.role], c.grades, false);
+            document.getElementById('eval-foot-stat').innerHTML = '평가 항목 <strong id="eval-progress">0/0</strong>';
+            document.getElementById('eval-save').style.display = '';
+            document.getElementById('eval-pdf').style.display = 'none';
+            tickEval();
+            evalModal$.classList.add('is-open');
+        }
+
+        function openHistoryView(idx) {
+            const r = HISTORY[idx];
+            if (!r) return;
+            evalCtx = null;
+            evalMode = 'view';
+            document.getElementById('eval-title').textContent = r.cycle + ' · ' + r.roleLabel + ' 평가표';
+            document.getElementById('eval-sub').textContent = '피평가자 ' + r.name + ' (' + r.team + ') · 평가자 ' + r.evaluator + ' · 평가일자 ' + r.date;
+            evalItems$.innerHTML = buildItems(ITEMS[r.role], r.grades, true);
+            document.getElementById('eval-foot-stat').innerHTML = '종합 결과 ' + gradeBadge(r.result) + ' <span style="color:var(--text-lightgray); margin-left:6px;">조회 전용</span>';
+            document.getElementById('eval-save').style.display = 'none';
+            document.getElementById('eval-pdf').style.display = '';
+            viewedRec = r;
+            evalModal$.classList.add('is-open');
+        }
+
+        function tickEval() {
+            const total = ITEMS[findRow(evalCtx.rowId).role].length;
+            let done = 0;
+            for (let i = 0; i < total; i++) {
+                if (evalItems$.querySelector('input[name="g' + i + '"]:checked')) done++;
+            }
+            document.getElementById('eval-progress').textContent = done + '/' + total;
+        }
+
+        function overall(grades) {
+            const g = grades.filter(Boolean);
+            if (!g.length) return null;
+            if (g.indexOf('미흡') >= 0) return '미흡';
+            if (g.every(x => x === '양호')) return '양호';
+            return '보통';
+        }
+
+        function saveEval() {
+            const row = findRow(evalCtx.rowId);
+            const total = ITEMS[row.role].length;
+            const grades = [];
+            for (let i = 0; i < total; i++) {
+                const sel = evalItems$.querySelector('input[name="g' + i + '"]:checked');
+                grades.push(sel ? sel.value : null);
+            }
+            const missing = grades.filter(x => !x).length;
+            if (missing > 0 && !window.confirm('미평가 항목 ' + missing + '건이 있습니다. 그대로 저장할까요?')) return;
+            const c = row[evalCtx.half];
+            c.grades = grades;
+            c.result = overall(grades);
+            c.date = TODAY;
+            const cyc = '2026 ' + (evalCtx.half === 'H1' ? '상반기' : '하반기');
+            const newRec = { date: c.date, cycle: cyc, dept: currentDept, role: row.role, roleLabel: row.roleLabel, name: row.name, team: row.team, evaluator: c.evaluator || '-', result: c.result, grades: grades.slice() };
+            for (let i = HISTORY.length - 1; i >= 0; i--) { if (histKey(HISTORY[i]) === histKey(newRec)) HISTORY.splice(i, 1); }
+            HISTORY.unshift(newRec);
+            closeEval();
+            renderMatrix();
+            renderHistory();
+            toast('평가 저장 완료 — 종합 ' + (c.result || '미산출') + ' · 이력에 추가됨 (목업)');
+        }
+
+        function closeEval() { evalModal$.classList.remove('is-open'); viewedRec = null; }
+
+        /* =========================================================
+         * 평가자 선택 모달 (조직도)
+         * ========================================================= */
+        const pickerModal$ = document.getElementById('picker-modal');
+        const pickTree$ = document.getElementById('picker-tree');
+        const pickMembers$ = document.getElementById('picker-members');
+        let pendingPick = null;
+        let pickDept = '건설과';
+        let pickMember = null;
+        let pickQuery = '';
+
+        function findDeptNode(id, list) {
+            list = list || PICK_TREE;
+            for (const n of list) {
+                if (n.id === id && n.members) return n;
+                if (n.children) { const r = findDeptNode(id, n.children); if (r) return r; }
+            }
+            return null;
+        }
+
+        function renderTree() {
+            function node(n, depth) {
+                const isLeaf = !!n.members;
+                if (isLeaf) {
+                    if (pickQuery && n.name.indexOf(pickQuery) < 0) return '';
+                    const sel = n.id === pickDept ? ' is-selected' : '';
+                    return '<div class="org-tree-node"><div class="org-tree-row' + sel + '" data-dept="' + n.id + '">' +
+                        '<span class="org-tree-toggle is-placeholder"></span>' +
+                        '<span class="org-tree-icon">' + SVG.team + '</span>' +
+                        '<span class="org-tree-name"><span class="name">' + n.name + '</span></span>' +
+                        '<span class="org-tree-count">' + n.members.length + '명</span>' +
+                    '</div></div>';
+                }
+                const childHtml = (n.children || []).map(c => node(c, depth + 1)).join('');
+                if (pickQuery && !childHtml) return '';
+                return '<div class="org-tree-node"><div class="org-tree-row is-group">' +
+                    '<span class="org-tree-toggle is-placeholder"></span>' +
+                    '<span class="org-tree-icon ' + (depth === 0 ? 'root' : '') + '">' + SVG.building + '</span>' +
+                    '<span class="org-tree-name"><span class="name">' + n.name + '</span></span>' +
+                '</div><div class="org-tree-children">' + childHtml + '</div></div>';
+            }
+            pickTree$.innerHTML = PICK_TREE.map(n => node(n, 0)).join('');
+        }
+
+        function renderMembers() {
+            const dept = findDeptNode(pickDept);
+            if (!dept) { pickMembers$.innerHTML = '<div class="evp-empty">좌측에서 부서를 선택하세요</div>'; return; }
+            pickMembers$.innerHTML =
+                '<div class="evp-members-head"><strong>' + dept.name + '</strong> 부서원 · 1명 선택</div>' +
+                dept.members.map((m, i) => {
+                    const checked = pickMember === m.name;
+                    return '<label class="evp-member' + (checked ? ' is-checked' : '') + '">' +
+                        '<input type="radio" name="pickmember" value="' + m.name + '"' + (checked ? ' checked' : '') + ' onchange="window.EVL.pickMember(\'' + m.name + '\')">' +
+                        '<span class="evp-member-text"><span class="team">' + m.team + '</span> · <strong>' + m.name + '</strong></span>' +
+                    '</label>';
+                }).join('');
+        }
+
+        function openPicker(rowId, half) {
+            pendingPick = { rowId, half };
+            const row = findRow(rowId);
+            pickDept = currentDept;          // 기본: 현재 부서
+            if (!findDeptNode(pickDept)) pickDept = '건설과';
+            pickMember = row[half].evaluator || null;
+            pickQuery = '';
+            document.getElementById('picker-search').value = '';
+            document.getElementById('picker-sub').textContent = row.roleLabel + ' ' + row.name + ' · ' + (half === 'H1' ? '상반기' : '하반기') + ' 평가자 지정';
+            renderTree(); renderMembers(); updatePickFoot();
+            pickerModal$.classList.add('is-open');
+        }
+
+        function updatePickFoot() {
+            const btn = document.getElementById('picker-confirm');
+            const lbl = document.getElementById('picker-selected');
+            if (pickMember) { btn.disabled = false; btn.textContent = pickMember + ' 선택'; lbl.innerHTML = '선택: <strong style="color:var(--main-dark);font-weight:700;">' + pickMember + '</strong>'; }
+            else { btn.disabled = true; btn.textContent = '선택'; lbl.textContent = '선택 안 됨'; }
+        }
+
+        pickTree$.addEventListener('click', (e) => {
+            const row = e.target.closest('[data-dept]');
+            if (!row) return;
+            pickDept = row.dataset.dept;
+            pickMember = null;
+            renderTree(); renderMembers(); updatePickFoot();
+        });
+
+        function confirmPicker() {
+            if (!pickMember || !pendingPick) return;
+            findRow(pendingPick.rowId)[pendingPick.half].evaluator = pickMember;
+            closePicker();
+            renderMatrix();
+            toast('평가자 지정: ' + pickMember + (pickMember === CURRENT_USER ? ' (본인 → 평가등록 가능)' : ''));
+        }
+
+        function closePicker() { pickerModal$.classList.remove('is-open'); }
+
+        /* ─── 토스트 ─── */
+        function toast(msg) {
+            const t = document.getElementById('toast');
+            if (!t) { return; }
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(window.__toastTimer);
+            window.__toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+        }
+
+        /* backdrop 클릭으로 닫기 */
+        document.querySelectorAll('.ev-modal-backdrop').forEach(bd => {
+            bd.addEventListener('click', (e) => { if (e.target === bd) bd.classList.remove('is-open'); });
+        });
+        /* ESC 로 열린 모달 닫기 (문서 미리보기가 위에 있으면 그것만) */
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape') return;
+            if (document.getElementById('doc-modal').classList.contains('is-open')) { closeDoc(); return; }
+            closeEval(); closePicker();
+        });
+
+        /* =========================================================
+         * 결재 문서 / PDF 미리보기
+         * ========================================================= */
+        const docModal$ = document.getElementById('doc-modal');
+        const docPaper$ = document.getElementById('doc-paper');
+        let viewedRec = null;
+
+        function docGrade(g) {
+            if (!g || !GKEY[g]) return '<span style="color:var(--text-lightgray);">-</span>';
+            return '<span class="doc-grade-' + GKEY[g] + '">' + g + '</span>';
+        }
+
+        function renderDoc(spec) {
+            const approval = (spec.approval || []).map(a =>
+                '<div class="col"><div class="ttl">' + a.role + '</div><div class="sig">' + (a.name || '') + '</div></div>'
+            ).join('');
+            const meta = (spec.meta || []).map(m => '<tr><td class="k">' + m[0] + '</td><td>' + m[1] + '</td></tr>').join('');
+            const head = spec.table.headers.map(h => '<th>' + h + '</th>').join('');
+            const align = spec.table.align || [];
+            const rows = spec.table.rows.length
+                ? spec.table.rows.map(r => '<tr>' + r.map((c, i) =>
+                    '<td' + (align[i] === 'l' ? '' : ' class="c"') + '>' + c + '</td>').join('') + '</tr>').join('')
+                : '<tr><td colspan="' + spec.table.headers.length + '" style="text-align:center; color:var(--text-lightgray); padding:18px;">완료된 평가가 없습니다</td></tr>';
+            const summary = spec.summary
+                ? '<div class="doc-summary"><span class="lbl">' + spec.summary.label + '</span><span>' + spec.summary.value + '</span>'
+                  + (spec.summary.note ? '<span style="margin-left:auto; font-size:12px; color:var(--text-gray);">' + spec.summary.note + '</span>' : '') + '</div>'
+                : '';
+            const stamp = spec.stamp ? '<div class="doc-stamp">' + spec.stamp + '</div>' : '';
+            docPaper$.innerHTML =
+                '<div class="doc-approval-wrap"><div class="doc-approval-box">' + approval + '</div></div>' +
+                '<div class="doc-org">담양군청 · DAMYANG COUNTY</div>' +
+                '<div class="doc-title">' + spec.title + '</div>' +
+                stamp +
+                '<div class="doc-section-h">평가 개요</div>' +
+                '<table class="doc-table"><tbody>' + meta + '</tbody></table>' +
+                '<div class="doc-section-h">' + (spec.tableTitle || '평가 내용') + '</div>' +
+                '<table class="doc-table"><thead><tr>' + head + '</tr></thead><tbody>' + rows + '</tbody></table>' +
+                summary +
+                '<div class="doc-foot">' + (spec.foot || '') + '</div>';
+        }
+
+        function buildEvalDocSpec(r) {
+            return {
+                title: r.roleLabel + ' 업무수행 평가표',
+                meta: [
+                    ['대상자', r.name + ' (' + r.team + ')'],
+                    ['소속 · 역할', r.dept + ' · ' + r.roleLabel],
+                    ['평가 사이클', r.cycle],
+                    ['평가자', r.evaluator],
+                    ['평가일자', r.date],
+                ],
+                tableTitle: '항목별 평가 내용',
+                table: {
+                    headers: ['No', '담당 업무 (평가 항목)', '평가'],
+                    align: ['c', 'l', 'c'],
+                    rows: ITEMS[r.role].map((t, i) => [String(i + 1), t, docGrade((r.grades || [])[i])]),
+                },
+                summary: { label: '종합 결과', value: docGrade(r.result), note: '미흡 1개↑=미흡 · 전항목 양호=양호 · 그 외 보통' },
+                approval: [{ role: '평가자', name: r.evaluator }, { role: '부서장', name: '' }, { role: '결재', name: '' }],
+                stamp: '평가완료',
+                foot: '근거: 중대재해처벌법 시행령 제4조제1항제5호 · 산업안전보건법 §15·§16<br>담양군 중대재해예방 통합관리시스템에서 생성된 문서입니다.',
+            };
+        }
+
+        function buildReportDocSpec(dept) {
+            const recs = HISTORY.filter(r => r.dept === dept);
+            const cnt = g => recs.filter(r => r.result === g).length;
+            return {
+                title: dept + ' 업무수행 평가 결과 보고',
+                meta: [
+                    ['부서', dept],
+                    ['평가 대상', recs.length + '명 (안전보건관리책임자 · 관리감독자)'],
+                    ['작성자', '박안전 (재난안전과 중대재해팀)'],
+                    ['작성일', TODAY],
+                    ['근거 법령', '중대재해처벌법 시행령 제4조제1항제5호'],
+                ],
+                tableTitle: '평가 결과 목록',
+                table: {
+                    headers: ['사이클', '역할', '피평가자', '평가자', '평가일자', '결과'],
+                    align: ['c', 'c', 'c', 'c', 'c', 'c'],
+                    rows: recs.map(r => [r.cycle, r.roleLabel, r.name, r.evaluator, r.date, docGrade(r.result)]),
+                },
+                summary: recs.length ? { label: '결과 분포', value: '양호 ' + cnt('양호') + ' · 보통 ' + cnt('보통') + ' · 미흡 ' + cnt('미흡') } : null,
+                approval: [{ role: '작성', name: '박안전' }, { role: '검토', name: '' }, { role: '결재', name: '담양군수' }],
+                stamp: null,
+                foot: '본 보고서는 온나라 전자결재 시스템을 통해 결재가 진행됩니다.',
+                _count: recs.length,
+            };
+        }
+
+        function openDoc(spec, opts) {
+            opts = opts || {};
+            renderDoc(spec);
+            document.getElementById('doc-toolbar-title-text').textContent = opts.mode === 'approval' ? '결재 문서 미리보기' : '평가표 PDF 미리보기';
+            const banner = document.getElementById('doc-banner');
+            if (opts.mode === 'approval') {
+                banner.style.display = 'flex';
+                banner.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>'
+                    + '<span>아래 미리보기를 확인한 뒤 <strong>[온나라로 결재 상신]</strong>을 누르면 <strong>온나라 전자결재</strong> 시스템으로 문서 결재가 진행됩니다. (결재선: 평가자 → 부서장 → 군수)</span>';
+            } else {
+                banner.style.display = 'none';
+            }
+            let html = '<button class="doc-tb-btn" type="button" onclick="window.EVL.printDoc()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> PDF 저장 / 인쇄</button>';
+            if (opts.mode === 'approval') {
+                const dis = opts.submittable ? '' : ' disabled title="완료된 평가가 없습니다 — 평가 완료 후 상신하세요"';
+                html += '<button class="doc-tb-btn primary" type="button" onclick="window.EVL.submitOnnara()"' + dis + '>온나라로 결재 상신</button>';
+            }
+            html += '<button class="doc-tb-btn" type="button" onclick="window.EVL.closeDoc()">닫기</button>';
+            document.getElementById('doc-toolbar-btns').innerHTML = html;
+            docModal$.querySelector('.doc-shell').setAttribute('aria-label', document.getElementById('doc-toolbar-title-text').textContent);
+            docModal$.classList.add('is-open');
+            requestAnimationFrame(() => { const b = docModal$.querySelector('#doc-toolbar-btns .doc-tb-btn'); if (b) b.focus(); });
+        }
+
+        function openApproval() {
+            const spec = buildReportDocSpec(currentDept);
+            openDoc(spec, { mode: 'approval', submittable: spec._count > 0 });
+        }
+        function openDocFromView() {
+            if (!viewedRec) return;
+            openDoc(buildEvalDocSpec(viewedRec), { mode: 'view' });
+        }
+        function printDoc() { window.print(); }
+        function submitOnnara() {
+            if (!window.confirm('온나라 전자결재 시스템으로 결재를 상신할까요?\n결재선: 평가자 → 부서장 → 군수')) return;
+            closeDoc();
+            toast('온나라 전자결재로 결재 상신되었습니다 — 결재선: 평가자 → 부서장 → 군수 (목업)');
+        }
+        function closeDoc() { docModal$.classList.remove('is-open'); }
+
+        /* 외부 노출 */
+        window.EVL = {
+            changeDept(v) { currentDept = v; renderMatrix(); },
+            openEval, closeEval, saveEval, tickEval,
+            openPicker, closePicker, confirmPicker,
+            pickMember(name) { pickMember = name; renderMembers(); updatePickFoot(); },
+            searchTree(q) { pickQuery = (q || '').trim(); renderTree(); },
+            viewHistory: openHistoryView,
+            filterHistory: renderHistory,
+            resetHistoryFilters() {
+                ['hist-f-cycle', 'hist-f-dept', 'hist-f-role', 'hist-f-result'].forEach(id => { const el = document.getElementById(id); if (el) el.value = '전체'; });
+                const q = document.getElementById('hist-f-q'); if (q) q.value = '';
+                renderHistory();
+            },
+            openApproval, openDocFromView, printDoc, submitOnnara, closeDoc,
+        };
+
+        /* 초기 렌더 */
+        renderMatrix();
+        renderHistory();
+    })();
+    </script>
+</body>
+</html>

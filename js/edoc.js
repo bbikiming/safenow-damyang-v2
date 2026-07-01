@@ -62,10 +62,10 @@
         const no = '온나라-2026-' + String(Math.floor(1000 + (docTitle.length * 137) % 9000));
         V().openModal('온나라 결재 요청',
             '<div style="text-align:center; padding:8px 4px 4px;">' +
-            '<div style="font-size:40px; margin-bottom:10px;">📨</div>' +
-            '<p style="font-size:14.5px; font-weight:700; margin-bottom:6px;">온나라로 결재 요청을 보냈습니다</p>' +
-            '<p style="font-size:12.5px; color:var(--text-gray);">' + esc(docTitle) + '<br>문서번호 <b>' + no + '</b> · 결재선: 팀장 → 과장 → 부군수</p>' +
-            '<p style="font-size:11.5px; color:var(--text-gray); margin-top:8px;">결재 완료 시 문서 상태가 자동으로 갱신됩니다. (연계 시뮬레이션)</p>' +
+            '<div style="font-size:38px; margin-bottom:10px;">📨</div>' +
+            '<p style="font-size:14px; font-weight:700; margin-bottom:6px;">온나라로 결재 요청을 보냈습니다</p>' +
+            '<p style="font-size:12px; color:var(--text-gray);">' + esc(docTitle) + '<br>문서번호 <b>' + no + '</b> · 결재선: 팀장 → 과장 → 부군수</p>' +
+            '<p style="font-size:12px; color:var(--text-gray); margin-top:8px;">결재 완료 시 문서 상태가 자동으로 갱신됩니다. (연계 시뮬레이션)</p>' +
             '</div>',
             '<button class="btn btn-primary" onclick="DYV2.closeModal();' + (after ? after : '') + '">확인</button>');
     }
@@ -86,7 +86,8 @@
                     '<option' + (o === v ? ' selected' : '') + '>' + esc(o) + '</option>').join('') + '</select>';
             case 'file': {
                 const drop = '<div class="upload-drop" style="padding:14px;" onclick="DYV2.toast(\'파일 첨부 (프로토타입 — 다중 가능)\')">' +
-                    (v ? '📎 ' + esc(v) : '파일을 끌어다 놓거나 클릭하여 첨부 (다중 가능)') + '</div>';
+                    (v ? '📎 ' + esc(v) : '파일을 끌어다 놓거나 클릭하여 첨부 (다중 가능)') + '</div>' +
+                    (V().fileHint ? V().fileHint() : '');
                 /* SFR-005: 파일별 설명·관리 목록 (ctx.attachList 제공 시) */
                 let list = '';
                 if (ctx && ctx.attachList && ctx.attachList.length) {
@@ -123,7 +124,7 @@
                         '<span class="edoc-chk-label">' + esc(it.item) + '</span>' +
                         '<span class="chip-mini ' + (type === '텍스트' ? 'wt-elec' : 'st-done') + '">' + esc(type) + '</span>' +
                         '</div>' +
-                        (it.basis ? '<button type="button" class="edoc-chk-basis" onclick="EDOC.lawInfo(\'' + esc(it.basis) + '\')" title="관련 법령 상세 보기">관련 근거 · ' + esc(it.basis) + ' <span class="law-i">ⓘ</span></button>' : '');
+                        (it.basis ? lawTag(it.basis) : '');
                     if (type === '텍스트') {
                         return '<div class="edoc-chk-row rich" data-i="' + i + '" data-type="text">' + head +
                             '<textarea class="edoc-chk-text" placeholder="점검 결과를 입력하세요">' + esc(cur.text || '') + '</textarea>' +
@@ -134,7 +135,7 @@
                         '<input type="text" class="edoc-chk-note" placeholder="비고 및 판단 근거" value="' + esc(cur.note || '') + '"></div>' +
                         '</div>';
                 }).join('') +
-                '<p style="font-size:11px; color:var(--status-danger-fg); margin-top:6px;">X 판정 항목은 확정 시 개선조치로 자동 등록됩니다.</p></div>';
+                '<p style="font-size:12px; color:var(--status-danger-fg); margin-top:6px;">X 판정 항목은 확정 시 개선조치로 자동 등록됩니다.</p></div>';
             }
             case 'scorelist': {
                 const items = (ctx && ctx.scorelist) || T.SCORE_PRESETS.default;
@@ -151,9 +152,11 @@
             }
             case 'orgpicker': {
                 const pid = 'edoc-pick-' + f.k;
-                return '<div style="display:flex; gap:8px; align-items:center;">' +
-                    '<input type="text" id="' + pid + '" data-k="' + f.k + '" value="' + esc(v) + '" placeholder="조직도에서 점검자를 선택하세요" readonly style="flex:1; background:var(--gray-50,#fafafa);">' +
+                return '<div class="orgpick-field">' +
+                    '<div style="display:flex; gap:8px; align-items:center;">' +
+                    '<input type="text" id="' + pid + '" data-k="' + f.k + '" value="' + esc(v) + '" placeholder="[조직도]에서 점검자를 선택하세요" readonly style="flex:1; background:var(--gray-50,#fafafa);">' +
                     '<button type="button" class="btn btn-sm btn-outline" onclick="EDOC.openOrgTree(\'' + pid + '\')">조직도</button>' +
+                    '</div>' +
                     '</div>';
             }
             default:
@@ -361,7 +364,7 @@
     }
     function formFor(d) { return T.formForDoc(d); }
 
-    /* ── 조직도 트리 (점검자 선택) — 상위 모달을 닫지 않는 별도 오버레이 ── */
+    /* ── 조직도 트리 (점검자 선택) — 입력 아래 인라인 패널(별도 모달 없음, 단일 모달 규칙) ── */
     const ORG_TREE = [
         { dept: '재난안전과', members: [['재난안전과장', '홍길동'], ['중대재해팀장', '김안전'], ['안전관리담당', '박담당']] },
         { dept: '건설과', members: [['건설과장', '이건설'], ['안전관리자', '박현장']] },
@@ -370,51 +373,59 @@
         { dept: '공공시설사업소', members: [['소장', '임시설'], ['안전담당', '한담당']] },
         { dept: '물순환사업소', members: [['소장', '오순환'], ['시설담당', '서담당']] },
     ];
-    function renderOrgTree() {
+    function renderOrgTree(selectedVal) {
         return '<div class="org-tree-root"><span>🏛</span> 담양군청</div>' +
             ORG_TREE.map(d =>
                 '<div class="otr-dept" data-dept="' + esc(d.dept) + '">' +
                 '<button type="button" class="otr-deptbtn" onclick="EDOC._orgToggle(this)"><span class="otr-arrow">▸</span> ' + esc(d.dept) + ' <span class="otr-count">' + d.members.length + '명</span></button>' +
                 '<div class="otr-members">' +
-                d.members.map(m => '<button type="button" class="otr-member" onclick="EDOC.pickOrgMember(\'' + esc(d.dept) + '\',\'' + esc(m[0]) + '\',\'' + esc(m[1]) + '\')"><span class="otr-role">' + esc(m[0]) + '</span><span class="otr-name">' + esc(m[1]) + '</span></button>').join('') +
+                d.members.map(m => {
+                    const val = d.dept + ' · ' + m[0] + ' / ' + m[1];
+                    const on = selectedVal && selectedVal === val ? ' on' : '';
+                    return '<button type="button" class="otr-member' + on + '" onclick="EDOC.pickOrgMember(this,\'' + esc(d.dept) + '\',\'' + esc(m[0]) + '\',\'' + esc(m[1]) + '\')"><span class="otr-role">' + esc(m[0]) + '</span><span class="otr-name">' + esc(m[1]) + '</span></button>';
+                }).join('') +
                 '</div></div>'
             ).join('');
     }
+    /* 입력 바로 아래에 인라인 트리 토글 — 별도 모달 없음(단일 모달 규칙). 같은 입력에 열려 있으면 닫는다. */
     function openOrgTree(targetId) {
-        closeOrgTree();
-        const ov = document.createElement('div');
-        ov.id = 'org-tree-overlay';
-        ov.className = 'org-tree-overlay';
-        ov.setAttribute('data-target', targetId || '');
-        ov.innerHTML =
-            '<div class="org-tree-backdrop" onclick="EDOC.closeOrgTree()"></div>' +
-            '<div class="org-tree-panel" role="dialog" aria-modal="true" aria-label="조직도에서 점검자 선택">' +
-            '<div class="org-tree-head"><span>조직도에서 점검자 선택</span><button type="button" class="modal-close" onclick="EDOC.closeOrgTree()" aria-label="닫기">&times;</button></div>' +
-            '<div class="org-tree-search"><input type="text" placeholder="부서·이름 검색" oninput="EDOC._orgFilter(this.value)"></div>' +
-            '<div class="org-tree-body" id="org-tree-body">' + renderOrgTree() + '</div>' +
-            '</div>';
-        document.body.appendChild(ov);
-        const first = ov.querySelector('.otr-members'); if (first) first.style.display = 'block';
-        const fa = ov.querySelector('.otr-arrow'); if (fa) fa.textContent = '▾';
+        const inp = document.getElementById(targetId);
+        if (!inp) return;
+        const field = inp.closest('.orgpick-field') || inp.parentElement;
+        const existing = field.querySelector(':scope > .org-inline');
+        if (existing) { existing.remove(); return; }
+        const panel = document.createElement('div');
+        panel.className = 'org-inline';
+        panel.setAttribute('data-target', targetId);
+        panel.style.marginTop = '8px';
+        panel.innerHTML =
+            '<div class="org-inline-search"><input type="text" placeholder="부서·이름 검색" oninput="EDOC._orgFilter(this)"></div>' +
+            '<div class="org-inline-body">' + renderOrgTree(inp.value) + '</div>';
+        field.appendChild(panel);
+        const cur = panel.querySelector('.otr-member.on');
+        const dept = cur ? cur.closest('.otr-dept') : panel.querySelector('.otr-dept');
+        if (dept) { const mm = dept.querySelector('.otr-members'); if (mm) mm.style.display = 'block'; const ar = dept.querySelector('.otr-arrow'); if (ar) ar.textContent = '▾'; }
+        panel.scrollIntoView({ block: 'nearest' });
     }
-    function closeOrgTree() { const o = document.getElementById('org-tree-overlay'); if (o) o.remove(); }
     function orgToggle(btn) {
         const m = btn.nextElementSibling; if (!m) return;
         const open = m.style.display === 'block';
         m.style.display = open ? 'none' : 'block';
         const ar = btn.querySelector('.otr-arrow'); if (ar) ar.textContent = open ? '▸' : '▾';
     }
-    function pickOrgMember(dept, role, name) {
-        const ov = document.getElementById('org-tree-overlay');
-        const tid = ov ? ov.getAttribute('data-target') : '';
+    function pickOrgMember(btnEl, dept, role, name) {
+        const panel = btnEl.closest('.org-inline'); if (!panel) return;
+        const tid = panel.getAttribute('data-target');
         const inp = tid ? document.getElementById(tid) : null;
         if (inp) inp.value = dept + ' · ' + role + ' / ' + name;
-        closeOrgTree();
+        panel.remove();   // 선택 후 인라인 트리 닫기
         V().toast('점검자 선택: ' + dept + ' ' + role + ' ' + name);
     }
-    function orgFilter(q) {
-        q = (q || '').trim();
-        document.querySelectorAll('#org-tree-body .otr-dept').forEach(dept => {
+    function orgFilter(inputEl) {
+        const panel = inputEl && inputEl.closest ? inputEl.closest('.org-inline') : null;
+        const scope = panel || document;
+        const q = ((inputEl && inputEl.value) || '').trim();
+        scope.querySelectorAll('.otr-dept').forEach(dept => {
             const dn = dept.getAttribute('data-dept') || '';
             let any = false;
             dept.querySelectorAll('.otr-member').forEach(mb => {
@@ -427,26 +438,32 @@
         });
     }
 
-    /* ── 관련 법령 상세 팝업 (근거 태그 ⓘ 클릭) — 상위 모달 위 적층 ── */
-    function lawInfo(basis) {
-        closeLawInfo();
-        const d = (T.LAW_DICT || {})[basis];
-        const body = d
-            ? '<div class="lawinfo-ref"><span class="lawinfo-law">' + esc(d.law) + '</span><span class="lawinfo-art">' + esc(d.art) + (d.clause ? ' ' + esc(d.clause) : '') + '</span></div>' +
-              '<div class="lawinfo-title">' + esc(d.title) + '</div>' +
-              '<div class="lawinfo-text">' + esc(d.text) + '</div>'
-            : '<div class="lawinfo-title">' + esc(basis) + '</div><div class="lawinfo-text">상세 조문 정보가 아직 등록되지 않았습니다.</div>';
-        const ov = document.createElement('div');
-        ov.id = 'law-info-overlay';
-        ov.className = 'org-tree-overlay';
-        ov.innerHTML =
-            '<div class="org-tree-backdrop" onclick="EDOC.closeLawInfo()"></div>' +
-            '<div class="org-tree-panel lawinfo-panel" role="dialog" aria-modal="true" aria-label="관련 법령 상세">' +
-            '<div class="org-tree-head"><span>관련 법령 상세</span><button type="button" class="modal-close" onclick="EDOC.closeLawInfo()" aria-label="닫기">&times;</button></div>' +
-            '<div class="org-tree-body lawinfo-body">' + body + '</div></div>';
-        document.body.appendChild(ov);
+    /* ── 관련 법령 도움말 — ⓘ 호버 시 뷰포트 고정 툴팁(모달·오버플로에 안 잘림) ── */
+    function lawTag(basis) {
+        return '<span class="edoc-chk-basis" data-basis="' + esc(basis) + '" tabindex="0" role="button" aria-label="관련 법령 상세" onmouseenter="EDOC.lawTipShow(this)" onmouseleave="EDOC.lawTipHide()" onfocus="EDOC.lawTipShow(this)" onblur="EDOC.lawTipHide()">관련 근거 · ' + esc(basis) + ' <span class="law-i">\u24d8</span></span>';
     }
-    function closeLawInfo() { const o = document.getElementById('law-info-overlay'); if (o) o.remove(); }
+    function lawTipHide() { const t = document.getElementById('law-tip-float'); if (t) t.remove(); }
+    function lawTipShow(el) {
+        lawTipHide();
+        const basis = el.getAttribute('data-basis');
+        const d = (T.LAW_DICT || {})[basis];
+        const tip = document.createElement('div');
+        tip.id = 'law-tip-float'; tip.className = 'law-tip-float';
+        tip.innerHTML = d
+            ? '<div class="law-tip-ref">' + esc(d.law) + ' <b>' + esc(d.art) + (d.clause ? ' ' + esc(d.clause) : '') + '</b></div><div class="law-tip-title">' + esc(d.title) + '</div><div class="law-tip-text">' + esc(d.text) + '</div>'
+            : '<div class="law-tip-text">' + esc(basis) + ' — 상세 조문 정보가 아직 등록되지 않았습니다.</div>';
+        document.body.appendChild(tip);
+        const r = el.getBoundingClientRect();
+        const tw = tip.offsetWidth, th = tip.offsetHeight;
+        let left = r.left, top = r.bottom + 8;
+        if (left + tw > window.innerWidth - 10) left = window.innerWidth - tw - 10;
+        if (top + th > window.innerHeight - 10) top = r.top - th - 8;
+        tip.style.left = Math.max(8, left) + 'px';
+        tip.style.top = Math.max(8, top) + 'px';
+    }
+    /* 하위호환: 옛 클릭 호출은 호버로 대체되어 무시 */
+    function lawInfo() {}
+    function closeLawInfo() { lawTipHide(); }
 
-    window.EDOC = { openForm, openForDoc, renderInline, formFor, onnaraPopup, notify, addImprovement, advanceImprovement, IMP_FLOW, improvements: () => S.imps(), saveImps: l => S.saveImps(l), statusOf, ntfs: () => S.ntfs(), STCHIP: ST_CHIP, ORG_TREE, openOrgTree, closeOrgTree, pickOrgMember, _orgToggle: orgToggle, _orgFilter: orgFilter, lawInfo, closeLawInfo };
+    window.EDOC = { openForm, openForDoc, renderInline, formFor, onnaraPopup, notify, addImprovement, advanceImprovement, IMP_FLOW, improvements: () => S.imps(), saveImps: l => S.saveImps(l), statusOf, ntfs: () => S.ntfs(), STCHIP: ST_CHIP, ORG_TREE, openOrgTree, pickOrgMember, _orgToggle: orgToggle, _orgFilter: orgFilter, lawTag, lawTipShow, lawTipHide, lawInfo, closeLawInfo };
 })();

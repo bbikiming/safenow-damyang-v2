@@ -23,7 +23,7 @@
                         <thead><tr><th>양식명</th><th>대메뉴</th><th>필드</th><th>사용</th><th></th></tr></thead>
                         <tbody id="preset-list"></tbody>
                     </table>
-                    <p style="font-size:11.5px; color:var(--text-gray); margin-top:10px;">
+                    <p style="font-size:12px; color:var(--text-gray); margin-top:10px;">
                         양식을 만들면 해당 전자문서들이 <a href="docs-preset.html" style="color:var(--main); font-weight:700;">이행문서 등록</a> 메뉴에서 이 양식으로 입력됩니다 — 문서별 하드코딩 화면 없음.
                     </p>
                 </div>
@@ -91,11 +91,11 @@
             document.getElementById('b-fields').innerHTML = fields.map((f, i) =>
                 '<div class="preset-field-row">' +
                 '<span class="drag">⠿</span>' +
-                '<input type="text" value="' + f.label + '" style="border:1px solid var(--card-line); border-radius:6px; padding:6px 9px; font-size:12.5px;" onchange="fields[' + i + '].label=this.value">' +
+                '<input type="text" value="' + f.label + '" style="border:1px solid var(--card-line); border-radius:6px; padding:6px 9px; font-size:12px;" onchange="fields[' + i + '].label=this.value">' +
                 '<select style="border:1px solid var(--card-line); border-radius:6px; padding:6px; font-size:12px;" onchange="fields[' + i + '].type=this.value">' +
                     FIELD_TYPES.map(t => '<option' + (t === f.type ? ' selected' : '') + '>' + t + '</option>').join('') +
                 '</select>' +
-                '<label style="font-size:11.5px; display:flex; align-items:center; gap:4px;"><input type="checkbox"' + (f.req ? ' checked' : '') + ' onchange="fields[' + i + '].req=this.checked"> 필수</label>' +
+                '<label style="font-size:12px; display:flex; align-items:center; gap:4px;"><input type="checkbox"' + (f.req ? ' checked' : '') + ' onchange="fields[' + i + '].req=this.checked"> 필수</label>' +
                 '<button class="btn btn-sm btn-secondary" onclick="fields.splice(' + i + ',1); renderFields();">삭제</button>' +
                 '</div>'
             ).join('');

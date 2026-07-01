@@ -13,6 +13,17 @@
     const PDCA_LABEL = { P: 'P 계획', D: 'D 실행', C: 'C 점검', A: 'A 조치', REVIEW: '미확정', '': '단계 없음' };
     const MENU_ORDER = ['policy', 'org', 'risk', 'hazard', 'edu', 'opinion', 'contract', 'improve', 'comply'];
 
+    /* 세트 테이블 컬럼 헤더 (docRow 7열과 1:1 정렬) */
+    const SL_HEAD = '<thead class="sl-thead"><tr>' +
+        '<th class="sl-th-pdca">PDCA 단계</th>' +
+        '<th>문서명</th>' +
+        '<th>담당자</th>' +
+        '<th>담당부서</th>' +
+        '<th>수정일</th>' +
+        '<th>상태</th>' +
+        '<th class="col-action">관리</th>' +
+        '</tr></thead>';
+
     function render(el, opts) {
         const V = window.DYV2, E = window.EDOC;
         const esc = V.esc;
@@ -99,7 +110,7 @@
                     (s.pre ? '<span class="sl-pre" title="세트 간 선행관계">선행: ' + esc(s.pre) + '</span>' : '') +
                     (s.note ? '<span class="sl-pre" style="opacity:.7;">' + esc(s.note) + '</span>' : '') +
                 '</div>' +
-                '<div class="sl-scroll"><table class="sl-table">' + body + '</table></div>' +
+                '<div class="sl-scroll"><table class="sl-table">' + SL_HEAD + '<tbody>' + body + '</tbody></table></div>' +
             '</div>';
         }
 
@@ -156,7 +167,7 @@
                     '<span class="v2-todo">TODO 정식 매핑 시트 수령 후 배정</span>' +
                     '<span class="sl-count">' + docs.length + '건</span>' +
                 '</div>' +
-                '<div class="sl-scroll"><table class="sl-table">' + body + '</table></div>' +
+                '<div class="sl-scroll"><table class="sl-table">' + SL_HEAD + '<tbody>' + body + '</tbody></table></div>' +
             '</div>';
         }
 

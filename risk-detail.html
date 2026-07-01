@@ -68,7 +68,7 @@
         .m4-axis-badge {
             display: inline-flex; align-items: center;
             padding: 2px 8px;
-            font-size: 11px; font-weight: 700;
+            font-size: 12px; font-weight: 700;
             border-radius: var(--radius-md);
             border: 1px solid;
             letter-spacing: -0.2px;
@@ -78,12 +78,12 @@
         .m4-axis-badge.m4-media      { background: var(--status-success-bg); border-color: var(--status-success-border); color: var(--status-success-fg); }
         .m4-axis-badge.m4-management { background: var(--status-purple-bg);  border-color: var(--status-purple-border);  color: var(--status-purple-fg); }
         .m4-axis-help {
-            font-size: 11px; color: var(--text-gray);
+            font-size: 12px; color: var(--text-gray);
             margin-right: 8px;
         }
         /* 위험요인 셀의 4M 뱃지 (작게) */
         td .m4-axis-badge {
-            font-size: 10px; padding: 1px 6px;
+            font-size: 12px; padding: 1px 6px;
             margin-left: 4px; vertical-align: middle;
         }
 
@@ -104,7 +104,7 @@
             display: grid;
             grid-template-columns: repeat(5, 1fr);
             gap: 8px;
-            font-size: 11px;
+            font-size: 12px;
         }
         @media (max-width: 1023px) { .step-legal-grid { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 600px)  { .step-legal-grid { grid-template-columns: 1fr; } }
@@ -117,8 +117,8 @@
             line-height: 1.4;
         }
         .step-legal-item strong { font-size: 12px; color: var(--text-black); }
-        .step-legal-item span   { font-size: 11px; color: var(--status-info-fg); font-weight: 600; }
-        .step-legal-item small  { font-size: 10px; color: var(--text-gray); }
+        .step-legal-item span   { font-size: 12px; color: var(--status-info-fg); font-weight: 600; }
+        .step-legal-item small  { font-size: 12px; color: var(--text-gray); }
 
         /* ─── 단계 토글 (프로토타입 데모 전용) ─── */
         body[data-rsk-stage="prepare"]  [data-stage-show]:not([data-stage-show~="prepare"]),
@@ -358,7 +358,7 @@
                     <span class="info-grid-label">평가 기법</span>
                     <span class="info-grid-value">
                         <strong>4M 위험성평가</strong>
-                        <span style="font-size:11px; color:var(--text-gray); margin-left:6px;">— KOSHA 4M 기술지침 <a href="https://kosha.or.kr/kosha/data/rskassessmentd.do" target="_blank" style="color:var(--main); text-decoration:underline;">M-15-2023</a> · 산안법 §36 1항</span>
+                        <span style="font-size:12px; color:var(--text-gray); margin-left:6px;">— KOSHA 4M 기술지침 <a href="https://kosha.or.kr/kosha/data/rskassessmentd.do" target="_blank" style="color:var(--main); text-decoration:underline;">M-15-2023</a> · 산안법 §36 1항</span>
                         <div style="margin-top:6px; display:flex; gap:6px; flex-wrap:wrap;">
                             <span class="m4-axis-badge m4-man">Man</span><span class="m4-axis-help">인적요인</span>
                             <span class="m4-axis-badge m4-machine">Machine</span><span class="m4-axis-help">기계·설비</span>
@@ -367,7 +367,7 @@
                         </div>
                         <a href="risk-checklist.html" style="margin-top:10px; display:inline-flex; align-items:center; gap:4px; padding:3px 10px; background:var(--status-info-bg); border:1px solid var(--status-info-border); border-radius:4px; font-size:12px; color:var(--status-info-fg); text-decoration:none; font-weight:600;">
                             📋 체크리스트 모드로 보기
-                            <span style="font-size:10px; color:var(--text-gray); font-weight:normal;">(RSK02-C)</span>
+                            <span style="font-size:12px; color:var(--text-gray); font-weight:400;">(RSK02-C)</span>
                         </a>
                     </span>
                 </div>
@@ -422,7 +422,7 @@
                 <h2 class="card-title">위험요인 목록</h2>
                 <button class="btn-register" type="button" data-stage-show="progress" data-rsk-add-factor>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    위험요인 추가 <span style="background:var(--status-warning-fg); color:#fff; padding:1px 6px; border-radius:8px; font-size:11px; margin-left:4px;">SIF 추천</span>
+                    위험요인 추가 <span style="background:var(--status-warning-fg); color:#fff; padding:1px 6px; border-radius:8px; font-size:12px; margin-left:4px;">SIF 추천</span>
                 </button>
             </div>
             <div class="card-body" style="padding:0;">
@@ -607,7 +607,7 @@
                                 </div>
                             </td>
                             <td><span class="factor-stage controlled">대책수립됨</span></td>
-                            <td class="center"><span class="text-lightgray" style="font-size:11px;">—</span></td>
+                            <td class="center"><span class="text-lightgray" style="font-size:12px;">—</span></td>
                         </tr>
                         <tr>
                             <td class="center">2</td>
@@ -627,7 +627,7 @@
                             </td>
                             <td><span class="inline-text empty">— (허용)</span></td>
                             <td><span class="factor-stage evaluated">결정됨</span></td>
-                            <td class="center"><span class="text-lightgray" style="font-size:11px;">—</span></td>
+                            <td class="center"><span class="text-lightgray" style="font-size:12px;">—</span></td>
                         </tr>
                         <tr>
                             <td class="center">3</td>
@@ -652,7 +652,7 @@
                                 </div>
                             </td>
                             <td><span class="factor-stage controlled">대책수립됨</span></td>
-                            <td class="center"><span class="text-lightgray" style="font-size:11px;">—</span></td>
+                            <td class="center"><span class="text-lightgray" style="font-size:12px;">—</span></td>
                         </tr>
                         <tr>
                             <td class="center">4</td>
@@ -677,7 +677,7 @@
                                 </div>
                             </td>
                             <td><span class="factor-stage controlled">대책수립됨</span></td>
-                            <td class="center"><span class="text-lightgray" style="font-size:11px;">—</span></td>
+                            <td class="center"><span class="text-lightgray" style="font-size:12px;">—</span></td>
                         </tr>
                         <tr>
                             <td class="center">5</td>
@@ -702,7 +702,7 @@
                                 </div>
                             </td>
                             <td><span class="factor-stage controlled">대책수립됨</span></td>
-                            <td class="center"><span class="text-lightgray" style="font-size:11px;">—</span></td>
+                            <td class="center"><span class="text-lightgray" style="font-size:12px;">—</span></td>
                         </tr>
                     </tbody>
                 </table>
@@ -736,7 +736,7 @@
         <!-- ─── 문서 출처 (v0.2) ─── -->
         <section class="card">
             <div class="card-header">
-                <h2 class="card-title">문서 출처 <span class="hint-tag" style="background:var(--status-info-bg); color:var(--status-info-fg); padding:2px 8px; border-radius:4px; font-size:11px; margin-left:4px;">v0.2</span></h2>
+                <h2 class="card-title">문서 출처 <span class="hint-tag" style="background:var(--status-info-bg); color:var(--status-info-fg); padding:2px 8px; border-radius:4px; font-size:12px; margin-left:4px;">v0.2</span></h2>
             </div>
             <div class="form-group document-source" style="padding:14px 18px;">
                 <div class="radio-group" style="display:flex; gap:16px; flex-wrap:wrap; font-size:13px;">
@@ -745,7 +745,7 @@
                     <label><input type="radio" name="doc_source" value="EXTERNAL_PDF"> 외부 PDF</label>
                     <label><input type="radio" name="doc_source" value="HWP_LEGACY"> HWP 기존</label>
                 </div>
-                <small class="form-hint" style="display:block; margin-top:8px; color:var(--text-gray); font-size:11px;">신규 결재 문서=시스템 원본 / 온나라 결재 사본=온나라 사본 / 외부 위탁 결과=외부 PDF / 기존 HWP=HWP 기존</small>
+                <small class="form-hint" style="display:block; margin-top:8px; color:var(--text-gray); font-size:12px;">신규 결재 문서=시스템 원본 / 온나라 결재 사본=온나라 사본 / 외부 위탁 결과=외부 PDF / 기존 HWP=HWP 기존</small>
             </div>
         </section>
 
@@ -981,13 +981,13 @@
             gap: 6px;
         }
         .rsk-sif-id {
-            font-size: 11px; color: var(--text-gray);
+            font-size: 12px; color: var(--text-gray);
             font-family: 'JetBrains Mono', monospace;
         }
         .rsk-sif-badge {
             padding: 1px 6px;
             border-radius: 4px;
-            font-size: 10px; font-weight: 700;
+            font-size: 12px; font-weight: 700;
         }
         .rsk-sif-badge.danger { background: var(--status-danger-bg); color: var(--status-danger-fg); border: 1px solid var(--status-danger-border); }
         .rsk-sif-badge.warning { background: var(--status-warning-bg); color: var(--status-warning-fg); border: 1px solid var(--status-warning-border); }
@@ -1007,7 +1007,7 @@
             margin-top: 2px;
         }
         .rsk-sif-tag {
-            font-size: 10px; padding: 2px 6px;
+            font-size: 12px; padding: 2px 6px;
             background: var(--gray-100);
             border-radius: 4px;
             color: var(--text-gray);
@@ -1022,7 +1022,7 @@
             border: 1px solid var(--card-line);
             background: #fff;
             border-radius: 4px;
-            font-size: 11px;
+            font-size: 12px;
             cursor: pointer;
             transition: all 0.1s;
         }
@@ -1071,7 +1071,7 @@
             padding: 6px 8px;
             border-bottom: 1px solid var(--card-line);
             text-align: left;
-            font-size: 11px;
+            font-size: 12px;
             font-weight: 600;
             color: var(--text-gray);
         }
@@ -1090,7 +1090,7 @@
         .rsk-pool-origin {
             display: inline-block;
             padding: 1px 5px;
-            font-size: 10px;
+            font-size: 12px;
             border-radius: 3px;
             margin-bottom: 2px;
         }
@@ -1116,10 +1116,10 @@
             cursor: pointer; color: var(--text-gray);
         }
         .rsk-pool-del:hover { background: var(--status-danger-bg); border-color: var(--status-danger-border); color: var(--status-danger-fg); }
-        .rsk-pool-disabled { font-size: 11px; color: var(--text-lightgray); }
+        .rsk-pool-disabled { font-size: 12px; color: var(--text-lightgray); }
         .rsk-pool-action-summary {
             display: flex; align-items: center; gap: 4px;
-            font-size: 11px; color: var(--text-gray);
+            font-size: 12px; color: var(--text-gray);
         }
         .rsk-link-btn {
             padding: 4px 8px;
@@ -1127,7 +1127,7 @@
             border: 1px solid var(--main);
             color: var(--main);
             border-radius: 4px;
-            font-size: 11px; cursor: pointer;
+            font-size: 12px; cursor: pointer;
         }
         .rsk-link-btn:hover { background: var(--main); color: #fff; }
         .rsk-link-btn.warning { border-color: var(--status-warning-fg); color: var(--status-warning-fg); }
@@ -1152,8 +1152,8 @@
             display: flex; align-items: center; gap: 6px;
         }
         .rsk-matrix-section-help {
-            font-size: 11px; color: var(--text-gray);
-            font-weight: normal;
+            font-size: 12px; color: var(--text-gray);
+            font-weight: 400;
         }
         .rsk-matrix-radios {
             display: grid;
@@ -1181,7 +1181,7 @@
             border-color: var(--main); background: var(--status-info-bg);
         }
         .rsk-matrix-radio-num { font-size: 16px; font-weight: 600; }
-        .rsk-matrix-radio-desc { font-size: 11px; color: var(--text-gray); }
+        .rsk-matrix-radio-desc { font-size: 12px; color: var(--text-gray); }
 
         .rsk-matrix-preview-empty {
             padding: 16px;
@@ -1201,7 +1201,7 @@
             margin-bottom: 8px;
         }
         .rsk-matrix-formula { font-size: 14px; color: var(--text-gray); }
-        .rsk-matrix-score { font-size: 28px; font-weight: 800; }
+        .rsk-matrix-score { font-size: 26px; font-weight: 700; }
         .rsk-matrix-level {
             margin-left: auto;
             padding: 4px 12px;
@@ -1291,7 +1291,7 @@
             <div class="rsk-modal-header">
                 <div class="rsk-modal-title" id="rsk-sif-modal-title">
                     🔍 위험요인 추가 — SIF 추천 시나리오 + 자체 입력
-                    <span style="font-size:11px; color:var(--text-gray); font-weight:normal; margin-left:8px;">PRD §7</span>
+                    <span style="font-size:12px; color:var(--text-gray); font-weight:400; margin-left:8px;">PRD §7</span>
                 </div>
                 <button class="rsk-modal-close" data-rsk-modal-close="rsk-sif-modal" aria-label="닫기">✕</button>
             </div>
@@ -1357,7 +1357,7 @@
             <div class="rsk-modal-header">
                 <div class="rsk-modal-title" id="rsk-matrix-modal-title">
                     ⚖️ 위험성 추정 — 5×5 매트릭스
-                    <span style="font-size:11px; color:var(--text-gray); font-weight:normal; margin-left:8px;">PRD §5.3</span>
+                    <span style="font-size:12px; color:var(--text-gray); font-weight:400; margin-left:8px;">PRD §5.3</span>
                 </div>
                 <button class="rsk-modal-close" data-rsk-modal-close="rsk-matrix-modal" aria-label="닫기">✕</button>
             </div>
@@ -1412,7 +1412,7 @@
             <div class="rsk-modal-header">
                 <div class="rsk-modal-title" id="rsk-actions-modal-title">
                     🛡 감소대책 수립 → 개선조치(IMP) 자동 생성
-                    <span style="font-size:11px; color:var(--text-gray); font-weight:normal; margin-left:8px;">PRD §9.4</span>
+                    <span style="font-size:12px; color:var(--text-gray); font-weight:400; margin-left:8px;">PRD §9.4</span>
                 </div>
                 <button class="rsk-modal-close" data-rsk-modal-close="rsk-actions-modal" aria-label="닫기">✕</button>
             </div>

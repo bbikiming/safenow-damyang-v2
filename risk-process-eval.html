@@ -11,7 +11,7 @@
         .pe-info { display:grid; grid-template-columns:repeat(4,1fr); gap:0; border:1px solid var(--card-line); border-radius:var(--radius-card); overflow:hidden; background:#fff; margin-bottom:14px; }
         @media (max-width:767px){ .pe-info{ grid-template-columns:repeat(2,1fr); } }
         .pe-info-cell { padding:13px 16px; border-right:1px solid var(--card-line); border-bottom:1px solid var(--card-line); }
-        .pe-info-label { font-size:11px; color:var(--text-gray); margin-bottom:3px; }
+        .pe-info-label { font-size:12px; color:var(--text-gray); margin-bottom:3px; }
         .pe-info-value { font-size:13px; font-weight:600; color:var(--text-black); }
 
         .pe-carry { display:flex; align-items:center; gap:10px; padding:11px 16px; margin-bottom:14px; background:var(--status-info-bg); border:1px solid var(--status-info-border); border-radius:var(--radius-button); color:var(--status-info-fg); font-size:13px; line-height:1.5; }
@@ -37,7 +37,7 @@
         /* 툴바 */
         .pe-toolbar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; background:#fff; border:1px solid var(--card-line); border-radius:var(--radius-button); padding:12px 18px; margin-bottom:14px; }
         .pe-stats { display:flex; gap:16px; font-size:13px; flex-wrap:wrap; }
-        .pe-stats b { font-weight:800; }
+        .pe-stats b { font-weight:700; }
         .pe-stats .s-o b { color:var(--status-success-fg); }
         .pe-stats .s-x b { color:var(--status-danger-fg); }
         .pe-stats .s-na b { color:var(--text-gray); }
@@ -56,11 +56,11 @@
         .pe-inc-check { width:20px; height:20px; accent-color:var(--main); cursor:pointer; }
         .pe-item-name { font-size:14px; font-weight:600; color:var(--text-black); }
         .pe-item-sub { font-size:12px; color:var(--text-lightgray); margin-top:2px; }
-        .pe-src { display:inline-block; padding:1px 6px; border-radius:var(--radius-md); font-size:10px; font-weight:700; margin-left:6px; vertical-align:middle; }
+        .pe-src { display:inline-block; padding:1px 6px; border-radius:var(--radius-md); font-size:12px; font-weight:700; margin-left:6px; vertical-align:middle; }
         .pe-src.sif { background:var(--status-danger-bg); color:var(--status-danger-fg); }
         .pe-src.kosha { background:var(--status-info-bg); color:var(--status-info-fg); }
         .pe-src.own { background:var(--status-purple-bg); color:var(--status-purple-fg); }
-        .lvl { display:inline-block; padding:1px 7px; border-radius:var(--radius-md); font-size:10px; font-weight:700; margin-left:6px; }
+        .lvl { display:inline-block; padding:1px 7px; border-radius:var(--radius-md); font-size:12px; font-weight:700; margin-left:6px; }
         .lvl.high { background:var(--status-danger-bg); color:var(--status-danger-fg); }
         .lvl.mid { background:var(--status-warning-bg); color:var(--status-warning-fg); }
         .lvl.low { background:var(--status-success-bg); color:var(--status-success-fg); }
@@ -68,7 +68,7 @@
         /* 판정 버튼 O/X/해당없음 */
         .pe-judge { display:inline-flex; border:1px solid var(--card-line); border-radius:var(--radius-md); overflow:hidden; }
         .pe-judge-btn { padding:6px 12px; font-size:13px; font-weight:700; background:#fff; border:none; border-right:1px solid var(--card-line); cursor:pointer; color:var(--text-gray); }
-        .pe-judge-btn:last-child { border-right:none; font-size:11px; font-weight:600; }
+        .pe-judge-btn:last-child { border-right:none; font-size:12px; font-weight:600; }
         .pe-judge-btn:hover { background:var(--gray-100); }
         .pe-judge-btn[data-j="O"].on { background:var(--status-success-fg); color:#fff; }
         .pe-judge-btn[data-j="X"].on { background:var(--status-danger-fg); color:#fff; }
@@ -80,9 +80,9 @@
         .pe-action-need { color:var(--status-danger-fg); font-weight:700; }
         .pe-action-done { color:var(--status-success-fg); }
         .pe-action-done .txt { color:var(--text-black); display:block; margin-top:2px; line-height:1.4; }
-        .pe-action-edit { font-size:11px; color:var(--main); cursor:pointer; text-decoration:underline; background:none; border:none; padding:0; margin-top:2px; }
+        .pe-action-edit { font-size:12px; color:var(--main); cursor:pointer; text-decoration:underline; background:none; border:none; padding:0; margin-top:2px; }
 
-        .pe-status-badge { font-size:11px; }
+        .pe-status-badge { font-size:12px; }
 
         /* 개선조치 모달 */
         .pe-modal { position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; z-index:1000; padding:24px; }
@@ -180,7 +180,7 @@
     <div id="pe-action-modal" class="pe-modal" role="dialog">
         <div class="pe-modal-box">
             <div class="pe-modal-head">
-                <div class="pe-modal-title">⚠ 개선조치 입력 <span style="font-size:12px; color:var(--text-gray); font-weight:normal;">부적정(X) 항목</span></div>
+                <div class="pe-modal-title">⚠ 개선조치 입력 <span style="font-size:12px; color:var(--text-gray); font-weight:400;">부적정(X) 항목</span></div>
                 <button class="pe-modal-close" id="pe-am-close" type="button">✕</button>
             </div>
             <div class="pe-modal-body">

@@ -10,7 +10,7 @@
     <style>
         .rc-section { background:#fff; border:1px solid var(--card-line); border-radius:var(--radius-card); margin-bottom:16px; overflow:hidden; }
         .rc-head { padding:14px 20px; border-bottom:1px solid var(--card-line); display:flex; align-items:center; gap:8px; }
-        .rc-step-no { width:24px; height:24px; border-radius:50%; background:var(--main); color:#fff; font-size:13px; font-weight:800; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+        .rc-step-no { width:24px; height:24px; border-radius:50%; background:var(--main); color:#fff; font-size:13px; font-weight:700; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
         .rc-head-title { font-size:15px; font-weight:700; color:var(--text-black); }
         .rc-head-desc { font-size:12px; color:var(--text-gray); margin-left:4px; }
         .rc-body { padding:18px 20px; }
@@ -32,8 +32,8 @@
         .rc-method:has(input:checked) { border-color:var(--main); background:var(--status-success-bg); box-shadow:0 0 0 2px rgba(32,159,132,.15); }
         .rc-method-name { font-size:14px; font-weight:700; color:var(--text-black); display:flex; align-items:center; gap:6px; }
         .rc-method-desc { font-size:12px; color:var(--text-gray); margin-top:5px; line-height:1.5; }
-        .rc-method-badge { font-size:10px; font-weight:700; padding:1px 7px; border-radius:var(--radius-full); background:var(--main); color:#fff; }
-        .rc-method-soon { font-size:10px; color:var(--text-lightgray); border:1px solid var(--card-line); padding:1px 7px; border-radius:var(--radius-full); }
+        .rc-method-badge { font-size:12px; font-weight:700; padding:1px 7px; border-radius:var(--radius-full); background:var(--main); color:#fff; }
+        .rc-method-soon { font-size:12px; color:var(--text-lightgray); border:1px solid var(--card-line); padding:1px 7px; border-radius:var(--radius-full); }
         .rc-method.disabled { opacity:.5; cursor:not-allowed; }
         .rc-method.disabled:hover { border-color:var(--card-line); background:#fff; }
         .rc-check-ico { position:absolute; top:12px; right:12px; width:20px; height:20px; border-radius:50%; background:var(--main); color:#fff; display:none; align-items:center; justify-content:center; }
@@ -42,7 +42,7 @@
         /* 유해·위험요인 선택 */
         .rc-proc-toolbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; flex-wrap:wrap; gap:8px; }
         .rc-proc-count { font-size:13px; color:var(--text-gray); }
-        .rc-proc-count b { color:var(--main); font-weight:800; }
+        .rc-proc-count b { color:var(--main); font-weight:700; }
         .rc-proc-row { display:flex; align-items:center; gap:12px; padding:12px 14px; border:1px solid var(--card-line); border-radius:var(--radius-md); margin-bottom:8px; transition:all .12s; }
         .rc-proc-row.on { border-color:var(--status-success-border); background:var(--status-success-bg); }
         .rc-proc-row.off { opacity:.5; }

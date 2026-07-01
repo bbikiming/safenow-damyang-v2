@@ -115,7 +115,7 @@
             '<span class="k">강사</span><input type="text" id="ec-inst" placeholder="예: 김안전 안전관리자">' +
             '<span class="k">교육 시간</span><input type="number" id="ec-hours" value="3">' +
             '<span class="k">대상자 선택</span><div id="ec-targets" style="display:flex; flex-direction:column; gap:4px; max-height:160px; overflow-y:auto; border:1px solid var(--card-line); border-radius:6px; padding:8px;">' +
-                DB.people.map((p, i) => '<label style="font-size:12.5px; display:flex; gap:6px; align-items:center;"><input type="checkbox" data-i="' + i + '"> ' + esc(p.n) + ' <span style="color:var(--text-gray);">' + esc(p.d) + ' · ' + esc(p.job) + '</span></label>').join('') +
+                DB.people.map((p, i) => '<label style="font-size:12px; display:flex; gap:6px; align-items:center;"><input type="checkbox" data-i="' + i + '"> ' + esc(p.n) + ' <span style="color:var(--text-gray);">' + esc(p.d) + ' · ' + esc(p.job) + '</span></label>').join('') +
             '</div>' +
             '<span class="k">교안 첨부</span><div class="upload-drop" style="padding:14px;" onclick="DYV2.toast(\'교안 파일 첨부 (프로토타입)\')">교안·자료 파일을 첨부하세요 (다중 가능)</div>' +
             '</div>',

@@ -38,6 +38,7 @@ common_specs = [
     ("inventory",  "화면 목록",      "00_화면목록.md"),
     ("permission", "공통 권한 정의",  "_공통_권한정의.md"),
     ("missing",    "미결사항 목록",   "99_미결사항목록.md"),
+    ("opn-plan",   "의견청취 3탭 기획", "../planning/의견청취_3탭개편_기획-v0.1.md"),
 ]
 commonDocs = []
 for key, title, fn in common_specs:

@@ -9,18 +9,23 @@
    ========================================= */
 :root {
   /* Brand (Figma --main / --main-dark / --main-dark2 / --main-light) */
-  --main: #209f84;
-  --brand-600: #209f84;
-  --main-dark: #1c7865;
-  --brand-700: #1c7865;
-  --main-dark2: #005140;
-  --brand-900: #005140;
-  --main-light: #65c8b3;
-  --brand-500: #65c8b3;
-  --brand-100: #e8f5f2;
-  --brand-50: #f2faf6; /* legacy alias */
+  --main: #2D9270;          /* DESIGN.md Primary — Damyang Green */
+  --brand-600: #2D9270;
+  --main-dark: #24785C;
+  --brand-700: #24785C;
+  --main-dark2: #0F3D2E;
+  --brand-900: #0F3D2E;
+  --main-light: #5FB897;
+  --brand-500: #5FB897;
+  --brand-100: #DFF1E9;
+  --brand-50: #F1FAF5; /* legacy alias */
+
+  /* Type scale — DESIGN.md canonical tokens (Pretendard Variable) */
+  --fs-12: 12px; --fs-13: 13px; --fs-14: 14px; --fs-15: 15px; --fs-16: 16px;
+  --fs-18: 18px; --fs-22: 22px; --fs-26: 26px; --fs-32: 32px; --fs-38: 38px;
+  --fw-regular: 400; --fw-medium: 500; --fw-semibold: 600; --fw-bold: 700;
   --gnb-active-fg: #ffff94; /* GNB 활성 메뉴 노랑 강조 */
-  --user-pill-bg: #358d7b; /* 헤더 우측 사용자 칩 배경 */
+  --user-pill-bg: #2C7D60; /* 헤더 우측 사용자 칩 배경 */
   --online-dot: #66e148; /* 아바타 온라인 점 */
 
   /* Neutral (Figma --text-* / --card-line / --text-lightgray2 / 페이지 배경) */
@@ -39,9 +44,9 @@
   --gray-50: #f2f4f3;
 
   /* Status — bg / border / text 페어 (statbox) + chip solid */
-  --status-success-bg: #e8f5f2;
-  --status-success-border: #74bcad;
-  --status-success-fg: #209f84;
+  --status-success-bg: #DFF1E9;
+  --status-success-border: #8FCBB4;
+  --status-success-fg: #2D9270;
   --status-info-bg: #eaf7ff;
   --status-info-border: #accded;
   --status-info-fg: #009adb;
@@ -60,7 +65,7 @@
   --status-purple-fg: #7e3cc6;
 
   /* Chart */
-  --chart-series-a: #65c8b3;
+  --chart-series-a: #5FB897;
   --chart-series-b: #ffcd70;
 
   /* Radius */
@@ -201,10 +206,13 @@ body[data-dy-page]:not(.dy-mounted) > main {
    ========================================= */
 * {
   font-family:
+    "Pretendard Variable",
     "Pretendard",
     -apple-system,
     BlinkMacSystemFont,
     system-ui,
+    "Apple SD Gothic Neo",
+    "Noto Sans KR",
     sans-serif;
 }
 
@@ -251,7 +259,7 @@ body {
 
 .sidebar-section {
   padding: 16px 12px 8px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: #64748b;
   text-transform: uppercase;
@@ -385,7 +393,7 @@ body {
 }
 
 .header-title {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 600;
   color: #0f172a;
 }
@@ -658,7 +666,7 @@ body {
 }
 .statbox-num {
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1;
   letter-spacing: -0.8px;
 }
@@ -1211,10 +1219,10 @@ body {
   font-size: 16px;
 }
 .text-xl {
-  font-size: 20px;
+  font-size: 22px;
 }
 .text-2xl {
-  font-size: 24px;
+  font-size: 26px;
 }
 
 .truncate {
@@ -1444,7 +1452,7 @@ body {
     gap: 8px;
   }
   .header-title {
-    font-size: 17px;
+    font-size: 18px;
   }
   .header-username {
     display: none;
@@ -1781,7 +1789,7 @@ body.sidebar-locked {
   margin-bottom: 18px;
 }
 .flow-section-title {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: #6b7280;
   text-transform: uppercase;
@@ -1797,7 +1805,7 @@ body.sidebar-locked {
   font-weight: 600;
 }
 .flow-current-meta {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
   color: #6b7280;
   margin-top: 2px;
@@ -1835,13 +1843,13 @@ body.sidebar-locked {
   padding: 2px 6px;
   border-radius: 4px;
   font-weight: 600;
-  font-size: 11px;
+  font-size: 12px;
   border: 1px solid;
   flex-shrink: 0;
 }
 .flow-edge-label {
   color: #4b5563;
-  font-size: 11px;
+  font-size: 12px;
   flex: 1;
 }
 
@@ -1867,7 +1875,7 @@ body.sidebar-locked {
   padding: 8px 10px;
   background: #f9fafb;
   border-radius: 8px;
-  font-size: 11px;
+  font-size: 12px;
   color: #6b7280;
   text-align: center;
 }
@@ -1903,8 +1911,8 @@ body.sidebar-locked {
 
 /* =========================================
    19. 디자인시스템 공통 레이아웃 (.dy-*) — Figma 시안(node 1:439) 기준
-        - Top header (다크그린 #1C7865, 84px) — 흰 로고 + 사용자칩(#358D7B)
-        - Horizontal GNB (메인그린 #209F84, padding-y 20) — 활성 메뉴 노랑(#FFFF94)
+        - Top header (다크그린 #24785C, 84px) — 흰 로고 + 사용자칩(#2C7D60)
+        - Horizontal GNB (메인그린 #2D9270, padding-y 20) — 활성 메뉴 노랑(#FFFF94)
         - Left sidebar (회색 #F2F4F3, 282px) — 활성 아이템 메인그린 배경 + 흰 글씨
         - 기존 .sidebar / .header 클래스는 layout.js가 .dy-* 로 치환
    ========================================= */
@@ -1963,7 +1971,7 @@ body.sidebar-locked {
   font-weight: 300;
 }
 
-/* --- 사용자 칩 (시안 #358D7B) --- */
+/* --- 사용자 칩 (시안 #2C7D60) --- */
 .dy-user-pill {
   display: inline-flex;
   align-items: center;
@@ -2018,7 +2026,7 @@ body.sidebar-locked {
   letter-spacing: -0.4px;
 }
 .dy-user-org {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 400;
   color: rgba(255, 255, 255, 0.85);
   letter-spacing: -0.4px;
@@ -2098,7 +2106,7 @@ body.sidebar-locked {
   gap: 24px;
 }
 .dy-sidebar-title {
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--main);
   line-height: 1;
@@ -2196,7 +2204,7 @@ body.sidebar-locked {
   font-size: 13px;
 }
 .dy-role-switcher-help {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-gray);
   line-height: 1.4;
 }
@@ -2211,7 +2219,7 @@ body.sidebar-locked {
   border: 1px solid var(--main);
   border-radius: 6px;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23209f84'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%232D9270'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 8px center;
   background-size: 14px;
@@ -2252,7 +2260,7 @@ body.sidebar-locked {
   margin-bottom: 4px;
 }
 .dy-page-title h1 {
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 700;
   color: var(--main-dark2);
   letter-spacing: -0.8px;
@@ -2541,7 +2549,7 @@ body.sidebar-locked {
   display: inline-flex;
   align-items: center;
   padding: 1px 6px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   border-radius: 4px;
   margin-left: 4px;
@@ -2553,7 +2561,7 @@ body.sidebar-locked {
   display: inline-flex;
   align-items: center;
   padding: 1px 6px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   border-radius: 4px;
   color: var(--text-gray);
@@ -2563,7 +2571,7 @@ body.sidebar-locked {
   display: inline-flex;
   align-items: center;
   padding: 1px 6px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   border-radius: 4px;
 }
@@ -2575,7 +2583,7 @@ body.sidebar-locked {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--text-gray);
 }
@@ -3020,7 +3028,7 @@ body.sidebar-locked {
   display: inline-flex;
   align-items: center;
   padding: 1px 8px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   border-radius: 4px;
   background: var(--status-info-bg);
@@ -3062,7 +3070,7 @@ body.sidebar-locked {
   height: 36px;
   background: var(--status-danger-bg);
   border-radius: 6px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--status-danger-fg);
   flex-shrink: 0;
@@ -3693,7 +3701,7 @@ body.sidebar-locked {
   display: inline-flex;
   padding: 2px 8px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
 }
 .sync-log-table .sync-result-chip.success {
@@ -3756,9 +3764,9 @@ body.sidebar-locked {
 .rsk-level-cell.info    { background: var(--status-info-bg);    border-color: var(--status-info-border);    color: var(--status-info-fg); }
 .rsk-level-cell.success { background: var(--status-success-bg); border-color: var(--status-success-border); color: var(--status-success-fg); }
 .rsk-level-cell.neutral { background: var(--status-neutral-bg); border-color: var(--status-neutral-border); color: var(--status-neutral-fg); }
-.rsk-level-num   { font-size: 28px; font-weight: 800; line-height: 1; letter-spacing: -0.8px; }
+.rsk-level-num   { font-size: 26px; font-weight: 700; line-height: 1; letter-spacing: -0.8px; }
 .rsk-level-label { font-size: 14px; font-weight: 600; letter-spacing: -0.4px; }
-.rsk-level-range { font-size: 11px; color: inherit; opacity: 0.85; }
+.rsk-level-range { font-size: 12px; color: inherit; opacity: 0.85; }
 
 /* 토스트 — 페이지 상단 중앙에 일시 표시 */
 .toast {
@@ -3907,8 +3915,8 @@ body.sidebar-locked {
 .kpi-card-icon.danger  { background: var(--status-danger-bg);  color: var(--status-danger-fg); }
 .kpi-card-icon.neutral { background: var(--gray-100);          color: var(--text-gray); }
 .kpi-card-value {
-  font-size: 30px;
-  font-weight: 800;
+  font-size: 32px;
+  font-weight: 700;
   color: var(--main-dark2);
   line-height: 1;
   letter-spacing: -0.8px;
@@ -4050,7 +4058,7 @@ body.sidebar-locked {
 }
 .compliance-card-value .accent { color: var(--main); }
 .compliance-card-meta {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-lightgray);
 }
 
@@ -4079,7 +4087,7 @@ body.sidebar-locked {
 }
 .mini-bar-rect.alt { background: var(--chart-series-b); }
 .mini-bar-label {
-  font-size: 10px;
+  font-size: 12px;
   color: var(--text-lightgray);
 }
 .mini-bar-legend {
@@ -4087,7 +4095,7 @@ body.sidebar-locked {
   justify-content: center;
   gap: 18px;
   padding-top: 8px;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-gray);
 }
 .mini-bar-legend-item {
@@ -4166,7 +4174,7 @@ body.sidebar-locked {
     font-size: 22px;
   }
   .dy-brand-name {
-    font-size: 20px;
+    font-size: 22px;
   }
 }
 
@@ -4319,7 +4327,7 @@ body.sidebar-locked {
 .module-int-widget .status-dot {
   display: inline-flex; align-items: center; gap: 5px;
   padding: 2px 8px;
-  font-size: 11px; font-weight: 700;
+  font-size: 12px; font-weight: 700;
   border-radius: 999px;
   background: var(--status-success-bg);
   color: var(--status-success-fg);
@@ -4387,7 +4395,7 @@ body.sidebar-locked {
   padding: 0 5px;
   background: #ef4444;
   color: white;
-  font-size: 10px; font-weight: 700;
+  font-size: 12px; font-weight: 700;
   border-radius: 999px;
   display: inline-flex; align-items: center; justify-content: center;
   border: 2px solid white;
@@ -4491,7 +4499,7 @@ body.sidebar-locked {
 .dy-ntf-item-cat {
   display: inline-flex; align-items: center;
   padding: 1px 6px;
-  font-size: 10px; font-weight: 700;
+  font-size: 12px; font-weight: 700;
   border-radius: 4px;
 }
 .dy-ntf-item-cat.approval   { background: #fee2e2; color: #b91c1c; }
@@ -4512,7 +4520,7 @@ body.sidebar-locked {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
-.dy-ntf-item-time { font-size: 11px; color: var(--text-lightgray); margin-top: 2px; }
+.dy-ntf-item-time { font-size: 12px; color: var(--text-lightgray); margin-top: 2px; }
 
 .dy-ntf-dropdown-foot {
   display: block;

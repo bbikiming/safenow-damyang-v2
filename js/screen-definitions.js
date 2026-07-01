@@ -60,14 +60,37 @@
         return item.kind === 'common' ? item.fileName : item.defFile;
     }
 
-    /* ── 원본 화면 URL 해석(.html 만 이동 가능) ── */
-    function resolveUrl(route) {
-        if (!route) return null;
+    /* ── 원본 화면 URL 해석 — 모든 화면이 해당 메뉴 페이지로 이동하도록 보정 ──
+     * 1) 라우트에 실제 .html 이 있으면 사용(문서상세 {id} 템플릿은 처리유형별 샘플 문서로 보정)
+     * 2) .html 이 없는 팝업/공통/전역 화면은 scrId 보정 → 대메뉴 대표 페이지로 폴백 */
+    var SAMPLE_DOC = {
+        '첨부파일': 'doc-detail.html?id=V2-002&v=2',
+        '전자문서': 'doc-detail.html?id=V2-013&v=2',
+        '프로그램': 'doc-detail.html?id=V2-001&v=2',
+    };
+    var MENU_FALLBACK = {
+        '대시보드': 'index.html', '기본정보': 'base-targets.html', '안전보건관리체계': 'risk-list.html',
+        '업무문서': 'docs-preset.html', '통계·보고': 'stats.html', '시스템 관리': 'admin-users.html',
+        '전자문서(공통)': 'docs-preset.html', '공통/전역': 'index.html',
+    };
+    var SCR_OVERRIDE = { 'SCR-EDOC-010': 'docs-archive.html', 'SCR-RISK-008': 'risk-list.html' };
+
+    function resolveUrl(item) {
+        var route = (item && item.route) || '';
         var m = route.match(/[\w\-]+\.html(\?[^\s)]*)?/);
-        if (!m) return null;
-        var u = m[0];
-        if (u.indexOf('{') >= 0) u = u.split('?')[0]; /* ?id={id} 등 템플릿 → 기본 페이지 */
-        return u;
+        if (m) {
+            var u = m[0];
+            if (u.indexOf('{') >= 0) {
+                if (u.indexOf('doc-detail') >= 0) {
+                    var ptm = route.match(/processType=([^)\s]+)/);
+                    var pt = ptm ? ptm[1] : '';
+                    return SAMPLE_DOC[pt] || u.split('?')[0];
+                }
+                return u.split('?')[0];
+            }
+            return u;
+        }
+        return SCR_OVERRIDE[item.scrId] || MENU_FALLBACK[item.daemenu] || 'index.html';
     }
 
     /* ── 목록 렌더 ── */
@@ -183,10 +206,9 @@
                 '</div>' +
                 '<div class="sd-h-sub"><span>공통 문서</span><span class="sd-h-url"><code>' + esc(item.fileName) + '</code></span></div>';
         } else {
-            var url = resolveUrl(item.route);
-            var openBtn = url
-                ? '<button class="sd-btn primary" id="sd-open">↗ 원본 화면 보기</button>'
-                : '<button class="sd-btn" id="sd-open" disabled title="이동 가능한 URL이 없는 화면(팝업/전역/코드 호출)">↗ 원본 화면</button>';
+            var url = resolveUrl(item);
+            /* 네이티브 앵커로 이동(팝업 차단 회피). 새 탭이 막히면 같은 탭으로라도 이동되도록 보조 핸들러 둠. */
+            var openBtn = '<a class="sd-btn primary" id="sd-open" href="' + esc(url) + '" target="_blank" rel="noopener" style="text-decoration:none;" title="이 화면(또는 해당 메뉴 페이지)으로 이동 (새 탭)">↗ 원본 화면 보기</a>';
             head.innerHTML =
                 '<div class="sd-head-top">' +
                     '<span class="sd-h-id">' + esc(item.scrId) + '</span>' +
@@ -205,10 +227,7 @@
                     (item.existingSfr && item.existingSfr !== '없음' ? '<span>기존 ' + esc(item.existingSfr) + '</span>' : '') +
                 '</div>';
 
-            if (url) {
-                var ob = $('sd-open');
-                if (ob) ob.addEventListener('click', function () { window.open(url, '_blank', 'noopener'); });
-            }
+            /* 이동은 앵커(href + target=_blank)가 직접 처리 — window.open 팝업 차단 회피 */
         }
         var pb = $('sd-prev'), nb = $('sd-next');
         if (pb) pb.addEventListener('click', function () { if (idx > 0) select(state.visible[idx - 1]); });

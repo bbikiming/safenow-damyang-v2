@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>평가 현황 - 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+    <style>
+        /* ─── EVL01-V / EVL01-L 전용 ─── */
+
+        /* 서브 탭 (POL과 동일 패턴) */
+        .evl-tabs {
+            display: flex; align-items: center; gap: 4px;
+            border-bottom: 1px solid var(--card-line);
+        }
+        .evl-tab {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 10px 18px;
+            font-size: 14px; font-weight: 600;
+            color: var(--text-gray);
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            margin-bottom: -1px;
+            transition: all .15s ease;
+        }
+        .evl-tab:hover { color: var(--main-dark); }
+        .evl-tab.is-active {
+            color: var(--main-dark2);
+            border-bottom-color: var(--main);
+        }
+        .evl-pane { display: none; }
+        .evl-pane.is-active { display: block; }
+
+        /* 사이클 셀렉터 */
+        .evl-cycle-bar {
+            display: flex; align-items: center; gap: 14px;
+            padding: 14px 22px;
+            background: white;
+            border: 1px solid var(--card-line);
+            border-radius: var(--radius-card);
+        }
+        .evl-cycle-label {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 14px; font-weight: 700;
+            color: var(--main-dark2);
+        }
+        .evl-cycle-label .icon {
+            width: 32px; height: 32px;
+            border-radius: 8px;
+            background: var(--brand-100);
+            color: var(--main-dark);
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .evl-half-toggle {
+            display: inline-flex;
+            border: 1px solid var(--card-line);
+            border-radius: var(--radius-button);
+            overflow: hidden;
+        }
+        .evl-half-toggle button {
+            padding: 7px 16px;
+            font-size: 13px; font-weight: 600;
+            color: var(--text-gray);
+            background: white;
+            border: none;
+            cursor: pointer;
+            border-right: 1px solid var(--card-line);
+        }
+        .evl-half-toggle button:last-child { border-right: none; }
+        .evl-half-toggle button.is-active {
+            background: var(--main);
+            color: white;
+        }
+        .evl-cycle-meta {
+            margin-left: auto;
+            font-size: 12px;
+            color: var(--text-gray);
+        }
+        .evl-cycle-meta strong { color: var(--text-black); font-weight: 700; }
+        .evl-cycle-meta .dday {
+            display: inline-flex; align-items: center;
+            padding: 3px 9px;
+            margin-left: 8px;
+            border-radius: 999px;
+            background: var(--status-warning-bg);
+            color: var(--status-warning-fg);
+            border: 1px solid var(--status-warning-border);
+            font-weight: 700;
+        }
+
+        /* KPI 그리드 */
+        .evl-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            background: white;
+            border: 1px solid var(--card-line);
+            border-radius: var(--radius-card);
+            overflow: hidden;
+        }
+        .evl-kpi-cell {
+            padding: 20px 24px;
+            display: flex; flex-direction: column; gap: 8px;
+            border-right: 1px solid var(--card-line);
+            min-height: 130px; justify-content: center;
+        }
+        .evl-kpi-cell:last-child { border-right: none; }
+        .evl-kpi-head {
+            display: flex; align-items: center; justify-content: space-between; gap: 8px;
+        }
+        .evl-kpi-title { font-size: 15px; font-weight: 600; color: var(--text-black); }
+        .evl-kpi-icon {
+            width: 30px; height: 30px;
+            border-radius: 8px;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: var(--brand-100);
+            color: var(--main-dark);
+        }
+        .evl-kpi-icon.success { background: var(--status-success-bg); color: var(--status-success-fg); }
+        .evl-kpi-icon.info    { background: var(--status-info-bg);    color: var(--status-info-fg); }
+        .evl-kpi-icon.warn    { background: var(--status-warning-bg); color: var(--status-warning-fg); }
+        .evl-kpi-value {
+            font-size: 26px; font-weight: 700; color: var(--main);
+            line-height: 1; letter-spacing: -0.8px;
+        }
+        .evl-kpi-value .small {
+            font-size: 14px; font-weight: 600; color: var(--text-gray);
+            margin-left: 2px;
+        }
+        .evl-kpi-value.success { color: var(--status-success-fg); }
+        .evl-kpi-value.info    { color: var(--status-info-fg); }
+        .evl-kpi-value.warning { color: var(--status-warning-fg); }
+        .evl-kpi-sub { font-size: 12px; color: var(--text-gray); }
+        .evl-kpi-sub strong { color: var(--text-black); font-weight: 700; }
+
+        /* 마감 임박 배너 */
+        .evl-alert-banner {
+            display: flex; align-items: center; gap: 14px;
+            padding: 14px 20px;
+            background: var(--status-warning-bg);
+            border: 1px solid var(--status-warning-border);
+            border-radius: var(--radius-button);
+        }
+        .evl-alert-banner .icon {
+            width: 38px; height: 38px;
+            border-radius: 10px;
+            background: white;
+            color: var(--status-warning-fg);
+            display: inline-flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .evl-alert-banner .msg { flex: 1; font-size: 14px; color: var(--status-warning-fg); }
+        .evl-alert-banner .msg strong { font-weight: 700; }
+        .evl-alert-banner .msg .sub { display: block; font-size: 12px; color: var(--text-gray); margin-top: 2px; }
+        .evl-alert-banner .btn { flex-shrink: 0; }
+
+        /* 역할별 카드 */
+        .evl-role-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        .evl-role-card {
+            background: white;
+            border: 1px solid var(--card-line);
+            border-radius: var(--radius-card);
+            padding: 20px 22px;
+            position: relative;
+            overflow: hidden;
+        }
+        .evl-role-card::before {
+            content: ""; position: absolute;
+            top: 0; left: 0; right: 0; height: 3px;
+            background: var(--main);
+        }
+        .evl-role-card.supervisor::before { background: var(--status-info-fg); }
+
+        .evl-role-head {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .evl-role-title {
+            font-size: 16px; font-weight: 700; color: var(--main-dark2);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .evl-role-title .badge-num {
+            background: var(--brand-100);
+            color: var(--main-dark);
+            font-size: 12px; font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 999px;
+        }
+        .evl-role-card.supervisor .evl-role-title .badge-num {
+            background: var(--status-info-bg);
+            color: var(--status-info-fg);
+        }
+        .evl-role-progress-bar {
+            display: flex; align-items: center; gap: 8px;
+        }
+        .evl-role-progress-bar .track {
+            flex: 1;
+            height: 8px; border-radius: 999px;
+            background: var(--gray-100);
+            overflow: hidden;
+        }
+        .evl-role-progress-bar .fill {
+            height: 100%; border-radius: 999px;
+            background: var(--main);
+        }
+        .evl-role-card.supervisor .evl-role-progress-bar .fill { background: var(--status-info-fg); }
+        .evl-role-progress-bar .pct {
+            font-size: 13px; font-weight: 700;
+            color: var(--text-black);
+            min-width: 36px; text-align: right;
+        }
+
+        .evl-role-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 14px;
+        }
+        .evl-role-stat-cell {
+            padding: 12px;
+            background: #fafbfb;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .evl-role-stat-num {
+            font-size: 22px; font-weight: 700;
+            color: var(--main-dark2);
+            line-height: 1;
+        }
+        .evl-role-stat-num.success { color: var(--status-success-fg); }
+        .evl-role-stat-num.info    { color: var(--status-info-fg); }
+        .evl-role-stat-label {
+            font-size: 12px; color: var(--text-gray);
+            margin-top: 4px; font-weight: 600;
+        }
+        .evl-role-avg {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-top: 14px;
+            padding: 12px 16px;
+            background: var(--brand-50);
+            border-radius: var(--radius-button);
+        }
+        .evl-role-card.supervisor .evl-role-avg {
+            background: var(--status-info-bg);
+        }
+        .evl-role-avg-label { font-size: 12px; color: var(--text-gray); font-weight: 600; }
+        .evl-role-avg-value {
+            font-size: 22px; font-weight: 700;
+            color: var(--main-dark2);
+            letter-spacing: -0.5px;
+        }
+        .evl-role-avg-value .unit {
+            font-size: 13px; font-weight: 600;
+            color: var(--text-gray);
+            margin-left: 2px;
+        }
+
+        /* 부서별 진행률은 dept-bar 글로벌 사용 */
+
+        /* 평가 결과 배지 */
+        .evl-result {
+            display: inline-flex; align-items: center;
+            padding: 2px 8px;
+            font-size: 12px; font-weight: 700;
+            border-radius: 5px;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+        .evl-result.excellent {
+            background: var(--status-info-bg);
+            color: var(--status-info-fg);
+            border-color: var(--status-info-border);
+        }
+        .evl-result.good {
+            background: var(--status-success-bg);
+            color: var(--status-success-fg);
+            border-color: var(--status-success-border);
+        }
+        .evl-result.improve {
+            background: var(--status-warning-bg);
+            color: var(--status-warning-fg);
+            border-color: var(--status-warning-border);
+        }
+        .evl-result.insufficient {
+            background: var(--status-danger-bg);
+            color: var(--status-danger-fg);
+            border-color: var(--status-danger-border);
+        }
+
+        /* 평가 역할 chip */
+        .evl-role-chip {
+            display: inline-flex; align-items: center;
+            padding: 2px 8px;
+            font-size: 12px; font-weight: 700;
+            border-radius: 5px;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+        .evl-role-chip.responsible {
+            background: var(--brand-100);
+            color: var(--main-dark);
+            border-color: var(--status-success-border);
+        }
+        .evl-role-chip.supervisor {
+            background: var(--status-info-bg);
+            color: var(--status-info-fg);
+            border-color: var(--status-info-border);
+        }
+
+        /* 점수 cell */
+        .evl-score {
+            font-size: 14px; font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            color: var(--text-black);
+        }
+        .evl-score.excellent { color: var(--status-info-fg); }
+        .evl-score.good      { color: var(--status-success-fg); }
+        .evl-score.improve   { color: var(--status-warning-fg); }
+        .evl-score.insufficient { color: var(--status-danger-fg); }
+        .evl-score-empty {
+            color: var(--text-lightgray);
+            font-weight: 500;
+            font-size: 12px;
+        }
+
+        /* 결재 상태 chip */
+        .evl-approval {
+            display: inline-flex; align-items: center; gap: 3px;
+            padding: 1px 6px;
+            font-size: 12px; font-weight: 700;
+            border-radius: 4px;
+            background: var(--gray-100);
+            color: var(--text-gray);
+        }
+        .evl-approval.requested { background: var(--status-warning-bg); color: var(--status-warning-fg); }
+        .evl-approval.approved  { background: var(--status-success-bg); color: var(--status-success-fg); }
+
+        /* 결과 카운트 */
+        .evl-meta-row { display: flex; align-items: center; gap: 12px; }
+        .evl-meta-count { font-size: 14px; color: var(--text-gray); }
+        .evl-meta-count strong { color: var(--main); font-weight: 700; }
+
+        /* 일괄 생성 모달 */
+        .evl-modal-backdrop {
+            position: fixed; inset: 0;
+            background: rgba(15, 23, 42, 0.5);
+            display: none;
+            align-items: center; justify-content: center;
+            z-index: 100;
+            padding: 20px;
+        }
+        .evl-modal-backdrop.is-open { display: flex; }
+        .evl-modal {
+            background: white;
+            border-radius: var(--radius-card);
+            width: 100%; max-width: 540px;
+            max-height: 90vh; overflow: hidden;
+            display: flex; flex-direction: column;
+            box-shadow: 0 16px 40px rgba(0,0,0,0.2);
+        }
+        .evl-modal-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid var(--card-line);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .evl-modal-title {
+            font-size: 18px; font-weight: 700; color: var(--main-dark2);
+        }
+        .evl-modal-close {
+            width: 32px; height: 32px;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: none; border: none; cursor: pointer;
+            color: var(--text-gray);
+            border-radius: 8px;
+        }
+        .evl-modal-close:hover { background: var(--gray-100); color: var(--text-black); }
+        .evl-modal-body { padding: 20px 24px; overflow-y: auto; flex: 1; }
+        .evl-modal-footer {
+            padding: 14px 24px;
+            border-top: 1px solid var(--card-line);
+            display: flex; justify-content: flex-end; gap: 8px;
+        }
+        .evl-form-row { margin-bottom: 14px; }
+        .evl-form-row .label {
+            display: block;
+            font-size: 13px; font-weight: 600;
+            color: var(--text-black);
+            margin-bottom: 6px;
+        }
+        .evl-form-row select,
+        .evl-form-row input {
+            width: 100%;
+            padding: 8px 12px;
+            font-size: 13px;
+            border: 1px solid var(--card-line);
+            border-radius: var(--radius-button);
+            outline: none;
+        }
+        .evl-form-row select:focus,
+        .evl-form-row input:focus {
+            border-color: var(--main);
+            box-shadow: 0 0 0 3px rgba(32, 159, 132, 0.12);
+        }
+        .evl-preview-box {
+            padding: 14px;
+            background: var(--brand-50);
+            border: 1px solid var(--status-success-border);
+            border-radius: var(--radius-button);
+            font-size: 13px;
+            color: var(--text-black);
+            line-height: 1.6;
+        }
+        .evl-preview-box strong { color: var(--main-dark2); font-weight: 700; }
+
+        @media (max-width: 1023px) {
+            .evl-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+            .evl-role-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body data-dy-page="evl-status" data-page-title="평가 현황" data-page-subtitle="인력 평가 > 평가 현황 — 안전보건관리책임자·관리감독자 반기 평가 현황 (SFR-009)">
+    <main>
+
+        <!-- ============================================================
+             ▼ 평가 현황 (EVL01-V) — KPI 대시보드
+        ============================================================ -->
+        <div class="evl-pane is-active" data-pane="status">
+
+            <!-- 사이클 셀렉터 -->
+            <div class="evl-cycle-bar">
+                <span class="evl-cycle-label">
+                    <span class="icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    </span>
+                    <select class="select" style="border:none; padding:4px 24px 4px 4px; font-size:15px; font-weight:700; background-position:right 4px center;">
+                        <option>2026년</option>
+                        <option>2025년</option>
+                        <option>2024년</option>
+                    </select>
+                </span>
+                <div class="evl-half-toggle">
+                    <button type="button" class="is-active">상반기</button>
+                    <button type="button">하반기</button>
+                    <button type="button">전체</button>
+                </div>
+                <span class="evl-cycle-meta">
+                    평가 기간 <strong>2026-04-01 ~ 2026-06-30</strong>
+                    <span class="dday">마감 D-15</span>
+                </span>
+            </div>
+
+            <!-- 평가 사이클 요약 KPI -->
+            <section class="evl-kpi-grid">
+                <div class="evl-kpi-cell">
+                    <div class="evl-kpi-head">
+                        <span class="evl-kpi-title">대상자</span>
+                        <span class="evl-kpi-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        </span>
+                    </div>
+                    <div class="evl-kpi-value">32<span class="small">명</span></div>
+                    <div class="evl-kpi-sub">책임자 <strong>12</strong> · 감독자 <strong>20</strong></div>
+                </div>
+                <div class="evl-kpi-cell">
+                    <div class="evl-kpi-head">
+                        <span class="evl-kpi-title">완료</span>
+                        <span class="evl-kpi-icon success">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        </span>
+                    </div>
+                    <div class="evl-kpi-value success">18<span class="small">명</span></div>
+                    <div class="progress" style="height:6px; margin-top:2px;">
+                        <div class="progress-bar green" style="width:56%;"></div>
+                    </div>
+                    <div class="evl-kpi-sub">진행률 <strong>56%</strong></div>
+                </div>
+                <div class="evl-kpi-cell">
+                    <div class="evl-kpi-head">
+                        <span class="evl-kpi-title">진행 중</span>
+                        <span class="evl-kpi-icon info">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        </span>
+                    </div>
+                    <div class="evl-kpi-value info">8<span class="small">명</span></div>
+                    <div class="evl-kpi-sub">평균 진행 <strong>3.2/8항목</strong></div>
+                </div>
+                <div class="evl-kpi-cell">
+                    <div class="evl-kpi-head">
+                        <span class="evl-kpi-title">미시작</span>
+                        <span class="evl-kpi-icon warn">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.29 3.86-8.4 14.74A2 2 0 0 0 3.62 22h16.76a2 2 0 0 0 1.73-3.4L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        </span>
+                    </div>
+                    <div class="evl-kpi-value warning">6<span class="small">명</span></div>
+                    <div class="evl-kpi-sub">보건소·담양읍 외 4건</div>
+                </div>
+            </section>
+
+            <!-- 마감 임박 배너 -->
+            <div class="evl-alert-banner">
+                <span class="icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </span>
+                <span class="msg">
+                    <strong>반기 평가 마감 D-15</strong> — 미시작 6건이 있습니다.
+                    <span class="sub">2026년 상반기 평가 사이클 마감일: 2026-06-30 (금)</span>
+                </span>
+                <button class="btn btn-primary" type="button" onclick="window.location.href='evl-eval.html'">
+                    미시작 평가 시작 →
+                </button>
+            </div>
+
+            <!-- 역할별 평가 진행 -->
+            <section>
+                <h2 style="font-size:18px; font-weight:700; color:var(--main-dark2); margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                    <span style="display:block; width:4px; height:18px; background:var(--main); border-radius:2px;"></span>
+                    역할별 평가 진행
+                </h2>
+                <div class="evl-role-grid">
+                    <!-- 안전보건관리책임자 -->
+                    <div class="evl-role-card">
+                        <div class="evl-role-head">
+                            <div class="evl-role-title">
+                                안전보건관리책임자
+                                <span class="badge-num">8항목</span>
+                            </div>
+                            <a class="text-muted" href="#" style="font-size:12px;" onclick="event.preventDefault(); window.DYLayout._soon(event, '책임자 평가 템플릿 (EVL03-S)')">템플릿 →</a>
+                        </div>
+                        <div class="evl-role-progress-bar">
+                            <span class="pct" style="min-width:0; padding-right:6px;">7 / 12</span>
+                            <div class="track"><div class="fill" style="width:58%;"></div></div>
+                            <span class="pct">58%</span>
+                        </div>
+                        <div class="evl-role-stats">
+                            <div class="evl-role-stat-cell">
+                                <div class="evl-role-stat-num success">7</div>
+                                <div class="evl-role-stat-label">완료</div>
+                            </div>
+                            <div class="evl-role-stat-cell">
+                                <div class="evl-role-stat-num info">3</div>
+                                <div class="evl-role-stat-label">진행중</div>
+                            </div>
+                            <div class="evl-role-stat-cell">
+                                <div class="evl-role-stat-num" style="color:var(--status-warning-fg);">2</div>
+                                <div class="evl-role-stat-label">미시작</div>
+                            </div>
+                        </div>
+                        <div class="evl-role-avg">
+                            <span class="evl-role-avg-label">완료자 평균 점수</span>
+                            <span class="evl-role-avg-value">82<span class="unit">/100</span></span>
+                        </div>
+                    </div>
+
+                    <!-- 관리감독자 -->
+                    <div class="evl-role-card supervisor">
+                        <div class="evl-role-head">
+                            <div class="evl-role-title">
+                                관리감독자
+                                <span class="badge-num">5항목</span>
+                            </div>
+                            <a class="text-muted" href="#" style="font-size:12px;" onclick="event.preventDefault(); window.DYLayout._soon(event, '감독자 평가 템플릿 (EVL03-S)')">템플릿 →</a>
+                        </div>
+                        <div class="evl-role-progress-bar">
+                            <span class="pct" style="min-width:0; padding-right:6px;">11 / 20</span>
+                            <div class="track"><div class="fill" style="width:55%;"></div></div>
+                            <span class="pct">55%</span>
+                        </div>
+                        <div class="evl-role-stats">
+                            <div class="evl-role-stat-cell">
+                                <div class="evl-role-stat-num success">11</div>
+                                <div class="evl-role-stat-label">완료</div>
+                            </div>
+                            <div class="evl-role-stat-cell">
+                                <div class="evl-role-stat-num info">5</div>
+                                <div class="evl-role-stat-label">진행중</div>
+                            </div>
+                            <div class="evl-role-stat-cell">
+                                <div class="evl-role-stat-num" style="color:var(--status-warning-fg);">4</div>
+                                <div class="evl-role-stat-label">미시작</div>
+                            </div>
+                        </div>
+                        <div class="evl-role-avg">
+                            <span class="evl-role-avg-label">완료자 평균 점수</span>
+                            <span class="evl-role-avg-value">78<span class="unit">/100</span></span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 부서별 진행률 -->
+            <section class="card">
+                <div class="card-header">
+                    <h2 class="card-title">부서별 평가 진행률</h2>
+                    <span class="text-muted" style="font-size:13px;">전체 9개 부서 · 2026 상반기</span>
+                </div>
+                <div class="card-body">
+                    <div class="dept-bar-list">
+                        <div class="dept-bar-item">
+                            <span class="dept-bar-name">건설과 ★</span>
+                            <div class="dept-bar-track"><div class="dept-bar-fill" style="width:100%;"></div></div>
+                            <span class="dept-bar-value">7/7</span>
+                        </div>
+                        <div class="dept-bar-item">
+                            <span class="dept-bar-name">공공시설사업소 ★</span>
+                            <div class="dept-bar-track"><div class="dept-bar-fill" style="width:89%;"></div></div>
+                            <span class="dept-bar-value">8/9</span>
+                        </div>
+                        <div class="dept-bar-item">
+                            <span class="dept-bar-name">기획감사실</span>
+                            <div class="dept-bar-track"><div class="dept-bar-fill" style="width:75%;"></div></div>
+                            <span class="dept-bar-value">3/4</span>
+                        </div>
+                        <div class="dept-bar-item">
+                            <span class="dept-bar-name">농업기술센터</span>
+                            <div class="dept-bar-track"><div class="dept-bar-fill" style="width:67%;"></div></div>
+                            <span class="dept-bar-value">2/3</span>
+                        </div>
+                        <div class="dept-bar-item">
+                            <span class="dept-bar-name">물순환사업소 ★</span>
+                            <div class="dept-bar-track"><div class="dept-bar-fill" style="width:67%;"></div></div>
+                            <span class="dept-bar-value">2/3</span>
+                        </div>
+                        <div class="dept-bar-item">
+                            <span class="dept-bar-name">환경과</span>
+                            <div class="dept-bar-track"><div class="dept-bar-fill warning" style="width:50%;"></div></div>
+                            <span class="dept-bar-value">1/2</span>
+                        </div>
+                        <div class="dept-bar-item">
+                            <span class="dept-bar-name">문화체육과 ★</span>
+                            <div class="dept-bar-track"><div class="dept-bar-fill warning" style="width:50%;"></div></div>
+                            <span class="dept-bar-value">1/2</span>
+                        </div>
+                        <div class="dept-bar-item">
+                            <span class="dept-bar-name">담양읍사무소</span>
+                            <div class="dept-bar-track"><div class="dept-bar-fill warning" style="width:33%;"></div></div>
+                            <span class="dept-bar-value">1/3</span>
+                        </div>
+                        <div class="dept-bar-item">
+                            <span class="dept-bar-name">보건소</span>
+                            <div class="dept-bar-track"><div class="dept-bar-fill danger" style="width:0%;"></div></div>
+                            <span class="dept-bar-value" style="color:var(--status-danger-fg);">0/2 ⚠</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+    </main>
+
+    <div id="toast" class="toast" role="status"></div>
+
+    <script src="./js/layout.js"></script>
+    <script>
+    (function () {
+        'use strict';
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            if (!t) { alert(msg); return; }
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(window.__toastTimer);
+            window.__toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+        }
+
+        /* ─── 반기 토글 ─── */
+        document.querySelectorAll('.evl-half-toggle button').forEach(b => {
+            b.addEventListener('click', () => {
+                document.querySelectorAll('.evl-half-toggle button').forEach(x => x.classList.remove('is-active'));
+                b.classList.add('is-active');
+            });
+        });
+
+    })();
+    </script>
+</body>
+</html>

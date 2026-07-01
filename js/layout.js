@@ -65,7 +65,14 @@
             { id: 'sbm-comply',   label: '이행관리',           icon: 'coins',    href: 'menu.html?m=comply',   screen: 'SFR-008·014' },
         ]},
 
-        // GNB 4. 업무문서 — 공통 메커니즘 2종 (기준문서함 + 프리셋 등록폼)
+        // GNB 4. 인력 평가 (EVL / SFR-009) — 안전보건관리책임자·관리감독자 업무수행평가 (중처법 시행령 §4①5호 반기 1회 · 산안법 §15·§16)
+        { id: 'eval', label: '인력 평가', icon: 'user', items: [
+            { id: 'evl-eval',     label: '인력 평가', icon: 'user',  href: 'evl-eval.html',     screen: 'EVL02-E / SFR-009' },
+            { id: 'evl-status',   label: '평가 현황', icon: 'chart', href: 'evl-list.html',     screen: 'EVL01-V / SFR-009' },
+            { id: 'evl-settings', label: '평가 설정', icon: 'cog',   href: 'evl-settings.html', screen: 'EVL03-S / SFR-009' },
+        ]},
+
+        // GNB 5. 업무문서 — 공통 메커니즘 2종 (기준문서함 + 프리셋 등록폼)
         //    ※ (2차 검토) 안전점검: v2에서 메뉴를 만들지 않음 — 점검 계열 문서는 기준문서함 "2차 검토 대상" 뱃지
         { id: 'docs', label: '업무문서', icon: 'file', items: [
             { id: 'docs-archive', label: '기준문서함',          icon: 'file', href: 'docs-archive.html' },
@@ -73,14 +80,14 @@
             { id: 'docs-exec',    label: '이행 목록',           icon: 'grid', href: 'docs-exec.html' },   // 같은 데이터 — 격자 카드형 보기
         ]},
 
-        // GNB 5. 통계·보고 (SFR-018·021)
+        // GNB 6. 통계·보고 (SFR-018·021)
         { id: 'stats', label: '통계·보고', icon: 'chart', items: [
             { id: 'stats',       label: '현황 통계',     icon: 'chart', href: 'stats.html',       screen: 'SFR-018' },
             { id: 'reports',     label: '보고서·제증명', icon: 'file',  href: 'reports.html',     screen: 'SFR-021' },
             { id: 'info-center', label: '정보센터',      icon: 'list',  href: 'info-center.html' },
         ]},
 
-        // GNB 6. 시스템 관리 (관리자 전용) — 프리셋 양식 관리가 v2 차별 포인트
+        // GNB 7. 시스템 관리 (관리자 전용) — 프리셋 양식 관리가 v2 차별 포인트
         { id: 'admin', label: '시스템 관리', icon: 'cog', items: [
             { id: 'admin-users',       label: '사용자·권한',      icon: 'users', href: 'admin-users.html',       screen: 'SFR-015' },
             { id: 'admin-notify',      label: '알림 관리',        icon: 'bell',  href: 'admin-notify.html',      screen: 'SFR-017' },
@@ -352,7 +359,7 @@
         if (!mainEl || mainEl.querySelector('.three-party-footer')) return;
         const footer = document.createElement('footer');
         footer.className = 'three-party-footer';
-        footer.style.cssText = 'text-align:center; padding:12px; font-size:11px; color:#888; border-top:1px solid #eee; margin-top:24px;';
+        footer.style.cssText = 'text-align:center; padding:12px; font-size:12px; color:#888; border-top:1px solid #eee; margin-top:24px;';
         footer.innerHTML = '컨설팅 <strong>안전일터관리원</strong> · 구축 <strong>㈜다온플레이스</strong> · 발주 <strong>담양군청 (재난안전과 중대재해팀)</strong>' +
             '<span style="margin-left:12px; opacity:0.7;">프로토타입 v2</span>';
         mainEl.appendChild(footer);
@@ -600,7 +607,7 @@
             wrap.innerHTML =
                 '<a href="screen-definitions.html?from=' + encodeURIComponent(from) + '" target="_blank" rel="noopener" ' +
                 'title="이 화면의 화면 정의서 보기 (새 탭)" ' +
-                'style="display:inline-flex;align-items:center;gap:6px;background:#1c7865;color:#fff;' +
+                'style="display:inline-flex;align-items:center;gap:6px;background:#24785C;color:#fff;' +
                 'padding:9px 14px;border-radius:22px;box-shadow:0 2px 10px rgba(0,0,0,.25);' +
                 'text-decoration:none;font-weight:700;opacity:.92;transition:opacity .15s,transform .15s;" ' +
                 'onmouseover="this.style.opacity=1;this.style.transform=\'translateY(-1px)\';" ' +

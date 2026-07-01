@@ -25,6 +25,9 @@
     ];
     const CYCLES = ['연간', '반기', '분기', '월', '수시', '발생시', '상시'];
     const DOC_ROLES = ['기준/절차', '계획', '실행/실적', '점검', '조치', '기타'];
+
+    /* 첨부파일 업로드 제약 안내 — DYV2.fileHint() 단일 출처 재사용 */
+    const fileHintHtml = () => (V() && V().fileHint ? V().fileHint() : '');
     const DEPTS = ['재난안전과', '건설과', '환경과', '보건소', '공공시설사업소', '물순환사업소', '행정과', '회계과', '도시과', '기획예산실'];
 
     /* 전자문서 양식: 표준 폼 7종(EDOC_T.FORMS) + 빌더 프리셋 — formId는 인라인 렌더용 표준폼 매핑 */
@@ -175,12 +178,28 @@
         return step3Attach();
     }
 
-    /* 담당 블록 — 3종 공통. 담당부서는 읽기전용(클릭 불가) 표시, [담당자 지정] 버튼만 활성. */
+    /* 담당 블록 — 3종 공통. 별도 모달 없이, 모달 안에서 트리형 조직도를 스크롤하여 담당자 선택. */
+    function ownerSel() {
+        return S.f.assignee
+            ? '<b class="reg-owner-name">' + esc(S.f.dept || '-') + ' · ' + esc(S.f.assignee) + '</b>'
+            : '<span class="reg-owner-none">선택된 담당자가 없습니다 — 아래 조직도에서 선택하세요</span>';
+    }
     function ownerBlock() {
-        const btnLabel = S.f.assignee ? '담당자: ' + S.f.assignee + ' (변경)' : '담당자 지정';
-        return '<p class="reg-lab">담당부서</p>' +
-            '<input type="text" id="reg-dept-disp" data-k="dept" value="' + esc(S.f.dept) + '" placeholder="담당자 지정 시 자동 표시" readonly style="background:var(--gray-50,#fafafa);">' +
-            '<div style="margin-top:8px;"><button type="button" class="btn btn-sm btn-outline" id="reg-owner-btn" onclick="DYREG._ownerPicker()">' + esc(btnLabel) + '</button></div>';
+        const tree = (window.EDOC && window.EDOC.ORG_TREE) || [];
+        return '<p class="reg-lab">담당자 지정 <span class="reg-req">*</span></p>' +
+            '<div class="reg-owner-sel"><span class="reg-owner-ic">👤</span><span id="reg-owner-cur">' + ownerSel() + '</span></div>' +
+            '<div class="org-inline" id="reg-orgtree">' +
+                '<div class="org-inline-search"><input type="text" id="reg-org-q" placeholder="부서·이름 검색"></div>' +
+                '<div class="org-inline-body" id="reg-orgtree-body">' +
+                    '<div class="org-tree-root"><span>🏛</span> 담양군청</div>' +
+                    tree.map((d, di) =>
+                        '<div class="otr-dept" data-dept="' + esc(d.dept) + '">' +
+                        '<button type="button" class="otr-deptbtn" data-di="' + di + '"><span class="otr-arrow">▸</span> ' + esc(d.dept) + ' <span class="otr-count">' + d.members.length + '명</span></button>' +
+                        '<div class="otr-members">' +
+                        d.members.map((m, mi) => '<button type="button" class="otr-member' + (S.f.assignee === m[1] && S.f.dept === d.dept ? ' on' : '') + '" data-di="' + di + '" data-mi="' + mi + '"><span class="otr-role">' + esc(m[0]) + '</span><span class="otr-name">' + esc(m[1]) + '</span></button>').join('') +
+                        '</div></div>').join('') +
+                '</div>' +
+            '</div>';
     }
 
     /* 첨부파일 목록 (추가/삭제 가능) */
@@ -217,6 +236,7 @@
             '<input type="text" data-k="legalBasis" value="' + esc(S.f.legalBasis) + '" placeholder="예: 중처법 시행령 제4조제1호">' +
             '<div class="reg-branch"><p class="bh">📄 파일 첨부</p>' +
                 '<div class="upload-drop" style="padding:14px;" onclick="DYV2.toast(\'파일 선택 (프로토타입) — 아래에 파일명·설명을 입력하고 [파일 추가]를 누르세요\')">파일을 끌어다 놓거나 클릭하여 선택</div>' +
+                fileHintHtml() +
                 '<div class="reg-grid2" style="margin-top:10px;">' +
                     '<div><input type="text" id="reg-fname" placeholder="파일명 (예: 경영방침_2026.pdf)"></div>' +
                     '<div><input type="text" id="reg-fdesc" placeholder="파일 설명 (선택)"></div>' +
@@ -261,44 +281,55 @@
             '<p class="reg-sub" style="margin-top:10px;">선택한 화면으로 이동하는 버튼이 문서 상세에 표시됩니다. 문서명은 선택한 화면 이름으로 자동 설정됩니다.</p>';
     }
 
-    /* ── 조직도 담당 선택 팝업 (담당부서+담당자 동시 채움, EDOC.ORG_TREE 재사용) ── */
-    function closeOwnerPicker() { const o = document.getElementById('reg-owner-overlay'); if (o) o.remove(); }
-    function openOwnerPicker() {
+    /* ── 인라인 조직도 트리 (모달 내 스크롤 선택 — 별도 모달 없음, EDOC.ORG_TREE 재사용) ── */
+    function openDept(deptEl) {
+        if (!deptEl) return;
+        const m = deptEl.querySelector('.otr-members'); if (m) m.style.display = 'block';
+        const ar = deptEl.querySelector('.otr-arrow'); if (ar) ar.textContent = '▾';
+    }
+    function wireOwnerTree(root) {
+        const box = root.querySelector('#reg-orgtree');
+        if (!box) return;
         const tree = (window.EDOC && window.EDOC.ORG_TREE) || [];
-        closeOwnerPicker();
-        const ov = document.createElement('div');
-        ov.id = 'reg-owner-overlay';
-        ov.className = 'org-tree-overlay';
-        ov.innerHTML =
-            '<div class="org-tree-backdrop"></div>' +
-            '<div class="org-tree-panel" role="dialog" aria-modal="true" aria-label="조직도에서 담당 선택">' +
-            '<div class="org-tree-head"><span>조직도에서 담당 선택</span><button type="button" class="modal-close" id="reg-owner-x" aria-label="닫기">&times;</button></div>' +
-            '<div class="org-tree-body">' +
-            '<div class="org-tree-root"><span>🏛</span> 담양군청</div>' +
-            tree.map((d, di) =>
-                '<div class="otr-dept">' +
-                '<button type="button" class="otr-deptbtn" data-di="' + di + '"><span class="otr-arrow">▸</span> ' + esc(d.dept) + ' <span class="otr-count">' + d.members.length + '명</span></button>' +
-                '<div class="otr-members">' +
-                d.members.map((m, mi) => '<button type="button" class="otr-member" data-di="' + di + '" data-mi="' + mi + '"><span class="otr-role">' + esc(m[0]) + '</span><span class="otr-name">' + esc(m[1]) + '</span></button>').join('') +
-                '</div></div>').join('') +
-            '</div></div>';
-        document.body.appendChild(ov);
-        ov.querySelector('.org-tree-backdrop').addEventListener('click', closeOwnerPicker);
-        ov.querySelector('#reg-owner-x').addEventListener('click', closeOwnerPicker);
-        ov.addEventListener('click', e => {
+        const body = box.querySelector('#reg-orgtree-body');
+
+        /* 현재 선택된 부서(없으면 첫 부서)를 펼친 상태로 시작 */
+        const cur = body.querySelector('.otr-member.on');
+        openDept(cur ? cur.closest('.otr-dept') : body.querySelector('.otr-dept'));
+
+        box.addEventListener('click', e => {
             const db = e.target.closest('.otr-deptbtn');
-            if (db) { const m = db.nextElementSibling; const open = m.style.display === 'block'; m.style.display = open ? 'none' : 'block'; const ar = db.querySelector('.otr-arrow'); if (ar) ar.textContent = open ? '▸' : '▾'; return; }
+            if (db) {
+                const m = db.nextElementSibling; const open = m.style.display === 'block';
+                m.style.display = open ? 'none' : 'block';
+                const ar = db.querySelector('.otr-arrow'); if (ar) ar.textContent = open ? '▸' : '▾';
+                return;
+            }
             const mb = e.target.closest('.otr-member');
             if (mb) {
                 const d = tree[+mb.dataset.di], mem = d.members[+mb.dataset.mi];
                 S.f.dept = d.dept; S.f.assignee = mem[1];
-                const di = document.getElementById('reg-dept-disp'); if (di) di.value = d.dept;
-                const bt = document.getElementById('reg-owner-btn'); if (bt) bt.textContent = '담당자: ' + mem[1] + ' (변경)';
-                closeOwnerPicker();
+                body.querySelectorAll('.otr-member').forEach(x => x.classList.toggle('on', x === mb));
+                const disp = root.querySelector('#reg-owner-cur'); if (disp) disp.innerHTML = ownerSel();
                 V().toast('담당자 지정: ' + d.dept + ' ' + mem[1]);
             }
         });
-        const first = ov.querySelector('.otr-members'); if (first) { first.style.display = 'block'; const a = ov.querySelector('.otr-arrow'); if (a) a.textContent = '▾'; }
+
+        const q = box.querySelector('#reg-org-q');
+        if (q) q.addEventListener('input', function () {
+            const v = this.value.trim();
+            body.querySelectorAll('.otr-dept').forEach(dept => {
+                const dn = dept.getAttribute('data-dept') || '';
+                let any = false;
+                dept.querySelectorAll('.otr-member').forEach(mb => {
+                    const show = !v || dn.indexOf(v) !== -1 || mb.textContent.indexOf(v) !== -1;
+                    mb.style.display = show ? '' : 'none';
+                    if (show) any = true;
+                });
+                dept.style.display = (!v || any) ? '' : 'none';
+                if (v && any) openDept(dept);
+            });
+        });
     }
 
     function progNav() {
@@ -435,6 +466,7 @@
                 root.querySelectorAll('#reg-pt .reg-pcard').forEach(x => x.classList.toggle('on', x === c));
             });
         } else if (S.step === 2) {
+            wireOwnerTree(root);
             const fs = root.querySelector('#reg-form');
             if (fs) fs.addEventListener('change', function () {
                 S.formRef = formOptions()[+this.value];
@@ -514,8 +546,8 @@
         if (!d) return;
         if (!isUser(id)) { V().toast('기본 제공 문서는 삭제할 수 없습니다'); return; }
         V().openModal('삭제 확인',
-            '<p style="font-size:13.5px; line-height:1.6;">이 업무문서를 삭제하시겠습니까?<br><b>' + esc(d.name) + '</b> <span style="color:var(--text-gray);">(' + esc(id) + ')</span></p>' +
-            '<p style="font-size:11.5px; color:var(--text-gray); margin-top:8px;">삭제하면 목록·상세에서 제거됩니다. (되돌릴 수 없음)</p>',
+            '<p style="font-size:13px; line-height:1.6;">이 업무문서를 삭제하시겠습니까?<br><b>' + esc(d.name) + '</b> <span style="color:var(--text-gray);">(' + esc(id) + ')</span></p>' +
+            '<p style="font-size:12px; color:var(--text-gray); margin-top:8px;">삭제하면 목록·상세에서 제거됩니다. (되돌릴 수 없음)</p>',
             '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button class="btn btn-primary" id="reg-del-yes" style="background:var(--status-danger-fg); border-color:var(--status-danger-fg);">삭제</button>');
         document.getElementById('reg-del-yes').addEventListener('click', () => {
@@ -530,6 +562,6 @@
         allDocs, getDoc, isUser, setIdOf,
         openCreate, openEdit, remove,
         LINK_TARGETS, linkTarget, formLabel,
-        _ownerPicker: openOwnerPicker, _addFile: addFile, _delFile: delFile,
+        _addFile: addFile, _delFile: delFile,
     };
 })();

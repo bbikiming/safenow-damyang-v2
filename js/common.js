@@ -21,6 +21,18 @@
 
     const docs = () => window.DY_DOCS || [];
 
+    /* ── 첨부파일 업로드 제약 (지원 형식·용량·개수) — 단일 출처 ── */
+    const FILE_LIMITS = {
+        formats: 'HWP · HWPX · PDF · DOC(X) · XLS(X) · PPT(X) · JPG · PNG · ZIP',
+        maxMB: 20, maxCount: 10,
+    };
+    /* 업로드 영역 하단에 붙이는 안내 문구 HTML */
+    function fileHint() {
+        return '<p class="file-hint">📎 <b>지원 형식</b> ' + FILE_LIMITS.formats +
+            ' <span class="fh-sep">·</span> <b>파일당 최대</b> ' + FILE_LIMITS.maxMB + 'MB' +
+            ' <span class="fh-sep">·</span> <b>최대</b> ' + FILE_LIMITS.maxCount + '개</p>';
+    }
+
     function byMenu(key) { return docs().filter(d => d.menuKey === key); }
 
     /* 이행률: 대메뉴 내 이행+프로그램 문서 중 status=완료 비율 */
@@ -80,9 +92,14 @@
         document.addEventListener('keydown', escClose);
     }
     function escClose(e) { if (e.key === 'Escape') closeModal(); }
+    /* 단일 모달 규칙(UI-RULE: 한 시점에 모달은 1개) — 본 모달과 함께 부수 오버레이도 제거해 잔류 레이어 방지.
+     * 규칙 전문은 프로젝트 루트 CLAUDE.md 참고. */
     function closeModal() {
         const m = document.getElementById('v2-modal');
         if (m) m.remove();
+        ['org-tree-overlay', 'reg-owner-overlay', 'stack-overlay'].forEach(id => {
+            const o = document.getElementById(id); if (o) o.remove();
+        });
         document.removeEventListener('keydown', escClose);
     }
 
@@ -120,7 +137,8 @@
             '<div style="margin-bottom:14px;">' + processTypeChip(d.processType) + ' ' + lawChip(d.law) +
               ' <span class="chip-mini wt">' + esc(d.version) + '</span></div>' +
             '<p style="font-size:13px; font-weight:600; margin-bottom:12px;">' + esc(d.name) + '</p>' +
-            '<div class="upload-drop">파일을 끌어다 놓거나 클릭하여 업로드<br><span style="font-size:11px;">다중 첨부 가능 · 업로드 시 버전 이력이 자동 기록됩니다</span></div>',
+            '<div class="upload-drop">파일을 끌어다 놓거나 클릭하여 업로드<br><span style="font-size:12px;">다중 첨부 가능 · 업로드 시 버전 이력이 자동 기록됩니다</span></div>' +
+            fileHint(),
             '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button class="btn btn-primary" onclick="DYV2.closeModal(); DYV2.toast(\'업로드되었습니다 (프로토타입)\')">업로드</button>'
         );
@@ -131,6 +149,6 @@
         esc, statusChip, workTypeChip, processTypeChip, pdcaChip, lawChip,
         unassignedBadge, secondReviewBadge,
         openModal, closeModal, toast, openDoc,
-        docs,
+        docs, FILE_LIMITS, fileHint,
     };
 })();

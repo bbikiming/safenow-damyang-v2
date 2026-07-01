@@ -42,7 +42,7 @@
         .sub-tab.active { color: var(--main); border-bottom-color: var(--main); }
         .sub-tab .cnt {
             display: inline-block; margin-left: 4px; padding: 0 6px;
-            font-size: 11px; background: var(--gray-100); color: var(--text-gray); border-radius: 8px;
+            font-size: 12px; background: var(--gray-100); color: var(--text-gray); border-radius: 8px;
         }
         .sub-tab.active .cnt { background: var(--status-info-bg); color: var(--main); }
 
@@ -58,13 +58,13 @@
         .proc-card-desc { font-size: 12px; color: var(--text-gray); margin-top: 2px; }
 
         /* 위험요인 출처 배지 */
-        .src-badge { display:inline-block; padding:2px 8px; border-radius:var(--radius-md); font-size:11px; font-weight:600; }
+        .src-badge { display:inline-block; padding:2px 8px; border-radius:var(--radius-md); font-size:12px; font-weight:600; }
         .src-badge.sif    { background:var(--status-danger-bg); color:var(--status-danger-fg); border:1px solid var(--status-danger-border); }
         .src-badge.own    { background:var(--status-purple-bg); color:var(--status-purple-fg); border:1px solid var(--status-purple-border); }
         .src-badge.kosha  { background:var(--status-info-bg); color:var(--status-info-fg); border:1px solid var(--status-info-border); }
 
         /* 위험성 수준 칩 */
-        .lvl { display:inline-block; padding:2px 8px; border-radius:var(--radius-md); font-size:11px; font-weight:700; }
+        .lvl { display:inline-block; padding:2px 8px; border-radius:var(--radius-md); font-size:12px; font-weight:700; }
         .lvl.high { background:var(--status-danger-bg); color:var(--status-danger-fg); }
         .lvl.mid  { background:var(--status-warning-bg); color:var(--status-warning-fg); }
         .lvl.low  { background:var(--status-success-bg); color:var(--status-success-fg); }
@@ -75,7 +75,7 @@
         .tbl-mini tr:hover td { background:#fafafa; }
 
         /* 시설·설비 구분 배지 */
-        .fac-type { display:inline-block; padding:2px 9px; border-radius:var(--radius-md); font-size:11px; font-weight:600; }
+        .fac-type { display:inline-block; padding:2px 9px; border-radius:var(--radius-md); font-size:12px; font-weight:600; }
         .fac-type.machine { background:var(--status-info-bg); color:var(--status-info-fg); border:1px solid var(--status-info-border); }
         .fac-type.place   { background:var(--gray-100); color:var(--text-gray); border:1px solid var(--card-line); }
         .fac-type.safety  { background:var(--status-success-bg); color:var(--status-success-fg); border:1px solid var(--status-success-border); }
@@ -86,20 +86,20 @@
         /* 작업 ▸ 설비·유해요인 계층 */
         .proc-work { border:1px solid var(--card-line); border-radius:var(--radius-md); margin-bottom:10px; overflow:hidden; }
         .proc-work-head { display:flex; align-items:center; gap:8px; padding:10px 14px; background:#fafafa; border-bottom:1px solid var(--card-line); }
-        .proc-work-no { font-size:11px; font-weight:700; color:#fff; background:var(--main); padding:2px 8px; border-radius:var(--radius-full); }
+        .proc-work-no { font-size:12px; font-weight:700; color:#fff; background:var(--main); padding:2px 8px; border-radius:var(--radius-full); }
         .proc-work-name { font-size:14px; font-weight:700; color:var(--text-black); }
         .proc-work-body { display:grid; grid-template-columns:1fr 1fr; gap:0; }
         @media (max-width:600px){ .proc-work-body{ grid-template-columns:1fr; } }
         .proc-work-col { padding:12px 14px; }
         .proc-work-col:first-child { border-right:1px solid var(--card-line); }
         @media (max-width:600px){ .proc-work-col:first-child{ border-right:none; border-bottom:1px solid var(--card-line); } }
-        .proc-work-label { display:block; font-size:11px; font-weight:700; color:var(--text-gray); margin-bottom:7px; }
+        .proc-work-label { display:block; font-size:12px; font-weight:700; color:var(--text-gray); margin-bottom:7px; }
 
         /* 변경이력 */
         .hist-item { display:flex; gap:12px; padding:12px 0; border-bottom:1px solid var(--card-line); font-size:13px; }
         .hist-date { width:120px; color:var(--text-gray); flex-shrink:0; }
         .hist-body { flex:1; }
-        .hist-tag { display:inline-block; padding:1px 7px; border-radius:var(--radius-md); font-size:11px; font-weight:600; margin-right:6px; }
+        .hist-tag { display:inline-block; padding:1px 7px; border-radius:var(--radius-md); font-size:12px; font-weight:600; margin-right:6px; }
         .hist-tag.add { background:var(--status-success-bg); color:var(--status-success-fg); }
         .hist-tag.mod { background:var(--status-warning-bg); color:var(--status-warning-fg); }
         .hist-tag.del { background:var(--status-neutral-bg); color:var(--status-neutral-fg); }
@@ -221,7 +221,7 @@
                         <div class="proc-card-desc">정기평가 생성 시 이 목록이 평가의 기본 위험요인으로 자동 로드됩니다 · 출처: KOSHA SIF(사망사례) 라이브러리 + 자체</div>
                     </div>
                     <button class="btn btn-primary btn-sm" type="button" id="proc-sif-open">
-                        + 표준 위험요인 추가 <span style="background:rgba(255,255,255,.25); padding:1px 6px; border-radius:8px; font-size:11px; margin-left:4px;">SIF 추천</span>
+                        + 표준 위험요인 추가 <span style="background:rgba(255,255,255,.25); padding:1px 6px; border-radius:8px; font-size:12px; margin-left:4px;">SIF 추천</span>
                     </button>
                 </div>
                 <table class="tbl-mini">
@@ -315,7 +315,7 @@
             <div style="display:flex; align-items:center; justify-content:space-between; padding:16px 22px; border-bottom:1px solid var(--card-line);">
                 <div id="proc-sif-title" style="font-size:16px; font-weight:700; color:var(--text-black);">
                     🔍 표준 유해위험요인 추가 — KOSHA SIF 라이브러리
-                    <span style="font-size:11px; color:var(--text-gray); font-weight:normal; margin-left:6px;">사망사례 4,432건 기반 추천</span>
+                    <span style="font-size:12px; color:var(--text-gray); font-weight:400; margin-left:6px;">사망사례 4,432건 기반 추천</span>
                 </div>
                 <button type="button" id="proc-sif-close" style="width:30px; height:30px; border:none; background:transparent; cursor:pointer; color:var(--text-gray); border-radius:6px;">✕</button>
             </div>
@@ -361,13 +361,13 @@
             var el = document.getElementById('proc-sif-list');
             if(!list || !list.length){ el.innerHTML='<div style="padding:28px; text-align:center; color:var(--text-gray); font-size:13px;">조건에 맞는 위험요인이 없습니다.</div>'; return; }
             el.innerHTML = list.map(function(s){
-                var sev = s.severity_hint>=5 ? '<span style="background:var(--status-danger-bg); color:var(--status-danger-fg); border:1px solid var(--status-danger-border); padding:1px 6px; border-radius:var(--radius-md); font-size:10px; font-weight:700;">사망사례</span>' : '';
+                var sev = s.severity_hint>=5 ? '<span style="background:var(--status-danger-bg); color:var(--status-danger-fg); border:1px solid var(--status-danger-border); padding:1px 6px; border-radius:var(--radius-md); font-size:12px; font-weight:700;">사망사례</span>' : '';
                 return '<label style="display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border:1px solid var(--card-line); border-radius:var(--radius-md); margin-bottom:6px; cursor:pointer;" class="proc-sif-item">' +
                     '<input type="checkbox" data-id="'+s.id+'" style="margin-top:3px; flex-shrink:0;">' +
                     '<div style="flex:1; min-width:0;">' +
                         '<div style="font-size:13px; font-weight:600; color:var(--text-black); display:flex; align-items:center; gap:6px;">'+esc(s.high_risk_situation)+' '+sev+'</div>' +
                         '<div style="font-size:12px; color:var(--text-gray); margin-top:3px; line-height:1.5;">'+esc(trunc(s.incident_summary,90))+'</div>' +
-                        '<div style="font-size:11px; color:var(--text-lightgray); margin-top:3px;">🛠 '+esc(s.causing_object)+' · '+esc(s.id)+'</div>' +
+                        '<div style="font-size:12px; color:var(--text-lightgray); margin-top:3px;">🛠 '+esc(s.causing_object)+' · '+esc(s.id)+'</div>' +
                     '</div></label>';
             }).join('');
             el.querySelectorAll('.proc-sif-item input').forEach(function(cb){

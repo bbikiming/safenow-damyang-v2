@@ -14,7 +14,7 @@
             padding: 18px 22px; margin-bottom: 16px;
         }
         .reg-header-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-        .reg-title { font-size: 19px; font-weight: 800; color: var(--text-black); letter-spacing: -0.6px; display: flex; align-items: center; gap: 8px; }
+        .reg-title { font-size: 18px; font-weight: 700; color: var(--text-black); letter-spacing: -0.6px; display: flex; align-items: center; gap: 8px; }
         .reg-meta { font-size: 13px; color: var(--text-gray); margin-top: 6px; }
         .reg-meta strong { color: var(--text-black); }
 
@@ -26,14 +26,14 @@
         .reg-autobanner-title { font-size: 14px; font-weight: 700; color: var(--status-success-fg); display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
         .reg-autobanner-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 18px; }
         @media (max-width: 767px) { .reg-autobanner-list { grid-template-columns: 1fr; } }
-        .reg-autobanner-item { font-size: 12.5px; color: var(--text-black); display: flex; align-items: flex-start; gap: 6px; line-height: 1.5; }
-        .reg-autobanner-item .ok { color: var(--status-success-fg); font-weight: 800; flex-shrink: 0; }
+        .reg-autobanner-item { font-size: 12px; color: var(--text-black); display: flex; align-items: flex-start; gap: 6px; line-height: 1.5; }
+        .reg-autobanner-item .ok { color: var(--status-success-fg); font-weight: 700; flex-shrink: 0; }
 
         /* 진행률 KPI */
         .reg-kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 16px; }
         @media (max-width: 767px) { .reg-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
         .reg-kpi { background: #fff; border: 1px solid var(--card-line); border-radius: var(--radius-statbox); padding: 14px 16px; text-align: center; }
-        .reg-kpi-num { font-size: 24px; font-weight: 800; letter-spacing: -0.6px; }
+        .reg-kpi-num { font-size: 26px; font-weight: 700; letter-spacing: -0.6px; }
         .reg-kpi-label { font-size: 12px; color: var(--text-gray); margin-top: 2px; }
         .reg-kpi.total .reg-kpi-num { color: var(--text-black); }
         .reg-kpi.todo  .reg-kpi-num { color: var(--text-lightgray); }
@@ -48,7 +48,7 @@
         .reg-progress-text { font-size:13px; font-weight:700; color:var(--text-black); white-space:nowrap; }
 
         /* 기준자료 출처 배지 */
-        .base-badge { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:var(--radius-md); font-size:11px; font-weight:600; }
+        .base-badge { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:var(--radius-md); font-size:12px; font-weight:600; }
         .base-badge.regular { background:var(--status-info-bg); color:var(--status-info-fg); border:1px solid var(--status-info-border); }
         .base-badge.special { background:var(--status-purple-bg); color:var(--status-purple-fg); border:1px solid var(--status-purple-border); }
         .base-badge.none    { background:var(--status-neutral-bg); color:var(--status-neutral-fg); border:1px solid var(--status-neutral-border); }
@@ -73,11 +73,11 @@
         .rr-ftable td { padding:11px 12px; font-size:13px; border-bottom:1px solid var(--card-line); vertical-align:top; }
         .rr-ftable tr:hover td { background:#fafafa; }
         .rr-fsub { font-size:12px; color:var(--text-lightgray); margin-top:2px; }
-        .rr-lvl { display:inline-block; padding:2px 9px; border-radius:var(--radius-md); font-size:11px; font-weight:700; }
+        .rr-lvl { display:inline-block; padding:2px 9px; border-radius:var(--radius-md); font-size:12px; font-weight:700; }
         .rr-lvl.high { background:var(--status-danger-bg); color:var(--status-danger-fg); }
         .rr-lvl.mid  { background:var(--status-warning-bg); color:var(--status-warning-fg); }
         .rr-lvl.low  { background:var(--status-success-bg); color:var(--status-success-fg); }
-        .rr-src { display:inline-block; padding:1px 7px; border-radius:var(--radius-md); font-size:10px; font-weight:700; }
+        .rr-src { display:inline-block; padding:1px 7px; border-radius:var(--radius-md); font-size:12px; font-weight:700; }
         .rr-src.sif { background:var(--status-danger-bg); color:var(--status-danger-fg); }
         .rr-src.kosha { background:var(--status-info-bg); color:var(--status-info-fg); }
         .rr-src.own { background:var(--status-purple-bg); color:var(--status-purple-fg); }
@@ -286,19 +286,19 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td style="padding:11px 12px; font-size:13px; border-bottom:1px solid var(--card-line);"><span class="hist-tag add" style="display:inline-block; padding:1px 7px; border-radius:var(--radius-md); font-size:11px; font-weight:600; background:var(--status-success-bg); color:var(--status-success-fg);">신규</span></td>
+                            <td style="padding:11px 12px; font-size:13px; border-bottom:1px solid var(--card-line);"><span class="hist-tag add" style="display:inline-block; padding:1px 7px; border-radius:var(--radius-md); font-size:12px; font-weight:600; background:var(--status-success-bg); color:var(--status-success-fg);">신규</span></td>
                             <td style="padding:11px 12px; font-size:13px; border-bottom:1px solid var(--card-line);"><strong>정수장 설비정비 유해·위험요인</strong> · 정전기 발화 위험</td>
                             <td style="padding:11px 12px; font-size:13px; border-bottom:1px solid var(--card-line); color:var(--text-gray);">반복 가능성 높음 → 기준정보 반영 권장</td>
                             <td style="padding:11px 12px; text-align:center; border-bottom:1px solid var(--card-line);"><button class="btn btn-outline btn-sm" type="button" onclick="window.location.href='proc-detail.html'">유해·위험요인관리 반영</button></td>
                         </tr>
                         <tr>
-                            <td style="padding:11px 12px; font-size:13px; border-bottom:1px solid var(--card-line);"><span style="display:inline-block; padding:1px 7px; border-radius:var(--radius-md); font-size:11px; font-weight:600; background:var(--status-warning-bg); color:var(--status-warning-fg);">변경</span></td>
+                            <td style="padding:11px 12px; font-size:13px; border-bottom:1px solid var(--card-line);"><span style="display:inline-block; padding:1px 7px; border-radius:var(--radius-md); font-size:12px; font-weight:600; background:var(--status-warning-bg); color:var(--status-warning-fg);">변경</span></td>
                             <td style="padding:11px 12px; font-size:13px; border-bottom:1px solid var(--card-line);"><strong>정수장 약품투입 유해·위험요인</strong> · 염소 누출 개선조치 보강</td>
                             <td style="padding:11px 12px; font-size:13px; border-bottom:1px solid var(--card-line); color:var(--text-gray);">표준 개선조치에 "환기팬 선가동" 추가</td>
                             <td style="padding:11px 12px; text-align:center; border-bottom:1px solid var(--card-line);"><button class="btn btn-outline btn-sm" type="button" onclick="window.location.href='proc-detail.html'">유해·위험요인관리 반영</button></td>
                         </tr>
                         <tr>
-                            <td style="padding:11px 12px; font-size:13px;"><span style="display:inline-block; padding:1px 7px; border-radius:var(--radius-md); font-size:11px; font-weight:600; background:var(--status-neutral-bg); color:var(--status-neutral-fg);">제외</span></td>
+                            <td style="padding:11px 12px; font-size:13px;"><span style="display:inline-block; padding:1px 7px; border-radius:var(--radius-md); font-size:12px; font-weight:600; background:var(--status-neutral-bg); color:var(--status-neutral-fg);">제외</span></td>
                             <td style="padding:11px 12px; font-size:13px;"><strong>구 노후정수장 운영 유해·위험요인</strong> · 폐쇄</td>
                             <td style="padding:11px 12px; font-size:13px; color:var(--text-gray);">설비 철거 → 시설·설비 비활성 처리 검토</td>
                             <td style="padding:11px 12px; text-align:center;"><button class="btn btn-outline btn-sm" type="button" onclick="window.DYLayout._soon(event, '비활성 처리')">비활성 처리</button></td>
@@ -321,7 +321,7 @@
     <div id="rr-add-modal" class="rr-modal" role="dialog">
         <div class="rr-modal-box">
             <div class="rr-modal-head">
-                <div class="rr-modal-title">+ 위험요인 추가 <span id="rr-add-proc" style="font-size:12px; color:var(--text-gray); font-weight:normal;"></span></div>
+                <div class="rr-modal-title">+ 위험요인 추가 <span id="rr-add-proc" style="font-size:12px; color:var(--text-gray); font-weight:400;"></span></div>
                 <button class="rr-modal-close" id="rr-add-close" type="button">✕</button>
             </div>
             <div class="rr-modal-body">
