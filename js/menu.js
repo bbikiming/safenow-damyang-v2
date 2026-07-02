@@ -903,7 +903,7 @@
                 if (!title) { V.toast('제목을 입력하세요'); return; }
                 if (!content) { V.toast('상세내용을 입력하세요'); return; }
                 const writer = author || (via === '온라인' ? '김대표' : '(현장 종사자)');
-                const rec = { id: 'OPN-' + nextNum(S.VOICES), cat: cat, title: title, location: loc || '-', content: content, author: writer, date: PROTO_TODAY, status: '접수대기', via: via, owner: '', inspectLink: false, inspect: null, link: '', adhocRisk: false, result: '', history: [] };
+                const rec = { id: 'OPN-' + nextNum(S.VOICES), cat: cat, title: title, location: loc || '-', content: content, author: writer, date: PROTO_TODAY, status: '접수대기', via: via, owner: '', inspectLink: false, inspect: null, link: '', result: '', history: [] };
                 pushHist(rec, '접수', '의견 접수 — ' + via + ' 경로');
                 S.VOICES.unshift(rec);
                 S.page = 1; PG.opnGo('voice', 'list', null);
@@ -990,13 +990,6 @@
                 o.status = '접수대기'; o.inspectLink = false; o.inspect = null; o.link = ''; o.rejectReason = ''; o.result = ''; o.completedAt = null; o.completedBy = null;
                 pushHist(o, '재처리', '처리를 취소하고 접수대기로 되돌림');
                 render(); V.toast('접수대기로 되돌렸습니다');
-            };
-            /* 수시 위험성평가 등록 (위험신고 분류 전용) */
-            PG.opnAdhocRisk = id => {
-                const o = find(id); if (!o) return;
-                o.adhocRisk = true;
-                pushHist(o, '수시평가 등록', '수시 위험성평가 등록 — 트리거: 근로자 위험신고');
-                render(); V.toast('수시 위험성평가가 등록되었습니다 — 위험성평가 메뉴에서 확인');
             };
 
             /* ===== 위원회 회의록 (목록 클릭 → 상세 페이지) / 협의체 공유 ===== */
@@ -1330,7 +1323,7 @@
             const OWNERS = ['재난안전과 · 홍길동', '재난안전과 · 김안전', '건설과 · 박현장', '환경과 · 최보건'];
             const INSPECT_KINDS = ['특별점검', '일상점검', '주간점검', '합동점검', '순회점검'];
             const ownerOpts = () => OWNERS.map(p => '<option>' + p + '</option>').join('');
-            const HIST_DOT = { '접수': 'neutral', '현장점검 생성': 'info', '개선조치 생성': 'warning', '경과': 'info', '완료': 'success', '반려': 'danger', '재처리': 'neutral', '수시평가 등록': 'info' };
+            const HIST_DOT = { '접수': 'neutral', '현장점검 생성': 'info', '개선조치 생성': 'warning', '경과': 'info', '완료': 'success', '반려': 'danger', '재처리': 'neutral' };
             function renderVoiceDetail(o) {
                 if (!o) return renderVoiceList();
                 /* ① 의견 정보 */
@@ -1345,17 +1338,7 @@
                     '<span class="k">상세내용</span><div>' + V.esc(o.content || '-') + '</div>' +
                     '<span class="k">첨부 사진</span><div><span class="opn-muted">첨부된 사진이 없습니다 (프로토타입)</span></div>' +
                     '</div>', '');
-                /* ② 수시 위험성평가 (위험신고 분류 전용) */
-                const adhocCard = (o.cat === '위험신고')
-                    ? '<div class="card"><div class="card-body opn-adhoc"><div class="opn-adhoc-l"><span class="opn-adhoc-ic">⚠</span><div>' +
-                      '<div class="opn-adhoc-h">수시 위험성평가 <span class="chip-mini wt-elec">위험신고 연계</span></div>' +
-                      '<div class="opn-adhoc-d">근로자의 위험신고 내용을 기반으로 수시 위험성평가를 등록합니다. 트리거 유형은 \'근로자 위험신고\'로 자동 설정됩니다.</div></div></div>' +
-                      (o.adhocRisk
-                        ? '<button class="btn btn-sm btn-outline" onclick="location.href=\'risk-list.html\'">보기</button>'
-                        : '<button class="btn btn-sm btn-primary" onclick="PG.opnAdhocRisk(\'' + o.id + '\')">수시 위험성평가 등록</button>') +
-                      '</div></div>'
-                    : '';
-                /* ③ 처리 카드 (상태별 5-view) */
+                /* ② 처리 카드 (상태별 5-view) */
                 const procHead = '<div class="opn-proc-head"><span class="opn-proc-title">처리</span><span class="opn-proc-status">현재 상태 ' + stChip(o.status) + '</span></div>';
                 let procBody;
                 if (o.status === '접수대기') {
@@ -1416,17 +1399,16 @@
                         : '<p class="opn-muted" style="font-size:var(--fs-13);">처리 이력이 없습니다.</p>', '');
                 /* ⑤ 연동 정보 */
                 let linkInner;
-                if (!o.inspectLink && !o.link && !o.adhocRisk) {
+                if (!o.inspectLink && !o.link) {
                     linkInner = '<div class="opn-linkempty"><span class="opn-linkempty-ic">🔗</span><span>조치 선택 후 연동 정보가 표시됩니다</span></div>';
                 } else {
                     linkInner = '';
                     if (o.inspectLink) { const ins = o.inspect || {}; linkInner += '<div class="opn-mini"><div class="opn-mini-badges"><span class="chip-mini wt-elec">안전점검</span> <span class="chip-mini wt">점검예정</span></div><div class="opn-mini-title">[의견청취] ' + V.esc(o.title) + '</div><div class="opn-mini-meta">담당 ' + V.esc(ins.owner || o.owner || '-') + ' · 예정 ' + (ins.date || '-') + '</div><button class="btn btn-sm btn-outline" onclick="DYV2.toast(\'안전점검 메뉴 연동 (프로토타입)\')">바로가기</button></div>'; }
                     if (o.link) { const imp = E.improvements().find(x => x.id === o.link) || {}; linkInner += '<div class="opn-mini"><div class="opn-mini-badges"><span class="chip-mini pdca">개선조치</span> <span class="chip-mini wt-attach">' + (imp.status === '종결' ? '종결' : '조치중') + '</span></div><div class="opn-mini-title">' + V.esc(imp.title || o.title) + '</div><div class="opn-mini-meta">' + V.esc(o.link) + ' · 예정 ' + (imp.due || '-') + '</div><button class="btn btn-sm btn-outline" onclick="location.href=\'menu.html?m=improve\'">바로가기</button></div>'; }
-                    if (o.adhocRisk) { linkInner += '<div class="opn-mini"><div class="opn-mini-badges"><span class="chip-mini wt">위험성평가</span> <span class="chip-mini wt-attach">수시</span></div><div class="opn-mini-title">수시 위험성평가 — ' + V.esc(o.title) + '</div><div class="opn-mini-meta">트리거: 근로자 위험신고</div><button class="btn btn-sm btn-outline" onclick="location.href=\'risk-list.html\'">바로가기</button></div>'; }
                 }
                 const linkCard = sectionCard('연동 정보', linkInner, '');
                 const header = '<div class="pol-detail-top"><button class="btn btn-sm btn-outline" onclick="PG.opnBack()">‹ 목록</button></div>';
-                return header + '<div class="opn-detail-grid"><div class="opn-detail-main">' + infoCard + adhocCard + procCard + '</div><div class="opn-detail-side">' + histCard + linkCard + '</div></div>';
+                return header + '<div class="opn-detail-grid"><div class="opn-detail-main">' + infoCard + procCard + '</div><div class="opn-detail-side">' + histCard + linkCard + '</div></div>';
             }
 
             /* ===== 탭2: 산업안전보건위원회 운영 ===== */

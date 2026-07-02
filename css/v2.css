@@ -972,13 +972,6 @@ textarea:focus-visible, [tabindex]:focus-visible, .psub-tab:focus-visible, .opn-
 .opn-done-k { font-size: var(--fs-12); color: var(--text-gray); font-weight: var(--fw-medium); }
 .opn-done-summary b { font-size: var(--fs-14); color: var(--text-black); }
 
-/* 수시 위험성평가 카드 */
-.opn-adhoc { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.opn-adhoc-l { display: flex; align-items: flex-start; gap: 10px; flex: 1; min-width: 220px; }
-.opn-adhoc-ic { flex: none; font-size: var(--fs-22); line-height: 1.2; color: var(--status-warning-fg); }
-.opn-adhoc-h { font-size: var(--fs-14); font-weight: var(--fw-semibold); color: var(--main-dark2); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.opn-adhoc-d { font-size: var(--fs-12); color: var(--text-gray); line-height: 1.55; margin-top: 4px; }
-
 /* 처리 이력 타임라인 */
 .opn-hist { list-style: none; margin: 0; padding: 0; }
 .opn-hist-item { position: relative; display: flex; gap: 12px; padding: 0 0 14px 4px; }
