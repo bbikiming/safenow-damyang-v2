@@ -59,10 +59,16 @@
             { id: 'sbm-risk',     label: '위험성평가',         icon: 'alert',    href: 'risk-list.html',       screen: 'SFR-007' },
             { id: 'sbm-hazard',   label: '유해·위험요인 관리', icon: 'alert',    href: 'proc-list.html',       screen: 'SFR-007·019' },
             { id: 'sbm-edu',      label: '안전보건교육',       icon: 'user',     href: 'edu.html',             screen: 'SFR-004·010' },  // 전용 화면 (기획 v1 §4)
-            { id: 'sbm-opinion',  label: '의견청취',           icon: 'bell',     href: 'menu.html?m=opinion',  screen: 'SFR-011' },
             { id: 'sbm-contract', label: '도급관리',           icon: 'building', href: 'menu.html?m=contract', screen: 'SFR-013' },
             { id: 'sbm-improve',  label: '개선조치',           icon: 'check',    href: 'menu.html?m=improve',  screen: 'SFR-003' },
             { id: 'sbm-comply',   label: '이행관리',           icon: 'coins',    href: 'menu.html?m=comply',   screen: 'SFR-008·014' },
+        ]},
+
+        // GNB 4. 의견청취 (SFR-011) — 대메뉴 승격. 화면 내부 3탭을 SNB 3메뉴로 분리 (menu.html?m=opinion&sub=)
+        { id: 'opinion', label: '의견청취', icon: 'bell', items: [
+            { id: 'opn-voice',     label: '의견청취·건의함',   icon: 'bell',  href: 'menu.html?m=opinion&sub=voice',     screen: 'SFR-011' },
+            { id: 'opn-committee', label: '산업안전보건위원회', icon: 'users', href: 'menu.html?m=opinion&sub=committee', screen: 'SFR-011' },
+            { id: 'opn-council',   label: '협의체·점검표',     icon: 'check', href: 'menu.html?m=opinion&sub=council',   screen: 'SFR-011' },
         ]},
 
         // GNB 4. 인력 평가 (EVL / SFR-009) — 안전보건관리책임자·관리감독자 업무수행평가 (중처법 시행령 §4①5호 반기 1회 · 산안법 §15·§16)

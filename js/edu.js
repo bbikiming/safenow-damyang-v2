@@ -44,26 +44,6 @@
     const DB = load();
     persist();   // 최초 시드도 저장 — 화면 이동 후 등록·출석 상태 유지
 
-    /* ── 요약 바 ── */
-    function renderSummary() {
-        const done = DB.courses.filter(c => c.status === '확정').length;
-        const planned = DB.courses.filter(c => c.status === '예정').length;
-        const complete = DB.people.filter(p => p.done >= p.req).length;
-        const rate = Math.round(complete / DB.people.length * 100);
-        document.getElementById('edu-summary').innerHTML =
-            '<div class="sbm-summary-item sbm-summary-rate">' +
-                '<span class="sbm-summary-label">이수율</span>' +
-                '<div class="progress"><div class="progress-bar ' + (rate >= 70 ? 'green' : 'warning') + '" style="width:' + rate + '%"></div></div>' +
-                '<span class="sbm-summary-value">' + rate + '%</span></div>' +
-            '<div class="sbm-summary-divider"></div>' +
-            '<div class="sbm-summary-item"><span class="sbm-summary-label">예정 교육</span>' +
-                (planned ? '<span class="sbm-due-badge">● ' + planned + '건</span>' : '<span class="sbm-due-badge none">없음</span>') + '</div>' +
-            '<div class="sbm-summary-divider"></div>' +
-            '<div class="sbm-summary-item"><span class="sbm-summary-label">완료 교육</span><span class="sbm-summary-value">' + done + '건</span></div>' +
-            '<div class="sbm-summary-divider"></div>' +
-            '<div class="sbm-summary-item"><span class="sbm-summary-label">담당부서</span><span class="sbm-summary-value" style="font-size:13px;">행정과(교육담당)</span></div>';
-    }
-
     /* ── 탭 ── */
     const tabs = document.querySelectorAll('#edu-tabs .tab');
     tabs.forEach(t => t.addEventListener('click', () => {
@@ -228,7 +208,7 @@
         E.notify('교육 D-안내 — ' + c.name + ' (' + c.date + ') 대상자 ' + c.targets.length + '명', '문자');
     }
 
-    function renderAll() { renderSummary(); renderCards(); renderPeople(); renderCatalog(); }
+    function renderAll() { renderCards(); renderPeople(); renderCatalog(); }
     renderAll();
 
     window.EDU = { openCreate, openAttend, finalize, openResult, notifyIncomplete, openCheck, remind };

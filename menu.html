@@ -14,16 +14,20 @@
         /* 공통 레이아웃 1개를 대메뉴들이 공유 — ?m= 파라미터로 데이터만 주입.
            위험성평가(risk)·유해·위험요인 관리(hazard)는 기존 프로토타입 UX 전용 화면으로 리다이렉트. */
         (function () {
-            var m = new URLSearchParams(location.search).get('m') || 'policy';
-            document.body.setAttribute('data-dy-page', 'sbm-' + m);
+            var p = new URLSearchParams(location.search);
+            var m = p.get('m') || 'policy';
+            if (m === 'opinion') {
+                var sub = p.get('sub');
+                if (['voice', 'committee', 'council'].indexOf(sub) === -1) sub = 'voice';
+                document.body.setAttribute('data-dy-page', 'opn-' + sub);
+            } else {
+                document.body.setAttribute('data-dy-page', 'sbm-' + m);
+            }
         })();
     </script>
     <main>
         <div class="dy-page-title"><span class="dy-page-dot"></span><h1 id="sbm-title">…</h1></div>
         <div class="dy-page-subtitle" id="sbm-subtitle"></div>
-
-        <!-- ① 요약 바: 이행률 · 시기도래 뱃지 · 담당부서 -->
-        <div class="sbm-summary" id="sbm-summary"></div>
 
         <section id="pane-program" data-pane="program"></section>
     </main>
