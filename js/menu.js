@@ -948,10 +948,9 @@
                 } else if (act === 'reject') {
                     const reason = valOf('opn-r-reason');
                     if (!reason) { V.toast('반려 사유를 입력하세요'); return; }
-                    if (!window.confirm('반려 처리하시겠습니까? 작성자에게 사유가 발송됩니다.')) return;
+                    if (!window.confirm('반려 처리하시겠습니까? 되돌리려면 재처리해야 합니다.')) return;
                     o.status = '반려'; o.rejectReason = reason;
                     pushHist(o, '반려', reason);
-                    E.notify('의견 반려 안내 — 사유가 작성자에게 발송되었습니다', '문자');
                     render(); V.toast('반려 처리되었습니다');
                 }
             };
@@ -1356,12 +1355,12 @@
                         '<label>완료 예정일<input type="date" id="opn-m-due" value="' + addDays(PROTO_TODAY, 14) + '"></label></div>' +
                         '<label class="opn-inl-full">개선 내용<textarea id="opn-m-desc">' + V.esc(o.title || '') + '</textarea></label>';
                     const rejectForm = '<label class="opn-inl-full">반려 사유<textarea id="opn-r-reason" placeholder="반려 사유를 입력하세요"></textarea></label>' +
-                        '<div class="opn-banner danger" style="margin-top:8px;">반려 시 작성자에게 사유가 문자로 발송되며, 되돌리려면 재처리해야 합니다.</div>';
+                        '<div class="opn-banner danger" style="margin-top:8px;">반려 사유가 기록되며, 되돌리려면 재처리해야 합니다.</div>';
                     procBody = '<div class="opn-banner warn">접수 대기 중 — 의견을 검토하고 조치 방법을 선택하세요.</div>' +
                         '<div class="opn-act-list">' +
                         opt('inspect', '현장점검 실시', '안전점검이 자동 생성됩니다.', inspectForm) +
                         opt('improve', '개선조치 바로 생성', '개선조치 메뉴에 조치 항목이 자동 생성됩니다.', improveForm) +
-                        opt('reject', '반려', '반려 사유가 작성자에게 문자로 발송됩니다.', rejectForm) +
+                        opt('reject', '반려', '반려 사유를 기록하고 종결합니다.', rejectForm) +
                         '</div>' +
                         '<div class="opn-proc-foot"><button class="btn btn-primary" id="opn-act-save" disabled onclick="PG.opnActSave(\'' + o.id + '\')">저장</button></div>';
                 } else if (o.status === '점검중') {
@@ -1386,7 +1385,7 @@
                         (o.result ? '<div class="opn-proc-note">' + V.esc(o.result) + '</div>' : '') +
                         '<div class="opn-proc-foot"><button class="btn btn-outline" onclick="PG.opnReopen(\'' + o.id + '\')">재처리</button></div>';
                 } else { /* 반려 */
-                    procBody = '<div class="opn-banner danger">반려 처리됨 — 작성자에게 반려 사유가 발송되었습니다.</div>' +
+                    procBody = '<div class="opn-banner danger">반려 처리됨 — 반려 사유가 기록되었습니다.</div>' +
                         '<div class="opn-proc-note">' + V.esc(o.rejectReason || '-') + '</div>' +
                         '<div class="opn-proc-foot"><button class="btn btn-outline" onclick="PG.opnReopen(\'' + o.id + '\')">재처리</button></div>';
                 }
