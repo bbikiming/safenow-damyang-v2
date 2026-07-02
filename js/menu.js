@@ -148,16 +148,20 @@
                 '<button class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
                 '<button class="btn btn-primary" onclick="DYV2.closeModal(); DYV2.toast(\'근거·고려사항이 저장되었습니다\')">저장</button>');
 
-            /* 점검표 관리 모달 (CRUD) */
-            PG.policyChecklist = () => V.openModal('경영방침 점검표 관리',
-                subT('점검 항목 · 결과유형(O/X·텍스트) · 관련 근거를 직접 등록합니다.') +
-                '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>영역</th><th>점검 항목</th><th>결과유형</th><th>관련 근거</th><th></th></tr></thead><tbody id="policy-chk-tbody">' +
-                CHK.map(r => '<tr><td><input value="' + r[0] + '" style="width:100%"></td><td><input value="' + r[1] + '" style="width:100%"></td><td><select><option' + (r[2] === 'O / X' ? ' selected' : '') + '>O / X</option><option' + (r[2] === '텍스트' ? ' selected' : '') + '>텍스트</option></select></td><td><input value="' + r[3] + '" style="width:100%"></td><td>' + delBtn + '</td></tr>').join('') +
-                '</tbody></table></div>' +
-                '<button class="btn btn-sm btn-outline" style="margin-top:8px;" onclick="PG.policyChkItemAdd()">+ 점검 항목 추가</button>' +
-                '<p style="font-size:12px; color:var(--text-gray); margin-top:10px;">저장한 항목은 [이행점검 작성] 점검표에 사용됩니다. X 판정 항목은 확정 시 개선조치로 자동 등록됩니다.</p>',
-                '<button class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
-                '<button class="btn btn-primary" onclick="DYV2.closeModal(); DYV2.toast(\'점검표가 저장되었습니다\')">저장</button>');
+            /* 점검표 관리 모달 (CRUD) — 관련 근거는 근거법령 사전(LAW_DICT)에서 선택 인용 */
+            PG.policyChecklist = () => {
+                const lawOpts = Object.keys(T.LAW_DICT || {}).map(k => '<option value="' + V.esc(k) + '">').join('');
+                V.openModal('경영방침 점검표 관리',
+                    '<datalist id="pol-law-list">' + lawOpts + '</datalist>' +
+                    subT('점검 항목 · 결과유형(O/X·텍스트) · 관련 근거는 근거법령 사전에서 선택 인용합니다.') +
+                    '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>영역</th><th>점검 항목</th><th>결과유형</th><th>관련 근거</th><th></th></tr></thead><tbody id="policy-chk-tbody">' +
+                    CHK.map(r => '<tr><td><input value="' + r[0] + '" style="width:100%"></td><td><input value="' + r[1] + '" style="width:100%"></td><td><select><option' + (r[2] === 'O / X' ? ' selected' : '') + '>O / X</option><option' + (r[2] === '텍스트' ? ' selected' : '') + '>텍스트</option></select></td><td><input value="' + r[3] + '" list="pol-law-list" style="width:100%"></td><td>' + delBtn + '</td></tr>').join('') +
+                    '</tbody></table></div>' +
+                    '<button class="btn btn-sm btn-outline" style="margin-top:8px;" onclick="PG.policyChkItemAdd()">+ 점검 항목 추가</button>' +
+                    '<p style="font-size:12px; color:var(--text-gray); margin-top:10px;">저장한 항목은 [이행점검 작성] 점검표에 사용됩니다. 관련 근거는 사전에 등록된 법령에서 선택되며, X 판정 항목은 확정 시 개선조치로 자동 등록됩니다.</p>',
+                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
+                    '<button class="btn btn-primary" onclick="DYV2.closeModal(); DYV2.toast(\'점검표가 저장되었습니다\')">저장</button>');
+            };
 
             /* '추가' 폼 — 단일 모달 규칙: 모달이 열려 있으면 모달 본문 안 인라인(.stack-inline)으로,
                모달이 없으면(페이지 위) 단일 오버레이로 표시(적층 방지). */
@@ -222,7 +226,7 @@
                 '<span class="k">영역</span><input id="chk-add-area" type="text" placeholder="예: 목표·KPI">' +
                 '<span class="k">점검 항목</span><input id="chk-add-item" type="text" placeholder="점검할 항목">' +
                 '<span class="k">결과유형</span><select id="chk-add-type"><option>O / X</option><option>텍스트</option></select>' +
-                '<span class="k">관련 근거</span><input id="chk-add-basis" type="text" placeholder="예: 중대재해처벌법 시행령 제4조제1호">' +
+                '<span class="k">관련 근거</span><input id="chk-add-basis" list="pol-law-list" type="text" placeholder="근거법령 사전에서 선택 (예: 산업안전보건법 제36조)">' +
                 '</div>',
                 '<button class="btn btn-secondary" onclick="PG._stackClose()">취소</button>' +
                 '<button class="btn btn-primary" onclick="PG.policyChkItemAddSave()">등록</button>');
@@ -232,7 +236,7 @@
                 const ty = (document.getElementById('chk-add-type') || {}).value || 'O / X';
                 const ba = (document.getElementById('chk-add-basis') || {}).value || '';
                 const tb = document.getElementById('policy-chk-tbody');
-                if (tb) { const tr = document.createElement('tr'); const s = '<select><option' + (ty === 'O / X' ? ' selected' : '') + '>O / X</option><option' + (ty === '텍스트' ? ' selected' : '') + '>텍스트</option></select>'; tr.innerHTML = '<td><input value="' + V.esc(ar) + '" style="width:100%"></td><td><input value="' + V.esc(it) + '" style="width:100%"></td><td>' + s + '</td><td><input value="' + V.esc(ba) + '" style="width:100%"></td><td>' + delBtn + '</td>'; tb.appendChild(tr); }
+                if (tb) { const tr = document.createElement('tr'); const s = '<select><option' + (ty === 'O / X' ? ' selected' : '') + '>O / X</option><option' + (ty === '텍스트' ? ' selected' : '') + '>텍스트</option></select>'; tr.innerHTML = '<td><input value="' + V.esc(ar) + '" style="width:100%"></td><td><input value="' + V.esc(it) + '" style="width:100%"></td><td>' + s + '</td><td><input value="' + V.esc(ba) + '" list="pol-law-list" style="width:100%"></td><td>' + delBtn + '</td>'; tb.appendChild(tr); }
                 PG._stackClose(); V.toast('점검 항목이 추가되었습니다');
             };
 
@@ -244,35 +248,63 @@
                 if (!POL.isActive(v)) { V.toast('현행(결재 승인완료) 방침에서만 점검표 근거를 등록·수정할 수 있습니다'); return; }
                 const items = (T.CHECKLIST_PRESETS && T.CHECKLIST_PRESETS.policy) || [];
                 const opts = Object.keys(T.LAW_DICT || {}).map(k => '<option value="' + V.esc(k) + '">').join('');
-                const rows = items.map((it, i) => {
+                /* 행 HTML 생성 — 영역·항목·유형·근거 모두 편집 가능(추가/삭제 지원) */
+                const rowHtml = it => {
                     const has = !!(T.LAW_DICT || {})[it.basis];
+                    const isText = it.type === '텍스트';
                     return '<tr>' +
-                        '<td><span class="chip-mini wt">' + V.esc(it.area) + '</span></td>' +
-                        '<td style="min-width:150px;">' + V.esc(it.item) + '</td>' +
-                        '<td><span class="chip-mini ' + (it.type === '텍스트' ? 'wt-elec' : 'st-done') + '">' + V.esc(it.type) + '</span></td>' +
-                        '<td style="min-width:200px;"><input id="chkb-' + i + '" list="chkb-laws" value="' + V.esc(it.basis || '') + '" style="width:100%" placeholder="예: 산업안전보건법 제36조"></td>' +
-                        '<td style="white-space:nowrap;"><span id="chkb-stat-' + i + '" class="chip-mini ' + (has ? 'st-done' : 'wt-attach') + '">' + (has ? '조문 등록됨' : '조문 미등록') + '</span></td>' +
-                        '<td><button class="btn btn-sm btn-outline" onclick="PG.polChkLawDetail(' + i + ')">조문 상세</button></td>' +
+                        '<td><input class="cb-area" value="' + V.esc(it.area || '') + '" style="width:100%" placeholder="영역"></td>' +
+                        '<td style="min-width:150px;"><input class="cb-item" value="' + V.esc(it.item || '') + '" style="width:100%" placeholder="점검 항목"></td>' +
+                        '<td><select class="cb-type"><option' + (isText ? '' : ' selected') + '>O / X</option><option' + (isText ? ' selected' : '') + '>텍스트</option></select></td>' +
+                        '<td style="min-width:200px;"><input class="cb-basis" list="chkb-laws" value="' + V.esc(it.basis || '') + '" style="width:100%" placeholder="예: 산업안전보건법 제36조"></td>' +
+                        '<td style="white-space:nowrap;"><span class="cb-stat chip-mini ' + (has ? 'st-done' : 'wt-attach') + '">' + (has ? '조문 등록됨' : '조문 미등록') + '</span></td>' +
+                        '<td style="white-space:nowrap;"><button class="btn btn-sm btn-outline" onclick="PG.polChkLawDetail(this)">조문 상세</button> ' +
+                        '<button class="btn btn-sm btn-outline" onclick="PG.polChkRowDel(this)" title="행 삭제">삭제</button></td>' +
                         '</tr>';
-                }).join('');
+                };
+                PG._chkbRowHtml = rowHtml;
+                const rows = items.map(rowHtml).join('');
                 V.openModal('점검표 관련 근거 설정 — 현행본 v' + v.ver,
                     '<datalist id="chkb-laws">' + opts + '</datalist>' +
-                    '<p style="font-size:12px; color:var(--text-gray); margin:0 0 10px; line-height:1.6;">각 점검 항목에 적용할 <b>관련 근거(법령·조항)</b>를 등록·수정합니다. [조문 상세]에서 조·항·내용을 등록하면 점검표·점검표 뷰어의 근거 태그에 <b>호버 툴팁</b>으로 표시됩니다. <b>결재 승인완료된 현행본에서만</b> 가능합니다.</p>' +
-                    '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>영역</th><th>점검 항목</th><th>유형</th><th>관련 근거</th><th>조문</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>',
+                    '<p style="font-size:12px; color:var(--text-gray); margin:0 0 10px; line-height:1.6;">각 점검 항목의 <b>관련 근거(법령·조항)</b>를 등록·수정하고, 하단 [+ 점검 항목 추가]로 <b>행을 추가</b>하거나 [삭제]로 <b>제거</b>할 수 있습니다. [조문 상세]에서 조·항·내용을 등록하면 점검표·점검표 뷰어의 근거 태그에 <b>호버 툴팁</b>으로 표시됩니다. <b>결재 승인완료된 현행본에서만</b> 가능합니다.</p>' +
+                    '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>영역</th><th>점검 항목</th><th>유형</th><th>관련 근거</th><th>조문</th><th></th></tr></thead><tbody id="pol-chkb-tbody">' + rows + '</tbody></table></div>' +
+                    '<button class="btn btn-sm btn-outline" style="margin-top:8px;" onclick="PG.polChkRowAdd()">+ 점검 항목 추가</button>',
                     '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
                     '<button class="btn btn-primary" onclick="PG.polChkBasisSave()">저장</button>');
             };
+            PG.polChkRowAdd = () => {
+                const tb = document.getElementById('pol-chkb-tbody');
+                if (!tb || !PG._chkbRowHtml) return;
+                const tmp = document.createElement('tbody');
+                tmp.innerHTML = PG._chkbRowHtml({ area: '', item: '', type: 'O / X', basis: '' });
+                const tr = tmp.firstElementChild;
+                tb.appendChild(tr);
+                const f = tr.querySelector('.cb-area'); if (f) f.focus();
+            };
+            PG.polChkRowDel = btn => { const tr = btn.closest('tr'); if (tr) tr.remove(); };
             PG.polChkBasisSave = () => {
-                const items = (T.CHECKLIST_PRESETS && T.CHECKLIST_PRESETS.policy) || [];
-                items.forEach((it, i) => { const el = document.getElementById('chkb-' + i); if (el) it.basis = el.value.trim(); });
+                const tb = document.getElementById('pol-chkb-tbody');
+                if (!tb) { V.closeModal(); return; }
+                const list = [];
+                Array.prototype.slice.call(tb.querySelectorAll('tr')).forEach(tr => {
+                    const area = ((tr.querySelector('.cb-area') || {}).value || '').trim();
+                    const item = ((tr.querySelector('.cb-item') || {}).value || '').trim();
+                    const type = ((tr.querySelector('.cb-type') || {}).value || 'O / X').trim();
+                    const basis = ((tr.querySelector('.cb-basis') || {}).value || '').trim();
+                    if (!area && !item) return; // 빈 행 제외
+                    list.push({ area: area, item: item, type: type, basis: basis });
+                });
+                T.CHECKLIST_PRESETS = T.CHECKLIST_PRESETS || {};
+                T.CHECKLIST_PRESETS.policy = list;
                 V.closeModal(); render(); V.toast('점검표 관련 근거가 저장되었습니다');
             };
-            PG.polChkLawDetail = i => {
-                const items = (T.CHECKLIST_PRESETS && T.CHECKLIST_PRESETS.policy) || [];
-                const it = items[i]; if (!it) return;
-                const key = ((document.getElementById('chkb-' + i) || {}).value || it.basis || '').trim();
+            PG.polChkLawDetail = btn => {
+                const tr = btn.closest('tr'); if (!tr) return;
+                PG._cldRow = tr;
+                const key = ((tr.querySelector('.cb-basis') || {}).value || '').trim();
+                const itemName = ((tr.querySelector('.cb-item') || {}).value || '').trim();
                 const d = (T.LAW_DICT || {})[key] || {};
-                PG._stackOpen('조문 상세 등록 · 점검 항목 「' + V.esc(it.item) + '」',
+                PG._stackOpen('조문 상세 등록 · 점검 항목 「' + V.esc(itemName) + '」',
                     '<div class="preset-form-grid">' +
                     '<span class="k">근거 표기</span><input id="cld-key" type="text" value="' + V.esc(key) + '" placeholder="예: 산업안전보건법 제36조">' +
                     '<span class="k">법령</span><input id="cld-law" type="text" value="' + V.esc(d.law || '') + '" placeholder="예: 산업안전보건법">' +
@@ -282,9 +314,9 @@
                     '<span class="k">조문 내용</span><textarea id="cld-text" rows="3" style="width:100%; resize:vertical;" placeholder="조문 본문을 입력하세요">' + V.esc(d.text || '') + '</textarea>' +
                     '</div>',
                     '<button class="btn btn-secondary" onclick="PG._stackClose()">취소</button>' +
-                    '<button class="btn btn-primary" onclick="PG.polChkLawDetailSave(' + i + ')">저장</button>');
+                    '<button class="btn btn-primary" onclick="PG.polChkLawDetailSave()">저장</button>');
             };
-            PG.polChkLawDetailSave = i => {
+            PG.polChkLawDetailSave = () => {
                 const key = ((document.getElementById('cld-key') || {}).value || '').trim();
                 if (!key) { V.toast('근거 표기를 입력하세요'); return; }
                 T.LAW_DICT = T.LAW_DICT || {};
@@ -295,8 +327,11 @@
                     title: ((document.getElementById('cld-title') || {}).value || '').trim(),
                     text: ((document.getElementById('cld-text') || {}).value || '').trim(),
                 };
-                const inp = document.getElementById('chkb-' + i); if (inp) inp.value = key;
-                const stat = document.getElementById('chkb-stat-' + i); if (stat) { stat.className = 'chip-mini st-done'; stat.textContent = '조문 등록됨'; }
+                const tr = PG._cldRow;
+                if (tr) {
+                    const inp = tr.querySelector('.cb-basis'); if (inp) inp.value = key;
+                    const stat = tr.querySelector('.cb-stat'); if (stat) { stat.className = 'cb-stat chip-mini st-done'; stat.textContent = '조문 등록됨'; }
+                }
                 PG._stackClose(); V.toast('조문 상세가 등록되었습니다 — 근거 태그 호버 시 표시됩니다');
             };
 
@@ -768,6 +803,11 @@
                             { role: '수급인 측', dept: '(주)안전건설', position: '현장소장', name: '강현장' },
                             { role: '수급인 측', dept: '(주)클린환경', position: '반장', name: '오환경' },
                         ],
+                        results: [
+                            { round: '2026-06', date: '2026-06-15', content: '5월 합동순회점검 결과 공유, 하절기 온열질환 예방대책 논의', result: '온열질환 예방 그늘막·아이스조끼 현장 배치 완료', status: '완료' },
+                            { round: '2026-05', date: '2026-05-14', content: '4월 협의체 운영 결과 점검, 수급인 안전교육 이수 현황 점검', result: '미이수자 3명 추가 교육 실시 완료', status: '완료' },
+                            { round: '2026-04', date: '2026-04-16', content: '신규 수급업체 (주)클린환경 합류 안내, 작업장 순회점검 주기 조정 논의', result: '순회점검 주기 월 2회로 조정 — 시행 여부 후속 확인 필요', status: '진행중' },
+                        ],
                         checklists: [
                             { id: 'CHK-06', cat: '용역', date: '2026-06-20', inspector: '정안전', result: '미흡', appr: '미상신', items: [
                                 { q: '도급 시 안전·보건 협의체를 구성·운영하였는가', r: '확인' },
@@ -814,6 +854,7 @@
             const linkChips = o => (o.inspectLink ? '<span class="chip-mini wt-elec"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:3px;" aria-hidden="true"><path d="M9 15a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M15 9a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/></svg>안전점검 연동</span> ' : '') + (o.link ? '<span class="chip-mini pdca"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:3px;" aria-hidden="true"><path d="M9 15a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M15 9a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/></svg>개선조치 연동</span>' : '');
             const find = id => S.VOICES.find(x => x.id === id);
             const nextNum = arr => { let m = 0; arr.forEach(x => { const g = /(\d+)$/.exec(x.id || ''); if (g && +g[1] > m) m = +g[1]; }); return m + 1; };
+            const addDays = (dateStr, n) => { const dt = new Date((dateStr || '2026-06-30') + 'T00:00:00Z'); if (isNaN(dt.getTime())) return '2026-07-31'; dt.setUTCDate(dt.getUTCDate() + n); return dt.toISOString().slice(0, 10); };
 
             /* ===== 라우터 ===== */
             PG.opnGo = (tab, view, id) => { if (tab) S.tab = tab; if (view) S.view = view; if (id !== undefined) S.id = id; render(); };
@@ -864,6 +905,7 @@
             PG.opnBack = () => PG.opnGo(S.tab, 'list', null);
             PG.opnNew = () => PG.opnGo('voice', 'form', null);
             PG.opnPage = p => { S.page = p < 1 ? 1 : p; render(); };
+            PG.opnSetKw = v => { S.fkw = v; S.page = 1; render(); };
             PG.opnSetCat = v => { S.fcat = v; S.page = 1; render(); };
             PG.opnSetStatus = v => { S.fstatus = v; S.page = 1; render(); };
             PG.opnSetDept = v => { S.fdept = v; S.page = 1; render(); };
@@ -894,9 +936,9 @@
                     '<div class="preset-form-grid">' +
                     '<span class="k">담당 배정</span><select id="opn-owner"><option' + (o.owner === '재난안전과' ? ' selected' : '') + '>재난안전과</option><option' + (o.owner === '행정과' ? ' selected' : '') + '>행정과</option><option' + (o.owner === '환경과' ? ' selected' : '') + '>환경과</option><option' + (o.owner === '도시과' ? ' selected' : '') + '>도시과</option></select>' +
                     '<span class="k">조치 방법</span><div style="display:flex; flex-direction:column; gap:6px;">' +
-                    '<label style="font-size:12px;"><input type="radio" name="opn-act" value="inspect" checked> 현장점검 실시 — 점검 후 조치 판단(안전점검 연동)</label>' +
-                    '<label style="font-size:12px;"><input type="radio" name="opn-act" value="improve"> 개선조치 바로 생성 — 위험 명확</label>' +
-                    '<label style="font-size:12px;"><input type="radio" name="opn-act" value="reject"> 반려 — 사유가 작성자에게 알림 발송</label></div>' +
+                    '<label style="font-size:var(--fs-12);"><input type="radio" name="opn-act" value="inspect" checked> 현장점검 실시 — 점검 후 조치 판단(안전점검 연동)</label>' +
+                    '<label style="font-size:var(--fs-12);"><input type="radio" name="opn-act" value="improve"> 개선조치 바로 생성 — 위험 명확</label>' +
+                    '<label style="font-size:var(--fs-12);"><input type="radio" name="opn-act" value="reject"> 반려 — 사유가 작성자에게 알림 발송</label></div>' +
                     '<span class="k">처리 의견·사유</span><textarea id="opn-note" placeholder="점검 계획 / 조치 내용 / 반려 사유"></textarea></div>',
                     '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
                     '<button class="btn btn-primary" id="opn-proc-save">저장</button>');
@@ -936,6 +978,7 @@
             };
             PG.opnDone = id => {
                 const o = find(id); if (!o) return;
+                if (!o.plan) { V.toast('추진계획을 먼저 입력하세요'); return; }
                 V.openModal('추진결과 입력(완료 처리) — ' + V.esc(o.title),
                     '<div class="preset-form-grid"><span class="k">추진결과</span><textarea id="opn-result" placeholder="최종 조치 결과를 입력하세요">' + V.esc(o.result || '') + '</textarea></div>',
                     '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button><button class="btn btn-primary" id="opn-done-save">완료 처리</button>');
@@ -968,16 +1011,30 @@
                 syncAtt();
             };
             PG.opnMtgRemAtt = ix => { if (!S.mtgDraft) return; S.mtgDraft.attendees.splice(ix, 1); syncAtt(); };
+            /* 의결사항 — 세부 방침(goalEditRow)과 동일한 행 추가/삭제 패턴, 저장 시점에 DOM에서 직접 수집 */
+            const decisionRow = val => '<div class="goal-row"><input type="text" class="mf-decision" value="' + V.esc(val) + '" placeholder="의결사항을 입력하세요"><button type="button" class="goal-del" onclick="this.closest(\'.goal-row\').remove()" aria-label="삭제">×</button></div>';
+            PG.opnMtgDecisionAdd = () => { const l = document.getElementById('mf-decisions'); if (!l) return; l.insertAdjacentHTML('beforeend', decisionRow('')); const ii = l.querySelectorAll('input'); if (ii.length) ii[ii.length - 1].focus(); };
             PG.opnMtgFormSave = () => {
                 const round = ((document.getElementById('mf-round') || {}).value || '').trim();
                 if (!round) { V.toast('회차를 입력하세요'); return; }
                 const editing = S.mtgDraft && S.mtgDraft.key !== '__new__';
-                const rec = { round: round, type: (document.getElementById('mf-type') || {}).value || '정기', date: (document.getElementById('mf-date') || {}).value || '-', place: ((document.getElementById('mf-place') || {}).value || '').trim() || '-', attendeeList: (S.mtgDraft ? S.mtgDraft.attendees.slice() : []), agenda: ((document.getElementById('mf-agenda') || {}).value || '').trim() || '-', decisions: [], status: '작성' };
-                if (editing) { const ix = S.COMMITTEE.meetings.findIndex(x => x.round === S.mtgDraft.key); if (ix >= 0) { rec.decisions = S.COMMITTEE.meetings[ix].decisions || []; rec.status = S.COMMITTEE.meetings[ix].status || '작성'; S.COMMITTEE.meetings[ix] = rec; } else S.COMMITTEE.meetings.unshift(rec); }
+                const decisions = Array.prototype.slice.call(document.querySelectorAll('#mf-decisions .mf-decision')).map(i => i.value.trim()).filter(Boolean);
+                const linkAgenda = !!(document.getElementById('mf-link-agenda') || {}).checked;
+                const rec = { round: round, type: (document.getElementById('mf-type') || {}).value || '정기', date: (document.getElementById('mf-date') || {}).value || '-', place: ((document.getElementById('mf-place') || {}).value || '').trim() || '-', attendeeList: (S.mtgDraft ? S.mtgDraft.attendees.slice() : []), agenda: ((document.getElementById('mf-agenda') || {}).value || '').trim() || '-', decisions: decisions, status: '작성' };
+                if (editing) { const ix = S.COMMITTEE.meetings.findIndex(x => x.round === S.mtgDraft.key); if (ix >= 0) { rec.status = S.COMMITTEE.meetings[ix].status || '작성'; S.COMMITTEE.meetings[ix] = rec; } else S.COMMITTEE.meetings.unshift(rec); }
                 else { S.COMMITTEE.meetings.unshift(rec); }
                 S.mtgDraft = null;
+                if (linkAgenda && decisions.length) {
+                    const due = addDays(rec.date, 30);
+                    decisions.forEach(d => S.COMMITTEE.agendaItems.push({ agenda: d, dept: '재난안전과', due: due, status: '진행' }));
+                }
                 PG.opnGo('committee', 'mdetail', rec.round);
-                V.toast('회의록이 ' + (editing ? '수정' : '작성') + '되었습니다');
+                V.toast('회의록이 ' + (editing ? '수정' : '작성') + '되었습니다' + (linkAgenda && decisions.length ? ' — 의결사항 ' + decisions.length + '건이 안건 부서이행 현황에 등록되었습니다' : ''));
+            };
+            PG.opnMtgConfirm = round => {
+                const mt = (S.COMMITTEE.meetings || []).find(x => x.round === round); if (!mt) return;
+                if (!window.confirm('이 회의록을 확정하시겠습니까? 확정 후에는 편집할 수 없습니다.')) return;
+                mt.status = '확정'; render(); V.toast('회의록이 확정되었습니다');
             };
 
             /* ===== 위원 구성 / 안건 부서이행 / 협의체 운영 — 관리(CRUD) ===== */
@@ -1045,46 +1102,116 @@
                 document.getElementById('co-cycle-save').addEventListener('click', () => { S.COUNCIL.cycle = (document.getElementById('co-cycle') || {}).value; V.closeModal(); render(); V.toast('운영 주기가 변경되었습니다'); });
             };
 
+            /* ===== 협의체 운영 결과 기록 — 단일 모달 CRUD (라이트, 회의록만큼 무겁게 만들지 않음) ===== */
+            function councilResultModal(i) {
+                const list = S.COUNCIL.results || (S.COUNCIL.results = []);
+                const ex = i >= 0 ? list[i] : null;
+                const stOpts = ['진행중', '완료'].map(s => '<option' + (ex && ex.status === s ? ' selected' : '') + '>' + s + '</option>').join('');
+                V.openModal((ex ? '운영 결과 수정' : '운영 결과 등록') + ' — 안전보건 협의체',
+                    '<div class="preset-form-grid">' +
+                    '<span class="k">회차</span><input id="cr-round" type="text" value="' + V.esc(ex ? ex.round : '') + '" placeholder="예: 2026-07">' +
+                    '<span class="k">일자</span><input id="cr-date" type="date" value="' + (ex ? ex.date : '2026-06-30') + '">' +
+                    '<span class="k">참석·논의 내용</span><textarea id="cr-content" placeholder="참석 현황 및 논의 내용을 입력하세요">' + V.esc(ex ? ex.content : '') + '</textarea>' +
+                    '<span class="k">결과 요약</span><textarea id="cr-result" placeholder="협의 결과를 입력하세요">' + V.esc(ex ? ex.result : '') + '</textarea>' +
+                    '<span class="k">상태</span><select id="cr-status">' + stOpts + '</select>' +
+                    '</div>',
+                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button><button class="btn btn-primary" id="cr-save">저장</button>');
+                document.getElementById('cr-save').addEventListener('click', () => {
+                    const round = ((document.getElementById('cr-round') || {}).value || '').trim();
+                    if (!round) { V.toast('회차를 입력하세요'); return; }
+                    const rec = { round: round, date: (document.getElementById('cr-date') || {}).value || '-', content: ((document.getElementById('cr-content') || {}).value || '').trim(), result: ((document.getElementById('cr-result') || {}).value || '').trim(), status: (document.getElementById('cr-status') || {}).value };
+                    if (ex) list[i] = rec; else list.unshift(rec);
+                    V.closeModal(); render(); V.toast('협의체 운영 결과가 ' + (ex ? '수정' : '등록') + '되었습니다');
+                });
+            }
+            PG.opnResultAdd = () => councilResultModal(-1);
+            PG.opnResultEdit = i => councilResultModal(i);
+            PG.opnResultDel = i => { if (!window.confirm('이 운영 결과를 삭제하시겠습니까?')) return; S.COUNCIL.results.splice(i, 1); render(); V.toast('운영 결과가 삭제되었습니다'); };
+
             /* ===== 점검결과지 (협의체 점검표) — 생성·수정·조회(상세)·삭제 + 온나라 결재 + PDF ===== */
             function opnChkModal(ex) {
                 const isEdit = !!ex;
+                const DEPT4 = DEPTS.slice(0, 4);
                 const catOpts = CHK_CATS.map(c => '<option' + (ex && ex.cat === c ? ' selected' : '') + '>' + c + '</option>').join('');
                 const itemsHtml = CHK_QS.map((q, i) => {
                     const saved = (ex && ex.items[i]) ? ex.items[i].r : '확인';
-                    return '<div class="opn-chk-row"><div class="opn-chk-q">' + (i + 1) + '. ' + q + '</div><div class="opn-chk-opts">' +
-                        ['확인', '미흡', '해당없음'].map(r => '<label><input type="radio" name="opn-chk-' + i + '" value="' + r + '"' + (r === saved ? ' checked' : '') + '> ' + r + '</label>').join('') + '</div></div>';
+                    const savedOwner = (ex && ex.items[i] && ex.items[i].owner) || DEPT4[0];
+                    const savedDue = (ex && ex.items[i] && ex.items[i].due) || '2026-07-31';
+                    return '<div class="opn-chk-row" style="flex-direction:column; align-items:stretch; gap:8px;">' +
+                        '<div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">' +
+                        '<div class="opn-chk-q">' + (i + 1) + '. ' + q + '</div><div class="opn-chk-opts">' +
+                        ['확인', '미흡', '해당없음'].map(r => '<label><input type="radio" name="opn-chk-' + i + '" value="' + r + '" onchange="PG.opnChkToggleFix(' + i + ',this.value)"' + (r === saved ? ' checked' : '') + '> ' + r + '</label>').join('') + '</div></div>' +
+                        '<div id="opn-chk-fix-' + i + '" style="display:' + (saved === '미흡' ? 'flex' : 'none') + '; align-items:center; gap:8px; padding-top:8px; border-top:1px dashed var(--gray-200); flex-wrap:wrap;">' +
+                        '<span style="font-size:var(--fs-12); color:var(--text-gray);">담당부서</span>' +
+                        '<select id="opn-chk-owner-' + i + '" class="opn-filter">' + DEPT4.map(d => '<option' + (savedOwner === d ? ' selected' : '') + '>' + d + '</option>').join('') + '</select>' +
+                        '<span style="font-size:var(--fs-12); color:var(--text-gray);">기한</span>' +
+                        '<input id="opn-chk-due-' + i + '" type="date" class="opn-filter" value="' + savedDue + '">' +
+                        '</div>' +
+                        '</div>';
                 }).join('');
                 V.openModal((isEdit ? '점검결과지 수정' : '점검결과지 생성') + ' — 의견청취·협의체 점검표',
                     '<div class="preset-form-grid"><span class="k">점검 구분</span><select id="opn-chk-cat">' + catOpts + '</select>' +
                     '<span class="k">점검일</span><input id="opn-chk-date" type="date" value="' + (ex ? ex.date : '2026-06-30') + '"></div>' +
-                    '<div style="margin-top:12px; font-size:12px; color:var(--text-gray);">문항별로 확인 / 미흡 / 해당없음을 선택하세요. 미흡 항목은 개선조치로 자동 연계됩니다.</div>' +
+                    '<div style="margin-top:12px; font-size:var(--fs-12); color:var(--text-gray);">문항별로 확인 / 미흡 / 해당없음을 선택하세요. 미흡 선택 시 담당부서·기한을 지정하며, 확정 시 개선조치로 자동 연계됩니다.</div>' +
                     '<div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">' + itemsHtml + '</div>',
                     '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button><button class="btn btn-primary" id="opn-chk-save">' + (isEdit ? '수정 저장' : '점검결과지 등록') + '</button>');
                 document.getElementById('opn-chk-save').addEventListener('click', () => {
                     const cat = (document.getElementById('opn-chk-cat') || {}).value;
                     const date = (document.getElementById('opn-chk-date') || {}).value || '2026-06-30';
-                    const newItems = CHK_QS.map((q, i) => ({ q: q, r: (document.querySelector('input[name=opn-chk-' + i + ']:checked') || {}).value || '확인' }));
+                    const newItems = CHK_QS.map((q, i) => {
+                        const r = (document.querySelector('input[name=opn-chk-' + i + ']:checked') || {}).value || '확인';
+                        const it = { q: q, r: r };
+                        if (r === '미흡') {
+                            it.owner = (document.getElementById('opn-chk-owner-' + i) || {}).value || DEPT4[0];
+                            it.due = (document.getElementById('opn-chk-due-' + i) || {}).value || '2026-07-31';
+                        }
+                        return it;
+                    });
                     const unfit = newItems.filter(x => x.r === '미흡').length;
                     if (isEdit) {
                         ex.cat = cat; ex.date = date; ex.items = newItems; ex.result = unfit ? '미흡' : '적합';
                         V.closeModal(); render(); V.toast('점검결과지가 수정되었습니다' + (unfit ? ' — 미흡 ' + unfit + '건' : ''));
                     } else {
                         S.COUNCIL.checklists.unshift({ id: 'CHK-' + String(nextNum(S.COUNCIL.checklists)).padStart(2, '0'), cat: cat, date: date, inspector: '정안전', result: unfit ? '미흡' : '적합', appr: '미상신', items: newItems });
-                        if (unfit) { newItems.forEach(it => { if (it.r === '미흡') E.addImprovement({ title: '[협의체 점검 미흡] ' + it.q, sourceMenu: '의견청취·협의체', sourceDoc: cat + ' 점검표', due: '2026-07-31' }); }); }
+                        if (unfit) { newItems.forEach(it => { if (it.r === '미흡') E.addImprovement({ title: '[협의체 점검 미흡] ' + it.q, sourceMenu: '의견청취·협의체', sourceDoc: cat + ' 점검표', owner: it.owner, due: it.due }); }); }
                         V.closeModal(); render(); V.toast('점검결과지가 등록되었습니다' + (unfit ? ' — 미흡 ' + unfit + '건 개선조치 연계' : ''));
                     }
                 });
             }
+            PG.opnChkToggleFix = (i, val) => { const el = document.getElementById('opn-chk-fix-' + i); if (el) el.style.display = val === '미흡' ? 'flex' : 'none'; };
             PG.opnChkNew = () => opnChkModal(null);
-            PG.opnChkEdit = id => { const c = S.COUNCIL.checklists.find(x => x.id === id); if (c) opnChkModal(c); };
+            PG.opnChkEdit = id => {
+                const c = S.COUNCIL.checklists.find(x => x.id === id); if (!c) return;
+                if (c.appr === '결재중' || c.appr === '승인완료') { V.toast('결재중·승인완료된 점검결과지는 수정할 수 없습니다'); return; }
+                opnChkModal(c);
+            };
             PG.opnChkOpen = id => PG.opnGo('council', 'cdetail', id);
-            PG.opnChkDel = id => { S.COUNCIL.checklists = S.COUNCIL.checklists.filter(x => x.id !== id); PG.opnGo('council', 'list', null); V.toast('점검결과지가 삭제되었습니다'); };
+            PG.opnChkDel = id => {
+                const c = S.COUNCIL.checklists.find(x => x.id === id); if (!c) return;
+                if (c.appr === '결재중' || c.appr === '승인완료') { V.toast('결재중·승인완료된 점검결과지는 삭제할 수 없습니다'); return; }
+                if (!window.confirm('이 점검결과지를 삭제하시겠습니까? 삭제 후 되돌릴 수 없습니다.')) return;
+                S.COUNCIL.checklists = S.COUNCIL.checklists.filter(x => x.id !== id); PG.opnGo('council', 'list', null); V.toast('점검결과지가 삭제되었습니다');
+            };
             PG.opnChkOnnara = id => { const c = S.COUNCIL.checklists.find(x => x.id === id); if (c) c.appr = '결재중'; E.onnaraPopup('의견청취 점검결과지 ' + id); render(); };
-            PG.opnChkApprHistory = () => V.openModal('온나라 결재 이력',
-                '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>일시</th><th>처리</th><th>처리자</th><th>비고</th></tr></thead><tbody>' +
-                [['2026-06-28 14:10', '결재 상신', '정안전', '-'], ['2026-06-28 15:30', '팀장 승인', '중대재해팀장', '-'], ['2026-06-29 09:40', '부군수 승인', '부군수', '승인 완료']].map(r => '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td><td>' + r[2] + '</td><td>' + r[3] + '</td></tr>').join('') +
-                '</tbody></table></div>',
-                '<button class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
+            /* 결재 이력 — 문서의 실제 appr 상태에 따라 이력 행을 동적 생성(고정 3행 표시 금지) */
+            PG.opnChkApprHistory = id => {
+                const c = S.COUNCIL.checklists.find(x => x.id === id);
+                const appr = c ? c.appr : '미상신';
+                const inspector = (c && c.inspector) || '정안전';
+                const d0 = (c && c.date) || '2026-06-28';
+                const d1 = addDays(d0, 1);
+                let rows = [];
+                if (appr === '결재중') rows = [[d0 + ' 14:10', '결재 상신', inspector, '-']];
+                else if (appr === '승인완료') rows = [[d0 + ' 14:10', '결재 상신', inspector, '-'], [d0 + ' 15:30', '팀장 승인', '중대재해팀장', '-'], [d1 + ' 09:40', '부군수 승인', '부군수', '승인 완료']];
+                else if (appr === '반려') rows = [[d0 + ' 14:10', '결재 상신', inspector, '-'], [d0 + ' 15:30', '반려', '중대재해팀장', (c && c.rejectReason) || '보완 후 재상신 요망']];
+                const body = rows.length
+                    ? '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>일시</th><th>처리</th><th>처리자</th><th>비고</th></tr></thead><tbody>' +
+                      rows.map(r => '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td><td>' + r[2] + '</td><td>' + r[3] + '</td></tr>').join('') +
+                      '</tbody></table></div>'
+                    : '<p style="font-size:var(--fs-13); color:var(--text-gray); text-align:center; padding:20px 0;">결재 이력이 없습니다 — 상신 후 이력이 기록됩니다.</p>';
+                V.openModal('온나라 결재 이력' + (c ? ' — ' + c.id : ''), body,
+                    '<button class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
+            };
             PG.opnChkPdfDownload = () => V.toast('PDF 다운로드 (프로토타입)');
             PG.opnChkPdfClose = () => { const o = document.getElementById('opn-chk-pdf-overlay'); if (o) o.remove(); };
             PG.opnChkPdfFull = id => {
@@ -1133,9 +1260,29 @@
                 '<div class="opn-lawhelp-foot"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span>법령·조항을 편집하려면 우측 상단 <b>법령 관리</b>를 이용하세요 — 변경 즉시 도움말에 반영되며 브라우저에 저장됩니다.</span></div>' +
             '</div>';
 
+            /* ===== 탭1: 부서별 접수·처리 현황 (산안법 §64 — 부서별 별도 관리) ===== */
+            PG.opnDeptStatsToggle = () => { S.deptStatsOpen = !(S.deptStatsOpen === true); render(); };
+            function renderDeptStats() {
+                const open = S.deptStatsOpen === true;
+                const rows = DEPTS.map(d => {
+                    const list = S.VOICES.filter(o => (o.owner || '미배정') === d);
+                    const tot = list.length;
+                    const doing = list.filter(o => o.status === '처리중').length;
+                    const done = list.filter(o => o.status === '완료').length;
+                    const rate = tot ? Math.round(done / tot * 100) : 0;
+                    return '<tr style="cursor:pointer;" onclick="PG.opnSetDept(\'' + d + '\')"><td>' + V.esc(d) + '</td><td>' + tot + '건</td><td>' + doing + '건</td><td>' + done + '건</td><td>' + rate + '%</td></tr>';
+                }).join('');
+                const body = '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>부서</th><th>접수</th><th>처리중</th><th>완료</th><th>완료율</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+                    '<p style="font-size:var(--fs-12); color:var(--text-gray); margin:8px 0 0;">행을 클릭하면 해당 부서로 목록이 필터링됩니다.</p>';
+                return sectionCard('부서별 접수·처리 현황 <span class="chip-mini wt" style="margin-left:6px;">산안법 §64</span>',
+                    open ? body : '',
+                    '<button class="btn btn-sm btn-outline" onclick="PG.opnDeptStatsToggle()">' + (open ? '접기' : '펼치기') + '</button>');
+            }
+
             /* ===== 탭1: 의견청취·건의함 목록 ===== */
             function renderVoiceList() {
                 let list = S.VOICES.slice();
+                if (S.fkw && S.fkw.trim()) { const kw = S.fkw.trim(); list = list.filter(o => (o.title || '').indexOf(kw) !== -1); }
                 if (S.fcat) list = list.filter(o => o.cat === S.fcat);
                 if (S.fstatus) list = list.filter(o => o.status === S.fstatus);
                 if (S.fdept) list = list.filter(o => (o.owner || '미배정') === S.fdept);
@@ -1144,7 +1291,8 @@
                 if (S.page > pages) S.page = pages;
                 const start = (S.page - 1) * PER;
                 const pageRows = list.slice(start, start + PER);
-                const catFilter = '<select onchange="PG.opnSetCat(this.value)" class="opn-filter"><option value="">전체 분류</option>' + CATS.map(c => '<option' + (S.fcat === c ? ' selected' : '') + '>' + c + '</option>').join('') + '</select>';
+                const kwSearch = '<input type="text" class="opn-filter" style="width:160px;" placeholder="제목 검색" value="' + V.esc(S.fkw || '') + '" onchange="PG.opnSetKw(this.value)" onkeydown="if(event.key===\'Enter\')PG.opnSetKw(this.value)">';
+                const catFilter = '<select onchange="PG.opnSetCat(this.value)" class="opn-filter" style="margin-left:6px;"><option value="">전체 분류</option>' + CATS.map(c => '<option' + (S.fcat === c ? ' selected' : '') + '>' + c + '</option>').join('') + '</select>';
                 const stFilter = '<select onchange="PG.opnSetStatus(this.value)" class="opn-filter" style="margin-left:6px;"><option value="">전체 상태</option>' + ['접수대기', '처리중', '완료', '반려'].map(s => '<option' + (S.fstatus === s ? ' selected' : '') + '>' + s + '</option>').join('') + '</select>';
                 const deptFilter = '<select onchange="PG.opnSetDept(this.value)" class="opn-filter" style="margin-left:6px;"><option value="">전체 부서</option>' + DEPTS.map(d => '<option' + (S.fdept === d ? ' selected' : '') + '>' + d + '</option>').join('') + '</select>';
                 const body = pageRows.length ? pageRows.map(o => '<tr style="cursor:pointer;" onclick="PG.opnOpen(\'' + o.id + '\')"><td>' + catChip(o.cat) + '</td><td><b>' + V.esc(o.title) + '</b> ' + linkChips(o) + '</td><td>' + V.esc(o.author) + '</td><td class="opn-hide-sm">' + (o.owner ? V.esc(o.owner) : '<span class="opn-muted">미배정</span>') + '</td><td>' + o.date + '</td><td>' + stChip(o.status) + '</td></tr>').join('') : '<tr><td colspan="6" style="text-align:center; color:var(--text-gray); padding:30px;">해당 조건의 의견이 없습니다.</td></tr>';
@@ -1154,7 +1302,7 @@
                     for (let p = 1; p <= pages; p++) btns += '<button class="opn-page-btn' + (p === S.page ? ' is-active' : '') + '" onclick="PG.opnPage(' + p + ')">' + p + '</button>';
                     pager = '<div class="opn-pager"><span class="opn-pager-info">총 ' + tot + '건 중 ' + (start + 1) + '-' + (start + pageRows.length) + '건</span><span class="opn-pager-btns">' + (S.page > 1 ? '<button class="opn-page-btn" onclick="PG.opnPage(' + (S.page - 1) + ')">‹</button>' : '') + btns + (S.page < pages ? '<button class="opn-page-btn" onclick="PG.opnPage(' + (S.page + 1) + ')">›</button>' : '') + '</span></div>';
                 }
-                const actions = '<span style="display:flex; align-items:center; gap:0; flex-wrap:wrap;">' + catFilter + stFilter + deptFilter + '<button class="btn btn-sm btn-primary" style="margin-left:8px;" onclick="PG.opnNew()">+ 의견 등록</button></span>';
+                const actions = '<span style="display:flex; align-items:center; gap:0; flex-wrap:wrap;">' + kwSearch + catFilter + stFilter + deptFilter + '<button class="btn btn-sm btn-primary" style="margin-left:8px;" onclick="PG.opnNew()">+ 의견 등록</button></span>';
                 return sectionCard('의견청취 · 건의함', '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>분류</th><th>제목</th><th>작성자</th><th class="opn-hide-sm">담당부서</th><th>등록일</th><th>상태</th></tr></thead><tbody>' + body + '</tbody></table></div>' + pager, actions);
             }
 
@@ -1213,7 +1361,7 @@
                     btns += '<button class="btn btn-sm btn-outline" onclick="PG.opnToImprove(\'' + o.id + '\')">개선조치 관리 ▶</button>';
                     btns += '<button class="btn btn-sm btn-primary" onclick="PG.opnDone(\'' + o.id + '\')">완료 처리</button>';
                 } else {
-                    btns += '<span class="opn-muted" style="font-size:12px; align-self:center;">' + (o.status === '반려' ? '반려 종결됨' : '처리 완료됨') + ' — 비가역 처리입니다.</span>';
+                    btns += '<span class="opn-muted" style="font-size:var(--fs-12); align-self:center;">' + (o.status === '반려' ? '반려 종결됨' : '처리 완료됨') + ' — 비가역 처리입니다.</span>';
                     btns += '<button class="btn btn-sm btn-outline" onclick="PG.opnReopen(\'' + o.id + '\')">재처리(되돌리기)</button>';
                 }
                 btns += '</div>';
@@ -1243,17 +1391,22 @@
             function renderMeetingDetail(round) {
                 const mt = (S.COMMITTEE.meetings || []).find(x => x.round === round);
                 if (!mt) return renderCommittee();
+                const isFixed = mt.status === '확정';
                 const info = '<div class="preset-form-grid">' +
                     '<span class="k">회차</span><div><b>' + mt.round + '</b> <span class="chip-mini wt-elec">' + mt.type + '</span></div>' +
                     '<span class="k">일시</span><div>' + mt.date + '</div>' +
                     '<span class="k">장소</span><div>' + V.esc(mt.place || '-') + '</div>' +
                     '<span class="k">참석자 (' + (mt.attendeeList || []).length + '명)</span><div class="att-list">' + ((mt.attendeeList || []).length ? (mt.attendeeList).map(a => '<span class="att-chip att-chip-ro">' + V.esc(a.name) + ' <span class="att-sub">' + V.esc(a.dept) + (a.position ? (' ' + V.esc(a.position)) : '') + '</span></span>').join('') : '<span class="att-empty">등록된 참석자가 없습니다.</span>') + '</div>' +
                     '<span class="k">주요 안건</span><div>' + V.esc(mt.agenda) + '</div>' +
-                    '<span class="k">의결사항</span><ol style="margin:0; padding-left:18px;">' + (mt.decisions || []).map(d => '<li>' + V.esc(d) + '</li>').join('') + '</ol>' +
-                    '<span class="k">상태</span><div><span class="chip-status ' + (mt.status === '확정' ? 'success' : 'info') + '">' + (mt.status || '작성') + '</span></div>' +
+                    '<span class="k">의결사항</span>' + ((mt.decisions && mt.decisions.length) ? '<ol style="margin:0; padding-left:18px;">' + mt.decisions.map(d => '<li>' + V.esc(d) + '</li>').join('') + '</ol>' : '<div class="opn-muted" style="font-size:var(--fs-13);">등록된 의결사항이 없습니다.</div>') +
+                    '<span class="k">상태</span><div><span class="chip-status ' + (isFixed ? 'success' : 'info') + '">' + (mt.status || '작성') + '</span></div>' +
                     '</div>';
+                const acts = isFixed
+                    ? '<span class="opn-muted" style="font-size:var(--fs-12); align-self:center;">확정된 회의록입니다 — 편집할 수 없습니다.</span>'
+                    : '<button class="btn btn-sm btn-outline" onclick="PG.opnMtgFormOpen(\'' + mt.round + '\')">편집</button>' +
+                      '<button class="btn btn-sm btn-primary" onclick="PG.opnMtgConfirm(\'' + mt.round + '\')">확정 처리</button>';
                 const header = '<div class="pol-detail-top"><button class="btn btn-sm btn-outline" onclick="PG.opnGo(\'committee\',\'list\',null)">‹ 목록</button>' +
-                    '<div class="pol-detail-actions"><button class="btn btn-sm btn-outline" onclick="PG.opnMtgFormOpen(\'' + mt.round + '\')">편집</button></div></div>';
+                    '<div class="pol-detail-actions">' + acts + '</div></div>';
                 return header + sectionCard(mt.round + ' 산업안전보건위원회 회의록', info, '');
             }
 
@@ -1275,7 +1428,12 @@
                     '<div style="margin-top:16px;"><label class="opn-flabel">참석자 (<span id="mtg-att-count">' + S.mtgDraft.attendees.length + '</span>명)</label>' +
                     '<div id="mtg-att-chips" class="att-list" style="margin:8px 0;">' + attChipsHtml() + '</div>' +
                     '<div class="org-inline"><div class="org-inline-search"><input type="text" placeholder="부서·이름 검색" oninput="EDOC._orgFilter(this)"></div><div class="org-inline-body">' + orgHtml + '</div></div>' +
-                    '<p style="font-size:var(--fs-12); color:var(--text-gray); margin:8px 0 0;">조직도에서 이름을 클릭하면 즉시 추가되고, 다시 누르거나 칩의 ×로 제외됩니다.</p></div>';
+                    '<p style="font-size:var(--fs-12); color:var(--text-gray); margin:8px 0 0;">조직도에서 이름을 클릭하면 즉시 추가되고, 다시 누르거나 칩의 ×로 제외됩니다.</p></div>' +
+                    '<div style="margin-top:16px;"><label class="opn-flabel">의결사항</label>' +
+                    '<div id="mf-decisions" class="goal-list" style="margin-top:8px;">' + ((mt && mt.decisions && mt.decisions.length) ? mt.decisions.map(decisionRow).join('') : decisionRow('')) + '</div>' +
+                    '<button type="button" class="btn btn-sm btn-outline" style="margin-top:8px;" onclick="PG.opnMtgDecisionAdd()">+ 의결사항 추가</button>' +
+                    '<label style="display:flex; align-items:center; gap:8px; margin-top:14px; font-size:var(--fs-13); color:var(--text-black); cursor:pointer;"><input type="checkbox" id="mf-link-agenda"> 의결사항을 안건 부서이행 현황에 등록</label>' +
+                    '</div>';
                 const header = '<div class="opn-form-head"><button class="btn btn-sm btn-outline" onclick="PG.opnMtgFormCancel()">‹ 취소</button><h2>' + (editing ? '회의록 편집' : '회의록 작성') + '</h2></div>';
                 const bar = '<div class="opn-formbar"><button class="btn btn-outline" onclick="PG.opnMtgFormCancel()">취소</button><button class="btn btn-primary" onclick="PG.opnMtgFormSave()">' + (editing ? '저장' : '작성 완료') + '</button></div>';
                 return header + sectionCard(editing ? '회의록 편집' : '회의록 작성', body, '') + bar;
@@ -1289,9 +1447,18 @@
                     '<div class="preset-form-grid" style="margin-bottom:12px;"><span class="k">운영 주기</span><div style="display:flex; gap:8px; align-items:center;">' + C.cycle + ' <button class="btn btn-sm btn-outline" onclick="PG.opnCouncilCycle()">주기 변경</button></div></div>' +
                     '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>구분</th><th>부서/소속</th><th>직책</th><th>성명</th><th>관리</th></tr></thead><tbody>' + coRows + '</tbody></table></div>',
                     '<button class="btn btn-sm btn-primary" onclick="PG.opnMemberAdd(\'council\')">+ 위원 추가</button>');
-                const chkRows = C.checklists.map(c => [c.cat, c.date, c.inspector, (c.result === '미흡' ? '<span class="chip-status danger">미흡 ' + c.items.filter(i => i.r === '미흡').length + '건</span>' : '<span class="chip-status success">적합</span>'), apprChip(c.appr), '<button class="btn btn-sm btn-outline" onclick="PG.opnChkOpen(\'' + c.id + '\')">조회</button> <button class="btn btn-sm btn-outline" onclick="PG.opnChkEdit(\'' + c.id + '\')">수정</button> <button class="btn btn-sm btn-outline" onclick="PG.opnChkDel(\'' + c.id + '\')">삭제</button>']);
+                const resRows = (C.results || []).map((r, i) => '<tr><td>' + V.esc(r.round) + '</td><td>' + r.date + '</td><td>' + V.esc(r.content) + '</td><td>' + V.esc(r.result) + '</td><td><span class="chip-status ' + (r.status === '완료' ? 'success' : 'info') + '">' + r.status + '</span></td><td><button class="btn btn-sm btn-outline" onclick="PG.opnResultEdit(' + i + ')">수정</button> <button class="btn btn-sm btn-outline" onclick="PG.opnResultDel(' + i + ')">삭제</button></td></tr>').join('');
+                const resultCard = sectionCard('협의체 운영 결과 <span class="chip-mini wt" style="margin-left:6px;">산안법 §64</span>',
+                    '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>회차</th><th>일자</th><th>참석·논의 내용</th><th>결과 요약</th><th>상태</th><th>관리</th></tr></thead><tbody>' + (resRows || '<tr><td colspan="6" style="text-align:center; color:var(--text-gray); padding:20px;">등록된 운영 결과가 없습니다.</td></tr>') + '</tbody></table></div>',
+                    '<button class="btn btn-sm btn-primary" onclick="PG.opnResultAdd()">+ 운영 결과 등록</button>');
+                const chkRows = C.checklists.map(c => {
+                    const editableRow = (c.appr === '미상신' || c.appr === '반려');
+                    const acts = '<button class="btn btn-sm btn-outline" onclick="PG.opnChkOpen(\'' + c.id + '\')">조회</button>' +
+                        (editableRow ? ' <button class="btn btn-sm btn-outline" onclick="PG.opnChkEdit(\'' + c.id + '\')">수정</button> <button class="btn btn-sm btn-outline" onclick="PG.opnChkDel(\'' + c.id + '\')">삭제</button>' : '');
+                    return [c.cat, c.date, c.inspector, (c.result === '미흡' ? '<span class="chip-status danger">미흡 ' + c.items.filter(i => i.r === '미흡').length + '건</span>' : '<span class="chip-status success">적합</span>'), apprChip(c.appr), acts];
+                });
                 const chkCard = sectionCard('의견청취 점검표 <span class="chip-mini wt" style="margin-left:6px;">용역·구매설치·위탁사업·기타</span>', tbl(['점검 구분', '점검일', '점검자', '결과', '온나라 결재', ''], chkRows), '<button class="btn btn-sm btn-primary" onclick="PG.opnChkNew()">+ 점검결과지 생성</button>');
-                return memCard + chkCard;
+                return memCard + resultCard + chkCard;
             }
 
             /* ===== 탭3: 점검결과지 상세 (온나라 결재 + PDF 미리보기) — 다른 메뉴와 동일 패턴 ===== */
@@ -1304,7 +1471,7 @@
                     '<span class="k">점검일</span><div>' + c.date + '</div>' +
                     '<span class="k">점검자</span><div>' + V.esc(c.inspector) + '</div>' +
                     '<span class="k">종합 결과</span><div>' + chkResultChip(c.result) + '</div>' +
-                    '<span class="k">온나라 결재</span><div style="display:flex; gap:8px; align-items:center;">' + apprChip(c.appr) + '<button class="btn btn-sm btn-outline" onclick="PG.opnChkApprHistory()">이력</button></div>' +
+                    '<span class="k">온나라 결재</span><div style="display:flex; gap:8px; align-items:center;">' + apprChip(c.appr) + '<button class="btn btn-sm btn-outline" onclick="PG.opnChkApprHistory(\'' + c.id + '\')">이력</button></div>' +
                     '<span class="k">점검 항목</span><div>' + c.items.map((it, i) => '<div class="opn-chk-row" style="margin-bottom:6px;"><div class="opn-chk-q">' + (i + 1) + '. ' + V.esc(it.q) + (it.note ? ' <span style="color:var(--status-danger-fg); font-size:var(--fs-12);">(' + V.esc(it.note) + ')</span>' : '') + '</div><div>' + chkItemChip(it.r) + '</div></div>').join('') + '</div>' +
                     '</div>';
                 const pdfPanel = '<div class="pol-pdf-wrap"><div class="pol-pdf-tools"><span style="font-size:var(--fs-12); font-weight:700; color:var(--text-gray);">PDF 미리보기</span><span style="display:flex; gap:6px;"><button class="btn btn-sm btn-outline" onclick="PG.opnChkPdfFull(\'' + c.id + '\')">전체화면</button><button class="btn btn-sm btn-primary" onclick="PG.opnChkPdfDownload()">PDF 다운로드</button></span></div>' + chkPdfPaper(c) + '</div>';
@@ -1313,7 +1480,7 @@
                     acts += '<button class="btn btn-sm btn-outline" onclick="PG.opnChkEdit(\'' + c.id + '\')">수정</button>';
                     acts += '<button class="btn btn-sm btn-primary" onclick="PG.opnChkOnnara(\'' + c.id + '\')">온나라 결재 상신</button>';
                 } else {
-                    acts += '<span class="opn-muted" style="font-size:12px; align-self:center;">' + (c.appr === '승인완료' ? '결재 승인 완료' : '결재 진행 중') + ' — 수정하려면 반려 후 진행하세요.</span>';
+                    acts += '<span class="opn-muted" style="font-size:var(--fs-12); align-self:center;">' + (c.appr === '승인완료' ? '결재 승인 완료' : '결재 진행 중') + ' — 수정하려면 반려 후 진행하세요.</span>';
                 }
                 acts += '</div>';
                 const header = '<div class="pol-detail-top"><button class="btn btn-sm btn-outline" onclick="PG.opnGo(\'council\',\'list\',null)">‹ 목록</button>' + acts + '</div>';
@@ -1322,7 +1489,7 @@
             }
 
             /* ===== 디스패치 ===== */
-            if (S.tab === 'voice') return (S.view === 'form') ? subtabs + renderVoiceForm() : dash + subtabs + (S.view === 'detail' ? renderVoiceDetail(find(S.id)) : lawHelp + renderVoiceList());
+            if (S.tab === 'voice') return (S.view === 'form') ? subtabs + renderVoiceForm() : dash + subtabs + (S.view === 'detail' ? renderVoiceDetail(find(S.id)) : lawHelp + renderDeptStats() + renderVoiceList());
             if (S.tab === 'committee') return dash + subtabs + (S.view === 'mform' ? renderMeetingForm(S.id) : S.view === 'mdetail' ? renderMeetingDetail(S.id) : lawHelp + renderCommittee());
             return dash + subtabs + (S.view === 'cdetail' ? renderCouncilDetail(S.id) : lawHelp + renderCouncil());
         },

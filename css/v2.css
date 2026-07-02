@@ -852,31 +852,31 @@
 @media (max-width: 640px) { .ba-board { grid-template-columns: 1fr; } .post-thumb { flex-basis: auto; max-width: none; } }
 
 /* ===== 의견청취(SCR-SBM-003) 3탭 — 목록 필터·페이지네이션·조치결과·점검표 ===== */
-.opn-filter { font-size: 12px; padding: 6px 10px; border: 1px solid var(--gray-300); border-radius: 8px; background: #fff; font-family: inherit; color: var(--text-dark, #1f2937); }
+.opn-filter { font-size: var(--fs-12); padding: 6px 10px; border: 1px solid var(--gray-300); border-radius: 8px; background: #fff; font-family: inherit; color: var(--text-black); }
 .opn-muted { color: var(--text-gray); }
 
 /* 페이지네이션 */
 .opn-pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
-.opn-pager-info { font-size: 12px; color: var(--text-gray); }
+.opn-pager-info { font-size: var(--fs-12); color: var(--text-gray); }
 .opn-pager-btns { display: inline-flex; gap: 4px; }
-.opn-page-btn { min-width: 30px; height: 30px; padding: 0 8px; border: 1px solid var(--gray-300); background: #fff; border-radius: 7px; font-size: 12px; font-weight: 600; color: var(--text-gray); cursor: pointer; font-family: inherit; transition: all .12s ease; }
+.opn-page-btn { min-width: 30px; height: 30px; padding: 0 8px; border: 1px solid var(--gray-300); background: #fff; border-radius: 7px; font-size: var(--fs-12); font-weight: var(--fw-semibold); color: var(--text-gray); cursor: pointer; font-family: inherit; transition: all .12s ease; }
 .opn-page-btn:hover { border-color: var(--main); color: var(--main-dark); }
 .opn-page-btn.is-active { background: var(--main); border-color: var(--main); color: #fff; }
 
 /* 조치결과 3단 (추진계획·추진경과·추진결과) */
 .opn-act3 { border: 1px solid var(--gray-200); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; }
 .opn-act3:last-child { margin-bottom: 0; }
-.opn-act3-h { font-size: 12px; font-weight: 700; color: var(--main-dark2, #0f3d2e); margin-bottom: 6px; }
-.opn-act3-b { font-size: 13px; line-height: 1.55; color: var(--text-dark, #1f2937); }
+.opn-act3-h { font-size: var(--fs-12); font-weight: var(--fw-bold); color: var(--main-dark2); margin-bottom: 6px; }
+.opn-act3-b { font-size: var(--fs-13); line-height: 1.55; color: var(--text-black); }
 .opn-timeline { margin: 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
-.opn-timeline li { font-size: 12px; padding-left: 12px; border-left: 2px solid var(--brand-100, #d7ece2); }
-.opn-tl-date { font-weight: 700; color: var(--main-dark, #146c43); margin-right: 6px; }
+.opn-timeline li { font-size: var(--fs-12); padding-left: 12px; border-left: 2px solid var(--brand-100); }
+.opn-tl-date { font-weight: var(--fw-bold); color: var(--main-dark); margin-right: 6px; }
 
 /* 점검결과지 체크리스트 행 */
 .opn-chk-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 10px; border: 1px solid var(--gray-200); border-radius: 8px; }
-.opn-chk-q { font-size: 12px; color: var(--text-dark, #1f2937); flex: 1; }
+.opn-chk-q { font-size: var(--fs-12); color: var(--text-black); flex: 1; }
 .opn-chk-opts { display: inline-flex; gap: 12px; flex-shrink: 0; }
-.opn-chk-opts label { font-size: 12px; color: var(--text-gray); white-space: nowrap; cursor: pointer; }
+.opn-chk-opts label { font-size: var(--fs-12); color: var(--text-gray); white-space: nowrap; cursor: pointer; }
 .opn-agenda { display: inline-block; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
 
 /* ===== 사용성 폴리시 (data-dense 대시보드 · 접근성) ===== */
