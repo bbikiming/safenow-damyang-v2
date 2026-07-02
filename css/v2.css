@@ -4,39 +4,6 @@
    기본 토큰·컴포넌트는 css/style.css 재사용 — 여기는 v2 신규 패턴만.
    ========================================================================= */
 
-/* ── ① 요약 바 (이행률 · 시기도래 · 담당부서) ───────────────────────── */
-.sbm-summary {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 18px;
-  padding: 16px 22px;
-  background: #fff;
-  border: 1px solid var(--card-line);
-  border-radius: var(--radius-card);
-  margin-bottom: 16px;
-}
-.sbm-summary-item { display: flex; align-items: center; gap: 10px; }
-.sbm-summary-label { font-size: 12px; font-weight: 600; color: var(--text-gray); }
-.sbm-summary-value { font-size: 15px; font-weight: 700; color: var(--text-black); }
-.sbm-summary-rate { display: flex; align-items: center; gap: 10px; min-width: 220px; }
-.sbm-summary-rate .progress { width: 120px; }
-.sbm-summary-divider { width: 1px; height: 26px; background: var(--card-line); }
-.sbm-due-badge {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 4px 11px;
-  border-radius: var(--radius-pill);
-  font-size: 12px; font-weight: 700;
-  background: var(--status-danger-bg);
-  color: var(--status-danger-fg);
-  border: 1px solid var(--status-danger-border);
-}
-.sbm-due-badge.none {
-  background: var(--status-neutral-bg);
-  color: var(--status-neutral-fg);
-  border-color: var(--status-neutral-border);
-}
-
 /* ── ② PDCA 세트 보드 ──────────────────────────────────────────────── */
 .pdca-board { border: 1px solid var(--card-line); border-radius: var(--radius-card); overflow: hidden; background: #fff; }
 .pdca-grid { display: grid; grid-template-columns: 170px repeat(4, 1fr); }
@@ -940,31 +907,102 @@ textarea:focus-visible, [tabindex]:focus-visible, .psub-tab:focus-visible, .opn-
 .att-chip.att-chip-ro { padding: 5px 12px; }
 /* 회의록 작성 폼 참석자 픽커는 공용 조직도 트리(.org-inline / .otr-*)를 재사용 */
 
-/* ── 관련 법령 도움말 (의견청취 · 경영방침/인력평가 공통 패턴) ── */
-.opn-lawhelp { border: 1px solid var(--status-info-border); border-radius: var(--radius-card); background: var(--status-info-bg); overflow: hidden; margin-bottom: 16px; }
-.opn-lawhelp-head { display: flex; align-items: stretch; gap: 6px; padding-right: 12px; }
-.opn-lawhelp-toggle { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: transparent; border: none; cursor: pointer; text-align: left; font-family: inherit; }
-.opn-lawhelp-toggle:hover { background: rgba(255, 255, 255, .5); }
-.opn-lawhelp-toggle:focus-visible { outline: 2px solid var(--status-info-fg); outline-offset: -2px; }
-.opn-lawhelp-manage { flex: none; align-self: center; display: inline-flex; align-items: center; gap: 5px; padding: 7px 13px; font-size: var(--fs-12); font-weight: 600; color: var(--status-info-fg); background: #fff; border: 1px solid var(--status-info-border); border-radius: 999px; cursor: pointer; white-space: nowrap; font-family: inherit; transition: background-color .12s ease; }
-.opn-lawhelp-manage:hover { background: var(--status-info-bg); }
-.opn-lawhelp-manage:focus-visible { outline: 2px solid var(--status-info-fg); outline-offset: 1px; }
-.opn-law-empty { padding: 16px 2px; text-align: center; font-size: var(--fs-13); color: var(--text-gray); }
-.opn-lawhelp-ico { flex: none; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 9px; background: #fff; color: var(--status-info-fg); border: 1px solid var(--status-info-border); }
-.opn-lawhelp-tt { flex: 1; min-width: 0; }
-.opn-lawhelp-tt b { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: var(--fs-14); font-weight: 700; color: var(--main-dark2); }
-.opn-lawhelp-cnt { font-size: var(--fs-12); font-weight: 600; color: var(--status-info-fg); background: #fff; border: 1px solid var(--status-info-border); border-radius: 999px; padding: 1px 8px; }
-.opn-lawhelp-tt span.sub { display: block; font-size: var(--fs-12); color: var(--text-gray); margin-top: 3px; }
-.opn-lawhelp-chev { flex: none; color: var(--text-lightgray); transition: transform .2s ease; }
-.opn-lawhelp[data-open="false"] .opn-lawhelp-chev { transform: rotate(-90deg); }
-.opn-lawhelp[data-open="false"] .opn-lawhelp-body,
-.opn-lawhelp[data-open="false"] .opn-lawhelp-foot { display: none; }
-.opn-lawhelp-body { background: #fff; padding: 2px 16px 6px; }
-.opn-law-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid var(--card-line); }
-.opn-law-row:first-child { border-top: none; }
-.opn-law-row .lw-name { font-size: var(--fs-13); font-weight: 700; color: var(--text-black); }
-.opn-law-row .lw-clause { font-size: var(--fs-12); color: var(--text-gray); margin-top: 2px; }
-.opn-law-row .lw-desc { font-size: var(--fs-12); color: var(--text-black); margin-top: 5px; line-height: 1.5; }
-.opn-law-tabchip { flex: none; font-size: var(--fs-12); font-weight: 600; color: var(--main-dark2); background: var(--brand-50); border: 1px solid var(--brand-100); border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
-.opn-lawhelp-foot { display: flex; align-items: center; gap: 6px; padding: 10px 16px; background: #fff; border-top: 1px dashed var(--status-info-border); font-size: var(--fs-12); color: var(--text-gray); }
-@media (max-width: 640px) { .opn-law-row { grid-template-columns: 1fr; } .opn-law-tabchip { justify-self: start; } }
+/* ===== 의견청취 개편: 화면 내 2차 탭 · 상태 카운트 바 · 2:1 상세 · 처리 카드 ===== */
+/* 화면 내 2차 탭 (SNB와 구분되게 상단 여백) */
+.opn-inpage-tabs { margin-bottom: 16px; }
+
+/* 탭① 상태별 카운트 바 (클릭 필터) */
+.opn-countbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+.opn-count { flex: 1; min-width: 120px; display: flex; flex-direction: column; gap: 4px; align-items: flex-start; padding: 14px 16px; border: 1px solid var(--card-line); border-radius: var(--radius-card); background: #fff; cursor: pointer; font-family: inherit; transition: border-color .12s ease, box-shadow .12s ease; }
+.opn-count:hover { border-color: var(--main-light); }
+.opn-count.is-active { border-color: var(--main); box-shadow: 0 0 0 2px var(--brand-100); }
+.opn-count-n { font-size: var(--fs-22); font-weight: var(--fw-bold); color: var(--main-dark2); }
+.opn-count.is-active .opn-count-n { color: var(--main); }
+.opn-count-l { font-size: var(--fs-13); font-weight: var(--fw-medium); color: var(--text-gray); }
+
+/* 상세 2:1 레이아웃 */
+.opn-detail-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: start; }
+.opn-detail-main { min-width: 0; display: flex; flex-direction: column; }
+.opn-detail-side { min-width: 0; display: flex; flex-direction: column; }
+@media (max-width: 1023px) { .opn-detail-grid { grid-template-columns: 1fr; } }
+
+/* 상태 배너 (톤별) */
+.opn-banner { font-size: var(--fs-13); line-height: 1.6; padding: 10px 14px; border-radius: var(--radius-md); border: 1px solid var(--card-line); margin-bottom: 12px; }
+.opn-banner.warn { background: var(--status-warning-bg); border-color: var(--status-warning-border); color: var(--status-warning-fg); }
+.opn-banner.info { background: var(--status-info-bg); border-color: var(--status-info-border); color: var(--status-info-fg); }
+.opn-banner.success { background: var(--status-success-bg); border-color: var(--status-success-border); color: var(--status-success-fg); }
+.opn-banner.danger { background: var(--status-danger-bg); border-color: var(--status-danger-border); color: var(--status-danger-fg); }
+
+/* 처리 카드 */
+.opn-proc-card { margin-bottom: 16px; }
+.opn-proc-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--card-line); }
+.opn-proc-title { font-size: var(--fs-16); font-weight: var(--fw-semibold); color: var(--main-dark2); }
+.opn-proc-status { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-12); color: var(--text-gray); }
+.opn-proc-foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.opn-proc-note { font-size: var(--fs-13); line-height: 1.6; color: var(--text-black); background: var(--gray-50); border: 1px solid var(--card-line); border-radius: var(--radius-md); padding: 10px 12px; }
+
+/* 접수대기 — 조치 방법 라디오 카드 */
+.opn-act-list { display: flex; flex-direction: column; gap: 10px; }
+.opn-act-opt { border: 1px solid var(--card-line); border-radius: var(--radius-md); overflow: hidden; transition: border-color .12s ease, box-shadow .12s ease; }
+.opn-act-opt.on { border-color: var(--main); box-shadow: 0 0 0 2px var(--brand-100); }
+.opn-act-head { display: grid; grid-template-columns: auto 1fr; grid-template-areas: "radio name" "radio desc"; column-gap: 10px; align-items: center; padding: 12px 14px; cursor: pointer; }
+.opn-act-head input { grid-area: radio; width: 16px; height: 16px; align-self: center; }
+.opn-act-name { grid-area: name; font-size: var(--fs-14); font-weight: var(--fw-semibold); color: var(--text-black); }
+.opn-act-desc { grid-area: desc; font-size: var(--fs-12); color: var(--text-gray); }
+.opn-act-form { padding: 4px 14px 14px; border-top: 1px dashed var(--card-line); }
+.opn-inl-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 12px 0 10px; }
+.opn-act-form label { display: flex; flex-direction: column; gap: 5px; font-size: var(--fs-12); font-weight: var(--fw-medium); color: var(--text-gray); }
+.opn-act-form label.opn-inl-full { display: block; }
+.opn-act-form label.opn-inl-full textarea { margin-top: 5px; }
+.opn-act-form input[type="text"], .opn-act-form input[type="date"], .opn-act-form select, .opn-act-form textarea {
+  width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--card-line); border-radius: var(--radius-button);
+  font-size: var(--fs-13); font-family: inherit; background: #fff; color: var(--text-black);
+}
+.opn-act-form textarea { min-height: 60px; resize: vertical; line-height: 1.5; }
+
+/* 연동 미니 카드 (처리 카드 내부) */
+.opn-linkcard { border: 1px solid var(--card-line); border-left: 3px solid var(--main); border-radius: var(--radius-md); padding: 12px 14px; background: var(--gray-50); }
+.opn-linkcard-badges { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+.opn-linkcard-title { font-size: var(--fs-13); font-weight: var(--fw-semibold); color: var(--text-black); margin-bottom: 4px; }
+.opn-linkcard-meta { font-size: var(--fs-12); color: var(--text-gray); margin-bottom: 10px; }
+
+/* 완료 요약 */
+.opn-done-summary { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.opn-done-summary > div { flex: 1; min-width: 130px; display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; border: 1px solid var(--card-line); border-radius: var(--radius-md); background: var(--gray-50); }
+.opn-done-k { font-size: var(--fs-12); color: var(--text-gray); font-weight: var(--fw-medium); }
+.opn-done-summary b { font-size: var(--fs-14); color: var(--text-black); }
+
+/* 수시 위험성평가 카드 */
+.opn-adhoc { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.opn-adhoc-l { display: flex; align-items: flex-start; gap: 10px; flex: 1; min-width: 220px; }
+.opn-adhoc-ic { flex: none; font-size: var(--fs-22); line-height: 1.2; color: var(--status-warning-fg); }
+.opn-adhoc-h { font-size: var(--fs-14); font-weight: var(--fw-semibold); color: var(--main-dark2); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.opn-adhoc-d { font-size: var(--fs-12); color: var(--text-gray); line-height: 1.55; margin-top: 4px; }
+
+/* 처리 이력 타임라인 */
+.opn-hist { list-style: none; margin: 0; padding: 0; }
+.opn-hist-item { position: relative; display: flex; gap: 12px; padding: 0 0 14px 4px; }
+.opn-hist-item::before { content: ''; position: absolute; left: 8px; top: 16px; bottom: 0; width: 1px; background: var(--card-line); }
+.opn-hist-item:last-child { padding-bottom: 0; }
+.opn-hist-item:last-child::before { display: none; }
+.opn-hist-dot { flex: none; width: 10px; height: 10px; margin-top: 4px; border-radius: 50%; z-index: 1; background: var(--status-neutral-fg); }
+.opn-hist-dot.info { background: var(--status-info-fg); }
+.opn-hist-dot.warning { background: var(--status-warning-fg); }
+.opn-hist-dot.success { background: var(--status-success-fg); }
+.opn-hist-dot.danger { background: var(--status-danger-fg); }
+.opn-hist-dot.neutral { background: var(--text-lightgray); }
+.opn-hist-body { flex: 1; min-width: 0; }
+.opn-hist-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.opn-hist-stage { font-size: var(--fs-13); font-weight: var(--fw-semibold); color: var(--text-black); }
+.opn-hist-at { font-size: var(--fs-12); color: var(--text-lightgray); white-space: nowrap; }
+.opn-hist-text { font-size: var(--fs-12); color: var(--text-black); line-height: 1.55; margin-top: 3px; }
+.opn-hist-actor { font-size: var(--fs-12); color: var(--text-gray); margin-top: 3px; }
+
+/* 연동 정보 카드 (우측) */
+.opn-linkempty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 24px 12px; text-align: center; font-size: var(--fs-13); color: var(--text-lightgray); }
+.opn-linkempty-ic { font-size: var(--fs-26); }
+.opn-mini { border: 1px solid var(--card-line); border-radius: var(--radius-md); padding: 12px; background: #fff; }
+.opn-mini + .opn-mini { margin-top: 10px; }
+.opn-mini-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.opn-mini-title { font-size: var(--fs-13); font-weight: var(--fw-semibold); color: var(--text-black); margin-bottom: 4px; line-height: 1.4; }
+.opn-mini-meta { font-size: var(--fs-12); color: var(--text-gray); margin-bottom: 10px; }

@@ -27,23 +27,17 @@
     document.getElementById('sbm-subtitle').textContent =
         '안전보건관리체계 > ' + META.label + ' · ' + META.sfr + ' · 문서 ' + MY_DOCS.length + '건';
 
-    /* ── ① 요약 바 ── */
-    (function renderSummary() {
-        const rate = V.complianceRate(KEY);
-        const due = V.dueCount(KEY);
-        const barCls = rate >= 70 ? 'green' : rate >= 40 ? 'warning' : 'danger';
-        document.getElementById('sbm-summary').innerHTML =
-            '<div class="sbm-summary-item sbm-summary-rate">' +
-                '<span class="sbm-summary-label">이행률</span>' +
-                '<div class="progress"><div class="progress-bar ' + barCls + '" style="width:' + rate + '%"></div></div>' +
-                '<span class="sbm-summary-value">' + rate + '%</span></div>' +
-            '<div class="sbm-summary-divider"></div>' +
-            '<div class="sbm-summary-item"><span class="sbm-summary-label">시기도래</span>' +
-                (due > 0 ? '<span class="sbm-due-badge">● ' + due + '건</span>' : '<span class="sbm-due-badge none">없음</span>') + '</div>' +
-            '<div class="sbm-summary-divider"></div>' +
-            '<div class="sbm-summary-item"><span class="sbm-summary-label">담당부서</span>' +
-                '<span class="sbm-summary-value" style="font-size:13px;">' + META.dept + '</span></div>';
-    })();
+    /* ── 의견청취: 대메뉴 승격 — sub 파라미터로 3개 SNB 페이지 분기(voice/committee/council) ── */
+    const OPN_SUB_MAP = { voice: '의견청취·건의함', committee: '산업안전보건위원회', council: '협의체·점검표' };
+    let OPN_SUB = null;
+    if (KEY === 'opinion') {
+        OPN_SUB = params.get('sub');
+        if (!OPN_SUB_MAP[OPN_SUB]) OPN_SUB = 'voice';
+        const subLabel = OPN_SUB_MAP[OPN_SUB];
+        document.title = subLabel + ' - 담양군 중대재해예방통합관리시스템 v2';
+        document.getElementById('sbm-title').textContent = subLabel;
+        document.getElementById('sbm-subtitle').textContent = '의견청취 > ' + subLabel + ' · ' + META.sfr;
+    }
 
     /* ── 탭 ── */
     const tabs = document.querySelectorAll('#sbm-tabs .tab');
@@ -736,18 +730,26 @@
 
         /* ── 의견청취 [SFR-011]: 1메뉴 3탭(의견청취·건의함 / 산업안전보건위원회 / 협의체·점검표) — 기획 v0.1 + RFP 보완(접수경로·부서별·안건이행·점검결과지 CRUD) ── */
         opinion() {
-            /* ===== 관련 법령 데이터 (localStorage 영속 + 시드) — '법령 관리' 모달에서 CRUD ===== */
-            const OPN_LAW_KEY = 'dy-opn-laws-v1';
-            const TAB_OPTS = ['의견청취·건의함', '산업안전보건위원회', '협의체·점검표'];
-            const DEFAULT_OPN_LAWS = [
-                { cite: '중대재해처벌법 시행령 제4조제7호', title: '종사자 의견 청취 절차 마련·이행', tab: '의견청취·건의함', desc: '종사자 의견을 청취할 절차를 마련하고, 반기 1회 이상 청취·개선방안 이행 여부를 점검합니다.' },
-                { cite: '산업안전보건법 제24조', title: '산업안전보건위원회', tab: '산업안전보건위원회', desc: '노사 동수로 위원회를 구성하고 분기 1회 이상 정기회의를 개최·심의·의결합니다.' },
-                { cite: '산업안전보건법 제64조', title: '도급사업 시의 안전·보건 협의체', tab: '협의체·점검표', desc: '도급인·수급인이 참여하는 협의체를 매월 1회 이상 정기적으로 운영합니다.' },
-                { cite: '산업안전보건법 제75조', title: '안전·보건에 관한 노사협의체 (건설공사)', tab: '협의체·점검표', desc: '공사금액 120억원 이상 건설공사는 노사협의체를 구성해 2개월마다 운영합니다.' },
-            ];
-            const loadOpnLaws = () => { try { const s = JSON.parse(localStorage.getItem(OPN_LAW_KEY)); if (Array.isArray(s)) return s; } catch (e) {} return null; };
-            const saveOpnLaws = (list) => { try { localStorage.setItem(OPN_LAW_KEY, JSON.stringify(list)); } catch (e) {} };
-
+            /* ===== 프로토타입 시각/이력 헬퍼 ===== */
+            const PROTO_TODAY = '2026-07-02';
+            const pad2 = n => String(n).padStart(2, '0');
+            const nowStamp = () => { const d = new Date(); return PROTO_TODAY + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()); };
+            const addDays = (dateStr, n) => { const dt = new Date((dateStr || PROTO_TODAY) + 'T00:00:00Z'); if (isNaN(dt.getTime())) return '2026-07-31'; dt.setUTCDate(dt.getUTCDate() + n); return dt.toISOString().slice(0, 10); };
+            const pushHist = (o, stage, text) => { o.history = o.history || []; o.history.push({ stage: stage, actor: '박안전', text: text || '', at: nowStamp() }); };
+            /* 레거시 레코드(status:'처리중', plan/progress/result) → 5단계 상태 + history[] 마이그레이션 (최초 1회) */
+            function migrateVoice(o) {
+                if (o.status === '처리중') o.status = o.link ? '개선조치중' : '점검중';
+                if (!o.history) {
+                    const h = [{ stage: '접수', actor: '박안전', text: '의견 접수 — ' + (o.via || '온라인') + ' 경로', at: (o.date || PROTO_TODAY) + ' 09:00' }];
+                    if (o.plan) h.push({ stage: o.link ? '개선조치 생성' : '현장점검 생성', actor: '박안전', text: o.plan, at: (o.date || PROTO_TODAY) + ' 10:00' });
+                    (o.progress || []).forEach(p => h.push({ stage: '경과', actor: '박안전', text: p.text, at: (p.date || o.date || PROTO_TODAY) + ' 11:00' }));
+                    if (o.status === '완료' && o.result) h.push({ stage: '완료', actor: '박안전', text: o.result, at: (o.date || PROTO_TODAY) + ' 15:00' });
+                    if (o.status === '반려' && o.rejectReason) h.push({ stage: '반려', actor: '박안전', text: o.rejectReason, at: (o.date || PROTO_TODAY) + ' 15:00' });
+                    o.history = h;
+                }
+                if (o.inspectLink && !o.inspect) o.inspect = { kind: '특별점검', date: addDays(o.date, 3), owner: o.owner || '재난안전과' };
+                if (o.status === '완료') { o.completedAt = o.completedAt || ((o.date || PROTO_TODAY) + ' 15:00'); o.completedBy = o.completedBy || '박안전'; }
+            }
             /* ===== SSOT (window.OPINION_STATE) ===== */
             if (!window.OPINION_STATE) {
                 const named = [
@@ -830,16 +832,35 @@
                 };
             }
             const S = window.OPINION_STATE;
-            if (!Array.isArray(S.LAWS)) S.LAWS = loadOpnLaws() || DEFAULT_OPN_LAWS.map(function (x) { return { cite: x.cite, title: x.title, tab: x.tab, desc: x.desc }; });
+            if (!S._migrated) { S.VOICES.forEach(migrateVoice); S._migrated = true; }
+            /* SNB(sub 파라미터)가 곧 현재 탭 — 탭 간 이동은 SNB 페이지 이동으로 일어남 */
+            if (OPN_SUB) S.tab = OPN_SUB;
             const PER = 8;
             const CATS = ['아차사고', '안전제안', '위험신고', '청취조사'];
             const DEPTS = ['재난안전과', '행정과', '환경과', '도시과', '미배정'];
             const CHK_CATS = ['용역', '구매설치', '위탁사업', '기타'];
             const CHK_QS = ['도급 시 안전·보건 협의체를 구성·운영하였는가', '작업장 합동 순회점검을 주기적으로 실시하였는가', '수급인에게 안전·보건 정보를 사전 제공하였는가', '종사자 의견청취를 실시하고 결과를 반영하였는가', '안전보건 협의체 결과를 게시·공유하였는가'];
-            const FLOW = ['접수대기', '처리중', '완료'];
-
+            /* 5단계 상태 (DESIGN-TOKENS §5): 접수대기 → 점검중 | 개선조치중 → 완료 (+반려) */
+            const ST_ORDER = ['접수대기', '점검중', '개선조치중', '완료', '반려'];
+            const ST_COLOR = { '접수대기': 'neutral', '점검중': 'info', '개선조치중': 'warning', '완료': 'success', '반려': 'danger' };
             const catChip = c => '<span class="chip-status ' + ({ '아차사고': 'warning', '안전제안': 'info', '위험신고': 'purple', '청취조사': 'success' }[c] || 'neutral') + '">' + c + '</span>';
-            const stChip = st => st === '반려' ? '<span class="chip-status danger">반려</span>' : '<span class="chip-status ' + ({ '접수대기': 'neutral', '처리중': 'info', '완료': 'success' }[st] || 'neutral') + '">' + st + '</span>';
+            const stChip = st => '<span class="chip-status ' + (ST_COLOR[st] || 'neutral') + '">' + st + '</span>';
+            /* 개선조치중 의견: 연계된 개선조치가 종결되면 자동으로 완료 전이 (렌더 시점 동기화) */
+            function syncAutoTransition() {
+                const imps = E.improvements();
+                S.VOICES.forEach(o => {
+                    if (o.status === '개선조치중' && o.link) {
+                        const imp = imps.find(x => x.id === o.link);
+                        if (imp && imp.status === '종결') {
+                            o.status = '완료';
+                            o.completedAt = nowStamp(); o.completedBy = '박안전';
+                            o.result = o.result || ('개선조치 ' + o.link + ' 종결 — 조치 완료');
+                            pushHist(o, '완료', '개선조치 ' + o.link + ' 완료 — 자동 전이');
+                        }
+                    }
+                });
+            }
+            syncAutoTransition();
             const apprColor = a => ({ '미상신': 'neutral', '결재중': 'info', '승인완료': 'success', '반려': 'danger' }[a] || 'neutral');
             const apprChip = a => '<span class="chip-status ' + apprColor(a) + '">' + (a || '미상신') + '</span>';
             const chkResultChip = r => (r === '미흡' ? '<span class="chip-status danger">미흡</span>' : '<span class="chip-status success">적합</span>');
@@ -854,53 +875,10 @@
             const linkChips = o => (o.inspectLink ? '<span class="chip-mini wt-elec"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:3px;" aria-hidden="true"><path d="M9 15a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M15 9a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/></svg>안전점검 연동</span> ' : '') + (o.link ? '<span class="chip-mini pdca"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:3px;" aria-hidden="true"><path d="M9 15a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M15 9a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/></svg>개선조치 연동</span>' : '');
             const find = id => S.VOICES.find(x => x.id === id);
             const nextNum = arr => { let m = 0; arr.forEach(x => { const g = /(\d+)$/.exec(x.id || ''); if (g && +g[1] > m) m = +g[1]; }); return m + 1; };
-            const addDays = (dateStr, n) => { const dt = new Date((dateStr || '2026-06-30') + 'T00:00:00Z'); if (isNaN(dt.getTime())) return '2026-07-31'; dt.setUTCDate(dt.getUTCDate() + n); return dt.toISOString().slice(0, 10); };
 
             /* ===== 라우터 ===== */
             PG.opnGo = (tab, view, id) => { if (tab) S.tab = tab; if (view) S.view = view; if (id !== undefined) S.id = id; render(); };
             PG.opnTab = name => PG.opnGo(name, 'list', null);
-            PG.opnLawToggle = () => { S.lawOpen = (S.lawOpen === false); render(); };
-            /* ── 관련 법령 관리 (CRUD) — 저장 시 S.LAWS 반영 + localStorage 영속 + 도움말 카드 즉시 갱신 ── */
-            PG.opnLawManage = () => {
-                const tabSel = (sel) => '<select class="ol-tab" style="width:100%">' + TAB_OPTS.map(function (t) { return '<option' + (sel === t ? ' selected' : '') + '>' + t + '</option>'; }).join('') + '</select>';
-                const rowHtml = (l) => '<tr>' +
-                    '<td><input class="ol-cite" value="' + V.esc(l.cite || '') + '" style="width:100%" placeholder="예: 산업안전보건법 제24조"></td>' +
-                    '<td><input class="ol-title" value="' + V.esc(l.title || '') + '" style="width:100%" placeholder="예: 산업안전보건위원회"></td>' +
-                    '<td><input class="ol-desc" value="' + V.esc(l.desc || '') + '" style="width:100%" placeholder="도움말에 표시할 이행 의무 요약"></td>' +
-                    '<td>' + tabSel(l.tab) + '</td>' +
-                    '<td style="text-align:center;"><button class="btn btn-sm btn-outline" onclick="this.closest(\'tr\').remove()">삭제</button></td></tr>';
-                V.openModal('관련 법령 관리 — 의견청취',
-                    '<p style="font-size:var(--fs-12); color:var(--text-gray); margin:0 0 10px;">여기서 등록·수정·삭제한 법령이 <b>관련 법령 도움말</b> 카드에 즉시 반영됩니다. <span style="color:var(--text-lightgray);">(프로토타입 — 브라우저에 저장되어 새로고침 후에도 유지)</span></p>' +
-                    '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th style="min-width:170px;">법령·조항</th><th style="min-width:140px;">조문명</th><th style="min-width:240px;">이행 의무 (도움말 표시)</th><th style="min-width:150px;">관련 화면</th><th style="width:64px;"></th></tr></thead><tbody id="opn-law-tbody">' +
-                    S.LAWS.map(rowHtml).join('') +
-                    '</tbody></table></div>' +
-                    '<button class="btn btn-sm btn-outline" style="margin-top:8px;" onclick="PG.opnLawAddRow()">+ 법령 추가</button>',
-                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-                    '<button class="btn btn-primary" onclick="PG.opnLawSave()">저장</button>');
-            };
-            PG.opnLawAddRow = () => {
-                const tb = document.getElementById('opn-law-tbody');
-                if (!tb) return;
-                const tr = document.createElement('tr');
-                tr.innerHTML = '<td><input class="ol-cite" style="width:100%" placeholder="예: 산업안전보건법 제24조"></td>' +
-                    '<td><input class="ol-title" style="width:100%" placeholder="예: 산업안전보건위원회"></td>' +
-                    '<td><input class="ol-desc" style="width:100%" placeholder="도움말에 표시할 이행 의무 요약"></td>' +
-                    '<td><select class="ol-tab" style="width:100%">' + TAB_OPTS.map(function (t) { return '<option>' + t + '</option>'; }).join('') + '</select></td>' +
-                    '<td style="text-align:center;"><button class="btn btn-sm btn-outline" onclick="this.closest(\'tr\').remove()">삭제</button></td>';
-                tb.appendChild(tr);
-            };
-            PG.opnLawSave = () => {
-                const rows = Array.prototype.slice.call(document.querySelectorAll('#opn-law-tbody tr'));
-                const laws = rows.map(function (tr) {
-                    const g = (sel) => { const el = tr.querySelector(sel); return el ? String(el.value).trim() : ''; };
-                    return { cite: g('.ol-cite'), title: g('.ol-title'), desc: g('.ol-desc'), tab: g('.ol-tab') || TAB_OPTS[0] };
-                }).filter(function (l) { return l.cite || l.title || l.desc; });
-                S.LAWS = laws;
-                saveOpnLaws(laws);
-                DYV2.closeModal();
-                render();
-                V.toast('관련 법령이 저장되었습니다 — 도움말 카드에 반영되었습니다');
-            };
             PG.opnOpen = id => PG.opnGo(S.tab, 'detail', id);
             PG.opnBack = () => PG.opnGo(S.tab, 'list', null);
             PG.opnNew = () => PG.opnGo('voice', 'form', null);
@@ -909,6 +887,9 @@
             PG.opnSetCat = v => { S.fcat = v; S.page = 1; render(); };
             PG.opnSetStatus = v => { S.fstatus = v; S.page = 1; render(); };
             PG.opnSetDept = v => { S.fdept = v; S.page = 1; render(); };
+            /* 화면 내 2차 탭 (위원회 3탭 / 협의체 2탭) — 탭 상태는 페이지 내 유지 */
+            PG.opnCmtTab = t => { S.cmtTab = t; render(); };
+            PG.opnCnlTab = t => { S.cnlTab = t; render(); };
 
             /* ===== 의견 등록 (온라인 / 오프라인 담당자 대리 입력) ===== */
             PG.opnSave = () => {
@@ -922,74 +903,101 @@
                 if (!title) { V.toast('제목을 입력하세요'); return; }
                 if (!content) { V.toast('상세내용을 입력하세요'); return; }
                 const writer = author || (via === '온라인' ? '김대표' : '(현장 종사자)');
-                S.VOICES.unshift({ id: 'OPN-' + nextNum(S.VOICES), cat: cat, title: title, location: loc || '-', content: content, author: writer, date: '2026-06-30', status: '접수대기', via: via, owner: '', inspectLink: false, link: '', plan: '', progress: [], result: '' });
+                const rec = { id: 'OPN-' + nextNum(S.VOICES), cat: cat, title: title, location: loc || '-', content: content, author: writer, date: PROTO_TODAY, status: '접수대기', via: via, owner: '', inspectLink: false, inspect: null, link: '', adhocRisk: false, result: '', history: [] };
+                pushHist(rec, '접수', '의견 접수 — ' + via + ' 경로');
+                S.VOICES.unshift(rec);
                 S.page = 1; PG.opnGo('voice', 'list', null);
                 E.notify('의견 접수 알림 — "' + title + '" (' + via + ' 접수, 의견청취 담당)', '문자');
                 V.toast('의견이 등록되었습니다' + (via === '오프라인' ? ' (담당자 대리 등록)' : ''));
             };
 
-            /* ===== 처리: 담당 배정 + 조치방법 분기 (유지) ===== */
-            PG.opnProcess = id => {
-                const o = find(id); if (!o) return;
-                V.openModal('의견 처리 — ' + V.esc(o.title),
-                    '<div style="margin-bottom:12px;">' + stepper(FLOW, o.status, o.status === '반려') + '</div>' +
-                    '<div class="preset-form-grid">' +
-                    '<span class="k">담당 배정</span><select id="opn-owner"><option' + (o.owner === '재난안전과' ? ' selected' : '') + '>재난안전과</option><option' + (o.owner === '행정과' ? ' selected' : '') + '>행정과</option><option' + (o.owner === '환경과' ? ' selected' : '') + '>환경과</option><option' + (o.owner === '도시과' ? ' selected' : '') + '>도시과</option></select>' +
-                    '<span class="k">조치 방법</span><div style="display:flex; flex-direction:column; gap:6px;">' +
-                    '<label style="font-size:var(--fs-12);"><input type="radio" name="opn-act" value="inspect" checked> 현장점검 실시 — 점검 후 조치 판단(안전점검 연동)</label>' +
-                    '<label style="font-size:var(--fs-12);"><input type="radio" name="opn-act" value="improve"> 개선조치 바로 생성 — 위험 명확</label>' +
-                    '<label style="font-size:var(--fs-12);"><input type="radio" name="opn-act" value="reject"> 반려 — 사유가 작성자에게 알림 발송</label></div>' +
-                    '<span class="k">처리 의견·사유</span><textarea id="opn-note" placeholder="점검 계획 / 조치 내용 / 반려 사유"></textarea></div>',
-                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-                    '<button class="btn btn-primary" id="opn-proc-save">저장</button>');
-                document.getElementById('opn-proc-save').addEventListener('click', () => {
-                    const act = (document.querySelector('input[name=opn-act]:checked') || {}).value;
-                    o.owner = (document.getElementById('opn-owner') || {}).value;
-                    const note = ((document.getElementById('opn-note') || {}).value || '').trim();
-                    if (act === 'reject' && !window.confirm('반려 처리하시겠습니까? 작성자에게 사유가 발송됩니다.')) return;
-                    if (act === 'inspect') { o.status = '처리중'; o.inspectLink = true; if (note) o.plan = note; V.toast('현장점검이 등록되었습니다 — 안전점검 연동'); }
-                    if (act === 'improve') { const imp = E.addImprovement({ title: o.title, sourceMenu: '의견청취', sourceDoc: o.id, owner: o.owner, due: '2026-07-15' }); o.status = '처리중'; o.link = imp.id; if (note) o.plan = note; V.toast('개선조치 ' + imp.id + ' 자동 생성 — 개선조치 메뉴에 집계'); }
-                    if (act === 'reject') { o.status = '반려'; o.rejectReason = note || '반려'; E.notify('의견 반려 안내 — 사유가 작성자에게 발송되었습니다', '문자'); }
-                    V.closeModal(); render();
+            /* ===== 처리: 상세 화면 인라인 '처리 카드'에서 조치 방법 선택 → 상태 전이 ===== */
+            const deptOf = s => (String(s || '').split(' · ')[0] || s || '').trim();
+            const valOf = elId => ((document.getElementById(elId) || {}).value || '').trim();
+            /* 라디오 선택 시: 카드 강조 토글 + 인라인 폼 펼침 + 저장 버튼 활성화 */
+            PG.opnActSel = radio => {
+                document.querySelectorAll('.opn-act-opt').forEach(opt => {
+                    const on = opt.getAttribute('data-act') === radio.value;
+                    opt.classList.toggle('on', on);
+                    const form = opt.querySelector('.opn-act-form'); if (form) form.hidden = !on;
                 });
+                const btn = document.getElementById('opn-act-save'); if (btn) btn.disabled = false;
             };
-            PG.opnToImprove = id => { const o = find(id); if (!o) return; if (!o.link) { const imp = E.addImprovement({ title: o.title, sourceMenu: '의견청취', sourceDoc: o.id, owner: o.owner || '재난안전과', due: '2026-07-15' }); o.link = imp.id; } o.status = '처리중'; render(); V.toast('개선조치(' + o.link + ')로 연계되었습니다 — 개선조치 메뉴에서 후속 처리'); };
-            PG.opnAddProgress = id => {
+            PG.opnActSave = id => {
                 const o = find(id); if (!o) return;
-                V.openModal('추진경과 추가 — ' + V.esc(o.title),
+                const act = (document.querySelector('input[name=opn-act]:checked') || {}).value;
+                if (!act) { V.toast('조치 방법을 선택하세요'); return; }
+                if (act === 'inspect') {
+                    const kind = valOf('opn-i-kind') || '특별점검';
+                    const date = valOf('opn-i-date') || addDays(PROTO_TODAY, 7);
+                    const owner = valOf('opn-i-owner');
+                    const note = valOf('opn-i-note');
+                    o.status = '점검중'; o.inspectLink = true; o.owner = deptOf(owner) || o.owner;
+                    o.inspect = { kind: kind, date: date, owner: owner };
+                    pushHist(o, '현장점검 생성', '현장점검 생성 — ' + kind + ' · 담당 ' + owner + ' · 예정 ' + date + (note ? ' · 확인사항: ' + note : ''));
+                    render(); V.toast('현장점검이 생성되었습니다 — 안전점검 연동');
+                } else if (act === 'improve') {
+                    const owner = valOf('opn-m-owner');
+                    const due = valOf('opn-m-due') || addDays(PROTO_TODAY, 14);
+                    const desc = valOf('opn-m-desc');
+                    if (!desc) { V.toast('개선 내용을 입력하세요'); return; }
+                    const imp = E.addImprovement({ title: desc.split('\n')[0], sourceMenu: '의견청취', sourceDoc: o.id, owner: owner, due: due });
+                    o.status = '개선조치중'; o.link = imp.id; o.owner = deptOf(owner) || o.owner;
+                    pushHist(o, '개선조치 생성', '개선조치 ' + imp.id + ' 생성 — 담당 ' + owner + ' · 예정 ' + due);
+                    render(); V.toast('개선조치 ' + imp.id + ' 생성 — 개선조치 메뉴에 집계');
+                } else if (act === 'reject') {
+                    const reason = valOf('opn-r-reason');
+                    if (!reason) { V.toast('반려 사유를 입력하세요'); return; }
+                    if (!window.confirm('반려 처리하시겠습니까? 작성자에게 사유가 발송됩니다.')) return;
+                    o.status = '반려'; o.rejectReason = reason;
+                    pushHist(o, '반려', reason);
+                    E.notify('의견 반려 안내 — 사유가 작성자에게 발송되었습니다', '문자');
+                    render(); V.toast('반려 처리되었습니다');
+                }
+            };
+            /* 경과 추가 — 이력에만 기록 */
+            PG.opnProgress = id => {
+                const o = find(id); if (!o) return;
+                V.openModal('경과 추가 — ' + V.esc(o.title),
                     '<div class="preset-form-grid"><span class="k">경과 내용</span><textarea id="opn-prog" placeholder="진행 상황을 입력하세요"></textarea></div>',
                     '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button><button class="btn btn-primary" id="opn-prog-save">추가</button>');
                 document.getElementById('opn-prog-save').addEventListener('click', () => {
                     const t = ((document.getElementById('opn-prog') || {}).value || '').trim();
                     if (!t) { V.toast('경과 내용을 입력하세요'); return; }
-                    o.progress = o.progress || []; o.progress.push({ date: '2026-06-30', text: t });
-                    V.closeModal(); render(); V.toast('추진경과가 추가되었습니다');
+                    pushHist(o, '경과', t);
+                    V.closeModal(); render(); V.toast('경과가 추가되었습니다');
                 });
             };
-            PG.opnEditPlan = id => {
+            /* 완료 처리 — 수동 완료(데모) */
+            PG.opnComplete = id => {
                 const o = find(id); if (!o) return;
-                V.openModal('추진계획 입력 — ' + V.esc(o.title),
-                    '<div class="preset-form-grid"><span class="k">추진계획</span><textarea id="opn-plan" placeholder="조치 추진계획을 입력하세요">' + V.esc(o.plan || '') + '</textarea></div>',
-                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button><button class="btn btn-primary" id="opn-plan-save">저장</button>');
-                document.getElementById('opn-plan-save').addEventListener('click', () => {
-                    o.plan = ((document.getElementById('opn-plan') || {}).value || '').trim();
-                    V.closeModal(); render(); V.toast('추진계획이 저장되었습니다');
-                });
-            };
-            PG.opnDone = id => {
-                const o = find(id); if (!o) return;
-                if (!o.plan) { V.toast('추진계획을 먼저 입력하세요'); return; }
-                V.openModal('추진결과 입력(완료 처리) — ' + V.esc(o.title),
-                    '<div class="preset-form-grid"><span class="k">추진결과</span><textarea id="opn-result" placeholder="최종 조치 결과를 입력하세요">' + V.esc(o.result || '') + '</textarea></div>',
+                V.openModal('완료 처리 — ' + V.esc(o.title),
+                    '<div class="preset-form-grid"><span class="k">처리 결과</span><textarea id="opn-result" placeholder="처리 결과를 입력하세요">' + V.esc(o.result || '') + '</textarea></div>',
                     '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button><button class="btn btn-primary" id="opn-done-save">완료 처리</button>');
                 document.getElementById('opn-done-save').addEventListener('click', () => {
                     o.result = ((document.getElementById('opn-result') || {}).value || '').trim();
-                    o.status = '완료'; V.closeModal(); render();
+                    o.status = '완료'; o.completedAt = nowStamp(); o.completedBy = '박안전';
+                    pushHist(o, '완료', o.result || '조치 완료');
+                    V.closeModal(); render();
                     E.notify('의견 처리 결과 회신 — "' + o.title + '" 조치 완료', '문자');
                     V.toast('완료 처리되었습니다 — 작성자에게 결과 회신');
                 });
             };
-            PG.opnReopen = id => { const o = find(id); if (!o) return; if (!window.confirm('처리 완료/반려를 취소하고 재처리(처리중) 상태로 되돌릴까요?')) return; o.status = '처리중'; o.rejectReason = ''; render(); V.toast('재처리로 전환되었습니다 (처리중)'); };
+            /* 재처리 — 완료/반려를 접수대기로 되돌림 */
+            PG.opnReopen = id => {
+                const o = find(id); if (!o) return;
+                if (!window.confirm('처리를 취소하고 접수대기 상태로 되돌리시겠습니까?')) return;
+                o.status = '접수대기'; o.inspectLink = false; o.inspect = null; o.link = ''; o.rejectReason = ''; o.result = ''; o.completedAt = null; o.completedBy = null;
+                pushHist(o, '재처리', '처리를 취소하고 접수대기로 되돌림');
+                render(); V.toast('접수대기로 되돌렸습니다');
+            };
+            /* 수시 위험성평가 등록 (위험신고 분류 전용) */
+            PG.opnAdhocRisk = id => {
+                const o = find(id); if (!o) return;
+                o.adhocRisk = true;
+                pushHist(o, '수시평가 등록', '수시 위험성평가 등록 — 트리거: 근로자 위험신고');
+                render(); V.toast('수시 위험성평가가 등록되었습니다 — 위험성평가 메뉴에서 확인');
+            };
 
             /* ===== 위원회 회의록 (목록 클릭 → 상세 페이지) / 협의체 공유 ===== */
             PG.opnMeetingOpen = round => PG.opnGo('committee', 'mdetail', round);
@@ -1229,60 +1237,42 @@
                 document.body.appendChild(ov);
             };
 
-            /* ===== 공통 상단 대시보드 ===== */
-            const total = S.VOICES.length;
-            const doneN = S.VOICES.filter(o => o.status === '완료').length;
-            const rate = total ? Math.round(doneN / total * 100) : 0;
-            const pendN = S.VOICES.filter(o => o.status !== '완료' && o.status !== '반려').length;
-            const dash = statboxes([['info', total + '건', '올해 의견청취 접수'], ['success', rate + '%', '처리 완료율'], ['danger', pendN + '건', '미조치']]);
-
-            /* ===== 서브탭 ===== */
-            const subtabs = '<div class="psub-tabs">' + [['voice', '의견청취·건의함'], ['committee', '산업안전보건위원회'], ['council', '협의체·점검표']].map(t => '<button type="button" class="psub-tab' + (S.tab === t[0] ? ' is-active' : '') + '" onclick="PG.opnTab(\'' + t[0] + '\')">' + t[1] + '</button>').join('') + '</div>';
-
-            /* ===== 관련 법령 도움말 (경영방침·인력평가 공통 패턴 적용) — 데이터: S.LAWS (법령 관리에서 CRUD) ===== */
-            const lawOpen = (S.lawOpen !== false);
-            const lawRows = S.LAWS.length ? S.LAWS.map(function (l) {
-                return '<div class="opn-law-row"><div><div class="lw-name">' + V.esc(l.cite || '') + '</div>' +
-                    (l.title ? '<div class="lw-clause">' + V.esc(l.title) + '</div>' : '') +
-                    (l.desc ? '<div class="lw-desc">' + V.esc(l.desc) + '</div>' : '') +
-                    '</div><span class="opn-law-tabchip">' + V.esc(l.tab || '공통') + '</span></div>';
-            }).join('') : '<div class="opn-law-empty">등록된 법령이 없습니다. 우측 상단 <b>법령 관리</b>에서 추가하세요.</div>';
-            const lawHelp = '<div class="opn-lawhelp" data-open="' + lawOpen + '">' +
-                '<div class="opn-lawhelp-head">' +
-                    '<button type="button" class="opn-lawhelp-toggle" aria-expanded="' + lawOpen + '" aria-controls="opn-lawhelp-body" onclick="PG.opnLawToggle()">' +
-                        '<span class="opn-lawhelp-ico" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6l3 1m0 0l-3 9a5 5 0 0 0 6 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5 5 0 0 0 6 0M18 7l3 9M18 7l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/></svg></span>' +
-                        '<span class="opn-lawhelp-tt"><b>관련 법령 도움말 <span class="opn-lawhelp-cnt">근거 ' + S.LAWS.length + '건</span></b><span class="sub">종사자 의견청취·협의체 운영의 법적 근거와 화면별 이행 의무를 안내합니다.</span></span>' +
-                        '<span class="opn-lawhelp-chev" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>' +
-                    '</button>' +
-                    '<button type="button" class="opn-lawhelp-manage" onclick="PG.opnLawManage()" title="관련 법령 등록·수정·삭제"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg><span>법령 관리</span></button>' +
-                '</div>' +
-                '<div class="opn-lawhelp-body" id="opn-lawhelp-body">' + lawRows + '</div>' +
-                '<div class="opn-lawhelp-foot"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span>법령·조항을 편집하려면 우측 상단 <b>법령 관리</b>를 이용하세요 — 변경 즉시 도움말에 반영되며 브라우저에 저장됩니다.</span></div>' +
-            '</div>';
-
-            /* ===== 탭1: 부서별 접수·처리 현황 (산안법 §64 — 부서별 별도 관리) ===== */
-            PG.opnDeptStatsToggle = () => { S.deptStatsOpen = !(S.deptStatsOpen === true); render(); };
-            function renderDeptStats() {
-                const open = S.deptStatsOpen === true;
-                const rows = DEPTS.map(d => {
-                    const list = S.VOICES.filter(o => (o.owner || '미배정') === d);
-                    const tot = list.length;
-                    const doing = list.filter(o => o.status === '처리중').length;
-                    const done = list.filter(o => o.status === '완료').length;
-                    const rate = tot ? Math.round(done / tot * 100) : 0;
-                    return '<tr style="cursor:pointer;" onclick="PG.opnSetDept(\'' + d + '\')"><td>' + V.esc(d) + '</td><td>' + tot + '건</td><td>' + doing + '건</td><td>' + done + '건</td><td>' + rate + '%</td></tr>';
-                }).join('');
-                const body = '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>부서</th><th>접수</th><th>처리중</th><th>완료</th><th>완료율</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
-                    '<p style="font-size:var(--fs-12); color:var(--text-gray); margin:8px 0 0;">행을 클릭하면 해당 부서로 목록이 필터링됩니다.</p>';
-                return sectionCard('부서별 접수·처리 현황 <span class="chip-mini wt" style="margin-left:6px;">산안법 §64</span>',
-                    open ? body : '',
-                    '<button class="btn btn-sm btn-outline" onclick="PG.opnDeptStatsToggle()">' + (open ? '접기' : '펼치기') + '</button>');
+            /* ===== 페이지별 상단 통계 ===== */
+            /* 탭① 의견청취·건의함 — 상태별 카운트 바 (클릭 시 목록 필터, 전체=해제) */
+            function voiceCountBar() {
+                const cnt = st => S.VOICES.filter(o => o.status === st).length;
+                const segs = [
+                    ['', '전체', S.VOICES.length],
+                    ['접수대기', '접수대기', cnt('접수대기')],
+                    ['점검중', '점검중', cnt('점검중')],
+                    ['개선조치중', '개선조치중', cnt('개선조치중')],
+                    ['완료', '완료', cnt('완료')],
+                ];
+                return '<div class="opn-countbar">' + segs.map(s =>
+                    '<button type="button" class="opn-count' + (S.fstatus === s[0] ? ' is-active' : '') + '" onclick="PG.opnSetStatus(\'' + s[0] + '\')">' +
+                    '<span class="opn-count-n">' + s[2] + '</span><span class="opn-count-l">' + s[1] + '</span></button>').join('') + '</div>';
+            }
+            /* 탭② 위원회 — 미니 지표 */
+            function committeeStat() {
+                const C = S.COMMITTEE;
+                const meetN = (C.meetings || []).length;
+                const ag = C.agendaItems || [];
+                const agDone = ag.filter(a => a.status === '완료').length;
+                const agLate = ag.filter(a => a.status === '지연').length;
+                return statboxes([['info', meetN + '회', '올해 회의 개최'], ['success', agDone + '/' + ag.length + '건', '안건 이행'], ['danger', agLate + '건', '이행 지연']]);
+            }
+            /* 탭③ 협의체·점검표 — 미니 지표 */
+            function councilStat() {
+                const cl = S.COUNCIL.checklists || [];
+                const unfit = cl.filter(c => c.result === '미흡').length;
+                const wait = cl.filter(c => c.appr === '결재중').length;
+                return statboxes([['info', cl.length + '건', '점검결과지'], ['danger', unfit + '건', '미흡'], ['warning', wait + '건', '결재 대기']]);
             }
 
             /* ===== 탭1: 의견청취·건의함 목록 ===== */
             function renderVoiceList() {
                 let list = S.VOICES.slice();
-                if (S.fkw && S.fkw.trim()) { const kw = S.fkw.trim(); list = list.filter(o => (o.title || '').indexOf(kw) !== -1); }
+                if (S.fkw && S.fkw.trim()) { const kw = S.fkw.trim(); list = list.filter(o => (o.title || '').indexOf(kw) !== -1 || (o.author || '').indexOf(kw) !== -1); }
                 if (S.fcat) list = list.filter(o => o.cat === S.fcat);
                 if (S.fstatus) list = list.filter(o => o.status === S.fstatus);
                 if (S.fdept) list = list.filter(o => (o.owner || '미배정') === S.fdept);
@@ -1291,9 +1281,9 @@
                 if (S.page > pages) S.page = pages;
                 const start = (S.page - 1) * PER;
                 const pageRows = list.slice(start, start + PER);
-                const kwSearch = '<input type="text" class="opn-filter" style="width:160px;" placeholder="제목 검색" value="' + V.esc(S.fkw || '') + '" onchange="PG.opnSetKw(this.value)" onkeydown="if(event.key===\'Enter\')PG.opnSetKw(this.value)">';
+                const kwSearch = '<input type="text" class="opn-filter" style="width:170px;" placeholder="제목, 작성자 검색" value="' + V.esc(S.fkw || '') + '" onchange="PG.opnSetKw(this.value)" onkeydown="if(event.key===\'Enter\')PG.opnSetKw(this.value)">';
                 const catFilter = '<select onchange="PG.opnSetCat(this.value)" class="opn-filter" style="margin-left:6px;"><option value="">전체 분류</option>' + CATS.map(c => '<option' + (S.fcat === c ? ' selected' : '') + '>' + c + '</option>').join('') + '</select>';
-                const stFilter = '<select onchange="PG.opnSetStatus(this.value)" class="opn-filter" style="margin-left:6px;"><option value="">전체 상태</option>' + ['접수대기', '처리중', '완료', '반려'].map(s => '<option' + (S.fstatus === s ? ' selected' : '') + '>' + s + '</option>').join('') + '</select>';
+                const stFilter = '<select onchange="PG.opnSetStatus(this.value)" class="opn-filter" style="margin-left:6px;"><option value="">전체 상태</option>' + ['접수대기', '점검중', '개선조치중', '완료', '반려'].map(s => '<option' + (S.fstatus === s ? ' selected' : '') + '>' + s + '</option>').join('') + '</select>';
                 const deptFilter = '<select onchange="PG.opnSetDept(this.value)" class="opn-filter" style="margin-left:6px;"><option value="">전체 부서</option>' + DEPTS.map(d => '<option' + (S.fdept === d ? ' selected' : '') + '>' + d + '</option>').join('') + '</select>';
                 const body = pageRows.length ? pageRows.map(o => '<tr style="cursor:pointer;" onclick="PG.opnOpen(\'' + o.id + '\')"><td>' + catChip(o.cat) + '</td><td><b>' + V.esc(o.title) + '</b> ' + linkChips(o) + '</td><td>' + V.esc(o.author) + '</td><td class="opn-hide-sm">' + (o.owner ? V.esc(o.owner) : '<span class="opn-muted">미배정</span>') + '</td><td>' + o.date + '</td><td>' + stChip(o.status) + '</td></tr>').join('') : '<tr><td colspan="6" style="text-align:center; color:var(--text-gray); padding:30px;">해당 조건의 의견이 없습니다.</td></tr>';
                 let pager = '';
@@ -1336,37 +1326,107 @@
                 return head + writer + info + detail + photo + bar;
             }
 
-            /* ===== 탭1: 상세 (조치결과 3단) ===== */
+            /* ===== 탭1: 상세 — 2:1 레이아웃 + 상태별 처리 카드 (민원처리형) ===== */
+            const OWNERS = ['재난안전과 · 홍길동', '재난안전과 · 김안전', '건설과 · 박현장', '환경과 · 최보건'];
+            const INSPECT_KINDS = ['특별점검', '일상점검', '주간점검', '합동점검', '순회점검'];
+            const ownerOpts = () => OWNERS.map(p => '<option>' + p + '</option>').join('');
+            const HIST_DOT = { '접수': 'neutral', '현장점검 생성': 'info', '개선조치 생성': 'warning', '경과': 'info', '완료': 'success', '반려': 'danger', '재처리': 'neutral', '수시평가 등록': 'info' };
             function renderVoiceDetail(o) {
                 if (!o) return renderVoiceList();
-                const isFinal = o.status === '완료' || o.status === '반려';
-                const info = '<div class="preset-form-grid">' +
-                    '<span class="k">분류</span><div>' + catChip(o.cat) + '</div>' +
-                    '<span class="k">제목</span><div style="font-weight:700;">' + V.esc(o.title) + '</div>' +
+                /* ① 의견 정보 */
+                const infoCard = sectionCard(o.id + ' · 의견 상세',
+                    '<div class="preset-form-grid">' +
+                    '<span class="k">분류 / 상태</span><div style="display:flex; gap:6px; align-items:center;">' + catChip(o.cat) + stChip(o.status) + '</div>' +
+                    '<span class="k">제목</span><div style="font-weight:var(--fw-bold);">' + V.esc(o.title) + '</div>' +
+                    '<span class="k">작성자 / 경로</span><div>' + V.esc(o.author) + ' · ' + V.esc(o.via || '온라인') + '</div>' +
+                    '<span class="k">작성일</span><div>' + o.date + '</div>' +
+                    '<span class="k">담당부서</span><div>' + (o.owner ? V.esc(o.owner) : '<span class="opn-muted">미배정</span>') + '</div>' +
                     '<span class="k">발생장소</span><div>' + V.esc(o.location || '-') + '</div>' +
                     '<span class="k">상세내용</span><div>' + V.esc(o.content || '-') + '</div>' +
-                    '<span class="k">작성자 / 경로</span><div>' + V.esc(o.author) + ' · ' + V.esc(o.via || '온라인') + '</div>' +
-                    '<span class="k">담당부서</span><div>' + (o.owner ? V.esc(o.owner) : '<span class="opn-muted">미배정</span>') + '</div>' +
-                    '<span class="k">등록일</span><div>' + o.date + '</div>' +
-                    '<span class="k">처리 상태</span><div>' + stepper(FLOW, o.status, o.status === '반려') + '</div>' +
-                    ((o.inspectLink || o.link) ? '<span class="k">연계</span><div>' + (o.inspectLink ? '<span class="chip-mini wt-elec"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:3px;" aria-hidden="true"><path d="M9 15a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M15 9a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/></svg>안전점검 연동</span> ' : '') + (o.link ? '<span class="chip-mini pdca"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:3px;" aria-hidden="true"><path d="M9 15a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M15 9a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/></svg>개선조치 ' + V.esc(o.link) + '</span>' : '') + '</div>' : '') +
-                    '</div>';
-                const planSec = '<div class="opn-act3"><div class="opn-act3-h">추진계획' + (isFinal ? '' : ' <button class="btn btn-sm btn-outline" style="margin-left:6px;" onclick="PG.opnEditPlan(\'' + o.id + '\')">입력</button>') + '</div><div class="opn-act3-b">' + (o.plan ? V.esc(o.plan) : '<span class="opn-muted">미작성</span>') + '</div></div>';
-                const progSec = '<div class="opn-act3"><div class="opn-act3-h">추진경과</div><div class="opn-act3-b">' + ((o.progress && o.progress.length) ? '<ul class="opn-timeline">' + o.progress.map(p => '<li><span class="opn-tl-date">' + p.date + '</span> ' + V.esc(p.text) + '</li>').join('') + '</ul>' : '<span class="opn-muted">경과 없음</span>') + (isFinal ? '' : ' <button class="btn btn-sm btn-outline" style="margin-top:6px;" onclick="PG.opnAddProgress(\'' + o.id + '\')">+ 경과 추가</button>') + '</div></div>';
-                const resSec = '<div class="opn-act3"><div class="opn-act3-h">추진결과</div><div class="opn-act3-b">' + (o.result ? V.esc(o.result) : (o.status === '반려' ? '<span style="color:var(--status-danger-fg);">반려: ' + V.esc(o.rejectReason || '') + '</span>' : '<span class="opn-muted">미완료</span>')) + '</div></div>';
-                const actSec = sectionCard('조치결과 (추진계획 · 추진경과 · 추진결과)', planSec + progSec + resSec, '');
-                let btns = '<div class="pol-detail-actions">';
-                if (!isFinal) {
-                    btns += '<button class="btn btn-sm btn-outline" onclick="PG.opnProcess(\'' + o.id + '\')">처리(담당·조치방법)</button>';
-                    btns += '<button class="btn btn-sm btn-outline" onclick="PG.opnToImprove(\'' + o.id + '\')">개선조치 관리 ▶</button>';
-                    btns += '<button class="btn btn-sm btn-primary" onclick="PG.opnDone(\'' + o.id + '\')">완료 처리</button>';
-                } else {
-                    btns += '<span class="opn-muted" style="font-size:var(--fs-12); align-self:center;">' + (o.status === '반려' ? '반려 종결됨' : '처리 완료됨') + ' — 비가역 처리입니다.</span>';
-                    btns += '<button class="btn btn-sm btn-outline" onclick="PG.opnReopen(\'' + o.id + '\')">재처리(되돌리기)</button>';
+                    '<span class="k">첨부 사진</span><div><span class="opn-muted">첨부된 사진이 없습니다 (프로토타입)</span></div>' +
+                    '</div>', '');
+                /* ② 수시 위험성평가 (위험신고 분류 전용) */
+                const adhocCard = (o.cat === '위험신고')
+                    ? '<div class="card"><div class="card-body opn-adhoc"><div class="opn-adhoc-l"><span class="opn-adhoc-ic">⚠</span><div>' +
+                      '<div class="opn-adhoc-h">수시 위험성평가 <span class="chip-mini wt-elec">위험신고 연계</span></div>' +
+                      '<div class="opn-adhoc-d">근로자의 위험신고 내용을 기반으로 수시 위험성평가를 등록합니다. 트리거 유형은 \'근로자 위험신고\'로 자동 설정됩니다.</div></div></div>' +
+                      (o.adhocRisk
+                        ? '<button class="btn btn-sm btn-outline" onclick="location.href=\'risk-list.html\'">보기</button>'
+                        : '<button class="btn btn-sm btn-primary" onclick="PG.opnAdhocRisk(\'' + o.id + '\')">수시 위험성평가 등록</button>') +
+                      '</div></div>'
+                    : '';
+                /* ③ 처리 카드 (상태별 5-view) */
+                const procHead = '<div class="opn-proc-head"><span class="opn-proc-title">처리</span><span class="opn-proc-status">현재 상태 ' + stChip(o.status) + '</span></div>';
+                let procBody;
+                if (o.status === '접수대기') {
+                    const opt = (val, name, desc, form) =>
+                        '<div class="opn-act-opt" data-act="' + val + '">' +
+                        '<label class="opn-act-head"><input type="radio" name="opn-act" value="' + val + '" onchange="PG.opnActSel(this)"><span class="opn-act-name">' + name + '</span><span class="opn-act-desc">' + desc + '</span></label>' +
+                        '<div class="opn-act-form" id="opn-actf-' + val + '" hidden>' + form + '</div></div>';
+                    const inspectForm = '<div class="opn-inl-grid">' +
+                        '<label>점검 종류<select id="opn-i-kind">' + INSPECT_KINDS.map((k, ix) => '<option' + (ix === 0 ? ' selected' : '') + '>' + k + '</option>').join('') + '</select></label>' +
+                        '<label>점검 예정일<input type="date" id="opn-i-date" value="' + addDays(PROTO_TODAY, 7) + '"></label>' +
+                        '<label>담당자<select id="opn-i-owner">' + ownerOpts() + '</select></label></div>' +
+                        '<label class="opn-inl-full">점검 시 확인사항<textarea id="opn-i-note">' + V.esc(o.content || '') + '</textarea></label>';
+                    const improveForm = '<div class="opn-inl-grid">' +
+                        '<label>담당자<select id="opn-m-owner">' + ownerOpts() + '</select></label>' +
+                        '<label>완료 예정일<input type="date" id="opn-m-due" value="' + addDays(PROTO_TODAY, 14) + '"></label></div>' +
+                        '<label class="opn-inl-full">개선 내용<textarea id="opn-m-desc">' + V.esc(o.title || '') + '</textarea></label>';
+                    const rejectForm = '<label class="opn-inl-full">반려 사유<textarea id="opn-r-reason" placeholder="반려 사유를 입력하세요"></textarea></label>' +
+                        '<div class="opn-banner danger" style="margin-top:8px;">반려 시 작성자에게 사유가 문자로 발송되며, 되돌리려면 재처리해야 합니다.</div>';
+                    procBody = '<div class="opn-banner warn">접수 대기 중 — 의견을 검토하고 조치 방법을 선택하세요.</div>' +
+                        '<div class="opn-act-list">' +
+                        opt('inspect', '현장점검 실시', '안전점검이 자동 생성됩니다.', inspectForm) +
+                        opt('improve', '개선조치 바로 생성', '개선조치 메뉴에 조치 항목이 자동 생성됩니다.', improveForm) +
+                        opt('reject', '반려', '반려 사유가 작성자에게 문자로 발송됩니다.', rejectForm) +
+                        '</div>' +
+                        '<div class="opn-proc-foot"><button class="btn btn-primary" id="opn-act-save" disabled onclick="PG.opnActSave(\'' + o.id + '\')">저장</button></div>';
+                } else if (o.status === '점검중') {
+                    const ins = o.inspect || {};
+                    procBody = '<div class="opn-banner info">현장점검 진행 중 — 점검이 완료되면 자동으로 상태가 변경됩니다.</div>' +
+                        '<div class="opn-linkcard"><div class="opn-linkcard-badges"><span class="chip-mini wt-elec">안전점검 연동</span> <span class="chip-mini wt">점검예정</span></div>' +
+                        '<div class="opn-linkcard-title">[의견청취] ' + V.esc(o.title) + '</div>' +
+                        '<div class="opn-linkcard-meta">' + V.esc(ins.kind || '특별점검') + ' · 담당 ' + V.esc(ins.owner || o.owner || '-') + ' · 예정 ' + (ins.date || '-') + '</div>' +
+                        '<button class="btn btn-sm btn-outline" onclick="DYV2.toast(\'안전점검 메뉴 연동 (프로토타입)\')">점검 상세 보기</button></div>' +
+                        '<div class="opn-proc-foot"><button class="btn btn-outline" onclick="PG.opnProgress(\'' + o.id + '\')">경과 추가</button><button class="btn btn-primary" onclick="PG.opnComplete(\'' + o.id + '\')">완료 처리</button></div>';
+                } else if (o.status === '개선조치중') {
+                    const imp = E.improvements().find(x => x.id === o.link) || {};
+                    procBody = '<div class="opn-banner warn">개선조치 진행 중 — 개선조치가 완료되면 자동으로 상태가 변경됩니다.</div>' +
+                        '<div class="opn-linkcard"><div class="opn-linkcard-badges"><span class="chip-mini pdca">의견청취 연동</span> <span class="chip-mini wt-attach">' + (imp.status === '종결' ? '종결' : '조치중') + '</span></div>' +
+                        '<div class="opn-linkcard-title">' + V.esc(imp.title || o.title) + '</div>' +
+                        '<div class="opn-linkcard-meta">담당 ' + V.esc(imp.owner || o.owner || '-') + ' · 예정 ' + (imp.due || '-') + '</div>' +
+                        '<button class="btn btn-sm btn-outline" onclick="location.href=\'menu.html?m=improve\'">개선조치 상세 보기</button></div>' +
+                        '<div class="opn-proc-foot"><button class="btn btn-outline" onclick="PG.opnProgress(\'' + o.id + '\')">경과 추가</button><button class="btn btn-primary" onclick="PG.opnComplete(\'' + o.id + '\')">완료 처리</button></div>';
+                } else if (o.status === '완료') {
+                    procBody = '<div class="opn-banner success">처리 완료 — 의견 처리 및 조치가 완료되었습니다.</div>' +
+                        '<div class="opn-done-summary"><div><span class="opn-done-k">처리 완료일</span><b>' + (o.completedAt || '-') + '</b></div><div><span class="opn-done-k">처리자</span><b>' + V.esc(o.completedBy || '-') + '</b></div></div>' +
+                        (o.result ? '<div class="opn-proc-note">' + V.esc(o.result) + '</div>' : '') +
+                        '<div class="opn-proc-foot"><button class="btn btn-outline" onclick="PG.opnReopen(\'' + o.id + '\')">재처리</button></div>';
+                } else { /* 반려 */
+                    procBody = '<div class="opn-banner danger">반려 처리됨 — 작성자에게 반려 사유가 발송되었습니다.</div>' +
+                        '<div class="opn-proc-note">' + V.esc(o.rejectReason || '-') + '</div>' +
+                        '<div class="opn-proc-foot"><button class="btn btn-outline" onclick="PG.opnReopen(\'' + o.id + '\')">재처리</button></div>';
                 }
-                btns += '</div>';
-                const header = '<div class="pol-detail-top"><button class="btn btn-sm btn-outline" onclick="PG.opnBack()">‹ 목록</button>' + btns + '</div>';
-                return header + sectionCard(o.id + ' · 의견 상세', info, '') + actSec;
+                const procCard = '<div class="card opn-proc-card"><div class="card-body">' + procHead + procBody + '</div></div>';
+                /* ④ 처리 이력 */
+                const hist = (o.history || []);
+                const histCard = sectionCard('처리 이력',
+                    hist.length
+                        ? '<ul class="opn-hist">' + hist.map(h => '<li class="opn-hist-item"><span class="opn-hist-dot ' + (HIST_DOT[h.stage] || 'neutral') + '"></span><div class="opn-hist-body"><div class="opn-hist-head"><span class="opn-hist-stage">' + V.esc(h.stage) + '</span><span class="opn-hist-at">' + V.esc(h.at) + '</span></div>' + (h.text ? '<div class="opn-hist-text">' + V.esc(h.text) + '</div>' : '') + '<div class="opn-hist-actor">' + V.esc(h.actor) + '</div></div></li>').join('') + '</ul>'
+                        : '<p class="opn-muted" style="font-size:var(--fs-13);">처리 이력이 없습니다.</p>', '');
+                /* ⑤ 연동 정보 */
+                let linkInner;
+                if (!o.inspectLink && !o.link && !o.adhocRisk) {
+                    linkInner = '<div class="opn-linkempty"><span class="opn-linkempty-ic">🔗</span><span>조치 선택 후 연동 정보가 표시됩니다</span></div>';
+                } else {
+                    linkInner = '';
+                    if (o.inspectLink) { const ins = o.inspect || {}; linkInner += '<div class="opn-mini"><div class="opn-mini-badges"><span class="chip-mini wt-elec">안전점검</span> <span class="chip-mini wt">점검예정</span></div><div class="opn-mini-title">[의견청취] ' + V.esc(o.title) + '</div><div class="opn-mini-meta">담당 ' + V.esc(ins.owner || o.owner || '-') + ' · 예정 ' + (ins.date || '-') + '</div><button class="btn btn-sm btn-outline" onclick="DYV2.toast(\'안전점검 메뉴 연동 (프로토타입)\')">바로가기</button></div>'; }
+                    if (o.link) { const imp = E.improvements().find(x => x.id === o.link) || {}; linkInner += '<div class="opn-mini"><div class="opn-mini-badges"><span class="chip-mini pdca">개선조치</span> <span class="chip-mini wt-attach">' + (imp.status === '종결' ? '종결' : '조치중') + '</span></div><div class="opn-mini-title">' + V.esc(imp.title || o.title) + '</div><div class="opn-mini-meta">' + V.esc(o.link) + ' · 예정 ' + (imp.due || '-') + '</div><button class="btn btn-sm btn-outline" onclick="location.href=\'menu.html?m=improve\'">바로가기</button></div>'; }
+                    if (o.adhocRisk) { linkInner += '<div class="opn-mini"><div class="opn-mini-badges"><span class="chip-mini wt">위험성평가</span> <span class="chip-mini wt-attach">수시</span></div><div class="opn-mini-title">수시 위험성평가 — ' + V.esc(o.title) + '</div><div class="opn-mini-meta">트리거: 근로자 위험신고</div><button class="btn btn-sm btn-outline" onclick="location.href=\'risk-list.html\'">바로가기</button></div>'; }
+                }
+                const linkCard = sectionCard('연동 정보', linkInner, '');
+                const header = '<div class="pol-detail-top"><button class="btn btn-sm btn-outline" onclick="PG.opnBack()">‹ 목록</button></div>';
+                return header + '<div class="opn-detail-grid"><div class="opn-detail-main">' + infoCard + adhocCard + procCard + '</div><div class="opn-detail-side">' + histCard + linkCard + '</div></div>';
             }
 
             /* ===== 탭2: 산업안전보건위원회 운영 ===== */
@@ -1384,7 +1444,10 @@
                 const meetHead = '<tr><th>회차</th><th>유형</th><th>일시</th><th>참석</th><th>주요 안건</th><th>상태</th></tr>';
                 const meetBody = C.meetings.map(mt => '<tr style="cursor:pointer;" onclick="PG.opnMeetingOpen(\'' + mt.round + '\')"><td><b>' + mt.round + '</b></td><td><span class="chip-mini wt-elec">' + mt.type + '</span></td><td>' + mt.date + '</td><td>' + (mt.attendeeList || []).length + '명</td><td><span class="opn-agenda">' + V.esc(mt.agenda) + '</span></td><td><span class="chip-status ' + (mt.status === '확정' ? 'success' : 'info') + '">' + (mt.status || '작성') + '</span></td></tr>').join('');
                 const meetCard = sectionCard('회의록 (정기·수시) <span class="opn-muted" style="font-size:var(--fs-12); font-weight:400;">— 행 클릭 시 상세 보기</span>', '<div style="overflow-x:auto;"><table class="table-figma"><thead>' + meetHead + '</thead><tbody>' + meetBody + '</tbody></table></div>', '<button class="btn btn-sm btn-primary" onclick="PG.opnMtgFormOpen(null)">회의록 작성</button>');
-                return memCard + agendaCard + meetCard;
+                const cmtTab = S.cmtTab || 'member';
+                const tabBar = '<div class="psub-tabs opn-inpage-tabs">' + [['member', '위원 구성'], ['agenda', '안건 부서이행'], ['meeting', '회의록']].map(t => '<button type="button" class="psub-tab' + (cmtTab === t[0] ? ' is-active' : '') + '" onclick="PG.opnCmtTab(\'' + t[0] + '\')">' + t[1] + '</button>').join('') + '</div>';
+                const pane = cmtTab === 'agenda' ? agendaCard : cmtTab === 'meeting' ? meetCard : memCard;
+                return tabBar + pane;
             }
 
             /* ===== 탭2: 회의록 상세 보기 페이지 ===== */
@@ -1458,7 +1521,10 @@
                     return [c.cat, c.date, c.inspector, (c.result === '미흡' ? '<span class="chip-status danger">미흡 ' + c.items.filter(i => i.r === '미흡').length + '건</span>' : '<span class="chip-status success">적합</span>'), apprChip(c.appr), acts];
                 });
                 const chkCard = sectionCard('의견청취 점검표 <span class="chip-mini wt" style="margin-left:6px;">용역·구매설치·위탁사업·기타</span>', tbl(['점검 구분', '점검일', '점검자', '결과', '온나라 결재', ''], chkRows), '<button class="btn btn-sm btn-primary" onclick="PG.opnChkNew()">+ 점검결과지 생성</button>');
-                return memCard + resultCard + chkCard;
+                const cnlTab = S.cnlTab || 'council';
+                const tabBar = '<div class="psub-tabs opn-inpage-tabs">' + [['council', '협의체 운영'], ['check', '점검표']].map(t => '<button type="button" class="psub-tab' + (cnlTab === t[0] ? ' is-active' : '') + '" onclick="PG.opnCnlTab(\'' + t[0] + '\')">' + t[1] + '</button>').join('') + '</div>';
+                const pane = cnlTab === 'check' ? chkCard : (memCard + resultCard);
+                return tabBar + pane;
             }
 
             /* ===== 탭3: 점검결과지 상세 (온나라 결재 + PDF 미리보기) — 다른 메뉴와 동일 패턴 ===== */
@@ -1488,10 +1554,13 @@
                 return header + main;
             }
 
-            /* ===== 디스패치 ===== */
-            if (S.tab === 'voice') return (S.view === 'form') ? subtabs + renderVoiceForm() : dash + subtabs + (S.view === 'detail' ? renderVoiceDetail(find(S.id)) : lawHelp + renderDeptStats() + renderVoiceList());
-            if (S.tab === 'committee') return dash + subtabs + (S.view === 'mform' ? renderMeetingForm(S.id) : S.view === 'mdetail' ? renderMeetingDetail(S.id) : lawHelp + renderCommittee());
-            return dash + subtabs + (S.view === 'cdetail' ? renderCouncilDetail(S.id) : lawHelp + renderCouncil());
+            /* ===== 디스패치 (탭 전환은 SNB 페이지 이동으로 일어남) ===== */
+            if (S.tab === 'committee') return committeeStat() + (S.view === 'mform' ? renderMeetingForm(S.id) : S.view === 'mdetail' ? renderMeetingDetail(S.id) : renderCommittee());
+            if (S.tab === 'council') return councilStat() + (S.view === 'cdetail' ? renderCouncilDetail(S.id) : renderCouncil());
+            /* 기본: voice */
+            if (S.view === 'form') return renderVoiceForm();
+            if (S.view === 'detail') return renderVoiceDetail(find(S.id));
+            return voiceCountBar() + renderVoiceList();
         },
 
         /* ── 도급관리 [SFR-013]: e호조 불러오기 → 적격 평가 → 점검표 → 수급인 평가 ── */
