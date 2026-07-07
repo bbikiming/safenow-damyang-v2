@@ -67,8 +67,7 @@
         function validBadge(s) {
             if (!isV2 || !s || !s.valid || s.valid === 'ok') return '';
             const cls = s.valid === 'error' ? 'sl-vbadge err' : 'sl-vbadge warn';
-            const ico = s.valid === 'error' ? '⛔' : '⚠';
-            return '<span class="' + cls + '" title="' + esc(s.validMsg || '') + '">' + ico + ' ' + esc(s.validMsg || '검토 필요') + '</span>';
+            return '<span class="' + cls + '" title="' + esc(s.validMsg || '') + '">' + esc(s.validMsg || '검토 필요') + '</span>';
         }
         function flowBadge(s) {
             if (!isV2 || !s || !s.pdcaFlow) return '';
@@ -147,7 +146,7 @@
                 '</div>' +
                 '<div class="slg-body">' + body + '</div>' +
                 '<div class="slg-foot">' +
-                    '<span class="slg-owner">👤 ' + esc(rep.assignee || '-') + ' (' + esc(rep.dept) + ')</span>' +
+                    '<span class="slg-owner">' + esc(rep.assignee || '-') + ' (' + esc(rep.dept) + ')</span>' +
                     (isUnassigned ? '<span class="v2-todo" style="padding:2px 8px;">TODO 미지정</span>' : '<span class="chip-mini pdca">' + esc(s.menu) + '</span>') +
                 '</div>' +
             '</div>';
@@ -226,7 +225,7 @@
             const allClear = !warn.length && !err.length;
             validBanner =
                 '<div class="sl-valbanner ' + (allClear ? 'ok' : 'warn') + '">' +
-                    '<span class="sl-vb-ico">' + (allClear ? '✓' : '⚠') + '</span>' +
+                    '<span class="sl-vb-ico">' + (allClear ? '✓' : '✕') + '</span>' +
                     '<span class="sl-vb-text"><b>PDCA 규칙 검증</b> — ' +
                         (allClear
                             ? '전체 ' + SETS.length + '개 세트 모두 정상입니다 (오류 없음).'

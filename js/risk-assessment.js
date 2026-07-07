@@ -12,17 +12,22 @@
     'use strict';
 
     // ─── 위험성 매트릭스 계산 ───
+    // 위험등급 색 인디케이터 — 그림 이모지 대신 CSS 원형 도트로 색 의미 보존 (REQ-B)
+    function levelDot(color) {
+        return '<span style="display:inline-block; width:9px; height:9px; border-radius:50%; background:' + color + '; margin-right:5px; vertical-align:middle;"></span>';
+    }
+
     var LEVELS = [
         { min: 16, max: 25, key: 'critical', label: '매우높음', cls: 'high',
-          color: 'var(--status-danger-fg)', bg: 'var(--status-danger-bg)', due: 30, banner: '⚠ 매우높음 — 작업 중지 검토, 30일 이내 개선조치 필요' },
+          color: 'var(--status-danger-fg)', bg: 'var(--status-danger-bg)', due: 30, banner: levelDot('var(--status-danger-fg)') + '매우높음 — 작업 중지 검토, 30일 이내 개선조치 필요' },
         { min: 12, max: 15, key: 'high',     label: '높음',     cls: 'high',
-          color: 'var(--status-warning-fg)', bg: 'var(--status-warning-bg)', due: 60, banner: '🔶 높음 — 대책 수립 후 작업, 60일 이내 개선조치' },
+          color: 'var(--status-warning-fg)', bg: 'var(--status-warning-bg)', due: 60, banner: levelDot('var(--status-warning-fg)') + '높음 — 대책 수립 후 작업, 60일 이내 개선조치' },
         { min: 8,  max: 11, key: 'medium',   label: '보통',     cls: 'mid',
-          color: 'var(--status-info-fg)', bg: 'var(--status-info-bg)', due: 90, banner: '🔵 보통 — 단계적 개선, 90일 이내 조치' },
+          color: 'var(--status-info-fg)', bg: 'var(--status-info-bg)', due: 90, banner: levelDot('var(--status-info-fg)') + '보통 — 단계적 개선, 90일 이내 조치' },
         { min: 4,  max: 7,  key: 'low',      label: '낮음',     cls: 'low',
-          color: 'var(--status-success-fg)', bg: 'var(--status-success-bg)', due: 180, banner: '🟢 낮음 — 모니터링 (선택적 개선)' },
+          color: 'var(--status-success-fg)', bg: 'var(--status-success-bg)', due: 180, banner: levelDot('var(--status-success-fg)') + '낮음 — 모니터링 (선택적 개선)' },
         { min: 1,  max: 3,  key: 'minimal',  label: '매우낮음', cls: 'low',
-          color: 'var(--text-gray)', bg: '#f5f5f5', due: null, banner: '⚪ 매우낮음 — 허용 가능 (기록 보관)' }
+          color: 'var(--text-gray)', bg: '#f5f5f5', due: null, banner: levelDot('var(--text-gray)') + '매우낮음 — 허용 가능 (기록 보관)' }
     ];
 
     function calcLevel(frequency, severity) {
@@ -75,8 +80,8 @@
               '<div class="rsk-sif-card-title">' + escapeHtml(s.high_risk_situation) + '</div>' +
               '<div class="rsk-sif-card-summary">' + escapeHtml(truncate(s.incident_summary, 110)) + '</div>' +
               '<div class="rsk-sif-card-meta">' +
-                '<span class="rsk-sif-tag">🛠 ' + escapeHtml(s.causing_object) + '</span>' +
-                '<span class="rsk-sif-tag">📂 ' + escapeHtml(s.work_category) + '</span>' +
+                '<span class="rsk-sif-tag">' + escapeHtml(s.causing_object) + '</span>' +
+                '<span class="rsk-sif-tag">' + escapeHtml(s.work_category) + '</span>' +
               '</div>' +
               '<div class="rsk-sif-card-actions">' +
                 '<button class="rsk-sif-btn rsk-sif-btn-adopt"  data-state="adopt"  type="button">해당함</button>' +
@@ -390,7 +395,7 @@
         });
         if (critical.length > 0) {
             // PRD 수정 — 차단 → 경고 (이슈 4 반영)
-            if (!confirm('⚠ 매우높음·높음 등급 ' + critical.length + '건에 감소대책이 없습니다.\n\n결재 상신 시 KOSHA 가이드 위반으로 판단될 수 있습니다. 그래도 계속하시겠습니까?')) return;
+            if (!confirm('매우높음·높음 등급 ' + critical.length + '건에 감소대책이 없습니다.\n\n결재 상신 시 KOSHA 가이드 위반으로 판단될 수 있습니다. 그래도 계속하시겠습니까?')) return;
         }
         toast('위험요인 풀이 평가에 반영되었습니다. (' + adoptedFactors.length + '건)');
         closeModal('rsk-sif-modal');

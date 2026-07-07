@@ -78,6 +78,12 @@
             { id: 'evl-settings', label: '평가 설정', icon: 'cog',   href: 'evl-settings.html', screen: 'EVL03-S / SFR-009' },
         ]},
 
+        // GNB 5. 예산관리 (BGT) — 안전보건 예산 편성·집행 총괄표 + 점검표 (중처법 시행령 §4①4호 예산)
+        { id: 'budget', label: '예산관리', icon: 'coins', items: [
+            { id: 'bgt-main',     label: '예산 총괄표',   icon: 'chart', href: 'bgt-main.html',     screen: 'BGT01-V' },
+            { id: 'bgt-settings', label: '예산 기준 설정', icon: 'cog',   href: 'bgt-settings.html', screen: 'BGT02-S' },
+        ]},
+
         // GNB 5. 업무문서 — 공통 메커니즘 2종 (기준문서함 + 프리셋 등록폼)
         //    ※ (2차 검토) 안전점검: v2에서 메뉴를 만들지 않음 — 점검 계열 문서는 기준문서함 "2차 검토 대상" 뱃지
         { id: 'docs', label: '업무문서', icon: 'file', items: [
@@ -618,7 +624,7 @@
                 'text-decoration:none;font-weight:700;opacity:.92;transition:opacity .15s,transform .15s;" ' +
                 'onmouseover="this.style.opacity=1;this.style.transform=\'translateY(-1px)\';" ' +
                 'onmouseout="this.style.opacity=.92;this.style.transform=\'none\';">' +
-                '<span style="font-size:14px;">📄</span> 화면 정의서</a>';
+                '화면 정의서</a>';
             document.body.appendChild(wrap);
         }
         if (document.readyState === 'loading') {

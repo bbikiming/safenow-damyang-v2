@@ -50,13 +50,13 @@
         // 전체 + 카테고리별 카운트
         var allCount = checklist.length;
         var html = '<div class="chk-tab ' + (activeCategory === 'all' ? 'is-active' : '') + '" data-cat="all">' +
-                   '<span>📋 전체</span><span class="chk-tab-count">' + allCount + '</span></div>';
+                   '<span>전체</span><span class="chk-tab-count">' + allCount + '</span></div>';
 
         Object.keys(cats).forEach(function(k) {
             var count = checklist.filter(function(c) { return c.category === k; }).length;
             if (count === 0) return;
             html += '<div class="chk-tab ' + (activeCategory === k ? 'is-active' : '') + '" data-cat="' + k + '">' +
-                    '<span>' + cats[k].icon + ' ' + cats[k].name + '</span>' +
+                    '<span>' + cats[k].name + '</span>' +
                     '<span class="chk-tab-count">' + count + '</span></div>';
         });
 
@@ -82,7 +82,6 @@
         if (filtered.length === 0) {
             tbody.innerHTML = '<tr><td colspan="8" style="padding:0;">' +
                 '<div class="chk-empty">' +
-                  '<div class="chk-empty-icon">📋</div>' +
                   '<div class="chk-empty-title">체크리스트 항목이 없습니다</div>' +
                   '<div class="chk-empty-desc">상단의 <strong>[표준모델 추가]</strong> · <strong>[아차사고 추가]</strong> · <strong>[사망사고 고위험요인 추가]</strong> · <strong>[직접추가]</strong> 버튼으로<br>위험성평가에 포함할 항목을 등록하세요.</div>' +
                 '</div></td></tr>';
@@ -223,15 +222,15 @@
 
         var meta = {
             STANDARD: {
-                title: '📦 표준모델 체크리스트 추가',
+                title: '표준모델 체크리스트 추가',
                 help: 'KOSHA 산업안전포털 표준 체크리스트에서 항목을 선택합니다. 카테고리별로 산업안전보건기준에 관한 규칙 조항이 자동 매핑됩니다.'
             },
             NEAR_MISS: {
-                title: '⚠ 아차사고(니어미스) 기반 체크리스트 추가',
+                title: '아차사고(니어미스) 기반 체크리스트 추가',
                 help: '담양군 내부에서 보고된 아차사고 사례에서 도출된 점검 항목입니다. "사고로 이어질 수 있었던 상황"을 사전에 차단합니다.'
             },
             SIF: {
-                title: '🚨 사망사고 고위험요인(SIF) 기반 체크리스트 추가',
+                title: '사망사고 고위험요인(SIF) 기반 체크리스트 추가',
                 help: 'KOSHA 산업재해 고위험요인(SIF) 4,432건에서 담양군 시설 관리에 적합한 시나리오 20건을 큐레이션. 각 시나리오는 실제 사망사례 기반입니다.'
             }
         };
@@ -257,7 +256,7 @@
         var cats = window.RskChecklistData.categories;
         var chips = '<span class="chk-cat-chip ' + (modalActiveCategory === 'all' ? 'is-active' : '') + '" data-cat="all">전체</span>';
         Object.keys(cats).forEach(function(k) {
-            chips += '<span class="chk-cat-chip ' + (modalActiveCategory === k ? 'is-active' : '') + '" data-cat="' + k + '">' + cats[k].icon + ' ' + cats[k].name + '</span>';
+            chips += '<span class="chk-cat-chip ' + (modalActiveCategory === k ? 'is-active' : '') + '" data-cat="' + k + '">' + cats[k].name + '</span>';
         });
         filterEl.innerHTML = chips;
         filterEl.querySelectorAll('.chk-cat-chip').forEach(function(c) {
@@ -456,7 +455,7 @@
 
     // ─── 저장·제출 ───
     function saveTemp() {
-        toast('💾 임시저장되었습니다. (' + checklist.length + '건 · ' + getDoneRatio() + '% 완료)');
+        toast('임시저장되었습니다. (' + checklist.length + '건 · ' + getDoneRatio() + '% 완료)');
     }
 
     function submitFinal() {

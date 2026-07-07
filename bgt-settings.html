@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>예산 기준 설정 - 담양군 중대재해예방통합관리시스템 v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+    <style>
+        /* ─── BGT02-S 전용 ─── */
+
+        /* 안내 노트 (evl-settings.html .evl-note 참고) */
+        .bgt-note {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 12px 16px; margin-bottom: 16px;
+            background: var(--status-warning-bg);
+            border: 1px solid var(--status-warning-border);
+            border-radius: var(--radius-button);
+            font-size: 12px; color: var(--status-warning-fg);
+        }
+        .bgt-note svg { flex-shrink: 0; margin-top: 1px; }
+
+        /* 현행 원칙 문서 하이라이트 카드 */
+        .bgt-cur-card {
+            border: 1px solid var(--main);
+            background: var(--brand-50);
+            border-radius: var(--radius-button);
+            padding: 16px 18px;
+        }
+        .bgt-cur-title { font-size: 15px; font-weight: 700; color: var(--main-dark2); }
+        .bgt-cur-meta { font-size: 12px; color: var(--text-gray); margin-top: 4px; }
+        .bgt-cur-meta .fh-sep { margin: 0 5px; color: var(--text-lightgray); }
+        .bgt-file-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+        .bgt-cur-body { font-size: 13px; color: var(--text-black); line-height: 1.6; margin-top: 10px; white-space: pre-line; }
+
+        /* 예방관련 예산 항목 트리 — 엘보 커넥터·그룹 박스·레벨 타이포는
+         * css/v2.css BGT 섹션(.bgt-tree-group·.bgt-trow·.bgt-tg 공유 클래스)에 정의.
+         * 생성 모달 체크 트리와 시각 언어를 공유한다. */
+        .bgt-tree { display: flex; flex-direction: column; }
+
+        /* 섹션 C: 점검 대상 관리 — 기관/시설 2열 블록 (모바일은 1열로 스택) */
+        .bgt-target-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+        }
+        @media (max-width: 860px) {
+            .bgt-target-grid { grid-template-columns: 1fr; }
+        }
+        .bgt-target-block {
+            border: 1px solid var(--card-line);
+            border-radius: var(--radius-button);
+            overflow: hidden;
+        }
+        .bgt-target-block-header {
+            display: flex; align-items: center; justify-content: space-between;
+            gap: 10px; padding: 12px 14px;
+            background: var(--gray-50);
+            border-bottom: 1px solid var(--card-line);
+        }
+        .bgt-target-block-title { font-size: 14px; font-weight: 700; color: var(--main-dark2); }
+        .bgt-target-block-actions { display: flex; gap: 6px; flex-shrink: 0; }
+        .bgt-target-syncmeta {
+            font-size: 12px; color: var(--text-gray);
+            padding: 8px 14px 0;
+        }
+        .bgt-target-list { display: flex; flex-direction: column; }
+        .bgt-target-row {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--card-line);
+        }
+        .bgt-target-row:last-child { border-bottom: none; }
+        .bgt-target-name { font-size: 13px; font-weight: 600; color: var(--text-black); }
+        .bgt-target-row-actions { margin-left: auto; display: flex; gap: 6px; flex-shrink: 0; }
+        .bgt-target-row-inline {
+            display: flex; align-items: center; gap: 8px;
+            padding: 10px 14px;
+            background: var(--brand-50);
+        }
+        .bgt-target-row-inline input {
+            flex: 1; max-width: 280px;
+            padding: 7px 10px; font-size: 13px;
+            border: 1px solid var(--main); border-radius: 6px;
+            outline: none; font-family: inherit;
+        }
+
+        /* 섹션 C 선택 팝업 — 기관/시설 공용 체크 목록 행 (.org-inline 패턴 재사용) */
+        .bgt-picker-row {
+            display: flex; align-items: center; gap: 10px;
+            padding: 9px 8px;
+            border-bottom: 1px solid var(--card-line);
+            cursor: pointer;
+        }
+        .bgt-picker-row:last-child { border-bottom: none; }
+        .bgt-picker-row.is-disabled { cursor: default; opacity: 0.65; }
+        .bgt-picker-row input[type="checkbox"] { flex-shrink: 0; width: 16px; height: 16px; }
+        .bgt-picker-name { font-size: 13px; font-weight: 600; color: var(--text-black); }
+        .bgt-target-block-title .chip-mini { margin-left: 6px; font-weight: 500; }
+    </style>
+</head>
+<body data-dy-page="bgt-settings" data-page-title="예산 기준 설정" data-page-subtitle="예산관리 > 예산 기준 설정 — 편성·관리 원칙 수립 + 예방관련 항목 설정 (BGT02-S)">
+    <main>
+        <!-- ─── 섹션 A: 편성·관리 원칙 및 준수사항 (R1: 예산편성 및 관리 원칙·준수사항 수립) ─── -->
+        <div id="bgt-section-a"></div>
+
+        <!-- ─── 섹션 B: 예방관련 예산 항목 설정 (R3: 시설·장비·안전장구류 등 항목 설정, depth 자유) ─── -->
+        <div id="bgt-section-b"></div>
+
+        <!-- ─── 섹션 C: 점검 대상 관리 (REQ-A: 기관·시설 마스터 등록 + FMS 연계) ─── -->
+        <div id="bgt-section-c"></div>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/data.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/edoc-templates.js"></script>
+    <script src="./js/edoc.js"></script>
+    <script src="./js/bgt.js"></script>
+    <script src="./js/bgt-settings.js"></script>
+</body>
+</html>

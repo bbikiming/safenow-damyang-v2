@@ -148,7 +148,7 @@
                         '<p class="dd-pv-p">본 문서는 「중대재해처벌법」 및 「산업안전보건법」에 따라 ' + esc(menu.label) + ' 업무의 기준·절차를 정하여, 담양군 사업장의 안전·보건 확보 의무 이행을 목적으로 한다. 적용 범위는 군 직영 사업장 및 관계 수급인의 종사자 전체로 한다.</p>' +
                         '<h3 class="dd-pv-h">2. 주요 내용</h3>' +
                         '<ul class="dd-pv-ul"><li>책임과 권한의 명확화 및 수행 주체 지정</li><li>주기적 점검·평가 및 기록 보존 절차</li><li>미흡 사항에 대한 개선조치 및 사후 확인</li></ul>' +
-                        '<div class="dd-pv-alert"><b>⚠ 중요 알림</b><br>' + (isV2 && d.legalBasis ? '법적 근거: ' + esc(d.legalBasis) + '. ' : '') + '본 문서는 ' + esc(set ? set.name : menu.label) + ' 이행의 ' + esc(isV2 ? (d.docRole || '근거') : '기준') + ' 문서이다.</div>' +
+                        '<div class="dd-pv-alert"><b>중요 알림</b><br>' + (isV2 && d.legalBasis ? '법적 근거: ' + esc(d.legalBasis) + '. ' : '') + '본 문서는 ' + esc(set ? set.name : menu.label) + ' 이행의 ' + esc(isV2 ? (d.docRole || '근거') : '기준') + ' 문서이다.</div>' +
                         '<p class="dd-pv-foot">※ 본 미리보기는 프로토타입 더미입니다. 실제 첨부 원본(PDF·HWP)으로 대체됩니다.</p>' +
                     '</div>' +
                 '</div>' +
@@ -213,7 +213,7 @@
 
     /* ── 우측: 기준 / 선행 / 후행 문서 ── */
     function relItem(doc, sub) {
-        const icon = doc.processType === '전자문서' ? '🧾' : doc.processType === '프로그램' ? '🖥️' : '📄';
+        const icon = doc.processType === '전자문서' ? '전자' : doc.processType === '프로그램' ? '실행' : '문서';
         return '<a class="dd-rel-item" href="doc-detail.html?id=' + doc.id + verQS + '">' +
             '<span class="dd-rel-ico">' + icon + '</span>' +
             '<span class="dd-rel-body"><span class="dd-rel-name">' + esc(doc.name) + '</span>' +
@@ -221,7 +221,7 @@
     }
     function lawItem(name, code) {
         return '<a class="dd-rel-item" href="docs-archive.html" onclick="DYV2.toast(\'법령 원문 연계 (프로토타입)\'); return false;">' +
-            '<span class="dd-rel-ico">⚖️</span>' +
+            '<span class="dd-rel-ico">법령</span>' +
             '<span class="dd-rel-body"><span class="dd-rel-name">' + esc(name) + '</span>' +
             '<span class="dd-rel-no">' + esc(code) + ' · 외부 법령</span></span></a>';
     }
@@ -267,7 +267,7 @@
     }
 
     document.getElementById('dd-side').innerHTML =
-        relCard('🔖 기준 문서', 'Reference', refHtml) +
+        relCard('기준 문서', 'Reference', refHtml) +
         relCard('↑ 선행 문서', 'Preceding', preHtml) +
         relCard('↓ 후행 문서', 'Subsequent', subHtml);
 })();

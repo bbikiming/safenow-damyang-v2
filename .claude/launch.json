@@ -4,8 +4,22 @@
     {
       "name": "fresh2",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8782"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8782"
+      ],
       "port": 8782
+    },
+    {
+      "name": "verify",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8783"
+      ],
+      "port": 8783
     }
   ]
 }

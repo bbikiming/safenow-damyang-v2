@@ -74,7 +74,7 @@
                 '<div class="edu-card-main">' +
                     '<div class="edu-card-name">' + esc(c.name) + ' ' + ST[c.status] + '</div>' +
                     '<div class="edu-card-meta"><span class="chip-mini pdca">' + esc(c.type) + '</span>' +
-                        '<span>📅 ' + c.date + '</span><span>📍 ' + esc(c.place) + '</span><span>강사 ' + esc(c.instructor) + '</span><span>' + c.hours + '시간</span></div>' +
+                        '<span>' + c.date + '</span><span>' + esc(c.place) + '</span><span>강사 ' + esc(c.instructor) + '</span><span>' + c.hours + '시간</span></div>' +
                 '</div>' +
                 '<div class="edu-att"><span>출석 ' + att + '/' + total + '</span>' +
                     '<div class="progress"><div class="progress-bar ' + (pct >= 80 ? 'green' : pct > 0 ? 'warning' : 'danger') + '" style="width:' + pct + '%"></div></div></div>' +
@@ -159,7 +159,7 @@
     function openResult(id) {
         const c = DB.courses.find(x => x.id === id);
         V.openModal('교육 결과 — ' + esc(c.name),
-            '<div class="edoc-linkcard">🔗 연동 정보 — 온나라 결재 상신 완료 · 이수 이력 ' + attCount(c) + '건 반영 · 교육 결과(C) 문서 확정</div>' +
+            '<div class="edoc-linkcard">연동 정보 — 온나라 결재 상신 완료 · 이수 이력 ' + attCount(c) + '건 반영 · 교육 결과(C) 문서 확정</div>' +
             '<table class="table-figma"><thead><tr><th>성명</th><th>부서</th><th>출석</th><th>가산 시간</th></tr></thead><tbody>' +
             c.targets.map((t, i) => '<tr><td>' + esc(t.n) + '</td><td>' + esc(t.d) + '</td><td>' +
                 (c.att[i] ? '<span class="chip-mini st-done">출석</span>' : '<span class="chip-mini st-todo">불참</span>') + '</td><td>' + (c.att[i] ? '+' + c.hours + 'h' : '-') + '</td></tr>').join('') +

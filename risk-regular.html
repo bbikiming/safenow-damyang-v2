@@ -342,7 +342,7 @@
                     </div>
                 </div>
                 <div style="font-size:12px; color:var(--status-info-fg); background:var(--status-info-bg); border:1px solid var(--status-info-border); border-radius:var(--radius-md); padding:9px 12px; line-height:1.5;">
-                    💡 이 평가에 추가됩니다. 반복 발생하는 위험요인은 평가 완료 시 <b>유해·위험요인 기준정보 반영</b>으로 다음 평가에도 적용할 수 있어요.
+                    이 평가에 추가됩니다. 반복 발생하는 위험요인은 평가 완료 시 <b>유해·위험요인 기준정보 반영</b>으로 다음 평가에도 적용할 수 있어요.
                 </div>
             </div>
             <div class="rr-modal-foot">
@@ -513,7 +513,7 @@
                 showBanner(sb, 'danger', '✕ <strong>반려된 평가입니다.</strong> 반려 사유: 일부 유해·위험요인의 위험요인 판단 근거 부족. 보완 후 재상신하세요.');
                 setFooter('rejected');
             } else if (status === 'preparing') {
-                showBanner(sb, 'info', 'ℹ <strong>사전준비 단계입니다.</strong> 유해·위험요인·담당자·기준자료가 준비되었습니다. 각 유해·위험요인 [작성]으로 현장점검을 시작하세요.');
+                showBanner(sb, 'info', '<strong>사전준비 단계입니다.</strong> 유해·위험요인·담당자·기준자료가 준비되었습니다. 각 유해·위험요인 [작성]으로 현장점검을 시작하세요.');
                 if (auto) auto.style.display = '';
             }
         }

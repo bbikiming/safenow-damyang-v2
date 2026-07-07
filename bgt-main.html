@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>예산 총괄표 - 담양군 중대재해예방통합관리시스템 v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="bgt-main" data-page-title="예산 총괄표" data-page-subtitle="예산관리 > 예산 총괄표 — 편성·집행·집행률 진행 확인 + 편성·집행 점검표 관리 (BGT01-V)">
+    <main>
+        <!-- BGT01-V 예산 총괄표: 목록 뷰 ↔ 상세 뷰를 bgt.js가 이 컨테이너 안에서 전환 -->
+        <div id="bgt-app"></div>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/data.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/edoc-templates.js"></script>
+    <script src="./js/edoc.js"></script>
+    <script src="./js/bgt.js"></script>
+</body>
+</html>

@@ -62,7 +62,6 @@
         const no = '온나라-2026-' + String(Math.floor(1000 + (docTitle.length * 137) % 9000));
         V().openModal('온나라 결재 요청',
             '<div style="text-align:center; padding:8px 4px 4px;">' +
-            '<div style="font-size:38px; margin-bottom:10px;">📨</div>' +
             '<p style="font-size:14px; font-weight:700; margin-bottom:6px;">온나라로 결재 요청을 보냈습니다</p>' +
             '<p style="font-size:12px; color:var(--text-gray);">' + esc(docTitle) + '<br>문서번호 <b>' + no + '</b> · 결재선: 팀장 → 과장 → 부군수</p>' +
             '<p style="font-size:12px; color:var(--text-gray); margin-top:8px;">결재 완료 시 문서 상태가 자동으로 갱신됩니다. (연계 시뮬레이션)</p>' +
@@ -86,7 +85,7 @@
                     '<option' + (o === v ? ' selected' : '') + '>' + esc(o) + '</option>').join('') + '</select>';
             case 'file': {
                 const drop = '<div class="upload-drop" style="padding:14px;" onclick="DYV2.toast(\'파일 첨부 (프로토타입 — 다중 가능)\')">' +
-                    (v ? '📎 ' + esc(v) : '파일을 끌어다 놓거나 클릭하여 첨부 (다중 가능)') + '</div>' +
+                    (v ? esc(v) : '파일을 끌어다 놓거나 클릭하여 첨부 (다중 가능)') + '</div>' +
                     (V().fileHint ? V().fileHint() : '');
                 /* SFR-005: 파일별 설명·관리 목록 (ctx.attachList 제공 시) */
                 let list = '';
@@ -213,7 +212,7 @@
                 (opts.ctx && opts.ctx.menuLabel ? '<span class="chip-mini wt">' + esc(opts.ctx.menuLabel) + '</span>' : '') +
             '</div>' +
             (opts.source ?
-                '<div class="edoc-linkcard">🔗 연동 정보 — ' + opts.source + '</div>' : '') +
+                '<div class="edoc-linkcard">연동 정보 — ' + opts.source + '</div>' : '') +
             '<div class="preset-form-grid" id="edoc-form">' +
                 formDef.fields.map(f =>
                     '<span class="k">' + esc(f.label) + '</span>' + fieldHtml(f, saved.fields[f.k], opts.ctx)
@@ -320,7 +319,7 @@
                 '<span class="chip-mini pdca">' + formDef.name + '</span>' + (ST_CHIP[saved.status] || '') +
                 (opts.ctx && opts.ctx.menuLabel ? '<span class="chip-mini wt">' + esc(opts.ctx.menuLabel) + '</span>' : '') +
             '</div>' +
-            (opts.source ? '<div class="edoc-linkcard">🔗 연동 정보 — ' + opts.source + '</div>' : '') +
+            (opts.source ? '<div class="edoc-linkcard">연동 정보 — ' + opts.source + '</div>' : '') +
             '<div class="preset-form-grid edoc-form-grid">' +
                 formDef.fields.map(f => '<span class="k">' + esc(f.label) + '</span>' + fieldHtml(f, saved.fields[f.k], opts.ctx)).join('') +
             '</div>' +
@@ -374,7 +373,7 @@
         { dept: '물순환사업소', members: [['소장', '오순환'], ['시설담당', '서담당']] },
     ];
     function renderOrgTree(selectedVal) {
-        return '<div class="org-tree-root"><span>🏛</span> 담양군청</div>' +
+        return '<div class="org-tree-root">담양군청</div>' +
             ORG_TREE.map(d =>
                 '<div class="otr-dept" data-dept="' + esc(d.dept) + '">' +
                 '<button type="button" class="otr-deptbtn" onclick="EDOC._orgToggle(this)"><span class="otr-arrow">▸</span> ' + esc(d.dept) + ' <span class="otr-count">' + d.members.length + '명</span></button>' +

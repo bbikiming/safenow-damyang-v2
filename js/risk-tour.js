@@ -90,7 +90,7 @@
             target: '#pe-submit',
             badge: 'STEP 8 / 8 · 제출',
             title: '⑧ 제출 · 결재요청',
-            body: '모든 항목 점검(+X 개선조치 입력)이 끝나면 <b>[제출 · 결재요청]</b>이 활성화됩니다. 결재가 요청됩니다. 🎉'
+            body: '모든 항목 점검(+X 개선조치 입력)이 끝나면 <b>[제출 · 결재요청]</b>이 활성화됩니다. 결재가 요청됩니다.'
         }
     ];
 
@@ -141,7 +141,7 @@
         b.id = 'rtour-fab';
         b.className = 'rtour-fab';
         b.type = 'button';
-        b.innerHTML = '🎓 진행 가이드';
+        b.innerHTML = '진행 가이드';
         b.addEventListener('click', start);
         document.body.appendChild(b);
     }
@@ -237,7 +237,7 @@
     function renderPop(step, idx) {
         var isLast = idx === STEPS.length - 1;
         var nextIsNav = !isLast && STEPS[idx + 1].page !== step.page;
-        var nextLabel = isLast ? '완료 🎉' : (nextIsNav ? '다음 화면 →' : '다음 →');
+        var nextLabel = isLast ? '완료' : (nextIsNav ? '다음 화면 →' : '다음 →');
         var dots = STEPS.map(function (_, i) {
             return '<span class="rtour-dot' + (i === idx ? ' on' : '') + '"></span>';
         }).join('');

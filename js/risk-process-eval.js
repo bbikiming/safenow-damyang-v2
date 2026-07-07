@@ -59,7 +59,7 @@
                     actionCell = '<div class="pe-action-cell pe-action-done">✓ 입력됨<span class="txt">' + esc(s.action.text) + '</span>' +
                                  '<button class="pe-action-edit" data-edit="' + f.id + '" type="button">수정</button></div>';
                 } else {
-                    actionCell = '<div class="pe-action-cell pe-action-need">⚠ 개선조치 입력 필요 <button class="pe-action-edit" data-edit="' + f.id + '" type="button">입력</button></div>';
+                    actionCell = '<div class="pe-action-cell pe-action-need">개선조치 입력 필요 <button class="pe-action-edit" data-edit="' + f.id + '" type="button">입력</button></div>';
                 }
             } else {
                 actionCell = '<div class="pe-action-cell pe-action-empty">—</div>';

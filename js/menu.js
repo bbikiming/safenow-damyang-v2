@@ -454,8 +454,8 @@
             /* 게시(상세) — 좌측 사진(세로형) + 우측 정보(제목·게시일·내용), 사진 클릭 시 전체화면 */
             const baCard = (ver, p, editable) => {
                 const thumb = p.photoSrc
-                    ? '<button type="button" class="post-thumb" onclick="PG.boardPhotoView(\'' + ver + '\',\'' + p.id + '\')" aria-label="사진 확대 보기"><img src="' + p.photoSrc + '" alt="게시 사진"><span class="post-thumb-zoom">🔍 확대</span></button>'
-                    : '<div class="post-thumb empty"><span class="pt-ic">🖼</span><span class="pt-tx">' + V.esc(p.photo || '게시 사진') + '</span></div>';
+                    ? '<button type="button" class="post-thumb" onclick="PG.boardPhotoView(\'' + ver + '\',\'' + p.id + '\')" aria-label="사진 확대 보기"><img src="' + p.photoSrc + '" alt="게시 사진"><span class="post-thumb-zoom">확대</span></button>'
+                    : '<div class="post-thumb empty"><span class="pt-tx">' + V.esc(p.photo || '게시 사진') + '</span></div>';
                 return '<div class="ba-card"><div class="post-row">' + thumb +
                     '<div class="post-info">' +
                     '<div class="post-info-head"><span class="post-title">' + V.esc(p.loc) + '</span>' +
@@ -482,13 +482,12 @@
 
             /* 사진 업로드 영역 — 빈 상태 / 미리보기 상태 */
             const boardPhotoEmpty = () =>
-                '<div class="board-up-icon">📎</div>' +
                 '<div class="board-up-title">게시된 경영방침 사진을 첨부하세요</div>' +
                 '<div class="board-up-sub">이곳을 <b>클릭</b>하거나 파일을 <b>끌어다 놓으세요</b> · JPG · PNG</div>' +
-                '<button type="button" class="btn btn-primary board-up-btn" onclick="event.stopPropagation(); PG.boardPhotoPick()">📎 사진 파일 첨부</button>';
+                '<button type="button" class="btn btn-primary board-up-btn" onclick="event.stopPropagation(); PG.boardPhotoPick()">사진 파일 첨부</button>';
             const boardPhotoPreview = p =>
                 '<div class="board-up-preview"><img src="' + p.src + '" alt="게시 사진 미리보기"></div>' +
-                '<div class="board-up-fname">🖼 ' + V.esc(p.name) + '</div>' +
+                '<div class="board-up-fname">' + V.esc(p.name) + '</div>' +
                 '<div class="board-up-actions"><button type="button" class="btn btn-sm btn-outline" onclick="event.stopPropagation(); PG.boardPhotoPick()">다시 선택</button>' +
                 '<button type="button" class="btn btn-sm btn-outline" onclick="event.stopPropagation(); PG.boardPhotoClear()">제거</button></div>';
             PG._boardPhoto = null;
@@ -653,7 +652,7 @@
                 const pdfPanel = '<div class="pol-pdf-wrap"><div class="pol-pdf-tools"><span style="font-size:12px; font-weight:700; color:var(--text-gray);">PDF 미리보기</span><span style="display:flex; gap:6px;"><button class="btn btn-sm btn-outline" onclick="PG.polPdfFull(\'' + v.ver + '\')">전체화면</button><button class="btn btn-sm btn-primary" onclick="PG.polPdfDownload()">PDF 다운로드</button></span></div>' + pdfPaper(v) + '</div>';
                 const checkSec = sectionCard('반기 이행 점검 ' + (editable ? '' : '이력 (열람 전용)'),
                     (v.inspections && v.inspections.length ? '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>회차</th><th>점검일</th><th>점검자</th><th>결과</th><th></th></tr></thead><tbody>' + v.inspections.map((i, idx) => '<tr><td>' + i.half + '</td><td>' + i.date + '</td><td>' + (i.inspector || '-') + '</td><td>' + resultChip(i.result) + '</td><td><button class="btn btn-sm btn-outline" onclick="PG.checkSheet(\'' + v.ver + '\',' + idx + ')">점검표 보기</button></td></tr>').join('') + '</tbody></table></div>' : '<p style="color:var(--text-gray); font-size:13px;">점검 이력이 없습니다.</p>') +
-                    (editable ? '' : '<p class="lock-note">🔒 이전 버전입니다. 점검 이력 열람만 가능하며 신규 점검 작성·수정은 현행본에서만 할 수 있습니다.</p>'),
+                    (editable ? '' : '<p class="lock-note">이전 버전입니다. 점검 이력 열람만 가능하며 신규 점검 작성·수정은 현행본에서만 할 수 있습니다.</p>'),
                     editable ? '<button class="btn btn-sm btn-outline" onclick="PG.polChkBasis(\'' + v.ver + '\')">점검표 근거 설정</button><button class="btn btn-sm btn-primary" onclick="PG.polCheckWrite(\'' + v.ver + '\')">이행점검 작성</button>' : '');
                 const boardSec = sectionCard('게시 현황 <span class="chip-mini wt" style="margin-left:6px;">산안법 §14</span>',
                     '<div class="ba-board">' + ((v.postings || []).length ? (v.postings || []).map(p => baCard(v.ver, p, editable)).join('') : '<p style="color:var(--text-gray); font-size:13px;">게시 이력이 없습니다.</p>') + '</div>' +
@@ -1399,7 +1398,7 @@
                 /* ⑤ 연동 정보 */
                 let linkInner;
                 if (!o.inspectLink && !o.link) {
-                    linkInner = '<div class="opn-linkempty"><span class="opn-linkempty-ic">🔗</span><span>조치 선택 후 연동 정보가 표시됩니다</span></div>';
+                    linkInner = '<div class="opn-linkempty"><span>조치 선택 후 연동 정보가 표시됩니다</span></div>';
                 } else {
                     linkInner = '';
                     if (o.inspectLink) { const ins = o.inspect || {}; linkInner += '<div class="opn-mini"><div class="opn-mini-badges"><span class="chip-mini wt-elec">안전점검</span> <span class="chip-mini wt">점검예정</span></div><div class="opn-mini-title">[의견청취] ' + V.esc(o.title) + '</div><div class="opn-mini-meta">담당 ' + V.esc(ins.owner || o.owner || '-') + ' · 예정 ' + (ins.date || '-') + '</div><button class="btn btn-sm btn-outline" onclick="DYV2.toast(\'안전점검 메뉴 연동 (프로토타입)\')">바로가기</button></div>'; }
@@ -1670,17 +1669,6 @@
                 ctx: { menuLabel: '이행관리 · 반기', checklist: T.CHECKLIST_PRESETS.comply }, onChange: render,
             });
             PG.cmpClose = () => E.onnaraPopup('2026 상반기 의무이행 점검 마감 보고');
-            PG.cmpHojo = () => {
-                V.openModal('e호조 집행 내역 조회 (연계 시뮬레이션)',
-                    tbl(['집행일', '항목', '금액', '상태'], [
-                        ['2026-06-05', '안전모·안전화 구입', '8,400천원', '<span class="chip-mini st-done">집행</span>'],
-                        ['2026-06-02', '위험성평가 컨설팅 (2차)', '18,000천원', '<span class="chip-mini st-done">집행</span>'],
-                        ['2026-05-28', '청사 비상유도등 교체', '12,600천원', '<span class="chip-mini st-done">집행</span>'],
-                    ]),
-                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
-                    '<button class="btn btn-primary" onclick="DYV2.closeModal(); DYV2.toast(\'e호조 집행 내역 3건이 반영되었습니다 — 집행률 재계산\')">집행 반영</button>');
-            };
-            const exec = p => '<div style="display:flex; align-items:center; gap:8px;"><div class="progress" style="width:90px;"><div class="progress-bar ' + (p >= 70 ? 'green' : 'warning') + '" style="width:' + p + '%"></div></div><b style="font-size:12px;">' + p + '%</b></div>';
             return sectionCard('의무이행 점검 (반기) ' + docStChip('EDOC-의무이행점검-2026H1'),
                 '<p style="font-size:12px; color:var(--text-gray);">중처법 시행령 §4·§5 항목별 이행 여부를 점검합니다. 각 항목에는 해당 메뉴의 실데이터가 근거로 연결되며, <b>X(미이행) 항목은 확정 시 개선조치로 자동 등록</b>됩니다.</p>' +
                 tbl(['항목', '근거 메뉴', '근거 현황'], [
@@ -1692,14 +1680,9 @@
                 '<div style="display:flex; gap:6px;">' +
                 '<button class="btn btn-sm btn-primary" onclick="PG.cmpCheck()">점검표 작성</button>' +
                 '<button class="btn btn-sm btn-outline" onclick="PG.cmpClose()">반기 마감 · 온나라 상신</button></div>') +
-            sectionCard('안전보건 예산 편성·집행 총괄 (2026)',
-                tbl(['예산 항목', '편성액', '집행액', '집행률'], [
-                    ['안전시설 개선', '480,000천원', '312,000천원', exec(65)],
-                    ['보호구·장비 구입', '120,000천원', '96,000천원', exec(80)],
-                    ['안전보건교육', '60,000천원', '21,000천원', exec(35)],
-                    ['위험성평가·컨설팅', '90,000천원', '72,000천원', exec(80)],
-                ]),
-                '<button class="btn btn-sm btn-primary" onclick="PG.cmpHojo()">e호조 집행 내역 조회</button>');
+            sectionCard('안전보건 예산 편성·집행',
+                '<p style="font-size:12px; color:var(--text-gray);">예산 편성·집행·집행률 관리는 <b>예산관리</b> 대메뉴로 이관되었습니다. 총괄표에서 기관·시설별 진행 현황을 확인하세요.</p>',
+                '<a class="btn btn-sm btn-primary" href="bgt-main.html">예산 총괄표 바로가기</a>');
         },
     };
 

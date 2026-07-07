@@ -999,3 +999,162 @@ textarea:focus-visible, [tabindex]:focus-visible, .psub-tab:focus-visible, .opn-
 .opn-mini-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
 .opn-mini-title { font-size: var(--fs-13); font-weight: var(--fw-semibold); color: var(--text-black); margin-bottom: 4px; line-height: 1.4; }
 .opn-mini-meta { font-size: var(--fs-12); color: var(--text-gray); margin-bottom: 10px; }
+
+/* ── BGT 예산관리 ──────────────────────────────────────────────────────
+ * BGT01-V 예산 총괄표 (bgt-main.html / js/bgt.js).
+ * 기존 공용 클래스(.card·.table-figma·.v2-toolbar·.select·.btn·.chip-mini·
+ * .kpi-card·.board-grid·.progress·.org-inline)를 최대한 재사용하고,
+ * 이 화면 고유 조합만 .bgt- 접두사로 추가한다. */
+
+/* 집행률 바 + % 숫자 (menu.js exec() 조합의 셀 내부 레이아웃) */
+.bgt-rate { display: flex; align-items: center; gap: 8px; }
+.bgt-rate b { font-size: 12px; color: var(--text-black); }
+
+/* 목록 대상 셀 (구분 칩 + 이름) */
+.bgt-target { display: flex; align-items: center; gap: 8px; }
+.bgt-target b { font-weight: 700; color: var(--text-black); }
+
+/* 총괄/상세 테이블 셀 여백 축소 (입력 필드가 들어가는 조밀한 표) */
+.bgt-table tbody td { padding: 12px 16px; }
+.bgt-table thead th { padding: 12px 16px; }
+/* 합계 행 */
+.bgt-table tfoot .bgt-foot td { padding: 12px 16px; font-weight: 700; color: var(--text-black); background: var(--gray-50); border-top: 1px solid var(--card-line); }
+
+/* 상세 뷰 상단 (뒤로 + 제목 + 상태 칩) */
+.bgt-detail-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.bgt-detail-title { font-size: 18px; font-weight: 700; color: var(--main-dark2); letter-spacing: -.3px; margin: 0; }
+
+/* 반려 사유 경고 박스 */
+.bgt-reject { margin-bottom: 14px; padding: 12px 14px; background: var(--status-danger-bg); border-left: 3px solid var(--status-danger-fg); border-radius: var(--radius-md); font-size: 13px; color: var(--text-black); line-height: 1.6; }
+.bgt-reject b { color: var(--status-danger-fg); font-weight: 700; margin-right: 6px; }
+
+/* 상태별 편집 안내 문구 */
+.bgt-edit-hint { font-size: 12px; color: var(--text-gray); background: var(--brand-100); border: 1px solid var(--card-line); border-left: 3px solid var(--main-dark2); border-radius: 8px; padding: 9px 12px; margin-bottom: 12px; line-height: 1.6; }
+
+/* 상세 행 입력 필드 */
+.bgt-in { width: 100%; padding: 7px 10px; border: 1px solid var(--card-line); border-radius: 8px; font-size: 13px; font-family: inherit; box-sizing: border-box; background: #fff; color: var(--text-black); text-align: right; }
+.bgt-in.bgt-in-note { text-align: left; }
+.bgt-in:focus { outline: none; border-color: var(--main); box-shadow: 0 0 0 2px var(--brand-100); }
+.bgt-in:disabled { background: var(--gray-50); color: var(--text-gray); cursor: not-allowed; }
+textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-align: left; }
+
+/* 전자결재 액션 카드 */
+.bgt-act-desc { font-size: 13px; color: var(--text-gray); line-height: 1.6; margin-bottom: 12px; }
+.bgt-act-ok { color: var(--main-dark); font-weight: 700; }
+.bgt-act-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.bgt-reject-inline { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--card-line); border-left: 3px solid var(--status-danger-fg); border-radius: 8px; background: var(--gray-50); }
+
+/* 결재 이력 타임라인 (간단 목록) */
+.bgt-hist { list-style: none; margin: 0; padding: 0; }
+.bgt-hist-item { display: flex; gap: 12px; align-items: baseline; padding: 7px 0; border-bottom: 1px dashed var(--card-line); font-size: 13px; }
+.bgt-hist-item:last-child { border-bottom: none; }
+.bgt-hist-at { flex: none; width: 132px; font-size: 12px; color: var(--text-lightgray); white-space: nowrap; }
+.bgt-hist-ev { color: var(--text-black); }
+
+/* 점검표 생성 모달 폼 */
+.bgt-create { display: block; }
+.bgt-lab { display: block; font-size: 12px; color: var(--text-gray); font-weight: 700; margin: 16px 0 7px; }
+.bgt-lab:first-child { margin-top: 0; }
+.bgt-lab-sub { font-weight: 400; color: var(--text-lightgray); margin-left: 4px; }
+.bgt-radios { display: flex; gap: 8px; }
+.bgt-radio { display: flex; align-items: center; gap: 7px; padding: 8px 16px; font-size: 13px; border: 1px solid var(--card-line); border-radius: 8px; cursor: pointer; background: #fff; color: var(--text-gray); }
+.bgt-radio.on { border-color: var(--main); background: var(--brand-100); color: var(--main-dark2); font-weight: 700; }
+/* 생성 모달 항목 트리 (.org-inline 재사용 + 체크박스 행) */
+.bgt-tree-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; font-size: 13px; cursor: pointer; border-radius: 6px; }
+.bgt-tree-row:hover { background: var(--brand-100); }
+.bgt-tree-name { color: var(--text-black); }
+.bgt-tree-name.is-group { font-weight: 700; color: var(--main-dark2); }
+
+/* ── 예방관련 예산 항목 트리 — 파일 트리식 엘보 커넥터 (공유 시각 언어) ──
+ * 섹션 B 관리 트리(bgt-settings)와 생성 모달 체크 트리(itemTreeHtml)가 공용.
+ * 각 행은 depth 만큼 가이드 셀(.bgt-tg, 22px)을 렌더하고,
+ * trail(조상별 마지막 자식 여부)로 세로선/엘보를 구성한다. */
+.bgt-tg { flex: none; width: 22px; align-self: stretch; position: relative; }
+/* 조상 레벨: 마지막 자식이 아니면 풀하이트 세로선 */
+.bgt-tg--line::before {
+  content: ''; position: absolute; top: 0; bottom: 0; left: 11px;
+  width: 1px; background: var(--card-line);
+}
+/* 자기 직전 셀(엘보): 세로선 + 수직 중앙 가로 틱 */
+.bgt-tg--elbow::before {
+  content: ''; position: absolute; top: 0; bottom: 0; left: 11px;
+  width: 1px; background: var(--card-line);
+}
+/* 자기가 마지막 자식이면 세로선은 상반부만 (엘보 꺾임) */
+.bgt-tg--elbow.is-last::before { bottom: 50%; }
+.bgt-tg--elbow::after {
+  content: ''; position: absolute; top: 50%; left: 11px;
+  width: 10px; height: 1px; background: var(--card-line);
+}
+
+/* 대분류 그룹 박스 — 각 루트 서브트리를 한 섹션으로 */
+.bgt-tree-group {
+  border: 1px solid var(--card-line); border-radius: 10px;
+  overflow: hidden; margin-bottom: 10px;
+}
+.bgt-tree-group:last-child { margin-bottom: 0; }
+
+/* 트리 행 공통 (섹션 B) — 가이드 셀 + 이름 + 액션 */
+.bgt-trow {
+  display: flex; align-items: stretch; gap: 0;
+  border-top: 1px solid var(--card-line);
+}
+.bgt-tree-group > .bgt-trow:first-child { border-top: none; }
+.bgt-trow:hover { background: var(--brand-50); }
+.bgt-trow-main {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+}
+/* depth 0 = 그룹 헤더 행 */
+.bgt-trow.is-root { background: var(--gray-50); }
+.bgt-trow.is-root:hover { background: var(--gray-50); }
+.bgt-trow.is-root .bgt-tname { font-size: 13.5px; font-weight: 700; color: var(--text-black); }
+/* 중간 그룹 노드(하위 보유) */
+.bgt-tname.is-group { font-weight: 600; }
+/* 리프 */
+.bgt-tname { font-size: 13px; font-weight: 400; color: var(--text-black); }
+.bgt-tname.is-root-name { font-size: 13.5px; }
+.bgt-trow-actions { margin-left: auto; display: flex; gap: 8px; flex-shrink: 0; }
+.chip-mini.wt.bgt-count { font-weight: 600; }
+
+/* 인라인 추가/수정 폼 행 — 동일 가이드 셀 정렬, 폼 배경 */
+.bgt-trow.is-form { background: var(--brand-50); border-top: 1px solid var(--card-line); }
+.bgt-trow.is-form:hover { background: var(--brand-50); }
+.bgt-trow-form {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px;
+}
+.bgt-trow-form input {
+  flex: 1; max-width: 320px; padding: 7px 10px; font-size: 13px;
+  border: 1px solid var(--main); border-radius: 6px; outline: none; font-family: inherit;
+}
+/* 루트 추가 폼(그룹 밖) — 트리 하단 별도 박스 */
+.bgt-tree-rootform {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px; margin-bottom: 10px;
+  background: var(--brand-50);
+  border: 1px solid var(--card-line); border-radius: 10px;
+}
+.bgt-tree-rootform input {
+  flex: 1; max-width: 320px; padding: 7px 10px; font-size: 13px;
+  border: 1px solid var(--main); border-radius: 6px; outline: none; font-family: inherit;
+}
+
+/* 생성 모달 체크 트리 — 가이드 셀 + 체크박스 (그룹 배경 아주 옅게) */
+.bgt-tree-row.has-tg { padding: 0; align-items: stretch; }
+.bgt-tree-row.has-tg .bgt-tree-check {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;
+  padding: 6px 8px;
+}
+/* 생성 모달 대상 0건 안내 (§1) */
+.bgt-target-empty { font-size: 13px; color: var(--text-gray); background: var(--gray-50); border: 1px dashed var(--card-line); border-radius: 8px; padding: 12px 14px; line-height: 1.6; margin: 0; }
+
+/* 전자결재 카드 — 공통 '온나라 결재' 행 (칩 + 문서번호 + [이력]) */
+.bgt-appr-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed var(--card-line); }
+.bgt-appr-lab { font-size: 13px; font-weight: 700; color: var(--text-black); }
+.bgt-appr-docno { font-size: 12px; color: var(--text-gray); font-family: var(--font-mono, monospace); }
+
+/* 결재 상태 조회 모달 — 모의 수신 박스 (연계 시뮬레이션) */
+.bgt-status-modal .table-figma { font-size: 13px; }
+.bgt-sim-box { margin-top: 16px; padding: 14px; background: var(--gray-50); border: 1px solid var(--card-line); border-radius: var(--radius-md); }
+.bgt-sim-head { font-size: 12px; font-weight: 700; color: var(--text-gray); margin-bottom: 10px; }

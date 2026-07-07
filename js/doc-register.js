@@ -19,9 +19,9 @@
 
     const PDCA = [['P', 'P 계획'], ['D', 'D 실행'], ['C', 'C 점검'], ['A', 'A 조치']];
     const PROC_TYPES = [
-        ['첨부파일', '📄', '한글·PDF 등 완성 문서를 올려 보관'],
-        ['전자문서', '🧾', '시스템 양식에 값을 입력해 작성'],
-        ['프로그램', '🖥️', '전용 화면에서 입력·평가·이력 관리'],
+        ['첨부파일', '문서', '한글·PDF 등 완성 문서를 올려 보관'],
+        ['전자문서', '양식', '시스템 양식에 값을 입력해 작성'],
+        ['프로그램', '화면', '전용 화면에서 입력·평가·이력 관리'],
     ];
     const CYCLES = ['연간', '반기', '분기', '월', '수시', '발생시', '상시'];
     const DOC_ROLES = ['기준/절차', '계획', '실행/실적', '점검', '조치', '기타'];
@@ -187,11 +187,11 @@
     function ownerBlock() {
         const tree = (window.EDOC && window.EDOC.ORG_TREE) || [];
         return '<p class="reg-lab">담당자 지정 <span class="reg-req">*</span></p>' +
-            '<div class="reg-owner-sel"><span class="reg-owner-ic">👤</span><span id="reg-owner-cur">' + ownerSel() + '</span></div>' +
+            '<div class="reg-owner-sel"><span id="reg-owner-cur">' + ownerSel() + '</span></div>' +
             '<div class="org-inline" id="reg-orgtree">' +
                 '<div class="org-inline-search"><input type="text" id="reg-org-q" placeholder="부서·이름 검색"></div>' +
                 '<div class="org-inline-body" id="reg-orgtree-body">' +
-                    '<div class="org-tree-root"><span>🏛</span> 담양군청</div>' +
+                    '<div class="org-tree-root">담양군청</div>' +
                     tree.map((d, di) =>
                         '<div class="otr-dept" data-dept="' + esc(d.dept) + '">' +
                         '<button type="button" class="otr-deptbtn" data-di="' + di + '"><span class="otr-arrow">▸</span> ' + esc(d.dept) + ' <span class="otr-count">' + d.members.length + '명</span></button>' +
@@ -234,7 +234,7 @@
             '<select data-k="cycle">' + CYCLES.map(c => '<option' + (c === S.f.cycle ? ' selected' : '') + '>' + c + '</option>').join('') + '</select>' +
             '<p class="reg-lab">법적 근거</p>' +
             '<input type="text" data-k="legalBasis" value="' + esc(S.f.legalBasis) + '" placeholder="예: 중처법 시행령 제4조제1호">' +
-            '<div class="reg-branch"><p class="bh">📄 파일 첨부</p>' +
+            '<div class="reg-branch"><p class="bh">파일 첨부</p>' +
                 '<div class="upload-drop" style="padding:14px;" onclick="DYV2.toast(\'파일 선택 (프로토타입) — 아래에 파일명·설명을 입력하고 [파일 추가]를 누르세요\')">파일을 끌어다 놓거나 클릭하여 선택</div>' +
                 fileHintHtml() +
                 '<div class="reg-grid2" style="margin-top:10px;">' +
@@ -258,7 +258,7 @@
         return '<p class="reg-lab">문서명 <span class="reg-req">*</span></p>' +
             '<input type="text" data-k="name" value="' + esc(S.f.name) + '" placeholder="문서명을 입력하세요">' +
             ownerBlock() +
-            '<div class="reg-branch"><p class="bh">🧾 전자문서 — 빌더 양식 연계 <span class="reg-req">*</span></p>' +
+            '<div class="reg-branch"><p class="bh">전자문서 — 빌더 양식 연계 <span class="reg-req">*</span></p>' +
                 '<p class="reg-lab">연계 양식</p>' +
                 '<select id="reg-form">' + opts.map((o, i) =>
                     '<option value="' + i + '"' + (i === curIdx ? ' selected' : '') + '>' + esc(o.label) + '</option>').join('') + '</select>' +

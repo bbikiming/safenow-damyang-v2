@@ -487,13 +487,13 @@
     <main>
         <!-- ─── 시민재해 적용 범위 안내 (v0.2) ─── -->
         <div class="info-banner civil-disaster-scope" style="background:var(--status-warning-bg); border-left:4px solid var(--status-warning-fg); padding:12px 16px; margin:12px 0; border-radius:4px;">
-            <strong>⚠️ 중대시민재해 적용 범위 (v0.2)</strong><br>
+            <strong>중대시민재해 적용 범위 (v0.2)</strong><br>
             본 시스템은 <strong>구조상 결함만</strong> 등록합니다. 천재지변(적설·태풍·결빙 등)은 본 시스템 범위 외이며 별도 재난 대응 매뉴얼에 따릅니다.
         </div>
 
         <!-- ─── PRD·법령 근거 안내 ─── -->
         <div class="chk-prd-banner">
-            <strong>📋 체크리스트 위험성평가 (RSK02-C)</strong><br>
+            <strong>체크리스트 위험성평가 (RSK02-C)</strong><br>
             <strong>법적 근거</strong> — 산업안전보건법 §36(위험성평가의 실시) · 중대재해처벌법 §4(경영책임자 의무) · 산업안전보건기준에 관한 규칙 제13~625조<br>
             <strong>표준</strong> — KOSHA KRAS 산업안전포털 체크리스트법(<a href="https://portal.kosha.or.kr/kras/implement/real/sub6" target="_blank" style="color:var(--status-info-fg); text-decoration:underline;">portal.kosha.or.kr</a>) · KOSHA 위험성평가 지침해설서<br>
             <strong>내부 PRD</strong> — PRD-위험성평가-v0.1.md §5.2 · PRD_01 SFR-015 위험성평가 참여·개선
@@ -600,7 +600,7 @@
                 미판단 <span id="chk-stat-pending">0</span>건
             </div>
             <div class="chk-footer-actions">
-                <button class="chk-btn secondary" data-chk-action="save-temp" type="button">💾 임시저장</button>
+                <button class="chk-btn secondary" data-chk-action="save-temp" type="button">임시저장</button>
                 <button class="chk-btn primary" data-chk-action="submit" type="button">✓ 최종제출 → 결재 상신</button>
             </div>
         </div>
@@ -610,12 +610,12 @@
     <div id="chk-add-modal" class="chk-modal" role="dialog">
         <div class="chk-modal-dialog">
             <div class="chk-modal-header">
-                <div class="chk-modal-title" id="chk-add-modal-title">📦 체크리스트 항목 추가</div>
+                <div class="chk-modal-title" id="chk-add-modal-title">체크리스트 항목 추가</div>
                 <button class="chk-modal-close" data-chk-modal-close aria-label="닫기">✕</button>
             </div>
             <div class="chk-modal-body">
                 <div id="chk-add-modal-help" style="font-size:12px; color:var(--text-gray); margin-bottom:12px; line-height:1.5;"></div>
-                <input type="text" id="chk-modal-search" class="chk-modal-search" placeholder="🔎 키워드 검색 (예: 사다리, 폭염, 절연)">
+                <input type="text" id="chk-modal-search" class="chk-modal-search" placeholder="키워드 검색 (예: 사다리, 폭염, 절연)">
                 <div class="chk-modal-filter" id="chk-modal-filter"></div>
                 <div id="chk-modal-list"></div>
             </div>
@@ -630,7 +630,7 @@
     <div id="chk-custom-modal" class="chk-modal" role="dialog">
         <div class="chk-modal-dialog" style="max-width:600px;">
             <div class="chk-modal-header">
-                <div class="chk-modal-title">✏️ 직접 체크리스트 항목 추가</div>
+                <div class="chk-modal-title">직접 체크리스트 항목 추가</div>
                 <button class="chk-modal-close" data-chk-modal-close aria-label="닫기">✕</button>
             </div>
             <div class="chk-modal-body">
@@ -642,16 +642,16 @@
 
                 <label style="font-size:13px; font-weight:600; display:block; margin:14px 0 6px;">카테고리</label>
                 <select id="chk-custom-category" class="chk-modal-search" style="margin-bottom:0;">
-                    <option value="heat">🌡️ 폭염 작업</option>
-                    <option value="cold">❄️ 한랭 작업</option>
-                    <option value="fall">⬇️ 추락·떨어짐</option>
-                    <option value="electric">⚡ 감전·전기</option>
-                    <option value="chemical" selected>🧪 화학물질</option>
-                    <option value="confined">🚪 밀폐공간</option>
-                    <option value="fire">🔥 화재·폭발</option>
-                    <option value="lift">🏗️ 중량물·인양</option>
-                    <option value="dust">💨 분진·소음</option>
-                    <option value="vehicle">🚜 차량·중장비</option>
+                    <option value="heat">폭염 작업</option>
+                    <option value="cold">한랭 작업</option>
+                    <option value="fall">추락·떨어짐</option>
+                    <option value="electric">감전·전기</option>
+                    <option value="chemical" selected>화학물질</option>
+                    <option value="confined">밀폐공간</option>
+                    <option value="fire">화재·폭발</option>
+                    <option value="lift">중량물·인양</option>
+                    <option value="dust">분진·소음</option>
+                    <option value="vehicle">차량·중장비</option>
                 </select>
 
                 <label style="font-size:13px; font-weight:600; display:block; margin:14px 0 6px;">관련 법령·근거 (선택)</label>

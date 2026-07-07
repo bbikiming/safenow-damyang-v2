@@ -28,7 +28,7 @@
     };
     /* 업로드 영역 하단에 붙이는 안내 문구 HTML */
     function fileHint() {
-        return '<p class="file-hint">📎 <b>지원 형식</b> ' + FILE_LIMITS.formats +
+        return '<p class="file-hint"><b>지원 형식</b> ' + FILE_LIMITS.formats +
             ' <span class="fh-sep">·</span> <b>파일당 최대</b> ' + FILE_LIMITS.maxMB + 'MB' +
             ' <span class="fh-sep">·</span> <b>최대</b> ' + FILE_LIMITS.maxCount + '개</p>';
     }

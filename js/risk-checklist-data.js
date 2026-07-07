@@ -16,16 +16,16 @@ window.RskChecklistData = {
 
     // ─── 카테고리 ───
     categories: {
-        heat:     { name: '폭염 작업',          icon: '🌡️', desc: '온열질환 예방' },
-        cold:     { name: '한랭 작업',          icon: '❄️', desc: '저체온증 예방' },
-        fall:     { name: '추락·떨어짐',         icon: '⬇️', desc: '고소작업·개구부' },
-        electric: { name: '감전·전기',           icon: '⚡', desc: '활선·정전작업' },
-        chemical: { name: '화학물질',           icon: '🧪', desc: 'MSDS·누출 대응' },
-        confined: { name: '밀폐공간',           icon: '🚪', desc: '산소결핍·유해가스' },
-        fire:     { name: '화재·폭발',           icon: '🔥', desc: '인화성·점화원' },
-        lift:     { name: '중량물·인양',         icon: '🏗️', desc: '크레인·줄걸이' },
-        dust:     { name: '분진·소음',           icon: '💨', desc: '호흡기·청력' },
-        vehicle:  { name: '차량·중장비',         icon: '🚜', desc: '굴착기·도로작업' }
+        heat:     { name: '폭염 작업',          desc: '온열질환 예방' },
+        cold:     { name: '한랭 작업',          desc: '저체온증 예방' },
+        fall:     { name: '추락·떨어짐',         desc: '고소작업·개구부' },
+        electric: { name: '감전·전기',           desc: '활선·정전작업' },
+        chemical: { name: '화학물질',           desc: 'MSDS·누출 대응' },
+        confined: { name: '밀폐공간',           desc: '산소결핍·유해가스' },
+        fire:     { name: '화재·폭발',           desc: '인화성·점화원' },
+        lift:     { name: '중량물·인양',         desc: '크레인·줄걸이' },
+        dust:     { name: '분진·소음',           desc: '호흡기·청력' },
+        vehicle:  { name: '차량·중장비',         desc: '굴착기·도로작업' }
     },
 
     // ─── ① 표준모델 체크리스트 (KOSHA 표준) ───
