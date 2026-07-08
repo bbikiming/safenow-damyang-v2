@@ -101,7 +101,9 @@
 
         // GNB 7. 시스템 관리 (관리자 전용) — 프리셋 양식 관리가 v2 차별 포인트
         { id: 'admin', label: '시스템 관리', icon: 'cog', items: [
-            { id: 'admin-users',       label: '사용자·권한',      icon: 'users', href: 'admin-users.html',       screen: 'SFR-015' },
+            { id: 'admin-users',       label: '사용자 관리',      icon: 'users', href: 'admin-users.html',       screen: 'SFR-015' },
+            { id: 'admin-menus',       label: '메뉴 관리',        icon: 'list',  href: 'admin-menus.html',       screen: 'ADM01-S' },
+            { id: 'admin-roles',       label: '권한 관리',        icon: 'cog',   href: 'admin-roles.html',       screen: 'ADM02-S' },
             { id: 'admin-notify',      label: '알림 관리',        icon: 'bell',  href: 'admin-notify.html',      screen: 'SFR-017' },
             { id: 'admin-presets',     label: '프리셋 양식 관리', icon: 'cog',   href: 'admin-presets.html' },
             { id: 'admin-integration', label: '연계 관리',        icon: 'cog',   href: 'admin-integration.html', screen: 'SIR-001' },

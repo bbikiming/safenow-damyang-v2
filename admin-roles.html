@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>권한 관리 - 담양군 중대재해예방통합관리시스템 v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="admin-roles" data-page-title="권한 관리" data-page-subtitle="시스템 관리 > 권한 관리 — 권한 등급·구성원 관리 (ADM02-S)">
+    <main>
+        <div class="admp-topbar">
+            <span class="admp-topbar-hint">권한 등급과 구성원을 관리합니다. 보기·수정 권한은 메뉴 관리에서 메뉴별로 설정합니다.</span>
+            <span class="spacer" style="flex:1;"></span>
+            <button class="btn btn-outline btn-sm" onclick="DYADROLE.resetDemo()">데모 데이터 초기화</button>
+        </div>
+
+        <div class="admp-2col" id="adm-roles-app">
+            <div class="admp-listcard card">
+                <div class="card-header">
+                    <span class="card-title">권한 등급</span>
+                    <button class="btn btn-primary btn-sm" onclick="DYADROLE.selNew()">+ 등급 추가</button>
+                </div>
+                <div id="admr-list" class="admr-list-body"></div>
+            </div>
+            <div id="admr-panel" class="admp-panel"></div>
+        </div>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/adm-perm.js"></script>
+    <script src="./js/admin-roles.js"></script>
+</body>
+</html>

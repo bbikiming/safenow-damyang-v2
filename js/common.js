@@ -19,6 +19,130 @@
         comply:   { label: '이행관리',           sfr: 'SFR-008·014',      dept: '재난안전과·기획예산실', href: 'menu.html?m=comply' },
     };
 
+    /* =========================================================================
+     * 조직도 — 단일 출처 (DYV2.ORG)
+     *   전 화면의 조직도(경영방침 점검자·의견청취 위원·인력평가 평가자·권한 관리·
+     *   조직 요약·예산 기관 등)가 바라보는 유일한 캐노니컬 데이터.
+     *   화면별 조직도는 이 트리의 파생 뷰(orgFlat 등)만 사용하고 자체 데이터를 만들지 않는다.
+     *   노드 { id, name, type('root'|'post'|'bureau'|'dept'|'team'|'office'|'town'),
+     *          members:[{uid, name, role, team?}], children:[...] }
+     *   기존 권한 시드가 uid 를 참조하므로 uid 는 절대 변경 금지.
+     * ========================================================================= */
+    const ORG = {
+        id: 'gov', name: '담양군청', type: 'root', members: [], children: [
+            { id: 'n_mayor', name: '군수', type: 'post', members: [{ uid: 'u_mayor', name: '김담양', role: '군수' }], children: [
+                { id: 'n_vice', name: '부군수', type: 'post', members: [{ uid: 'u_vice', name: '이부군', role: '부군수' }], children: [
+                    { id: 'plan', name: '기획예산실', type: 'dept', members: [
+                        { uid: 'u_plan1', name: '서기획', role: '기획예산실장' },
+                        { uid: 'u_plan2', name: '한열람', role: '예산 담당 주무관' },
+                    ], children: [] },
+                    { id: 'bureau_adm', name: '행정복지국', type: 'bureau', members: [{ uid: 'u_badm', name: '박행정', role: '행정복지국장' }], children: [
+                        { id: 'safety', name: '재난안전과', type: 'dept', members: [
+                            { uid: 'u_safe1', name: '홍길동', role: '재난안전과장' },
+                            { uid: 'u_safe2', name: '박담당', role: '안전관리담당' },
+                        ], children: [
+                            { id: 'jjt', name: '중대재해팀', type: 'team', members: [
+                                { uid: 'u_jjt1', name: '김중대', role: '중대재해팀장' },
+                                { uid: 'u_jjt2', name: '박안전', role: '안전관리 주무관' },
+                                { uid: 'u_jjt3', name: '김안전', role: '안전관리자' },
+                            ], children: [] },
+                        ] },
+                        { id: 'acct', name: '회계과', type: 'dept', members: [
+                            { uid: 'u_acct1', name: '조회계', role: '회계과장' },
+                            { uid: 'u_acct2', name: '최회계', role: '계약·도급 담당 주무관' },
+                        ], children: [] },
+                        { id: 'env', name: '환경과', type: 'dept', members: [
+                            { uid: 'u_env1', name: '차환경', role: '환경과장' },
+                            { uid: 'u_env2', name: '정환경', role: '유해·위험요인 담당 주무관' },
+                            { uid: 'u_env3', name: '최보건', role: '보건관리자' },
+                            { uid: 'u_env4', name: '김지도', role: '주무관', team: '환경지도팀' },
+                            { uid: 'u_env5', name: '정수빈', role: '주무관', team: '자원순환팀' },
+                        ], children: [] },
+                        { id: 'culture', name: '문화체육과', type: 'dept', members: [
+                            { uid: 'u_cul1', name: '한지훈', role: '주무관', team: '체육시설팀' },
+                            { uid: 'u_cul2', name: '오세영', role: '주무관', team: '문화시설팀' },
+                        ], children: [] },
+                        { id: 'finance', name: '재무과', type: 'dept', members: [
+                            { uid: 'u_fin1', name: '최재무', role: '주무관', team: '회계팀' },
+                            { uid: 'u_fin2', name: '강세무', role: '주무관', team: '세정팀' },
+                        ], children: [] },
+                        { id: 'health', name: '보건소', type: 'dept', members: [
+                            { uid: 'u_hlth1', name: '강보건', role: '보건소장' },
+                            { uid: 'u_hlth2', name: '이보건', role: '보건행정 주무관' },
+                            { uid: 'u_hlth3', name: '윤담당', role: '보건담당' },
+                            { uid: 'u_hlth4', name: '백지영', role: '주무관', team: '보건행정과' },
+                            { uid: 'u_hlth5', name: '곽문석', role: '주무관', team: '건강증진과' },
+                        ], children: [] },
+                    ] },
+                    { id: 'bureau_ind', name: '산업건설국', type: 'bureau', members: [{ uid: 'u_bind', name: '정산업', role: '산업건설국장' }], children: [
+                        { id: 'construct', name: '건설과', type: 'dept', members: [
+                            { uid: 'u_con1', name: '이건설', role: '건설과장' },
+                            { uid: 'u_con2', name: '박현장', role: '현장안전 담당 주무관' },
+                            { uid: 'u_con3', name: '김도현', role: '주무관', team: '안전관리팀' },
+                            { uid: 'u_con4', name: '박서준', role: '주무관', team: '시설관리팀' },
+                            { uid: 'u_con5', name: '이준호', role: '주무관', team: '도로관리팀' },
+                        ], children: [] },
+                        { id: 'facility', name: '공공시설사업소', type: 'office', members: [
+                            { uid: 'u_fac1', name: '임시설', role: '공공시설사업소장' },
+                            { uid: 'u_fac2', name: '한담당', role: '시설안전 담당' },
+                            { uid: 'u_fac3', name: '한운영', role: '주무관', team: '시설운영팀' },
+                            { uid: 'u_fac4', name: '민설비', role: '주무관', team: '환경시설팀' },
+                        ], children: [] },
+                        { id: 'water', name: '물순환사업소', type: 'office', members: [
+                            { uid: 'u_wat1', name: '오순환', role: '물순환사업소장' },
+                            { uid: 'u_wat2', name: '서담당', role: '시설 담당' },
+                            { uid: 'u_wat3', name: '하정수', role: '주무관', team: '정수팀' },
+                            { uid: 'u_wat4', name: '오수질', role: '주무관', team: '수질관리팀' },
+                        ], children: [] },
+                    ] },
+                    { id: 'town_damyang', name: '담양읍', type: 'town', members: [
+                        { uid: 'u_twn1', name: '노읍장', role: '담양읍장' },
+                        { uid: 'u_twn2', name: '배주민', role: '주민복지 담당' },
+                    ], children: [] },
+                ] },
+            ] },
+        ],
+    };
+
+    function orgWalk(fn, node) { node = node || ORG; fn(node); (node.children || []).forEach(c => orgWalk(fn, c)); }
+    function orgNode(id) { let found = null; orgWalk(n => { if (n.id === id) found = n; }); return found; }
+    /* 노드 하위 구성원 수 (includeSub=true 면 하위 부서까지 포함) */
+    function orgCount(id, includeSub) {
+        const n = orgNode(id); if (!n) return 0; let c = 0;
+        (function w(nd, deep) {
+            c += (nd.members || []).length;
+            if (deep) (nd.children || []).forEach(x => w(x, true));
+            else (nd.children || []).forEach(x => { if (x.type === 'team') w(x, false); });
+        })(n, !!includeSub);
+        return c;
+    }
+    function orgTotal() { let c = 0; orgWalk(n => { c += (n.members || []).length; }); return c; }
+    /* EDOC 호환 평면 투영: [{dept, members:[[role,name],...]}]
+     *   부서형 노드(dept·office·town) 단위 그룹핑, 팀 노드 구성원은 소속 과에 합산.
+     *   기본적으로 지휘부(post·bureau 직속: 군수·부군수·국장)는 제외. */
+    function orgFlat(opts) {
+        opts = opts || {};
+        const out = [];
+        const isDeptLike = n => n.type === 'dept' || n.type === 'office' || n.type === 'town';
+        function collect(n, acc) {
+            (n.members || []).forEach(m => acc.push([m.role, m.name]));
+            (n.children || []).forEach(c => { if (c.type === 'team') collect(c, acc); });
+        }
+        (function walk(n) {
+            if (isDeptLike(n)) {
+                const acc = []; collect(n, acc);
+                out.push({ dept: n.name, members: acc });
+                (n.children || []).forEach(c => { if (c.type !== 'team') walk(c); });
+            } else {
+                if (opts.includeLeadership && (n.type === 'post' || n.type === 'bureau') && (n.members || []).length) {
+                    out.push({ dept: n.name, members: n.members.map(m => [m.role, m.name]) });
+                }
+                (n.children || []).forEach(walk);
+            }
+        })(ORG);
+        return out;
+    }
+
     const docs = () => window.DY_DOCS || [];
 
     /* ── 첨부파일 업로드 제약 (지원 형식·용량·개수) — 단일 출처 ── */
@@ -150,5 +274,6 @@
         unassignedBadge, secondReviewBadge,
         openModal, closeModal, toast, openDoc,
         docs, FILE_LIMITS, fileHint,
+        ORG, orgFlat, orgNode, orgCount, orgTotal, orgWalk,
     };
 })();

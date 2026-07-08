@@ -509,8 +509,8 @@
  {
   "scrId": "SCR-ADMIN-001",
   "daemenu": "시스템 관리",
-  "jungmenu": "사용자·권한",
-  "name": "사용자·권한 관리",
+  "jungmenu": "사용자 관리",
+  "name": "사용자 관리",
   "type": "목록",
   "route": "admin-users.html",
   "components": "layout.js, common.js",
@@ -557,6 +557,32 @@
   "defFile": "SCR-ADMIN-004_연계관리.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/admin-integration.html",
   "unresolvedCount": 4
+ },
+ {
+  "scrId": "SCR-ADMIN-005",
+  "daemenu": "시스템 관리",
+  "jungmenu": "메뉴 관리",
+  "name": "메뉴 관리",
+  "type": "설정",
+  "route": "admin-menus.html",
+  "components": "admin-menus.html, common.js",
+  "existingSfr": "ADM01-S",
+  "defFile": "SCR-ADMIN-005_메뉴관리.md",
+  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/admin-menus.html",
+  "unresolvedCount": 6
+ },
+ {
+  "scrId": "SCR-ADMIN-006",
+  "daemenu": "시스템 관리",
+  "jungmenu": "권한 관리",
+  "name": "권한 관리",
+  "type": "설정",
+  "route": "admin-roles.html",
+  "components": "admin-roles.html, common.js",
+  "existingSfr": "ADM02-S",
+  "defFile": "SCR-ADMIN-006_권한관리.md",
+  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/admin-roles.html",
+  "unresolvedCount": 6
  },
  {
   "scrId": "SCR-EDOC-001",

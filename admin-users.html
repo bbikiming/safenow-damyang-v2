@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>사용자·권한 - 담양군 중대재해예방통합관리시스템 v2</title>
+    <title>사용자 관리 - 담양군 중대재해예방통합관리시스템 v2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="./js/tailwind-config.js"></script>
     <link rel="stylesheet" href="./css/style.css">
     <link rel="stylesheet" href="./css/v2.css">
 </head>
-<body data-dy-page="admin-users" data-page-title="사용자·권한" data-page-subtitle="시스템 관리 > 사용자·권한 — SSO·행정포털 조직도 연동 (SFR-015)">
+<body data-dy-page="admin-users" data-page-title="사용자 관리" data-page-subtitle="시스템 관리 > 사용자 관리 — SSO·조직도 연동 + 사용자별 실효 권한 역조회 (SFR-015)">
     <main>
         <div class="card" style="margin-bottom:16px;">
             <div class="card-body" style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
@@ -29,29 +29,28 @@
                 <table class="table-figma">
                     <thead><tr><th>성명</th><th>부서 (조직도 연동)</th><th>권한</th><th>담당 대메뉴</th><th>최근 접속</th><th></th></tr></thead>
                     <tbody>
-                        <tr><td style="font-weight:600;">박안전</td><td>재난안전과 중대재해팀</td><td><span class="chip-mini wt-program">시스템 관리자</span></td><td>전체</td><td>2026-06-11 09:12</td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('권한 편집 (프로토타입)')">권한</button></td></tr>
-                        <tr><td style="font-weight:600;">김중대</td><td>재난안전과 중대재해팀</td><td><span class="chip-mini wt-elec">총괄 담당</span></td><td>경영방침·위험성평가·개선조치</td><td>2026-06-11 08:47</td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('권한 편집 (프로토타입)')">권한</button></td></tr>
-                        <tr><td style="font-weight:600;">이보건</td><td>보건소</td><td><span class="chip-mini pdca">부서 담당</span></td><td>안전보건교육</td><td>2026-06-10 17:30</td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('권한 편집 (프로토타입)')">권한</button></td></tr>
-                        <tr><td style="font-weight:600;">최회계</td><td>회계과</td><td><span class="chip-mini pdca">부서 담당</span></td><td>도급관리</td><td>2026-06-09 11:05</td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('권한 편집 (프로토타입)')">권한</button></td></tr>
-                        <tr><td style="font-weight:600;">정환경</td><td>환경과</td><td><span class="chip-mini pdca">부서 담당</span></td><td>유해·위험요인 관리</td><td>2026-06-08 14:21</td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('권한 편집 (프로토타입)')">권한</button></td></tr>
-                        <tr><td style="font-weight:600;">한열람</td><td>기획예산실</td><td><span class="chip-mini wt">열람</span></td><td>통계·보고</td><td>2026-06-02 10:00</td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('권한 편집 (프로토타입)')">권한</button></td></tr>
+                        <tr data-uname="박안전"><td style="font-weight:600;">박안전</td><td>재난안전과 중대재해팀</td><td class="perm-cell"></td><td>전체</td><td>2026-06-11 09:12</td><td><button class="btn btn-sm btn-outline" onclick="admAccess('박안전')">접근 메뉴</button></td></tr>
+                        <tr data-uname="김중대"><td style="font-weight:600;">김중대</td><td>재난안전과 중대재해팀</td><td class="perm-cell"></td><td>전 업무 메뉴 (총괄)</td><td>2026-06-11 08:47</td><td><button class="btn btn-sm btn-outline" onclick="admAccess('김중대')">접근 메뉴</button></td></tr>
+                        <tr data-uname="이보건"><td style="font-weight:600;">이보건</td><td>보건소</td><td class="perm-cell"></td><td>안전보건교육</td><td>2026-06-10 17:30</td><td><button class="btn btn-sm btn-outline" onclick="admAccess('이보건')">접근 메뉴</button></td></tr>
+                        <tr data-uname="최회계"><td style="font-weight:600;">최회계</td><td>회계과</td><td class="perm-cell"></td><td>도급관리</td><td>2026-06-09 11:05</td><td><button class="btn btn-sm btn-outline" onclick="admAccess('최회계')">접근 메뉴</button></td></tr>
+                        <tr data-uname="정환경"><td style="font-weight:600;">정환경</td><td>환경과</td><td class="perm-cell"></td><td>유해·위험요인 관리</td><td>2026-06-08 14:21</td><td><button class="btn btn-sm btn-outline" onclick="admAccess('정환경')">접근 메뉴</button></td></tr>
+                        <tr data-uname="한열람"><td style="font-weight:600;">한열람</td><td>기획예산실</td><td class="perm-cell"></td><td>-</td><td>2026-06-02 10:00</td><td><button class="btn btn-sm btn-outline" onclick="admAccess('한열람')">접근 메뉴</button></td></tr>
                     </tbody>
                 </table>
+                <p style="font-size:12px; color:var(--text-gray); margin-top:10px;">‘권한’·‘담당 대메뉴’는 권한 관리(등급)·메뉴 관리(개별 지정)의 산출값입니다(읽기 전용). [접근 메뉴]에서 사용자별 실효 권한을 근거와 함께 확인할 수 있습니다.</p>
             </div>
         </div>
 
         <div class="card" style="margin-top:16px;">
-            <div class="card-header"><span class="card-title">권한 등급</span></div>
-            <div class="card-body">
+            <div class="card-header"><span class="card-title">권한 등급</span>
+                <a class="btn btn-sm btn-outline" href="admin-roles.html">권한 관리로 이동</a>
+            </div>
+            <div class="card-body" style="overflow-x:auto;">
                 <table class="table-figma">
-                    <thead><tr><th>등급</th><th>범위</th></tr></thead>
-                    <tbody>
-                        <tr><td><span class="chip-mini wt-program">시스템 관리자</span></td><td>전체 메뉴 + 시스템 관리 (프리셋 양식·알림·연계·권한)</td></tr>
-                        <tr><td><span class="chip-mini wt-elec">총괄 담당</span></td><td>전 대메뉴 등록·마감 + 통계·보고</td></tr>
-                        <tr><td><span class="chip-mini pdca">부서 담당</span></td><td>담당 대메뉴 등록·수정 + 기준문서함 업로드</td></tr>
-                        <tr><td><span class="chip-mini wt">열람</span></td><td>대시보드·통계 조회만</td></tr>
-                    </tbody>
+                    <thead><tr><th>등급</th><th>구성원</th><th>적용 메뉴</th><th>설명</th></tr></thead>
+                    <tbody id="adm-grade-rows"></tbody>
                 </table>
+                <p style="font-size:12px; color:var(--text-gray); margin-top:10px;">등급 구성·적용은 <b>권한 관리</b>에서, 메뉴별 접근·수정 권한은 <b>메뉴 관리</b>에서 설정합니다. 부서별 업무 담당자는 등급이 아니라 메뉴별 개별 지정으로 처리합니다.</p>
             </div>
         </div>
     </main>
@@ -61,5 +60,67 @@
     <script src="./js/layout.js"></script>
     <script src="./js/data.js"></script>
     <script src="./js/common.js"></script>
+    <script src="./js/adm-perm.js"></script>
+    <script>
+    (function () {
+        'use strict';
+        function permChip(label) {
+            var cls = 'wt';
+            if (label === '시스템 관리자') cls = 'wt-program';
+            else if (label === '전담부서(중대재해 총괄)') cls = 'wt-elec';
+            else if (label === '메뉴별 지정' || label === '군수' || label === '부군수·국장' || label === '과장·팀장') cls = 'pdca';
+            return '<span class="chip-mini ' + cls + '">' + (window.DYV2 ? DYV2.esc(label) : label) + '</span>';
+        }
+        function fillPerms() {
+            if (!window.DYADM) return;
+            document.querySelectorAll('tr[data-uname]').forEach(function (row) {
+                var uid = DYADM.uidOf(row.getAttribute('data-uname'));
+                var cell = row.querySelector('.perm-cell');
+                if (cell && uid) cell.innerHTML = permChip(DYADM.primaryRole(uid));
+            });
+        }
+        function fillGrades() {
+            if (!window.DYADM) return;
+            var tb = document.getElementById('adm-grade-rows');
+            if (!tb) return;
+            tb.innerHTML = DYADM.roles().map(function (r) {
+                var ac = DYADM.roleAppliedCount(r.id);
+                var menu = ac.all ? '<span class="chip-mini wt-program">전체 메뉴</span>' : '<span class="chip-mini wt">' + ac.n + '개</span>';
+                return '<tr><td><span class="chip-mini ' + (r.protected ? 'wt-program' : 'pdca') + '">' + DYV2.esc(r.name) + '</span>' +
+                    (r.protected ? ' <span class="chip-mini wt">보호</span>' : '') + '</td>' +
+                    '<td>' + DYV2.esc(DYADM.roleMemberCountLabel(r)) + '</td>' +
+                    '<td>' + menu + '</td>' +
+                    '<td style="font-size:12px; color:var(--text-gray);">' + DYV2.esc(r.desc || '') + '</td></tr>';
+            }).join('');
+        }
+        /* 사용자별 실효 권한 역조회 (합집합 · 근거 표기) — DYADM.effectiveForUser 사용 */
+        window.admAccess = function (uname) {
+            if (!window.DYADM) return;
+            var uid = DYADM.uidOf(uname);
+            if (!uid) return;
+            var eff = DYADM.effectiveForUser(uid);
+            var menus = DYADM.middleMenus();
+            var acc = menus.filter(function (m) { return eff[m.id].view || eff[m.id].edit; });
+            var rows = acc.map(function (m) {
+                var e = eff[m.id];
+                var reason = e.reasons.map(function (r) { return r.via; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).join(', ');
+                return '<tr><td>' + DYV2.esc(m.groupLabel) + '</td><td style="font-weight:600;">' + DYV2.esc(m.label) + '</td>' +
+                    '<td style="text-align:center;">' + (e.view ? '<b style="color:var(--main);">O</b>' : '<span style="color:var(--text-lightgray);">-</span>') + '</td>' +
+                    '<td style="text-align:center;">' + (e.edit ? '<b style="color:var(--main);">O</b>' : '<span style="color:var(--text-lightgray);">-</span>') + '</td>' +
+                    '<td style="font-size:12px; color:var(--text-gray);">' + DYV2.esc(reason) + '</td></tr>';
+            }).join('');
+            var body =
+                '<p style="font-size:13px; margin-bottom:12px;"><b>' + DYV2.esc(uname) + '</b> · 접근 가능 <b>' + acc.length + '</b>개 / 전체 ' + menus.length + '개 메뉴</p>' +
+                '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>대메뉴</th><th>중메뉴</th><th style="width:52px;">보기</th><th style="width:52px;">수정</th><th>근거</th></tr></thead>' +
+                '<tbody>' + (rows || '<tr><td colspan="5" style="text-align:center; color:var(--text-gray); padding:16px;">접근 가능한 메뉴가 없습니다.</td></tr>') + '</tbody></table></div>' +
+                '<p style="font-size:12px; color:var(--text-gray); margin-top:10px;">여러 경로(등급 경유·개별 지정)로 권한이 겹치면 높은 권한이 적용됩니다(합집합). 미표시 메뉴는 기본 차단입니다.</p>';
+            DYV2.openModal(DYV2.esc(uname) + ' — 접근 메뉴 (실효 권한)', body,
+                '<button class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
+        };
+        function init() { fillPerms(); fillGrades(); }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+        else init();
+    })();
+    </script>
 </body>
 </html>

@@ -1158,3 +1158,141 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .bgt-status-modal .table-figma { font-size: 13px; }
 .bgt-sim-box { margin-top: 16px; padding: 14px; background: var(--gray-50); border: 1px solid var(--card-line); border-radius: var(--radius-md); }
 .bgt-sim-head { font-size: 12px; font-weight: 700; color: var(--text-gray); margin-bottom: 10px; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+ * 시스템 관리: 메뉴·권한 관리 (ADM)
+ *   ADM01-S 메뉴 관리 · ADM02-S 권한 관리 · 공용 조직도 복수선택 모달.
+ *   기존 토큰·컴포넌트(.card·.table-figma·.chip-mini·.reg-radio·.toggle-switch·
+ *   .org-inline-*)를 최대한 재사용하고 화면 고유 레이아웃만 정의.
+ * ───────────────────────────────────────────────────────────────────────── */
+
+/* 공통 상단바 + 2단 레이아웃 */
+.admp-topbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.admp-topbar-hint { font-size: 12px; color: var(--text-gray); line-height: 1.5; max-width: 720px; }
+.admp-2col { display: grid; grid-template-columns: 320px 1fr; gap: 16px; align-items: start; }
+.admp-listcard { align-self: start; overflow: hidden; }
+.admp-panel { min-width: 0; }
+@media (max-width: 860px) { .admp-2col { grid-template-columns: 1fr; } }
+
+/* ── ADM01-S: 좌측 메뉴 트리 ── */
+.admm-search { padding: 10px 14px; border-bottom: 1px solid var(--card-line); }
+.admm-search input { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--card-line); border-radius: 8px; font-size: 13px; font-family: inherit; outline: none; }
+.admm-search input:focus { border-color: var(--main); box-shadow: 0 0 0 3px rgba(45,146,112,.12); }
+.admm-tree-body { max-height: 640px; overflow-y: auto; padding: 8px; }
+.admm-group { margin-bottom: 2px; }
+.admm-ghead { display: flex; align-items: center; gap: 2px; border-radius: 6px; }
+.admm-ghead.is-sel { background: var(--brand-100); }
+.admm-gtoggle { width: 22px; height: 30px; border: none; background: transparent; color: var(--main); cursor: pointer; font-size: 12px; flex-shrink: 0; }
+.admm-glabel { flex: 1; text-align: left; border: none; background: transparent; padding: 7px 4px; font-size: 13px; font-weight: 700; color: var(--main-dark2); cursor: pointer; font-family: inherit; border-radius: 6px; }
+.admm-glabel:hover { color: var(--main-dark); }
+.admm-menus { display: flex; flex-direction: column; }
+.admm-menu { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; border: none; background: transparent; padding: 8px 8px 8px 28px; font-size: 13px; color: var(--text-black); cursor: pointer; font-family: inherit; border-radius: 6px; }
+.admm-menu:hover { background: var(--gray-50); }
+.admm-menu.is-sel { background: var(--brand-100); }
+.admm-menu.is-sel .admm-menu-label { color: var(--main-dark2); font-weight: 700; }
+.admm-menu-label { flex: 1; }
+
+/* ── ADM01-S: 우측 패널 ── */
+.admm-info { display: grid; grid-template-columns: 128px 1fr; row-gap: 11px; column-gap: 12px; align-items: center; font-size: 13px; }
+.admm-info-k { color: var(--text-gray); font-weight: 600; }
+.admm-info-v { color: var(--text-black); min-width: 0; }
+.admm-info-v code { font-size: 12px; background: var(--gray-50); padding: 2px 7px; border-radius: 4px; word-break: break-all; }
+.admm-usage-txt { font-size: 12px; color: var(--text-gray); }
+.admm-auto { font-size: 12.5px; color: var(--status-info-fg); background: var(--status-info-bg); border: 1px solid var(--status-info-border); border-radius: 8px; padding: 10px 12px; line-height: 1.5; }
+.admm-note { font-size: 12.5px; color: var(--text-gray); background: var(--gray-50); border: 1px solid var(--card-line); border-radius: 8px; padding: 10px 12px; line-height: 1.55; }
+.admm-add { display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; }
+.admm-add .select { min-width: 240px; }
+.admm-add-hint { font-size: 12px; color: var(--text-gray); }
+.admm-perm-table td { vertical-align: middle; }
+.admm-exp { border: none; background: transparent; color: var(--main); cursor: pointer; font-size: 11px; margin-right: 4px; padding: 0 2px; }
+.admm-mc { font-size: 12px; color: var(--text-gray); font-weight: 500; }
+.admm-prev-row td { background: var(--gray-50); }
+.admm-prev { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 4px 2px; }
+.admm-prev-h { font-size: 12px; font-weight: 700; color: var(--main-dark2); margin-right: 4px; }
+.admm-prev-chip { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: #fff; border: 1px solid var(--card-line); color: var(--text-black); }
+.admm-editnote { font-size: 12px; color: var(--text-gray); margin-top: 8px; }
+.admm-summary { display: flex; align-items: center; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--card-line); flex-wrap: wrap; }
+.admm-sum-txt { font-size: 13px; color: var(--main-dark2); }
+.admm-bulk { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.admm-bulk-lab { font-size: 13px; font-weight: 700; color: var(--main-dark2); }
+.admm-bulk .select { min-width: 200px; }
+
+/* ── ADM02-S: 좌측 등급 목록 ── */
+.admr-list-body { padding: 10px; display: flex; flex-direction: column; gap: 7px; max-height: 660px; overflow-y: auto; }
+.admr-item { display: flex; flex-direction: column; gap: 7px; width: 100%; text-align: left; border: 1px solid var(--card-line); background: #fff; border-radius: 10px; padding: 11px 12px; cursor: pointer; font-family: inherit; transition: border-color .12s ease, background .12s ease; }
+.admr-item:hover { border-color: var(--main-light); background: var(--brand-50); }
+.admr-item.is-sel { border-color: var(--main); background: var(--brand-100); }
+.admr-item-top { display: flex; align-items: center; gap: 6px; }
+.admr-item-name { font-size: 14px; font-weight: 700; color: var(--main-dark2); }
+.admr-item-sub { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+/* ── ADM02-S: 우측 등급 상세 ── */
+.admr-form { display: grid; grid-template-columns: 90px 1fr; row-gap: 10px; column-gap: 12px; align-items: start; }
+.admr-fl { font-size: 13px; color: var(--text-gray); font-weight: 600; padding-top: 8px; }
+.admr-form input, .admr-form textarea { width: 100%; box-sizing: border-box; padding: 8px 12px; font-size: 13px; border: 1px solid var(--card-line); border-radius: 8px; outline: none; font-family: inherit; }
+.admr-form textarea { resize: vertical; line-height: 1.5; }
+.admr-form input:focus, .admr-form textarea:focus { border-color: var(--main); box-shadow: 0 0 0 3px rgba(45,146,112,.12); }
+.admr-form input[readonly], .admr-form textarea[readonly] { background: var(--gray-50); color: var(--text-gray); }
+.admr-attrs { display: flex; gap: 18px; margin-top: 14px; flex-wrap: wrap; }
+.admr-attr { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--text-black); cursor: pointer; }
+.admr-attr.is-lock { color: var(--text-lightgray); cursor: default; }
+.admr-note { font-size: 12.5px; color: var(--text-gray); background: var(--gray-50); border: 1px solid var(--card-line); border-radius: 8px; padding: 10px 12px; margin-top: 12px; line-height: 1.55; }
+.admr-note.ok { color: var(--status-success-fg); background: var(--status-success-bg); border-color: var(--status-success-border); }
+.admr-note.warn { color: var(--status-warning-fg); background: var(--status-warning-bg); border-color: var(--status-warning-border); }
+.admr-mlist { display: flex; flex-direction: column; gap: 8px; }
+.admr-mrow { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: 1px solid var(--card-line); border-radius: 8px; background: #fff; }
+.admr-mtarget { flex: 1; font-size: 13px; min-width: 0; }
+.admr-mc { font-size: 12px; color: var(--text-gray); font-weight: 500; }
+.admr-applied-note { font-size: 12px; color: var(--text-gray); margin-bottom: 10px; }
+.admr-foot { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.admr-del { color: var(--status-danger-fg); border-color: var(--status-danger-border); }
+.admr-del:hover { background: var(--status-danger-bg); border-color: var(--status-danger-fg); }
+
+/* ── 공용 조직도 복수선택 모달 (DYADM.openOrgPicker) ── */
+.modal:has(.admp-picker) .modal-content { max-width: 760px; }
+.admp-picker { display: grid; grid-template-columns: 1fr 240px; gap: 14px; height: 70vh; max-height: calc(100vh - 200px); min-height: 320px; }
+.admp-pick-tree { border: 1px solid var(--card-line); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; min-height: 0; }
+.admp-pick-toolbar { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--card-line); background: #fff; flex-shrink: 0; }
+.admp-pick-q { flex: 1; min-width: 0; padding: 8px 10px; border: 1px solid var(--card-line); border-radius: 8px; font-size: 13px; font-family: inherit; box-sizing: border-box; outline: none; }
+.admp-pick-q:focus { border-color: var(--main); box-shadow: 0 0 0 3px rgba(45,146,112,.12); }
+.admp-tool-btn { flex-shrink: 0; border: 1px solid var(--card-line); background: #fff; color: var(--text-gray); font-size: 12px; font-family: inherit; padding: 7px 8px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
+.admp-tool-btn:hover { border-color: var(--main-light); color: var(--main-dark); background: var(--brand-50); }
+.admp-tree { flex: 1; min-height: 0; max-height: none; overflow-y: auto; }
+.admp-root { font-size: 13px; font-weight: 700; color: var(--main-dark2); padding: 2px 6px 8px; }
+.admp-node { margin-left: 2px; }
+.admp-drow { display: flex; align-items: center; gap: 6px; padding: 1px 0; }
+.admp-arrow { width: 18px; height: 24px; border: none; background: transparent; color: var(--main); cursor: pointer; font-size: 11px; flex-shrink: 0; }
+.admp-dcheck { display: flex; align-items: center; gap: 6px; cursor: pointer; flex: 1; padding: 4px 6px; border-radius: 6px; min-width: 0; }
+.admp-dcheck:hover { background: var(--brand-50); }
+.admp-dcheck.is-dis { opacity: .6; cursor: default; }
+.admp-postlabel { display: flex; align-items: center; gap: 6px; flex: 1; padding: 4px 6px; min-width: 0; }
+.admp-dname { font-size: 13px; font-weight: 600; color: var(--text-black); }
+.admp-dcount { font-size: 12px; color: var(--text-lightgray); flex-shrink: 0; }
+.admp-subopt { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-gray); cursor: pointer; flex-shrink: 0; white-space: nowrap; }
+.admp-subopt.is-dis { opacity: .45; cursor: default; }
+.admp-children { padding-left: 18px; border-left: 1px solid var(--card-line); margin-left: 9px; }
+.admp-mrow { display: flex; align-items: center; gap: 8px; padding: 5px 6px; cursor: pointer; border-radius: 6px; }
+.admp-mrow:hover { background: var(--brand-50); }
+.admp-mrow.is-dis { opacity: .6; cursor: default; }
+.admp-mrole { font-size: 12px; color: var(--text-gray); min-width: 128px; }
+.admp-mname { font-size: 13px; font-weight: 600; color: var(--main-dark2); }
+.admp-hl { background: var(--brand-100); color: var(--main-dark); border-radius: 3px; padding: 0 1px; }
+.admp-pick-basket { border: 1px solid var(--card-line); border-radius: 10px; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+.admp-basket-head { padding: 10px 12px; border-bottom: 1px solid var(--card-line); background: var(--gray-50); font-size: 13px; font-weight: 700; color: var(--main-dark2); display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.admp-basket-body { padding: 10px; overflow-y: auto; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
+.admp-basket-empty { font-size: 12px; color: var(--text-gray); text-align: center; padding: 20px 8px; line-height: 1.5; }
+.admp-basket-item { display: flex; align-items: center; gap: 6px; padding: 7px 8px; border: 1px solid var(--card-line); border-radius: 8px; background: #fff; flex-wrap: wrap; }
+.admp-bi-name { font-size: 13px; font-weight: 600; color: var(--text-black); }
+.admp-bi-meta { font-size: 11px; color: var(--text-gray); width: 100%; }
+.admp-bi-x { margin-left: auto; width: 22px; height: 22px; border: 1px solid var(--card-line); border-radius: 6px; background: #fff; color: var(--text-gray); cursor: pointer; font-size: 15px; line-height: 1; flex-shrink: 0; }
+.admp-bi-x:hover { background: var(--status-danger-bg); color: var(--status-danger-fg); border-color: var(--status-danger-border); }
+@media (max-width: 640px) {
+  .admp-picker { grid-template-columns: 1fr; height: auto; max-height: none; }
+  .admp-tree { max-height: 44vh; }
+  .admp-basket-body { max-height: 30vh; }
+  .modal:has(.admp-picker) .modal-content { max-width: 100%; }
+  .admr-form { grid-template-columns: 1fr; row-gap: 6px; }
+  .admr-fl { padding-top: 0; }
+  .admm-info { grid-template-columns: 1fr; row-gap: 4px; }
+  .admm-info-k { margin-top: 8px; }
+}

@@ -440,6 +440,7 @@
     <div id="toast" class="toast" role="status"></div>
 
     <script src="./js/layout.js"></script>
+    <script src="./js/common.js"></script>
     <script>
     (function () {
         'use strict';
@@ -495,32 +496,36 @@
         const rowsOf = () => DEPTS[currentDept];
         const findRow = (id) => rowsOf().find(r => r.id === id);
 
-        /* ─── 조직도(평가자 선택) 데이터 — org-chart.html TREE 축약 + 부서원(팀·이름) ─── */
-        const PICK_TREE = [{
-            id: 'root', name: '담양군청', children: [
-                { id: 'bonchung', name: '본청', children: [
-                    { id: '건설과',     name: '건설과',     members: [
-                        { team: '안전관리팀', name: '박안전' }, { team: '안전관리팀', name: '김도현' },
-                        { team: '시설관리팀', name: '박서준' }, { team: '도로관리팀', name: '이준호' } ] },
-                    { id: '환경과',     name: '환경과',     members: [
-                        { team: '환경지도팀', name: '김지도' }, { team: '자원순환팀', name: '정수빈' } ] },
-                    { id: '문화체육과', name: '문화체육과', members: [
-                        { team: '체육시설팀', name: '한지훈' }, { team: '문화시설팀', name: '오세영' } ] },
-                    { id: '재무과',     name: '재무과',     members: [
-                        { team: '회계팀',     name: '최재무' }, { team: '세정팀',     name: '강세무' } ] },
-                ]},
-                { id: 'jiksok', name: '직속기관', children: [
-                    { id: '보건소', name: '보건소', members: [
-                        { team: '보건행정과', name: '백지영' }, { team: '건강증진과', name: '곽문석' } ] },
-                ]},
-                { id: 'saubso', name: '사업소', children: [
-                    { id: '공공시설사업소', name: '공공시설사업소', members: [
-                        { team: '시설운영팀', name: '한운영' }, { team: '환경시설팀', name: '민설비' } ] },
-                    { id: '물순환사업소',   name: '물순환사업소',   members: [
-                        { team: '정수팀',     name: '하정수' }, { team: '수질관리팀', name: '오수질' } ] },
-                ]},
-            ]
-        }];
+        /* ─── 조직도(평가자 선택) 데이터 — 단일 출처(DYV2.ORG) 파생 ───
+         *   본청 = 부서(dept, 보건소 제외) + 기획예산실 / 직속기관 = 보건소 /
+         *   사업소 = office / 읍·면 = town. 부서원 team 은 member.team(없으면 role). */
+        const PICK_TREE = (function () {
+            const O = window.DYV2 && DYV2.ORG;
+            if (!O) return [{ id: 'root', name: '담양군청', children: [] }];
+            function deptMembers(n) {
+                const acc = [];
+                (function collect(nd) {
+                    (nd.members || []).forEach(m => acc.push({ team: m.team || m.role, name: m.name }));
+                    (nd.children || []).forEach(c => { if (c.type === 'team') collect(c); });
+                })(n);
+                return acc;
+            }
+            const leaf = n => ({ id: n.name, name: n.name, members: deptMembers(n) });
+            let plan = null, health = null; const depts = [], offices = [], towns = [];
+            DYV2.orgWalk(n => {
+                if (n.id === 'plan') plan = n;
+                else if (n.id === 'health') health = n;
+                else if (n.type === 'dept') depts.push(n);
+                else if (n.type === 'office') offices.push(n);
+                else if (n.type === 'town') towns.push(n);
+            });
+            const bonchung = (plan ? [plan] : []).concat(depts).map(leaf);
+            const groups = [{ id: 'bonchung', name: '본청', children: bonchung }];
+            if (health) groups.push({ id: 'jiksok', name: '직속기관', children: [leaf(health)] });
+            if (offices.length) groups.push({ id: 'saubso', name: '사업소', children: offices.map(leaf) });
+            if (towns.length) groups.push({ id: 'town', name: '읍·면', children: towns.map(leaf) });
+            return [{ id: 'root', name: '담양군청', children: groups }];
+        })();
 
         const SVG = {
             building: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22V12h6v10"/><path d="M8 6h.01M12 6h.01M16 6h.01M8 10h.01M16 10h.01"/></svg>',

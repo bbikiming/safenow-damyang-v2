@@ -36,6 +36,14 @@
 
 지원 형식·용량·개수 제약은 `DYV2.FILE_LIMITS`(`js/common.js`)에 단일 정의하고, 업로드 영역 하단 안내 문구는 `DYV2.fileHint()`로 렌더한다. 새 업로드 UI를 만들면 문구를 직접 쓰지 말고 `DYV2.fileHint()`를 재사용한다. (현재: 지원 형식 HWP·HWPX·PDF·DOC(X)·XLS(X)·PPT(X)·JPG·PNG·ZIP, 파일당 최대 20MB, 최대 10개.)
 
-### 3. 업무 목록(세트 테이블) 컬럼 헤더
+### 3. 조직도 데이터 — 단일 출처
+
+조직도 데이터는 `DYV2.ORG`(`js/common.js`)에 단일 정의한다. 화면별 조직도는 `DYV2.orgFlat()` 등 파생 뷰만 사용하고 자체 조직도 데이터를 만들지 않는다.
+- 스키마: 노드 `{ id, name, type('root'|'post'|'bureau'|'dept'|'team'|'office'|'town'), members:[{uid, name, role, team?}], children:[...] }`. 권한 시드가 uid 를 참조하므로 **uid 는 변경 금지**.
+- 파생 헬퍼: `DYV2.orgFlat(opts)`(EDOC 호환 평면 투영 `[{dept, members:[[role,name]]}]`) · `DYV2.orgNode(id)` · `DYV2.orgCount(id, includeSub)` · `DYV2.orgTotal()` · `DYV2.orgWalk(fn)`.
+- 소비처: `EDOC.ORG_TREE`(= `orgFlat()` 파생 → 경영방침·의견청취·회의록·업무 등록 담당자·예산 기관) · 메뉴/권한/사용자 관리(`DYADM.ORG = DYV2.ORG` 참조) · 인력평가 평가자 선택(evl-eval.html `PICK_TREE` 파생) · 조직 화면(m=org) 요약 카드.
+- `common.js` 는 `edoc.js`·`adm-perm.js` 보다 먼저 로드되어야 한다(전 페이지 검증됨).
+
+### 4. 업무 목록(세트 테이블) 컬럼 헤더
 
 `js/setlist.js`의 세트 단위 테이블(`setCard`·`unassignedCard`)은 `SL_HEAD`(`<thead>`)를 포함해 컬럼(PDCA 단계·문서명·담당자·담당부서·수정일·상태·관리)을 항상 표기한다. `docRow`의 7열과 1:1로 정렬되어야 한다.

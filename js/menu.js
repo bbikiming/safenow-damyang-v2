@@ -705,14 +705,20 @@
                 fields: { source: '수행평가: 예산·인력 지원의 충분성 — 보완 판정' }, onChange: render,
             });
             const team = (name, n) => '<div style="border:1px solid var(--card-line); border-radius:var(--radius-md); padding:10px 14px; text-align:center; background:#fff;"><div style="font-size:12px; font-weight:700;">' + name + '</div><div style="font-size:12px; color:var(--text-gray);">' + n + '명</div></div>';
+            /* 조직도 요약 — 단일 출처(DYV2.ORG) 파생 실인원 */
+            const orgTotal = (V.orgTotal ? V.orgTotal() : 0);
+            const jjtN = (V.orgCount ? V.orgCount('jjt', false) : 0);
+            const mayorN = (V.orgCount ? V.orgCount('n_mayor', false) : 1);
+            const deptCards = (V.orgFlat ? V.orgFlat() : [])
+                .map(d => team(d.dept, d.members.length)).join('');
             return sectionCard('조직도 (행정포털 연계)',
                 '<div style="display:flex; flex-direction:column; align-items:center; gap:10px;">' +
-                team('군수 (경영책임자)', 1) +
+                team('군수 (경영책임자)', mayorN) +
                 '<div style="width:1px; height:14px; background:var(--card-line);"></div>' +
-                team('재난안전과 중대재해팀 (전담조직)', 4) +
+                team('재난안전과 중대재해팀 (전담조직)', jjtN) +
                 '<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; width:100%; margin-top:4px;">' +
-                [['행정과', 12], ['환경과', 9], ['도시과', 11], ['회계과', 7], ['보건소', 15]].map(t => team(t[0], t[1])).join('') + '</div></div>',
-                '<button class="btn btn-sm btn-secondary" onclick="EDOC.notify(\'행정포털 조직도 동기화 완료 — 612명\', \'시스템\')">조직도 동기화</button>') +
+                deptCards + '</div></div>',
+                '<button class="btn btn-sm btn-secondary" onclick="EDOC.notify(\'행정포털 조직도 동기화 완료 — ' + orgTotal + '명\', \'시스템\')">조직도 동기화</button>') +
             sectionCard('안전관리자·보건관리자 선임 현황',
                 tbl(['구분', '성명', '선임일', '자격', '상태'], [
                     ['안전관리자', '김안전', '2025-03-02', '산업안전기사', ST('완료')],

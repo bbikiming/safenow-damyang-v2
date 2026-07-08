@@ -363,15 +363,10 @@
     }
     function formFor(d) { return T.formForDoc(d); }
 
-    /* ── 조직도 트리 (점검자 선택) — 입력 아래 인라인 패널(별도 모달 없음, 단일 모달 규칙) ── */
-    const ORG_TREE = [
-        { dept: '재난안전과', members: [['재난안전과장', '홍길동'], ['중대재해팀장', '김안전'], ['안전관리담당', '박담당']] },
-        { dept: '건설과', members: [['건설과장', '이건설'], ['안전관리자', '박현장']] },
-        { dept: '환경과', members: [['환경과장', '정환경'], ['보건관리자', '최보건']] },
-        { dept: '보건소', members: [['보건소장', '강보건'], ['보건담당', '윤담당']] },
-        { dept: '공공시설사업소', members: [['소장', '임시설'], ['안전담당', '한담당']] },
-        { dept: '물순환사업소', members: [['소장', '오순환'], ['시설담당', '서담당']] },
-    ];
+    /* ── 조직도 트리 (점검자 선택) — 입력 아래 인라인 패널(별도 모달 없음, 단일 모달 규칙) ──
+     *   조직도 데이터는 단일 출처(DYV2.ORG)에서 파생한다. 자체 하드코딩 금지.
+     *   common.js 가 edoc.js 보다 먼저 로드되므로 IIFE 초기화 시점에 orgFlat() 조회 가능. */
+    const ORG_TREE = (window.DYV2 && window.DYV2.orgFlat) ? window.DYV2.orgFlat() : [];
     function renderOrgTree(selectedVal) {
         return '<div class="org-tree-root">담양군청</div>' +
             ORG_TREE.map(d =>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>메뉴 관리 - 담양군 중대재해예방통합관리시스템 v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="admin-menus" data-page-title="메뉴 관리" data-page-subtitle="시스템 관리 > 메뉴 관리 — 메뉴별 접근 권한 설정 (ADM01-S)">
+    <main>
+        <div class="admp-topbar">
+            <span class="admp-topbar-hint">메뉴별 접근 권한을 설정합니다. 미설정 메뉴는 기본 차단(시스템 관리자 제외)이며, 실제 내비게이션 노출에는 영향을 주지 않습니다(프로토타입).</span>
+            <span class="spacer" style="flex:1;"></span>
+            <button class="btn btn-outline btn-sm" onclick="DYADMENU.resetDemo()">데모 데이터 초기화</button>
+        </div>
+
+        <div class="admp-2col" id="adm-menus-app">
+            <div class="admp-listcard card">
+                <div class="card-header"><span class="card-title">메뉴 트리</span></div>
+                <div class="admm-search">
+                    <input id="admm-q" type="text" placeholder="메뉴명 검색" oninput="DYADMENU.search(this.value)">
+                </div>
+                <div id="admm-tree" class="admm-tree-body"></div>
+            </div>
+            <div id="admm-panel" class="admp-panel"></div>
+        </div>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/adm-perm.js"></script>
+    <script src="./js/admin-menus.js"></script>
+</body>
+</html>
