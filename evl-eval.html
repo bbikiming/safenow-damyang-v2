@@ -240,6 +240,10 @@
                     <span class="info-grid-value">반기 1회 <span class="text-gray">(상반기 4~6월 / 하반기 10~12월)</span></span>
                 </div>
                 <div class="info-grid-row">
+                    <span class="info-grid-label">평가 사이클</span>
+                    <span class="info-grid-value"><strong id="ev-cycle-now">2026년</strong> <span class="text-gray">· 아래 ‘평가 결과’ 상단의 사이클 선택과 연동되며, 매트릭스 상·하반기 헤더에 연도가 병기됩니다</span></span>
+                </div>
+                <div class="info-grid-row">
                     <span class="info-grid-label">평가일자</span>
                     <span class="info-grid-value">평가 등록 시 자동 기록 <span class="text-gray">· 피평가자별 실제 평가일은 아래 매트릭스·이력의 ‘평가일자’ 열 참조</span></span>
                 </div>
@@ -255,12 +259,14 @@
             <div class="card-header">
                 <h2 class="card-title">평가 결과</h2>
                 <div class="ev-bar" style="border:none; padding:0; gap:8px;">
-                    <span class="lbl">부서</span>
-                    <select id="ev-dept" onchange="window.EVL.changeDept(this.value)">
-                        <option>건설과</option>
-                        <option>공공시설사업소</option>
-                        <option>환경과</option>
+                    <span class="lbl">평가 사이클</span>
+                    <select id="ev-year" onchange="window.EVL.changeYear(this.value)">
+                        <option>2026</option>
+                        <option>2025</option>
+                        <option>2024</option>
                     </select>
+                    <span class="lbl" style="margin-left:8px;">부서</span>
+                    <select id="ev-dept" onchange="window.EVL.changeDept(this.value)"></select>
                 </div>
             </div>
             <div style="padding:16px 22px;">
@@ -270,8 +276,8 @@
                             <tr>
                                 <th rowspan="2">구분</th>
                                 <th rowspan="2">피평가자</th>
-                                <th class="grp-h1 ev-col-div" colspan="3">상반기 (H1)</th>
-                                <th class="grp-h2 ev-col-div" colspan="3">하반기 (H2)</th>
+                                <th class="grp-h1 ev-col-div" colspan="3" id="ev-h1-head">2026 상반기</th>
+                                <th class="grp-h2 ev-col-div" colspan="3" id="ev-h2-head">2026 하반기</th>
                             </tr>
                             <tr>
                                 <th class="grp-h1 ev-col-div">평가자</th>
@@ -379,7 +385,8 @@
                         PDF 미리보기
                     </button>
                     <button class="btn btn-outline" type="button" onclick="window.EVL.closeEval()">닫기</button>
-                    <button class="btn btn-primary" id="eval-save" type="button" onclick="window.EVL.saveEval()">저장</button>
+                    <button class="btn btn-secondary" id="eval-draft" type="button" onclick="window.EVL.saveDraft()">임시저장</button>
+                    <button class="btn btn-primary" id="eval-save" type="button" onclick="window.EVL.completeEval()" disabled>평가 완료</button>
                 </div>
             </div>
         </div>
@@ -473,27 +480,48 @@
 
         function cell(evaluator) { return { evaluator: evaluator || null, date: null, result: null, grades: null }; }
 
-        /* ─── 부서별 피평가자(책임자·관리감독자) ─── */
-        const DEPTS = {
-            '건설과': [
-                { id: 'c-r1', role: 'RESPONSIBLE', roleLabel: '안전보건관리책임자', name: '신과장', team: '부서장',     H1: cell('박안전'), H2: cell('박안전') },
-                { id: 'c-s1', role: 'SUPERVISOR',  roleLabel: '관리감독자',         name: '김도현', team: '안전관리팀', H1: cell('박안전'), H2: cell(null) },
-                { id: 'c-s2', role: 'SUPERVISOR',  roleLabel: '관리감독자',         name: '박서준', team: '시설관리팀', H1: cell('김안전'), H2: cell(null) },
-                { id: 'c-s3', role: 'SUPERVISOR',  roleLabel: '관리감독자',         name: '이준호', team: '도로관리팀', H1: cell(null),     H2: cell(null) },
-            ],
-            '공공시설사업소': [
-                { id: 'g-r1', role: 'RESPONSIBLE', roleLabel: '안전보건관리책임자', name: '정소장', team: '부서장',     H1: cell('박안전'), H2: cell(null) },
-                { id: 'g-s1', role: 'SUPERVISOR',  roleLabel: '관리감독자',         name: '민설비', team: '환경시설팀', H1: cell(null),     H2: cell(null) },
-                { id: 'g-s2', role: 'SUPERVISOR',  roleLabel: '관리감독자',         name: '한운영', team: '시설운영팀', H1: cell(null),     H2: cell(null) },
-            ],
-            '환경과': [
-                { id: 'e-r1', role: 'RESPONSIBLE', roleLabel: '안전보건관리책임자', name: '윤환경', team: '부서장',     H1: cell(null),     H2: cell(null) },
-                { id: 'e-s1', role: 'SUPERVISOR',  roleLabel: '관리감독자',         name: '정수빈', team: '자원순환팀', H1: cell(null),     H2: cell(null) },
-                { id: 'e-s2', role: 'SUPERVISOR',  roleLabel: '관리감독자',         name: '김지도', team: '환경지도팀', H1: cell(null),     H2: cell(null) },
-            ],
-        };
-        let currentDept = '건설과';
-        const rowsOf = () => DEPTS[currentDept];
+        /* ─── 부서별 피평가자(책임자·관리감독자) — 조직도 단일 출처(DYV2.ORG) 직위 파생 ───
+         *   안전보건관리책임자 = 부서장(장(長) 직위, 부서 대표 구성원)
+         *   관리감독자        = 부서 내 팀 소속(team 속성) 구성원(팀장/현장 감독 대표)
+         *   피평가자 명단은 조직도에서 자동 구성하고, seedDemo() 로 데모용 평가자 지정·임시저장만 덧입힌다.
+         *   (CLAUDE.md 규칙 3 — 자체 조직도 데이터를 만들지 않고 파생 뷰만 사용) */
+        function buildDepts() {
+            const out = {};
+            if (!(window.DYV2 && DYV2.ORG)) return out;
+            const isDeptLike = n => n.type === 'dept' || n.type === 'office' || n.type === 'town';
+            const isHead = r => /장$/.test(r || '');   // 과장·소장·실장·읍장 등
+            let seq = 0;
+            DYV2.orgWalk(n => {
+                if (!isDeptLike(n)) return;
+                const rows = [];
+                const head = (n.members || []).find(m => isHead(m.role));
+                if (head) rows.push({ id: 'p' + (seq++), role: 'RESPONSIBLE', roleLabel: '안전보건관리책임자', name: head.name, team: '부서장', H1: cell(null), H2: cell(null) });
+                (n.members || []).filter(m => m.team).forEach(m => {
+                    rows.push({ id: 'p' + (seq++), role: 'SUPERVISOR', roleLabel: '관리감독자', name: m.name, team: m.team, H1: cell(null), H2: cell(null) });
+                });
+                if (rows.length) out[n.name] = rows;
+            });
+            return out;
+        }
+        const DEPTS = buildDepts();
+
+        /* 데모 시드: 조직도 파생 위에 평가자 지정·임시저장 상태만 덧입힘(목업 시연용) */
+        function seedCell(dept, name, half, patch) {
+            const rows = DEPTS[dept]; if (!rows) return;
+            const row = rows.find(r => r.name === name); if (!row) return;
+            Object.assign(row[half], patch);
+        }
+        (function seedDemo() {
+            seedCell('건설과', '이건설', 'H1', { evaluator: '박안전' });          // 부서장(책임자) — 본인 지정 → 평가등록 가능
+            seedCell('건설과', '이건설', 'H2', { evaluator: '박안전' });
+            seedCell('건설과', '박서준', 'H1', { evaluator: '김안전' });          // 타인 지정 → 평가등록 비활성
+            seedCell('건설과', '김도현', 'H1', { evaluator: '박안전', draft: true, grades: ['양호', '보통', '양호', null, null] });  // 임시저장(진행 중 3/5)
+            seedCell('공공시설사업소', '임시설', 'H1', { evaluator: '박안전' });   // 부서장(책임자) — 본인 지정
+        })();
+
+        let currentDept = DEPTS['건설과'] ? '건설과' : (Object.keys(DEPTS)[0] || '');
+        let evalYear = '2026';
+        const rowsOf = () => DEPTS[currentDept] || [];
         const findRow = (id) => rowsOf().find(r => r.id === id);
 
         /* ─── 조직도(평가자 선택) 데이터 — 단일 출처(DYV2.ORG) 파생 ───
@@ -546,12 +574,12 @@
             return { date: date, cycle: cycle, dept: dept, role: role, roleLabel: roleLabel, name: name, team: team, evaluator: evaluator, result: result, grades: makeGrades(role, result) };
         }
         const HISTORY = [
-            rec('2025-12-22', '2025 하반기', '건설과',         'RESPONSIBLE', '안전보건관리책임자', '신과장', '부서장',     '박안전', '양호'),
+            rec('2025-12-22', '2025 하반기', '건설과',         'RESPONSIBLE', '안전보건관리책임자', '이건설', '부서장',     '박안전', '양호'),
             rec('2025-12-22', '2025 하반기', '건설과',         'SUPERVISOR',  '관리감독자',         '김도현', '안전관리팀', '박안전', '보통'),
             rec('2025-12-20', '2025 하반기', '건설과',         'SUPERVISOR',  '관리감독자',         '박서준', '시설관리팀', '김안전', '양호'),
             rec('2025-12-19', '2025 하반기', '환경과',         'SUPERVISOR',  '관리감독자',         '정수빈', '자원순환팀', '김안전', '미흡'),
-            rec('2025-12-18', '2025 하반기', '공공시설사업소', 'RESPONSIBLE', '안전보건관리책임자', '정소장', '부서장',     '박안전', '양호'),
-            rec('2025-06-25', '2025 상반기', '건설과',         'RESPONSIBLE', '안전보건관리책임자', '신과장', '부서장',     '박안전', '보통'),
+            rec('2025-12-18', '2025 하반기', '공공시설사업소', 'RESPONSIBLE', '안전보건관리책임자', '임시설', '부서장',     '박안전', '양호'),
+            rec('2025-06-25', '2025 상반기', '건설과',         'RESPONSIBLE', '안전보건관리책임자', '이건설', '부서장',     '박안전', '보통'),
             rec('2025-06-24', '2025 상반기', '건설과',         'SUPERVISOR',  '관리감독자',         '김도현', '안전관리팀', '박안전', '양호'),
         ];
 
@@ -613,12 +641,18 @@
             const dateCell = '<td>' + (c.date ? c.date : '<span class="ev-cell-empty">-</span>') + '</td>';
             // 평가
             let resCell;
+            const done = (c.grades || []).filter(Boolean).length;
+            const total = ITEMS[row.role].length;
             if (c.result) {
                 resCell = '<td>' + gradeBadge(c.result) + '</td>';
             } else if (c.evaluator === CURRENT_USER) {
-                resCell = '<td><button class="ev-mini primary" onclick="window.EVL.openEval(\'' + row.id + '\',\'' + h + '\')">평가등록</button></td>';
+                // 본인 지정 — 임시저장(진행 중)이면 이어작성, 아니면 평가등록
+                const label = c.draft ? '진행 중 ' + done + '/' + total : '평가등록';
+                resCell = '<td><button class="ev-mini primary" onclick="window.EVL.openEval(\'' + row.id + '\',\'' + h + '\')">' + label + '</button></td>';
             } else if (c.evaluator) {
-                resCell = '<td><button class="ev-mini" disabled title="배정된 평가자만 등록할 수 있습니다">평가등록</button></td>';
+                const label = c.draft ? '진행 중' : '평가등록';
+                const title = c.draft ? '배정된 평가자가 작성 중입니다' : '배정된 평가자만 등록할 수 있습니다';
+                resCell = '<td><button class="ev-mini" disabled title="' + title + '">' + label + '</button></td>';
             } else {
                 resCell = '<td><span class="ev-cell-empty">-</span></td>';
             }
@@ -662,11 +696,12 @@
             const c = row[half];
             evalCtx = { rowId, half };
             evalMode = 'edit';
-            document.getElementById('eval-title').textContent = (half === 'H1' ? '상반기' : '하반기') + ' · ' + row.roleLabel + ' 평가표';
-            document.getElementById('eval-sub').textContent = '피평가자 ' + row.name + ' (' + row.team + ') · 평가자 ' + (c.evaluator || '-');
+            document.getElementById('eval-title').textContent = evalYear + ' ' + (half === 'H1' ? '상반기' : '하반기') + ' · ' + row.roleLabel + ' 평가표';
+            document.getElementById('eval-sub').textContent = '피평가자 ' + row.name + ' (' + row.team + ') · 평가자 ' + (c.evaluator || '-') + (c.draft ? ' · 임시저장 이어작성' : '');
             evalItems$.innerHTML = buildItems(ITEMS[row.role], c.grades, false);
             document.getElementById('eval-foot-stat').innerHTML = '평가 항목 <strong id="eval-progress">0/0</strong>';
             document.getElementById('eval-save').style.display = '';
+            document.getElementById('eval-draft').style.display = '';
             document.getElementById('eval-pdf').style.display = 'none';
             tickEval();
             evalModal$.classList.add('is-open');
@@ -682,6 +717,7 @@
             evalItems$.innerHTML = buildItems(ITEMS[r.role], r.grades, true);
             document.getElementById('eval-foot-stat').innerHTML = '종합 결과 ' + gradeBadge(r.result) + ' <span style="color:var(--text-lightgray); margin-left:6px;">조회 전용</span>';
             document.getElementById('eval-save').style.display = 'none';
+            document.getElementById('eval-draft').style.display = 'none';
             document.getElementById('eval-pdf').style.display = '';
             viewedRec = r;
             evalModal$.classList.add('is-open');
@@ -694,6 +730,11 @@
                 if (evalItems$.querySelector('input[name="g' + i + '"]:checked')) done++;
             }
             document.getElementById('eval-progress').textContent = done + '/' + total;
+            const saveBtn = document.getElementById('eval-save');
+            if (saveBtn) {
+                saveBtn.disabled = done < total;
+                saveBtn.title = done < total ? '전 항목 판정 후 평가를 완료할 수 있습니다 (임시저장은 언제든 가능)' : '';
+            }
         }
 
         function overall(grades) {
@@ -704,28 +745,50 @@
             return '보통';
         }
 
-        function saveEval() {
-            const row = findRow(evalCtx.rowId);
+        function collectGrades(row) {
             const total = ITEMS[row.role].length;
             const grades = [];
             for (let i = 0; i < total; i++) {
                 const sel = evalItems$.querySelector('input[name="g' + i + '"]:checked');
                 grades.push(sel ? sel.value : null);
             }
-            const missing = grades.filter(x => !x).length;
-            if (missing > 0 && !window.confirm('미평가 항목 ' + missing + '건이 있습니다. 그대로 저장할까요?')) return;
+            return grades;
+        }
+
+        /* 임시저장 — 미평가 항목이 있어도 진행분 보존(종합 미산출·이력 미등재) */
+        function saveDraft() {
+            const row = findRow(evalCtx.rowId);
+            const grades = collectGrades(row);
+            const done = grades.filter(Boolean).length;
+            if (done === 0) { toast('판정한 항목이 없어 임시저장할 내용이 없습니다'); return; }
+            const c = row[evalCtx.half];
+            c.grades = grades;
+            c.draft = true;
+            c.result = null;
+            c.date = null;
+            closeEval();
+            renderMatrix();
+            toast('임시저장되었습니다 — 진행 중 ' + done + '/' + grades.length + ' (목업)');
+        }
+
+        /* 평가 완료 — 전 항목 판정 시에만 종합 산출·이력 등재 */
+        function completeEval() {
+            const row = findRow(evalCtx.rowId);
+            const grades = collectGrades(row);
+            if (grades.filter(x => !x).length > 0) { toast('전 항목 판정 후 평가를 완료할 수 있습니다'); return; }
             const c = row[evalCtx.half];
             c.grades = grades;
             c.result = overall(grades);
+            c.draft = false;
             c.date = TODAY;
-            const cyc = '2026 ' + (evalCtx.half === 'H1' ? '상반기' : '하반기');
+            const cyc = evalYear + ' ' + (evalCtx.half === 'H1' ? '상반기' : '하반기');
             const newRec = { date: c.date, cycle: cyc, dept: currentDept, role: row.role, roleLabel: row.roleLabel, name: row.name, team: row.team, evaluator: c.evaluator || '-', result: c.result, grades: grades.slice() };
             for (let i = HISTORY.length - 1; i >= 0; i--) { if (histKey(HISTORY[i]) === histKey(newRec)) HISTORY.splice(i, 1); }
             HISTORY.unshift(newRec);
             closeEval();
             renderMatrix();
             renderHistory();
-            toast('평가 저장 완료 — 종합 ' + (c.result || '미산출') + ' · 이력에 추가됨 (목업)');
+            toast('평가 완료 — 종합 ' + (c.result || '미산출') + ' · 이력에 추가됨 (목업)');
         }
 
         function closeEval() { evalModal$.classList.remove('is-open'); viewedRec = null; }
@@ -977,10 +1040,26 @@
         }
         function closeDoc() { docModal$.classList.remove('is-open'); }
 
+        /* ─── 평가 사이클(연도) ─── */
+        function renderCycle() {
+            const h1 = document.getElementById('ev-h1-head'); if (h1) h1.textContent = evalYear + ' 상반기';
+            const h2 = document.getElementById('ev-h2-head'); if (h2) h2.textContent = evalYear + ' 하반기';
+            const cn = document.getElementById('ev-cycle-now'); if (cn) cn.textContent = evalYear + '년';
+        }
+
+        /* 부서 셀렉터·이력 부서 필터를 조직도 파생 DEPTS 로 채움 */
+        function initSelectors() {
+            const dsel = document.getElementById('ev-dept');
+            if (dsel) dsel.innerHTML = Object.keys(DEPTS).map(d => '<option' + (d === currentDept ? ' selected' : '') + '>' + d + '</option>').join('');
+            const hd = document.getElementById('hist-f-dept');
+            if (hd) hd.innerHTML = '<option>전체</option>' + Object.keys(DEPTS).map(d => '<option>' + d + '</option>').join('');
+        }
+
         /* 외부 노출 */
         window.EVL = {
             changeDept(v) { currentDept = v; renderMatrix(); },
-            openEval, closeEval, saveEval, tickEval,
+            changeYear(v) { evalYear = v; renderCycle(); },
+            openEval, closeEval, saveDraft, completeEval, tickEval,
             openPicker, closePicker, confirmPicker,
             pickMember(name) { pickMember = name; renderMembers(); updatePickFoot(); },
             searchTree(q) { pickQuery = (q || '').trim(); renderTree(); },
@@ -995,6 +1074,8 @@
         };
 
         /* 초기 렌더 */
+        initSelectors();
+        renderCycle();
         renderMatrix();
         renderHistory();
     })();
