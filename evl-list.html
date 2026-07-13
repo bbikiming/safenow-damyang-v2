@@ -92,6 +92,8 @@
             border: 1px solid var(--status-warning-border);
             font-weight: 700;
         }
+        .evl-cycle-meta .dday.done { background: var(--status-success-bg); color: var(--status-success-fg); border-color: var(--status-success-border); }
+        .evl-cycle-meta .dday.upcoming { background: var(--status-info-bg); color: var(--status-info-fg); border-color: var(--status-info-border); }
 
         /* KPI 그리드 */
         .evl-kpi-grid {
@@ -440,83 +442,25 @@
                     <span class="icon">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                     </span>
-                    <select class="select" style="border:none; padding:4px 24px 4px 4px; font-size:15px; font-weight:700; background-position:right 4px center;">
+                    <select id="evl-year" class="select" style="border:none; padding:4px 24px 4px 4px; font-size:15px; font-weight:700; background-position:right 4px center;" onchange="window.EVLS.render()">
                         <option>2026년</option>
                         <option>2025년</option>
                         <option>2024년</option>
                     </select>
                 </span>
-                <div class="evl-half-toggle">
-                    <button type="button" class="is-active">상반기</button>
-                    <button type="button">하반기</button>
-                    <button type="button">전체</button>
+                <div class="evl-half-toggle" id="evl-half">
+                    <button type="button" class="is-active" data-half="H1">상반기</button>
+                    <button type="button" data-half="H2">하반기</button>
+                    <button type="button" data-half="ALL">전체</button>
                 </div>
-                <span class="evl-cycle-meta">
-                    평가 기간 <strong>2026-04-01 ~ 2026-06-30</strong>
-                    <span class="dday">마감 D-15</span>
-                </span>
+                <span class="evl-cycle-meta" id="evl-meta"></span>
             </div>
 
             <!-- 평가 사이클 요약 KPI -->
-            <section class="evl-kpi-grid">
-                <div class="evl-kpi-cell">
-                    <div class="evl-kpi-head">
-                        <span class="evl-kpi-title">대상자</span>
-                        <span class="evl-kpi-icon">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                        </span>
-                    </div>
-                    <div class="evl-kpi-value">32<span class="small">명</span></div>
-                    <div class="evl-kpi-sub">책임자 <strong>12</strong> · 감독자 <strong>20</strong></div>
-                </div>
-                <div class="evl-kpi-cell">
-                    <div class="evl-kpi-head">
-                        <span class="evl-kpi-title">완료</span>
-                        <span class="evl-kpi-icon success">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                        </span>
-                    </div>
-                    <div class="evl-kpi-value success">18<span class="small">명</span></div>
-                    <div class="progress" style="height:6px; margin-top:2px;">
-                        <div class="progress-bar green" style="width:56%;"></div>
-                    </div>
-                    <div class="evl-kpi-sub">진행률 <strong>56%</strong></div>
-                </div>
-                <div class="evl-kpi-cell">
-                    <div class="evl-kpi-head">
-                        <span class="evl-kpi-title">진행 중</span>
-                        <span class="evl-kpi-icon info">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                        </span>
-                    </div>
-                    <div class="evl-kpi-value info">8<span class="small">명</span></div>
-                    <div class="evl-kpi-sub">평균 진행 <strong>3.2/8항목</strong></div>
-                </div>
-                <div class="evl-kpi-cell">
-                    <div class="evl-kpi-head">
-                        <span class="evl-kpi-title">미시작</span>
-                        <span class="evl-kpi-icon warn">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.29 3.86-8.4 14.74A2 2 0 0 0 3.62 22h16.76a2 2 0 0 0 1.73-3.4L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                        </span>
-                    </div>
-                    <div class="evl-kpi-value warning">6<span class="small">명</span></div>
-                    <div class="evl-kpi-sub">보건소·담양읍 외 4건</div>
-                </div>
-            </section>
+            <section class="evl-kpi-grid" id="evl-kpi"></section>
 
-            <!-- 마감 임박 배너 -->
-            <div class="evl-alert-banner">
-                <span class="icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                </span>
-                <span class="msg">
-                    <strong>반기 평가 마감 D-15</strong> — 미시작 6건이 있습니다.
-                    <span class="sub">2026년 상반기 평가 사이클 마감일: 2026-06-30 (금)</span>
-                </span>
-                <button class="btn btn-primary" type="button" onclick="window.location.href='evl-eval.html'">
-                    미시작 평가 시작 →
-                </button>
-            </div>
+            <!-- 마감 임박 배너 (미시작 있고 진행 중 사이클일 때만) -->
+            <div id="evl-banner"></div>
 
             <!-- 역할별 평가 진행 -->
             <section>
@@ -524,131 +468,17 @@
                     <span style="display:block; width:4px; height:18px; background:var(--main); border-radius:2px;"></span>
                     역할별 평가 진행
                 </h2>
-                <div class="evl-role-grid">
-                    <!-- 안전보건관리책임자 -->
-                    <div class="evl-role-card">
-                        <div class="evl-role-head">
-                            <div class="evl-role-title">
-                                안전보건관리책임자
-                                <span class="badge-num">8항목</span>
-                            </div>
-                            <a class="text-muted" href="#" style="font-size:12px;" onclick="event.preventDefault(); window.DYLayout._soon(event, '책임자 평가 템플릿 (EVL03-S)')">템플릿 →</a>
-                        </div>
-                        <div class="evl-role-progress-bar">
-                            <span class="pct" style="min-width:0; padding-right:6px;">7 / 12</span>
-                            <div class="track"><div class="fill" style="width:58%;"></div></div>
-                            <span class="pct">58%</span>
-                        </div>
-                        <div class="evl-role-stats">
-                            <div class="evl-role-stat-cell">
-                                <div class="evl-role-stat-num success">7</div>
-                                <div class="evl-role-stat-label">완료</div>
-                            </div>
-                            <div class="evl-role-stat-cell">
-                                <div class="evl-role-stat-num info">3</div>
-                                <div class="evl-role-stat-label">진행중</div>
-                            </div>
-                            <div class="evl-role-stat-cell">
-                                <div class="evl-role-stat-num" style="color:var(--status-warning-fg);">2</div>
-                                <div class="evl-role-stat-label">미시작</div>
-                            </div>
-                        </div>
-                        <div class="evl-role-avg">
-                            <span class="evl-role-avg-label">완료자 평균 점수</span>
-                            <span class="evl-role-avg-value">82<span class="unit">/100</span></span>
-                        </div>
-                    </div>
-
-                    <!-- 관리감독자 -->
-                    <div class="evl-role-card supervisor">
-                        <div class="evl-role-head">
-                            <div class="evl-role-title">
-                                관리감독자
-                                <span class="badge-num">5항목</span>
-                            </div>
-                            <a class="text-muted" href="#" style="font-size:12px;" onclick="event.preventDefault(); window.DYLayout._soon(event, '감독자 평가 템플릿 (EVL03-S)')">템플릿 →</a>
-                        </div>
-                        <div class="evl-role-progress-bar">
-                            <span class="pct" style="min-width:0; padding-right:6px;">11 / 20</span>
-                            <div class="track"><div class="fill" style="width:55%;"></div></div>
-                            <span class="pct">55%</span>
-                        </div>
-                        <div class="evl-role-stats">
-                            <div class="evl-role-stat-cell">
-                                <div class="evl-role-stat-num success">11</div>
-                                <div class="evl-role-stat-label">완료</div>
-                            </div>
-                            <div class="evl-role-stat-cell">
-                                <div class="evl-role-stat-num info">5</div>
-                                <div class="evl-role-stat-label">진행중</div>
-                            </div>
-                            <div class="evl-role-stat-cell">
-                                <div class="evl-role-stat-num" style="color:var(--status-warning-fg);">4</div>
-                                <div class="evl-role-stat-label">미시작</div>
-                            </div>
-                        </div>
-                        <div class="evl-role-avg">
-                            <span class="evl-role-avg-label">완료자 평균 점수</span>
-                            <span class="evl-role-avg-value">78<span class="unit">/100</span></span>
-                        </div>
-                    </div>
-                </div>
+                <div class="evl-role-grid" id="evl-roles"></div>
             </section>
 
             <!-- 부서별 진행률 -->
             <section class="card">
                 <div class="card-header">
                     <h2 class="card-title">부서별 평가 진행률</h2>
-                    <span class="text-muted" style="font-size:13px;">전체 9개 부서 · 2026 상반기</span>
+                    <span class="text-muted" id="evl-dept-head" style="font-size:13px;"></span>
                 </div>
                 <div class="card-body">
-                    <div class="dept-bar-list">
-                        <div class="dept-bar-item">
-                            <span class="dept-bar-name">건설과 ★</span>
-                            <div class="dept-bar-track"><div class="dept-bar-fill" style="width:100%;"></div></div>
-                            <span class="dept-bar-value">7/7</span>
-                        </div>
-                        <div class="dept-bar-item">
-                            <span class="dept-bar-name">공공시설사업소 ★</span>
-                            <div class="dept-bar-track"><div class="dept-bar-fill" style="width:89%;"></div></div>
-                            <span class="dept-bar-value">8/9</span>
-                        </div>
-                        <div class="dept-bar-item">
-                            <span class="dept-bar-name">기획감사실</span>
-                            <div class="dept-bar-track"><div class="dept-bar-fill" style="width:75%;"></div></div>
-                            <span class="dept-bar-value">3/4</span>
-                        </div>
-                        <div class="dept-bar-item">
-                            <span class="dept-bar-name">농업기술센터</span>
-                            <div class="dept-bar-track"><div class="dept-bar-fill" style="width:67%;"></div></div>
-                            <span class="dept-bar-value">2/3</span>
-                        </div>
-                        <div class="dept-bar-item">
-                            <span class="dept-bar-name">물순환사업소 ★</span>
-                            <div class="dept-bar-track"><div class="dept-bar-fill" style="width:67%;"></div></div>
-                            <span class="dept-bar-value">2/3</span>
-                        </div>
-                        <div class="dept-bar-item">
-                            <span class="dept-bar-name">환경과</span>
-                            <div class="dept-bar-track"><div class="dept-bar-fill warning" style="width:50%;"></div></div>
-                            <span class="dept-bar-value">1/2</span>
-                        </div>
-                        <div class="dept-bar-item">
-                            <span class="dept-bar-name">문화체육과 ★</span>
-                            <div class="dept-bar-track"><div class="dept-bar-fill warning" style="width:50%;"></div></div>
-                            <span class="dept-bar-value">1/2</span>
-                        </div>
-                        <div class="dept-bar-item">
-                            <span class="dept-bar-name">담양읍사무소</span>
-                            <div class="dept-bar-track"><div class="dept-bar-fill warning" style="width:33%;"></div></div>
-                            <span class="dept-bar-value">1/3</span>
-                        </div>
-                        <div class="dept-bar-item">
-                            <span class="dept-bar-name">보건소</span>
-                            <div class="dept-bar-track"><div class="dept-bar-fill danger" style="width:0%;"></div></div>
-                            <span class="dept-bar-value" style="color:var(--status-danger-fg);">0/2</span>
-                        </div>
-                    </div>
+                    <div class="dept-bar-list" id="evl-depts"></div>
                 </div>
             </section>
         </div>
@@ -671,13 +501,182 @@
             window.__toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
         }
 
+        /* ══════════════════════════════════════════════════════════
+         * 사이클별 예시 데이터셋 (프로토타입 목업 — 연도·반기 선택 시 전환)
+         *   role: { items, total(대상), done, prog(진행중), notStart, avg(완료자 평균점수) }
+         *   depts: [부서명, 완료, 대상, 중점(★)]
+         * ══════════════════════════════════════════════════════════ */
+        const CY = {
+            '2026-H1': { period: '2026-04-01 ~ 2026-06-30', deadline: '2026-06-30 (금)', dday: '마감 D-15', ddayKind: 'warn',
+                resp: { items: 8, total: 12, done: 7, prog: 3, notStart: 2, avg: 82 },
+                sup:  { items: 5, total: 20, done: 11, prog: 5, notStart: 4, avg: 78 },
+                avgProgress: '3.2/8항목', notNote: '보건소·담양읍 외 4건',
+                depts: [['건설과',7,7,1],['공공시설사업소',8,9,1],['기획예산실',3,4,0],['재무과',2,3,0],['물순환사업소',2,3,1],['환경과',1,2,0],['문화체육과',1,2,1],['담양읍',1,3,0],['보건소',0,2,0]] },
+            '2026-H2': { period: '2026-10-01 ~ 2026-12-31', deadline: '2026-12-31 (수)', dday: '개시 예정', ddayKind: 'upcoming',
+                resp: { items: 8, total: 12, done: 0, prog: 0, notStart: 12, avg: 0 },
+                sup:  { items: 5, total: 20, done: 0, prog: 0, notStart: 20, avg: 0 },
+                avgProgress: '0/8항목', notNote: '하반기 사이클 개시 전',
+                depts: [['건설과',0,7,1],['공공시설사업소',0,9,1],['기획예산실',0,4,0],['재무과',0,3,0],['물순환사업소',0,3,1],['환경과',0,2,0],['문화체육과',0,2,1],['담양읍',0,3,0],['보건소',0,2,0]] },
+            '2025-H2': { period: '2025-10-01 ~ 2025-12-31', deadline: '2025-12-31', dday: '마감 완료', ddayKind: 'done',
+                resp: { items: 8, total: 12, done: 12, prog: 0, notStart: 0, avg: 85 },
+                sup:  { items: 5, total: 20, done: 19, prog: 0, notStart: 1, avg: 80 },
+                avgProgress: '—', notNote: '환경과 1건 미시작 종결',
+                depts: [['건설과',7,7,1],['공공시설사업소',9,9,1],['기획예산실',4,4,0],['재무과',3,3,0],['물순환사업소',3,3,1],['환경과',1,2,0],['문화체육과',2,2,1],['담양읍',3,3,0],['보건소',2,2,0]] },
+            '2025-H1': { period: '2025-04-01 ~ 2025-06-30', deadline: '2025-06-30', dday: '마감 완료', ddayKind: 'done',
+                resp: { items: 8, total: 12, done: 12, prog: 0, notStart: 0, avg: 83 },
+                sup:  { items: 5, total: 20, done: 20, prog: 0, notStart: 0, avg: 79 },
+                avgProgress: '—', notNote: '전 부서 완료',
+                depts: [['건설과',7,7,1],['공공시설사업소',9,9,1],['기획예산실',4,4,0],['재무과',3,3,0],['물순환사업소',3,3,1],['환경과',2,2,0],['문화체육과',2,2,1],['담양읍',3,3,0],['보건소',2,2,0]] },
+            '2024-H2': { period: '2024-10-01 ~ 2024-12-31', deadline: '2024-12-31', dday: '마감 완료', ddayKind: 'done',
+                resp: { items: 8, total: 11, done: 11, prog: 0, notStart: 0, avg: 81 },
+                sup:  { items: 5, total: 18, done: 18, prog: 0, notStart: 0, avg: 77 },
+                avgProgress: '—', notNote: '전 부서 완료',
+                depts: [['건설과',6,6,1],['공공시설사업소',8,8,1],['기획예산실',4,4,0],['재무과',3,3,0],['물순환사업소',3,3,1],['환경과',2,2,0],['문화체육과',2,2,1],['담양읍',3,3,0],['보건소',1,1,0]] },
+            '2024-H1': { period: '2024-04-01 ~ 2024-06-30', deadline: '2024-06-30', dday: '마감 완료', ddayKind: 'done',
+                resp: { items: 8, total: 11, done: 10, prog: 0, notStart: 1, avg: 78 },
+                sup:  { items: 5, total: 18, done: 17, prog: 0, notStart: 1, avg: 75 },
+                avgProgress: '—', notNote: '도입 초기(2건 미시작 종결)',
+                depts: [['건설과',6,6,1],['공공시설사업소',7,8,1],['기획예산실',4,4,0],['재무과',3,3,0],['물순환사업소',2,3,1],['환경과',2,2,0],['문화체육과',2,2,1],['담양읍',3,3,0],['보건소',1,1,0]] },
+        };
+
+        const HALF_LABEL = { H1: '상반기', H2: '하반기', ALL: '전체' };
+        const pct = (d, t) => t ? Math.round(d / t * 100) : 0;
+
+        const SVG = {
+            users: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+            check: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+            clock: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+            warn:  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.29 3.86-8.4 14.74A2 2 0 0 0 3.62 22h16.76a2 2 0 0 0 1.73-3.4L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+            bell:  '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+        };
+
+        /* '전체' — 해당 연도 상·하반기 합산 */
+        function aggregate(year) {
+            const a = CY[year + '-H1'], b = CY[year + '-H2'];
+            if (!a || !b) return a || b || null;
+            const mergeRole = (r1, r2) => ({
+                items: r1.items, total: r1.total + r2.total, done: r1.done + r2.done,
+                prog: r1.prog + r2.prog, notStart: r1.notStart + r2.notStart,
+                avg: (r1.done + r2.done) ? Math.round((r1.avg * r1.done + r2.avg * r2.done) / (r1.done + r2.done)) : 0,
+            });
+            const depts = a.depts.map((d, i) => [d[0], d[1] + b.depts[i][1], d[2] + b.depts[i][2], d[3]]);
+            return { period: year + ' 연간 (상·하반기 합산)', deadline: '연간', dday: '연간 합산', ddayKind: 'upcoming',
+                resp: mergeRole(a.resp, b.resp), sup: mergeRole(a.sup, b.sup),
+                avgProgress: '—', notNote: '상·하반기 합산', depts };
+        }
+
+        function selected() {
+            const year = (document.getElementById('evl-year').value || '2026년').replace('년', '');
+            const half = document.querySelector('#evl-half button.is-active').dataset.half;
+            const data = half === 'ALL' ? aggregate(year) : (CY[year + '-' + half] || null);
+            return { year, half, data };
+        }
+
+        /* ─── 렌더러 ─── */
+        function render() {
+            const { year, half, data } = selected();
+            const meta$ = document.getElementById('evl-meta');
+            const kpi$ = document.getElementById('evl-kpi');
+            const banner$ = document.getElementById('evl-banner');
+            const roles$ = document.getElementById('evl-roles');
+            const depts$ = document.getElementById('evl-depts');
+            const depthead$ = document.getElementById('evl-dept-head');
+
+            if (!data) {
+                meta$.innerHTML = '해당 사이클 데이터 없음';
+                kpi$.innerHTML = ''; banner$.innerHTML = ''; roles$.innerHTML = '';
+                depts$.innerHTML = '<div style="padding:20px; color:var(--text-lightgray);">표시할 데이터가 없습니다.</div>';
+                depthead$.textContent = '';
+                return;
+            }
+
+            const target = data.resp.total + data.sup.total;
+            const done = data.resp.done + data.sup.done;
+            const prog = data.resp.prog + data.sup.prog;
+            const notStart = data.resp.notStart + data.sup.notStart;
+            const comp = pct(done, target);
+
+            /* 사이클 메타 */
+            const ddayCls = data.ddayKind === 'done' ? 'dday done' : (data.ddayKind === 'upcoming' ? 'dday upcoming' : 'dday');
+            meta$.innerHTML = '평가 기간 <strong>' + data.period + '</strong><span class="' + ddayCls + '">' + data.dday + '</span>';
+
+            /* KPI 4종 */
+            kpi$.innerHTML =
+                kpiCell('대상자', '', SVG.users, target + '<span class="small">명</span>',
+                    '책임자 <strong>' + data.resp.total + '</strong> · 감독자 <strong>' + data.sup.total + '</strong>') +
+                kpiCell('완료', 'success', SVG.check, done + '<span class="small">명</span>',
+                    '진행률 <strong>' + comp + '%</strong>', comp) +
+                kpiCell('진행 중', 'info', SVG.clock, prog + '<span class="small">명</span>',
+                    prog ? ('평균 진행 <strong>' + data.avgProgress + '</strong>') : '<span style="color:var(--text-lightgray);">임시저장 없음</span>') +
+                kpiCell('미시작', 'warn', SVG.warn, notStart + '<span class="small">명</span>', data.notNote);
+
+            /* 마감 배너 — 진행 중 사이클 + 미시작 있을 때만 */
+            if (data.ddayKind === 'warn' && notStart > 0 && half !== 'ALL') {
+                banner$.innerHTML =
+                    '<div class="evl-alert-banner"><span class="icon">' + SVG.bell + '</span>' +
+                    '<span class="msg"><strong>반기 평가 ' + data.dday + '</strong> — 미시작 ' + notStart + '건이 있습니다.' +
+                    '<span class="sub">' + year + '년 ' + HALF_LABEL[half] + ' 평가 사이클 마감일: ' + data.deadline + '</span></span>' +
+                    '<button class="btn btn-primary" type="button" onclick="window.location.href=\'evl-eval.html\'">미시작 평가 시작 →</button></div>';
+            } else {
+                banner$.innerHTML = '';
+            }
+
+            /* 역할별 카드 */
+            roles$.innerHTML =
+                roleCard('안전보건관리책임자', 'R', data.resp, false) +
+                roleCard('관리감독자', 'S', data.sup, true);
+
+            /* 부서별 진행률 */
+            depthead$.textContent = '전체 ' + data.depts.length + '개 부서 · ' + year + ' ' + HALF_LABEL[half];
+            depts$.innerHTML = data.depts.map(d => {
+                const p = pct(d[1], d[2]);
+                const fillCls = p === 0 ? 'dept-bar-fill danger' : (p < 60 ? 'dept-bar-fill warning' : 'dept-bar-fill');
+                const valStyle = p === 0 ? ' style="color:var(--status-danger-fg);"' : '';
+                return '<div class="dept-bar-item">' +
+                    '<span class="dept-bar-name">' + d[0] + (d[3] ? ' ★' : '') + '</span>' +
+                    '<div class="dept-bar-track"><div class="' + fillCls + '" style="width:' + p + '%;"></div></div>' +
+                    '<span class="dept-bar-value"' + valStyle + '>' + d[1] + '/' + d[2] + '</span></div>';
+            }).join('');
+        }
+
+        function kpiCell(title, kind, icon, value, sub, prog) {
+            const bar = (prog !== undefined)
+                ? '<div class="progress" style="height:6px; margin-top:2px;"><div class="progress-bar green" style="width:' + prog + '%;"></div></div>'
+                : '';
+            return '<div class="evl-kpi-cell"><div class="evl-kpi-head">' +
+                '<span class="evl-kpi-title">' + title + '</span>' +
+                '<span class="evl-kpi-icon ' + kind + '">' + icon + '</span></div>' +
+                '<div class="evl-kpi-value ' + (kind === 'warn' ? 'warning' : kind) + '">' + value + '</div>' +
+                bar + '<div class="evl-kpi-sub">' + sub + '</div></div>';
+        }
+
+        function roleCard(name, roleKey, r, isSup) {
+            const p = pct(r.done, r.total);
+            return '<div class="evl-role-card' + (isSup ? ' supervisor' : '') + '">' +
+                '<div class="evl-role-head"><div class="evl-role-title">' + name +
+                '<span class="badge-num">' + r.items + '항목</span></div>' +
+                '<a class="text-muted" href="evl-settings.html?role=' + roleKey + '" style="font-size:12px;">템플릿 →</a></div>' +
+                '<div class="evl-role-progress-bar"><span class="pct" style="min-width:0; padding-right:6px;">' + r.done + ' / ' + r.total + '</span>' +
+                '<div class="track"><div class="fill" style="width:' + p + '%;"></div></div><span class="pct">' + p + '%</span></div>' +
+                '<div class="evl-role-stats">' +
+                '<div class="evl-role-stat-cell"><div class="evl-role-stat-num success">' + r.done + '</div><div class="evl-role-stat-label">완료</div></div>' +
+                '<div class="evl-role-stat-cell"><div class="evl-role-stat-num info">' + r.prog + '</div><div class="evl-role-stat-label">진행중</div></div>' +
+                '<div class="evl-role-stat-cell"><div class="evl-role-stat-num" style="color:var(--status-warning-fg);">' + r.notStart + '</div><div class="evl-role-stat-label">미시작</div></div></div>' +
+                '<div class="evl-role-avg"><span class="evl-role-avg-label">완료자 평균 점수</span>' +
+                '<span class="evl-role-avg-value">' + (r.avg || '—') + (r.avg ? '<span class="unit">/100</span>' : '') + '</span></div></div>';
+        }
+
         /* ─── 반기 토글 ─── */
-        document.querySelectorAll('.evl-half-toggle button').forEach(b => {
+        document.querySelectorAll('#evl-half button').forEach(b => {
             b.addEventListener('click', () => {
-                document.querySelectorAll('.evl-half-toggle button').forEach(x => x.classList.remove('is-active'));
+                document.querySelectorAll('#evl-half button').forEach(x => x.classList.remove('is-active'));
                 b.classList.add('is-active');
+                render();
             });
         });
+
+        window.EVLS = { render };
+        render();
 
     })();
     </script>

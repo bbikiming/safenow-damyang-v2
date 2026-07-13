@@ -412,7 +412,7 @@
         <div class="evl-subpane is-active" data-subpane="items">
 
             <!-- 안전보건관리책임자 (8항목) -->
-            <div class="evl-card">
+            <div class="evl-card" id="role-R">
                 <div class="evl-card-head">
                     <div>
                         <h3>안전보건관리책임자 <span class="role-badge responsible">RESPONSIBLE · 8항목</span></h3>
@@ -533,7 +533,7 @@
             </div>
 
             <!-- 관리감독자 (5항목) -->
-            <div class="evl-card supervisor">
+            <div class="evl-card supervisor" id="role-S">
                 <div class="evl-card-head">
                     <div>
                         <h3>관리감독자 <span class="role-badge supervisor">SUPERVISOR · 5항목</span></h3>
@@ -803,6 +803,20 @@
         document.querySelectorAll('.evl-modal-backdrop').forEach(bd => {
             bd.addEventListener('click', (e) => { if (e.target === bd) bd.classList.remove('is-open'); });
         });
+
+        /* 평가 현황 '템플릿 →' 딥링크: ?role=R|S → 해당 역할 항목 마스터로 스크롤·강조 */
+        (function deepLinkRole() {
+            const role = new URLSearchParams(location.search).get('role');
+            if (role !== 'R' && role !== 'S') return;
+            const el = document.getElementById('role-' + role);
+            if (!el) return;
+            requestAnimationFrame(() => {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.style.transition = 'box-shadow .3s ease';
+                el.style.boxShadow = '0 0 0 3px var(--main)';
+                setTimeout(() => { el.style.boxShadow = ''; }, 1800);
+            });
+        })();
     })();
     </script>
 </body>
