@@ -20,6 +20,23 @@
         "8783"
       ],
       "port": 8783
+    },
+    {
+      "name": "demo",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        ".claude/serve-nocache.py"
+      ],
+      "port": 8785
+    },
+    {
+      "name": "demo2",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        ".claude/serve-nocache.py",
+        "8786"
+      ],
+      "port": 8786
     }
   ]
 }

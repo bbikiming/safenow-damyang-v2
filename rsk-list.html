@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>위험성평가 — 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+    <style>
+        .rl-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; background: #fff; border: 1px solid var(--card-line); border-radius: var(--radius-card); padding: 12px 16px; margin-bottom: 14px; }
+        .rl-tb-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .rl-tb-label { font-size: 12px; font-weight: 700; color: var(--text-gray); }
+        .rl-tb-right { display: flex; gap: 8px; flex-wrap: wrap; }
+        #rl-target { min-width: 250px; }
+        .rl-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+        .rl-filters select { min-width: 120px; }
+        .rl-yeargrp { margin-bottom: 20px; }
+        .rl-year { font-size: 13px; font-weight: 700; color: var(--text-gray); padding: 6px 2px; border-bottom: 2px solid var(--main); margin-bottom: 8px; display: inline-block; }
+        .rl-row { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid var(--card-line); border-radius: var(--radius-card); padding: 14px 18px; margin-bottom: 8px; }
+        .rl-row-main { flex: 1; min-width: 0; }
+        .rl-row-title { font-size: 14px; font-weight: 700; color: var(--text-black); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .rl-row-sub { font-size: 12px; color: var(--text-gray); margin-top: 5px; }
+        .rl-prog { display: inline-flex; gap: 6px; align-items: center; }
+        .rl-prog b { color: var(--text-black); }
+        .rl-row-act { flex-shrink: 0; }
+        .type-badge { display: inline-block; padding: 2px 10px; border-radius: var(--radius-md); font-size: 11px; font-weight: 700; }
+        .type-badge.reg { background: var(--status-info-bg); color: var(--status-info-fg); border: 1px solid var(--status-info-border); }
+        .type-badge.occ { background: var(--status-purple-bg); color: var(--status-purple-fg); border: 1px solid var(--status-purple-border); }
+        .rl-modal-row { margin-bottom: 12px; }
+        .rl-modal-row .form-label { display: block; font-size: 12px; font-weight: 700; color: var(--text-gray); margin-bottom: 5px; }
+        .rl-chk-list { display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--card-line); border-radius: var(--radius-button); padding: 8px; max-height: 220px; overflow-y: auto; }
+        .rl-chk { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 5px 8px; border-radius: var(--radius-button); cursor: pointer; }
+        .rl-chk:hover { background: #fafafa; }
+    </style>
+</head>
+<body data-dy-page="rsk-list"
+      data-page-title="위험성평가"
+      data-page-subtitle="관리대상 ▸ 연도별 정기·수시 위험성평가 (RSK01-L)">
+    <main>
+        <div class="check-notice">
+            관리대상별 <b>연도별 정기·수시</b> 위험성평가 목록입니다. <b>[＋정기]</b>는 현재 작업공정 전체를 대상으로,
+            <b>[＋수시]</b>는 변경된 공정만(<b>변경분만</b>) 대상으로 생성합니다. 작업공정이 있어야 평가를 생성할 수 있습니다.
+        </div>
+        <div id="rl-root"></div>
+    </main>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/rsk-kosha.js"></script>
+    <script src="./js/rsk-data.js"></script>
+    <script src="./js/rsk-list.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () { window.RSKLIST.init('rl-root'); });
+    </script>
+</body>
+</html>

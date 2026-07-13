@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>개선조치 — 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+    <style>
+        .ri-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+        .ri-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+        .ri-filters select { min-width: 130px; }
+        .ri-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--card-line); border-radius: var(--radius-card); overflow: hidden; }
+        .ri-table th { font-size: 12px; font-weight: 700; color: var(--text-gray); text-align: left; padding: 11px 14px; background: #fafafa; border-bottom: 1px solid var(--card-line); }
+        .ri-table td { font-size: 13px; color: var(--text-black); padding: 12px 14px; border-bottom: 1px solid var(--card-line); }
+        .ri-table tr:last-child td { border-bottom: none; }
+        .ri-table tbody tr { cursor: pointer; }
+        .ri-table tbody tr:hover { background: var(--brand-50); }
+        .src-badge { display: inline-block; padding: 2px 9px; border-radius: var(--radius-md); font-size: 11px; font-weight: 700; }
+        .src-badge.info { background: var(--status-info-bg); color: var(--status-info-fg); border: 1px solid var(--status-info-border); }
+        .src-badge.purple { background: var(--status-purple-bg); color: var(--status-purple-fg); border: 1px solid var(--status-purple-border); }
+        .src-badge.warning { background: var(--status-warning-bg); color: var(--status-warning-fg); border: 1px solid var(--status-warning-border); }
+        .src-badge.danger { background: var(--status-danger-bg); color: var(--status-danger-fg); border: 1px solid var(--status-danger-border); }
+        .src-badge.neutral { background: var(--gray-100); color: var(--text-gray); border: 1px solid var(--card-line); }
+        .ri-hrf { font-size: 11px; color: var(--text-gray); margin-top: 3px; }
+        .ri-due.soon { color: var(--status-warning-fg); font-weight: 700; }
+        .ri-due.over { color: var(--status-danger-fg); font-weight: 700; }
+        .ri-modal-row { margin-bottom: 12px; }
+        .ri-modal-row .form-label { display: block; font-size: 12px; font-weight: 700; color: var(--text-gray); margin-bottom: 5px; }
+    </style>
+</head>
+<body data-dy-page="rsk-imp"
+      data-page-title="개선조치"
+      data-page-subtitle="전 출처 통합(위험성평가 감소대책 정본) · 조치·완료 (IMP01-L)">
+    <main>
+        <div class="check-notice">
+            위험성평가 <b>감소대책</b>을 포함한 전 출처(점검·의견·사고·수동) 개선조치를 <b>한 곳</b>에서 관리합니다.
+            위험성평가에서 나온 감소대책은 출처 <b>위험성평가</b>로 표시되며, 조치 완료 시 해당 공정이 <b>재평가 대기</b>로 연동됩니다.
+        </div>
+        <div id="ri-root"></div>
+    </main>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/rsk-kosha.js"></script>
+    <script src="./js/rsk-data.js"></script>
+    <script src="./js/rsk-imp.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () { window.RSKIMP.init('ri-root'); });
+    </script>
+</body>
+</html>

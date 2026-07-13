@@ -4291,6 +4291,40 @@ body.sidebar-locked {
 }
 
 /* =========================================
+   PC(≥1024px) 컴팩트 상단 — 고객 피드백: 타이틀(헤더) 영역 높이 축소.
+   · 브랜드 바(헤더) 높이 84/72 → 52 로 축소
+   · 알림 아이콘 + 사용자 칩을 GNB(초록 바) 라인으로 이동해 동일 라인 배치
+   · transform 사용 → sticky 헤더와 함께 고정(스크롤 시 유지)
+   모바일/태블릿(≤1023px)은 기존 2단 레이아웃 그대로 유지.
+   ========================================= */
+@media (min-width: 1024px) {
+  :root { --dy-header-h: 52px; }
+  .dy-layout { position: relative; }
+  .dy-brand-icon { width: 24px; height: 26px; }
+  .dy-brand-name { font-size: 18px; }
+
+  .dy-header-actions {
+    position: relative;
+    z-index: 31;
+    transform: translateY(calc((var(--dy-header-h) + var(--dy-gnb-h)) / 2));
+  }
+  .dy-gnb {
+    padding-right: 250px;      /* 알림·사용자 칩 자리 확보 */
+    overflow-x: auto;          /* 좁은 PC 폭에서 메뉴가 넘쳐도 페이지 가로 스크롤 방지 */
+    scrollbar-width: none;
+  }
+  .dy-gnb::-webkit-scrollbar { display: none; }
+}
+
+/* 1024~1279px — GNB 메뉴 9개 총폭이 넓어 사용자 칩과 겹침.
+   이름·부서를 숨겨 칩을 아바타 크기로 줄이고 확보 여백도 축소한다. */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  .dy-user-text { display: none; }
+  .dy-user-pill { padding: 6px 8px; }
+  .dy-gnb { padding-right: 130px; }
+}
+
+/* =========================================
    모듈 설정 화면 — 상단 외부 연동 상태 위젯 (결정사항 #24)
    RSK04-S / CON10-S / NTF03-S 등 모듈 설정 화면 공통.
    조회 전용 — 클릭 시 SYS01-S deep-link.

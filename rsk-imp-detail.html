@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>개선조치 상세 — 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+    <style>
+        .id-card { background: #fff; border: 1px solid var(--card-line); border-radius: var(--radius-card); padding: 18px; margin-bottom: 14px; }
+        .id-title { font-size: 16px; font-weight: 700; color: var(--text-black); margin-bottom: 6px; }
+        .id-meta { font-size: 12px; color: var(--text-gray); display: flex; gap: 14px; flex-wrap: wrap; }
+        .id-meta b { color: var(--text-black); }
+        .src-badge { display: inline-block; padding: 2px 9px; border-radius: var(--radius-md); font-size: 11px; font-weight: 700; }
+        .src-badge.info { background: var(--status-info-bg); color: var(--status-info-fg); border: 1px solid var(--status-info-border); }
+        .src-badge.neutral { background: var(--gray-100); color: var(--text-gray); border: 1px solid var(--card-line); }
+        .id-sec { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--card-line); }
+        .id-sec-title { font-size: 13px; font-weight: 700; color: var(--text-black); margin-bottom: 8px; }
+        .id-desc { font-size: 13px; color: var(--text-black); line-height: 1.6; }
+        .id-photo { display: inline-flex; align-items: center; justify-content: center; width: 120px; height: 80px; border: 1px dashed var(--card-line); border-radius: var(--radius-button); color: var(--text-lightgray); font-size: 12px; background: var(--page-bg); }
+        .id-frow { margin-bottom: 10px; }
+        .id-frow .form-label { display: block; font-size: 12px; font-weight: 700; color: var(--text-gray); margin-bottom: 4px; }
+        .id-foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+        .id-back { font-size: 13px; color: var(--main-dark); text-decoration: none; font-weight: 600; }
+        .id-done-note { background: var(--status-success-bg); color: var(--status-success-fg); border: 1px solid var(--status-success-border); border-radius: var(--radius-button); padding: 10px 14px; font-size: 13px; }
+    </style>
+</head>
+<body data-dy-page="rsk-imp"
+      data-page-title="개선조치 상세·조치"
+      data-page-subtitle="조치 전/후 · 완료 처리 → 위험성평가 재평가 연동 (IMP01-D)">
+    <main>
+        <p style="margin-bottom:12px;"><a class="id-back" href="rsk-imp.html">← 개선조치 목록</a></p>
+        <div id="id-root"></div>
+    </main>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/rsk-kosha.js"></script>
+    <script src="./js/rsk-data.js"></script>
+    <script src="./js/rsk-imp-detail.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () { window.RSKIMPD.init('id-root'); });
+    </script>
+</body>
+</html>

@@ -10,12 +10,12 @@
     const MENUS = {
         policy:   { label: '경영방침',           sfr: 'SFR-005',          dept: '재난안전과 중대재해팀', href: 'menu.html?m=policy' },
         org:      { label: '조직',               sfr: 'SFR-006·009·010',  dept: '행정과·재난안전과',     href: 'menu.html?m=org' },
-        risk:     { label: '위험성평가',         sfr: 'SFR-007',          dept: '재난안전과 중대재해팀', href: 'risk-list.html' },
-        hazard:   { label: '유해·위험요인 관리', sfr: 'SFR-007·019',      dept: '재난안전과·환경과',     href: 'proc-list.html' },
+        risk:     { label: '위험성평가',         sfr: 'SFR-007',          dept: '재난안전과 중대재해팀', href: 'rsk-list.html' },
+        hazard:   { label: '작업공정 관리',      sfr: 'SFR-007·019',      dept: '재난안전과·환경과',     href: 'rsk-proc.html' },
         edu:      { label: '안전보건교육',       sfr: 'SFR-004·010',      dept: '행정과(교육담당)',      href: 'edu.html' },
         opinion:  { label: '의견청취',           sfr: 'SFR-011',          dept: '재난안전과 중대재해팀', href: 'menu.html?m=opinion' },
         contract: { label: '도급관리',           sfr: 'SFR-013',          dept: '회계과·각 발주부서',    href: 'menu.html?m=contract' },
-        improve:  { label: '개선조치',           sfr: 'SFR-003',          dept: '재난안전과 중대재해팀', href: 'menu.html?m=improve' },
+        improve:  { label: '개선조치',           sfr: 'SFR-003',          dept: '재난안전과 중대재해팀', href: 'rsk-imp.html' },
         comply:   { label: '이행관리',           sfr: 'SFR-008·014',      dept: '재난안전과·기획예산실', href: 'menu.html?m=comply' },
     };
 

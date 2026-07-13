@@ -11,7 +11,8 @@
     const params = new URLSearchParams(location.search);
     const KEY = V.MENUS[params.get('m')] ? params.get('m') : 'policy';
 
-    if (KEY === 'risk' || KEY === 'hazard' || KEY === 'edu') {
+    // 위험성평가·작업공정·개선조치·교육은 전용 정적 화면으로 리다이렉트 (개선조치=위험성평가 정본 rsk-imp.html)
+    if (KEY === 'risk' || KEY === 'hazard' || KEY === 'improve' || KEY === 'edu') {
         location.replace(V.MENUS[KEY].href);
         return;
     }
@@ -1382,7 +1383,7 @@
                         '<div class="opn-linkcard"><div class="opn-linkcard-badges"><span class="chip-mini pdca">의견청취 연동</span> <span class="chip-mini wt-attach">' + (imp.status === '종결' ? '종결' : '조치중') + '</span></div>' +
                         '<div class="opn-linkcard-title">' + V.esc(imp.title || o.title) + '</div>' +
                         '<div class="opn-linkcard-meta">담당 ' + V.esc(imp.owner || o.owner || '-') + ' · 예정 ' + (imp.due || '-') + '</div>' +
-                        '<button class="btn btn-sm btn-outline" onclick="location.href=\'menu.html?m=improve\'">개선조치 상세 보기</button></div>' +
+                        '<button class="btn btn-sm btn-outline" onclick="location.href=\'rsk-imp.html\'">개선조치 상세 보기</button></div>' +
                         '<div class="opn-proc-foot"><button class="btn btn-outline" onclick="PG.opnProgress(\'' + o.id + '\')">경과 추가</button><button class="btn btn-primary" onclick="PG.opnComplete(\'' + o.id + '\')">완료 처리</button></div>';
                 } else if (o.status === '완료') {
                     procBody = '<div class="opn-banner success">처리 완료 — 의견 처리 및 조치가 완료되었습니다.</div>' +
@@ -1408,7 +1409,7 @@
                 } else {
                     linkInner = '';
                     if (o.inspectLink) { const ins = o.inspect || {}; linkInner += '<div class="opn-mini"><div class="opn-mini-badges"><span class="chip-mini wt-elec">안전점검</span> <span class="chip-mini wt">점검예정</span></div><div class="opn-mini-title">[의견청취] ' + V.esc(o.title) + '</div><div class="opn-mini-meta">담당 ' + V.esc(ins.owner || o.owner || '-') + ' · 예정 ' + (ins.date || '-') + '</div><button class="btn btn-sm btn-outline" onclick="DYV2.toast(\'안전점검 메뉴 연동 (프로토타입)\')">바로가기</button></div>'; }
-                    if (o.link) { const imp = E.improvements().find(x => x.id === o.link) || {}; linkInner += '<div class="opn-mini"><div class="opn-mini-badges"><span class="chip-mini pdca">개선조치</span> <span class="chip-mini wt-attach">' + (imp.status === '종결' ? '종결' : '조치중') + '</span></div><div class="opn-mini-title">' + V.esc(imp.title || o.title) + '</div><div class="opn-mini-meta">' + V.esc(o.link) + ' · 예정 ' + (imp.due || '-') + '</div><button class="btn btn-sm btn-outline" onclick="location.href=\'menu.html?m=improve\'">바로가기</button></div>'; }
+                    if (o.link) { const imp = E.improvements().find(x => x.id === o.link) || {}; linkInner += '<div class="opn-mini"><div class="opn-mini-badges"><span class="chip-mini pdca">개선조치</span> <span class="chip-mini wt-attach">' + (imp.status === '종결' ? '종결' : '조치중') + '</span></div><div class="opn-mini-title">' + V.esc(imp.title || o.title) + '</div><div class="opn-mini-meta">' + V.esc(o.link) + ' · 예정 ' + (imp.due || '-') + '</div><button class="btn btn-sm btn-outline" onclick="location.href=\'rsk-imp.html\'">바로가기</button></div>'; }
                 }
                 const linkCard = sectionCard('연동 정보', linkInner, '');
                 const header = '<div class="pol-detail-top"><button class="btn btn-sm btn-outline" onclick="PG.opnBack()">‹ 목록</button></div>';
@@ -1679,7 +1680,7 @@
                 '<p style="font-size:12px; color:var(--text-gray);">중처법 시행령 §4·§5 항목별 이행 여부를 점검합니다. 각 항목에는 해당 메뉴의 실데이터가 근거로 연결되며, <b>X(미이행) 항목은 확정 시 개선조치로 자동 등록</b>됩니다.</p>' +
                 tbl(['항목', '근거 메뉴', '근거 현황'], [
                     ['§4-1 목표·경영방침 수립', '<a href="menu.html?m=policy" style="color:var(--main); font-weight:700;">경영방침</a>', '2026 방침 수립 · 점검 ' + (E.statusOf('EDOC-경영방침점검-2026H1') || '미작성')],
-                    ['§4-3 유해·위험요인 확인·개선', '<a href="risk-list.html" style="color:var(--main); font-weight:700;">위험성평가</a>', '정기 1회 · 수시 2회 실시'],
+                    ['§4-3 유해·위험요인 확인·개선', '<a href="rsk-list.html" style="color:var(--main); font-weight:700;">위험성평가</a>', '정기 1회 · 수시 2회 실시'],
                     ['§4-5 책임자 평가·관리', '<a href="menu.html?m=org" style="color:var(--main); font-weight:700;">조직</a>', '수행평가 ' + (E.statusOf('EDOC-수행평가-2026H1') || '미작성')],
                     ['§4-7 종사자 의견청취', '<a href="menu.html?m=opinion" style="color:var(--main); font-weight:700;">의견청취</a>', '접수·처리 운영 중'],
                 ]),

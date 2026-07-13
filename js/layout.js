@@ -51,16 +51,29 @@
             { id: 'base-bulk',    label: '데이터 일괄등록', icon: 'file',   href: 'base-bulk.html',    screen: 'SFR-016' },
         ]},
 
-        // GNB 3. 안전보건관리체계 — 핵심. 9개 대메뉴(확정), 공통 레이아웃 menu.html 공유
+        // GNB 3. 시설물 안전관리 (FAC) — FMS 시설물관리대장 연계. 기본정보→시설물대장→위험성평가 흐름 (기획-시설물관리-FMS연계-PRD-v1.md)
+        { id: 'facil', label: '시설물 안전관리', icon: 'building', items: [
+            { id: 'fac-list',     label: '시설물 대장',   icon: 'list',     href: 'fac-list.html',     screen: 'FAC01-V' },
+            { id: 'fac-risk',     label: '시설물 위험도', icon: 'alert',    href: 'fac-risk.html',     screen: 'FAC03-V' },
+            { id: 'fac-sync',     label: 'FMS 연계',     icon: 'external',  href: 'fac-sync.html',     screen: 'FAC04-S' },
+            { id: 'fac-settings', label: '연계 설정',     icon: 'cog',      href: 'fac-settings.html', screen: 'FAC05-S' },
+        ]},
+
+        // GNB. 위험성평가 — 레퍼런스 정합 재구현 (작업공정 → 평가 → 개선조치). 위험성평가 그룹이 개선조치 '정본'.
+        //    작업공정관리(PRC01-L) · 위험성평가 목록(RSK01-L) · 개선조치(IMP01-L) — 독립 HTML, sub 화면은 부모 id 공유
+        { id: 'risk', label: '위험성평가', icon: 'alert', items: [
+            { id: 'rsk-proc', label: '작업공정 관리', icon: 'list',  href: 'rsk-proc.html', screen: 'PRC01-L / SFR-007' },
+            { id: 'rsk-list', label: '위험성평가',    icon: 'alert', href: 'rsk-list.html', screen: 'RSK01-L / SFR-007' },
+            { id: 'rsk-imp',  label: '개선조치',      icon: 'check', href: 'rsk-imp.html',  screen: 'IMP01-L / SFR-003' },
+        ]},
+
+        // GNB 4. 안전보건관리체계 — 핵심 대메뉴, 공통 레이아웃 menu.html 공유
+        //    ※ 위험성평가·유해위험요인·개선조치는 위 '위험성평가' 그룹으로 이관(레퍼런스 정본). rsk-imp.html 등 스텁은 하위호환 유지.
         { id: 'sbm', label: '안전보건관리체계', icon: 'shield', items: [
             { id: 'sbm-policy',   label: '경영방침',           icon: 'shield',   href: 'menu.html?m=policy',   screen: 'SFR-005' },
             { id: 'sbm-org',      label: '조직',               icon: 'users',    href: 'menu.html?m=org',      screen: 'SFR-006·009·010' },
-            // 위험성평가·유해·위험요인 관리 — 기존 프로토타입 UX 이식 (요인 등록 → 평가방법 선택 → 평가 진행 → 개선조치 입력)
-            { id: 'sbm-risk',     label: '위험성평가',         icon: 'alert',    href: 'risk-list.html',       screen: 'SFR-007' },
-            { id: 'sbm-hazard',   label: '유해·위험요인 관리', icon: 'alert',    href: 'proc-list.html',       screen: 'SFR-007·019' },
             { id: 'sbm-edu',      label: '안전보건교육',       icon: 'user',     href: 'edu.html',             screen: 'SFR-004·010' },  // 전용 화면 (기획 v1 §4)
             { id: 'sbm-contract', label: '도급관리',           icon: 'building', href: 'menu.html?m=contract', screen: 'SFR-013' },
-            { id: 'sbm-improve',  label: '개선조치',           icon: 'check',    href: 'menu.html?m=improve',  screen: 'SFR-003' },
             { id: 'sbm-comply',   label: '이행관리',           icon: 'coins',    href: 'menu.html?m=comply',   screen: 'SFR-008·014' },
         ]},
 
@@ -133,7 +146,7 @@
                         <span class="dy-brand-name"><strong>담양군</strong><span>중대재해예방 시스템</span></span>
                     </a>
                 </div>
-                <div style="display:flex; align-items:center; gap:6px;">
+                <div class="dy-header-actions" style="display:flex; align-items:center; gap:6px;">
                     <div class="dy-ntf-wrap" id="dy-ntf-wrap" style="position:relative;">
                         <button class="dy-ntf-btn" id="dy-ntf-btn" type="button" aria-label="알림">
                             ${ICON.bell}
@@ -185,7 +198,7 @@
                                         <div class="dy-ntf-item-time">어제 18:00</div>
                                     </div>
                                 </a>
-                                <a class="dy-ntf-item" href="risk-list.html">
+                                <a class="dy-ntf-item" href="rsk-list.html">
                                     <span class="dy-ntf-dot risk"></span>
                                     <div class="dy-ntf-item-body">
                                         <div class="dy-ntf-item-head">

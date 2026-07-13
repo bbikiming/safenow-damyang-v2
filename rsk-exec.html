@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>위험성 추정 — 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+    <style>
+        .re-head { background: #fff; border: 1px solid var(--card-line); border-radius: var(--radius-card); padding: 16px 18px; margin-bottom: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+        .re-head-main { min-width: 0; }
+        .re-title { font-size: 16px; font-weight: 700; color: var(--text-black); }
+        .re-sub { font-size: 12px; color: var(--text-gray); margin-top: 5px; }
+        .re-method { display: flex; align-items: center; gap: 8px; }
+        .re-method label { font-size: 12px; font-weight: 700; color: var(--text-gray); }
+        .re-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--card-line); border-radius: var(--radius-card); overflow: hidden; margin-bottom: 14px; }
+        .re-table th { font-size: 12px; font-weight: 700; color: var(--text-gray); text-align: left; padding: 11px 14px; background: #fafafa; border-bottom: 1px solid var(--card-line); }
+        .re-table td { font-size: 13px; color: var(--text-black); padding: 12px 14px; border-bottom: 1px solid var(--card-line); vertical-align: top; }
+        .re-hrf-name { font-weight: 600; }
+        .re-hrf-basis { font-size: 11px; color: var(--text-lightgray); margin-top: 3px; }
+        .re-sel { padding: 4px 6px; border: 1px solid var(--card-line); border-radius: var(--radius-sm); font-size: 13px; }
+        .re-grade { display: inline-block; padding: 2px 10px; border-radius: var(--radius-md); font-size: 12px; font-weight: 700; }
+        .re-grade.g-minimal, .re-grade.g-low { background: var(--status-success-bg); color: var(--status-success-fg); border: 1px solid var(--status-success-border); }
+        .re-grade.g-medium { background: var(--status-info-bg); color: var(--status-info-fg); border: 1px solid var(--status-info-border); }
+        .re-grade.g-high, .re-grade.g-critical { background: var(--status-danger-bg); color: var(--status-danger-fg); border: 1px solid var(--status-danger-border); }
+        .re-accept { font-size: 12px; font-weight: 700; }
+        .re-accept.ok { color: var(--status-success-fg); }
+        .re-accept.no { color: var(--status-danger-fg); }
+        .re-measure-btn { font-size: 12px; font-weight: 600; color: #fff; background: var(--status-danger-fg); border: none; border-radius: var(--radius-button); padding: 5px 12px; cursor: pointer; }
+        .re-measure-has { font-size: 12px; color: var(--status-success-fg); font-weight: 600; }
+        .re-panel { background: var(--brand-50); border: 1px solid var(--main-light); border-radius: var(--radius-button); padding: 12px; margin-top: 8px; }
+        .re-panel .form-label { display: block; font-size: 12px; font-weight: 700; color: var(--text-gray); margin-bottom: 4px; }
+        .re-prow { margin-bottom: 10px; }
+        .re-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .re-foot { display: flex; justify-content: flex-end; gap: 8px; }
+        .re-uploadhint { font-size: 11px; color: var(--text-gray); margin-top: 3px; }
+        .re-actions { display: flex; justify-content: flex-end; gap: 8px; }
+        .re-back { font-size: 13px; color: var(--main-dark); text-decoration: none; font-weight: 600; }
+        .re-done-note { background: var(--status-success-bg); color: var(--status-success-fg); border: 1px solid var(--status-success-border); border-radius: var(--radius-button); padding: 10px 14px; font-size: 13px; margin-bottom: 14px; }
+    </style>
+</head>
+<body data-dy-page="rsk-list"
+      data-page-title="위험성 추정"
+      data-page-subtitle="공정별 빈도×강도 추정 · 허용초과 → 감소대책 (RSK03-EXEC)">
+    <main>
+        <p style="margin-bottom:12px;"><a class="re-back" id="re-back" href="rsk-list.html">← 평가 상세</a></p>
+        <div id="re-root"></div>
+    </main>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/rsk-kosha.js"></script>
+    <script src="./js/rsk-data.js"></script>
+    <script src="./js/rsk-exec.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () { window.RSKEXEC.init('re-root'); });
+    </script>
+</body>
+</html>

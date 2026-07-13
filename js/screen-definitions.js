@@ -69,11 +69,12 @@
         '프로그램': 'doc-detail.html?id=V2-001&v=2',
     };
     var MENU_FALLBACK = {
-        '대시보드': 'index.html', '기본정보': 'base-targets.html', '안전보건관리체계': 'risk-list.html',
+        '대시보드': 'index.html', '기본정보': 'base-targets.html', '위험성평가': 'rsk-list.html',
+        '안전보건관리체계': 'menu.html?m=policy',
         '업무문서': 'docs-preset.html', '통계·보고': 'stats.html', '시스템 관리': 'admin-users.html',
         '전자문서(공통)': 'docs-preset.html', '공통/전역': 'index.html',
     };
-    var SCR_OVERRIDE = { 'SCR-EDOC-010': 'docs-archive.html', 'SCR-RISK-008': 'risk-list.html' };
+    var SCR_OVERRIDE = { 'SCR-EDOC-010': 'docs-archive.html' };
 
     function resolveUrl(item) {
         var route = (item && item.route) || '';
