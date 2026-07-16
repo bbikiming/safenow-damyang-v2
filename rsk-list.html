@@ -3,51 +3,154 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>위험성평가 — 담양군 중대재해예방통합관리시스템</title>
+    <title>정기 위험성평가 — 담양군 중대재해예방통합관리시스템</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="./js/tailwind-config.js"></script>
     <link rel="stylesheet" href="./css/style.css">
     <link rel="stylesheet" href="./css/v2.css">
     <style>
-        .rl-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; background: #fff; border: 1px solid var(--card-line); border-radius: var(--radius-card); padding: 12px 16px; margin-bottom: 14px; }
+        /* 상단 툴바 */
+        .rl-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); padding: 12px 16px; margin-bottom: 14px; }
         .rl-tb-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-        .rl-tb-label { font-size: 12px; font-weight: 700; color: var(--text-gray); }
-        .rl-tb-right { display: flex; gap: 8px; flex-wrap: wrap; }
-        #rl-target { min-width: 250px; }
-        .rl-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
-        .rl-filters select { min-width: 120px; }
-        .rl-yeargrp { margin-bottom: 20px; }
-        .rl-year { font-size: 13px; font-weight: 700; color: var(--text-gray); padding: 6px 2px; border-bottom: 2px solid var(--main); margin-bottom: 8px; display: inline-block; }
-        .rl-row { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid var(--card-line); border-radius: var(--radius-card); padding: 14px 18px; margin-bottom: 8px; }
-        .rl-row-main { flex: 1; min-width: 0; }
-        .rl-row-title { font-size: 14px; font-weight: 700; color: var(--text-black); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-        .rl-row-sub { font-size: 12px; color: var(--text-gray); margin-top: 5px; }
-        .rl-prog { display: inline-flex; gap: 6px; align-items: center; }
-        .rl-prog b { color: var(--text-black); }
-        .rl-row-act { flex-shrink: 0; }
-        .type-badge { display: inline-block; padding: 2px 10px; border-radius: var(--radius-md); font-size: 11px; font-weight: 700; }
-        .type-badge.reg { background: var(--status-info-bg); color: var(--status-info-fg); border: 1px solid var(--status-info-border); }
-        .type-badge.occ { background: var(--status-purple-bg); color: var(--status-purple-fg); border: 1px solid var(--status-purple-border); }
+        .rl-tb-right { display: flex; align-items: center; gap: 10px; }
+        .rl-tb-label { font-size: var(--fs-12); font-weight: 700; color: var(--text-gray); }
+        .type-badge { display: inline-block; padding: 2px 10px; border-radius: var(--radius-md); font-size: var(--fs-12); font-weight: 700; background: var(--status-info-bg); color: var(--status-info-fg); border: 1px solid var(--status-info-border); }
+
+        /* 요약 카드 */
+        .rl-summary { background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); padding: 16px 18px; margin-bottom: 14px; }
+        .rl-summary-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+        .rl-summary-title { font-size: var(--fs-18); font-weight: 700; color: var(--text-black); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .rl-summary-meta { font-size: var(--fs-12); color: var(--text-gray); margin-top: 10px; display: flex; gap: 18px; flex-wrap: wrap; width: 100%; }
+        .rl-summary-meta b { color: var(--text-black); }
+        .rl-progress { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+        .rl-progress-bar { flex: 1; height: 10px; background: var(--gray-100); border-radius: var(--radius-full); overflow: hidden; }
+        .rl-progress-fill { height: 100%; background: var(--main); border-radius: var(--radius-full); transition: width .3s; }
+        .rl-progress-txt { font-size: var(--fs-13); color: var(--text-black); min-width: 120px; text-align: right; }
+        .rl-progress-txt b { font-weight: 700; }
+
+        /* 탭 */
+        .rl-tabs { display: flex; gap: 4px; border-bottom: 2px solid var(--card-line); margin-bottom: 14px; }
+        .rl-tab { padding: 10px 18px; font-size: var(--fs-13); font-weight: 700; color: var(--text-gray); border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+        .rl-tab.on { color: var(--main-dark); border-bottom-color: var(--main); }
+
+        /* 카드 공통 */
+        .rl-card { background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); padding: 16px 18px; margin-bottom: 14px; }
+        .rl-card-title { font-size: var(--fs-13); font-weight: 700; color: var(--text-black); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+
+        /* 보고서 업로드 */
+        .rl-report-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--brand-50); border: 1px solid var(--main); border-radius: var(--radius-button); flex-wrap: wrap; }
+        .rl-report-file { color: var(--main-dark); font-weight: 700; font-size: var(--fs-13); }
+        .rl-file-btn { border: 1px dashed var(--card-line); background: var(--surface); padding: 5px 12px; border-radius: var(--radius-md); font-size: var(--fs-12); color: var(--text-gray); cursor: pointer; }
+        .rl-file-btn:hover { background: var(--brand-50); border-color: var(--main); color: var(--main-dark); }
+
+        /* 부서 테이블 */
+        .rl-dept-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); overflow: hidden; }
+        .rl-dept-table th { font-size: var(--fs-12); font-weight: 700; color: var(--text-gray); text-align: left; padding: 11px 14px; background: var(--surface-alt); border-bottom: 1px solid var(--card-line); }
+        .rl-dept-table td { font-size: var(--fs-13); color: var(--text-black); padding: 12px 14px; border-bottom: 1px solid var(--card-line); }
+        .rl-dept-table tr:last-child td { border-bottom: none; }
+        .rl-dept-name { font-weight: 700; }
+        .rl-tiny-file { font-size: var(--fs-12); color: var(--main-dark); }
+        .rl-overdue { color: var(--status-danger-fg); font-weight: 700; }
+        .rl-dept-excluded { margin-top: 10px; padding: 8px 12px; font-size: var(--fs-12); color: var(--text-gray); background: var(--gray-50); border: 1px dashed var(--card-line); border-radius: var(--radius-button); }
+        .rl-dept-excluded b { color: var(--text-black); }
+
+        /* 검수 인라인 패널 */
+        .rl-rv-card { border-color: var(--main); }
+        .rl-rv-dept { border: 1px solid var(--card-line); border-radius: var(--radius-button); margin-bottom: 10px; overflow: hidden; }
+        .rl-rv-dept-head { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: var(--gray-50); cursor: pointer; font-size: var(--fs-13); }
+        .rl-rv-dept-head:hover { background: var(--brand-50); }
+        .rl-rv-arrow { display: inline-block; font-size: var(--fs-12); color: var(--text-gray); transition: transform .15s; }
+        .rl-rv-arrow.open { transform: rotate(90deg); }
+        .rl-rv-dept-name { font-weight: 700; color: var(--text-black); }
+        .rl-rv-dept-body { padding: 12px 14px; }
+        .rl-rv-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+        .rl-rv-table th, .rl-rv-table td { padding: 6px 8px; font-size: var(--fs-12); border: 1px solid var(--card-line); text-align: left; vertical-align: top; }
+        .rl-rv-table th { background: var(--gray-50); color: var(--text-gray); font-weight: 700; }
+        .rl-rv-table input[type=text], .rl-rv-table select, .rl-rv-table textarea { width: 100%; padding: 5px 7px; font-size: var(--fs-12); border: 1px solid var(--card-line); border-radius: var(--radius-xs); box-sizing: border-box; font-family: inherit; }
+        .rl-rv-table textarea { resize: vertical; min-height: 40px; }
+        .rl-rv-del { color: var(--status-danger-fg); cursor: pointer; background: none; border: none; font-size: var(--fs-14); }
+        .rl-rv-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--card-line); flex-wrap: wrap; }
+        .rl-rv-foot-note { font-size: var(--fs-12); color: var(--text-gray); }
+        .rl-rv-foot-actions { display: flex; gap: 8px; align-items: center; }
+
+        /* 부서 상세 모달 */
+        .rl-dept-modal-table { width: 100%; border-collapse: collapse; }
+        .rl-dept-modal-table th, .rl-dept-modal-table td { padding: 7px 9px; font-size: var(--fs-12); border: 1px solid var(--card-line); text-align: left; vertical-align: top; }
+        .rl-dept-modal-table th { background: var(--gray-50); color: var(--text-gray); font-weight: 700; }
+
+        /* 이력 */
+        .rl-history { display: flex; flex-direction: column; gap: 0; }
+        .rl-hist-row { display: flex; gap: 14px; align-items: flex-start; padding: 12px 0; border-bottom: 1px dashed var(--card-line); }
+        .rl-hist-row:last-child { border-bottom: none; }
+        .rl-hist-at { flex: none; width: 140px; font-size: var(--fs-12); color: var(--text-lightgray); }
+        .rl-hist-type { flex: none; padding: 2px 8px; border-radius: var(--radius-md); font-size: var(--fs-12); font-weight: 700; }
+        .rl-hist-type.CREATE   { background: var(--gray-100); color: var(--text-gray); }
+        .rl-hist-type.NOTIFY   { background: var(--status-info-bg); color: var(--status-info-fg); }
+        .rl-hist-type.DELIVER  { background: var(--brand-100); color: var(--main-dark2); }
+        .rl-hist-type.REMIND   { background: var(--status-warning-bg); color: var(--status-warning-fg); }
+        .rl-hist-type.REASON   { background: var(--status-purple-bg); color: var(--status-purple-fg); }
+        .rl-hist-type.DUE_CHANGE { background: var(--status-info-bg); color: var(--status-info-fg); }
+        .rl-hist-type.STATUS   { background: var(--status-success-bg); color: var(--status-success-fg); }
+        .rl-hist-type.COMPLETE { background: var(--status-success-bg); color: var(--status-success-fg); }
+        .rl-hist-type.REVIEW   { background: var(--status-info-bg); color: var(--status-info-fg); }
+        .rl-hist-type.REGISTER { background: var(--gray-100); color: var(--text-gray); }
+        .rl-hist-body { flex: 1; min-width: 0; font-size: var(--fs-13); }
+        .rl-hist-by { font-size: var(--fs-12); color: var(--text-lightgray); margin-left: 6px; }
+
+        /* 빈 상태 */
+        .rl-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 60px 20px; }
+        .rl-empty-icon { font-size:var(--fs-38); opacity: .6; }
+        .rl-empty-title { font-size: var(--fs-15); font-weight: 700; color: var(--text-black); }
+        .rl-empty-steps { display: flex; align-items: center; gap: 8px; margin-top: 4px; flex-wrap: wrap; justify-content: center; }
+        .rl-empty-step { padding: 6px 14px; border-radius: var(--radius-full); background: var(--brand-50); color: var(--main-dark2); font-size: var(--fs-12); font-weight: 700; border: 1px solid var(--main); }
+        .rl-empty-arrow { color: var(--text-lightgray); font-size: var(--fs-14); }
+        .rl-empty-sub { font-size: var(--fs-12); color: var(--text-gray); margin-bottom: 8px; }
+
+        /* 시연 리셋 버튼 */
+        .rl-reset-btn { border-style: dashed !important; color: var(--text-gray) !important; margin-left: 8px; }
+        .rl-reset-btn:hover { border-color: var(--status-warning-fg) !important; color: var(--status-warning-fg) !important; }
+
+        /* 마법사 */
+        .rl-wiz-step { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; font-size: var(--fs-12); color: var(--text-gray); font-weight: 700; }
+        .rl-wiz-step .wz { padding: 5px 12px; border-radius: var(--radius-full); background: var(--gray-100); border: 1px solid var(--card-line); }
+        .rl-wiz-step .wz.on { background: var(--brand-100); border-color: var(--main); color: var(--main-dark2); }
+        .rl-wiz-step .wz.done { background: var(--status-success-bg); border-color: var(--status-success-border); color: var(--status-success-fg); }
         .rl-modal-row { margin-bottom: 12px; }
-        .rl-modal-row .form-label { display: block; font-size: 12px; font-weight: 700; color: var(--text-gray); margin-bottom: 5px; }
-        .rl-chk-list { display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--card-line); border-radius: var(--radius-button); padding: 8px; max-height: 220px; overflow-y: auto; }
-        .rl-chk { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 5px 8px; border-radius: var(--radius-button); cursor: pointer; }
-        .rl-chk:hover { background: #fafafa; }
+        .rl-modal-row .form-label { display: block; font-size: var(--fs-12); font-weight: 700; color: var(--text-gray); margin-bottom: 5px; }
+        .rl-dept-tree { display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--card-line); border-radius: var(--radius-button); padding: 10px; max-height: 300px; overflow-y: auto; }
+        .rl-dept-tree label { display: flex; align-items: center; gap: 8px; font-size: var(--fs-13); padding: 6px 8px; border-radius: var(--radius-button); cursor: pointer; }
+        .rl-dept-tree label:hover { background: var(--brand-50); }
+        .rl-dept-tree .rl-dept-name { flex: 1; }
+        .rl-dates-table { width: 100%; border-collapse: collapse; }
+        .rl-dates-table th, .rl-dates-table td { text-align: left; padding: 8px 10px; font-size: var(--fs-13); border-bottom: 1px solid var(--card-line); }
+        .rl-dates-table th { background: var(--gray-50); color: var(--text-gray); font-weight: 700; font-size: var(--fs-12); }
+        .rl-dates-table input[type=date] { min-width: 150px; }
+        .rl-bulk { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding: 10px 12px; background: var(--brand-50); border: 1px solid var(--main); border-radius: var(--radius-button); }
+        .rl-survey-all { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--brand-50); border: 1px solid var(--main); border-radius: var(--radius-button); margin-bottom: 12px; }
+        .rl-survey-file { color: var(--main-dark); font-weight: 700; font-size: var(--fs-12); }
+
+        /* STEP1 인사정보시스템 연동 배지·전체선택 툴바 (v1.1 §6.4) */
+        .rl-hr-badge { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--status-info-bg); border: 1px solid var(--status-info-border); border-radius: var(--radius-button); flex-wrap: wrap; }
+        .rl-hr-chip { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: var(--radius-full); background: var(--status-info-fg); color: var(--surface); font-size: var(--fs-12); font-weight: 700; }
+        .rl-dept-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; padding: 6px 10px; background: var(--gray-50); border-radius: var(--radius-md); }
+        .rl-dept-allck { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-12); font-weight: 700; color: var(--text-gray); cursor: pointer; }
+        .rl-dept-allck input { cursor: pointer; }
     </style>
 </head>
 <body data-dy-page="rsk-list"
-      data-page-title="위험성평가"
-      data-page-subtitle="관리대상 ▸ 연도별 정기·수시 위험성평가 (RSK01-L)">
+      data-page-title="정기 위험성평가"
+      data-page-subtitle="연도별 정기 위험성평가 — 대상지 선정·보고서 검수·부서 조치 통합 관리 (RSK01-L)">
     <main>
         <div class="check-notice">
-            관리대상별 <b>연도별 정기·수시</b> 위험성평가 목록입니다. <b>[＋정기]</b>는 현재 작업공정 전체를 대상으로,
-            <b>[＋수시]</b>는 변경된 공정만(<b>변경분만</b>) 대상으로 생성합니다. 작업공정이 있어야 평가를 생성할 수 있습니다.
+            연도별 <b>정기 위험성평가</b>는 연 1건 원칙이므로 목록과 상세를 통합합니다.
+            대상지 선정 · 용역업체 보고서 업로드 · 자동 파싱·검수 · 부서별 조치기한 설정 · 재촉을 이 화면에서 모두 처리합니다.
         </div>
         <div id="rl-root"></div>
     </main>
 
     <script src="./js/layout.js"></script>
     <script src="./js/common.js"></script>
+    <script src="./js/org-pick.js"></script>
     <script src="./js/rsk-kosha.js"></script>
     <script src="./js/rsk-data.js"></script>
     <script src="./js/rsk-list.js"></script>

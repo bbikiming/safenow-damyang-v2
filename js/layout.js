@@ -32,6 +32,8 @@
         coins: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></svg>',
         dot: '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="3"/></svg>',
         external: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>',
+        gauge: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>',
+        activity: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>',
     };
 
     /* --- 네비게이션 데이터 (v2) ---
@@ -42,7 +44,8 @@
     const NAV = [
         // GNB 1. 대시보드 (SFR-020·017)
         { id: 'dashboard', label: '대시보드', icon: 'grid', items: [
-            { id: 'index', label: '통합 현황', icon: 'grid', href: 'index.html', screen: 'SFR-020' },
+            { id: 'index',   label: '통합 현황', icon: 'grid',  href: 'index.html',   screen: 'SFR-020' },
+            { id: 'my-work', label: '내 할일',   icon: 'check', href: 'my-work.html', screen: 'MYW01-V' },  // v1.1 §6.2 전 업무 통합 내 할일
         ]},
 
         // GNB 2. 기본정보 (SFR-002·016)
@@ -59,22 +62,42 @@
             { id: 'fac-settings', label: '연계 설정',     icon: 'cog',      href: 'fac-settings.html', screen: 'FAC05-S' },
         ]},
 
-        // GNB. 위험성평가 — 레퍼런스 정합 재구현 (작업공정 → 평가 → 개선조치). 위험성평가 그룹이 개선조치 '정본'.
-        //    작업공정관리(PRC01-L) · 위험성평가 목록(RSK01-L) · 개선조치(IMP01-L) — 독립 HTML, sub 화면은 부모 id 공유
+        // GNB. 위험성평가 — 재설계 v1 (docs/기획-위험성평가-재설계-v1.md). 개선조치 원본은 rsk-imp.
+        //    정기(RSK01-L, 목록·상세 통합) · 수시(RSK03-L) · 개선조치(IMP01-L).
+        //    v1.1 §6.2: '내 할일'은 위험성평가 그룹에서 빠져 대시보드 그룹의 전역 메뉴로 이관 (my-work.html).
+        //    작업공정 관리(rsk-proc) · 위험성 추정(rsk-exec)은 메뉴에서 제거하되 파일은 보존.
         { id: 'risk', label: '위험성평가', icon: 'alert', items: [
-            { id: 'rsk-proc', label: '작업공정 관리', icon: 'list',  href: 'rsk-proc.html', screen: 'PRC01-L / SFR-007' },
-            { id: 'rsk-list', label: '위험성평가',    icon: 'alert', href: 'rsk-list.html', screen: 'RSK01-L / SFR-007' },
-            { id: 'rsk-imp',  label: '개선조치',      icon: 'check', href: 'rsk-imp.html',  screen: 'IMP01-L / SFR-003' },
+            { id: 'rsk-list', label: '정기 위험성평가', icon: 'alert', href: 'rsk-list.html', screen: 'RSK01-L / SFR-007' },
+            { id: 'rsk-occ',  label: '수시 위험성평가', icon: 'alert', href: 'rsk-occ.html',  screen: 'RSK03-L / SFR-007' },
+            { id: 'rsk-imp',  label: '개선조치',        icon: 'check', href: 'rsk-imp.html',  screen: 'IMP01-L / SFR-003' },
         ]},
 
         // GNB 4. 안전보건관리체계 — 핵심 대메뉴, 공통 레이아웃 menu.html 공유
         //    ※ 위험성평가·유해위험요인·개선조치는 위 '위험성평가' 그룹으로 이관(레퍼런스 정본). rsk-imp.html 등 스텁은 하위호환 유지.
+        //    ※ 안전보건교육은 재설계 v1(2026-07-16)로 별도 그룹 승격 — 아래 'edu' 그룹 참고. edu.html은 리다이렉트 스텁.
         { id: 'sbm', label: '안전보건관리체계', icon: 'shield', items: [
             { id: 'sbm-policy',   label: '경영방침',           icon: 'shield',   href: 'menu.html?m=policy',   screen: 'SFR-005' },
             { id: 'sbm-org',      label: '조직',               icon: 'users',    href: 'menu.html?m=org',      screen: 'SFR-006·009·010' },
-            { id: 'sbm-edu',      label: '안전보건교육',       icon: 'user',     href: 'edu.html',             screen: 'SFR-004·010' },  // 전용 화면 (기획 v1 §4)
+            // 안전보건관리책임자 법정 직무 실행·이행 (산안법 §15 — 위탁용역 계획·실시·증빙·후속조치, 인력평가 자동 연계)
+            { id: 'sbm-workenv',  label: '작업환경측정',       icon: 'gauge',    href: 'work-env.html',        screen: 'WEM01-L' },
+            { id: 'sbm-health',   label: '건강검진',           icon: 'activity', href: 'health-exam.html',     screen: 'HEX01-L' },
             { id: 'sbm-contract', label: '도급관리',           icon: 'building', href: 'menu.html?m=contract', screen: 'SFR-013' },
             { id: 'sbm-comply',   label: '이행관리',           icon: 'coins',    href: 'menu.html?m=comply',   screen: 'SFR-008·014' },
+        ]},
+
+        // GNB. 안전보건교육 — 재설계 v1 §8.5 v1.1 개선 (SNB 3뎁스)
+        //   item.section 값이 바뀌면 헤더 삽입, undefined면 직속(top-level) — renderSidebar 참고.
+        { id: 'edu', label: '안전보건교육', icon: 'user', items: [
+            /* 현업근로자 3종 */
+            { id: 'edu-reg',     section: '현업근로자',  label: '정기교육',   icon: 'user',  href: 'edu-reg.html',     screen: 'EDU-REG / SFR-004·010' },
+            { id: 'edu-hire',    section: '현업근로자',  label: '채용시교육', icon: 'user',  href: 'edu-hire.html',    screen: 'EDU-HIRE / SFR-004' },
+            { id: 'edu-etc',     section: '현업근로자',  label: '기타 교육',  icon: 'user',  href: 'edu-etc.html',     screen: 'EDU-ETC / SFR-004' },
+            /* 관리감독자 2종 */
+            { id: 'edu-sup',     section: '관리감독자',  label: '정기교육',  icon: 'user',  href: 'edu-sup.html',     screen: 'EDU-SUP / SFR-004' },
+            { id: 'edu-sup-etc', section: '관리감독자',  label: '기타 교육', icon: 'user',  href: 'edu-sup-etc.html', screen: 'EDU-SUP-ETC / SFR-004' },
+            /* 직속 (section 없음) */
+            { id: 'edu-status',  label: '이수현황',           icon: 'chart', href: 'edu-status.html',  screen: 'EDU-STATUS / SFR-004·010' },
+            { id: 'edu-workers', label: '근로자 명단 관리',    icon: 'users', href: 'edu-workers.html', screen: 'EDU-WORKERS / SFR-004' },
         ]},
 
         // GNB 4. 의견청취 (SFR-011) — 대메뉴 승격. 화면 내부 3탭을 SNB 3메뉴로 분리 (menu.html?m=opinion&sub=)
@@ -114,7 +137,8 @@
 
         // GNB 7. 시스템 관리 (관리자 전용) — 프리셋 양식 관리가 v2 차별 포인트
         { id: 'admin', label: '시스템 관리', icon: 'cog', items: [
-            { id: 'admin-users',       label: '사용자 관리',      icon: 'users', href: 'admin-users.html',       screen: 'SFR-015' },
+            { id: 'admin-users',       label: '사용자 관리',      icon: 'users',    href: 'admin-users.html',       screen: 'SFR-015' },
+            { id: 'admin-sites',       label: '사업장 관리',      icon: 'building', href: 'admin-sites.html',       screen: 'ADM03-S' },
             { id: 'admin-menus',       label: '메뉴 관리',        icon: 'list',  href: 'admin-menus.html',       screen: 'ADM01-S' },
             { id: 'admin-roles',       label: '권한 관리',        icon: 'cog',   href: 'admin-roles.html',       screen: 'ADM02-S' },
             { id: 'admin-notify',      label: '알림 관리',        icon: 'bell',  href: 'admin-notify.html',      screen: 'SFR-017' },
@@ -198,13 +222,13 @@
                                         <div class="dy-ntf-item-time">어제 18:00</div>
                                     </div>
                                 </a>
-                                <a class="dy-ntf-item" href="rsk-list.html">
+                                <a class="dy-ntf-item" href="my-work.html?dept=water&cat=improve">
                                     <span class="dy-ntf-dot risk"></span>
                                     <div class="dy-ntf-item-body">
                                         <div class="dy-ntf-item-head">
                                             <span class="dy-ntf-item-cat risk">위험성평가</span>
                                         </div>
-                                        <div class="dy-ntf-item-title">2026 정기 위험성평가 평가자 지정</div>
+                                        <div class="dy-ntf-item-title">물순환사업소 개선조치 기한초과 재촉</div>
                                         <div class="dy-ntf-item-time">어제 14:30</div>
                                     </div>
                                 </a>
@@ -241,29 +265,43 @@
     }
 
     function renderSidebar(activeGroup, activePageId) {
+        /* SNB 3뎁스 렌더 (§8.5 v1.1)
+         *   item.section 값이 바뀌면 섹션 헤더 삽입, 섹션→비섹션 전환 시 구분선.
+         *   섹션 소속 아이템은 is-nested 클래스로 들여쓰기. */
+        let prevSection = null;
+        const parts = activeGroup.items.map((it, idx) => {
+            let prefix = '';
+            const curSection = it.section || null;
+            if (curSection !== prevSection) {
+                if (curSection) {
+                    if (idx > 0) prefix += '<div class="dy-sidebar-sep"></div>';
+                    prefix += `<div class="dy-sidebar-section">${curSection}</div>`;
+                } else {
+                    /* 섹션 → 비섹션(직속) 전환: 구분선만 */
+                    prefix += '<div class="dy-sidebar-sep"></div>';
+                }
+                prevSection = curSection;
+            }
+            const isActive = it.id === activePageId;
+            const href = it.href || '#';
+            const onclick = it.soon
+                ? `onclick="return window.DYLayout._soon(event, '${it.soon}')"`
+                : '';
+            const externalIcon = it.external
+                ? `<span class="dy-sidebar-item-external" aria-label="다른 메뉴로 이동" title="다른 GNB로 이동">${ICON.external}</span>`
+                : '';
+            const nestedCls = curSection ? 'is-nested' : '';
+            return `${prefix}<a class="dy-sidebar-item ${isActive ? 'is-active' : ''} ${it.external ? 'is-external' : ''} ${nestedCls}" href="${href}" ${onclick}>
+                <span class="dy-sidebar-item-icon">${ICON[it.icon] || ICON.dot}</span>
+                <span>${it.label}</span>
+                ${externalIcon}
+            </a>`;
+        }).join('');
         return html`
             <aside class="dy-sidebar" id="dy-sidebar">
                 <div class="dy-sidebar-inner">
                     <div class="dy-sidebar-title">${activeGroup.label}</div>
-                    <nav class="dy-sidebar-nav">
-                        ${activeGroup.items.map(it => {
-                            const isActive = it.id === activePageId;
-                            const href = it.href || '#';
-                            const onclick = it.soon
-                                ? `onclick="return window.DYLayout._soon(event, '${it.soon}')"`
-                                : '';
-                            const externalIcon = it.external
-                                ? `<span class="dy-sidebar-item-external" aria-label="다른 메뉴로 이동" title="다른 GNB로 이동">${ICON.external}</span>`
-                                : '';
-                            return html`
-                                <a class="dy-sidebar-item ${isActive ? 'is-active' : ''} ${it.external ? 'is-external' : ''}" href="${href}" ${onclick}>
-                                    <span class="dy-sidebar-item-icon">${ICON[it.icon] || ICON.dot}</span>
-                                    <span>${it.label}</span>
-                                    ${externalIcon}
-                                </a>
-                            `;
-                        }).join('')}
-                    </nav>
+                    <nav class="dy-sidebar-nav">${parts}</nav>
                 </div>
             </aside>
             <div class="dy-sidebar-backdrop" id="dy-sidebar-backdrop"></div>
@@ -386,7 +424,7 @@
         if (!mainEl || mainEl.querySelector('.three-party-footer')) return;
         const footer = document.createElement('footer');
         footer.className = 'three-party-footer';
-        footer.style.cssText = 'text-align:center; padding:12px; font-size:12px; color:#888; border-top:1px solid #eee; margin-top:24px;';
+        footer.style.cssText = 'text-align:center; padding:12px; font-size:var(--fs-12); color:var(--text-gray); border-top:1px solid var(--card-line); margin-top:24px;';
         footer.innerHTML = '컨설팅 <strong>안전일터관리원</strong> · 구축 <strong>㈜다온플레이스</strong> · 발주 <strong>담양군청 (재난안전과 중대재해팀)</strong>' +
             '<span style="margin-left:12px; opacity:0.7;">프로토타입 v2</span>';
         mainEl.appendChild(footer);
@@ -630,12 +668,12 @@
             var from = base + (location.search || '');
             var wrap = document.createElement('div');
             wrap.id = 'dy-screendef-fab';
-            wrap.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:99999;font-size:12px;';
+            wrap.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:var(--z-fab);font-size:var(--fs-12);';
             wrap.innerHTML =
                 '<a href="screen-definitions.html?from=' + encodeURIComponent(from) + '" target="_blank" rel="noopener" ' +
                 'title="이 화면의 화면 정의서 보기 (새 탭)" ' +
-                'style="display:inline-flex;align-items:center;gap:6px;background:#24785C;color:#fff;' +
-                'padding:9px 14px;border-radius:22px;box-shadow:0 2px 10px rgba(0,0,0,.25);' +
+                'style="display:inline-flex;align-items:center;gap:6px;background:var(--main-dark);color:var(--surface);' +
+                'padding:9px 14px;border-radius:var(--radius-pill);box-shadow:var(--shadow-md);' +
                 'text-decoration:none;font-weight:700;opacity:.92;transition:opacity .15s,transform .15s;" ' +
                 'onmouseover="this.style.opacity=1;this.style.transform=\'translateY(-1px)\';" ' +
                 'onmouseout="this.style.opacity=.92;this.style.transform=\'none\';">' +

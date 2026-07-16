@@ -3,52 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>위험성평가 상세 — 담양군 중대재해예방통합관리시스템</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="./js/tailwind-config.js"></script>
-    <link rel="stylesheet" href="./css/style.css">
-    <link rel="stylesheet" href="./css/v2.css">
-    <style>
-        .rd-head { background: #fff; border: 1px solid var(--card-line); border-radius: var(--radius-card); padding: 16px 18px; margin-bottom: 14px; }
-        .rd-head-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-        .rd-title { font-size: 17px; font-weight: 700; color: var(--text-black); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-        .rd-meta { font-size: 12px; color: var(--text-gray); margin-top: 8px; display: flex; gap: 14px; flex-wrap: wrap; }
-        .rd-meta b { color: var(--text-black); }
-        .type-badge { display: inline-block; padding: 2px 10px; border-radius: var(--radius-md); font-size: 11px; font-weight: 700; }
-        .type-badge.reg { background: var(--status-info-bg); color: var(--status-info-fg); border: 1px solid var(--status-info-border); }
-        .type-badge.occ { background: var(--status-purple-bg); color: var(--status-purple-fg); border: 1px solid var(--status-purple-border); }
-        .rd-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--card-line); border-radius: var(--radius-card); overflow: hidden; margin-bottom: 16px; }
-        .rd-table th { font-size: 12px; font-weight: 700; color: var(--text-gray); text-align: left; padding: 11px 14px; background: #fafafa; border-bottom: 1px solid var(--card-line); }
-        .rd-table td { font-size: 13px; color: var(--text-black); padding: 12px 14px; border-bottom: 1px solid var(--card-line); }
-        .rd-table tr:last-child td { border-bottom: none; }
-        .rd-table tbody tr { cursor: pointer; }
-        .rd-table tbody tr:hover { background: var(--brand-50); }
-        .rd-proc-name { font-weight: 600; }
-        .rd-gate { background: #fff; border: 1px solid var(--card-line); border-radius: var(--radius-card); padding: 16px 18px; }
-        .rd-gate-title { font-size: 13px; font-weight: 700; color: var(--text-black); margin-bottom: 10px; }
-        .rd-gate-row { display: flex; align-items: center; gap: 10px; font-size: 13px; padding: 7px 0; }
-        .rd-gate-row .rd-gate-mark { width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
-        .rd-gate-mark.ok { background: var(--status-success-bg); color: var(--status-success-fg); }
-        .rd-gate-mark.no { background: var(--status-warning-bg); color: var(--status-warning-fg); }
-        .rd-gate-foot { display: flex; justify-content: flex-end; margin-top: 12px; }
-        .rd-back { font-size: 13px; color: var(--main-dark); text-decoration: none; font-weight: 600; }
-    </style>
-</head>
-<body data-dy-page="rsk-list"
-      data-page-title="위험성평가 상세"
-      data-page-subtitle="공정별 진행 · 완료 통제 (RSK02-D)">
-    <main>
-        <p style="margin-bottom:12px;"><a class="rd-back" href="rsk-list.html">← 위험성평가 목록</a></p>
-        <div id="rd-root"></div>
-    </main>
-
-    <script src="./js/layout.js"></script>
-    <script src="./js/common.js"></script>
-    <script src="./js/rsk-kosha.js"></script>
-    <script src="./js/rsk-data.js"></script>
-    <script src="./js/rsk-detail.js"></script>
+    <title>정기 위험성평가 → 통합 목록 (리다이렉트)</title>
     <script>
-        document.addEventListener('DOMContentLoaded', function () { window.RSKDETAIL.init('rd-root'); });
+        /* v1.1 §6.1: 정기평가는 연 1건 → 목록·상세 통합. rsk-detail은 rsk-list로 리다이렉트하는 하위호환 스텁. */
+        (function () {
+            var q = new URLSearchParams(location.search);
+            var id = q.get('id') || '';
+            var year = '';
+            var m = /RA-(\d{4})-/.exec(id);
+            if (m) year = m[1];
+            var url = 'rsk-list.html' + (year ? '?year=' + year : '');
+            location.replace(url);
+        })();
     </script>
+</head>
+<body>
+    <p style="font-family:sans-serif;padding:20px;color:var(--text-gray);">
+        통합 목록(<a href="rsk-list.html">rsk-list.html</a>)으로 이동합니다…
+    </p>
 </body>
 </html>

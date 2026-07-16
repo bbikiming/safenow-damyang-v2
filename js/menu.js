@@ -122,7 +122,7 @@
             PG.policyGuide = () => V.openModal('목표·경영방침 설정 가이드',
                 '<div style="font-size:13px; line-height:1.7;">' + GUIDE.map(s =>
                     '<div style="display:flex; gap:10px; padding:10px 0; border-bottom:1px solid var(--card-line);">' +
-                    '<span style="flex-shrink:0; width:24px; height:24px; border-radius:6px; background:var(--main); color:#fff; font-weight:700; display:flex; align-items:center; justify-content:center;">' + s[0] + '</span>' +
+                    '<span style="flex-shrink:0; width:24px; height:24px; border-radius:6px; background:var(--main); color:var(--surface); font-weight:700; display:flex; align-items:center; justify-content:center;">' + s[0] + '</span>' +
                     '<div><div style="font-weight:700; color:var(--main-dark2);">' + s[1] + '</div>' +
                     '<div style="color:var(--text-black);">' + s[2] + '</div>' +
                     '<div style="font-size:12px; color:var(--main); font-weight:600; margin-top:2px;">근거: ' + s[3] + '</div></div></div>').join('') + '</div>',
@@ -539,7 +539,7 @@
             PG.evidenceAdd = ver => PG._stackOpen('증빙 추가',
                 '<div class="preset-form-grid">' +
                 '<span class="k">구분</span><select id="evi-add-kind"><option>본문</option><option>의견수렴</option><option>기타</option></select>' +
-                '<span class="k">파일</span><div class="upload-drop" style="padding:14px;" onclick="DYV2.toast(\'파일 선택 (프로토타입)\')">증빙 파일 첨부</div>' +
+                '<span class="k">파일</span>' + DYV2.uploadDrop('증빙 파일 첨부', null, { style: 'padding:14px;' }) +
                 '<span class="k">파일명</span><input id="evi-add-name" type="text" placeholder="예: 의견수렴결과.xlsx"></div>',
                 '<button class="btn btn-secondary" onclick="PG._stackClose()">취소</button>' +
                 '<button class="btn btn-primary" onclick="PG.evidenceSave(\'' + ver + '\')">등록</button>');
@@ -692,7 +692,7 @@
                     '<span class="k">성명 (조직도 선택)</span><input type="text" placeholder="행정포털 조직도에서 선택">' +
                     '<span class="k">선임일</span><input type="date" value="2026-06-11">' +
                     '<span class="k">자격</span><input type="text" placeholder="예: 산업안전기사">' +
-                    '<span class="k">선임계 첨부</span><div class="upload-drop" style="padding:14px;">선임 신고서·자격증 사본 첨부</div></div>',
+                    '<span class="k">선임계 첨부</span>' + DYV2.uploadDrop('선임 신고서·자격증 사본 첨부', null, { style: 'padding:14px;' }) + '</div>',
                     '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
                     '<button class="btn btn-primary" onclick="DYV2.closeModal(); EDOC.notify(\'선임 등록 완료 — 고용노동부 선임 신고 안내\', \'메일\')">등록</button>');
             };
@@ -705,7 +705,7 @@
                 ctx: { menuLabel: '조직' }, source: '2026 상반기 수행평가 — 판정 미흡 1건',
                 fields: { source: '수행평가: 예산·인력 지원의 충분성 — 보완 판정' }, onChange: render,
             });
-            const team = (name, n) => '<div style="border:1px solid var(--card-line); border-radius:var(--radius-md); padding:10px 14px; text-align:center; background:#fff;"><div style="font-size:12px; font-weight:700;">' + name + '</div><div style="font-size:12px; color:var(--text-gray);">' + n + '명</div></div>';
+            const team = (name, n) => '<div style="border:1px solid var(--card-line); border-radius:var(--radius-md); padding:10px 14px; text-align:center; background:var(--surface);"><div style="font-size:12px; font-weight:700;">' + name + '</div><div style="font-size:12px; color:var(--text-gray);">' + n + '명</div></div>';
             /* 조직도 요약 — 단일 출처(DYV2.ORG) 파생 실인원 */
             const orgTotal = (V.orgTotal ? V.orgTotal() : 0);
             const jjtN = (V.orgCount ? V.orgCount('jjt', false) : 0);
@@ -1581,7 +1581,7 @@
                 ctx: { menuLabel: '도급관리', scorelist: T.SCORE_PRESETS.contract }, onChange: render,
             });
             PG.conPledge = () => V.openModal('안전보건 서약서 첨부',
-                '<div class="upload-drop">서약서·계약서 사본을 첨부하세요 (다중 가능)</div>',
+                DYV2.uploadDrop('서약서·계약서 사본을 첨부하세요 (다중 가능)', null, { hint: true }),
                 '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
                 '<button class="btn btn-primary" onclick="DYV2.closeModal(); DYV2.toast(\'서약서가 첨부되었습니다\')">업로드</button>');
 
@@ -1628,7 +1628,7 @@
                     V.openModal('조치 완료 보고 — ' + esc(imp.title),
                         '<div class="preset-form-grid">' +
                         '<span class="k">조치 결과</span><textarea placeholder="완료된 조치 내용"></textarea>' +
-                        '<span class="k">완료 사진</span><div class="upload-drop" style="padding:14px;">조치 전·후 사진 첨부</div></div>',
+                        '<span class="k">완료 사진</span>' + DYV2.uploadDrop('조치 전·후 사진 첨부', null, { style: 'padding:14px;' }) + '</div>',
                         '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
                         '<button class="btn btn-primary" onclick="DYV2.closeModal(); EDOC.advanceImprovement(\'' + id + '\'); PG._r(); DYV2.toast(\'완료 보고 — 확인자 검토 대기\')">완료 보고</button>');
                 } else {

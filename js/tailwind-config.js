@@ -13,10 +13,12 @@
     window.tailwind.config = {
         theme: {
             extend: {
+                /* 값은 css/style.css :root 브랜드 토큰과 동기화 — 여기서 새 색을 만들지 않는다.
+                 * primary.N ↔ --brand-N, sidebar ↔ --page-bg. 토큰 변경 시 이 표도 함께 고칠 것. */
                 colors: {
                     primary: {
-                        50:  '#DFF1E9',
-                        100: '#DFF1E9',
+                        50:  '#F1FAF5',   /* --brand-50 */
+                        100: '#DFF1E9',   /* --brand-100 */
                         500: '#5FB897',
                         600: '#2D9270',
                         700: '#24785C',

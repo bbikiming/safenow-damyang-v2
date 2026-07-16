@@ -68,6 +68,19 @@
   --chart-series-a: #5FB897;
   --chart-series-b: #ffcd70;
 
+  /* Category — 내 할일(my-work) 업무 분류 칩 9종.
+     상태(status) 축과 다른 의미 축이라 tone 6종으로 수렴시킬 수 없어 별도 팔레트로 둔다.
+     분류 색이 필요한 화면은 여기만 참조하고 자체 색을 만들지 않는다. */
+  --cat-approval-fg: #8b5cf6;   --cat-approval-bg: #f3e8ff;
+  --cat-risk-fg: #dc2626;       --cat-risk-bg: #fee2e2;
+  --cat-improve-fg: #ea580c;    --cat-improve-bg: #ffedd5;
+  --cat-inspection-fg: #2563eb; --cat-inspection-bg: #dbeafe;
+  --cat-opinion-fg: #ca8a04;    --cat-opinion-bg: #fef9c3;
+  --cat-comply-fg: #16a34a;     --cat-comply-bg: #dcfce7;
+  --cat-contract-fg: #0d9488;   --cat-contract-bg: #ccfbf1;
+  --cat-eval-fg: #4f46e5;       --cat-eval-bg: #e0e7ff;
+  --cat-edu-fg: #0891b2;        --cat-edu-bg: #cffafe;
+
   /* Radius */
   --radius-xs: 4px;
   --radius-sm: 5px;
@@ -92,6 +105,13 @@
   --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.06);
   --shadow-lg: 0 10px 30px rgba(15, 23, 42, 0.12);  /* 모달·드로어 */
   --overlay-scrim: rgba(0, 0, 0, 0.45);             /* 모달·오버레이 백드롭 */
+  --overlay-scrim-strong: rgba(15, 23, 42, 0.84);   /* 사진 라이트박스 등 콘텐츠를 완전히 덮는 스크림 */
+  --overlay-btn-bg: rgba(255, 255, 255, 0.16);      /* 스크림 위에 얹는 반투명 버튼 */
+  --overlay-btn-bg-hover: rgba(255, 255, 255, 0.3);
+
+  /* Focus ring — 입력 포커스 강조. 브랜드/위험 2종. */
+  --focus-ring: 0 0 0 3px rgba(45, 146, 112, 0.12);        /* --main 틴트 */
+  --focus-ring-danger: 0 0 0 3px rgba(223, 89, 89, 0.16);  /* --status-danger-fg 틴트 */
 
   /* Layer — z-index 6단계 스케일. 리터럴 z-index 금지, 반드시 이 토큰만 사용.
      FAB 는 드로어·오버레이보다 아래(90) — 열린 레이어를 가리지 않게 한다. */
@@ -1276,7 +1296,7 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 1000;
+  z-index: var(--z-modal);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1294,12 +1314,12 @@ body {
   right: 0;
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.5);
-  z-index: 1001;
+  z-index: var(--z-base);
 }
 
 .modal-content {
   position: relative;
-  z-index: 1002;
+  z-index: calc(var(--z-base) + 1);
   background-color: white;
   border-radius: 16px;
   box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
@@ -1406,7 +1426,7 @@ body {
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.5);
-  z-index: 39;
+  z-index: calc(var(--z-drawer) - 1);
   opacity: 0;
   transition: opacity 0.2s ease;
 }
@@ -1444,7 +1464,7 @@ body {
     height: 100vh;
     width: 280px;
     max-width: 86vw;
-    z-index: 50;
+    z-index: var(--z-drawer);
     transform: translateX(-100%);
     transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 2px 0 16px rgba(0, 0, 0, 0.18);
@@ -1725,7 +1745,7 @@ body.sidebar-locked {
   position: fixed;
   right: 20px;
   bottom: 20px;
-  z-index: 9998;
+  z-index: var(--z-fab);
   width: 48px;
   height: 48px;
   border-radius: 50%;
@@ -1757,7 +1777,7 @@ body.sidebar-locked {
   bottom: 80px;
   width: 360px;
   max-width: calc(100vw - 24px);
-  z-index: 9999;
+  z-index: calc(var(--z-fab) + 1);
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 14px;
@@ -1957,7 +1977,7 @@ body.sidebar-locked {
   padding: 0 60px;
   position: sticky;
   top: 0;
-  z-index: 30;
+  z-index: var(--z-nav);
   color: #ffffff;
 }
 .dy-brand {
@@ -2072,7 +2092,7 @@ body.sidebar-locked {
   gap: 16px;
   position: sticky;
   top: var(--dy-header-h);
-  z-index: 29;
+  z-index: calc(var(--z-nav) - 1);
 }
 .dy-gnb-item {
   position: relative;
@@ -3823,7 +3843,7 @@ body.sidebar-locked {
   top: 24px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 9999;
+  z-index: var(--z-toast);
   background: #1e293b;
   color: white;
   padding: 12px 20px;
@@ -4279,7 +4299,7 @@ body.sidebar-locked {
     max-height: 100vh;
     width: 282px;
     max-width: 86vw;
-    z-index: 50;
+    z-index: var(--z-drawer);
     transform: translateX(-100%);
     transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 2px 0 16px rgba(0, 0, 0, 0.18);
@@ -4301,7 +4321,7 @@ body.sidebar-locked {
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.5);
-  z-index: 49;
+  z-index: calc(var(--z-drawer) - 1);
 }
 
 @media (max-width: 767px) {
@@ -4354,7 +4374,7 @@ body.sidebar-locked {
 
   .dy-header-actions {
     position: relative;
-    z-index: 31;
+    z-index: calc(var(--z-nav) + 1);
     transform: translateY(calc((var(--dy-header-h) + var(--dy-gnb-h)) / 2));
   }
   .dy-gnb {
@@ -4513,7 +4533,7 @@ body.sidebar-locked {
   flex-direction: column;
   max-height: calc(100vh - 100px);
   overflow: hidden;
-  z-index: 100;
+  z-index: calc(var(--z-nav) + 2);
 }
 .dy-ntf-dropdown.is-open { display: flex; }
 

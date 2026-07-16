@@ -84,9 +84,10 @@
                 return '<select data-k="' + f.k + '">' + (f.options || []).map(o =>
                     '<option' + (o === v ? ' selected' : '') + '>' + esc(o) + '</option>').join('') + '</select>';
             case 'file': {
-                const drop = '<div class="upload-drop" style="padding:14px;" onclick="DYV2.toast(\'파일 첨부 (프로토타입 — 다중 가능)\')">' +
-                    (v ? esc(v) : '파일을 끌어다 놓거나 클릭하여 첨부 (다중 가능)') + '</div>' +
-                    (V().fileHint ? V().fileHint() : '');
+                const drop = V().uploadDrop(
+                    (v ? esc(v) : '파일을 끌어다 놓거나 클릭하여 첨부 (다중 가능)'),
+                    "DYV2.toast('파일 첨부 (프로토타입 — 다중 가능)')",
+                    { style: 'padding:14px;', hint: true });
                 /* SFR-005: 파일별 설명·관리 목록 (ctx.attachList 제공 시) */
                 let list = '';
                 if (ctx && ctx.attachList && ctx.attachList.length) {
@@ -153,7 +154,7 @@
                 const pid = 'edoc-pick-' + f.k;
                 return '<div class="orgpick-field">' +
                     '<div style="display:flex; gap:8px; align-items:center;">' +
-                    '<input type="text" id="' + pid + '" data-k="' + f.k + '" value="' + esc(v) + '" placeholder="[조직도]에서 점검자를 선택하세요" readonly style="flex:1; background:var(--gray-50,#fafafa);">' +
+                    '<input type="text" id="' + pid + '" data-k="' + f.k + '" value="' + esc(v) + '" placeholder="[조직도]에서 점검자를 선택하세요" readonly style="flex:1; background:var(--surface-alt);">' +
                     '<button type="button" class="btn btn-sm btn-outline" onclick="EDOC.openOrgTree(\'' + pid + '\')">조직도</button>' +
                     '</div>' +
                     '</div>';

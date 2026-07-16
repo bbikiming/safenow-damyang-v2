@@ -235,8 +235,7 @@
             '<p class="reg-lab">법적 근거</p>' +
             '<input type="text" data-k="legalBasis" value="' + esc(S.f.legalBasis) + '" placeholder="예: 중처법 시행령 제4조제1호">' +
             '<div class="reg-branch"><p class="bh">파일 첨부</p>' +
-                '<div class="upload-drop" style="padding:14px;" onclick="DYV2.toast(\'파일 선택 (프로토타입) — 아래에 파일명·설명을 입력하고 [파일 추가]를 누르세요\')">파일을 끌어다 놓거나 클릭하여 선택</div>' +
-                fileHintHtml() +
+                V().uploadDrop('파일을 끌어다 놓거나 클릭하여 선택', "DYV2.toast('파일 선택 (프로토타입) — 아래에 파일명·설명을 입력하고 [파일 추가]를 누르세요')", { style: 'padding:14px;', hint: true }) +
                 '<div class="reg-grid2" style="margin-top:10px;">' +
                     '<div><input type="text" id="reg-fname" placeholder="파일명 (예: 경영방침_2026.pdf)"></div>' +
                     '<div><input type="text" id="reg-fdesc" placeholder="파일 설명 (선택)"></div>' +
@@ -485,7 +484,7 @@
     function openModalShell(title) {
         V().openModal(esc(title),
             '<div id="reg-steps-wrap"></div><div id="reg-body"></div>',
-            (S.mode === 'edit' ? '<button class="btn btn-outline" id="reg-del" style="margin-right:auto; color:var(--status-danger-fg); border-color:var(--status-danger-border,#fecaca);">삭제</button>' : '') +
+            (S.mode === 'edit' ? '<button class="btn btn-outline" id="reg-del" style="margin-right:auto; color:var(--status-danger-fg); border-color:var(--status-danger-border);">삭제</button>' : '') +
             '<button class="btn btn-secondary" id="reg-prev">← 이전</button>' +
             '<button class="btn btn-primary" id="reg-next">다음 →</button>');
 
