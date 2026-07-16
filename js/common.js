@@ -117,6 +117,16 @@
         return c;
     }
     function orgTotal() { let c = 0; orgWalk(n => { c += (n.members || []).length; }); return c; }
+    const isDeptLike = n => n.type === 'dept' || n.type === 'office' || n.type === 'town';
+    /* 부서형 노드(dept·office·town) 이름 목록 — 사업장 마스터·작업환경측정 등 부서 선택 공용 파생 */
+    function deptNames() { const out = []; orgWalk(n => { if (isDeptLike(n)) out.push(n.name); }); return out; }
+    /* 부서형 노드 [{id, name, count}] — deptId 로 저장하는 도메인(위험성평가·안전보건교육)의 부서 선택 공용 파생.
+     * orgFlat() 은 EDOC 호환을 위해 id 를 버리고 부서명만 투영하므로 id 기준 화면에서는 이 헬퍼를 쓴다. */
+    function orgDepts() {
+        const out = [];
+        orgWalk(n => { if (isDeptLike(n)) out.push({ id: n.id, name: n.name, count: orgCount(n.id) }); });
+        return out;
+    }
     /* EDOC 호환 평면 투영: [{dept, members:[[role,name],...]}]
      *   부서형 노드(dept·office·town) 단위 그룹핑, 팀 노드 구성원은 소속 과에 합산.
      *   기본적으로 지휘부(post·bureau 직속: 군수·부군수·국장)는 제외. */
@@ -145,6 +155,34 @@
 
     const docs = () => window.DY_DOCS || [];
 
+    /* =========================================================================
+     * 브레이크포인트 — 단일 출처 (DYV2.BP)
+     *   CSS 토큰 --bp-*(css/style.css :root)와 같은 값. JS 의 matchMedia 는
+     *   1023 같은 리터럴을 쓰지 말고 이 상수를 참조한다.
+     *   DYV2.below(k) → 해당 단계 "미만" 여부(예: below('lg') = 1023px 이하).
+     * ========================================================================= */
+    const BP = { xl: 1280, lg: 1024, md: 768, sm: 560 };
+    function below(key) {
+        return window.matchMedia('(max-width: ' + (BP[key] - 1) + 'px)').matches;
+    }
+
+    /* =========================================================================
+     * 상태 라벨 → tone 매핑 — 단일 출처 (DYV2.STATUS_TONE)
+     *   전 화면의 상태 배지는 이 표만 바라본다. 새 상태 어휘가 필요하면 여기에
+     *   추가하고, 화면에서 색(tone)을 직접 고르지 않는다.
+     *   tone 6종은 style.css --status-{tone}-bg/border/fg 페어와 1:1 대응.
+     * ========================================================================= */
+    const STATUS_TONE = {
+        '완료': 'success', '적합': 'success', '승인': 'success', '이행': 'success',
+        '진행': 'info', '진행중': 'info', '검토중': 'info', '접수': 'info',
+        '미착수': 'neutral', '미완료': 'neutral', '해당없음': 'neutral', '대기': 'neutral',
+        '지연': 'warning', '보완필요': 'warning', '보완 필요': 'warning', '주의': 'warning',
+        '기한초과': 'danger', '기한 초과': 'danger', '부적합': 'danger', '반려': 'danger',
+        '수시': 'purple', '임시저장': 'purple',
+    };
+    /* 매핑에 없는 라벨은 neutral 로 수렴(색을 임의로 만들지 않는다). */
+    function toneOf(label) { return STATUS_TONE[String(label || '').trim()] || 'neutral'; }
+
     /* ── 첨부파일 업로드 제약 (지원 형식·용량·개수) — 단일 출처 ── */
     const FILE_LIMITS = {
         formats: 'HWP · HWPX · PDF · DOC(X) · XLS(X) · PPT(X) · JPG · PNG · ZIP',
@@ -155,6 +193,37 @@
         return '<p class="file-hint"><b>지원 형식</b> ' + FILE_LIMITS.formats +
             ' <span class="fh-sep">·</span> <b>파일당 최대</b> ' + FILE_LIMITS.maxMB + 'MB' +
             ' <span class="fh-sep">·</span> <b>최대</b> ' + FILE_LIMITS.maxCount + '개</p>';
+    }
+
+    /* ── 접근성 업로드 드롭존 — 단일 출처 (fileHint 와 동일한 §2 원칙) ──
+     * .upload-drop 은 cursor:pointer·hover 강조로 "클릭하여 업로드" 어포던스를 약속하므로,
+     * 마우스뿐 아니라 키보드 활성화까지 반드시 배선한다(WCAG 2.1.1/4.1.2). 새 업로드 UI 는
+     * 드롭존을 직접 쓰지 말고 이 헬퍼를 재사용한다.
+     *   labelHtml : 드롭존 내부 표시(HTML 허용).
+     *   onAct     : 활성화 시 실행할 인라인 JS 표현식(기존 onclick 관례대로 작은따옴표 문자열).
+     *               생략 시 프로토타입 토스트. 실제 등록/제출은 모달 하단 [등록]·[제출] 버튼이 담당.
+     *   opts.hint : true → fileHint() 를 함께 렌더하고 aria-describedby 로 제약 문구를 연결.
+     *   opts.style: 드롭존에 덧붙일 인라인 style 문자열. */
+    let _dropSeq = 0;
+    function dropKey(e) {
+        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+            e.preventDefault();          /* Space 스크롤 방지 + 클릭으로 활성화 경로 단일화 */
+            e.currentTarget.click();
+        }
+    }
+    function uploadDrop(labelHtml, onAct, opts) {
+        opts = opts || {};
+        const act = onAct || "DYV2.toast('파일 선택 (프로토타입)')";
+        const style = opts.style ? ' style="' + opts.style + '"' : '';
+        let desc = '', hint = '';
+        if (opts.hint) {
+            const hid = 'updrop-hint-' + (++_dropSeq);
+            desc = ' aria-describedby="' + hid + '"';
+            hint = fileHint().replace('class="file-hint"', 'class="file-hint" id="' + hid + '"');
+        }
+        return '<div class="upload-drop" role="button" tabindex="0"' + style +
+            ' onclick="' + act + '" onkeydown="DYV2.dropKey(event)"' + desc + '>' +
+            labelHtml + '</div>' + hint;
     }
 
     function byMenu(key) { return docs().filter(d => d.menuKey === key); }
@@ -261,8 +330,7 @@
             '<div style="margin-bottom:14px;">' + processTypeChip(d.processType) + ' ' + lawChip(d.law) +
               ' <span class="chip-mini wt">' + esc(d.version) + '</span></div>' +
             '<p style="font-size:13px; font-weight:600; margin-bottom:12px;">' + esc(d.name) + '</p>' +
-            '<div class="upload-drop">파일을 끌어다 놓거나 클릭하여 업로드<br><span style="font-size:12px;">다중 첨부 가능 · 업로드 시 버전 이력이 자동 기록됩니다</span></div>' +
-            fileHint(),
+            uploadDrop('파일을 끌어다 놓거나 클릭하여 업로드<br><span style="font-size:12px;">다중 첨부 가능 · 업로드 시 버전 이력이 자동 기록됩니다</span>', null, { hint: true }),
             '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button class="btn btn-primary" onclick="DYV2.closeModal(); DYV2.toast(\'업로드되었습니다 (프로토타입)\')">업로드</button>'
         );
@@ -273,7 +341,8 @@
         esc, statusChip, workTypeChip, processTypeChip, pdcaChip, lawChip,
         unassignedBadge, secondReviewBadge,
         openModal, closeModal, toast, openDoc,
-        docs, FILE_LIMITS, fileHint,
-        ORG, orgFlat, orgNode, orgCount, orgTotal, orgWalk,
+        docs, FILE_LIMITS, fileHint, uploadDrop, dropKey,
+        BP, below, STATUS_TONE, toneOf,
+        ORG, orgFlat, orgNode, orgCount, orgTotal, orgWalk, deptNames, orgDepts,
     };
 })();

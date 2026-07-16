@@ -81,9 +81,34 @@
   /* legacy aliases */
   --radius-lg: 20px;
 
+  /* Surface — 요소가 얹히는 표면. #fff·#fafafa 원시값을 담는 단일 출처.
+     --surface-alt 는 --page-bg 로 수렴시키지 않는다(표 헤더가 페이지 바닥과 겹칠 때 구분돼야 함). */
+  --surface: #ffffff;
+  --surface-alt: #fafafa;
+  --surface-sunken: var(--page-bg);
+
   /* Shadow */
   --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04);
   --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.06);
+  --shadow-lg: 0 10px 30px rgba(15, 23, 42, 0.12);  /* 모달·드로어 */
+  --overlay-scrim: rgba(0, 0, 0, 0.45);             /* 모달·오버레이 백드롭 */
+
+  /* Layer — z-index 6단계 스케일. 리터럴 z-index 금지, 반드시 이 토큰만 사용.
+     FAB 는 드로어·오버레이보다 아래(90) — 열린 레이어를 가리지 않게 한다. */
+  --z-base: 1;
+  --z-nav: 30;
+  --z-fab: 90;
+  --z-drawer: 100;
+  --z-overlay: 110;
+  --z-modal: 120;
+  --z-toast: 130;
+
+  /* Breakpoint — 4단계 표준(문서화 값. CSS @media 는 리터럴을 쓰되 이 값만 사용하고,
+     JS matchMedia 는 DYV2.BP 를 참조한다). xl 1280 / lg 1024 / md 768 / sm 560 */
+  --bp-xl: 1280px;
+  --bp-lg: 1024px;
+  --bp-md: 768px;
+  --bp-sm: 560px;
 
   /* Layout — 시안 1920 캔버스 기준 */
   --dy-header-h: 84px;
@@ -2152,6 +2177,30 @@ body.sidebar-locked {
   height: 20px;
   flex-shrink: 0;
   color: currentColor;
+}
+
+/* SNB 3뎁스 (v1.1) — 섹션 헤더 · 구분선 · 하위(nested) 항목 */
+.dy-sidebar-section {
+  padding: 10px 12px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-lightgray);
+  letter-spacing: 0.4px;
+  text-transform: none;
+}
+.dy-sidebar-sep {
+  height: 1px;
+  background: var(--card-line);
+  margin: 6px 8px;
+}
+.dy-sidebar-item.is-nested {
+  padding-left: 24px;
+  font-size: 13px;
+}
+.dy-sidebar-item.is-nested .dy-sidebar-item-icon {
+  width: 16px;
+  height: 16px;
+  opacity: 0.7;
 }
 
 /* 외부(타 GNB) 이동 LNB 항목 — 우측에 외부 링크 아이콘 표시 */

@@ -36,6 +36,10 @@
 
 지원 형식·용량·개수 제약은 `DYV2.FILE_LIMITS`(`js/common.js`)에 단일 정의하고, 업로드 영역 하단 안내 문구는 `DYV2.fileHint()`로 렌더한다. 새 업로드 UI를 만들면 문구를 직접 쓰지 말고 `DYV2.fileHint()`를 재사용한다. (현재: 지원 형식 HWP·HWPX·PDF·DOC(X)·XLS(X)·PPT(X)·JPG·PNG·ZIP, 파일당 최대 20MB, 최대 10개.)
 
+**드롭존은 `DYV2.uploadDrop()`로만 렌더 (MUST)** — `.upload-drop`은 `cursor:pointer`·hover 강조로 "클릭하여 업로드" 어포던스를 약속하므로, 없는 동작을 시각적으로 약속하는 무핸들러 드롭존(`<div class="upload-drop">…</div>` 직접 작성)은 **금지**한다. 대신 접근성 렌더러 `DYV2.uploadDrop(labelHtml, onAct, opts)`(`js/common.js`)를 재사용한다. 이 헬퍼는 `role="button"`·`tabindex="0"`과 클릭·Enter·Space 활성화(`DYV2.dropKey`)를 배선하고, `opts.hint === true`면 `fileHint()`를 함께 렌더하며 `aria-describedby`로 제약 문구를 연결한다(WCAG 2.1.1/4.1.2/2.4.7, 포커스 링은 `css/v2.css`의 `.upload-drop:focus-visible`).
+- `onAct`: 활성화 시 실행할 인라인 JS 표현식(기존 `onclick` 관례대로 작은따옴표 문자열). 생략 시 프로토타입 토스트. **실제 등록/제출은 모달 하단 `[등록]`·`[제출]` 버튼이 담당**하고, 드롭존은 파일 선택 어포던스만 응답한다.
+- 예외 — 실제 파일 `input`을 배선한 드롭존(`js/facil.js` `#fac-drop`)과 정적 HTML 마크업(`base-bulk.html`)은 헬퍼 대신 같은 속성(`role`·`tabindex`·`onkeydown="DYV2.dropKey(event)"`)을 직접 부여해 실제 배선을 보존한다.
+
 ### 3. 조직도 데이터 — 단일 출처
 
 조직도 데이터는 `DYV2.ORG`(`js/common.js`)에 단일 정의한다. 화면별 조직도는 `DYV2.orgFlat()` 등 파생 뷰만 사용하고 자체 조직도 데이터를 만들지 않는다.
@@ -47,3 +51,58 @@
 ### 4. 업무 목록(세트 테이블) 컬럼 헤더
 
 `js/setlist.js`의 세트 단위 테이블(`setCard`·`unassignedCard`)은 `SL_HEAD`(`<thead>`)를 포함해 컬럼(PDCA 단계·문서명·담당자·담당부서·수정일·상태·관리)을 항상 표기한다. `docRow`의 7열과 1:1로 정렬되어야 한다.
+
+### 5. 디자인 토큰 — 원시값 금지 (MUST)
+
+색·폰트 크기·반경·그림자·z-index 는 **`css/style.css` `:root` 토큰만** 사용한다. CSS·JS·HTML 어디서든 원시값(hex·rgba·px 폰트·리터럴 z-index)을 직접 쓰지 않는다.
+
+**근거** — 원시값은 토큰과 같은 값이어도 "단일 출처"가 아니다. 토큰을 고쳐도 따라오지 않아 화면마다 색이 어긋나고, 새 화면이 자기 팔레트를 재발명하는 출발점이 된다.
+
+| 종류 | 토큰 | 비고 |
+|---|---|---|
+| 표면 | `--surface`(#fff) · `--surface-alt`(#fafafa, 표 헤더 등) · `--surface-sunken`(페이지 바닥) | `--surface-alt`를 `--page-bg`로 수렴시키지 않는다 |
+| 브랜드·중립·상태 | `--main`/`--brand-*` · `--text-*`/`--gray-*`/`--card-line` · `--status-{tone}-bg/border/fg` | |
+| 폰트 | `--fs-12` ~ `--fs-38` · `--fw-*` | 스케일 밖 값은 **최근접 토큰으로 수렴** |
+| 반경 | `--radius-xs/sm/md/button/progress/statbox/card/pill/full` | 동상 |
+| 그림자·백드롭 | `--shadow-sm/md/lg` · `--overlay-scrim` | |
+| 레이어 | `--z-base(1)` · `--z-nav(30)` · `--z-fab(90)` · `--z-drawer(100)` · `--z-overlay(110)` · `--z-modal(120)` · `--z-toast(130)` | 6단계 밖 임의 값 금지. FAB 는 드로어·오버레이보다 **아래** |
+
+- `var(--x, #폴백)`의 폴백값은 반드시 실제 토큰값과 일치시킨다(불일치 폴백은 조용한 색 어긋남의 원인).
+- 예외 — `onepager-docflow.html`·`screen-definitions.html`은 레이아웃 시스템 밖 독립 문서라 치환 대상이 아니다. 포크 클론(`safe-damyang-v2/`)도 본 저장소 규칙의 대상이 아니다.
+- 검사: `grep -nE '#[0-9a-fA-F]{3,6}|font-size: *[0-9]|z-index: *[0-9]' css/v2.css css/edu.css` 잔존 0.
+
+### 6. 표준 컴포넌트 클래스 — 계열 신설 금지
+
+동일 요소는 **한 계열로만** 구현한다. 화면 전용 접두어(`sh-`·`edu-`·`evl-`·`rl-` 등)로 같은 요소를 다시 만들지 않고, 변형이 필요하면 표준 클래스의 modifier 로 붙인다.
+
+| 요소 | 표준 | 폐기·별칭 대상 |
+|---|---|---|
+| 상태 배지 | `chip-status` + `DYV2.toneOf(라벨)` | `chip-mini.st-*` · `sh-st` · `.edu-src` · `.tag` (별칭 후 점진 치환) · `.badge-*`(미사용, 삭제) |
+| select | `.form-select` | `.select`(별칭 유지) |
+| 테이블 | `.table-figma` | `.sh-table` · `.edu-table` · 화면 로컬 `*-table` |
+| 빈 상태 | `.v2-empty` | `.sh-empty` · `.edu-empty` |
+| 토스트 | `DYV2.toast` | layout.js·screen-definitions.js 자체 구현 |
+| 탭 | `.tabs` / `.tab` | `sh-vtab` · `sh-ptab` · `edu-tab` · `sd-tab` 등 |
+| 모달 | `DYV2.openModal` (§1) | 자작 백드롭 `.ev-modal-backdrop` · `.evl-modal-backdrop` |
+| 조직도 픽커 | `ORGPICK` / `.org-inline` (§1) | `.evp-*` · `.org-tree-panel` · `.bgt-tree-*` · `.admp-tree` |
+
+**상태 어휘 → tone 은 `DYV2.STATUS_TONE`(`js/common.js`) 단일 출처**다. 화면에서 라벨별 색을 직접 고르지 않고 `DYV2.toneOf(label)`로 tone 을 얻어 `--status-{tone}-*` 토큰을 쓴다. 매핑에 없는 라벨은 `neutral` 로 수렴하므로, 새 어휘는 표에 추가한다.
+
+### 7. 브레이크포인트 — 4단계 표준
+
+`xl 1280 / lg 1024 / md 768 / sm 560` **4개 값만** 사용한다. 그 밖의 폭(1599·1279·1100·900·860·767·720·640·479 등)으로 미디어쿼리를 새로 만들지 않는다.
+
+- CSS: `@media (max-width: 1023px)`처럼 표준값−1 을 쓴다(토큰 `--bp-*`는 문서·참조용 — `@media`는 `var()`를 지원하지 않는다).
+- JS: `matchMedia` 리터럴 금지. `DYV2.BP`(`{xl:1280, lg:1024, md:768, sm:560}`) 또는 `DYV2.below('lg')`를 쓴다.
+- 셸(햄버거+드로어) 전환은 `lg`(1023px 이하) 기준이며, 컴포넌트도 같은 시점에 접혀야 한다.
+
+### 8. 신규 화면 체크리스트
+
+새 화면·컴포넌트를 추가하기 전 아래를 만족시킨다.
+
+1. 색·폰트·반경·z-index 에 원시값 0 (§5).
+2. 배지·select·테이블·빈상태·탭·토스트·모달은 표준 클래스/헬퍼 사용, 새 계열 신설 없음 (§6).
+3. 조직도는 `DYV2.ORG` 파생만, 업로드는 `DYV2.uploadDrop()`/`DYV2.fileHint()` (§2·§3).
+4. 모달은 `DYV2.openModal` 1개만, 적층 없음 (§1).
+5. **375px에서 확인** — 가로 스크롤 없음(표는 스크롤 래퍼 안), 겹침·과밀 없음, 미디어쿼리는 4단계 표준값만 (§7).
+6. 본문·배지 최소 폰트 **12px**(장식 글리프 `▸▾` 등은 예외), 주요 터치 타깃 44px.
