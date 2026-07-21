@@ -4644,3 +4644,225 @@ body.sidebar-locked {
     width: 320px;
   }
 }
+
+/* =========================================================================
+ * 알림 드롭다운 UX 개편 (2026-07-21) — 분류 칩 필터 · 읽음 처리 · 내 할일 바로가기
+ *   항목이 <a> → 클릭형 <div role="link">로 바뀌어 커서·포커스 링을 명시한다.
+ * ========================================================================= */
+.dy-ntf-item { cursor: pointer; }
+.dy-ntf-item:focus-visible { outline: 2px solid var(--main); outline-offset: -2px; }
+
+.dy-ntf-chips {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--card-line);
+  background: var(--surface-alt);
+}
+.dy-ntf-chip {
+  border: 1px solid var(--card-line);
+  background: var(--surface);
+  color: var(--text-gray);
+  padding: 4px 11px;
+  border-radius: var(--radius-full);
+  font-size: var(--fs-12); font-weight: var(--fw-bold);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .12s ease;
+}
+.dy-ntf-chip:hover { border-color: var(--main); color: var(--main-dark); }
+.dy-ntf-chip.active { background: var(--brand-100); border-color: var(--main); color: var(--main-dark); }
+
+.dy-ntf-worklink {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: var(--fs-12); font-weight: var(--fw-bold);
+  color: var(--main-dark);
+  text-decoration: none;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--brand-50);
+  border: 1px solid var(--brand-100);
+}
+.dy-ntf-worklink:hover { background: var(--brand-100); }
+
+.dy-ntf-empty {
+  padding: 28px 16px;
+  text-align: center;
+  font-size: var(--fs-13);
+  color: var(--text-lightgray);
+}
+
+.dy-ntf-read-all:disabled { color: var(--text-lightgray); cursor: default; }
+.dy-ntf-read-all:disabled:hover { background: none; }
+
+.dy-ntf-dropdown-foot2 {
+  display: flex;
+  border-top: 1px solid var(--card-line);
+}
+.dy-ntf-dropdown-foot2 a {
+  flex: 1;
+  padding: 12px 10px;
+  text-align: center;
+  font-size: var(--fs-13); font-weight: var(--fw-bold);
+  color: var(--main-dark);
+  text-decoration: none;
+  background: var(--brand-100);
+  transition: background .12s ease;
+}
+.dy-ntf-dropdown-foot2 a:hover { background: var(--brand-50); }
+.dy-ntf-dropdown-foot2 a + a { border-left: 1px solid var(--card-line); }
+
+/* =========================================================================
+ * 권한 시연 롤 스위처 (DYROLE) — 헤더 사용자 칩 드롭다운
+ *   책임체계 3계층: head(총괄 책임자·purple) / super(관리감독자·info) / staff(업무담당자·success)
+ *   상태 tone 토큰(--status-{tone}-*)을 계층 색으로 재사용 — 원시값 금지 (CLAUDE.md §6)
+ * ========================================================================= */
+
+/* 사용자 칩 안 계층 배지 — 초록 pill 위라 반투명 화이트 처리 */
+.dy-user-tier {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 4px;
+  padding: 1px 7px;
+  font-size: var(--fs-12);
+  font-weight: var(--fw-bold);
+  color: var(--surface);
+  background: var(--overlay-btn-bg);
+  border: 1px solid var(--overlay-btn-bg-hover);
+  border-radius: var(--radius-full);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.dy-role-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  background: var(--surface);
+  border: 1px solid var(--card-line);
+  border-radius: var(--radius-statbox);
+  box-shadow: var(--shadow-lg);
+  display: none;
+  flex-direction: column;
+  max-height: calc(100vh - 100px);
+  overflow: hidden;
+  z-index: calc(var(--z-nav) + 2);
+}
+.dy-role-dropdown.is-open { display: flex; }
+
+.dy-role-drop-head {
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--card-line);
+}
+.dy-role-drop-title {
+  display: flex; align-items: center; gap: 6px;
+  font-size: var(--fs-14); font-weight: var(--fw-bold); color: var(--text-black);
+}
+.dy-role-drop-demo {
+  padding: 1px 7px;
+  font-size: var(--fs-12); font-weight: var(--fw-bold);
+  color: var(--status-purple-fg);
+  background: var(--status-purple-bg);
+  border: 1px solid var(--status-purple-border);
+  border-radius: var(--radius-full);
+}
+.dy-role-drop-sub {
+  margin-top: 4px;
+  font-size: var(--fs-12); color: var(--text-gray);
+}
+
+.dy-role-drop-list {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 440px;
+  padding: 6px 0;
+}
+
+.dy-role-tiergroup + .dy-role-tiergroup {
+  border-top: 1px solid var(--card-line);
+  margin-top: 6px;
+  padding-top: 6px;
+}
+.dy-role-tier-label {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 16px 4px;
+}
+.dy-role-tier-badge {
+  padding: 1px 8px;
+  font-size: var(--fs-12); font-weight: var(--fw-bold);
+  border-radius: var(--radius-full);
+  border: 1px solid;
+}
+.dy-role-tier-label.tier-head  .dy-role-tier-badge { color: var(--status-purple-fg);  background: var(--status-purple-bg);  border-color: var(--status-purple-border); }
+.dy-role-tier-label.tier-super .dy-role-tier-badge { color: var(--status-info-fg);    background: var(--status-info-bg);    border-color: var(--status-info-border); }
+.dy-role-tier-label.tier-staff .dy-role-tier-badge { color: var(--status-success-fg); background: var(--status-success-bg); border-color: var(--status-success-border); }
+.dy-role-tier-who { font-size: var(--fs-12); color: var(--text-gray); font-weight: var(--fw-medium); }
+
+.dy-role-item {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%;
+  padding: 9px 16px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background .12s ease;
+}
+.dy-role-item:hover { background: var(--gray-100); }
+.dy-role-item.is-current {
+  background: var(--brand-50);
+  box-shadow: inset 3px 0 0 var(--main);
+  cursor: default;
+}
+
+.dy-role-avatar {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: var(--fs-13); font-weight: var(--fw-bold);
+  flex-shrink: 0;
+  border: 1px solid;
+}
+.dy-role-avatar.tier-head  { color: var(--status-purple-fg);  background: var(--status-purple-bg);  border-color: var(--status-purple-border); }
+.dy-role-avatar.tier-super { color: var(--status-info-fg);    background: var(--status-info-bg);    border-color: var(--status-info-border); }
+.dy-role-avatar.tier-staff { color: var(--status-success-fg); background: var(--status-success-bg); border-color: var(--status-success-border); }
+
+.dy-role-item-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.dy-role-item-name {
+  font-size: var(--fs-13); font-weight: var(--fw-bold); color: var(--text-black);
+}
+.dy-role-item-name em {
+  font-style: normal; font-weight: var(--fw-medium);
+  color: var(--text-gray); margin-left: 2px;
+}
+.dy-role-item-desc {
+  font-size: var(--fs-12); color: var(--text-gray);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.dy-role-current-mark {
+  padding: 1px 7px;
+  font-size: var(--fs-12); font-weight: var(--fw-bold);
+  color: var(--main-dark);
+  background: var(--brand-100);
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.dy-role-drop-foot {
+  padding: 10px 16px;
+  font-size: var(--fs-12); color: var(--text-gray);
+  background: var(--surface-alt);
+  border-top: 1px solid var(--card-line);
+  line-height: 1.5;
+}
+
+@media (max-width: 559px) {
+  .dy-role-dropdown {
+    right: -8px;
+    width: 300px;
+  }
+  /* 초소형 화면: 이름 옆 계층 배지는 드롭다운으로 대체되므로 숨김 */
+  .dy-user-tier { display: none; }
+}

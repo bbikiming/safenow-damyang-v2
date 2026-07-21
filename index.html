@@ -9,125 +9,10 @@
     <link rel="stylesheet" href="./css/style.css">
     <link rel="stylesheet" href="./css/v2.css">
 </head>
-<body data-dy-page="index" data-page-title="통합 현황" data-page-subtitle="대시보드 · 시기도래 알림 · 안전관리 진행현황 · 예방활동 요약 (SFR-020·017)">
+<body data-dy-page="index" data-page-title="통합 현황" data-page-subtitle="대시보드 · 권한 계층(총괄 책임자·관리감독자·업무담당자)에 따라 화면이 달라집니다 (SFR-020·017)">
     <main>
-        <!-- 관리대상 요약 (SFR-002 딥링크) -->
-        <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:16px;">
-            <a class="statbox info" href="base-targets.html" style="text-decoration:none;">
-                <div class="statbox-num">23</div><div class="statbox-label">사업장 (개소)</div>
-            </a>
-            <a class="statbox success" href="base-targets.html?tab=facility" style="text-decoration:none;">
-                <div class="statbox-num">47</div><div class="statbox-label">공중이용시설 (개소)</div>
-            </a>
-            <a class="statbox neutral" href="base-targets.html?tab=material" style="text-decoration:none;">
-                <div class="statbox-num">6</div><div class="statbox-label">원료·제조물 (품목)</div>
-            </a>
-            <a class="statbox warning" href="docs-archive.html?filter=unassigned" style="text-decoration:none;">
-                <div class="statbox-num">124</div><div class="statbox-label">분류 미확정 문서</div>
-            </a>
-        </div>
-
-        <!-- 시기도래 알림 + 달력 토글 -->
-        <div class="card" style="margin-bottom:16px;">
-            <div class="card-header">
-                <span class="card-title">시기도래 알림</span>
-                <div class="tabs" style="margin:0; border:none;">
-                    <button class="tab active" id="due-tab-list" onclick="toggleDue('list')">목록</button>
-                    <button class="tab" id="due-tab-cal" onclick="toggleDue('cal')">달력 보기</button>
-                </div>
-            </div>
-            <div class="card-body">
-                <div id="due-list">
-                    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:14px;">
-                        <div class="statbox danger"><div class="statbox-num">4</div><div class="statbox-label">기한 초과</div></div>
-                        <div class="statbox danger"><div class="statbox-num">2</div><div class="statbox-label">오늘 마감</div></div>
-                        <div class="statbox warning"><div class="statbox-num">7</div><div class="statbox-label">1주일 이내</div></div>
-                        <div class="statbox info"><div class="statbox-num">19</div><div class="statbox-label">1개월 이내</div></div>
-                    </div>
-                    <table class="table-figma">
-                        <thead><tr><th>문서·업무</th><th>대메뉴</th><th>기한</th><th>상태</th><th></th></tr></thead>
-                        <tbody>
-                            <tr>
-                                <td style="font-weight:600;">의무이행 점검표 반기 마감</td>
-                                <td><span class="chip-mini pdca">이행관리</span></td>
-                                <td>2026-06-03</td>
-                                <td><span class="chip-mini st-todo">기한 초과 D+8</span></td>
-                                <td><a class="btn btn-sm btn-outline" href="menu.html?m=comply">이동</a></td>
-                            </tr>
-                            <tr>
-                                <td style="font-weight:600;">정기 위험성평가 결과 등록</td>
-                                <td><span class="chip-mini pdca">위험성평가</span></td>
-                                <td>2026-06-11</td>
-                                <td><span class="chip-mini st-todo">오늘 마감</span></td>
-                                <td><a class="btn btn-sm btn-outline" href="rsk-list.html">이동</a></td>
-                            </tr>
-                            <tr>
-                                <td style="font-weight:600;">상반기 안전보건교육 실시 결과</td>
-                                <td><span class="chip-mini pdca">안전보건교육</span></td>
-                                <td>2026-06-17</td>
-                                <td><span class="chip-mini st-doing">D-6</span></td>
-                                <td><a class="btn btn-sm btn-outline" href="edu.html">이동</a></td>
-                            </tr>
-                            <tr>
-                                <td style="font-weight:600;">도급사업 안전보건 점검 (군도 5호선)</td>
-                                <td><span class="chip-mini pdca">도급관리</span></td>
-                                <td>2026-06-30</td>
-                                <td><span class="chip-mini st-doing">D-19</span></td>
-                                <td><a class="btn btn-sm btn-outline" href="menu.html?m=contract">이동</a></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div id="due-cal" style="display:none;">
-                    <p style="font-size:12px; font-weight:700; margin-bottom:8px; text-align:center;">2026년 6월</p>
-                    <table class="mini-cal">
-                        <thead><tr><th>일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th></tr></thead>
-                        <tbody>
-                            <tr><td><span class="day muted">31</span></td><td><span class="day">1</span></td><td><span class="day">2</span></td><td><span class="day has-due">3</span></td><td><span class="day">4</span></td><td><span class="day">5</span></td><td><span class="day">6</span></td></tr>
-                            <tr><td><span class="day">7</span></td><td><span class="day">8</span></td><td><span class="day">9</span></td><td><span class="day">10</span></td><td><span class="day today has-due">11</span></td><td><span class="day">12</span></td><td><span class="day">13</span></td></tr>
-                            <tr><td><span class="day">14</span></td><td><span class="day">15</span></td><td><span class="day">16</span></td><td><span class="day has-due">17</span></td><td><span class="day">18</span></td><td><span class="day">19</span></td><td><span class="day">20</span></td></tr>
-                            <tr><td><span class="day">21</span></td><td><span class="day">22</span></td><td><span class="day">23</span></td><td><span class="day">24</span></td><td><span class="day">25</span></td><td><span class="day">26</span></td><td><span class="day">27</span></td></tr>
-                            <tr><td><span class="day">28</span></td><td><span class="day">29</span></td><td><span class="day has-due">30</span></td><td><span class="day muted">1</span></td><td><span class="day muted">2</span></td><td><span class="day muted">3</span></td><td><span class="day muted">4</span></td></tr>
-                        </tbody>
-                    </table>
-                    <p style="font-size:12px; color:var(--text-gray); text-align:center; margin-top:8px;">● 빨간 점 = 마감 도래 일자</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="dsh-grid">
-            <!-- 안전관리 진행현황 — 대메뉴별 이행률 -->
-            <div class="card">
-                <div class="card-header"><span class="card-title">안전관리 진행현황 — 대메뉴별 이행률</span></div>
-                <div class="card-body" id="dsh-rates"></div>
-            </div>
-
-            <div style="display:flex; flex-direction:column; gap:16px;">
-                <!-- 예방활동 요약 피드 -->
-                <div class="card">
-                    <div class="card-header"><span class="card-title">예방활동 요약</span></div>
-                    <div class="card-body">
-                        <div class="dsh-feed-item"><span class="dsh-feed-time">오늘 10:20</span><span>수시 위험성평가 완료 — 하수처리장 설비 변경 <a href="rsk-list.html" style="color:var(--main); font-weight:700;">보기</a></span></div>
-                        <div class="dsh-feed-item"><span class="dsh-feed-time">오늘 09:05</span><span>종사자 신고 1건 접수 — 보도블록 침하 <a href="rsk-proc.html" style="color:var(--main); font-weight:700;">보기</a></span></div>
-                        <div class="dsh-feed-item"><span class="dsh-feed-time">어제 16:40</span><span>관리감독자 교육 이수율 100% 달성</span></div>
-                        <div class="dsh-feed-item"><span class="dsh-feed-time">06-09</span><span>개선조치 2건 완료 처리 — 노후 사다리 교체 외</span></div>
-                        <div class="dsh-feed-item"><span class="dsh-feed-time">06-08</span><span>도급사업 서약서 3건 첨부 완료</span></div>
-                    </div>
-                </div>
-                <!-- 알림 메시지 이력 (SFR-017) -->
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-title">알림 메시지 이력</span>
-                        <a class="btn btn-sm btn-secondary" href="admin-notify.html">전체</a>
-                    </div>
-                    <div class="card-body">
-                        <div class="dsh-feed-item"><span class="dsh-feed-time">오늘 08:00</span><span><span class="chip-mini wt-elec">문자</span> 기한 초과 알림 — 의무이행 점검표 (재난안전과장 외 2명)</span></div>
-                        <div class="dsh-feed-item"><span class="dsh-feed-time">06-10 17:00</span><span><span class="chip-mini wt">메일</span> 시기도래 주간 요약 (부서장 12명)</span></div>
-                        <div class="dsh-feed-item"><span class="dsh-feed-time">06-09 09:00</span><span><span class="chip-mini wt-elec">문자</span> 위험성평가 평가자 지정 통보 (4명)</span></div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <!-- 권한 계층별 대시보드 — js/dashboard.js (DYDSH) 가 DYROLE.current() 기준으로 렌더 -->
+        <div id="dsh-root"></div>
     </main>
 
     <div id="toast" class="toast"></div>
@@ -135,27 +20,6 @@
     <script src="./js/layout.js"></script>
     <script src="./js/data.js"></script>
     <script src="./js/common.js"></script>
-    <script>
-        /* 대메뉴별 이행률 — data.js 실데이터 집계 + 해당 메뉴 딥링크 */
-        (function () {
-            const el = document.getElementById('dsh-rates');
-            el.innerHTML = Object.keys(DYV2.MENUS).map(key => {
-                const m = DYV2.MENUS[key];
-                const r = DYV2.complianceRate(key);
-                const cls = r >= 70 ? 'green' : r >= 40 ? 'warning' : 'danger';
-                return '<a class="dsh-rate-row" href="' + m.href + '" style="text-decoration:none;">' +
-                    '<span class="rate-label">' + m.label + '</span>' +
-                    '<div class="progress"><div class="progress-bar ' + cls + '" style="width:' + r + '%"></div></div>' +
-                    '<span class="rate-num">' + r + '%</span>' +
-                '</a>';
-            }).join('');
-        })();
-        function toggleDue(mode) {
-            document.getElementById('due-list').style.display = mode === 'list' ? '' : 'none';
-            document.getElementById('due-cal').style.display = mode === 'cal' ? '' : 'none';
-            document.getElementById('due-tab-list').classList.toggle('active', mode === 'list');
-            document.getElementById('due-tab-cal').classList.toggle('active', mode === 'cal');
-        }
-    </script>
+    <script src="./js/dashboard.js"></script>
 </body>
 </html>

@@ -36,6 +36,206 @@
         activity: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>',
     };
 
+    /* =========================================================================
+     * 권한 시연 (DYROLE) — 중대재해처벌법 책임체계 3계층 롤 스위처
+     *   군수(총괄 책임자) – 실과장·사업소장·읍면장(관리감독자) – 업무담당자(실무 수행자)
+     *   우측 상단 사용자 칩 클릭 → 페르소나 전환 → 전 화면(헤더·GNB·대시보드)이
+     *   선택한 직위 관점으로 다시 렌더된다. 저장: localStorage(dy-role-sim-v1).
+     *   페르소나 uid/deptId 는 DYV2.ORG(js/common.js) 조직도와 동일 값 — 변경 금지.
+     * ========================================================================= */
+    const ROLE_KEY = 'dy-role-sim-v1';
+    const ROLE_TIERS = {
+        head:  { label: '총괄 책임자', tone: 'purple',  who: '군수',
+                 law: '중대재해처벌법 §4 — 안전보건 확보의무 총괄',
+                 hideNav: ['docs', 'admin'] },
+        super: { label: '관리감독자', tone: 'info',     who: '실과장·사업소장·읍면장',
+                 law: '산업안전보건법 §16 — 소속 부서 관리·감독',
+                 hideNav: ['admin'] },
+        staff: { label: '업무담당자', tone: 'success',  who: '실무 수행자',
+                 law: '부서 안전보건 업무 실무 수행·기록',
+                 hideNav: [] },
+    };
+    const ROLE_PERSONAS = [
+        { id: 'mayor',  tier: 'head',  uid: 'u_mayor', name: '김담양', role: '군수',
+          org: '담양군청', desc: '경영책임자 — 군 전체 안전보건 총괄' },
+        { id: 'safety', tier: 'super', uid: 'u_safe1', name: '홍길동', role: '재난안전과장',
+          org: '담양군청 · 재난안전과', deptId: 'safety', deptName: '재난안전과', desc: '실과장 — 재난안전과 관리·감독' },
+        { id: 'fac',    tier: 'super', uid: 'u_fac1',  name: '임시설', role: '공공시설사업소장',
+          org: '공공시설사업소', deptId: 'facility', deptName: '공공시설사업소', desc: '사업소장 — 공공시설사업소 관리·감독' },
+        { id: 'town',   tier: 'super', uid: 'u_twn1',  name: '노읍장', role: '담양읍장',
+          org: '담양읍', deptId: 'town_damyang', deptName: '담양읍', desc: '읍면장 — 담양읍 관리·감독' },
+        { id: 'staff',  tier: 'staff', uid: 'u_jjt2',  name: '박안전', role: '안전관리 주무관',
+          org: '담양군청 · 재난안전과', deptId: 'safety', deptName: '재난안전과', desc: '중대재해팀 — 실무 수행' },
+    ];
+    function rolePersona() {
+        let id = null;
+        try { id = localStorage.getItem(ROLE_KEY); } catch (e) {}
+        return ROLE_PERSONAS.find(p => p.id === id) || ROLE_PERSONAS.find(p => p.id === 'staff');
+    }
+    function roleTier(p) { return ROLE_TIERS[(p || rolePersona()).tier]; }
+    function roleSet(id) {
+        const p = ROLE_PERSONAS.find(x => x.id === id);
+        if (!p || p.id === rolePersona().id) { roleClose(); return; }
+        try {
+            localStorage.setItem(ROLE_KEY, id);
+            sessionStorage.setItem('dy-role-switched',
+                ROLE_TIERS[p.tier].label + ' — ' + p.name + ' ' + p.role + ' 관점으로 전환되었습니다');
+        } catch (e) {}
+        /* 새 권한에서 숨겨지는 GNB 그룹의 화면이면 대시보드로, 아니면 현재 화면 유지 */
+        const pageId = document.body.getAttribute('data-dy-page') || 'index';
+        const group = findGroup(pageId);
+        if (ROLE_TIERS[p.tier].hideNav.indexOf(group.id) >= 0) {
+            window.location.href = 'index.html';
+        } else {
+            window.location.reload();
+        }
+    }
+    function roleOpen() {
+        const d = document.getElementById('dy-role-dropdown');
+        const btn = document.getElementById('dy-role-btn');
+        if (!d) return;
+        const ntf = document.getElementById('dy-ntf-dropdown');
+        if (ntf) { ntf.classList.remove('is-open'); ntf.setAttribute('aria-hidden', 'true'); }
+        d.classList.add('is-open');
+        d.setAttribute('aria-hidden', 'false');
+        if (btn) btn.setAttribute('aria-expanded', 'true');
+    }
+    function roleClose() {
+        const d = document.getElementById('dy-role-dropdown');
+        const btn = document.getElementById('dy-role-btn');
+        if (!d) return;
+        d.classList.remove('is-open');
+        d.setAttribute('aria-hidden', 'true');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+    }
+
+    /* =========================================================================
+     * 알림 (헤더 드롭다운) — 데이터 구동 + 읽음 상태 (UX 개편 2026-07-21)
+     *   · 항목 데이터 NTF_ITEMS 단일 배열 → 배지·"안 읽음 N건"·목록이 전부 여기서 파생
+     *   · 읽음 상태: sessionStorage(dy-ntf-read-v1) — 클릭/모두 읽음 시 저장
+     *   · 카테고리 칩 필터 · work 링크가 있으면 "내 할일에서 처리" 바로가기 노출
+     * ========================================================================= */
+    const NTF_ITEMS = [
+        { id: 'n1', cat: 'approval',   catLabel: '결재',       time: '14:23',
+          title: '안전·보건 목표와 경영방침 결재 요청 (온나라)', href: 'menu.html?m=policy',
+          work: 'my-work.html?cat=approval' },
+        { id: 'n2', cat: 'assignment', catLabel: '지정',       time: '09:15',
+          title: '군청 청사 관리책임자로 자동 지정', href: 'base-targets.html' },
+        { id: 'n3', cat: 'compliance', catLabel: '이행',       time: '08:00',
+          title: '의무이행 점검표 반기 마감 기한 초과 (D+8)', href: 'menu.html?m=comply',
+          work: 'my-work.html?cat=comply' },
+        { id: 'n4', cat: 'inspection', catLabel: '점검',       time: '어제 18:00',
+          title: '기준문서함 2차 검토 대상 16건 분류 확인 요청', href: 'docs-archive.html' },
+        { id: 'n5', cat: 'risk',       catLabel: '위험성평가', time: '어제 14:30',
+          title: '물순환사업소 개선조치 기한초과 재촉', href: 'my-work.html?dept=water&cat=improve',
+          work: 'my-work.html?dept=water&cat=improve' },
+    ];
+    const NTF_DEFAULT_UNREAD = ['n1', 'n2', 'n3'];
+    const NTF_READ_KEY = 'dy-ntf-read-v1';
+    let ntfFilter = '';
+
+    function ntfReadSet() {
+        try { return new Set(JSON.parse(sessionStorage.getItem(NTF_READ_KEY) || '[]')); }
+        catch (e) { return new Set(); }
+    }
+    function ntfSaveRead(set) {
+        try { sessionStorage.setItem(NTF_READ_KEY, JSON.stringify(Array.from(set))); } catch (e) {}
+    }
+    function ntfIsUnread(id, readSet) {
+        return NTF_DEFAULT_UNREAD.indexOf(id) >= 0 && !readSet.has(id);
+    }
+    function ntfUnreadCount() {
+        const rs = ntfReadSet();
+        return NTF_ITEMS.filter(n => ntfIsUnread(n.id, rs)).length;
+    }
+    function ntfMarkRead(id) {
+        const rs = ntfReadSet(); rs.add(id); ntfSaveRead(rs);
+        ntfSyncBadge();
+    }
+    function ntfMarkAllRead() {
+        const rs = ntfReadSet();
+        NTF_DEFAULT_UNREAD.forEach(id => rs.add(id));
+        ntfSaveRead(rs);
+        ntfRenderList();
+        ntfSyncBadge();
+        if (window.DYV2 && window.DYV2.toast) window.DYV2.toast('알림을 모두 읽음 처리했습니다.');
+    }
+    function ntfSyncBadge() {
+        const n = ntfUnreadCount();
+        const badge = document.getElementById('dy-ntf-badge');
+        if (badge) { badge.textContent = n > 0 ? String(n) : ''; badge.setAttribute('data-count', String(n)); }
+        const cnt = document.getElementById('dy-ntf-count');
+        if (cnt) cnt.textContent = n > 0 ? '(안 읽음 ' + n + '건)' : '(모두 읽음)';
+        const readAllBtn = document.getElementById('dy-ntf-read-all');
+        if (readAllBtn) readAllBtn.disabled = n === 0;
+    }
+    function ntfSetFilter(cat) {
+        ntfFilter = cat;
+        ntfRenderList();
+        const chips = document.querySelectorAll('.dy-ntf-chip');
+        chips.forEach(c => {
+            const on = (c.getAttribute('data-cat') || '') === cat;
+            c.classList.toggle('active', on);
+            c.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+    }
+    function ntfItemHtml(n, readSet) {
+        const unread = ntfIsUnread(n.id, readSet);
+        const workLink = n.work
+            ? '<a class="dy-ntf-worklink" href="' + n.work + '" onclick="event.stopPropagation();DYLayout._ntfRead(\'' + n.id + '\')">내 할일에서 처리 →</a>'
+            : '';
+        return '<div class="dy-ntf-item' + (unread ? ' is-unread' : '') + '" role="link" tabindex="0"' +
+            ' data-id="' + n.id + '" data-href="' + n.href + '" aria-label="' + n.catLabel + ' 알림: ' + n.title + '">' +
+            '<span class="dy-ntf-dot ' + n.cat + '"></span>' +
+            '<div class="dy-ntf-item-body">' +
+                '<div class="dy-ntf-item-head"><span class="dy-ntf-item-cat ' + n.cat + '">' + n.catLabel + '</span></div>' +
+                '<div class="dy-ntf-item-title">' + n.title + '</div>' +
+                workLink +
+                '<div class="dy-ntf-item-time">' + n.time + '</div>' +
+            '</div>' +
+        '</div>';
+    }
+    function ntfRenderList() {
+        const listEl = document.getElementById('dy-ntf-list');
+        if (!listEl) return;
+        const rs = ntfReadSet();
+        const items = NTF_ITEMS.filter(n => !ntfFilter || n.cat === ntfFilter);
+        listEl.innerHTML = items.length
+            ? items.map(n => ntfItemHtml(n, rs)).join('')
+            : '<div class="dy-ntf-empty">이 분류의 알림이 없습니다.</div>';
+        /* 항목 클릭/Enter → 읽음 처리 후 이동 */
+        listEl.querySelectorAll('.dy-ntf-item').forEach(item => {
+            const go = () => {
+                ntfMarkRead(item.getAttribute('data-id'));
+                window.location.href = item.getAttribute('data-href');
+            };
+            item.addEventListener('click', go);
+            item.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); }
+            });
+        });
+    }
+    function renderNtfDropdown() {
+        const cats = [['', '전체'], ['approval', '결재'], ['assignment', '지정'], ['compliance', '이행'], ['inspection', '점검'], ['risk', '위험']];
+        const chips = cats.map(c =>
+            '<button type="button" class="dy-ntf-chip' + (c[0] === '' ? ' active' : '') + '" data-cat="' + c[0] + '"' +
+            ' aria-pressed="' + (c[0] === '' ? 'true' : 'false') + '" onclick="DYLayout._ntfFilter(\'' + c[0] + '\')">' + c[1] + '</button>').join('');
+        return html`
+            <div class="dy-ntf-dropdown" id="dy-ntf-dropdown" role="dialog" aria-hidden="true" aria-label="알림">
+                <div class="dy-ntf-dropdown-head">
+                    <span class="dy-ntf-dropdown-title">알림 <span class="dy-ntf-count" id="dy-ntf-count"></span></span>
+                    <button class="dy-ntf-read-all" id="dy-ntf-read-all" type="button" onclick="DYLayout._ntfReadAll()">모두 읽음</button>
+                </div>
+                <div class="dy-ntf-chips" role="group" aria-label="알림 분류 필터">${chips}</div>
+                <div class="dy-ntf-dropdown-list" id="dy-ntf-list"></div>
+                <div class="dy-ntf-dropdown-foot2">
+                    <a href="my-work.html">내 할일 열기</a>
+                    <a href="admin-notify.html">알림 전체 보기 (42건)</a>
+                </div>
+            </div>
+        `;
+    }
+
     /* --- 네비게이션 데이터 (v2) ---
      *   담양군_프로토타입_v2_재구축_프롬프트.md §3 IA 기준 — GNB 6개, 최대 3뎁스.
      *   안전보건관리체계 9개 대메뉴는 공통 레이아웃 1개(menu.html)에 데이터 주입 (?m= 파라미터).
@@ -175,85 +375,102 @@
                     <div class="dy-ntf-wrap" id="dy-ntf-wrap" style="position:relative;">
                         <button class="dy-ntf-btn" id="dy-ntf-btn" type="button" aria-label="알림">
                             ${ICON.bell}
-                            <span class="dy-ntf-badge" id="dy-ntf-badge">3</span>
+                            <span class="dy-ntf-badge" id="dy-ntf-badge"></span>
                         </button>
-                        <div class="dy-ntf-dropdown" id="dy-ntf-dropdown" role="dialog" aria-hidden="true">
-                            <div class="dy-ntf-dropdown-head">
-                                <span class="dy-ntf-dropdown-title">알림 <span class="dy-ntf-count">(안 읽음 3건)</span></span>
-                                <button class="dy-ntf-read-all" type="button" onclick="window.DYLayout._soon(event, '모두 읽음 처리')">모두 읽음</button>
-                            </div>
-                            <div class="dy-ntf-dropdown-list">
-                                <a class="dy-ntf-item is-unread" href="menu.html?m=policy">
-                                    <span class="dy-ntf-dot approval"></span>
-                                    <div class="dy-ntf-item-body">
-                                        <div class="dy-ntf-item-head">
-                                            <span class="dy-ntf-item-cat approval">결재</span>
-                                        </div>
-                                        <div class="dy-ntf-item-title">안전·보건 목표와 경영방침 결재 요청 (온나라)</div>
-                                        <div class="dy-ntf-item-time">14:23</div>
-                                    </div>
-                                </a>
-                                <a class="dy-ntf-item is-unread" href="base-targets.html">
-                                    <span class="dy-ntf-dot assignment"></span>
-                                    <div class="dy-ntf-item-body">
-                                        <div class="dy-ntf-item-head">
-                                            <span class="dy-ntf-item-cat assignment">지정</span>
-                                        </div>
-                                        <div class="dy-ntf-item-title">군청 청사 관리책임자로 자동 지정</div>
-                                        <div class="dy-ntf-item-time">09:15</div>
-                                    </div>
-                                </a>
-                                <a class="dy-ntf-item is-unread" href="menu.html?m=comply">
-                                    <span class="dy-ntf-dot compliance"></span>
-                                    <div class="dy-ntf-item-body">
-                                        <div class="dy-ntf-item-head">
-                                            <span class="dy-ntf-item-cat compliance">이행</span>
-                                        </div>
-                                        <div class="dy-ntf-item-title">의무이행 점검표 반기 마감 기한 초과 (D+8)</div>
-                                        <div class="dy-ntf-item-time">08:00</div>
-                                    </div>
-                                </a>
-                                <a class="dy-ntf-item" href="docs-archive.html">
-                                    <span class="dy-ntf-dot inspection"></span>
-                                    <div class="dy-ntf-item-body">
-                                        <div class="dy-ntf-item-head">
-                                            <span class="dy-ntf-item-cat inspection">점검</span>
-                                        </div>
-                                        <div class="dy-ntf-item-title">기준문서함 2차 검토 대상 16건 분류 확인 요청</div>
-                                        <div class="dy-ntf-item-time">어제 18:00</div>
-                                    </div>
-                                </a>
-                                <a class="dy-ntf-item" href="my-work.html?dept=water&cat=improve">
-                                    <span class="dy-ntf-dot risk"></span>
-                                    <div class="dy-ntf-item-body">
-                                        <div class="dy-ntf-item-head">
-                                            <span class="dy-ntf-item-cat risk">위험성평가</span>
-                                        </div>
-                                        <div class="dy-ntf-item-title">물순환사업소 개선조치 기한초과 재촉</div>
-                                        <div class="dy-ntf-item-time">어제 14:30</div>
-                                    </div>
-                                </a>
-                            </div>
-                            <a class="dy-ntf-dropdown-foot" href="admin-notify.html">전체 보기 (42건) →</a>
-                        </div>
+                        ${renderNtfDropdown()}
                     </div>
-                    <button class="dy-user-pill" type="button" aria-label="사용자 메뉴">
-                        <span class="dy-user-avatar">박</span>
-                        <span class="dy-user-text">
-                            <span class="dy-user-name">박안전 님</span>
-                            <span class="dy-user-org">담양군청 · 안전건설과</span>
-                        </span>
-                        ${ICON.chevron}
-                    </button>
+                    <div class="dy-role-wrap" id="dy-role-wrap" style="position:relative;">
+                        ${renderRolePill()}
+                        ${renderRoleDropdown()}
+                    </div>
                 </div>
             </header>
         `;
     }
 
+    /* 우측 상단 사용자 칩 — 현재 페르소나 + 권한 계층 배지 */
+    function renderRolePill() {
+        const p = rolePersona();
+        const t = roleTier(p);
+        return html`
+            <button class="dy-user-pill" id="dy-role-btn" type="button"
+                    aria-haspopup="dialog" aria-expanded="false" aria-label="사용자 메뉴 — 권한 전환 (시연)">
+                <span class="dy-user-avatar">${p.name.charAt(0)}</span>
+                <span class="dy-user-text">
+                    <span class="dy-user-name">${p.name} 님 <span class="dy-user-tier">${t.label}</span></span>
+                    <span class="dy-user-org">${p.org} · ${p.role}</span>
+                </span>
+                ${ICON.chevron}
+            </button>
+        `;
+    }
+
+    /* 권한 전환 드롭다운 — 책임체계 3계층 · 페르소나 5인 */
+    function renderRoleDropdown() {
+        const cur = rolePersona();
+        const tierOrder = ['head', 'super', 'staff'];
+        const groups = tierOrder.map(tid => {
+            const t = ROLE_TIERS[tid];
+            const items = ROLE_PERSONAS.filter(p => p.tier === tid).map(p => {
+                const isCur = p.id === cur.id;
+                return html`
+                    <button class="dy-role-item ${isCur ? 'is-current' : ''}" type="button"
+                            onclick="DYROLE.set('${p.id}')" ${isCur ? 'aria-current="true"' : ''}>
+                        <span class="dy-role-avatar tier-${tid}">${p.name.charAt(0)}</span>
+                        <span class="dy-role-item-body">
+                            <span class="dy-role-item-name">${p.name} <em>${p.role}</em></span>
+                            <span class="dy-role-item-desc">${p.desc}</span>
+                        </span>
+                        ${isCur ? '<span class="dy-role-current-mark">현재</span>' : ''}
+                    </button>
+                `;
+            }).join('');
+            return html`
+                <div class="dy-role-tiergroup">
+                    <div class="dy-role-tier-label tier-${tid}">
+                        <span class="dy-role-tier-badge">${t.label}</span>
+                        <span class="dy-role-tier-who">${t.who}</span>
+                    </div>
+                    ${items}
+                </div>
+            `;
+        }).join('');
+        return html`
+            <div class="dy-role-dropdown" id="dy-role-dropdown" role="dialog" aria-hidden="true" aria-label="권한 전환">
+                <div class="dy-role-drop-head">
+                    <span class="dy-role-drop-title">권한 전환 <span class="dy-role-drop-demo">시연</span></span>
+                    <p class="dy-role-drop-sub">선택한 직위 관점으로 대시보드·메뉴가 전환됩니다</p>
+                </div>
+                <div class="dy-role-drop-list">${groups}</div>
+                <div class="dy-role-drop-foot">책임체계 — 군수(총괄) → 실과장·사업소장·읍면장(관리감독) → 업무담당자(실무)</div>
+            </div>
+        `;
+    }
+
+    function wireRoleSwitcher() {
+        const wrap = document.getElementById('dy-role-wrap');
+        const btn = document.getElementById('dy-role-btn');
+        const dropdown = document.getElementById('dy-role-dropdown');
+        if (!wrap || !btn || !dropdown) return;
+
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            dropdown.classList.contains('is-open') ? roleClose() : roleOpen();
+        });
+        document.addEventListener('click', (e) => {
+            if (!wrap.contains(e.target)) roleClose();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') roleClose();
+        });
+    }
+
     function renderGnb(activeGroupId) {
+        /* 권한 계층별 GNB 차등 노출 — hideNav 그룹은 렌더하지 않음 (DYROLE) */
+        const hidden = roleTier().hideNav || [];
         return html`
             <nav class="dy-gnb">
-                ${NAV.map(g => {
+                ${NAV.filter(g => hidden.indexOf(g.id) < 0).map(g => {
                     const first = g.items[0];
                     const href = first.href || '#';
                     const onclick = first.soon
@@ -361,6 +578,21 @@
 
             wireMobileMenu();
             wireNotification();
+            wireRoleSwitcher();
+
+            /* 권한 전환 직후 도착 토스트 (DYROLE) */
+            try {
+                const msg = sessionStorage.getItem('dy-role-switched');
+                if (msg) {
+                    sessionStorage.removeItem('dy-role-switched');
+                    if (window.DYV2 && window.DYV2.toast) window.DYV2.toast(msg);
+                    else showComingSoon && (function () {
+                        const t = document.getElementById('toast');
+                        if (t) { t.textContent = msg; t.classList.add('show');
+                            setTimeout(() => t.classList.remove('show'), 2200); }
+                    })();
+                }
+            } catch (e) {}
         } finally {
             // 마운트 성공/실패와 무관하게 화면 표시 — visibility:hidden 잠금 해제
             document.body.classList.add('dy-mounted');
@@ -461,6 +693,7 @@
             dropdown.setAttribute('aria-hidden', 'true');
         };
         const open = () => {
+            roleClose();  /* 헤더 드롭다운은 한 시점에 1개만 */
             dropdown.classList.add('is-open');
             dropdown.setAttribute('aria-hidden', 'false');
         };
@@ -478,10 +711,9 @@
             if (e.key === 'Escape') close();
         });
 
-        /* 알림 아이템 클릭 시 드롭다운 닫기 (기본 링크 동작은 유지) */
-        dropdown.querySelectorAll('.dy-ntf-item, .dy-ntf-dropdown-foot').forEach(item => {
-            item.addEventListener('click', () => close());
-        });
+        /* 목록·배지 최초 렌더 (데이터 구동) */
+        ntfRenderList();
+        ntfSyncBadge();
     }
 
     function wireMobileMenu() {
@@ -630,6 +862,21 @@
         renderPagination,
         renderFilterRow,
         NAV,
+        /* 알림 내부 핸들러 (인라인 onclick 용) */
+        _ntfFilter: ntfSetFilter,
+        _ntfReadAll: ntfMarkAllRead,
+        _ntfRead: ntfMarkRead,
+    };
+
+    /* 권한 시연 API — 대시보드(js/dashboard.js) 등 화면 모듈이 참조 */
+    window.DYROLE = {
+        TIERS: ROLE_TIERS,
+        PERSONAS: ROLE_PERSONAS,
+        current: rolePersona,
+        tier: roleTier,
+        set: roleSet,
+        open: roleOpen,
+        close: roleClose,
     };
 
     /* 호환: 기존 페이지의 inline showComingSoon() 콜백 유지 */

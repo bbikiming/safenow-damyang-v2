@@ -1755,3 +1755,170 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 @media (prefers-reduced-motion: reduce) {
   .edu-tour-focus { scroll-behavior: auto; }
 }
+
+/* =========================================================================
+ * 권한 계층별 대시보드 (js/dashboard.js DYDSH) — head/super/staff 3계층
+ *   계층 색은 상태 tone 토큰 재사용: head=purple / super=info / staff=success
+ * ========================================================================= */
+
+/* dsh-grid 자식 컬럼이 표 min-content 폭에 끌려 넘치지 않게 (표는 내부 스크롤 래퍼가 담당) */
+.dsh-grid > * { min-width: 0; }
+
+/* 현재 권한 안내 바 — 대시보드 최상단 */
+.dsh-rolebar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  background: var(--surface);
+  border: 1px solid var(--card-line);
+  border-radius: var(--radius-statbox);
+  box-shadow: var(--shadow-sm);
+}
+.dsh-rolebar-badge {
+  padding: 3px 10px;
+  font-size: var(--fs-12); font-weight: var(--fw-bold);
+  border-radius: var(--radius-full);
+  border: 1px solid;
+  white-space: nowrap;
+}
+.dsh-rolebar.tier-head  .dsh-rolebar-badge { color: var(--status-purple-fg);  background: var(--status-purple-bg);  border-color: var(--status-purple-border); }
+.dsh-rolebar.tier-super .dsh-rolebar-badge { color: var(--status-info-fg);    background: var(--status-info-bg);    border-color: var(--status-info-border); }
+.dsh-rolebar.tier-staff .dsh-rolebar-badge { color: var(--status-success-fg); background: var(--status-success-bg); border-color: var(--status-success-border); }
+.dsh-rolebar-text {
+  flex: 1; min-width: 0;
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  font-size: var(--fs-13); color: var(--text-black);
+}
+.dsh-rolebar-law { font-size: var(--fs-12); color: var(--text-gray); }
+
+/* 히어로 밴드 — head: 브랜드 그라디언트 / super(is-dept): 표면 카드 + info 어센트 */
+.dsh-hero {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.1fr) 2fr;
+  gap: 20px;
+  padding: 22px 24px;
+  margin-bottom: 16px;
+  border-radius: var(--radius-card);
+  background: linear-gradient(135deg, var(--main-dark2), var(--main-dark) 55%, var(--main));
+  color: var(--surface);
+  box-shadow: var(--shadow-md);
+}
+.dsh-hero-label { font-size: var(--fs-13); font-weight: var(--fw-semibold); opacity: .85; }
+.dsh-hero-num {
+  font-size: var(--fs-38); font-weight: var(--fw-bold);
+  line-height: 1.15; font-variant-numeric: tabular-nums;
+  margin: 2px 0 8px;
+}
+.dsh-hero-num em { font-style: normal; font-size: var(--fs-22); font-weight: var(--fw-semibold); margin-left: 2px; }
+.dsh-hero-delta { margin-top: 8px; font-size: var(--fs-12); opacity: .85; }
+.dsh-hero .progress { background: var(--overlay-btn-bg); }
+.dsh-hero .progress-bar { background: var(--surface); }
+
+.dsh-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);  /* 2×2 고정 — auto-fit 은 3+1 고아 줄바꿈을 만든다 */
+  gap: 10px;
+  align-content: center;
+}
+@media (max-width: 559px) {
+  .dsh-hero-stats { grid-template-columns: 1fr 1fr; }
+}
+.dsh-hero-stat {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 12px 14px;
+  border-radius: var(--radius-statbox);
+  background: var(--overlay-btn-bg);
+  border: 1px solid var(--overlay-btn-bg);
+  text-decoration: none;
+  color: var(--surface);
+  transition: background .12s ease;
+}
+.dsh-hero-stat:hover { background: var(--overlay-btn-bg-hover); }
+.dsh-hero-stat b { font-size: var(--fs-26); font-weight: var(--fw-bold); line-height: 1.2; font-variant-numeric: tabular-nums; }
+.dsh-hero-stat b em { font-style: normal; font-size: var(--fs-13); font-weight: var(--fw-medium); margin-left: 2px; }
+.dsh-hero-stat span { font-size: var(--fs-12); opacity: .85; }
+.dsh-hero-stat.is-danger b { color: var(--status-warning-border); }
+
+/* 관리감독자(부서 스코프) 변형 — 표면 카드 + info 어센트 */
+.dsh-hero.is-dept {
+  background: var(--surface);
+  color: var(--text-black);
+  border: 1px solid var(--card-line);
+  border-top: 4px solid var(--status-info-fg);
+  box-shadow: var(--shadow-sm);
+}
+.dsh-hero.is-dept .dsh-hero-label { color: var(--text-gray); opacity: 1; }
+.dsh-hero.is-dept .dsh-hero-num { color: var(--status-info-fg); }
+.dsh-hero.is-dept .dsh-hero-delta { color: var(--text-gray); opacity: 1; }
+.dsh-hero.is-dept .progress { background: var(--gray-200); }
+.dsh-hero.is-dept .progress-bar { background: var(--status-info-fg); }
+.dsh-hero.is-dept .dsh-hero-stat {
+  background: var(--surface-alt);
+  border-color: var(--card-line);
+  color: var(--text-black);
+}
+.dsh-hero.is-dept .dsh-hero-stat:hover { background: var(--gray-200); }
+.dsh-hero.is-dept .dsh-hero-stat span { color: var(--text-gray); opacity: 1; }
+.dsh-hero.is-dept .dsh-hero-stat.is-danger b { color: var(--status-danger-fg); }
+
+/* 책임체계 체인 — 군수 → 관리감독자 → 업무담당자 */
+.dsh-chain { display: flex; align-items: stretch; gap: 10px; }
+.dsh-chain-node {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  padding: 12px 14px;
+  border-radius: var(--radius-statbox);
+  border: 1px solid;
+}
+.dsh-chain-node.tier-head  { background: var(--status-purple-bg);  border-color: var(--status-purple-border); }
+.dsh-chain-node.tier-super { background: var(--status-info-bg);    border-color: var(--status-info-border); }
+.dsh-chain-node.tier-staff { background: var(--status-success-bg); border-color: var(--status-success-border); }
+.dsh-chain-tier { font-size: var(--fs-12); font-weight: var(--fw-bold); }
+.dsh-chain-node.tier-head  .dsh-chain-tier { color: var(--status-purple-fg); }
+.dsh-chain-node.tier-super .dsh-chain-tier { color: var(--status-info-fg); }
+.dsh-chain-node.tier-staff .dsh-chain-tier { color: var(--status-success-fg); }
+.dsh-chain-node b { font-size: var(--fs-14); font-weight: var(--fw-bold); color: var(--text-black); }
+.dsh-chain-node b em { font-style: normal; color: var(--text-gray); font-weight: var(--fw-semibold); }
+.dsh-chain-who { font-size: var(--fs-12); color: var(--text-gray); }
+.dsh-chain-arrow { align-self: center; font-size: var(--fs-16); font-weight: var(--fw-bold); color: var(--text-lightgray); flex-shrink: 0; }
+
+/* 부서별 이행 현황 표 내부 진행바 + 미흡 행 강조 */
+.dsh-dept-bar { display: flex; align-items: center; gap: 8px; min-width: 140px; }
+.dsh-dept-bar .progress { flex: 1; }
+.dsh-dept-num { width: 40px; text-align: right; font-size: var(--fs-12); font-weight: var(--fw-bold); color: var(--text-black); font-variant-numeric: tabular-nums; }
+.table-figma tr.is-low td { background: var(--status-danger-bg); }
+
+/* 의무 점검·예산 등 라벨-값 행 */
+.dsh-duty-sum {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 10px;
+  font-size: var(--fs-12); font-weight: var(--fw-bold); color: var(--main-dark);
+}
+.dsh-duty-sum .progress { flex: 1; }
+.dsh-duty-sum span { flex-shrink: 0; }
+.dsh-duty-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--gray-200);
+  font-size: var(--fs-13); color: var(--text-black);
+}
+.dsh-duty-row:last-child { border-bottom: none; }
+.dsh-duty-row b { font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; }
+
+/* 결재·확인 대기 행 */
+.dsh-approve-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--gray-200);
+}
+.dsh-approve-row:last-child { border-bottom: none; }
+.dsh-approve-row > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dsh-approve-row b { font-size: var(--fs-13); font-weight: var(--fw-bold); color: var(--text-black); }
+.dsh-approve-row span { font-size: var(--fs-12); color: var(--text-gray); }
+
+@media (max-width: 767px) {
+  .dsh-hero { grid-template-columns: 1fr; padding: 18px; }
+  .dsh-chain { flex-direction: column; }
+  .dsh-chain-arrow { transform: rotate(90deg); }
+  .dsh-rolebar { flex-wrap: wrap; }
+}
