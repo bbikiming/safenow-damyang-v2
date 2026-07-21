@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>건강검진 상세 — 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="sbm-health"
+      data-page-title="건강검진 상세"
+      data-page-subtitle="검진 일정·대상자 현황·실시 증빙·사후관리·개인별 열람(권한)·이력 (HEX01-D)">
+    <main>
+        <p style="margin-bottom:12px;"><a class="id-back" href="health-exam.html">← 건강검진 목록</a></p>
+        <div id="hd-root"></div>
+    </main>
+
+    <div id="toast" class="toast" role="status"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/org-pick.js"></script>
+    <script src="./js/sh-data.js"></script>
+    <script src="./js/health-exam-detail.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () { window.HEXD.init('hd-root'); });
+    </script>
+</body>
+</html>

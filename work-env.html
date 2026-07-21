@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>작업환경측정 — 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="sbm-workenv"
+      data-page-title="작업환경측정"
+      data-page-subtitle="위탁 작업환경측정 계획·실시·증빙·개선조치 관리 · 반기 1회 (WEM01-L / 산안법 §125)">
+    <main>
+        <div id="we-root"></div>
+    </main>
+
+    <div id="toast" class="toast" role="status"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/org-pick.js"></script>
+    <script src="./js/sh-data.js"></script>
+    <script src="./js/site-data.js"></script>
+    <script src="./js/work-env.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () { window.WENV.init('we-root'); });
+    </script>
+</body>
+</html>

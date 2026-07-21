@@ -8,7 +8,7 @@
  *     ext   = 자체 소유(보완입력) { <facilNo>: {...} }
  *     syncLog = 수신/전송·필드변경 감사추적 []
  *     settings = FMS 연계 파라미터
- *   기획 근거: 기획-시설물관리-FMS연계-PRD-v1.md
+ *   기획 근거: docs/planning/기획-시설물관리-FMS연계-PRD-v1.md
  *   단일 모달 규칙: 부가 UX는 DYV2.openModal / 인라인 패널만 사용(적층 금지).
  * ========================================================================= */
 (function () {
@@ -381,7 +381,7 @@
                 /* 수신 IN */
                 '<div class="card"><div class="card-header"><span class="card-title">수신 (IN) — FMS → 시스템</span></div><div class="card-body">' +
                 '<p style="font-size:13px; color:var(--text-gray); margin-bottom:12px;">FMS 시설물관리대장(BASTB_MASTER, Ð 43토큰)을 불러와 <b>차이 미리보기</b> 후 선택 반영합니다. 자체 소유(보완입력) 필드는 덮어쓰지 않습니다.</p>' +
-                '<div class="upload-drop" id="fac-drop" style="cursor:pointer;">엑셀(.xls)을 끌어다 놓거나 클릭하여 업로드<br><span style="font-size:12px;">원천: 88384_2.xls (FMS 수신 포맷)</span></div>' +
+                '<div class="upload-drop" id="fac-drop" role="button" tabindex="0" style="cursor:pointer;" onkeydown="DYV2.dropKey(event)">엑셀(.xls)을 끌어다 놓거나 클릭하여 업로드<br><span style="font-size:12px;">원천: 88384_2.xls (FMS 수신 포맷)</span></div>' +
                 '<input type="file" id="fac-file" accept=".xls,.xlsx" style="display:none;">' +
                 (V().fileHint ? V().fileHint() : '') +
                 '<div style="display:flex; gap:8px; margin-top:10px;">' +
