@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>근로자 명단 관리 — 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="edu-workers"
+      data-page-title="근로자 명단 관리"
+      data-page-subtitle="인사연동(공무원·공무직) + 부서별 직접 등록·엑셀 업로드 (EDU-WORKERS)">
+    <main>
+        <div class="check-notice">
+            안전보건교육 대상 근로자 명단입니다. 인사정보시스템 연동분(공무원·공무직)은 <b>읽기 전용</b>이며,
+            부서 계약직·일용 근로자는 <b>직접 등록 · 엑셀 업로드</b>로 관리합니다.
+        </div>
+        <div id="ew-root"></div>
+    </main>
+
+    <div id="toast" class="toast" role="status"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/org-pick.js"></script>
+    <script src="./js/edu-data.js"></script>
+    <script src="./js/edu-filter.js"></script>
+    <script src="./js/edu-workers.js"></script>
+    <script src="./js/edu-tour.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            window.EDUW.init('ew-root');
+            window.EDUTOUR.boot();
+        });
+    </script>
+</body>
+</html>

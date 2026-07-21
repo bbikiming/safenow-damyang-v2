@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>채용시교육 (현업근로자) — 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="edu-hire"
+      data-page-title="채용시교육 (현업근로자)"
+      data-page-subtitle="고용형태·계약기간별 필요시간 자동 산정 · 업무 투입 전 이수 원칙 (EDU-HIRE)">
+    <main>
+        <div class="check-notice">
+            <b>채용시교육</b>은 근로자 고용형태·계약기간에 따라 필요시간이 달라집니다
+            (일용·1주 이하 <b>1h</b> / 1주 초과~1개월 <b>4h</b> / 그 밖 <b>8h</b>).
+            <b>업무 투입 전</b>에 이수해야 하며, 채용일 이후 이수 시 '지연' 상태로 표시됩니다.
+        </div>
+        <div id="eh-root"></div>
+    </main>
+
+    <div id="toast" class="toast" role="status"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/org-pick.js"></script>
+    <script src="./js/edu-data.js"></script>
+    <script src="./js/edu-filter.js"></script>
+    <script src="./js/edu-hire.js"></script>
+    <script src="./js/edu-tour.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            window.EDUH.init('eh-root');
+            window.EDUTOUR.boot();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>정기교육 상세 — 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="edu-reg"
+      data-page-title="정기교육 상세"
+      data-page-subtitle="신청현황 전체 노출 · 부서 신청 · 교육 종료 처리 (EDU-REG-DETAIL)"
+      data-back-href="edu-reg.html"
+      data-back-label="정기교육 목록">
+    <main>
+        <div id="erd-root"></div>
+    </main>
+
+    <div id="toast" class="toast" role="status"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/org-pick.js"></script>
+    <script src="./js/edu-data.js"></script>
+    <script src="./js/edu-filter.js"></script>
+    <script src="./js/edu-reg-detail.js"></script>
+    <script src="./js/edu-tour.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            window.EDURD.init('erd-root');
+            window.EDUTOUR.boot();
+        });
+    </script>
+</body>
+</html>

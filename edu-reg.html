@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>정기교육 (현업근로자) — 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="edu-reg"
+      data-page-title="정기교육 (현업근로자)"
+      data-page-subtitle="집합교육(재난안전과 등록 → 부서 신청 → 종료 처리) · 자체교육(부서 즉시 완료) (EDU-REG)">
+    <main>
+        <div class="check-notice">
+            <b>정기교육</b>은 채용일 기준 개인별 반기(6개월) 사이클로 관리됩니다.
+            <b>집합교육</b>은 재난안전과가 등록하고 부서가 신청·서명파일을 업로드합니다.
+            <b>자체교육</b>은 부서가 등록·즉시 완료 처리합니다.
+        </div>
+        <div id="er-root"></div>
+    </main>
+
+    <div id="toast" class="toast" role="status"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/org-pick.js"></script>
+    <script src="./js/edu-data.js"></script>
+    <script src="./js/edu-filter.js"></script>
+    <script src="./js/edu-reg.js"></script>
+    <script src="./js/edu-tour.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            window.EDUR.init('er-root');
+            window.EDUTOUR.boot();
+        });
+    </script>
+</body>
+</html>

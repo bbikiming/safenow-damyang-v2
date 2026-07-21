@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>기타 교육 (현업근로자) — 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="edu-etc"
+      data-page-title="기타 교육 (현업근로자)"
+      data-page-subtitle="특별교육 / 작업내용 변경 시 / MSDS / 직무교육 / 자체·기타 (EDU-ETC)">
+    <main>
+        <div class="check-notice">
+            <b>기타 교육</b>은 자체교육 형식으로 등록·즉시 진행 처리합니다. 5종 분류(특별교육·작업내용 변경 시·MSDS·직무교육·자체) 중 하나를 선택하며,
+            법정 정기시간에는 합산되지 않고 참고 표시만 됩니다.
+        </div>
+        <div id="ee-root"></div>
+    </main>
+
+    <div id="toast" class="toast" role="status"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/org-pick.js"></script>
+    <script src="./js/edu-data.js"></script>
+    <script src="./js/edu-filter.js"></script>
+    <script src="./js/edu-etc.js"></script>
+    <script src="./js/edu-tour.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            window.EDUE.init('ee-root', { supMode: false });
+            window.EDUTOUR.boot();
+        });
+    </script>
+</body>
+</html>
