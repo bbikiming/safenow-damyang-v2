@@ -8,14 +8,18 @@
    [화면 구조]
    · 상단: "내 할일" · 최종 동기화 시각 · [동기화]
    · KPI 칩 5개(클릭=필터): 지연 / 오늘 마감 / 이번주 / 결재 대기 / 전체
-   · 뷰 탭 2개:
-       - 마감 할일  : 기한 중심 그룹(지연/이번주/예정/기타/완료)
+   · 뷰 탭 3개:
+       - 마감 할일   : 기한 중심 그룹(지연/이번주/예정/기타) — 미완료만
        - 발행된 업무 : 업무 목록(DY_DOCS_V2)에서 이 부서로 발행된 담당 문서
-   · 처리 유형(atype)별 인라인 액션 — "지금 할 수 있는 건 여기서 끝낸다":
-       attach   → 카드 안에서 바로 파일 첨부(DYV2.uploadDrop) 후 완료
+       - 완료한 업무 : 완료된 마감 할일 + 완료된 발행 업무. 첨부형은 여기서
+                       [첨부 재등록]으로 추후 수정 가능 (2026-07-21 UX 개편)
+   · 처리 유형(atype)별 액션 — "지금 할 수 있는 건 여기서 끝낸다":
+       attach   → 팝업(단일 모달 DYV2.openModal)에서 파일 첨부 후 완료
        menu     → 해당 메뉴로 딥링크 (처리 위치 라벨 함께 표기)
        download → 설문지 등 즉시 다운로드 (프로토타입 토스트)
        inline   → 재촉 응답·완료 처리 등 기존 인라인 폼/모달
+   · 카드 자체 클릭 = 대표 액션 실행 (menu형 이동 / attach형 첨부 팝업) —
+     알림에서 넘어와 "누르면 바로 진행"되는 흐름 (버튼·링크 클릭은 제외)
    · 발행된 업무의 처리유형 매핑: 첨부파일=attach / 전자문서·프로그램=menu
    · 위험성평가·안전보건교육 실데이터 편입 + 타 카테고리 목업 시드
    · 상단 부서 셀렉트로 관점 전환 (프로토타입용) — DYV2.ORG 파생
@@ -134,12 +138,13 @@
 
     var state = {
         mount: null, deptId: '',
-        view: 'due',                    /* 'due' 마감 할일 | 'pub' 발행된 업무 */
+        view: 'due',                    /* 'due' 마감 할일 | 'pub' 발행된 업무 | 'done' 완료한 업무 */
         fStatus: '', fCat: '', sort: 'due',
         openInline: {},                 /* {impId: {reason, due}} 재촉 응답 */
-        openAttach: {},                 /* {itemId: true} 첨부 패널 열림 */
+        attachCtx: null,                /* {id, kind:'seed'|'pub', redo} 열려있는 첨부 팝업 */
         attachFiles: {},                /* {itemId: [파일명,...]} 선택된 모의 파일 */
         doneSeeds: {},                  /* {seedId: {at, files}} 첨부로 완료한 시드 */
+        pubFiles: {},                   /* {docId: [파일명,...]} 발행 업무 첨부 완료본 (재등록용) */
         pubType: '', pubStatus: 'open', /* 발행 업무 필터 (open=미시행+진행) */
         syncedAt: '2026-07-16 09:15'
     };
@@ -317,13 +322,12 @@
         return arr;
     }
 
-    /* ================= 그룹 (완료 그룹 포함 — DONE 항목 렌더 크래시 방지) ================= */
+    /* ================= 그룹 — DONE 은 '완료한 업무' 탭으로 분리 ================= */
     var GROUPS = [
         { key: 'overdue', label: '지연',   tone: 'danger'  },
         { key: 'week',    label: '이번주', tone: 'warning' },
         { key: 'plan',    label: '예정',   tone: 'success' },
-        { key: 'other',   label: '기타',   tone: 'neutral' },
-        { key: 'done',    label: '완료',   tone: 'neutral' }
+        { key: 'other',   label: '기타',   tone: 'neutral' }
     ];
 
     /* ================= 렌더 ================= */
@@ -361,19 +365,25 @@
                 kpiChip('neutral', '전체',      k.total,   '') +
             '</div>';
 
+        var doneN = items.filter(function (i) { return i.status === 'DONE'; }).length +
+                    pubs.filter(function (d) { return d.status === '완료'; }).length;
         var tabs =
             '<div class="tabs mw-tabs">' +
                 '<button type="button" class="tab' + (state.view === 'due' ? ' active' : '') + '" onclick="MYWORK.setView(\'due\')">마감 할일 <span class="mw-tab-n">' + items.filter(function (i) { return i.status !== 'DONE'; }).length + '</span></button>' +
                 '<button type="button" class="tab' + (state.view === 'pub' ? ' active' : '') + '" onclick="MYWORK.setView(\'pub\')">발행된 업무 <span class="mw-tab-n">' + pubOpenN + '</span></button>' +
+                '<button type="button" class="tab' + (state.view === 'done' ? ' active' : '') + '" onclick="MYWORK.setView(\'done\')">완료한 업무 <span class="mw-tab-n">' + doneN + '</span></button>' +
             '</div>';
 
-        var body = state.view === 'pub' ? renderPub(pubs) : renderDue(items);
+        var body = state.view === 'pub' ? renderPub(pubs)
+                 : state.view === 'done' ? renderDone(items, pubs)
+                 : renderDue(items);
 
         state.mount.innerHTML = head + kpi + tabs + body;
     }
 
-    /* ---- 마감 할일 뷰 ---- */
+    /* ---- 마감 할일 뷰 (미완료만 — 완료는 '완료한 업무' 탭) ---- */
     function renderDue(items) {
+        items = items.filter(function (i) { return i.status !== 'DONE'; });
         var view = filterAndSort(items);
 
         var catOpts = '<option value="">전체 카테고리</option>' +
@@ -483,12 +493,15 @@
                 '</div>' +
             '</div>';
         }
-        /* 파일 첨부 인라인 패널 */
-        if (it.atype === 'attach' && state.openAttach[it.id] && it.status !== 'DONE') {
-            inline = attachPanel(it.id, 'seed');
+        /* 카드 자체 클릭 = 대표 액션 (menu형 이동 · attach형 첨부 팝업) */
+        var cardAct = '';
+        if (it.status !== 'DONE') {
+            if (it.atype === 'attach') cardAct = ' onclick="MYWORK.cardAttach(\'' + it.id + '\',\'seed\',event)"';
+            else if (it.atype === 'menu' && it.href) cardAct = ' onclick="MYWORK.go(\'' + esc(it.href) + '\',event)"';
         }
 
-        return '<div class="mw-item' + (it.remind ? ' remind' : '') + (it.status === 'DONE' ? ' is-done' : '') + '">' + head + inline + '</div>';
+        return '<div class="mw-item' + (it.remind ? ' remind' : '') + (it.status === 'DONE' ? ' is-done' : '') +
+            (cardAct ? ' mw-click' : '') + '"' + cardAct + '>' + head + inline + '</div>';
     }
 
     function actionButtons(it) {
@@ -504,13 +517,15 @@
         if (it.impId) {
             return '<a class="btn btn-outline btn-sm" href="' + esc(it.href) + '">보기</a>';
         }
-        /* 파일 첨부형 — 카드에서 바로 완료 */
+        /* 파일 첨부형 — 팝업(모달)에서 첨부해 완료 · 완료 후엔 재등록 가능 */
         if (it.atype === 'attach') {
             if (it.status === 'DONE') {
-                return '<span class="mw-done-mark">' + ICO.check + ' 첨부 완료</span>';
+                return '<span class="mw-done-mark">' + ICO.check + ' 첨부 완료</span>' +
+                    ' <button type="button" class="btn btn-outline btn-sm" onclick="MYWORK.openAttach(\'' + it.id + '\',\'seed\',true)">' +
+                    ICO.clip + ' 첨부 재등록</button>';
             }
-            return '<button type="button" class="btn btn-primary btn-sm" onclick="MYWORK.toggleAttach(\'' + it.id + '\')">' +
-                ICO.clip + ' ' + (state.openAttach[it.id] ? '첨부 닫기' : '파일 첨부') + '</button>';
+            return '<button type="button" class="btn btn-primary btn-sm" onclick="MYWORK.openAttach(\'' + it.id + '\',\'seed\')">' +
+                ICO.clip + ' 파일 첨부</button>';
         }
         /* 다운로드형 */
         if (it.atype === 'download' && it.onclick) {
@@ -523,25 +538,63 @@
         return '';
     }
 
-    /* ---- 파일 첨부 인라인 패널 (마감 할일 시드 · 발행 업무 공용) ----
-       kind: 'seed' → doneSeeds 완료 / 'pub' → DY_DOCS_V2 status 갱신 */
-    function attachPanel(id, kind) {
-        var files = state.attachFiles[id] || [];
+    /* ---- 파일 첨부 팝업 (단일 모달 DYV2.openModal — 마감 할일 시드 · 발행 업무 공용) ----
+       kind: 'seed' → doneSeeds 완료 / 'pub' → DY_DOCS_V2 status 갱신
+       redo: true → 완료 건 첨부 재등록 (기존 파일을 새 첨부로 교체) */
+    function attachItemTitle(ctx) {
+        if (ctx.kind === 'pub') {
+            var d = (global.DY_DOCS_V2 || []).find(function (x) { return x.id === ctx.id; });
+            return d ? d.name : '';
+        }
+        var s = otherSeeds().filter(function (x) { return x.id === ctx.id; })[0];
+        return s ? s.title : '';
+    }
+    function attachBodyHtml() {
+        var ctx = state.attachCtx; if (!ctx) return '';
+        var files = state.attachFiles[ctx.id] || [];
         var filePills = files.map(function (f, i) {
             return '<span class="mw-file-pill">' + ICO.fileText + ' ' + esc(f) +
-                '<button type="button" class="mw-file-x" aria-label="' + esc(f) + ' 제거" onclick="MYWORK.removeFile(\'' + id + '\',' + i + ')">&times;</button></span>';
+                '<button type="button" class="mw-file-x" aria-label="' + esc(f) + ' 제거" onclick="MYWORK.removeFile(\'' + ctx.id + '\',' + i + ')">&times;</button></span>';
         }).join('');
-        return '<div class="mw-inline mw-attach">' +
+        return '<div class="mw-attach">' +
+            '<p class="mw-attach-target">' + esc(attachItemTitle(ctx)) + '</p>' +
+            (ctx.redo ? '<p class="mw-attach-note">첨부 완료를 유지한 채 파일만 교체합니다. [재등록 완료]를 누르면 아래 목록이 새 첨부본으로 저장됩니다.</p>' : '') +
             V().uploadDrop('파일을 끌어다 놓거나 클릭하여 선택',
-                "MYWORK.pickFile('" + id + "')", { hint: true }) +
+                "MYWORK.pickFile('" + ctx.id + "')", { hint: true }) +
             (files.length ? '<div class="mw-file-list">' + filePills + '</div>' : '') +
-            '<div class="mw-inline-foot">' +
-                '<button type="button" class="btn btn-secondary btn-sm" onclick="MYWORK.toggleAttach(\'' + id + '\')">취소</button>' +
+            '<div class="mw-inline-foot" style="margin-top:12px;">' +
+                '<button type="button" class="btn btn-secondary btn-sm" onclick="DYV2.closeModal()">취소</button>' +
                 '<button type="button" class="btn btn-primary btn-sm"' + (files.length ? '' : ' disabled') +
-                    ' onclick="MYWORK.submitAttach(\'' + id + '\',\'' + kind + '\')">' +
-                    ICO.check + ' 첨부 완료' + (files.length ? ' (' + files.length + ')' : '') + '</button>' +
+                    ' onclick="MYWORK.submitAttach()">' +
+                    ICO.check + ' ' + (ctx.redo ? '재등록 완료' : '첨부 완료') + (files.length ? ' (' + files.length + ')' : '') + '</button>' +
             '</div>' +
         '</div>';
+    }
+    function renderAttachModal() {
+        var el = document.getElementById('mw-attach-body');
+        if (el) el.innerHTML = attachBodyHtml();
+    }
+    function openAttach(id, kind, redo) {
+        redo = !!redo;
+        if (redo) {
+            var existing = kind === 'pub' ? state.pubFiles[id]
+                : (state.doneSeeds[id] && state.doneSeeds[id].files);
+            state.attachFiles[id] = (existing || []).slice();
+        } else {
+            state.attachFiles[id] = state.attachFiles[id] || [];
+        }
+        state.attachCtx = { id: id, kind: kind, redo: redo };
+        V().openModal(redo ? '첨부파일 재등록' : '파일 첨부',
+            '<div id="mw-attach-body">' + attachBodyHtml() + '</div>');
+    }
+    /* 카드 자체 클릭 핸들러 — 내부 버튼·링크 클릭은 그대로 통과 */
+    function go(href, ev) {
+        if (ev && ev.target.closest('a,button,input,textarea,label,.mw-inline')) return;
+        window.location.href = href;
+    }
+    function cardAttach(id, kind, ev) {
+        if (ev && ev.target.closest('a,button,input,textarea,label,.mw-inline')) return;
+        openAttach(id, kind, false);
     }
 
     /* ---- 발행된 업무 뷰 ---- */
@@ -595,26 +648,33 @@
         var typeChip = V().processTypeChip(d.processType);
         var pdca = d.pdca ? '<span class="chip-mini pdca">' + esc(d.pdca) + '</span>' : '';
 
-        var action = '', destChip = '';
+        var action = '', destChip = '', cardAct = '';
         if (d.status === '완료') {
-            action = '<span class="mw-done-mark">' + ICO.check + ' 완료</span>';
+            action = '<span class="mw-done-mark">' + ICO.check + ' 완료</span>' +
+                (d.processType === '첨부파일'
+                    ? ' <button type="button" class="btn btn-outline btn-sm" onclick="MYWORK.openAttach(\'' + d.id + '\',\'pub\',true)">' + ICO.clip + ' 첨부 재등록</button>'
+                    : '');
         } else if (d.processType === '첨부파일') {
-            action = '<button type="button" class="btn btn-primary btn-sm" onclick="MYWORK.toggleAttach(\'' + d.id + '\')">' +
-                ICO.clip + ' ' + (state.openAttach[d.id] ? '첨부 닫기' : '파일 첨부') + '</button>';
+            action = '<button type="button" class="btn btn-primary btn-sm" onclick="MYWORK.openAttach(\'' + d.id + '\',\'pub\')">' +
+                ICO.clip + ' 파일 첨부</button>';
+            cardAct = ' onclick="MYWORK.cardAttach(\'' + d.id + '\',\'pub\',event)"';
         } else if (d.processType === '전자문서') {
             destChip = '<span class="mw-dest">' + ICO.arrow + ' 업무 목록에서 작성</span>';
             action = '<a class="btn btn-outline btn-sm" href="docs-preset.html">양식 작성 ' + ICO.arrow + '</a>';
+            cardAct = ' onclick="MYWORK.go(\'docs-preset.html\',event)"';
         } else {
             var menu = (global.DY_MENUS_V2 || {})[d.menuKey];
             var label = menu ? menu.label : '업무 목록';
+            var href = MENU_HREF_V2[d.menuKey] || 'docs-preset.html';
             destChip = '<span class="mw-dest">' + ICO.arrow + ' ' + esc(label) + '에서 진행</span>';
-            action = '<a class="btn btn-outline btn-sm" href="' + esc(MENU_HREF_V2[d.menuKey] || 'docs-preset.html') + '">진행하러 가기 ' + ICO.arrow + '</a>';
+            action = '<a class="btn btn-outline btn-sm" href="' + esc(href) + '">진행하러 가기 ' + ICO.arrow + '</a>';
+            cardAct = ' onclick="MYWORK.go(\'' + esc(href) + '\',event)"';
         }
 
-        var inline = (d.processType === '첨부파일' && state.openAttach[d.id] && d.status !== '완료')
-            ? attachPanel(d.id, 'pub') : '';
+        var inline = '';
 
-        return '<div class="mw-item' + (d.status === '완료' ? ' is-done' : '') + '">' +
+        return '<div class="mw-item' + (d.status === '완료' ? ' is-done' : '') +
+            (cardAct ? ' mw-click' : '') + '"' + cardAct + '>' +
             '<div class="mw-item-head">' +
                 '<div class="mw-item-main">' +
                     typeChip + ' ' + pdca +
@@ -630,6 +690,40 @@
                 '<div class="mw-item-actions">' + action + '</div>' +
             '</div>' + inline +
         '</div>';
+    }
+
+    /* ---- 완료한 업무 뷰 — 마감 할일 완료분 + 발행 업무 완료분 ----
+       첨부형은 [첨부 재등록]으로 추후 수정 가능, 메뉴형은 [보기]로 처리 화면 이동 */
+    function renderDone(items, pubs) {
+        var dueDone = items.filter(function (i) { return i.status === 'DONE'; });
+        var pubDone = pubs.filter(function (d) { return d.status === '완료'; });
+        if (!dueDone.length && !pubDone.length) {
+            return '<div class="mw-empty">아직 완료한 업무가 없습니다.<br>' +
+                '<span style="color:var(--text-lightgray);">마감 할일이나 발행된 업무를 처리하면 여기에 모입니다.</span></div>';
+        }
+        var note =
+            '<div class="mw-pub-note">완료 처리된 업무 모음입니다. ' +
+            '<b>첨부형</b>은 <b>첨부 재등록</b>으로 파일을 나중에 교체할 수 있고, 메뉴 진행형은 처리 화면에서 이력을 확인합니다.</div>';
+        var html = note;
+        if (dueDone.length) {
+            html += '<div class="mw-group mw-g-done">' +
+                '<div class="mw-group-head">' + groupDot('success') +
+                    '<span class="mw-group-label">완료한 마감 할일</span>' +
+                    '<span class="mw-group-count">' + dueDone.length + '건</span>' +
+                '</div>' +
+                '<div class="mw-group-body">' + dueDone.map(itemHtml).join('') + '</div>' +
+            '</div>';
+        }
+        if (pubDone.length) {
+            html += '<div class="mw-group mw-g-done">' +
+                '<div class="mw-group-head">' + groupDot('success') +
+                    '<span class="mw-group-label">완료한 발행 업무</span>' +
+                    '<span class="mw-group-count">' + pubDone.length + '건</span>' +
+                '</div>' +
+                '<div class="mw-group-body">' + pubDone.map(pubItemHtml).join('') + '</div>' +
+            '</div>';
+        }
+        return html;
     }
 
     /* ================= 부서 후보 (DYV2.ORG 파생) ================= */
@@ -652,7 +746,7 @@
     }
 
     /* ================= 액션 ================= */
-    function setDept(id) { state.deptId = id; state.openInline = {}; state.openAttach = {}; render(); }
+    function setDept(id) { state.deptId = id; state.openInline = {}; state.attachCtx = null; render(); }
     function setView(v) { state.view = v; render(); }
     function setStatus(v) { state.fStatus = v; render(); }
     function setCat(v) { state.fCat = v; render(); }
@@ -675,37 +769,37 @@
         render();
     }
 
-    /* ---- 파일 첨부 (프로토타입 모의 흐름) ---- */
-    function toggleAttach(id) {
-        if (state.openAttach[id]) delete state.openAttach[id];
-        else state.openAttach[id] = true;
-        render();
-    }
+    /* ---- 파일 첨부 (프로토타입 모의 흐름 — 팝업 안에서만 갱신) ---- */
     var MOCK_FILES = ['스캔본_서명완료.pdf', '현장사진.jpg', '점검결과.hwp', '증빙자료.zip'];
     function pickFile(id) {
         var files = state.attachFiles[id] = state.attachFiles[id] || [];
         if (files.length >= V().FILE_LIMITS.maxCount) { toast('최대 ' + V().FILE_LIMITS.maxCount + '개까지 첨부할 수 있습니다.'); return; }
         files.push(MOCK_FILES[files.length % MOCK_FILES.length]);
-        render();
+        renderAttachModal();
     }
     function removeFile(id, idx) {
         var files = state.attachFiles[id];
         if (files) files.splice(idx, 1);
-        render();
+        renderAttachModal();
     }
-    function submitAttach(id, kind) {
-        var files = state.attachFiles[id] || [];
+    function submitAttach() {
+        var ctx = state.attachCtx; if (!ctx) return;
+        var files = state.attachFiles[ctx.id] || [];
         if (!files.length) { toast('첨부할 파일을 선택하세요.'); return; }
-        if (kind === 'pub') {
-            var d = (global.DY_DOCS_V2 || []).find(function (x) { return x.id === id; });
+        if (ctx.kind === 'pub') {
+            var d = (global.DY_DOCS_V2 || []).find(function (x) { return x.id === ctx.id; });
             if (d) { d.status = '완료'; d.updated = TODAY_ISO; }
-            toast('첨부 완료 — 업무 목록' + (d && d.setId ? ' (세트 ' + d.setId + ')' : '') + '에 반영되었습니다.');
+            state.pubFiles[ctx.id] = files.slice();
+            toast(ctx.redo ? '첨부 재등록 완료 — 새 파일로 교체되었습니다.'
+                : '첨부 완료 — 업무 목록' + (d && d.setId ? ' (세트 ' + d.setId + ')' : '') + '에 반영되었습니다.');
         } else {
-            state.doneSeeds[id] = { at: TODAY_ISO, files: files.slice() };
-            toast('첨부 완료 — 할일이 완료 그룹으로 이동했습니다.');
+            state.doneSeeds[ctx.id] = { at: TODAY_ISO, files: files.slice() };
+            toast(ctx.redo ? '첨부 재등록 완료 — 새 파일로 교체되었습니다.'
+                : '첨부 완료 — 완료한 업무 탭으로 이동했습니다.');
         }
-        delete state.openAttach[id];
-        delete state.attachFiles[id];
+        delete state.attachFiles[ctx.id];
+        state.attachCtx = null;
+        V().closeModal();
         render();
     }
 
@@ -769,7 +863,8 @@
         if (dv === 'over') state.fStatus = 'overdue';
         else if (dv === 'today') state.fStatus = 'today';
         else if (dv === 'week') state.fStatus = 'week';
-        if (q.get('view') === 'pub') state.view = 'pub';
+        var vw = q.get('view');
+        if (vw === 'pub' || vw === 'done') state.view = vw;
         render();
     }
 
@@ -777,7 +872,8 @@
         init: init, setDept: setDept, setView: setView,
         setStatus: setStatus, setCat: setCat, setSort: setSort, sync: sync,
         setPubType: setPubType, setPubStatus: setPubStatus, kpiFilter: kpiFilter,
-        toggleAttach: toggleAttach, pickFile: pickFile, removeFile: removeFile, submitAttach: submitAttach,
+        go: go, cardAttach: cardAttach,
+        openAttach: openAttach, pickFile: pickFile, removeFile: removeFile, submitAttach: submitAttach,
         toggleRespond: toggleRespond, setRespReason: setRespReason, setRespDue: setRespDue, submitRespond: submitRespond,
         complete: complete, doComplete: doComplete
     };

@@ -1764,33 +1764,6 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 /* dsh-grid 자식 컬럼이 표 min-content 폭에 끌려 넘치지 않게 (표는 내부 스크롤 래퍼가 담당) */
 .dsh-grid > * { min-width: 0; }
 
-/* 현재 권한 안내 바 — 대시보드 최상단 */
-.dsh-rolebar {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 14px;
-  margin-bottom: 16px;
-  background: var(--surface);
-  border: 1px solid var(--card-line);
-  border-radius: var(--radius-statbox);
-  box-shadow: var(--shadow-sm);
-}
-.dsh-rolebar-badge {
-  padding: 3px 10px;
-  font-size: var(--fs-12); font-weight: var(--fw-bold);
-  border-radius: var(--radius-full);
-  border: 1px solid;
-  white-space: nowrap;
-}
-.dsh-rolebar.tier-head  .dsh-rolebar-badge { color: var(--status-purple-fg);  background: var(--status-purple-bg);  border-color: var(--status-purple-border); }
-.dsh-rolebar.tier-super .dsh-rolebar-badge { color: var(--status-info-fg);    background: var(--status-info-bg);    border-color: var(--status-info-border); }
-.dsh-rolebar.tier-staff .dsh-rolebar-badge { color: var(--status-success-fg); background: var(--status-success-bg); border-color: var(--status-success-border); }
-.dsh-rolebar-text {
-  flex: 1; min-width: 0;
-  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
-  font-size: var(--fs-13); color: var(--text-black);
-}
-.dsh-rolebar-law { font-size: var(--fs-12); color: var(--text-gray); }
-
 /* 히어로 밴드 — head: 브랜드 그라디언트 / super(is-dept): 표면 카드 + info 어센트 */
 .dsh-hero {
   display: grid;
@@ -1813,6 +1786,10 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .dsh-hero-delta { margin-top: 8px; font-size: var(--fs-12); opacity: .85; }
 .dsh-hero .progress { background: var(--overlay-btn-bg); }
 .dsh-hero .progress-bar { background: var(--surface); }
+/* 어두운 히어로 위 스파크라인은 흰색 계열로 반전 (is-dept 밝은 변형은 기본 유지) */
+.dsh-hero:not(.is-dept) .dsh-spark { color: var(--surface); opacity: .9; }
+.dsh-hero:not(.is-dept) .dsh-spark svg polyline { stroke: var(--surface); }
+.dsh-hero:not(.is-dept) .dsh-spark svg circle { fill: var(--surface); }
 
 .dsh-hero-stats {
   display: grid;
@@ -1905,6 +1882,119 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .dsh-duty-row:last-child { border-bottom: none; }
 .dsh-duty-row b { font-weight: var(--fw-bold); font-variant-numeric: tabular-nums; }
 
+/* 법정 의무 행 — 근거 조문·주기·마감 D-day (권한별 대시보드 공용, js/dashboard.js lawRow) */
+.dsh-law-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--gray-200);
+  text-decoration: none;
+}
+.dsh-law-row:last-child { border-bottom: none; }
+.dsh-law-row:hover .dsh-law-main b { color: var(--main-dark); text-decoration: underline; }
+.dsh-law-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.dsh-law-main b { font-size: var(--fs-13); font-weight: var(--fw-bold); color: var(--text-black); }
+.dsh-law-meta { font-size: var(--fs-12); color: var(--text-gray); }
+.dsh-law-dday {
+  flex-shrink: 0;
+  font-size: var(--fs-12); font-weight: var(--fw-bold); font-variant-numeric: tabular-nums;
+  padding: 1px 8px; border-radius: var(--radius-xs);
+  background: var(--gray-100); color: var(--text-gray);
+}
+.dsh-law-dday.over { background: var(--status-danger-bg); color: var(--status-danger-fg); }
+.dsh-law-dday.soon { background: var(--status-warning-bg); color: var(--status-warning-fg); }
+.dsh-law-note {
+  font-size: var(--fs-12); color: var(--text-gray); line-height: 1.5;
+  background: var(--surface-alt); border: 1px solid var(--card-line); border-radius: var(--radius-button);
+  padding: 8px 10px; margin-bottom: 10px;
+}
+.dsh-law-note b { color: var(--text-black); }
+
+/* ── 대시보드 시각화 계열 (js/dashboard.js 전용, 라이브러리 없음·토큰만) ── */
+/* 스파크라인 (히어로 12개월 추이) */
+.dsh-spark { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: var(--fs-12); color: var(--text-gray); }
+.dsh-spark svg { flex: 1; height: 34px; min-width: 0; }
+.dsh-spark-label { flex-shrink: 0; }
+
+/* 부서 × 의무 히트맵 */
+.dsh-heat-wrap { overflow-x: auto; }
+.dsh-heat { border-collapse: separate; border-spacing: 3px; width: 100%; min-width: 480px; }
+.dsh-heat th { font-size: var(--fs-12); color: var(--text-gray); font-weight: var(--fw-bold); padding: 2px 4px; text-align: center; white-space: nowrap; }
+.dsh-heat th.rowh { text-align: left; }
+.dsh-heat td { padding: 0; }
+.dsh-heat-cell {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; height: 22px; min-width: 22px;
+  border-radius: var(--radius-xs); border: 1px solid transparent;
+  font-size: var(--fs-12); font-weight: var(--fw-bold); cursor: pointer;
+}
+.dsh-heat-cell.ok  { background: var(--status-success-bg); border-color: var(--status-success-border); color: var(--status-success-fg); }
+.dsh-heat-cell.run { background: var(--status-warning-bg); border-color: var(--status-warning-border); color: var(--status-warning-fg); }
+.dsh-heat-cell.bad { background: var(--status-danger-bg);  border-color: var(--status-danger-border);  color: var(--status-danger-fg); }
+.dsh-heat-cell:hover { box-shadow: var(--shadow-sm); }
+.dsh-viz-legend { display: flex; gap: 12px; margin-top: 8px; font-size: var(--fs-12); color: var(--text-gray); flex-wrap: wrap; }
+.dsh-viz-legend i { display: inline-block; width: 12px; height: 12px; border-radius: var(--radius-xs); margin-right: 4px; vertical-align: -1px; border: 1px solid var(--card-line); }
+
+/* 월별 미니 막대 (재해·아차사고 추이) */
+.dsh-mbar { display: flex; align-items: flex-end; gap: 4px; height: 76px; }
+.dsh-mbar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px; height: 100%; }
+.dsh-mbar-bar { width: 100%; max-width: 22px; min-height: 2px; border-radius: var(--radius-xs) var(--radius-xs) 0 0; background: var(--status-info-fg); }
+.dsh-mbar-col.zero .dsh-mbar-bar { background: var(--gray-200); }
+.dsh-mbar-col.future .dsh-mbar-bar { background: var(--gray-100); }
+.dsh-mbar-lbl { font-size: var(--fs-12); color: var(--text-lightgray); }
+.dsh-mbar-num { font-size: var(--fs-12); font-weight: var(--fw-bold); color: var(--text-gray); font-variant-numeric: tabular-nums; }
+
+/* 도넛 (예산 집행) — conic-gradient */
+.dsh-donut-wrap { display: flex; gap: 16px; align-items: center; margin-bottom: 10px; }
+.dsh-donut { width: 108px; height: 108px; border-radius: var(--radius-full); flex-shrink: 0; position: relative; }
+.dsh-donut::after {
+  content: attr(data-center); position: absolute; inset: 15px;
+  background: var(--surface); border-radius: var(--radius-full);
+  display: flex; align-items: center; justify-content: center;
+  font-size: var(--fs-14); font-weight: var(--fw-bold); color: var(--text-black);
+}
+.dsh-donut-legend { flex: 1; min-width: 0; }
+.dsh-legend-row { display: flex; align-items: center; gap: 6px; font-size: var(--fs-12); color: var(--text-gray); padding: 2px 0; }
+.dsh-legend-row i { width: 10px; height: 10px; border-radius: var(--radius-xs); flex-shrink: 0; }
+.dsh-legend-row b { margin-left: auto; color: var(--text-black); font-variant-numeric: tabular-nums; }
+
+/* 단계 파이프라인 (위험성평가 흐름) */
+.dsh-funnel { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
+.dsh-funnel-row { display: flex; align-items: center; gap: 8px; font-size: var(--fs-12); }
+.dsh-funnel-row .fn-label { width: 84px; flex-shrink: 0; color: var(--text-gray); font-weight: var(--fw-bold); }
+.dsh-funnel-bar {
+  height: 18px; min-width: 28px; border-radius: var(--radius-xs);
+  background: var(--brand-100); color: var(--main-dark);
+  display: flex; align-items: center; justify-content: flex-end;
+  padding: 0 6px; font-weight: var(--fw-bold); font-variant-numeric: tabular-nums;
+}
+
+/* D-day 구간 스트립 (내 할일 분포) */
+.dsh-stack { display: flex; height: 28px; border-radius: var(--radius-button); overflow: hidden; border: 1px solid var(--card-line); margin-bottom: 16px; }
+.dsh-stack a {
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  font-size: var(--fs-12); font-weight: var(--fw-bold); text-decoration: none;
+  min-width: 0; white-space: nowrap; overflow: hidden; padding: 0 4px;
+}
+.dsh-stack a.t-danger  { background: var(--status-danger-bg);  color: var(--status-danger-fg); }
+.dsh-stack a.t-warning { background: var(--status-warning-bg); color: var(--status-warning-fg); }
+.dsh-stack a.t-info    { background: var(--status-info-bg);    color: var(--status-info-fg); }
+.dsh-stack a.t-neutral { background: var(--gray-100);          color: var(--text-gray); }
+.dsh-stack a:hover { filter: brightness(.97); }
+
+/* 연간 로드맵 (미니 간트) */
+.dsh-road-wrap { overflow-x: auto; }
+.dsh-road { min-width: 560px; display: flex; flex-direction: column; gap: 4px; }
+.dsh-road-head, .dsh-road-row { display: grid; grid-template-columns: 150px repeat(12, 1fr); gap: 2px; align-items: center; }
+.dsh-road-head span { font-size: var(--fs-12); color: var(--text-lightgray); text-align: center; }
+.dsh-road-head span.now { color: var(--main-dark); font-weight: var(--fw-bold); }
+.dsh-road-label { font-size: var(--fs-12); font-weight: var(--fw-bold); color: var(--text-black); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 6px; }
+.dsh-road-cell { height: 16px; border-radius: var(--radius-xs); background: var(--gray-100); }
+.dsh-road-cell.done { background: var(--status-success-bg); border: 1px solid var(--status-success-border); }
+.dsh-road-cell.due  { background: var(--status-info-bg);    border: 1px solid var(--status-info-border); }
+.dsh-road-cell.over { background: var(--status-danger-bg);  border: 1px solid var(--status-danger-border); }
+.dsh-road-cell.always { background: var(--brand-50); }
+.dsh-road-cell.now { outline: 2px solid var(--main); outline-offset: -2px; }
+
 /* 결재·확인 대기 행 */
 .dsh-approve-row {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
@@ -1920,5 +2010,4 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
   .dsh-hero { grid-template-columns: 1fr; padding: 18px; }
   .dsh-chain { flex-direction: column; }
   .dsh-chain-arrow { transform: rotate(90deg); }
-  .dsh-rolebar { flex-wrap: wrap; }
 }

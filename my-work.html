@@ -91,8 +91,15 @@
         /* 첨부 완료 마크 */
         .mw-done-mark { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-12); font-weight: 700; color: var(--status-success-fg); padding: 4px 10px; background: var(--status-success-bg); border: 1px solid var(--status-success-border); border-radius: var(--radius-full); }
 
-        /* 인라인 첨부 패널 + 파일 필 */
+        /* 카드 자체 클릭 = 대표 액션 (메뉴 이동 · 첨부 팝업) */
+        .mw-item.mw-click { cursor: pointer; transition: background .12s ease; }
+        .mw-item.mw-click:hover { background: var(--brand-50); }
+        .mw-item.mw-click.remind:hover { background: var(--status-warning-bg); }
+
+        /* 첨부 팝업(모달) 본문 + 파일 필 */
         .mw-attach .upload-drop { padding: 18px 12px; font-size: var(--fs-13); }
+        .mw-attach-target { font-size: var(--fs-13); font-weight: 700; color: var(--text-black); margin: 0 0 10px; }
+        .mw-attach-note { font-size: var(--fs-12); color: var(--text-gray); background: var(--surface-alt); border: 1px solid var(--card-line); border-radius: var(--radius-button); padding: 8px 10px; margin: 0 0 10px; line-height: 1.5; }
         .mw-file-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
         .mw-file-pill { display: inline-flex; align-items: center; gap: 5px; padding: 4px 6px 4px 10px; border-radius: var(--radius-full); background: var(--surface); border: 1px solid var(--card-line); font-size: var(--fs-12); font-weight: 600; color: var(--text-black); }
         .mw-file-x { border: none; background: var(--gray-200); color: var(--text-gray); width: 18px; height: 18px; border-radius: 50%; cursor: pointer; font-size: var(--fs-12); line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
@@ -119,7 +126,7 @@
 
         .mw-empty { background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); padding: 40px 20px; text-align: center; color: var(--text-lightgray); font-size: var(--fs-13); }
 
-        @media (max-width: 900px) {
+        @media (max-width: 767px) {
             .mw-kpis { grid-template-columns: repeat(2, 1fr); }
         }
     </style>
@@ -130,8 +137,9 @@
     <main>
         <div class="check-notice">
             부서 담당자 관점에서 처리할 <b>전 업무</b>를 통합해서 보여줍니다.
-            KPI 칩을 <b>클릭하면 바로 필터</b>되고, <b>발행된 업무</b> 탭에는 업무 목록에서 이 부서로 발행된 담당 문서가 모입니다.
-            파일 첨부형 업무는 카드에서 <b>바로 첨부해 완료</b>하고, 메뉴 진행형은 처리 위치로 이동합니다.
+            상단 알림에서 넘어오면 여기서 <b>카드를 눌러 바로 처리</b>할 수 있습니다 —
+            첨부형은 <b>팝업에서 파일 첨부</b>, 메뉴 진행형은 처리 화면으로 이동합니다.
+            완료한 업무는 <b>완료한 업무</b> 탭에 모이고, 첨부형은 <b>첨부 재등록</b>으로 나중에 파일을 교체할 수 있습니다.
         </div>
         <div id="mw-root"></div>
     </main>

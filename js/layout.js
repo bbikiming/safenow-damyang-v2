@@ -113,19 +113,22 @@
      * 알림 (헤더 드롭다운) — 데이터 구동 + 읽음 상태 (UX 개편 2026-07-21)
      *   · 항목 데이터 NTF_ITEMS 단일 배열 → 배지·"안 읽음 N건"·목록이 전부 여기서 파생
      *   · 읽음 상태: sessionStorage(dy-ntf-read-v1) — 클릭/모두 읽음 시 저장
-     *   · 카테고리 칩 필터 · work 링크가 있으면 "내 할일에서 처리" 바로가기 노출
+     *   · 카테고리 칩 필터 · 항목 클릭 = 내 할일(work)로 이동해 그 자리에서 처리,
+     *     원 처리 화면(href)은 보조 링크 "해당 화면 바로 열기"로 노출 (2026-07-21)
      * ========================================================================= */
     const NTF_ITEMS = [
         { id: 'n1', cat: 'approval',   catLabel: '결재',       time: '14:23',
           title: '안전·보건 목표와 경영방침 결재 요청 (온나라)', href: 'menu.html?m=policy',
           work: 'my-work.html?cat=approval' },
         { id: 'n2', cat: 'assignment', catLabel: '지정',       time: '09:15',
-          title: '군청 청사 관리책임자로 자동 지정', href: 'base-targets.html' },
+          title: '군청 청사 관리책임자로 자동 지정', href: 'base-targets.html',
+          work: 'my-work.html' },
         { id: 'n3', cat: 'compliance', catLabel: '이행',       time: '08:00',
           title: '의무이행 점검표 반기 마감 기한 초과 (D+8)', href: 'menu.html?m=comply',
           work: 'my-work.html?cat=comply' },
         { id: 'n4', cat: 'inspection', catLabel: '점검',       time: '어제 18:00',
-          title: '기준문서함 2차 검토 대상 16건 분류 확인 요청', href: 'docs-archive.html' },
+          title: '기준문서함 2차 검토 대상 16건 분류 확인 요청', href: 'docs-archive.html',
+          work: 'my-work.html?cat=inspection' },
         { id: 'n5', cat: 'risk',       catLabel: '위험성평가', time: '어제 14:30',
           title: '물순환사업소 개선조치 기한초과 재촉', href: 'my-work.html?dept=water&cat=improve',
           work: 'my-work.html?dept=water&cat=improve' },
@@ -181,11 +184,14 @@
     }
     function ntfItemHtml(n, readSet) {
         const unread = ntfIsUnread(n.id, readSet);
-        const workLink = n.work
-            ? '<a class="dy-ntf-worklink" href="' + n.work + '" onclick="event.stopPropagation();DYLayout._ntfRead(\'' + n.id + '\')">내 할일에서 처리 →</a>'
+        /* 항목 클릭 = 내 할일로 이동 (거기서 첨부 팝업·메뉴 이동으로 이어짐).
+           원 처리 화면은 보조 링크로 바로 열 수 있게 유지. */
+        const workHref = n.work || 'my-work.html';
+        const workLink = (n.href && n.href !== workHref)
+            ? '<a class="dy-ntf-worklink" href="' + n.href + '" onclick="event.stopPropagation();DYLayout._ntfRead(\'' + n.id + '\')">해당 화면 바로 열기 →</a>'
             : '';
         return '<div class="dy-ntf-item' + (unread ? ' is-unread' : '') + '" role="link" tabindex="0"' +
-            ' data-id="' + n.id + '" data-href="' + n.href + '" aria-label="' + n.catLabel + ' 알림: ' + n.title + '">' +
+            ' data-id="' + n.id + '" data-href="' + workHref + '" aria-label="' + n.catLabel + ' 알림: ' + n.title + ' — 내 할일에서 처리">' +
             '<span class="dy-ntf-dot ' + n.cat + '"></span>' +
             '<div class="dy-ntf-item-body">' +
                 '<div class="dy-ntf-item-head"><span class="dy-ntf-item-cat ' + n.cat + '">' + n.catLabel + '</span></div>' +
