@@ -98,7 +98,13 @@
         .ev-modal-footer .btns { display:flex; gap:8px; margin-left:auto; }
 
         /* 평가기준 안내 */
-        .ev-criteria { display:flex; flex-direction:column; gap:5px; padding:12px 14px; background:var(--brand-50); border:1px solid var(--status-success-border); border-radius:var(--radius-button); margin-bottom:16px; }
+        .ev-criteria { margin-bottom:16px; font-size:12px; }
+        .ev-criteria > summary { display:inline-flex; align-items:center; gap:4px; padding:8px 12px; background:var(--brand-50); border:1px solid var(--status-success-border); border-radius:var(--radius-button); color:var(--main-dark2); font-weight:700; cursor:pointer; list-style:none; }
+        .ev-criteria > summary::-webkit-details-marker { display:none; }
+        .ev-criteria > summary::before { content:'▸'; font-size:9px; }
+        .ev-criteria[open] > summary { border-radius:var(--radius-button) var(--radius-button) 0 0; }
+        .ev-criteria[open] > summary::before { content:'▾'; }
+        .ev-criteria-body { display:flex; flex-direction:column; gap:5px; padding:12px 14px; background:var(--brand-50); border:1px solid var(--status-success-border); border-top:none; border-radius:0 0 var(--radius-button) var(--radius-button); }
         .ev-criteria .row { font-size:12px; color:var(--text-black); line-height:1.5; }
         .ev-criteria .row b { display:inline-block; min-width:42px; font-weight:700; }
         .ev-criteria .row.good b   { color:var(--status-success-fg); }
@@ -110,6 +116,13 @@
         .ev-item:last-child { border-bottom:none; }
         .ev-item-no { width:24px; height:24px; border-radius:7px; background:var(--brand-100); color:var(--main-dark2); font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; }
         .ev-item-task { font-size:13px; color:var(--text-black); line-height:1.45; }
+        /* 세부평가기준 — 기본 접힘(간결). 필요 시 펼쳐서 확인(RFP: 항목별 세부평가기준 적용) */
+        .ev-item-crit { margin-top:4px; font-size:11.5px; }
+        .ev-item-crit summary { display:inline-flex; align-items:center; gap:3px; color:var(--main-dark2); font-weight:700; cursor:pointer; list-style:none; user-select:none; }
+        .ev-item-crit summary::-webkit-details-marker { display:none; }
+        .ev-item-crit summary::before { content:'▸'; font-size:9px; }
+        .ev-item-crit[open] summary::before { content:'▾'; }
+        .ev-item-crit > div { margin-top:4px; padding:6px 9px; background:var(--brand-50); border:1px solid var(--status-success-border); border-radius:var(--radius-xs); color:var(--text-gray); line-height:1.5; }
         .ev-judge-group { display:inline-flex; gap:14px; }
         .ev-judge-label { display:inline-flex; align-items:center; gap:5px; cursor:pointer; font-size:13px; }
         .ev-judge-label input { accent-color:var(--main); width:15px; height:15px; cursor:pointer; }
@@ -373,12 +386,15 @@
                 </button>
             </div>
             <div class="ev-modal-body">
-                <div class="ev-criteria">
-                    <div class="row good"><b>양호</b> 법령에 따른 업무수행으로 안전보건목표 달성·재해예방 기여</div>
-                    <div class="row normal"><b>보통</b> 법령에 따른 업무를 적절하게 수행</div>
-                    <div class="row poor"><b>미흡</b> 법령에 따른 업무를 일부 수행하지 않음</div>
-                    <div class="row" style="margin-top:5px; border-top:1px solid var(--status-success-border); padding-top:7px; color:var(--text-gray);"><b style="min-width:42px; color:var(--main-dark2);">종합</b> 미흡 항목이 1개라도 있으면 「미흡」, 전 항목 양호면 「양호」, 그 외 「보통」으로 자동 산출</div>
-                </div>
+                <details class="ev-criteria">
+                    <summary>평가 등급 기준 (양호·보통·미흡)</summary>
+                    <div class="ev-criteria-body">
+                        <div class="row good"><b>양호</b> 법령에 따른 업무수행으로 안전보건목표 달성·재해예방 기여</div>
+                        <div class="row normal"><b>보통</b> 법령에 따른 업무를 적절하게 수행</div>
+                        <div class="row poor"><b>미흡</b> 법령에 따른 업무를 일부 수행하지 않음</div>
+                        <div class="row" style="margin-top:5px; border-top:1px solid var(--status-success-border); padding-top:7px; color:var(--text-gray);"><b style="min-width:42px; color:var(--main-dark2);">종합</b> 미흡 항목이 1개라도 있으면 「미흡」, 전 항목 양호면 「양호」, 그 외 「보통」으로 자동 산출</div>
+                    </div>
+                </details>
                 <div id="eval-items"></div>
             </div>
             <div class="ev-modal-footer">
@@ -452,6 +468,8 @@
 
     <script src="./js/layout.js"></script>
     <script src="./js/common.js"></script>
+    <script src="./js/sh-data.js"></script>
+    <script src="./js/evl-data.js"></script>
     <script>
     (function () {
         'use strict';
@@ -459,26 +477,10 @@
         const CURRENT_USER = '박안전';
         const TODAY = '2026-06-30';
 
-        /* ─── 공식 평가 항목 (담양 기능요구사항) ─── */
-        const ITEMS = {
-            RESPONSIBLE: [
-                '사업장 산재 예방 계획 수립',
-                '안전보건관리규정의 작성 및 변경',
-                '안전보건교육 이행, 작업환경측정 등 작업환경의 점검 및 개선',
-                '종사자의 건강진단 등 건강관리',
-                '산업재해 원인조사 및 재발방지 대책 수립',
-                '산업재해에 관한 통계의 기록 및 유지관리',
-                '안전장치 및 보호구 구입 시 적격품 여부 확인',
-                '위험성평가 실시 등',
-            ],
-            SUPERVISOR: [
-                '종사자 안전보건에 관한 사항 확인',
-                '사업장 내 기계기구 또는 설비의 안전보건 점검 및 이상 유무 확인',
-                '보호장치 및 방호장치 점검 및 착용·사용 교육·지도',
-                '산업재해에 관한 보고, 안전보건관리자 등 지도·조언에 대한 이행',
-                '유해위험요인의 파악 및 개선조치 여부 확인',
-            ],
-        };
+        /* ─── 공식 평가 항목·세부평가기준 — 단일 출처 DYEVL(js/evl-data.js)에서 파생 ───
+         *   설정화면(evl-settings)이 같은 DYEVL을 편집하므로 변경이 평가화면에 반영된다. */
+        const ITEMS = { RESPONSIBLE: DYEVL.titles('RESPONSIBLE'), SUPERVISOR: DYEVL.titles('SUPERVISOR') };
+        const CRITERIA = { RESPONSIBLE: DYEVL.criteria('RESPONSIBLE'), SUPERVISOR: DYEVL.criteria('SUPERVISOR') };
         const GRADES = ['미흡', '보통', '양호'];
         const GKEY = { '미흡': 'poor', '보통': 'normal', '양호': 'good' };
 
@@ -682,15 +684,66 @@
         let evalCtx = null;
         let evalMode = 'edit';
 
-        function buildItems(items, grades, disabled) {
+        /* ─── 산업보건관리(작업환경측정·건강검진) 이행현황 자동 연계 패널 ───
+         *   완료 결과·증빙을 안전보건관리책임자 평가 2개 항목에 참고지표로 자동 표시.
+         *   읽기전용 연계 — 최종 등급은 평가자 판단. 데이터: js/sh-data.js(DYSH) */
+        function shEsc(s) { return window.DYV2 ? DYV2.esc(String(s == null ? '' : s)) : String(s == null ? '' : s); }
+        function shIcon() { return window.DYSH ? DYSH.icon('link', 13) : ''; }
+        function shYear() { return window.DYSH ? DYSH.CURYEAR : 2026; }
+        function shLinkNone(name, href, dept) {
+            return '<div class="sh-evlink plain"><div class="h">' + shIcon() + ' ' + name + ' 이행현황 (자동 연계)</div>' +
+                '<div class="muted">해당 부서(' + shEsc(dept) + ')의 ' + shYear() + '년 ' + name + ' 대상 건이 없습니다. ' +
+                '<a href="' + href + '?dept=' + encodeURIComponent(dept) + '">' + name + ' 목록 →</a></div></div>';
+        }
+        /* 과거연도 평가표 조회 시: 연계 지표는 당해연도 기준이므로 과거 실적을 붙이지 않는다(연도 불일치 방지) */
+        function shPastNote(name, href) {
+            return '<div class="sh-evlink plain"><div class="h">' + shIcon() + ' ' + name + ' 이행현황 (자동 연계)</div>' +
+                '<div class="muted">이행현황 지표는 <b>당해연도(' + shYear() + ')</b> 기준으로만 제공됩니다. 과거 평가 조회에는 표시하지 않습니다. ' +
+                '<a href="' + href + '">' + name + ' 목록 →</a></div></div>';
+        }
+        /* 자동연계 지표 — 세부평가기준과 동일한 접힘식(간결). 요약줄에 핵심 지표를 유지 */
+        function evLinkPanel(itemText, ctx) {
+            if (!ctx || ctx.role !== 'RESPONSIBLE' || !window.DYSH || !ctx.dept) return '';
+            var isWE = itemText.indexOf('작업환경측정') >= 0, isHC = itemText.indexOf('건강진단') >= 0;
+            if (!isWE && !isHC) return '';
+            var past = ctx.year && Number(ctx.year) !== DYSH.CURYEAR;
+            if (isWE) {
+                if (past) return shPastNote('작업환경측정', 'work-env.html');
+                var s = DYSH.workEnvLink(ctx.dept);
+                if (!s.total) return shLinkNone('작업환경측정', 'work-env.html', ctx.dept);
+                return '<details class="sh-evlink"><summary>' + shIcon() + ' 작업환경측정 이행현황 · 이행률 <b>' + (s.rate == null ? '-' : s.rate + '%') + '</b></summary>' +
+                    '<div class="body"><div class="metrics">' +
+                        '<span>측정 이행률 <b>' + (s.rate == null ? '-' : s.rate + '%') + '</b> (완료 ' + s.measured + '/' + s.total + ')</span>' +
+                        '<span>개선 필요 <b>' + s.improve + '건</b></span>' +
+                        '<span>기한 초과 <b>' + s.overdue + '건</b></span>' +
+                    '</div>' +
+                    '<div style="margin-top:5px;"><a href="work-env.html?dept=' + encodeURIComponent(ctx.dept) + '">증빙·상세 보기 →</a> ' +
+                    '<span class="muted">· ' + shYear() + ' 기준 · 최종 등급은 평가자가 판단</span></div></div></details>';
+            }
+            if (past) return shPastNote('건강검진', 'health-exam.html');
+            var h = DYSH.healthLink(ctx.dept);
+            if (!h.target) return shLinkNone('건강검진', 'health-exam.html', ctx.dept);
+            return '<details class="sh-evlink"><summary>' + shIcon() + ' 건강검진 이행현황 · 수검률 <b>' + (h.rate == null ? '-' : h.rate + '%') + '</b></summary>' +
+                '<div class="body"><div class="metrics">' +
+                    '<span>수검률 <b>' + (h.rate == null ? '-' : h.rate + '%') + '</b> (수검 ' + h.examined + '/' + h.target + '명)</span>' +
+                    '<span>사후관리 <b>' + h.followup + '건</b></span>' +
+                    '<span>기한 초과 <b>' + h.overdue + '건</b></span>' +
+                '</div>' +
+                '<div style="margin-top:5px;"><a href="health-exam.html?dept=' + encodeURIComponent(ctx.dept) + '">증빙·상세 보기 →</a> ' +
+                '<span class="muted">· ' + shYear() + ' 기준 · 최종 등급은 평가자가 판단</span></div></div></details>';
+        }
+
+        function buildItems(items, grades, disabled, ctx) {
+            const crit = ctx && CRITERIA[ctx.role] ? CRITERIA[ctx.role] : null;
             return items.map((t, i) => {
                 const g = grades ? grades[i] : null;
                 const radios = GRADES.map(gr =>
                     '<label class="ev-judge-label ' + GKEY[gr] + '"><input type="radio" name="g' + i + '" value="' + gr + '"' +
                     (g === gr ? ' checked' : '') + (disabled ? ' disabled' : ' onchange="window.EVL.tickEval()"') + '><span>' + gr + '</span></label>'
                 ).join('');
+                const critHtml = (crit && crit[i]) ? '<details class="ev-item-crit"><summary>세부평가기준</summary><div>' + crit[i] + '</div></details>' : '';
                 return '<div class="ev-item"><div class="ev-item-no">' + (i + 1) + '</div>' +
-                       '<div class="ev-item-task">' + t + '</div>' +
+                       '<div class="ev-item-task">' + t + critHtml + evLinkPanel(t, ctx) + '</div>' +
                        '<div class="ev-judge-group">' + radios + '</div></div>';
             }).join('');
         }
@@ -702,7 +755,7 @@
             evalMode = 'edit';
             document.getElementById('eval-title').textContent = evalYear + ' ' + (half === 'H1' ? '상반기' : '하반기') + ' · ' + row.roleLabel + ' 평가표';
             document.getElementById('eval-sub').textContent = '피평가자 ' + row.name + ' (' + row.team + ') · 평가자 ' + (c.evaluator || '-') + (c.draft ? ' · 임시저장 이어작성' : '');
-            evalItems$.innerHTML = buildItems(ITEMS[row.role], c.grades, false);
+            evalItems$.innerHTML = buildItems(ITEMS[row.role], c.grades, false, { dept: currentDept, role: row.role, year: parseInt(evalYear, 10) });
             document.getElementById('eval-foot-stat').innerHTML = '평가 항목 <strong id="eval-progress">0/0</strong>';
             document.getElementById('eval-save').style.display = '';
             document.getElementById('eval-draft').style.display = '';
@@ -718,7 +771,7 @@
             evalMode = 'view';
             document.getElementById('eval-title').textContent = r.cycle + ' · ' + r.roleLabel + ' 평가표';
             document.getElementById('eval-sub').textContent = '피평가자 ' + r.name + ' (' + r.team + ') · 평가자 ' + r.evaluator + ' · 평가일자 ' + r.date;
-            evalItems$.innerHTML = buildItems(ITEMS[r.role], r.grades, true);
+            evalItems$.innerHTML = buildItems(ITEMS[r.role], r.grades, true, { dept: r.dept, role: r.role, year: parseInt(r.cycle, 10) });
             document.getElementById('eval-foot-stat').innerHTML = '종합 결과 ' + gradeBadge(r.result) + ' <span style="color:var(--text-lightgray); margin-left:6px;">조회 전용</span>';
             document.getElementById('eval-save').style.display = 'none';
             document.getElementById('eval-draft').style.display = 'none';
@@ -986,9 +1039,10 @@
                 meta: [
                     ['부서', dept],
                     ['평가 대상', recs.length + '명 (안전보건관리책임자 · 관리감독자)'],
+                    ['권한·예산 부여 <span style="font-weight:400;color:#888;">(§4①5호 가목)</span>', '안전보건 예산 편성·집행(예산관리) · 안전보건관리책임자 권한 부여(위임전결) — <b>부여 완료</b>'],
                     ['작성자', '박안전 (재난안전과 중대재해팀)'],
                     ['작성일', TODAY],
-                    ['근거 법령', '중대재해처벌법 시행령 제4조제1항제5호'],
+                    ['근거 법령', '중대재해처벌법 시행령 제4조제1항제5호 (가. 권한·예산 부여 · 나. 반기 1회 평가)'],
                 ],
                 tableTitle: '평가 결과 목록',
                 table: {
@@ -1012,7 +1066,7 @@
             if (opts.mode === 'approval') {
                 banner.style.display = 'flex';
                 banner.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>'
-                    + '<span>아래 미리보기를 확인한 뒤 <strong>[온나라로 결재 상신]</strong>을 누르면 <strong>온나라 전자결재</strong> 시스템으로 문서 결재가 진행됩니다. (결재선: 평가자 → 부서장 → 군수)</span>';
+                    + '<span>이 보고서를 <strong>규격 기안문</strong>으로 <strong>온나라 전자결재</strong>에 상신합니다(호출기안 연계). 결재선 <strong>평가자 → 부서장(검토) → 군수(결재)</strong> · 결재 완료 시 온나라가 부여한 <strong>문서등록번호·결재일</strong>을 회신 등록해 평가 이력과 연결합니다.</span>';
             } else {
                 banner.style.display = 'none';
             }
@@ -1038,9 +1092,24 @@
         }
         function printDoc() { window.print(); }
         function submitOnnara() {
-            if (!window.confirm('온나라 전자결재 시스템으로 결재를 상신할까요?\n결재선: 평가자 → 부서장 → 군수')) return;
+            if (!window.confirm('규격 기안문으로 온나라 전자결재에 상신할까요?\n연계 방식: 호출기안 · 결재선: 평가자 → 부서장(검토) → 군수(결재)')) return;
             closeDoc();
-            toast('온나라 전자결재로 결재 상신되었습니다 — 결재선: 평가자 → 부서장 → 군수 (목업)');
+            /* 온나라 결재결과 회신 등록(1단계 연계) — 상신 후 결재 완료 시 부여되는 문서등록번호·결재일을 시스템에 회신 저장 */
+            const mockNo = '재난안전과-' + Math.floor(1000 + Math.random() * 9000);
+            DYV2.openModal('온나라 결재결과 회신 등록',
+                '<p style="font-size:13px;line-height:1.6;margin-bottom:12px;color:var(--text-gray);">규격 기안문이 온나라로 상신되었습니다. 온나라에서 <b>결재 완료</b> 시 부여되는 <b>문서등록번호</b>·결재일을 등록하면 평가 이력과 연결됩니다. <span style="color:var(--text-lightgray);">(프로토타입 — 실제 연계 시 온나라가 자동 회신)</span></p>' +
+                '<div style="margin-bottom:12px;"><label class="form-label" for="onnara-docno">문서등록번호 <span style="color:var(--text-lightgray);font-weight:400;">(온나라 부여)</span></label>' +
+                    '<input type="text" class="form-input" id="onnara-docno" value="' + mockNo + '"></div>' +
+                '<div><label class="form-label" for="onnara-date">결재일</label>' +
+                    '<input type="date" class="form-input" id="onnara-date" value="' + TODAY + '"></div>',
+                '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">나중에</button>' +
+                '<button type="button" class="btn btn-primary" onclick="window.EVL.saveOnnara()">회신 등록</button>');
+        }
+        function saveOnnara() {
+            const no = (document.getElementById('onnara-docno').value || '').trim();
+            const dt = document.getElementById('onnara-date').value || TODAY;
+            DYV2.closeModal();
+            toast('온나라 결재 완료 회신 등록 · 문서번호 ' + (no || '-') + ' · 결재일 ' + dt + ' (목업)');
         }
         function closeDoc() { docModal$.classList.remove('is-open'); }
 
@@ -1074,7 +1143,7 @@
                 const q = document.getElementById('hist-f-q'); if (q) q.value = '';
                 renderHistory();
             },
-            openApproval, openDocFromView, printDoc, submitOnnara, closeDoc,
+            openApproval, openDocFromView, printDoc, submitOnnara, saveOnnara, closeDoc,
         };
 
         /* 초기 렌더 */

@@ -350,46 +350,7 @@
         .evl-meta-count { font-size: 14px; color: var(--text-gray); }
         .evl-meta-count strong { color: var(--main); font-weight: 700; }
 
-        /* 일괄 생성 모달 */
-        .evl-modal-backdrop {
-            position: fixed; inset: 0;
-            background: rgba(15, 23, 42, 0.5);
-            display: none;
-            align-items: center; justify-content: center;
-            z-index: 100;
-            padding: 20px;
-        }
-        .evl-modal-backdrop.is-open { display: flex; }
-        .evl-modal {
-            background: white;
-            border-radius: var(--radius-card);
-            width: 100%; max-width: 540px;
-            max-height: 90vh; overflow: hidden;
-            display: flex; flex-direction: column;
-            box-shadow: 0 16px 40px rgba(0,0,0,0.2);
-        }
-        .evl-modal-header {
-            padding: 18px 24px;
-            border-bottom: 1px solid var(--card-line);
-            display: flex; align-items: center; justify-content: space-between;
-        }
-        .evl-modal-title {
-            font-size: 18px; font-weight: 700; color: var(--main-dark2);
-        }
-        .evl-modal-close {
-            width: 32px; height: 32px;
-            display: inline-flex; align-items: center; justify-content: center;
-            background: none; border: none; cursor: pointer;
-            color: var(--text-gray);
-            border-radius: 8px;
-        }
-        .evl-modal-close:hover { background: var(--gray-100); color: var(--text-black); }
-        .evl-modal-body { padding: 20px 24px; overflow-y: auto; flex: 1; }
-        .evl-modal-footer {
-            padding: 14px 24px;
-            border-top: 1px solid var(--card-line);
-            display: flex; justify-content: flex-end; gap: 8px;
-        }
+        /* (일괄 생성 모달 CSS 삭제 — 마크업·호출부 없는 사문화 코드였음. 모달은 DYV2.openModal §1) */
         .evl-form-row { margin-bottom: 14px; }
         .evl-form-row .label {
             display: block;
@@ -488,6 +449,7 @@
     <div id="toast" class="toast" role="status"></div>
 
     <script src="./js/layout.js"></script>
+    <script src="./js/common.js"></script>
     <script>
     (function () {
         'use strict';
