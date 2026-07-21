@@ -158,23 +158,7 @@
         '</div></div>';
     }
 
-    /* =============== 회차(일자 탭) ===============
-     * 교육은 하루에 끝나지 않는다 — 일자 + 시작~종료 시각을 회차로 등록하고,
-     * 교육 시간은 회차 합계로 자동 산정한다(직접 입력 금지 · DYEDU.sumSessionHours 단일 출처). */
-    var MAX_SESSIONS = 5;
-    function sessHours(s) { return E().sessionHours(s); }
-    function totalHours() { return E().sumSessionHours(F.sessions); }
-    function addDays(iso, n) {
-        var p = String(iso || '').split('-');
-        if (p.length !== 3) return iso;
-        var d = new Date(+p[0], +p[1] - 1, +p[2] + n);
-        var mm = d.getMonth() + 1, dd = d.getDate();
-        return d.getFullYear() + '-' + (mm < 10 ? '0' : '') + mm + '-' + (dd < 10 ? '0' : '') + dd;
-    }
-    function mdLabel(iso) {
-        var p = String(iso || '').split('-');
-        return p.length === 3 ? p[1] + '/' + p[2] : '일자 미정';
-    }
+    /* 회차(일자 탭)·첨부·사진 UI 와 검증은 공용 EDUFORM 단일 출처(채용시교육과 동일 구성) */
 
     /* =============== 등록 · 수정 =============== */
     function openCreate(mode) {
@@ -182,9 +166,9 @@
         F = {
             edit: null, mode: mode, kind: mode === 'group' ? groupKind() : selfKind(),
             deptId: mode === 'self' ? depts[0].id : '',
-            sessions: [{ date: E().today(), start: '14:00', end: SUP_MODE ? '18:00' : '17:00' }],
+            sessions: [EDUFORM.newSession({ end: SUP_MODE ? '18:00' : '17:00' })],
             sIdx: 0,
-            instructor: '', place: '', desc: '', files: [],
+            instructor: '', place: '', desc: '', files: [], photos: [],
             workerIds: {}
         };
         renderCreate();
@@ -201,7 +185,7 @@
             edit: courseId, mode: c.deptId ? 'self' : 'group', kind: c.kind,
             deptId: c.deptId || '', sessions: ss, sIdx: 0, legacyHours: c.hours,
             instructor: c.instructor || '', place: c.place || '', desc: c.desc || '',
-            files: (c.files || []).slice(), workerIds: {}
+            files: (c.files || []).slice(), photos: (c.photos || []).slice(), workerIds: {}
         };
         renderCreate();
     }
@@ -211,19 +195,17 @@
                 ? '<div class="edu-modal-row"><label class="form-label">부서 <span style="color:var(--status-danger-fg)">*</span></label>' +
                     deptField('er-deptfield', F.deptId, 'EDUR.pickDept') + '</div>'
                 : '') +
-            renderSessions() +
+            EDUFORM.renderSessions(F, 'EDUR') +
             '<div class="edu-modal-row"><label class="form-label" for="er-inst">강사</label>' +
                 '<input type="text" class="form-input" id="er-inst" value="' + esc(F.instructor) + '"></div>' +
             '<div class="edu-modal-row"><label class="form-label" for="er-place">장소</label>' +
                 '<input type="text" class="form-input" id="er-place" value="' + esc(F.place) + '"></div>' +
             '<div class="edu-modal-row"><label class="form-label" for="er-desc">내용 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 '<textarea class="form-textarea" id="er-desc" rows="2">' + esc(F.desc) + '</textarea></div>' +
+            /* 첨부파일 + 교육 사진 — 자체·집합 공통(공용 EDUFORM) */
+            EDUFORM.renderAttach(F, 'EDUR') +
             (F.mode === 'group'
-                ? '<div class="edu-modal-row"><label class="form-label">첨부 (계획서 등)</label>' +
-                    '<button type="button" class="btn btn-sm btn-outline" onclick="EDUR.attachFile()">＋ 파일 첨부 (프로토타입)</button>' +
-                    (F.files.length ? '<div style="font-size:var(--fs-12);color:var(--main-dark);margin-top:6px;">' + F.files.map(function (f) { return esc(f.name); }).join(', ') + '</div>' : '') +
-                    V().fileHint() +
-                  '</div>'
+                ? ''
                 : (F.edit
                     ? '<div class="check-notice">대상자는 이 화면에서 바꾸지 않습니다 — 이미 반영된 이수시간과 어긋나므로 <b>신청 취소 후 재신청</b>으로 처리합니다.</div>'
                     : renderSelfTargets())
@@ -238,73 +220,16 @@
                 (F.edit ? '저장' : (F.mode === 'group' ? '등록' : '진행 처리')) + '</button>';
         V().openModal(title, body, foot);
     }
-    /* 회차 탭 + 활성 회차 입력 + 자동 산정된 총 교육시간
-     * 탭 라벨에 일자·시간을 함께 적어, 탭을 열어보지 않아도 전체 일정이 읽히게 한다. */
-    function renderSessions() {
-        var n = F.sessions.length;
-        var idx = Math.min(F.sIdx, n - 1);
-        var cur = F.sessions[idx];
-        var total = totalHours();
-        var curH = sessHours(cur);
-        var invalid = cur.start && cur.end && curH === 0;
-
-        var tabs = F.sessions.map(function (s, i) {
-            var h = sessHours(s);
-            return '<button type="button" class="edu-sess-tab' + (i === idx ? ' active' : '') + '"' +
-                ' aria-pressed="' + (i === idx ? 'true' : 'false') + '"' +
-                ' onclick="EDUR.sessTab(' + i + ')">' +
-                '<b>' + (i + 1) + '회차</b> <span>' + esc(mdLabel(s.date)) + (h ? ' · ' + h + 'h' : '') + '</span>' +
-            '</button>';
-        }).join('');
-        var addBtn = n < MAX_SESSIONS
-            ? '<button type="button" class="edu-sess-add" onclick="EDUR.sessAdd()">＋ 일자 추가</button>'
-            : '<span class="edu-sess-max">최대 ' + MAX_SESSIONS + '일</span>';
-
-        return '<div class="edu-modal-row">' +
-            '<label class="form-label">교육 일자 · 시간 <span style="color:var(--status-danger-fg)">*</span> ' +
-                '<span style="color:var(--text-lightgray);font-weight:var(--fw-regular);">(일자별로 탭을 추가 · 최대 ' + MAX_SESSIONS + '일)</span></label>' +
-            '<div class="edu-sess-tabs" role="group" aria-label="교육 회차">' + tabs + addBtn + '</div>' +
-            '<div class="edu-sess-panel">' +
-                '<div class="edu-sess-grid">' +
-                    '<div><label class="form-label" for="er-s-date">일자</label>' +
-                        '<input type="date" class="form-input" id="er-s-date" value="' + esc(cur.date || '') + '" onchange="EDUR.sessSync()"></div>' +
-                    '<div><label class="form-label" for="er-s-start">시작 시각</label>' +
-                        '<input type="time" class="form-input" id="er-s-start" value="' + esc(cur.start || '') + '" onchange="EDUR.sessSync()"></div>' +
-                    '<div><label class="form-label" for="er-s-end">종료 시각</label>' +
-                        '<input type="time" class="form-input" id="er-s-end" value="' + esc(cur.end || '') + '" onchange="EDUR.sessSync()"></div>' +
-                '</div>' +
-                '<div class="edu-sess-foot">' +
-                    (invalid
-                        ? '<span class="edu-sess-warn" role="alert">종료 시각이 시작 시각보다 빠르거나 같습니다 — 이 회차는 0h로 계산됩니다.</span>'
-                        : '<span class="edu-sess-calc">이 회차 <b>' + curH + 'h</b> 자동 산정</span>') +
-                    (n > 1
-                        ? '<button type="button" class="edu-sess-del" onclick="EDUR.sessDel(' + idx + ')">이 일자 삭제</button>'
-                        : '') +
-                '</div>' +
-            '</div>' +
-            '<div class="edu-sess-total">교육 시간 합계 <b>' + total + 'h</b> ' +
-                '<span>(' + n + '일 · 회차 시간 자동 합산)</span></div>' +
-        '</div>';
-    }
+    /* 회차 탭 위임 래퍼 — 변경 전 captureCreate 로 입력 보존, 변경 후 재렌더 */
     function sessTab(i) { captureCreate(); F.sIdx = i; renderCreate(); }
-    function sessAdd() {
-        captureCreate();
-        if (F.sessions.length >= MAX_SESSIONS) { toast('교육 일자는 최대 ' + MAX_SESSIONS + '일까지 추가할 수 있습니다.'); return; }
-        var last = F.sessions[F.sessions.length - 1];
-        /* 다음 날 같은 시간대를 기본값으로 — 연속 일정이 가장 흔하다 */
-        F.sessions.push({ date: addDays(last.date, 1), start: last.start, end: last.end });
-        F.sIdx = F.sessions.length - 1;
-        renderCreate();
-    }
-    function sessDel(i) {
-        captureCreate();
-        if (F.sessions.length <= 1) return;
-        F.sessions.splice(i, 1);
-        F.sIdx = Math.max(0, Math.min(F.sIdx, F.sessions.length - 1));
-        renderCreate();
-    }
-    /* 일자·시각 변경 즉시 재렌더 — 탭 라벨과 합계 시간이 항상 입력과 일치해야 한다 */
+    function sessAdd() { captureCreate(); if (!EDUFORM.sessAdd(F)) toast('교육 일자는 최대 ' + EDUFORM.MAX_SESSIONS + '일까지 추가할 수 있습니다.'); renderCreate(); }
+    function sessDel(i) { captureCreate(); EDUFORM.sessDel(F, i); renderCreate(); }
     function sessSync() { captureCreate(); renderCreate(); }
+    /* 첨부·사진 위임 래퍼 */
+    function addFile() { captureCreate(); EDUFORM.addFile(F); renderCreate(); }
+    function delFile(i) { captureCreate(); EDUFORM.delFile(F, i); renderCreate(); }
+    function addPhoto() { captureCreate(); EDUFORM.addPhoto(F); renderCreate(); }
+    function delPhoto(i) { captureCreate(); EDUFORM.delPhoto(F, i); renderCreate(); }
 
     function renderSelfTargets() {
         var deptId = F.deptId;
@@ -323,15 +248,10 @@
             '<div class="edu-tg-body" style="max-height:200px;">' + rows + '</div>' +
         '</div>';
     }
-    /* 재렌더 전 입력값 보존 — 원본은 체크 시 타이핑 값이 유실됐다(이식 시 보완) */
+    /* 재렌더 전 입력값 보존 — 회차는 공용 EDUFORM, 메타 필드는 화면 로컬 id */
     function captureCreate() {
         var el = function (id) { return document.getElementById(id); };
-        var cur = F.sessions && F.sessions[F.sIdx];
-        if (cur && el('er-s-date')) {
-            cur.date = el('er-s-date').value;
-            cur.start = el('er-s-start').value;
-            cur.end = el('er-s-end').value;
-        }
+        EDUFORM.captureSessions(F);
         if (el('er-inst')) F.instructor = el('er-inst').value.trim();
         if (el('er-place')) F.place = el('er-place').value.trim();
         if (el('er-desc')) F.desc = el('er-desc').value.trim();
@@ -346,41 +266,18 @@
         if (on) F.workerIds[id] = true; else delete F.workerIds[id];
         renderCreate();
     }
-    function attachFile() {
-        captureCreate();
-        F.files.push({ name: (F.desc.trim() || '교육_계획서') + '.hwpx' });
-        toast('파일 첨부 (프로토타입)');
-        renderCreate();
-    }
-    /* 회차 검증 — 저장 대표값(date·time·endTime·hours)은 여기서만 파생한다 */
-    function sessionPayload() {
-        var bad = -1;
-        for (var i = 0; i < F.sessions.length; i++) {
-            var s = F.sessions[i];
-            if (!s.date || !s.start || !s.end || sessHours(s) <= 0) { bad = i; break; }
-        }
-        if (bad >= 0) {
-            F.sIdx = bad; renderCreate();
-            toast((bad + 1) + '회차의 일자·시작·종료 시각을 확인하세요 (종료가 시작보다 뒤여야 합니다).');
-            return null;
-        }
-        var ss = F.sessions.slice().sort(function (a, b) { return (a.date + a.start).localeCompare(b.date + b.start); });
-        return {
-            sessions: ss, date: ss[0].date, time: ss[0].start, endTime: ss[0].end,
-            hours: E().sumSessionHours(ss)
-        };
-    }
     function doCreate() {
         captureCreate();
         if (!F.desc) { toast('교육 내용을 입력하세요.'); return; }
-        var S = sessionPayload();
-        if (!S) return;
+        var pr = EDUFORM.sessionPayload(F);
+        if (!pr.ok) { F.sIdx = pr.badIdx; renderCreate(); toast(pr.msg); return; }
+        var S = pr.payload;
         /* 수정 저장 — 대상자·신청 내역은 건드리지 않고 교육 정보만 갱신 */
         if (F.edit) {
             E().updateCourse(F.edit, {
                 deptId: F.deptId, date: S.date, time: S.time, endTime: S.endTime,
                 sessions: S.sessions, hours: S.hours,
-                instructor: F.instructor, place: F.place, desc: F.desc, files: F.files
+                instructor: F.instructor, place: F.place, desc: F.desc, files: F.files, photos: F.photos
             });
             /* 회차를 고치면 시간이 자동으로 바뀐다 — 이미 쌓인 이수기록도 함께 맞춰야
              * 카드의 교육시간과 이수현황 인정시간이 어긋나지 않는다. */
@@ -400,7 +297,7 @@
             var c = E().addCourse({
                 kind: F.kind, deptId: F.deptId, date: S.date, time: S.time, endTime: S.endTime,
                 sessions: S.sessions, hours: S.hours,
-                instructor: F.instructor, place: F.place, desc: F.desc, files: F.files,
+                instructor: F.instructor, place: F.place, desc: F.desc, files: F.files, photos: F.photos,
                 status: 'DONE', createdBy: E().deptName(F.deptId)
             });
             E().addEnroll({ courseId: c.id, deptId: F.deptId, workerIds: ids, at: S.date });
@@ -413,7 +310,7 @@
             E().addCourse({
                 kind: F.kind, date: S.date, time: S.time, endTime: S.endTime,
                 sessions: S.sessions, hours: S.hours,
-                instructor: F.instructor, place: F.place, desc: F.desc, files: F.files,
+                instructor: F.instructor, place: F.place, desc: F.desc, files: F.files, photos: F.photos,
                 status: 'OPEN', createdBy: '재난안전과'
             });
             V().closeModal();
@@ -557,6 +454,8 @@
                 '<div style="color:var(--text-gray);margin-top:4px;">' +
                     '일정 ' + esc(E().courseDateTime(c)) + ' · ' + c.hours + 'h · 강사 ' + esc(c.instructor || '-') + ' · 장소 ' + esc(c.place || '-') +
                 '</div>' +
+                ((c.files && c.files.length) ? '<div style="font-size:var(--fs-12);color:var(--main-dark);margin-top:6px;">📎 ' + c.files.map(function (f) { return esc(f.name); }).join(' · ') + '</div>' : '') +
+                ((c.photos && c.photos.length) ? '<div style="font-size:var(--fs-12);color:var(--main-dark);margin-top:4px;">📷 교육 사진 ' + c.photos.length + '장 · ' + c.photos.map(function (p) { return esc(p.name); }).join(' · ') + '</div>' : '') +
             '</div>' +
             '<label class="form-label">신청 현황</label>' +
             '<div class="edu-scroll"><table class="table-figma table-compact"><thead><tr>' +
@@ -575,9 +474,10 @@
     }
     global.EDUR = {
         init: init, setTab: setTab, setF: setF, resetF: resetF,
-        openCreate: openCreate, openEdit: openEdit, doCreate: doCreate, attachFile: attachFile, toggleTarget: toggleTarget, pickDept: pickDept,
-        /* 회차(일자 탭) — 최대 5일, 교육시간 자동 합산 */
+        openCreate: openCreate, openEdit: openEdit, doCreate: doCreate, toggleTarget: toggleTarget, pickDept: pickDept,
+        /* 회차(일자 탭) — 최대 5일, 교육시간 자동 합산 · 첨부/사진 (공용 EDUFORM) */
         sessTab: sessTab, sessAdd: sessAdd, sessDel: sessDel, sessSync: sessSync,
+        addFile: addFile, delFile: delFile, addPhoto: addPhoto, delPhoto: delPhoto,
         confirmRemove: confirmRemove, doRemove: doRemove,
         openApply: openApply, applyPickDept: applyPickDept, applyToggle: applyToggle,
         applyAttachSign: applyAttachSign, applyClearSign: applyClearSign, doApply: doApply,

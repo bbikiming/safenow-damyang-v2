@@ -353,7 +353,7 @@
             date: o.date, time: o.time || '', endTime: o.endTime || '', hours: o.hours || 0,
             sessions: (o.sessions || []).map(function (s) { return { date: s.date, start: s.start, end: s.end }; }),
             instructor: o.instructor || '', place: o.place || '', desc: o.desc || '',
-            files: o.files || [], status: o.status || 'OPEN',
+            files: o.files || [], photos: o.photos || [], status: o.status || 'OPEN',
             createdBy: o.createdBy || '', history: o.history || []
         };
         d.courses.push(c);

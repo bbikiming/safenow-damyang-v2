@@ -60,6 +60,7 @@
                         }).join(' · ') + '</div>'
                     : '') +
                 (c.files && c.files.length ? '<div class="edu-detail-files">📎 ' + c.files.map(function (f) { return esc(f.name); }).join(' · ') + '</div>' : '') +
+                (c.photos && c.photos.length ? '<div class="edu-detail-files">📷 교육 사진 ' + c.photos.length + '장 · ' + c.photos.map(function (p) { return esc(p.name); }).join(' · ') + '</div>' : '') +
                 (actions ? '<div class="edu-detail-actions">' + actions + '</div>' : '') +
             '</div>';
 
