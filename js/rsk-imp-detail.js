@@ -1,7 +1,8 @@
 /* =====================================================================
    rsk-imp-detail.js · 개선조치 상세·조치 (IMP01-D)
    · 출처·유해위험요인·조치전 사진 · 조치내용+조치후 사진 → [완료 처리]
-   · risk_assessment 출처면 해당 공정 '재평가 대기' 연동 안내
+   · risk_assessment 출처면 완료 시 정기평가 완료율(N/M)에 자동 반영
+     (재평가·위험성 추정 단계는 재설계 v1에서 폐지)
    ===================================================================== */
 (function (global) {
     'use strict';
@@ -42,7 +43,7 @@
                     ? '<div class="id-sec"><div class="id-sec-title">조치 결과 (완료)</div>' +
                         '<div class="id-desc">' + esc(m.action_content || '조치 완료') + '</div>' +
                         '<div style="margin-top:8px;"><span class="id-photo">조치 후 사진</span></div>' +
-                        '<div class="id-done-note" style="margin-top:12px;">조치 완료' + (isRA ? ' · 해당 공정이 <b>재평가 대기</b>로 전환되었습니다. 위험성 추정 화면에서 [재평가]로 허용 여부를 재확인하세요.' : '') + '</div></div>'
+                        '<div class="id-done-note" style="margin-top:12px;">조치 완료' + (isRA ? ' · 정기 위험성평가 완료율에 반영되었습니다.' : '') + '</div></div>'
                     : '<div class="id-sec"><div class="id-sec-title">조치 실시</div>' +
                         '<div class="id-frow"><label class="form-label">조치 내용 <span style="color:var(--status-danger-fg)">*</span></label>' +
                             '<textarea class="form-textarea" id="id-action" rows="3" placeholder="실제 조치한 내용을 입력하세요"></textarea></div>' +
@@ -57,9 +58,9 @@
     function complete() {
         var action = (document.getElementById('id-action').value || '').trim();
         if (!action) { toast('조치 내용을 입력하세요.'); return; }
-        var m = D().completeImprovement(state.id, action);
+        D().completeImprovement(state.id, action);
         render();
-        toast('조치 완료 처리' + (m.source_type === 'risk_assessment' ? ' · 공정 재평가 대기 전환' : ''));
+        toast('조치 완료 처리');
     }
 
     function init(mountId) {

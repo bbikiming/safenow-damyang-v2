@@ -44,20 +44,26 @@
 
         var rows = list.length ? list.map(function (m) {
             var t = KO().targetOf(m.target_id);
-            var titleCell = esc(m.description) + (m.source_type === 'risk_assessment' && m.hazard_risk_factor ? '<div class="ri-hrf">' + esc(m.hazard_risk_factor) + '</div>' : '');
+            var scope = m.dept_id ? D().deptName(m.dept_id) : (t ? t.name : '-');
+            var hazardName = (m.hazard && m.hazard.name) || m.hazard_risk_factor || '';
+            var titleCell = esc(m.description) +
+                (hazardName ? '<div class="ri-hrf">' + esc(hazardName) +
+                    (m.hazard && m.hazard.category ? ' <span class="chip-mini wt" style="margin-left:4px;">' + esc(m.hazard.category) + '</span>' : '') +
+                '</div>' : '');
             var owner = m.assigned_to ? esc(m.assigned_to) : '<a href="#" onclick="RSKIMP.assign(\'' + m.id + '\');return false;" style="color:var(--main-dark);">지정</a>';
+            var due = m.due || m.due_date || '';
             return '<tr onclick="RSKIMP.detail(\'' + m.id + '\')">' +
                 '<td>' + srcBadge(m.source_type) + '</td>' +
-                '<td>' + esc(t ? t.name : '-') + '</td>' +
+                '<td>' + esc(scope) + '</td>' +
                 '<td>' + titleCell + '</td>' +
                 '<td onclick="event.stopPropagation()">' + owner + '</td>' +
-                '<td class="ri-due ' + dueClass(m.due_date, m.status) + '">' + esc(m.due_date || '-') + '</td>' +
+                '<td class="ri-due ' + dueClass(due, m.status) + '">' + esc(due || '-') + '</td>' +
                 '<td>' + stChip(m.status) + '</td></tr>';
         }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text-lightgray);padding:24px;">조건에 맞는 개선조치가 없습니다.</td></tr>';
 
         state.mount.innerHTML = head +
             '<table class="ri-table"><thead><tr>' +
-                '<th>출처</th><th>관리대상</th><th>제목 / 유해위험요인</th><th>담당자</th><th>기한</th><th>상태</th>' +
+                '<th>출처</th><th>부서 / 관리대상</th><th>제목 / 유해위험요인</th><th>담당자</th><th>기한</th><th>상태</th>' +
             '</tr></thead><tbody>' + rows + '</tbody></table>';
     }
 

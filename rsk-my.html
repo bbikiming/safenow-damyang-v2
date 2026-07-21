@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>내 할일 → 전역 my-work (리다이렉트)</title>
+    <script>
+        /* v1.1 §6.2: rsk-my(위험성평가 전용 내 할일)은 전역 '내 할일'(my-work)로 승격.
+         *   기존 링크(rsk-my.html?dept=xxx)는 그대로 이관. */
+        (function () {
+            var q = location.search || '';
+            location.replace('my-work.html' + q);
+        })();
+    </script>
+</head>
+<body>
+    <p style="font-family:sans-serif;padding:20px;color:var(--text-gray);">
+        전역 <a href="my-work.html">내 할일 화면</a>으로 이동합니다…
+    </p>
+</body>
+</html>

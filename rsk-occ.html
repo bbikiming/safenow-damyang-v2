@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>수시 위험성평가 — 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+    <style>
+        .roc-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); padding: 12px 16px; margin-bottom: 14px; }
+        .roc-tb-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .roc-tb-label { font-size: var(--fs-12); font-weight: 700; color: var(--text-gray); }
+        .roc-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); overflow: hidden; }
+        .roc-table th { font-size: var(--fs-12); font-weight: 700; color: var(--text-gray); text-align: left; padding: 11px 14px; background: var(--surface-alt); border-bottom: 1px solid var(--card-line); }
+        .roc-table td { font-size: var(--fs-13); color: var(--text-black); padding: 12px 14px; border-bottom: 1px solid var(--card-line); vertical-align: top; }
+        .roc-table tr:last-child td { border-bottom: none; }
+        .roc-reason { display: inline-block; padding: 2px 9px; border-radius: var(--radius-md); font-size: var(--fs-12); font-weight: 700; }
+        .roc-reason.ACCIDENT     { background: var(--status-danger-bg); color: var(--status-danger-fg); border: 1px solid var(--status-danger-border); }
+        .roc-reason.EQUIP_CHANGE { background: var(--status-warning-bg); color: var(--status-warning-fg); border: 1px solid var(--status-warning-border); }
+        .roc-reason.OTHER        { background: var(--gray-100); color: var(--text-gray); border: 1px solid var(--card-line); }
+        .roc-modal-row { margin-bottom: 12px; }
+        .roc-modal-row .form-label { display: block; font-size: var(--fs-12); font-weight: 700; color: var(--text-gray); margin-bottom: 5px; }
+        .roc-desc { font-size: var(--fs-12); color: var(--text-gray); margin-top: 4px; }
+        .roc-files { font-size: var(--fs-12); color: var(--text-lightgray); margin-top: 4px; }
+    </style>
+</head>
+<body data-dy-page="rsk-occ"
+      data-page-title="수시 위험성평가"
+      data-page-subtitle="사유별 즉시 등록 · 재난안전과 검토 (RSK03-L)">
+    <main>
+        <div class="check-notice">
+            정기평가와 별개로 <b>재해사고 발생 · 설비/물질 변경 · 기타</b> 사유로 즉시 실시하는 위험성평가입니다.
+            등록 후 재난안전과가 <b>검토완료</b> 처리하며, 이력이 자동 기록됩니다.
+        </div>
+        <div id="roc-root"></div>
+    </main>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/org-pick.js"></script>
+    <script src="./js/rsk-kosha.js"></script>
+    <script src="./js/rsk-data.js"></script>
+    <script src="./js/rsk-occ.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () { window.RSKOCC.init('roc-root'); });
+    </script>
+</body>
+</html>
