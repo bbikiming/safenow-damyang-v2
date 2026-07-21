@@ -42,8 +42,12 @@
         .rl-report-file { color: var(--main-dark); font-weight: 700; font-size: var(--fs-13); }
         .rl-file-btn { border: 1px dashed var(--card-line); background: var(--surface); padding: 5px 12px; border-radius: var(--radius-md); font-size: var(--fs-12); color: var(--text-gray); cursor: pointer; }
         .rl-file-btn:hover { background: var(--brand-50); border-color: var(--main); color: var(--main-dark); }
+        /* 터치 기기에서만 탭 타깃 44px 이상 (데스크톱은 조밀함 유지, WCAG 2.5.5) */
+        @media (pointer: coarse) { .rl-file-btn { min-height: 44px; } }
 
-        /* 부서 테이블 */
+        /* 부서 테이블 — 좁은 화면에서 마지막 열이 잘리지 않도록 가로 스크롤 래퍼로 감싼다 */
+        .rl-table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: var(--radius-card); }
+        .rl-table-scroll > .rl-dept-table { min-width: 640px; }
         .rl-dept-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); overflow: hidden; }
         .rl-dept-table th { font-size: var(--fs-12); font-weight: 700; color: var(--text-gray); text-align: left; padding: 11px 14px; background: var(--surface-alt); border-bottom: 1px solid var(--card-line); }
         .rl-dept-table td { font-size: var(--fs-13); color: var(--text-black); padding: 12px 14px; border-bottom: 1px solid var(--card-line); }

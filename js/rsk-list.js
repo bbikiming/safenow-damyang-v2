@@ -241,6 +241,26 @@
     /* 현재 연도의 평가 (설문지 핸들러 공통 진입점) */
     function current() { return (D().assessments(state.year) || [])[0]; }
 
+    /* ===== 보고서 첨부·교체 (개선 건수 확인 단계) — 재파싱 없이 파일만 갱신 ===== */
+    function openReportAttach() {
+        var a = current(); if (!a) return;
+        var existing = (a.files && a.files.report) || '';
+        surveyModal('용역업체 보고서 첨부',
+            '<p style="font-size:13px;">개선 건수 확인 단계에서 <b>보고서(최종본·보완본)를 첨부·교체</b>합니다. ' +
+            '이미 추출·전달된 <b>개선 건수와 조치 내역은 그대로 유지</b>됩니다.' +
+            (existing ? '<br><span style="color:var(--text-gray);">현재 보고서: ' + esc(existing) + '</span>' : '') + '</p>',
+            a.year + '_정기평가_보고서_최종.hwpx', 'RSKLIST.doReportAttach()');
+    }
+    function doReportAttach() {
+        var a = current(); if (!a) return;
+        var name = surveyNameInput(a.year + '_정기평가_보고서.hwpx');
+        if (!name) { toast('파일명을 입력하세요.'); return; }
+        D().setReportFile(a.id, name);
+        V().closeModal();
+        toast('보고서 첨부 완료 · 개선 건수·조치 내역은 유지됩니다');
+        render();
+    }
+
     /* =============== 부서별 조치 탭 =============== */
     function renderDepts(a) {
         var review = a.review || { stage: 'NONE' };
@@ -273,9 +293,9 @@
 
         var deptTable =
             '<div class="rl-card"><div class="rl-card-title">부서별 조치</div>' +
-                '<table class="rl-dept-table"><thead><tr>' +
+                '<div class="rl-table-scroll"><table class="rl-dept-table"><thead><tr>' +
                     '<th>부서</th><th>점검일</th><th>설문지</th><th>개선건수</th><th>조치기한</th><th>상태</th><th>관리</th>' +
-                '</tr></thead><tbody>' + rows + '</tbody></table>' +
+                '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
                 excludedNote +
             '</div>';
 
@@ -363,9 +383,14 @@
                 '<span style="font-size:12px;color:var(--text-gray);margin-left:auto;">추출 <b>' + totalRows + '</b>건 · 아래에서 내용 검수 후 조치기한을 설정하세요</span>' +
                 '<button type="button" class="rl-file-btn" onclick="RSKLIST.clearReport()">보고서 취소</button>';
         } else {
-            body = '<span class="rl-report-file">📄 ' + esc(a.files.report) + '</span>' +
+            /* DELIVERED = 개선 건수 확인 단계. 보고서(최종본·보완본)를 첨부·교체할 수 있다(재파싱 없음). */
+            body = (a.files && a.files.report
+                    ? '<span class="rl-report-file">📄 ' + esc(a.files.report) + '</span>'
+                    : '<span style="font-size:12px;color:var(--status-warning-fg);">보고서 미첨부</span>') +
                 '<span class="chip-mini st-done" style="margin-left:6px;">전달 완료</span>' +
-                '<span style="font-size:12px;color:var(--text-gray);margin-left:auto;">' + esc(review.extractedAt || '') + '에 파싱·검수 완료</span>';
+                '<span style="font-size:12px;color:var(--text-gray);margin-left:auto;">' + esc(review.extractedAt || '') + '에 파싱·검수 완료</span>' +
+                '<button type="button" class="rl-file-btn" onclick="RSKLIST.openReportAttach()">' +
+                    (a.files && a.files.report ? '보고서 교체' : '＋ 보고서 첨부') + '</button>';
         }
         return '<div class="rl-card"><div class="rl-card-title">용역업체 보고서 (HWPX)</div>' +
             '<div class="rl-report-row">' + body + '</div></div>';
@@ -828,6 +853,8 @@
         openSurveyAll: openSurveyAll, doSurveyAll: doSurveyAll,
         clearSurveyAll: clearSurveyAll, doClearSurveyAll: doClearSurveyAll,
         openDeptSurvey: openDeptSurvey, doDeptSurvey: doDeptSurvey, clearDeptSurvey: clearDeptSurvey,
-        pickSurveyFile: pickSurveyFile
+        pickSurveyFile: pickSurveyFile,
+        /* 보고서 첨부·교체 (개선 건수 확인 단계) */
+        openReportAttach: openReportAttach, doReportAttach: doReportAttach
     };
 })(window);

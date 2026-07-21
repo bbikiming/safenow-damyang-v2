@@ -271,6 +271,17 @@
             memo: deptName(deptId) + (fileName ? ' 부서 설문지 첨부 · ' + fileName : ' 부서 설문지 삭제(공통본 적용)') });
         save(); return dp;
     }
+    /* ===== 보고서 파일 첨부·교체 (개선 건수 확인 단계) =====
+     * 검수·전달로 개선조치가 이미 추출·확정된 뒤(DELIVERED)에도 보고서(최종본·보완본)를
+     * 첨부·교체할 수 있게 한다. uploadReport 와 달리 재파싱하지 않아 개선 건수·조치 내역은 보존된다. */
+    function setReportFile(aid, fileName) {
+        var a = assessmentOf(aid); if (!a) return null;
+        a.files = a.files || {};
+        a.files.report = fileName || '';
+        pushHistory(aid, { type: 'FILE', by: '재난안전과',
+            memo: fileName ? '보고서 첨부·교체 · ' + fileName + ' (개선 건수·조치 내역 유지)' : '보고서 삭제' });
+        save(); return a;
+    }
     /* 설문지 첨부 진행률 — 부서별본 또는 공통본이 걸린 부서 수 */
     function surveyProgress(aid) {
         var a = assessmentOf(aid); if (!a) return { done: 0, total: 0, all: '' };
@@ -650,6 +661,7 @@
         refreshAssessmentStatus: refreshAssessmentStatus, pushHistory: pushHistory,
         /* 점검설문지 — 등록 이후 목록에서 첨부 (생성 마법사 STEP 아님) */
         setSurveyAll: setSurveyAll, setDeptSurvey: setDeptSurvey, surveyProgress: surveyProgress,
+        setReportFile: setReportFile,
         /* 보고서 파싱·검수 (검수 단계에서는 내용만 편집, 기한은 다음 단계 모달에서 부서 단위 지정) */
         uploadReport: uploadReport, clearReport: clearReport,
         reviewSet: reviewSet, reviewDel: reviewDel, reviewAdd: reviewAdd,
