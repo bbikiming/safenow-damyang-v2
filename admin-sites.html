@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>사업장 관리 — 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="admin-sites"
+      data-page-title="사업장 관리"
+      data-page-subtitle="담양군 내 사업장(작업장) 마스터 — 관할 부서·유형·유해인자 (ADM03-S)">
+    <main>
+        <div id="as-root"></div>
+    </main>
+
+    <div id="toast" class="toast" role="status"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/site-data.js"></script>
+    <script src="./js/admin-sites.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () { window.DYADMSITE.init('as-root'); });
+    </script>
+</body>
+</html>

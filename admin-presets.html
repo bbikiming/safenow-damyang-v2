@@ -118,7 +118,7 @@
                 if (f.type === '문장(여러 줄)') return k + '<textarea placeholder="입력"></textarea>';
                 if (f.type === '선택(드롭다운)') return k + '<select><option>2026년 · 연간</option></select>';
                 if (f.type === 'O/X 판정') return k + '<div><label style="margin-right:12px;"><input type="radio" name="p' + f.label + '"> O</label><label><input type="radio" name="p' + f.label + '"> X</label></div>';
-                if (f.type === '파일 첨부') return k + '<div class="upload-drop" style="padding:14px;">파일 첨부 (다중 가능)</div>';
+                if (f.type === '파일 첨부') return k + DYV2.uploadDrop('파일 첨부 (다중 가능)', null, { style: 'padding:14px;' });
                 return k + '<input type="text" placeholder="입력">';
             }).join('') + '</div>';
             DYV2.openModal('양식 미리보기 — 사용자에게 보이는 등록폼', body,

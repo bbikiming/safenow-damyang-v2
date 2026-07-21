@@ -7,7 +7,7 @@
  *   · 사용자 기준 실효 권한 계산(effectiveForUser) — 사용자 관리 역조회에서 사용
  *   · 데모 데이터 초기화(resetDemo)
  *
- * 결정 반영(기획-시스템관리-메뉴권한-검토-v1.md D1~D8):
+ * 결정 반영(docs/planning/기획-시스템관리-메뉴권한-검토-v1.md D1~D8):
  *   D1 보기/수정 체크는 메뉴 관리의 지정 행 · 권한 관리는 구성원만 · '전체 권한'은 등급 속성
  *   D2 등급/직접 지정 병존 → 통합 목록 · 중복 경로는 높은 권한 우선(합집합)
  *   D3 기본 6등급 · 부서별 담당자는 메뉴별 개별 지정
@@ -87,6 +87,23 @@
     function load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } }
     function persist(d) { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) {} }
 
+    /* 메뉴 1건의 기본 권한 프리셋 — 최초 시드와 신규 메뉴 병합이 같은 규칙을 쓴다.
+     *   시스템 관리자(fullAccess)는 개별 지정 없음(자동). 시스템 관리 하위 = 지정 없음(관리자 전용).
+     *   base-bulk = 프리셋 제외(미설정 배지 시연).
+     * 병합에서 이 함수를 쓰지 않으면 NAV 에 추가된 신규 메뉴가 권한 0건으로 들어가
+     * 기존 스토어를 가진 브라우저에서만 '미설정'으로 보인다. */
+    function defaultPerms(m) {
+        if (m.groupId === 'admin') return [];
+        if (m.id === 'base-bulk') return [];
+        return [
+            { kind: 'role', id: 'mayor', view: true, edit: false },
+            { kind: 'role', id: 'exec', view: true, edit: false },
+            { kind: 'role', id: 'manager', view: true, edit: false },
+            { kind: 'role', id: 'team', view: true, edit: true },
+            { kind: 'role', id: 'staff', view: true, edit: (m.id === 'opn-voice') },
+        ];
+    }
+
     function seed() {
         /* ── 6등급 ──
          *   members: [{kind:'user', id:uid}] 또는 [{kind:'dept', id:nodeId, includeSub}]
@@ -119,19 +136,11 @@
         const menuUsage = {};
         middleMenus().forEach(m => {
             menuUsage[m.id] = true;
-            if (m.groupId === 'admin') { menuPerms[m.id] = []; return; }   /* 관리자 전용 */
-            if (m.id === 'base-bulk') { menuPerms[m.id] = []; return; }    /* 미설정 시연 */
-            const list = [
-                { kind: 'role', id: 'mayor', view: true, edit: false },
-                { kind: 'role', id: 'exec', view: true, edit: false },
-                { kind: 'role', id: 'manager', view: true, edit: false },
-                { kind: 'role', id: 'team', view: true, edit: true },
-                { kind: 'role', id: 'staff', view: true, edit: (m.id === 'opn-voice') },
-            ];
-            menuPerms[m.id] = list;
+            menuPerms[m.id] = defaultPerms(m);
         });
         /* 개별 지정 3건 (부서 1 · 사용자 2) */
-        if (menuPerms['sbm-edu']) menuPerms['sbm-edu'].push({ kind: 'dept', id: 'health', includeSub: false, view: true, edit: true });
+        /* 안전보건교육 재설계 v1(2026-07-20): sbm-edu → edu 그룹 분리, 대표 화면 edu-status 에 개별 권한 이관 */
+        if (menuPerms['edu-status']) menuPerms['edu-status'].push({ kind: 'dept', id: 'health', includeSub: false, view: true, edit: true });
         if (menuPerms['sbm-hazard']) menuPerms['sbm-hazard'].push({ kind: 'user', id: uidOf('정환경'), view: true, edit: true });
         if (menuPerms['sbm-contract']) menuPerms['sbm-contract'].push({ kind: 'user', id: uidOf('최회계'), view: true, edit: true });
 
@@ -143,9 +152,10 @@
     let _data = load();
     if (!_data || !_data.roles || !_data.menuPerms || !_data.menuUsage) { _data = seed(); }
     else {
-        /* 시드 병합: NAV에 있는데 스토어에 없는 메뉴 키 보강 (신규 메뉴 대비) */
+        /* 시드 병합: NAV에 있는데 스토어에 없는 메뉴 키 보강 (신규 메뉴 대비).
+         * 최초 시드와 같은 defaultPerms 를 써야 신규 메뉴가 '권한 미설정'으로 보이지 않는다. */
         middleMenus().forEach(m => {
-            if (!(m.id in _data.menuPerms)) _data.menuPerms[m.id] = [];
+            if (!(m.id in _data.menuPerms)) _data.menuPerms[m.id] = defaultPerms(m);
             if (!(m.id in _data.menuUsage)) _data.menuUsage[m.id] = true;
         });
     }
