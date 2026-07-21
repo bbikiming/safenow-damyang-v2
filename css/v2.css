@@ -596,6 +596,33 @@
 }
 
 /* ── 조직도 트리 오버레이 (점검자 선택, 상위 모달 위에 적층) ── */
+/* ── 공용 모달 변형 (DYV2.openModal 의 opts.variant) ──
+ * 문서 미리보기·라이트박스는 자작 오버레이 대신 이 변형을 쓴다(단일 모달 규칙 §1). */
+.modal-head-tools { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+/* wide — 문서(PDF) 전체화면 미리보기 */
+.modal.modal-wide .modal-content { max-width: 1100px; width: 96vw; height: 92vh; max-height: 92vh; }
+.modal.modal-wide .modal-body {
+  flex: 1; overflow: auto; padding: 28px; background: var(--gray-50);
+  display: flex; justify-content: center; align-items: flex-start;
+}
+
+/* lightbox — 이미지 확대. 크롬(카드·헤더 배경) 없이 스크림 위 이미지만. */
+.modal.modal-lightbox .modal-backdrop { background: var(--overlay-scrim-strong); }
+.modal.modal-lightbox .modal-content {
+  max-width: 96vw; width: auto; max-height: 92vh; background: none; box-shadow: none; overflow: visible;
+}
+.modal.modal-lightbox .modal-header { border-bottom: 0; padding: 0 0 8px; }
+.modal.modal-lightbox .modal-title { color: var(--surface); font-size: var(--fs-13); font-weight: var(--fw-semibold); }
+.modal.modal-lightbox .modal-close { color: var(--surface); background: var(--overlay-btn-bg); }
+.modal.modal-lightbox .modal-close:hover { background: var(--overlay-btn-bg-hover); }
+.modal.modal-lightbox .modal-body { padding: 0; overflow: visible; }
+.modal.modal-lightbox .modal-body img {
+  max-width: 96vw; max-height: 78vh; object-fit: contain;
+  border-radius: var(--radius-button); box-shadow: var(--shadow-lg); display: block;
+}
+.modal.modal-lightbox .modal-footer { border-top: 0; justify-content: center; color: var(--surface); font-size: var(--fs-12); }
+
 .org-tree-overlay { position: fixed; inset: 0; z-index: var(--z-overlay); display: flex; align-items: center; justify-content: center; padding: 20px; }
 .org-tree-backdrop { position: absolute; inset: 0; background: var(--overlay-scrim); }
 .org-tree-panel { position: relative; z-index: var(--z-base); background: var(--surface); border-radius: var(--radius-card); width: 100%; max-width: 440px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: var(--shadow-lg); overflow: hidden; }
@@ -902,13 +929,10 @@ textarea:focus-visible, [tabindex]:focus-visible, .psub-tab:focus-visible, .opn-
   background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: var(--radius-button); padding: 10px 12px;
 }
 .opn-counter { font-size: var(--fs-12); color: var(--text-lightgray); text-align: right; }
-.opn-dropzone {
-  border: 1.5px dashed var(--gray-300); border-radius: var(--radius-statbox); padding: 32px 20px; text-align: center;
-  color: var(--text-gray); cursor: pointer; transition: border-color .15s ease, background-color .15s ease;
-}
-.opn-dropzone:hover { border-color: var(--main); background: var(--brand-50); }
-.opn-dropzone .dz-title { font-size: var(--fs-14); color: var(--text-gray); margin: 10px 0 12px; }
-.opn-dropzone .dz-hint { font-size: var(--fs-12); color: var(--text-lightgray); margin-top: 10px; }
+/* 의견청취 사진 첨부 — 드롭존 자체는 표준 .upload-drop(DYV2.uploadDrop)으로 수렴(CP-09).
+ * 내부 문구 스타일만 남긴다. */
+.upload-drop .dz-title { font-size: var(--fs-14); color: var(--text-gray); margin: 10px 0 12px; }
+.upload-drop .dz-hint { font-size: var(--fs-12); color: var(--text-lightgray); margin-top: 10px; }
 .opn-formbar { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
 @media (max-width: 640px) { .opn-form-grid { grid-template-columns: 1fr; } }
 
@@ -1530,4 +1554,161 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
   .sh-kv { grid-template-columns: 1fr; gap: 3px 0; }
   .sh-kv dt { margin-top: 8px; }
   .sh-toolbar { align-items: stretch; }
+}
+
+/* =========================================================================
+   안전보건교육 (edu-*) — 재설계 v1 다화면 공용 스타일
+   소스 css/edu.css(safe-damyang-v2) 이식본 — 원시값은 전부 토큰 치환(§6).
+   표준 치환: edu-table→.table-figma(.table-compact) · edu-tabs→.sub-tabs ·
+   edu-empty→.v2-empty · chip-mini→.chip-status(.chip-sm) · edu-bar→.progress
+   ========================================================================= */
+.edu-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); padding: 10px 14px; margin-bottom: 12px; }
+.edu-toolbar .form-select { width: auto; min-width: 130px; }
+.edu-spacer { flex: 1; }
+.edu-count { font-size: var(--fs-12); color: var(--text-gray); font-weight: var(--fw-bold); white-space: nowrap; }
+
+/* 공용 필터 바 (EDUFILTER.bar) — 좌: 조회 조건 / 우: 건수·초기화·액션 */
+.edu-filterbar { justify-content: space-between; align-items: flex-start; }
+.edu-filterbar-fields { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 0; }
+.edu-filterbar-tail { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
+.edu-f-search { width: auto; flex: 0 1 220px; min-width: 160px; }
+
+.edu-card { background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); padding: 14px 16px; margin-bottom: 12px; }
+.edu-card-title { font-size: var(--fs-13); font-weight: var(--fw-bold); color: var(--text-black); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+/* 집계 모집단 안내 — 필터를 걸어둔 채 전체 수치로 오독하는 것을 막는다 */
+.edu-pop-note { margin-left: auto; padding: 3px 9px; background: var(--brand-100); border-radius: var(--radius-pill);
+    font-size: var(--fs-12); font-weight: var(--fw-regular); color: var(--text-gray); }
+.edu-pop-note b { color: var(--main-dark2); font-weight: var(--fw-bold); }
+@media (max-width: 767px) { .edu-pop-note { margin-left: 0; } }
+
+/* 상태 배지 소형 변형 — 표에 붙는 밀도용 (chip-status modifier) */
+.chip-status.chip-sm { padding: 2px 10px; font-size: var(--fs-12); }
+
+/* 밀도 높은 표 변형 — table-figma modifier */
+.table-figma.table-compact th { padding: 9px 12px; font-size: var(--fs-12); }
+.table-figma.table-compact td { padding: 9px 12px; font-size: var(--fs-13); }
+.table-figma.table-nowrap th, .table-figma.table-nowrap td { white-space: nowrap; }
+.table-figma tr.row-short td { background: var(--status-warning-bg); }
+.edu-name { font-weight: var(--fw-bold); }
+.edu-short { color: var(--status-danger-fg); font-weight: var(--fw-bold); }
+.edu-scroll { overflow-x: auto; }
+.edu-bar-txt { font-size: var(--fs-12); font-weight: var(--fw-bold); color: var(--text-black); }
+.edu-gauge { display: inline-block; width: 120px; vertical-align: middle; margin-right: 6px; }
+
+.edu-short-ck { display: inline-flex; align-items: center; gap: 5px; font-size: var(--fs-12); color: var(--text-gray); font-weight: var(--fw-bold); cursor: pointer; padding: 0 8px; }
+
+.edu-course-card { background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); padding: 12px 14px; margin-bottom: 8px; }
+.edu-course-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.edu-course-title { font-size: var(--fs-13); font-weight: var(--fw-bold); color: var(--text-black); flex: 1; min-width: 200px; }
+.edu-course-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+.edu-course-meta { display: flex; gap: 16px; font-size: var(--fs-12); color: var(--text-gray); flex-wrap: wrap; }
+.edu-course-meta b { color: var(--text-black); font-weight: var(--fw-bold); }
+
+.edu-tg-body { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 3px; max-height: 220px; overflow-y: auto; border: 1px solid var(--card-line); border-radius: var(--radius-md); padding: 6px; }
+.edu-tg-member { display: flex; align-items: center; gap: 6px; font-size: var(--fs-12); padding: 4px 6px; border-radius: var(--radius-xs); cursor: pointer; }
+.edu-tg-member:hover { background: var(--brand-50); }
+
+.edu-modal-row { margin-bottom: 10px; }
+.edu-modal-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.edu-modal-row .form-label, .edu-modal-row-2 .form-label { display: block; font-size: var(--fs-12); font-weight: var(--fw-bold); color: var(--text-gray); margin-bottom: 4px; }
+
+/* 교육 회차(일자 탭) — 등록 모달 · 최대 5일 · 시간 자동 합산 */
+.edu-sess-tabs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: -1px; }
+.edu-sess-tab { display: inline-flex; align-items: baseline; gap: 5px; min-height: 34px; padding: 7px 12px;
+    background: var(--surface-alt); border: 1px solid var(--card-line); border-bottom-color: transparent;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0; font-size: var(--fs-12); color: var(--text-gray); cursor: pointer; }
+.edu-sess-tab b { font-weight: var(--fw-bold); color: var(--text-black); }
+.edu-sess-tab:hover { background: var(--brand-50); }
+.edu-sess-tab.active { background: var(--surface); color: var(--text-black); border-color: var(--main); border-bottom-color: var(--surface); box-shadow: inset 0 2px 0 var(--main); }
+.edu-sess-tab:focus-visible, .edu-sess-add:focus-visible, .edu-sess-del:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
+.edu-sess-add { min-height: 34px; padding: 7px 12px; background: transparent; border: 1px dashed var(--card-line);
+    border-radius: var(--radius-sm); font-size: var(--fs-12); font-weight: var(--fw-bold); color: var(--main-dark); cursor: pointer; }
+.edu-sess-add:hover { background: var(--brand-50); border-color: var(--main); }
+.edu-sess-max { font-size: var(--fs-12); color: var(--text-lightgray); padding: 0 6px; }
+.edu-sess-panel { border: 1px solid var(--main); border-radius: 0 var(--radius-sm) var(--radius-sm) var(--radius-sm); padding: 12px; background: var(--surface); }
+/* 모달은 max-width 500px 로 폭이 고정돼 뷰포트 미디어쿼리가 안 걸린다 —
+ * 일자는 한 줄 전체, 시작~종료 시각은 아래 줄에 2칸으로 나눠 좁은 모달에서도 넉넉하게. */
+.edu-sess-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.edu-sess-grid > div { min-width: 0; }                 /* date/time 입력의 min-content 폭이 셀을 밀어내지 않도록 */
+.edu-sess-grid > div:first-child { grid-column: 1 / -1; }  /* 일자: 전체 폭 */
+.edu-sess-grid .form-input { width: 100%; min-width: 0; }
+.edu-sess-foot { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.edu-sess-calc { font-size: var(--fs-12); color: var(--text-gray); }
+.edu-sess-calc b { color: var(--main-dark); font-weight: var(--fw-bold); }
+.edu-sess-warn { font-size: var(--fs-12); color: var(--status-danger-fg); }
+.edu-sess-del { margin-left: auto; min-height: 32px; padding: 6px 10px; background: transparent;
+    border: 1px solid var(--status-danger-border); border-radius: var(--radius-button);
+    font-size: var(--fs-12); color: var(--status-danger-fg); cursor: pointer; }
+.edu-sess-del:hover { background: var(--status-danger-bg); }
+.edu-sess-total { display: flex; align-items: baseline; gap: 6px; margin-top: 8px; padding: 9px 12px;
+    background: var(--brand-100); border-radius: var(--radius-button); font-size: var(--fs-13); color: var(--text-black); }
+.edu-sess-total b { font-size: var(--fs-16); font-weight: var(--fw-bold); color: var(--main-dark2); }
+.edu-sess-total span { font-size: var(--fs-12); color: var(--text-gray); }
+@media (max-width: 560px) {
+    .edu-sess-grid { grid-template-columns: 1fr; }
+    .edu-sess-grid > div:first-child { grid-column: auto; }
+    .edu-sess-del { margin-left: 0; }
+}
+
+/* 정기교육 상세 헤더 */
+.edu-detail-head { background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); padding: 16px 18px; margin-bottom: 12px; }
+.edu-detail-title { font-size: var(--fs-18); font-weight: var(--fw-bold); color: var(--text-black); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.edu-detail-meta { display: flex; gap: 18px; font-size: var(--fs-12); color: var(--text-gray); flex-wrap: wrap; }
+.edu-detail-meta b { color: var(--text-black); font-weight: var(--fw-bold); }
+.edu-detail-files { margin-top: 8px; font-size: var(--fs-12); color: var(--main-dark); }
+.edu-detail-actions { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--card-line); display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* 이력 */
+.edu-hist { display: flex; flex-direction: column; }
+.edu-hist-row { display: flex; gap: 14px; align-items: flex-start; padding: 8px 0; border-bottom: 1px dashed var(--card-line); font-size: var(--fs-12); }
+.edu-hist-row:last-child { border-bottom: none; }
+.edu-hist-at { flex: none; width: 140px; color: var(--text-lightgray); }
+.edu-hist-type { flex: none; padding: 2px 8px; border-radius: var(--radius-xs); background: var(--gray-100); color: var(--text-gray); font-weight: var(--fw-bold); font-size: var(--fs-12); min-width: 60px; text-align: center; }
+.edu-hist-body { flex: 1; }
+.edu-hist-by { color: var(--text-lightgray); margin-left: 6px; }
+
+/* =========================================================================
+   안전보건교육 시연 바 + 크로스 페이지 시연 투어 (EDUTOUR · js/edu-tour.js)
+   발표용 핵심 자산 — 구 edu.html 인라인 스타일 이식본(토큰 치환).
+   ========================================================================= */
+.edu-demo-bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 14px 18px; margin-bottom: 14px; border: 1px solid var(--brand-100); border-radius: var(--radius-card); background: var(--brand-50); }
+.edu-demo-copy { flex: 1; min-width: 280px; }
+.edu-demo-copy strong { display: block; font-size: var(--fs-14); color: var(--main-dark2); }
+.edu-demo-copy span { display: block; margin-top: 4px; font-size: var(--fs-12); color: var(--text-gray); }
+.edu-demo-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.edu-tour-focus { position: relative; outline: 3px solid var(--main-dark); outline-offset: 4px; z-index: var(--z-base); scroll-margin: 120px 0; }
+.edu-tour-panel {
+  position: fixed; right: 24px; bottom: 72px; z-index: var(--z-fab);
+  width: min(440px, calc(100vw - 32px)); padding: 18px;
+  border: 1px solid var(--brand-100); border-radius: var(--radius-statbox); background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  max-height: calc(100vh - 96px); overflow-y: auto;
+}
+.edu-tour-panel.is-left { left: calc(var(--dy-sidebar-w) + 18px); right: auto; }
+.edu-tour-head { display: flex; align-items: flex-start; gap: 12px; }
+.edu-tour-head-main { flex: 1; min-width: 0; }
+.edu-tour-close { border: 0; background: transparent; color: var(--text-gray); cursor: pointer; padding: 2px 0; font-size: var(--fs-12); text-decoration: underline; text-underline-offset: 2px; }
+.edu-tour-kicker { font-size: var(--fs-12); font-weight: var(--fw-bold); color: var(--main-dark); }
+.edu-tour-title { margin-top: 6px; font-size: var(--fs-18); font-weight: var(--fw-bold); color: var(--main-dark2); }
+.edu-tour-desc { margin-top: 8px; font-size: var(--fs-13); line-height: 1.55; color: var(--text-gray); }
+.edu-tour-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; margin-top: 14px; }
+.edu-tour-step { min-width: 0; border: 1px solid var(--brand-100); border-radius: var(--radius-md); background: var(--surface); padding: 6px 2px; color: var(--text-gray); font-size: var(--fs-12); font-weight: var(--fw-bold); cursor: pointer; }
+.edu-tour-step.done { background: var(--brand-50); color: var(--main-dark); }
+.edu-tour-step.active { border-color: var(--main-dark); background: var(--main-dark); color: var(--surface); }
+.edu-tour-script { margin-top: 12px; padding: 10px 12px; border-left: 3px solid var(--main-dark); border-radius: 0 var(--radius-md) var(--radius-md) 0; background: var(--brand-50); color: var(--main-dark2); font-size: var(--fs-12); line-height: 1.55; }
+.edu-tour-script b { display: block; margin-bottom: 3px; font-size: var(--fs-12); }
+.edu-tour-action { width: 100%; justify-content: center; margin-top: 12px; }
+.edu-tour-foot { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+.edu-tour-progress { flex: 1; font-size: var(--fs-12); color: var(--text-gray); }
+.edu-tour-inline { margin-bottom: 14px; padding: 11px 12px; border: 1px solid var(--brand-100); border-radius: var(--radius-button); background: var(--brand-50); color: var(--main-dark2); font-size: var(--fs-12); line-height: 1.55; }
+.edu-tour-inline b { display: block; margin-bottom: 3px; }
+
+@media (max-width: 559px) {
+  .edu-tour-panel { right: 12px; bottom: 64px; width: calc(100vw - 24px); padding: 15px; }
+  .edu-tour-panel.is-left { left: 12px; right: auto; }
+  .edu-tour-steps { gap: 3px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .edu-tour-focus { scroll-behavior: auto; }
 }

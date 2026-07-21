@@ -94,8 +94,7 @@
             '</div>' +
             '<div style="margin-top:14px;">' +
                 '<div style="font-size:13px; font-weight:600; margin-bottom:6px;">첨부파일</div>' +
-                '<div class="upload-drop" onclick="DYV2.toast(\'파일 첨부 (프로토타입)\')">파일을 끌어다 놓거나 클릭하여 업로드</div>' +
-                V.fileHint() +
+                V.uploadDrop('파일을 끌어다 놓거나 클릭하여 업로드', "DYV2.toast('파일 첨부 (프로토타입)')", { hint: true }) +
                 (files.length ? '<div class="bgt-file-chips" style="margin-top:8px;">' + files.map(f => '<span class="chip-mini wt">' + esc(f) + '</span>').join('') + '</div>' : '') +
             '</div>';
 

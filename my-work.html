@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>내 할일 — 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+    <style>
+        /* 헤더 */
+        .mw-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); padding: 12px 16px; margin-bottom: 12px; }
+        .mw-head-left { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .mw-head-right { display: flex; align-items: center; gap: 8px; }
+        .mw-title { font-size: var(--fs-18); font-weight: 700; color: var(--text-black); margin: 0; }
+        .mw-synced { font-size: var(--fs-12); color: var(--text-gray); }
+        .mw-synced b { color: var(--text-black); font-weight: 700; }
+        .mw-deptlabel { font-size: var(--fs-12); font-weight: 700; color: var(--text-gray); }
+
+        /* KPI 칩 */
+        .mw-kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 12px; }
+        .mw-kpi { background: var(--surface); border: 1px solid var(--card-line); border-left: 4px solid var(--gray-200); border-radius: var(--radius-card); padding: 12px 16px; display: flex; flex-direction: column; gap: 4px; }
+        .mw-kpi-num { font-size: var(--fs-22); font-weight: 800; color: var(--text-black); line-height: 1; }
+        .mw-kpi-label { font-size: var(--fs-12); color: var(--text-gray); font-weight: 700; }
+        .mw-kpi-danger  { border-left-color: var(--status-danger-fg); }
+        .mw-kpi-danger  .mw-kpi-num { color: var(--status-danger-fg); }
+        .mw-kpi-warning { border-left-color: var(--status-warning-fg); }
+        .mw-kpi-warning .mw-kpi-num { color: var(--status-warning-fg); }
+        .mw-kpi-info    { border-left-color: var(--status-info-fg); }
+        .mw-kpi-info    .mw-kpi-num { color: var(--status-info-fg); }
+        .mw-kpi-purple  { border-left-color: var(--status-purple-fg); }
+        .mw-kpi-purple  .mw-kpi-num { color: var(--status-purple-fg); }
+        .mw-kpi-neutral { border-left-color: var(--text-gray); }
+
+        /* 필터 바 */
+        .mw-filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); padding: 10px 14px; margin-bottom: 14px; }
+        .mw-filters .form-select { min-width: 140px; }
+        .mw-filter-count { margin-left: auto; font-size: var(--fs-12); color: var(--text-gray); font-weight: 700; }
+
+        /* 그룹 */
+        .mw-group { background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); margin-bottom: 12px; overflow: hidden; }
+        .mw-group-head { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--card-line); background: var(--gray-50); font-weight: 700; font-size: var(--fs-13); }
+        .mw-g-danger  .mw-group-head { background: var(--status-danger-bg); color: var(--status-danger-fg); }
+        .mw-g-warning .mw-group-head { background: var(--status-warning-bg); color: var(--status-warning-fg); }
+        .mw-g-success .mw-group-head { background: var(--status-success-bg); color: var(--status-success-fg); }
+        .mw-g-neutral .mw-group-head { background: var(--gray-50); color: var(--text-gray); }
+        .mw-group-icon { font-size: var(--fs-14); }
+        .mw-group-label { font-weight: 700; }
+        .mw-group-count { margin-left: auto; font-size: var(--fs-12); padding: 2px 9px; border-radius: var(--radius-full); background: var(--surface); color: var(--text-gray); font-weight: 700; }
+        .mw-group-body { padding: 6px 0; }
+
+        /* 항목 */
+        .mw-item { padding: 10px 16px; border-bottom: 1px solid var(--card-line); }
+        .mw-item:last-child { border-bottom: none; }
+        .mw-item.remind { background: var(--status-warning-bg); border-left: 3px solid var(--status-warning-fg); }
+        .mw-item-head { display: flex; align-items: flex-start; gap: 10px; justify-content: space-between; }
+        .mw-item-main { flex: 1; min-width: 0; }
+        .mw-item-title { font-size: var(--fs-13); font-weight: 700; color: var(--text-black); margin-left: 4px; }
+        .mw-item-sub { font-size: var(--fs-12); color: var(--text-gray); margin-top: 4px; }
+        .mw-item-meta { display: flex; gap: 8px; margin-top: 5px; font-size: var(--fs-12); align-items: center; flex-wrap: wrap; }
+        .mw-item-due { color: var(--text-lightgray); }
+        .mw-item-dept { color: var(--text-gray); padding: 1px 8px; border-radius: var(--radius-xs); background: var(--gray-100); font-size: var(--fs-12); }
+        .mw-item-actions { flex-shrink: 0; display: flex; gap: 6px; align-items: center; }
+        .mw-cat { display: inline-block; padding: 2px 8px; border-radius: var(--radius-full); font-size: var(--fs-12); font-weight: 700; }
+        .mw-remind-tag { display: inline-block; padding: 2px 8px; border-radius: var(--radius-full); background: var(--status-warning-bg); color: var(--status-warning-fg); font-size: var(--fs-12); font-weight: 700; border: 1px solid var(--status-warning-border); }
+        .mw-dday { font-weight: 700; padding: 1px 8px; border-radius: var(--radius-xs); background: var(--gray-100); color: var(--text-gray); font-size: var(--fs-12); }
+        .mw-dday.over  { background: var(--status-danger-bg);  color: var(--status-danger-fg); }
+        .mw-dday.soon  { background: var(--status-warning-bg); color: var(--status-warning-fg); }
+        .mw-dday.done  { background: var(--status-success-bg); color: var(--status-success-fg); }
+
+        /* 재촉 응답 인라인 폼 */
+        .mw-inline { margin-top: 10px; padding: 10px 12px; background: var(--brand-50); border: 1px solid var(--main); border-radius: var(--radius-button); }
+        .mw-inline-row { margin-bottom: 8px; }
+        .mw-inline-row label { font-size: var(--fs-12); font-weight: 700; color: var(--text-gray); display: block; margin-bottom: 4px; }
+        .mw-inline-row textarea, .mw-inline-row input[type=date] { width: 100%; padding: 7px 9px; font-size: var(--fs-13); border: 1px solid var(--card-line); border-radius: var(--radius-md); box-sizing: border-box; font-family: inherit; }
+        .mw-inline-row input[type=date] { max-width: 220px; }
+        .mw-inline-foot { display: flex; gap: 6px; justify-content: flex-end; }
+
+        .mw-empty { background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); padding: 40px 20px; text-align: center; color: var(--text-lightgray); font-size: var(--fs-13); }
+
+        @media (max-width: 900px) {
+            .mw-kpis { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body data-dy-page="my-work"
+      data-page-title="내 할일"
+      data-page-subtitle="전 업무 통합 할일 — 결재·위험·개선·점검·의견·이행·도급·평가 (MYW01-V)">
+    <main>
+        <div class="check-notice">
+            부서 담당자 관점에서 처리할 <b>전 업무</b>를 통합해서 보여줍니다.
+            상단 부서 셀렉트로 관점을 전환하고, KPI·필터·그룹으로 마감 임박 항목을 우선 처리하세요.
+            위험성평가 관련 항목은 <b>위험/개선</b> 카테고리로 편입됩니다.
+        </div>
+        <div id="mw-root"></div>
+    </main>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/rsk-kosha.js"></script>
+    <script src="./js/rsk-data.js"></script>
+    <script src="./js/edu-data.js"></script>
+    <script src="./js/my-work.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () { window.MYWORK.init('mw-root'); });
+    </script>
+</body>
+</html>

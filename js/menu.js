@@ -175,17 +175,15 @@
                     panel.scrollIntoView({ block: 'nearest' });
                     const first = panel.querySelector('input, select'); if (first) first.focus();
                 } else {
-                    const ov = document.createElement('div');
-                    ov.id = 'stack-overlay'; ov.className = 'org-tree-overlay';
-                    ov.innerHTML = '<div class="org-tree-backdrop" onclick="PG._stackClose()"></div>' +
-                        '<div class="org-tree-panel" role="dialog" aria-modal="true" style="max-width:460px;">' +
-                        '<div class="org-tree-head"><span>' + title + '</span><button type="button" class="modal-close" onclick="PG._stackClose()" aria-label="닫기">&times;</button></div>' +
-                        '<div class="org-tree-body" style="padding:18px 20px;">' + body + '</div>' +
-                        '<div class="modal-footer">' + foot + '</div></div>';
-                    document.body.appendChild(ov);
+                    /* 모달이 없는 페이지 위 — 적층이 아니므로 공용 모달 1개로 표시. */
+                    PG._stackModal = true;
+                    V.openModal(title, body, foot);
                 }
             };
-            PG._stackClose = () => { ['stack-inline', 'stack-overlay'].forEach(id => { const o = document.getElementById(id); if (o) o.remove(); }); };
+            PG._stackClose = () => {
+                const p = document.getElementById('stack-inline'); if (p) p.remove();
+                if (PG._stackModal) { PG._stackModal = false; V.closeModal(); }
+            };
             PG.policyLawAdd = () => PG._stackOpen('근거 법령 추가',
                 '<div class="preset-form-grid">' +
                 '<span class="k">법령</span><input id="law-add-law" type="text" placeholder="예: 산업안전보건법">' +
@@ -436,20 +434,14 @@
                 '<div class="pdf-sign">시행일 ' + (v.effDate || '-') + '<br><br><b>' + (v.pdf.signer || '담양군수') + '</b> (직인)</div>' +
                 '</div>';
             PG.polPdfDownload = () => V.toast('PDF 다운로드 (프로토타입)');
-            PG.polPdfClose = () => { const o = document.getElementById('pdf-full-overlay'); if (o) o.remove(); };
+            PG.polPdfClose = () => V.closeModal();
+            /* 문서 미리보기 — 공용 모달 'wide' 변형(자작 오버레이 폐지, 단일 모달 규칙 §1). */
             PG.polPdfFull = ver => {
                 const v = S.VERSIONS.find(x => x.ver === ver) || POL.cur(); if (!v) return;
-                PG.polPdfClose();
-                const ov = document.createElement('div');
-                ov.id = 'pdf-full-overlay'; ov.className = 'pdf-full-overlay';
-                ov.innerHTML =
-                    '<div class="pdf-full-backdrop" onclick="PG.polPdfClose()"></div>' +
-                    '<div class="pdf-full-panel" role="dialog" aria-modal="true">' +
-                    '<div class="pdf-full-head"><span>경영방침 v' + v.ver + ' 문서 미리보기</span>' +
-                    '<span class="pdf-full-tools"><button class="btn btn-sm btn-outline" onclick="PG.polPdfDownload()">PDF 다운로드</button>' +
-                    '<button type="button" class="modal-close" onclick="PG.polPdfClose()" aria-label="닫기">&times;</button></span></div>' +
-                    '<div class="pdf-full-body">' + pdfPaper(v) + '</div></div>';
-                document.body.appendChild(ov);
+                V.openModal('경영방침 v' + v.ver + ' 문서 미리보기', pdfPaper(v), '', {
+                    variant: 'wide',
+                    headHtml: '<button class="btn btn-sm btn-outline" onclick="PG.polPdfDownload()">PDF 다운로드</button>',
+                });
             };
 
             /* 게시(상세) — 좌측 사진(세로형) + 우측 정보(제목·게시일·내용), 사진 클릭 시 전체화면 */
@@ -467,18 +459,15 @@
                     '</div></div></div>';
             };
             /* 게시 사진 전체화면 보기 (라이트박스) */
-            PG.boardPhotoClose = () => { const o = document.getElementById('post-photo-overlay'); if (o) o.remove(); };
+            PG.boardPhotoClose = () => V.closeModal();
+            /* 사진 확대 — 공용 모달 'lightbox' 변형(자작 오버레이 폐지). */
             PG.boardPhotoView = (ver, id) => {
                 const v = S.VERSIONS.find(x => x.ver === ver); const p = v && (v.postings || []).find(x => x.id === id);
                 if (!p || !p.photoSrc) return;
-                PG.boardPhotoClose();
-                const ov = document.createElement('div');
-                ov.id = 'post-photo-overlay'; ov.className = 'post-photo-overlay';
-                ov.innerHTML = '<div class="post-photo-backdrop" onclick="PG.boardPhotoClose()"></div>' +
-                    '<div class="post-photo-stage"><button type="button" class="post-photo-x" onclick="PG.boardPhotoClose()" aria-label="닫기">&times;</button>' +
-                    '<img src="' + p.photoSrc + '" alt="게시 사진 — ' + V.esc(p.loc) + '">' +
-                    '<div class="post-photo-cap">' + V.esc(p.loc) + ' · 게시일 ' + (p.date || '-') + '</div></div>';
-                document.body.appendChild(ov);
+                V.openModal(V.esc(p.loc) + ' — 게시 사진',
+                    '<img src="' + p.photoSrc + '" alt="게시 사진 — ' + V.esc(p.loc) + '">',
+                    V.esc(p.loc) + ' · 게시일 ' + (p.date || '-'),
+                    { variant: 'lightbox' });
             };
 
             /* 사진 업로드 영역 — 빈 상태 / 미리보기 상태 */
@@ -1219,20 +1208,14 @@
                     '<button class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
             };
             PG.opnChkPdfDownload = () => V.toast('PDF 다운로드 (프로토타입)');
-            PG.opnChkPdfClose = () => { const o = document.getElementById('opn-chk-pdf-overlay'); if (o) o.remove(); };
+            PG.opnChkPdfClose = () => V.closeModal();
+            /* 문서 미리보기 — polPdfFull 과 동일 패턴(2-4: 미리보기 UI 1패턴 통일). */
             PG.opnChkPdfFull = id => {
                 const c = S.COUNCIL.checklists.find(x => x.id === id); if (!c) return;
-                PG.opnChkPdfClose();
-                const ov = document.createElement('div');
-                ov.id = 'opn-chk-pdf-overlay'; ov.className = 'pdf-full-overlay';
-                ov.innerHTML =
-                    '<div class="pdf-full-backdrop" onclick="PG.opnChkPdfClose()"></div>' +
-                    '<div class="pdf-full-panel" role="dialog" aria-modal="true">' +
-                    '<div class="pdf-full-head"><span>점검결과지 ' + c.id + ' 문서 미리보기</span>' +
-                    '<span class="pdf-full-tools"><button class="btn btn-sm btn-outline" onclick="PG.opnChkPdfDownload()">PDF 다운로드</button>' +
-                    '<button type="button" class="modal-close" onclick="PG.opnChkPdfClose()" aria-label="닫기">&times;</button></span></div>' +
-                    '<div class="pdf-full-body">' + chkPdfPaper(c) + '</div></div>';
-                document.body.appendChild(ov);
+                V.openModal('점검결과지 ' + c.id + ' 문서 미리보기', chkPdfPaper(c), '', {
+                    variant: 'wide',
+                    headHtml: '<button class="btn btn-sm btn-outline" onclick="PG.opnChkPdfDownload()">PDF 다운로드</button>',
+                });
             };
 
             /* ===== 페이지별 상단 통계 ===== */
@@ -1315,11 +1298,12 @@
                     '<p style="font-size:var(--fs-12); color:var(--text-gray); margin:10px 0 0;">근로자는 온라인으로 직접 등록하며, 오프라인(서면·구두) 접수는 담당자가 대리 등록합니다.</p>', '');
                 const CLOUD = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14.9A7 7 0 1 1 15.7 8h1.8a4.5 4.5 0 0 1 2.5 8.2"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>';
                 const photo = sectionCard('사진 첨부',
-                    '<div class="opn-dropzone" onclick="DYV2.toast(\'사진 첨부 (프로토타입)\')">' + CLOUD +
-                    '<div class="dz-title">첨부할 파일을 여기에 끌어다 놓거나 파일 선택 버튼을 클릭하세요</div>' +
-                    '<button type="button" class="btn btn-sm btn-outline">파일 선택</button>' +
-                    '<div class="dz-hint">JPG, PNG, GIF 파일만 업로드 가능합니다 (최대 10MB · 최대 5장)</div>' +
-                    '</div>', '');
+                    /* 드롭존은 DYV2.uploadDrop() 로만 렌더 — role/tabindex/Enter·Space 활성화 배선(§2). */
+                    V.uploadDrop(CLOUD +
+                        '<div class="dz-title">첨부할 파일을 여기에 끌어다 놓거나 파일 선택 버튼을 클릭하세요</div>' +
+                        '<button type="button" class="btn btn-sm btn-outline">파일 선택</button>' +
+                        '<div class="dz-hint">JPG, PNG, GIF 파일만 업로드 가능합니다 (최대 10MB · 최대 5장)</div>',
+                        "DYV2.toast('사진 첨부 (프로토타입)')"), '');
                 const bar = '<div class="opn-formbar"><button class="btn btn-outline" onclick="PG.opnBack()">취소</button><button class="btn btn-primary" onclick="PG.opnSave()">등록하기</button></div>';
                 return head + writer + info + detail + photo + bar;
             }

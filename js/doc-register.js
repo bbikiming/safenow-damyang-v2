@@ -1,6 +1,6 @@
 /* =========================================================================
  * 업무 등록 마법사 + CRUD (DYREG) — 업무 목록(docs-preset) · 이행 목록(docs-exec)
- *   기획: 기획-업무등록-CRUD-상세설계-v1.md
+ *   기획: docs/planning/기획-업무등록-CRUD-상세설계-v1.md
  *   STEP1 분류(대메뉴 탭 · 세트 · PDCA 라디오) → STEP2 처리유형 → STEP3 처리유형별 분기 폼 → STEP4 확인
  *   저장: localStorage 'dy-userdocs-v2' (시드 DY_DOCS_V2 원본은 불변, 사용자 등록분만 수정·삭제)
  *   조회: allDocs() = 시드 + 사용자 / setIdOf(doc) = 문서의 세트 (setlist.js·doc-detail.js가 사용)
@@ -74,11 +74,20 @@
             { label: '유해·위험요인 관리', href: 'rsk-proc.html' },
             { label: '경영방침', href: 'menu.html?m=policy' },
             { label: '조직', href: 'menu.html?m=org' },
-            { label: '안전보건교육', href: 'edu.html' },
             { label: '의견청취', href: 'menu.html?m=opinion' },
             { label: '도급관리', href: 'menu.html?m=contract' },
             { label: '개선조치', href: 'rsk-imp.html' },
             { label: '이행관리', href: 'menu.html?m=comply' },
+        ] },
+        /* 안전보건교육 — 재설계 v1(2026-07-20) 별도 GNB 그룹 */
+        { menu: '안전보건교육', depths: [
+            { label: '정기교육 (현업근로자)', href: 'edu-reg.html' },
+            { label: '채용시교육 (현업근로자)', href: 'edu-hire.html' },
+            { label: '기타 교육 (현업근로자)', href: 'edu-etc.html' },
+            { label: '관리감독자 정기교육', href: 'edu-sup.html' },
+            { label: '관리감독자 기타 교육', href: 'edu-sup-etc.html' },
+            { label: '이수현황', href: 'edu-status.html' },
+            { label: '근로자 명단 관리', href: 'edu-workers.html' },
         ] },
         { menu: '업무문서', depths: [
             { label: '기준문서함', href: 'docs-archive.html' },

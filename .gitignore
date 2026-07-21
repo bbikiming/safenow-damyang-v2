@@ -2,4 +2,8 @@
 *.log
 .vercel/
 .claude/settings.local.json
+.claude/worktrees/
 node_modules/
+__pycache__/
+*.pyc
+~$*

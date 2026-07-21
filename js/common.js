@@ -12,7 +12,7 @@
         org:      { label: '조직',               sfr: 'SFR-006·009·010',  dept: '행정과·재난안전과',     href: 'menu.html?m=org' },
         risk:     { label: '위험성평가',         sfr: 'SFR-007',          dept: '재난안전과 중대재해팀', href: 'rsk-list.html' },
         hazard:   { label: '작업공정 관리',      sfr: 'SFR-007·019',      dept: '재난안전과·환경과',     href: 'rsk-proc.html' },
-        edu:      { label: '안전보건교육',       sfr: 'SFR-004·010',      dept: '행정과(교육담당)',      href: 'edu.html' },
+        edu:      { label: '안전보건교육',       sfr: 'SFR-004·010',      dept: '재난안전과·각 부서',    href: 'edu.html' },  /* edu.html 은 edu-status.html 리다이렉트 스텁 */
         opinion:  { label: '의견청취',           sfr: 'SFR-011',          dept: '재난안전과 중대재해팀', href: 'menu.html?m=opinion' },
         contract: { label: '도급관리',           sfr: 'SFR-013',          dept: '회계과·각 발주부서',    href: 'menu.html?m=contract' },
         improve:  { label: '개선조치',           sfr: 'SFR-003',          dept: '재난안전과 중대재해팀', href: 'rsk-imp.html' },
@@ -179,6 +179,9 @@
         '지연': 'warning', '보완필요': 'warning', '보완 필요': 'warning', '주의': 'warning',
         '기한초과': 'danger', '기한 초과': 'danger', '부적합': 'danger', '반려': 'danger',
         '수시': 'purple', '임시저장': 'purple',
+        /* 안전보건교육 (edu-*) — 이수 상태·명단 출처 */
+        '미이수': 'neutral', '정상 이수': 'success', '지연 이수': 'warning',
+        '인사연동': 'info', '직접등록': 'neutral', '엑셀업로드': 'purple',
     };
     /* 매핑에 없는 라벨은 neutral 로 수렴(색을 임의로 만들지 않는다). */
     function toneOf(label) { return STATUS_TONE[String(label || '').trim()] || 'neutral'; }
@@ -186,6 +189,8 @@
     /* ── 첨부파일 업로드 제약 (지원 형식·용량·개수) — 단일 출처 ── */
     const FILE_LIMITS = {
         formats: 'HWP · HWPX · PDF · DOC(X) · XLS(X) · PPT(X) · JPG · PNG · ZIP',
+        /* formats 의 기계 판독용 대응쌍 — 실제 input accept·확장자 검증에 사용 */
+        extensions: ['hwp', 'hwpx', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'jpg', 'jpeg', 'png', 'zip'],
         maxMB: 20, maxCount: 10,
     };
     /* 업로드 영역 하단에 붙이는 안내 문구 HTML */
@@ -265,18 +270,26 @@
     function unassignedBadge() { return '<span class="badge-unassigned">분류 미확정</span>'; }
     function secondReviewBadge() { return '<span class="badge-second-review">2차 검토 대상</span>'; }
 
-    /* ── 모달 (페이지에 #v2-modal 컨테이너 없으면 동적 생성) ── */
-    function openModal(title, bodyHtml, footHtml) {
+    /* ── 모달 (페이지에 #v2-modal 컨테이너 없으면 동적 생성) ──
+     * opts.variant — 크기·크롬 변형. 문서 미리보기·라이트박스도 자작 오버레이를 만들지 말고
+     *   이 경로를 쓴다(단일 모달 불변식이 openModal→closeModal 에서 자동 유지됨).
+     *     'wide'     : 문서(PDF) 전체화면 미리보기 — 96vw × 92vh
+     *     'lightbox' : 이미지 확대 — 크롬 없이 어두운 스크림 위 이미지만
+     * opts.headHtml — 헤더 제목 우측에 끼울 도구 버튼(예: [PDF 다운로드]). */
+    function openModal(title, bodyHtml, footHtml, opts) {
         closeModal();
+        opts = opts || {};
         const wrap = document.createElement('div');
-        wrap.className = 'modal';
+        wrap.className = 'modal' + (opts.variant ? ' modal-' + opts.variant : '');
         wrap.id = 'v2-modal';
         wrap.innerHTML =
             '<div class="modal-backdrop" onclick="DYV2.closeModal()"></div>' +
             '<div class="modal-content" role="dialog" aria-modal="true" aria-label="' + esc(title) + '">' +
               '<div class="modal-header">' +
                 '<span class="modal-title">' + title + '</span>' +
-                '<button class="modal-close" type="button" aria-label="닫기" onclick="DYV2.closeModal()">&times;</button>' +
+                '<span class="modal-head-tools">' + (opts.headHtml || '') +
+                  '<button class="modal-close" type="button" aria-label="닫기" onclick="DYV2.closeModal()">&times;</button>' +
+                '</span>' +
               '</div>' +
               '<div class="modal-body">' + bodyHtml + '</div>' +
               (footHtml ? '<div class="modal-footer">' + footHtml + '</div>' : '') +

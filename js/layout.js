@@ -62,7 +62,7 @@
             { id: 'fac-settings', label: '연계 설정',     icon: 'cog',      href: 'fac-settings.html', screen: 'FAC05-S' },
         ]},
 
-        // GNB. 위험성평가 — 재설계 v1 (docs/기획-위험성평가-재설계-v1.md). 개선조치 원본은 rsk-imp.
+        // GNB. 위험성평가 — 재설계 v1 (docs/planning/기획-위험성평가-재설계-v1.md). 개선조치 원본은 rsk-imp.
         //    정기(RSK01-L, 목록·상세 통합) · 수시(RSK03-L) · 개선조치(IMP01-L).
         //    v1.1 §6.2: '내 할일'은 위험성평가 그룹에서 빠져 대시보드 그룹의 전역 메뉴로 이관 (my-work.html).
         //    작업공정 관리(rsk-proc) · 위험성 추정(rsk-exec)은 메뉴에서 제거하되 파일은 보존.
@@ -74,7 +74,7 @@
 
         // GNB 4. 안전보건관리체계 — 핵심 대메뉴, 공통 레이아웃 menu.html 공유
         //    ※ 위험성평가·유해위험요인·개선조치는 위 '위험성평가' 그룹으로 이관(레퍼런스 정본). rsk-imp.html 등 스텁은 하위호환 유지.
-        //    ※ 안전보건교육은 재설계 v1(2026-07-16)로 별도 그룹 승격 — 아래 'edu' 그룹 참고. edu.html은 리다이렉트 스텁.
+        //    ※ 안전보건교육은 재설계 v1 구조 적용(2026-07-20)으로 별도 'edu' 그룹 승격 — 아래 참고. edu.html 은 리다이렉트 스텁.
         { id: 'sbm', label: '안전보건관리체계', icon: 'shield', items: [
             { id: 'sbm-policy',   label: '경영방침',           icon: 'shield',   href: 'menu.html?m=policy',   screen: 'SFR-005' },
             { id: 'sbm-org',      label: '조직',               icon: 'users',    href: 'menu.html?m=org',      screen: 'SFR-006·009·010' },
@@ -85,8 +85,9 @@
             { id: 'sbm-comply',   label: '이행관리',           icon: 'coins',    href: 'menu.html?m=comply',   screen: 'SFR-008·014' },
         ]},
 
-        // GNB. 안전보건교육 — 재설계 v1 §8.5 v1.1 개선 (SNB 3뎁스)
-        //   item.section 값이 바뀌면 헤더 삽입, undefined면 직속(top-level) — renderSidebar 참고.
+        // GNB. 안전보건교육 — 재설계 v1 §8.5 (SNB 3뎁스, 2026-07-20 적용)
+        //   item.section 값이 바뀌면 헤더 삽입, undefined 면 직속(top-level) — renderSidebar 참고.
+        //   대표 진입: edu-status.html(이수현황) — edu.html 은 리다이렉트 스텁. 시연 투어는 js/edu-tour.js(EDUTOUR).
         { id: 'edu', label: '안전보건교육', icon: 'user', items: [
             /* 현업근로자 3종 */
             { id: 'edu-reg',     section: '현업근로자',  label: '정기교육',   icon: 'user',  href: 'edu-reg.html',     screen: 'EDU-REG / SFR-004·010' },
