@@ -2036,6 +2036,24 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .eduapv-f .form-select { width: auto; min-width: 132px; }
 .eduapv-last { margin-left: auto; font-size: var(--fs-12); color: var(--text-gray); }
 .eduapv-last b { color: var(--main-dark2); font-weight: var(--fw-bold); }
+.eduapv-ctx { font-size: var(--fs-13); color: var(--text-black); }
+.eduapv-ctx b { color: var(--main-dark2); font-weight: var(--fw-bold); }
+
+/* 목록 결재 상태 칩/상신 버튼 (courseControl · personControl) */
+.edu-apv-slot { display: inline-flex; align-items: center; }
+.eduapv-chip { border: 1px solid transparent; cursor: pointer; font-family: inherit; }
+.eduapv-chip:hover { filter: brightness(0.97); }
+.eduapv-chip:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
+.eduapv-newbtn { white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
+.eduapv-newbtn svg { flex: none; }
+.edu-apv-cell { white-space: nowrap; }
+
+/* 결재 상태 팝업 (openStatus) */
+.eduapv-status .table-doc { min-width: 0; }
+.eduapv-status-lead { font-size: var(--fs-14); color: var(--text-black); margin-bottom: 6px; }
+.eduapv-status-note { margin-top: 12px; padding: 10px 12px; border-radius: var(--radius-button);
+  background: var(--status-info-bg); border: 1px solid var(--status-info-border);
+  color: var(--status-info-fg); font-size: var(--fs-12); line-height: 1.55; }
 /* 결재선 편집 — 조직도(ORGPICK 'member')로만 지정한다 */
 .eduapv-line {
   padding: 12px 14px; margin-bottom: 12px;

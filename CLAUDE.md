@@ -78,9 +78,13 @@
 
 - 파일 구성: 화면 HTML 8개(`edu-reg/hire/etc/sup/sup-etc/status/workers/reg-detail.html`) + 모듈 6개(`js/edu-reg.js` EDUR · `edu-reg-detail.js` EDURD · `edu-hire.js` EDUH · `edu-etc.js` EDUE · `edu-status.js` EDUS · `edu-workers.js` EDUW) + `js/edu-data.js`(전역 `DYEDU`, 데이터 단일 출처) + `js/edu-filter.js`(전역 `EDUFILTER`, 공용 필터 바) + `js/edu-approval.js`(전역 `EDUAPV`, 온나라 결재 상신) + `js/edu-tour.js`(전역 `EDUTOUR`, 시연 투어). 공용 스타일은 `css/v2.css`의 `edu-*` 블록 — **별도 `edu.css` 파일 없음**(재생성 금지).
 - 로드 순서: `layout.js → common.js → org-pick.js → edu-data.js → edu-filter.js → 화면 모듈 → edu-approval.js → edu-tour.js`.
-- **온나라 결재 상신은 `EDUAPV`(`js/edu-approval.js`)로만** — 화면마다 결재 버튼·문서를 새로 짜지 않는다. 각 화면은 모듈 init 후 `EDUAPV.boot({ view })`를 호출하고(우측 최상단 버튼 자동 주입 `.page-head-action`), 서식은 한 팝업 안의 3탭(`kind` 교육 종류별 목록 · `person` 개인별 이수 현황 · `all` 통합)이다. 근거: `docs/planning/기획-안전보건교육-온나라결재상신-v1.md`.
+- **온나라 결재 상신은 `EDUAPV`(`js/edu-approval.js`)로만** — 화면마다 결재 버튼·문서를 새로 짜지 않는다. 근거: `docs/planning/기획-안전보건교육-온나라결재상신-v1.md`(v1.1). **상신 트리거 3종**:
+  - **총괄(Type 1)** — 목록 화면 init 후 `EDUAPV.boot({ view })`(우측 최상단 `[총괄 결재 상신]` 자동 주입 `.page-head-action`). 한 팝업 3탭(`kind`·`person`·`all`, 대상 연도·부서 조회 조건).
+  - **교육별(Type 2)** — 교육 카드/상세의 결재 상태 칩(`EDUAPV.courseControl(id)`) · 상세 화면은 `boot({ mode:'course' })`(버튼 `[이 교육 결재 상신]`). `openCourse(id)` → 그 교육 1건 실시 결과 문서.
+  - **개인별(Type 3)** — 이수현황 대상자별 상세 행의 결재 칩(`EDUAPV.personControl(wid)`). `openPerson(wid)` → 그 사람 1명 이수 확인서.
+  - **목록 결재 상태**(미상신·결재중·결재완료·반려)는 위 두 컨트롤로 노출한다. 미상신=액션 버튼, 이후=상태 칩(클릭 시 상태 팝업 — 시연용 결재완료/반려 회신·재상신). 화면 모듈은 init 에서 `EDUAPV.registerRefresh(render)`로 자동 갱신을 등록한다. 상태 어휘 tone 은 `DYV2.STATUS_TONE`(공용) 단일 출처.
   - 문서는 `DYV2.openModal(..., { variant:'wide' })` 위에 **표준 `.pdf-paper` + `.pdf-doc` modifier**로 그리고, 표는 `.table-figma` + `.table-doc` modifier를 쓴다(새 계열 신설 금지 §7). 자작 오버레이·자작 표 계열을 만들지 말 것.
-  - 문서 수치는 전부 `DYEDU` 파생이다 — 결재용 별도 시드를 만들면 화면과 결재문서가 조용히 어긋난다. 상신 이력·결재선만 `sessionStorage['dy-edu-approval-v1']`·`['dy-edu-apprline-v1']`에 둔다.
+  - 문서 수치는 전부 `DYEDU` 파생이다 — 결재용 별도 시드를 만들면 화면과 결재문서가 조용히 어긋난다. 상태 스토어·결재선만 `sessionStorage['dy-edu-approval-v2']`·`['dy-edu-apprline-v1']`에 둔다.
   - **결재선을 코드에 고정하지 말 것** — 결재권자는 안전보건 법령이 아니라 **지자체 위임전결규칙** 소관이라 조직 개편·규칙 개정으로 바뀐다. 기본값(기안자 부서의 팀장 → 부서장)만 `DYV2.ORG`에서 직위명으로 파생하고, 변경은 `ORGPICK`(`member` 모드) 인라인 조직도로만 받는다(새 select 금지). 기안문 결재란 칸 수·직위·이름은 이 결재선을 그대로 따른다.
 - **관리감독자 2화면은 별도 코드가 아니다** — `EDUR/EDUE.init(mount, { supMode: true })` 플래그 재사용(`edu-sup.html`·`edu-sup-etc.html`). 관리감독자용 파일을 새로 만들지 말 것.
 - `edu.html`은 `edu-status.html`(대표 진입) 리다이렉트 스텁(쿼리 보존). 기존 링크는 무수정 동작.

@@ -40,9 +40,11 @@
         }
 
         var sessions = E().courseSessions(c);
+        /* 온나라 결재 상태 칩/상신 버튼 (교육별 = Type 2) */
+        var apvChip = global.EDUAPV ? '<span class="edu-apv-slot">' + global.EDUAPV.courseControl(c.id) + '</span>' : '';
         var summary =
             '<div class="edu-detail-head">' +
-                '<div class="edu-detail-title">' + esc(c.desc) + ' ' + stChip + '</div>' +
+                '<div class="edu-detail-title">' + esc(c.desc) + ' ' + stChip + ' ' + apvChip + '</div>' +
                 '<div class="edu-detail-meta">' +
                     '<span>구분 <b>' + esc(E().kindLabel(c.kind)) + '</b></span>' +
                     '<span>일정 <b>' + esc(E().courseDateTime(c)) + '</b></span>' +
@@ -221,6 +223,7 @@
         state.mount = document.getElementById(mountId);
         if (!state.mount) return;
         state.courseId = new URLSearchParams(location.search).get('id');
+        if (global.EDUAPV) global.EDUAPV.registerRefresh(render);
         render();
     }
     global.EDURD = {

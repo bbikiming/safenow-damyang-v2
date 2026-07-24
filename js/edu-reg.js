@@ -129,10 +129,12 @@
             actions = '<button type="button" class="btn btn-outline btn-sm" onclick="EDUR.viewDetail(\'' + c.id + '\')">상세</button> ';
         }
         actions += editDeleteBtns(c.id);
+        /* 온나라 결재 상태 칩/상신 버튼 (교육별 = Type 2) */
+        var apv = global.EDUAPV ? '<span class="edu-apv-slot">' + global.EDUAPV.courseControl(c.id) + '</span>' : '';
         return '<div class="edu-course-card" data-course-id="' + esc(c.id) + '">' +
             '<div class="edu-course-head">' +
                 '<div class="edu-course-title">' + deptChip + esc(c.desc) + ' ' + stChip + '</div>' +
-                '<div class="edu-course-actions">' + actions + '</div>' +
+                '<div class="edu-course-actions">' + apv + actions + '</div>' +
             '</div>' +
             '<div class="edu-course-meta">' +
                 '<span>일시 <b>' + esc(E().courseDateTime(c)) + '</b></span>' +
@@ -470,6 +472,7 @@
         SUP_MODE = !!opts.supMode;
         state.mount = document.getElementById(mountId);
         if (!state.mount) return;
+        if (global.EDUAPV) global.EDUAPV.registerRefresh(render);
         render();
     }
     global.EDUR = {

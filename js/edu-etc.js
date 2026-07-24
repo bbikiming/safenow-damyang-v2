@@ -59,10 +59,11 @@
         var deptChip = c.deptId ? '<span class="chip-status chip-sm neutral" style="margin-right:6px;">' + esc(E().deptName(c.deptId)) + '</span>' : '';
         var enrolls = E().enrolls(c.id);
         var cnt = enrolls.reduce(function (n, e) { return n + (e.workerIds || []).length; }, 0);
+        var apv = global.EDUAPV ? '<span class="edu-apv-slot">' + global.EDUAPV.courseControl(c.id) + '</span>' : '';
         return '<div class="edu-course-card">' +
             '<div class="edu-course-head">' +
                 '<div class="edu-course-title">' + typeBadge + deptChip + esc(c.desc) + ' ' + stChip + '</div>' +
-                '<div class="edu-course-actions">' +
+                '<div class="edu-course-actions">' + apv +
                     '<button type="button" class="btn btn-outline btn-sm" onclick="EDUE.viewDetail(\'' + c.id + '\')">상세</button>' +
                     '<button type="button" class="btn btn-outline btn-sm" onclick="EDUE.openEdit(\'' + c.id + '\')">수정</button>' +
                     '<button type="button" class="btn btn-outline btn-sm" style="border-color:var(--status-danger-border);color:var(--status-danger-fg);" onclick="EDUE.confirmRemove(\'' + c.id + '\')">삭제</button>' +
@@ -247,6 +248,7 @@
         SUP_MODE = !!opts.supMode;
         state.mount = document.getElementById(mountId);
         if (!state.mount) return;
+        if (global.EDUAPV) global.EDUAPV.registerRefresh(render);
         render();
     }
     global.EDUE = {

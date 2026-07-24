@@ -182,6 +182,8 @@
         /* 안전보건교육 (edu-*) — 이수 상태·명단 출처 */
         '미이수': 'neutral', '정상 이수': 'success', '지연 이수': 'warning',
         '인사연동': 'info', '직접등록': 'neutral', '엑셀업로드': 'purple',
+        /* 안전보건교육 — 온나라 결재 상태 (미상신→결재중→결재완료 / 반려) */
+        '미상신': 'neutral', '상신': 'info', '결재중': 'info', '결재완료': 'success',
     };
     /* 매핑에 없는 라벨은 neutral 로 수렴(색을 임의로 만들지 않는다). */
     function toneOf(label) { return STATUS_TONE[String(label || '').trim()] || 'neutral'; }
