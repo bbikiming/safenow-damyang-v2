@@ -28,10 +28,12 @@
     <script src="./js/edu-data.js"></script>
     <script src="./js/edu-filter.js"></script>
     <script src="./js/edu-etc.js"></script>
+    <script src="./js/edu-approval.js"></script>
     <script src="./js/edu-tour.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             window.EDUE.init('ee-root', { supMode: true });
+            window.EDUAPV.boot({ view: 'kind' });
             window.EDUTOUR.boot();
         });
     </script>

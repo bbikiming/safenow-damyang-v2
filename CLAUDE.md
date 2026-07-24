@@ -76,8 +76,12 @@
 
 안전보건교육은 **독립 GNB 그룹 `edu`**(`js/layout.js`)이고, SNB 3뎁스 구조다 — 현업근로자(정기 `edu-reg` · 채용시 `edu-hire` · 기타 `edu-etc`) · 관리감독자(정기 `edu-sup` · 기타 `edu-sup-etc`) · 직속(이수현황 `edu-status` · 근로자 명단 관리 `edu-workers`). 근거: `docs/planning/기획-안전보건교육-재설계-v1.md` — safe-damyang-v2 스냅샷의 UI/UX·메뉴 구조를 이식(2026-07-20). **구 "단일 화면 3탭" 확정(보완안 §7, 2026-07-19)은 이 이식으로 대체됨** — 다시 3탭으로 합치지 말 것.
 
-- 파일 구성: 화면 HTML 8개(`edu-reg/hire/etc/sup/sup-etc/status/workers/reg-detail.html`) + 모듈 6개(`js/edu-reg.js` EDUR · `edu-reg-detail.js` EDURD · `edu-hire.js` EDUH · `edu-etc.js` EDUE · `edu-status.js` EDUS · `edu-workers.js` EDUW) + `js/edu-data.js`(전역 `DYEDU`, 데이터 단일 출처) + `js/edu-filter.js`(전역 `EDUFILTER`, 공용 필터 바) + `js/edu-tour.js`(전역 `EDUTOUR`, 시연 투어). 공용 스타일은 `css/v2.css`의 `edu-*` 블록 — **별도 `edu.css` 파일 없음**(재생성 금지).
-- 로드 순서: `layout.js → common.js → org-pick.js → edu-data.js → edu-filter.js → 화면 모듈 → edu-tour.js`.
+- 파일 구성: 화면 HTML 8개(`edu-reg/hire/etc/sup/sup-etc/status/workers/reg-detail.html`) + 모듈 6개(`js/edu-reg.js` EDUR · `edu-reg-detail.js` EDURD · `edu-hire.js` EDUH · `edu-etc.js` EDUE · `edu-status.js` EDUS · `edu-workers.js` EDUW) + `js/edu-data.js`(전역 `DYEDU`, 데이터 단일 출처) + `js/edu-filter.js`(전역 `EDUFILTER`, 공용 필터 바) + `js/edu-approval.js`(전역 `EDUAPV`, 온나라 결재 상신) + `js/edu-tour.js`(전역 `EDUTOUR`, 시연 투어). 공용 스타일은 `css/v2.css`의 `edu-*` 블록 — **별도 `edu.css` 파일 없음**(재생성 금지).
+- 로드 순서: `layout.js → common.js → org-pick.js → edu-data.js → edu-filter.js → 화면 모듈 → edu-approval.js → edu-tour.js`.
+- **온나라 결재 상신은 `EDUAPV`(`js/edu-approval.js`)로만** — 화면마다 결재 버튼·문서를 새로 짜지 않는다. 각 화면은 모듈 init 후 `EDUAPV.boot({ view })`를 호출하고(우측 최상단 버튼 자동 주입 `.page-head-action`), 서식은 한 팝업 안의 3탭(`kind` 교육 종류별 목록 · `person` 개인별 이수 현황 · `all` 통합)이다. 근거: `docs/planning/기획-안전보건교육-온나라결재상신-v1.md`.
+  - 문서는 `DYV2.openModal(..., { variant:'wide' })` 위에 **표준 `.pdf-paper` + `.pdf-doc` modifier**로 그리고, 표는 `.table-figma` + `.table-doc` modifier를 쓴다(새 계열 신설 금지 §7). 자작 오버레이·자작 표 계열을 만들지 말 것.
+  - 문서 수치는 전부 `DYEDU` 파생이다 — 결재용 별도 시드를 만들면 화면과 결재문서가 조용히 어긋난다. 상신 이력·결재선만 `sessionStorage['dy-edu-approval-v1']`·`['dy-edu-apprline-v1']`에 둔다.
+  - **결재선을 코드에 고정하지 말 것** — 결재권자는 안전보건 법령이 아니라 **지자체 위임전결규칙** 소관이라 조직 개편·규칙 개정으로 바뀐다. 기본값(기안자 부서의 팀장 → 부서장)만 `DYV2.ORG`에서 직위명으로 파생하고, 변경은 `ORGPICK`(`member` 모드) 인라인 조직도로만 받는다(새 select 금지). 기안문 결재란 칸 수·직위·이름은 이 결재선을 그대로 따른다.
 - **관리감독자 2화면은 별도 코드가 아니다** — `EDUR/EDUE.init(mount, { supMode: true })` 플래그 재사용(`edu-sup.html`·`edu-sup-etc.html`). 관리감독자용 파일을 새로 만들지 말 것.
 - `edu.html`은 `edu-status.html`(대표 진입) 리다이렉트 스텁(쿼리 보존). 기존 링크는 무수정 동작.
 - **`js/edu-data.js`는 삭제·덮어쓰기 금지** — `js/my-work.js`가 `global.DYEDU`로 참조하고, 현재본이 소스 스냅샷의 상위집합(v1r4, 독촉 시드 3건 포함)이다. 시드 변경 시 `SKEY` 버전 범프.

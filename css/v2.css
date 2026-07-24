@@ -2011,3 +2011,164 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
   .dsh-chain { flex-direction: column; }
   .dsh-chain-arrow { transform: rotate(90deg); }
 }
+
+/* =========================================================================
+   안전보건교육 — 온나라 결재 상신 · 결재 문서 미리보기 (js/edu-approval.js EDUAPV)
+   ---------------------------------------------------------------------
+   공용 모달 'wide' 변형(DYV2.openModal) 안에서 3종 결재 서식을 탭 전환한다.
+   문서 지면은 표준 .pdf-paper 에 .pdf-doc modifier 를 얹어 A4 폭·격자 괘선으로
+   확장하고(새 계열 신설 금지 §7), 표는 .table-figma 의 .table-doc modifier 를 쓴다.
+   ========================================================================= */
+
+/* 페이지 헤더 우측 최상단 액션 버튼 */
+.page-head-action { margin-left: auto; flex-shrink: 0; }
+.dy-page-title:has(.page-head-action) { flex-wrap: wrap; }
+
+/* ── 팝업 상단: 조회 조건 + 서식 탭 ── */
+.eduapv-wrap { width: 100%; max-width: 900px; display: flex; flex-direction: column; }
+.eduapv-bar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 14px; margin-bottom: 12px;
+  background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card);
+}
+.eduapv-f { display: inline-flex; align-items: center; gap: 6px; }
+.eduapv-f > span { font-size: var(--fs-12); font-weight: var(--fw-bold); color: var(--text-gray); white-space: nowrap; }
+.eduapv-f .form-select { width: auto; min-width: 132px; }
+.eduapv-last { margin-left: auto; font-size: var(--fs-12); color: var(--text-gray); }
+.eduapv-last b { color: var(--main-dark2); font-weight: var(--fw-bold); }
+/* 결재선 편집 — 조직도(ORGPICK 'member')로만 지정한다 */
+.eduapv-line {
+  padding: 12px 14px; margin-bottom: 12px;
+  background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card);
+}
+.eduapv-line-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.eduapv-line-head b { font-size: var(--fs-13); font-weight: var(--fw-bold); color: var(--main-dark2); }
+.eduapv-line-head .pdf-note { font-size: var(--fs-12); }
+.eduapv-line-btns { margin-left: auto; display: flex; gap: 6px; flex-shrink: 0; }
+/* 조직도 트리를 펼치면 필드가 세로로 길어지므로 단계 라벨은 위에 붙여 둔다 */
+.eduapv-ln-row { display: flex; align-items: flex-start; gap: 10px; padding: 5px 0; }
+.eduapv-ln-row + .eduapv-ln-row { border-top: 1px dashed var(--card-line); }
+.eduapv-ln-step {
+  flex: none; width: 62px; padding-top: 9px; font-size: var(--fs-12); font-weight: var(--fw-bold);
+  color: var(--main-dark); white-space: nowrap;
+}
+.eduapv-ln-fixed { padding-top: 8px; }
+.eduapv-ln-row .orgpick-field { flex: 1; min-width: 0; }
+.eduapv-ln-pick { display: flex; align-items: center; gap: 8px; }
+.eduapv-ln-pick .form-input { flex: 1; min-width: 0; background: var(--gray-50); }
+.eduapv-ln-fixed { flex: 1; min-width: 0; font-size: var(--fs-13); line-height: 1.5; color: var(--text-black); }
+.eduapv-tabs { margin-bottom: 8px; }
+.eduapv-use { font-size: var(--fs-12); line-height: 1.55; color: var(--text-gray); margin-bottom: 14px; }
+.eduapv-use b { color: var(--main-dark2); font-weight: var(--fw-bold); }
+.eduapv-foot-note { margin-right: auto; font-size: var(--fs-12); color: var(--text-gray); }
+.eduapv-foot-note b { color: var(--main-dark2); font-weight: var(--fw-bold); }
+.eduapv-sent { text-align: center; padding: 8px 4px 4px; }
+.eduapv-sent .t { font-size: var(--fs-14); font-weight: var(--fw-bold); color: var(--main-dark2); margin-bottom: 6px; }
+.eduapv-sent .d { font-size: var(--fs-12); line-height: 1.6; color: var(--text-gray); margin-top: 8px; }
+
+/* ── .pdf-paper 의 문서(기안문) 변형 ── */
+.pdf-paper.pdf-doc {
+  max-width: 100%; width: 100%; padding: 40px 44px;
+  font-size: var(--fs-13); line-height: 1.6; box-shadow: var(--shadow-lg);
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.pdf-doc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+.pdf-doc-org { display: flex; flex-direction: column; gap: 2px; }
+.pdf-doc-org b { font-size: var(--fs-14); font-weight: var(--fw-bold); color: var(--main-dark2); letter-spacing: 2px; }
+.pdf-doc-org span { font-size: var(--fs-12); color: var(--text-gray); }
+.pdf-appr { display: flex; border: 1px solid var(--text-black); border-radius: var(--radius-xs); overflow: hidden; }
+.pdf-appr-col { min-width: 62px; border-left: 1px solid var(--text-black); }
+.pdf-appr-col:first-child { border-left: none; }
+.pdf-appr-t { font-size: var(--fs-12); text-align: center; padding: 3px 6px; background: var(--surface-alt); border-bottom: 1px solid var(--text-black); color: var(--text-gray); }
+.pdf-appr-s { height: 42px; display: flex; align-items: center; justify-content: center; font-size: var(--fs-12); color: var(--text-black); }
+.pdf-doc .pdf-title { font-size: var(--fs-22); letter-spacing: 1px; margin: 18px 0 6px; }
+.pdf-doc-sub { text-align: center; font-size: var(--fs-12); color: var(--text-gray); margin-bottom: 22px; }
+.pdf-doc .pdf-sec { font-size: var(--fs-13); font-weight: var(--fw-bold); color: var(--main-dark2); border-left: 3px solid var(--main); padding-left: 8px; margin: 24px 0 8px; }
+.pdf-subsec { font-size: var(--fs-12); font-weight: var(--fw-bold); color: var(--text-black); margin: 14px 0 6px; }
+.pdf-note { color: var(--text-lightgray); font-weight: var(--fw-regular); }
+.pdf-note-p { font-size: var(--fs-12); color: var(--text-gray); line-height: 1.6; margin-top: 8px; }
+.pdf-strong { font-weight: var(--fw-bold); color: var(--text-black); }
+.pdf-bad { color: var(--status-danger-fg); font-weight: var(--fw-bold); }
+.pdf-dash { color: var(--text-lightgray); }
+.pdf-empty-p { font-size: var(--fs-12); color: var(--text-lightgray); text-align: center; padding: 18px 0; }
+.pdf-doc .pdf-list { margin: 0; padding-left: 18px; font-size: var(--fs-12); line-height: 1.7; color: var(--text-black); }
+.pdf-doc .pdf-list b { color: var(--main-dark2); font-weight: var(--fw-bold); }
+.pdf-doc-foot { margin-top: 28px; padding-top: 12px; border-top: 1px solid var(--card-line); font-size: var(--fs-12); color: var(--text-gray); line-height: 1.7; }
+.pdf-doc-foot b { color: var(--text-black); font-weight: var(--fw-bold); }
+.pdf-doc-foot p + p { margin-top: 6px; }
+
+/* 종합 요약 지표 */
+.pdf-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.pdf-kpi { border: 1px solid var(--card-line); border-radius: var(--radius-md); padding: 10px 12px; text-align: center; background: var(--surface-alt); }
+.pdf-kpi b { display: block; font-size: var(--fs-18); font-weight: var(--fw-bold); color: var(--main-dark2); }
+.pdf-kpi span { display: block; margin-top: 2px; font-size: var(--fs-12); color: var(--text-gray); }
+.pdf-kpi.info { background: var(--status-info-bg); border-color: var(--status-info-border); }
+.pdf-kpi.success { background: var(--status-success-bg); border-color: var(--status-success-border); }
+.pdf-kpi.warning { background: var(--status-warning-bg); border-color: var(--status-warning-border); }
+.pdf-kpi.danger { background: var(--status-danger-bg); border-color: var(--status-danger-border); }
+.pdf-kpi.neutral { background: var(--status-neutral-bg); border-color: var(--status-neutral-border); }
+
+/* 문서용 표 — 표준 .table-figma 의 격자·조밀 modifier */
+.pdf-tablewrap { overflow-x: auto; }
+.table-figma.table-doc { min-width: 520px; }
+.table-figma.table-doc thead th {
+  background: var(--surface-alt); color: var(--text-gray);
+  font-size: var(--fs-12); font-weight: var(--fw-bold);
+  padding: 7px 9px; border: 1px solid var(--card-line); text-align: left; white-space: nowrap;
+}
+.table-figma.table-doc tbody td {
+  padding: 7px 9px; font-size: var(--fs-12); color: var(--text-black);
+  border: 1px solid var(--card-line); vertical-align: middle;
+}
+.table-figma.table-doc tbody tr:last-child td { border-bottom: 1px solid var(--card-line); }
+.table-figma.table-doc tbody tr:hover { background: transparent; }
+/* 중앙정렬 칸은 짧은 값(연번·구분·일자·시간·상태)만 담으므로 줄바꿈을 막는다.
+   본문이 긴 칸(교육명·강사·부서)은 좌측정렬이라 그대로 줄바꿈된다. */
+.table-figma.table-doc th.c, .table-figma.table-doc td.c { text-align: center; white-space: nowrap; }
+.table-figma.table-doc td.k { background: var(--surface-alt); font-weight: var(--fw-bold); color: var(--text-gray); width: 104px; white-space: nowrap; }
+.table-figma.table-doc tr.pdf-total td { background: var(--brand-50); font-weight: var(--fw-bold); color: var(--main-dark2); }
+.table-figma.table-doc tr.pdf-warn td { background: var(--status-warning-bg); }
+.table-figma.table-doc .pdf-empty { color: var(--text-lightgray); padding: 18px 0; }
+.pdf-meta { margin-bottom: 4px; }
+.table-figma.table-doc.pdf-meta { min-width: 0; }
+
+@media (max-width: 767px) {
+  .pdf-paper.pdf-doc { padding: 22px 18px; }
+  .pdf-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .eduapv-last { margin-left: 0; }
+  .eduapv-foot-note { margin-right: 0; width: 100%; }
+}
+/* 좁은 화면: 단계 라벨을 위로 올려 결재자 필드가 한 줄을 다 쓰게 한다 */
+@media (max-width: 559px) {
+  .eduapv-ln-row { flex-direction: column; align-items: stretch; gap: 4px; }
+  .eduapv-ln-step { width: auto; padding-top: 0; }
+  .eduapv-ln-fixed { padding-top: 0; }
+  .eduapv-line-btns { margin-left: 0; }
+}
+
+/* ── PDF 저장 / 인쇄 — wide 모달이 열려 있을 때 그 문서만 출력 ──
+ *  (모달이 닫혀 있으면 브라우저 기본 페이지 인쇄가 그대로 동작한다) */
+@media print {
+  body:has(#v2-modal.modal-wide) * { visibility: hidden !important; }
+  body:has(#v2-modal.modal-wide) #v2-modal,
+  body:has(#v2-modal.modal-wide) #v2-modal * { visibility: visible !important; }
+  #v2-modal.modal-wide { position: absolute; top: 0; left: 0; right: 0; display: block; padding: 0; background: var(--surface); }
+  #v2-modal.modal-wide .modal-backdrop,
+  #v2-modal.modal-wide .modal-header,
+  #v2-modal.modal-wide .modal-footer,
+  #v2-modal.modal-wide .eduapv-bar,
+  #v2-modal.modal-wide .eduapv-line,
+  #v2-modal.modal-wide .eduapv-tabs,
+  #v2-modal.modal-wide .eduapv-use { display: none !important; }
+  #v2-modal.modal-wide .modal-content {
+    max-width: none; width: auto; height: auto; max-height: none;
+    box-shadow: none; border-radius: 0; display: block;
+  }
+  #v2-modal.modal-wide .modal-body { display: block; overflow: visible; padding: 0; background: var(--surface); }
+  #v2-modal.modal-wide .eduapv-wrap { max-width: none; }
+  #v2-modal.modal-wide .pdf-paper { box-shadow: none; border: none; max-width: none; padding: 0; }
+  #v2-modal.modal-wide .pdf-tablewrap { overflow: visible; }
+  #v2-modal.modal-wide .table-figma.table-doc { min-width: 0; }
+  #v2-modal.modal-wide .pdf-sec { break-after: avoid; }
+  #v2-modal.modal-wide tr { break-inside: avoid; }
+}

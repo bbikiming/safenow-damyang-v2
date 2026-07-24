@@ -28,10 +28,12 @@
     <script src="./js/edu-data.js"></script>
     <script src="./js/edu-filter.js"></script>
     <script src="./js/edu-workers.js"></script>
+    <script src="./js/edu-approval.js"></script>
     <script src="./js/edu-tour.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             window.EDUW.init('ew-root');
+            window.EDUAPV.boot({ view: 'person' });
             window.EDUTOUR.boot();
         });
     </script>
