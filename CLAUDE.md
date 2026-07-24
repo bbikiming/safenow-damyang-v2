@@ -72,11 +72,11 @@
 - 소비처: `EDOC.ORG_TREE`(= `orgFlat()` 파생 → 경영방침·의견청취·회의록·업무 등록 담당자·예산 기관) · 메뉴/권한/사용자 관리(`DYADM.ORG = DYV2.ORG` 참조) · 인력평가 평가자 선택(evl-eval.html `PICK_TREE` 파생) · 조직 화면(m=org) 요약 카드.
 - `common.js` 는 `edoc.js`·`adm-perm.js` 보다 먼저 로드되어야 한다(전 페이지 검증됨).
 
-### 4. 안전보건교육 — 별도 GNB 그룹 · 7메뉴 + 상세 1 (재설계 v1 적용, 2026-07-20)
+### 4. 안전보건교육 — 별도 GNB 그룹 · 8메뉴 + 상세 1 (재설계 v1 적용, 2026-07-20 · 결재 이력 2026-07-24)
 
-안전보건교육은 **독립 GNB 그룹 `edu`**(`js/layout.js`)이고, SNB 3뎁스 구조다 — 현업근로자(정기 `edu-reg` · 채용시 `edu-hire` · 기타 `edu-etc`) · 관리감독자(정기 `edu-sup` · 기타 `edu-sup-etc`) · 직속(이수현황 `edu-status` · 근로자 명단 관리 `edu-workers`). 근거: `docs/planning/기획-안전보건교육-재설계-v1.md` — safe-damyang-v2 스냅샷의 UI/UX·메뉴 구조를 이식(2026-07-20). **구 "단일 화면 3탭" 확정(보완안 §7, 2026-07-19)은 이 이식으로 대체됨** — 다시 3탭으로 합치지 말 것.
+안전보건교육은 **독립 GNB 그룹 `edu`**(`js/layout.js`)이고, SNB 3뎁스 구조다 — 현업근로자(정기 `edu-reg` · 채용시 `edu-hire` · 기타 `edu-etc`) · 관리감독자(정기 `edu-sup` · 기타 `edu-sup-etc`) · 직속(이수현황 `edu-status` · 근로자 명단 관리 `edu-workers` · 결재 이력 `edu-approval`). 근거: `docs/planning/기획-안전보건교육-재설계-v1.md` — safe-damyang-v2 스냅샷의 UI/UX·메뉴 구조를 이식(2026-07-20). **구 "단일 화면 3탭" 확정(보완안 §7, 2026-07-19)은 이 이식으로 대체됨** — 다시 3탭으로 합치지 말 것.
 
-- 파일 구성: 화면 HTML 8개(`edu-reg/hire/etc/sup/sup-etc/status/workers/reg-detail.html`) + 모듈 6개(`js/edu-reg.js` EDUR · `edu-reg-detail.js` EDURD · `edu-hire.js` EDUH · `edu-etc.js` EDUE · `edu-status.js` EDUS · `edu-workers.js` EDUW) + `js/edu-data.js`(전역 `DYEDU`, 데이터 단일 출처) + `js/edu-filter.js`(전역 `EDUFILTER`, 공용 필터 바) + `js/edu-approval.js`(전역 `EDUAPV`, 온나라 결재 상신) + `js/edu-tour.js`(전역 `EDUTOUR`, 시연 투어). 공용 스타일은 `css/v2.css`의 `edu-*` 블록 — **별도 `edu.css` 파일 없음**(재생성 금지).
+- 파일 구성: 화면 HTML 9개(`edu-reg/hire/etc/sup/sup-etc/status/workers/reg-detail/approval.html`) + 모듈 7개(`js/edu-reg.js` EDUR · `edu-reg-detail.js` EDURD · `edu-hire.js` EDUH · `edu-etc.js` EDUE · `edu-status.js` EDUS · `edu-workers.js` EDUW · `edu-apv-log.js` EDUAPVLOG) + `js/edu-data.js`(전역 `DYEDU`, 데이터 단일 출처) + `js/edu-filter.js`(전역 `EDUFILTER`, 공용 필터 바) + `js/edu-approval.js`(전역 `EDUAPV`, 온나라 결재 상신) + `js/edu-tour.js`(전역 `EDUTOUR`, 시연 투어). 공용 스타일은 `css/v2.css`의 `edu-*` 블록 — **별도 `edu.css` 파일 없음**(재생성 금지).
 - 로드 순서: `layout.js → common.js → org-pick.js → edu-data.js → edu-filter.js → 화면 모듈 → edu-approval.js → edu-tour.js`.
 - **온나라 결재 상신은 `EDUAPV`(`js/edu-approval.js`)로만** — 화면마다 결재 버튼·문서를 새로 짜지 않는다. 근거: `docs/planning/기획-안전보건교육-온나라결재상신-v1.md`(v1.1). **상신 트리거 3종**:
   - **총괄(Type 1)** — 목록 화면 init 후 `EDUAPV.boot({ view })`(우측 최상단 `[총괄 결재 상신]` 자동 주입 `.page-head-action`). 한 팝업 3탭(`kind`·`person`·`all`, 대상 연도·부서 조회 조건).
@@ -85,6 +85,7 @@
   - **목록 결재 상태**(미상신·결재중·결재완료·반려)는 위 두 컨트롤로 노출한다. 미상신=액션 버튼, 이후=상태 칩(클릭 시 상태 팝업 — 시연용 결재완료/반려 회신·재상신). 화면 모듈은 init 에서 `EDUAPV.registerRefresh(render)`로 자동 갱신을 등록한다. 상태 어휘 tone 은 `DYV2.STATUS_TONE`(공용) 단일 출처.
   - 문서는 `DYV2.openModal(..., { variant:'wide' })` 위에 **표준 `.pdf-paper` + `.pdf-doc` modifier**로 그리고, 표는 `.table-figma` + `.table-doc` modifier를 쓴다(새 계열 신설 금지 §7). 자작 오버레이·자작 표 계열을 만들지 말 것.
   - 문서 수치는 전부 `DYEDU` 파생이다 — 결재용 별도 시드를 만들면 화면과 결재문서가 조용히 어긋난다. 상태 스토어·결재선만 `sessionStorage['dy-edu-approval-v2']`·`['dy-edu-apprline-v1']`에 둔다.
+  - **상신 이력은 `edu-approval.html`(결재 이력, `js/edu-apv-log.js` EDUAPVLOG)에서 통합 조회**한다. 이 화면은 조회 전용이며 `EDUAPV.submissions()`·`openDocSid()`·`openStatusSid()`만 소비하고 스토어를 직접 읽지 않는다. **재상신 건은 이전 건을 덮어쓰지 않고** 별도 이력으로 남기며, 최신이 아닌 건은 상태 변경이 막힌다(이력 변조 방지).
   - **결재선을 코드에 고정하지 말 것** — 결재권자는 안전보건 법령이 아니라 **지자체 위임전결규칙** 소관이라 조직 개편·규칙 개정으로 바뀐다. 기본값(기안자 부서의 팀장 → 부서장)만 `DYV2.ORG`에서 직위명으로 파생하고, 변경은 `ORGPICK`(`member` 모드) 인라인 조직도로만 받는다(새 select 금지). 기안문 결재란 칸 수·직위·이름은 이 결재선을 그대로 따른다.
 - **관리감독자 2화면은 별도 코드가 아니다** — `EDUR/EDUE.init(mount, { supMode: true })` 플래그 재사용(`edu-sup.html`·`edu-sup-etc.html`). 관리감독자용 파일을 새로 만들지 말 것.
 - `edu.html`은 `edu-status.html`(대표 진입) 리다이렉트 스텁(쿼리 보존). 기존 링크는 무수정 동작.

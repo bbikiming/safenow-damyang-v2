@@ -731,8 +731,15 @@
         else if (kind === 'person') { state.mode = 'person'; state.workerId = workerId; openStatus('person', personTarget(workerId)); }
         else { openStatus('summary', summaryTarget()); }
     }
-    function openStatus(kind, target) {
-        var sub = latestSub(kind, target);
+    function openStatus(kind, target) { statusModal(latestSub(kind, target), kind, target); }
+    /* 상신 이력 목록에서 특정 상신 건을 지정해 열 때 — 재상신으로 밀려난 과거 건도 그대로 보여준다 */
+    function openStatusSid(sid) {
+        var arr = store().subs.filter(function (s) { return s.sid === sid; });
+        if (!arr.length) return;
+        var sub = arr[0];
+        statusModal(sub, sub.kind, sub.target);
+    }
+    function statusModal(sub, kind, target) {
         var reopenCall = kind === 'course' ? "EDUAPV.openCourse('" + esc(sub ? sub.courseId : state.courseId) + "')"
             : kind === 'person' ? "EDUAPV.openPerson('" + esc(sub ? sub.workerId : state.workerId) + "')"
             : 'EDUAPV.openSummary()';
@@ -758,9 +765,13 @@
             '<tr><td class="k">결재선</td><td>' + esc(sub.line) + '</td></tr>' +
             '<tr><td class="k">현재 상태</td><td>' + chipMini(sub.status) + '</td></tr>' +
         '</tbody></table>';
-        /* 시연 회신 컨트롤 — 온나라 결재 결과 회신 시뮬레이션 */
+        /* 시연 회신 컨트롤 — 온나라 결재 결과 회신 시뮬레이션.
+         * 재상신으로 밀려난 과거 건은 이력 열람만 가능하고 상태를 되돌리지 않는다. */
+        var isLatest = latestSub(kind, target) === sub;
         var demo = '';
-        if (sub.status === ST_SUBMITTED) {
+        if (!isLatest) {
+            demo = '';
+        } else if (sub.status === ST_SUBMITTED) {
             demo = '<button type="button" class="btn btn-outline btn-sm" style="border-color:var(--status-danger-border);color:var(--status-danger-fg);" onclick="EDUAPV.advance(\'' + kind + '\',\'' + esc(target) + '\',\'' + ST_REJECT + '\')">반려 처리</button>' +
                    '<button type="button" class="btn btn-primary btn-sm" onclick="EDUAPV.advance(\'' + kind + '\',\'' + esc(target) + '\',\'' + ST_DONE + '\')">결재 완료 처리</button>';
         } else {
@@ -768,8 +779,11 @@
         }
         V().openModal('결재 상태 · ' + esc(sub.no),
             '<div class="eduapv-status">' + infoTable +
-                '<div class="eduapv-status-note">온나라 전자결재 진행 상태입니다. 실제 연계 시 결재 완료·반려는 온나라에서 회신됩니다. ' +
-                '<span class="pdf-note">아래 버튼은 프로토타입 시연용 회신입니다.</span></div>' +
+                '<div class="eduapv-status-note">' + (isLatest
+                    ? '온나라 전자결재 진행 상태입니다. 실제 연계 시 결재 완료·반려는 온나라에서 회신됩니다. ' +
+                      '<span class="pdf-note">아래 버튼은 프로토타입 시연용 회신입니다.</span>'
+                    : '이 문서는 이후 <b>재상신되어 최신 건이 아닙니다</b>. 상태 변경은 최신 상신 건에서만 가능합니다.') +
+                '</div>' +
                 '<div class="edu-card-title" style="margin-top:14px;">상태 이력</div>' +
                 '<div class="edu-hist">' + logRows + '</div>' +
             '</div>',
@@ -787,6 +801,49 @@
         V().closeModal();
         refreshAll();
         toast('결재 상태: ' + st + (st === ST_DONE ? ' · 문서등록번호 회신 등록(목업)' : ''));
+    }
+
+    /* ==================== 상신 이력 목록 (edu-approval.html · EDUAPVLOG) ====================
+     * 화면은 이 API 만 소비한다 — 스토어 구조를 화면이 직접 읽지 않도록 라벨까지 여기서 낸다. */
+    var SUB_KIND_LABEL = { summary: '총괄', course: '교육별', person: '개인별' };
+    function subKindLabel(s) { return SUB_KIND_LABEL[s.kind] || s.kind; }
+    /* 대상 표기 — 무엇을 대상으로 상신한 건인지 한 줄로 */
+    function subScope(s) {
+        if (s.kind === 'course') {
+            var c = E().courseOf(s.courseId);
+            return c ? courseTitleBase(c) : (s.courseId || '(삭제된 교육)');
+        }
+        if (s.kind === 'person') {
+            var w = E().workerOf(s.workerId);
+            return w ? (w.name + ' · ' + E().deptName(w.deptId)) : (s.workerId || '(삭제된 대상자)');
+        }
+        return (s.dept ? E().deptName(s.dept) : '전체 부서') + ' · ' + (s.year || '') + '년';
+    }
+    /* 상신 이력 — 최신순. 각 건에 그 대상의 최신 건인지(latest) 표시해 재상신 이력을 구분한다. */
+    function submissions() {
+        var subs = store().subs;
+        return subs.map(function (s, i) {
+            return {
+                sid: s.sid, no: s.no, at: s.at, status: s.status, label: s.label, line: s.line,
+                kind: s.kind, kindLabel: subKindLabel(s), scope: subScope(s),
+                year: s.year || '', target: s.target,
+                latest: latestSub(s.kind, s.target) === s,
+                _i: i
+            };
+        }).sort(function (a, b) {
+            var d = String(b.at).localeCompare(String(a.at));
+            return d !== 0 ? d : b._i - a._i;
+        });
+    }
+    /* 이력 행에서 문서 다시 보기 — 상신 당시 컨텍스트(연도·부서·서식)를 복원해 연다 */
+    function openDocSid(sid) {
+        var arr = store().subs.filter(function (s) { return s.sid === sid; });
+        if (!arr.length) return;
+        var s = arr[0];
+        if (s.kind === 'course') { openCourse(s.courseId); return; }
+        if (s.kind === 'person') { state.year = s.year || ''; openPerson(s.workerId); return; }
+        state.view = s.view || 'kind'; state.year = s.year || ''; state.dept = s.dept || '';
+        openSummary();
     }
 
     /* ==================== 목록 상태 칩 · 행 컨트롤 ==================== */
@@ -849,6 +906,9 @@
         reopenLast: reopenLast, advance: advance,
         /* 상태 팝업 진입 — status(kind, courseId, workerId) */
         status: openStatusCtx, openStatus: openStatus,
+        /* 상신 이력 목록(edu-approval.html) 소비 API */
+        submissions: submissions, openStatusSid: openStatusSid, openDocSid: openDocSid,
+        STATUSES: [ST_SUBMITTED, ST_DONE, ST_REJECT],
         /* 목록 상태 칩/버튼 (화면 렌더러가 셀에 삽입) */
         courseControl: courseControl, personControl: personControl,
         statusOf: statusOf,

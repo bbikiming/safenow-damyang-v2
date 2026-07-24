@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>결재 이력 — 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="edu-approval"
+      data-page-title="결재 이력"
+      data-page-subtitle="온나라 결재 상신 건 통합 조회 — 총괄·교육별·개인별 (EDU-APV-LOG)">
+    <main>
+        <div class="check-notice">
+            안전보건교육에서 상신한 <b>온나라 결재 문서</b>를 한 곳에서 조회합니다.
+            <b>총괄</b>(연도·부서 전체) · <b>교육별</b>(교육 1건) · <b>개인별</b>(대상자 1명) 상신이 모두 쌓이며,
+            행의 <b>[문서]</b>로 상신 당시 문서를 다시 보고 <b>[상태]</b>로 결재 진행 상태를 확인합니다.
+        </div>
+        <div id="eal-root"></div>
+    </main>
+
+    <div id="toast" class="toast" role="status"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/org-pick.js"></script>
+    <script src="./js/edu-data.js"></script>
+    <script src="./js/edu-filter.js"></script>
+    <script src="./js/edu-apv-log.js"></script>
+    <script src="./js/edu-approval.js"></script>
+    <script src="./js/edu-tour.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            window.EDUAPVLOG.init('eal-root');
+            window.EDUTOUR.boot();
+        });
+    </script>
+</body>
+</html>

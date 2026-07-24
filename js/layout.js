@@ -305,6 +305,8 @@
             /* 직속 (section 없음) */
             { id: 'edu-status',  label: '이수현황',           icon: 'chart', href: 'edu-status.html',  screen: 'EDU-STATUS / SFR-004·010' },
             { id: 'edu-workers', label: '근로자 명단 관리',    icon: 'users', href: 'edu-workers.html', screen: 'EDU-WORKERS / SFR-004' },
+            /* 온나라 결재 상신 이력 통합 조회 (총괄·교육별·개인별) — js/edu-apv-log.js */
+            { id: 'edu-approval', label: '결재 이력',          icon: 'file',  href: 'edu-approval.html', screen: 'EDU-APV-LOG / SFR-004' },
         ]},
 
         // GNB 4. 의견청취 (SFR-011) — 대메뉴 승격. 화면 내부 3탭을 SNB 3메뉴로 분리 (menu.html?m=opinion&sub=)
