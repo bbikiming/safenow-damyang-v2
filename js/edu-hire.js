@@ -14,8 +14,11 @@
     function esc(s) { return V().esc(String(s == null ? '' : s)); }
     function toast(m) { V().toast(m); }
 
-    var state = { mount: null, tab: 'undone', fDept: '', fEmp: '', fQ: '', fYear: '', fDone: '', groupBy: 'dept', checked: {} };
-    /* groupBy: 'dept' 부서별 | 'hire' 채용일(월)별 | 'none' 안 묶기 */
+    var state = { mount: null, tab: 'undone', fDept: '', fEmp: '', fQ: '', fYear: '', fDone: '', groupBy: 'dept', checked: {},
+                  cQ: '', cDept: '', cYear: '' };
+    /* tab: 'undone' 미이수 | 'done' 이수 | 'courses' 교육 건(실시한 채용시 교육 목록 · 교육별 결재 상신)
+     * groupBy: 'dept' 부서별 | 'hire' 채용일(월)별 | 'none' 안 묶기
+     * c* — '교육 건' 탭 전용 필터(근로자 필터와 의미가 달라 별도 상태로 둔다) */
     var B = null; /* 일괄 이수처리 폼 */
     var A = null; /* 채용시 교육 추가 폼 (자체교육과 동일 구성 · EDUFORM) */
 
@@ -43,14 +46,19 @@
 
     function render() {
         if (!state.mount) return;
-        var all = tabRows();
-        var list = rowsForTab();
 
         var tabs =
             '<div class="sub-tabs" style="margin-bottom:12px;">' +
                 '<button type="button" class="sub-tab' + (state.tab === 'undone' ? ' active' : '') + '" onclick="EDUH.setTab(\'undone\')">미이수 <span class="count">' + tabCount('undone') + '</span></button>' +
                 '<button type="button" class="sub-tab' + (state.tab === 'done' ? ' active' : '') + '" onclick="EDUH.setTab(\'done\')">이수 <span class="count">' + tabCount('done') + '</span></button>' +
+                '<button type="button" class="sub-tab' + (state.tab === 'courses' ? ' active' : '') + '" onclick="EDUH.setTab(\'courses\')">교육 건 <span class="count">' + hireCourses().length + '</span></button>' +
             '</div>';
+
+        /* '교육 건' 탭 — 실시한 채용시 교육을 건 단위로 보고 교육별 결재 상신(Type 2)을 건다 */
+        if (state.tab === 'courses') { state.mount.innerHTML = tabs + renderCourses(); return; }
+
+        var all = tabRows();
+        var list = rowsForTab();
 
         var fields = [
             { type: 'search', id: 'eh-q', value: state.fQ, placeholder: '이름·부서 검색', on: "EDUH.setF('Q', this.value)" },
@@ -110,6 +118,70 @@
                 '<th>이름</th><th>부서</th><th>고용형태</th><th>채용일</th><th>필요시간</th><th>이수일</th><th>상태</th><th></th>' +
             '</tr></thead><tbody>' + body + '</tbody></table></div></div>';
     }
+
+    /* ===== '교육 건' 탭 — 채용시 교육 목록 + 교육별 결재 상신 =====
+     * 채용시교육은 근로자 단위 화면이라 그동안 교육 건 목록이 없었고, 그래서 교육별 상신(Type 2)을
+     * 걸 자리도 없었다. 실제로는 HIRE 교육 건이 존재하므로(일괄 이수처리=근로자별 1건,
+     * 교육 추가=다수 대상 1건) 이 탭에서 건 단위로 노출하고 다른 교육 화면과 같은 컨트롤을 쓴다. */
+    function hireCourses() { return E().courses({ kind: ['HIRE'] }); }
+    function courseWorkers(c) {
+        var ids = {};
+        E().enrolls(c.id).forEach(function (e) { (e.workerIds || []).forEach(function (w) { ids[w] = true; }); });
+        E().records().forEach(function (r) { if (r.courseId === c.id) ids[r.workerId] = true; });
+        return Object.keys(ids).map(function (id) { return E().workerOf(id); }).filter(Boolean);
+    }
+    function renderCourses() {
+        var all = hireCourses();
+        var list = all.filter(function (c) {
+            if (state.cDept && c.deptId !== state.cDept) return false;
+            if (state.cYear && String(c.date || '').slice(0, 4) !== state.cYear) return false;
+            return EDUFILTER.match(state.cQ, [c.desc, c.instructor, E().deptName(c.deptId)]);
+        });
+        var head = EDUFILTER.bar([
+            { type: 'search', id: 'eh-c-q', value: state.cQ, placeholder: '교육명·강사 검색', on: "EDUH.setCF('Q', this.value)" },
+            { type: 'select', id: 'eh-c-dept', value: state.cDept, label: '부서',
+              options: [['', '부서 전체']].concat(E().deptCandidates().map(function (d) { return [d.id, d.name]; })),
+              on: "EDUH.setCF('Dept', this.value)" },
+            { type: 'select', id: 'eh-c-year', value: state.cYear, label: '연도',
+              options: EDUFILTER.yearOptions(all.map(function (c) { return c.date; })),
+              on: "EDUH.setCF('Year', this.value)" }
+        ], {
+            count: list.length, unit: '건', reset: 'EDUH.resetCF()',
+            actions: '<button type="button" class="btn btn-primary" onclick="EDUH.openAdd()">＋ 채용시 교육 추가</button>'
+        });
+        var cards = list.length ? list.map(courseCardHtml).join('')
+            : '<div class="edu-card"><div class="v2-empty">' +
+                (all.length ? '조건에 맞는 채용시 교육이 없습니다.' : '실시한 채용시 교육이 없습니다. 미이수 탭에서 이수 처리하면 교육 건이 만들어집니다.') +
+              '</div></div>';
+        return head +
+            '<div class="check-notice" style="margin-bottom:12px;">채용시 교육을 <b>건 단위</b>로 보고, 건별로 <b>온나라 결재 상신</b>합니다. ' +
+            '대상자 이수 취소는 <b>이수</b> 탭에서 처리합니다.</div>' + cards;
+    }
+    function courseCardHtml(c) {
+        var stChip = '<span class="chip-status chip-sm ' + V().toneOf(c.status === 'DONE' ? '완료' : '진행중') + '">' +
+            (c.status === 'DONE' ? '완료' : '진행중') + '</span>';
+        var deptChip = c.deptId ? '<span class="chip-status chip-sm neutral" style="margin-right:6px;">' + esc(E().deptName(c.deptId)) + '</span>' : '';
+        var ws = courseWorkers(c);
+        var names = ws.map(function (w) { return w.name; });
+        var apv = global.EDUAPV ? '<span class="edu-apv-slot">' + global.EDUAPV.courseControl(c.id) + '</span>' : '';
+        return '<div class="edu-course-card" data-course-id="' + esc(c.id) + '">' +
+            '<div class="edu-course-head">' +
+                '<div class="edu-course-title">' + deptChip + esc(c.desc) + ' ' + stChip + '</div>' +
+                '<div class="edu-course-actions">' + apv + '</div>' +
+            '</div>' +
+            '<div class="edu-course-meta">' +
+                '<span>일시 <b>' + esc(E().courseDateTime(c) || '-') + '</b></span>' +
+                '<span>시간 <b>' + c.hours + 'h</b></span>' +
+                '<span>강사 <b>' + esc(c.instructor || '-') + '</b></span>' +
+                '<span>대상자 <b>' + ws.length + '명</b>' +
+                    (names.length ? ' <span style="color:var(--text-gray);">' +
+                        esc(names.length > 5 ? names.slice(0, 5).join(', ') + ' 외 ' + (names.length - 5) : names.join(', ')) + '</span>' : '') +
+                '</span>' +
+            '</div>' +
+        '</div>';
+    }
+    function setCF(k, v) { state['c' + k] = v; EDUFILTER.rerender(render); }
+    function resetCF() { state.cQ = ''; state.cDept = ''; state.cYear = ''; render(); }
 
     /* ===== 묶어보기(그룹) ===== */
     function groupKeyOf(r) {
@@ -434,10 +506,13 @@
     function init(mountId) {
         state.mount = document.getElementById(mountId);
         if (!state.mount) return;
+        if (global.EDUAPV) global.EDUAPV.registerRefresh(render);
         render();
     }
     global.EDUH = {
         init: init, setTab: setTab, setF: setF, resetF: resetF,
+        /* '교육 건' 탭 — 교육별 결재 상신 */
+        setCF: setCF, resetCF: resetCF,
         toggle: toggle, toggleAll: toggleAll,
         setGroupBy: setGroupBy, toggleGroup: toggleGroup,
         openBulk: openBulk, setBulkMode: setBulkMode, doBulk: doBulk,
