@@ -417,6 +417,35 @@
         save();
         return { enrolls: enrollCnt, records: recordCnt };
     }
+    /* 근로자 1명만 교육에서 회수 — 한 교육 건에 여러 명이 묶인 경우(채용시 일괄 이수처리 '묶기')
+     * 교육 건을 통째로 지우면 다른 대상자의 이수기록까지 사라지므로, 그 사람의 신청·이수기록만 뺀다.
+     * 남은 대상자가 없으면 빈 교육 건은 함께 회수한다.
+     * 반환 = { records: 회수된 이수기록 수, courseRemoved: 교육 건까지 삭제됐는지 } */
+    function removeWorkerFromCourse(courseId, workerId) {
+        var d = load(), recCnt = 0;
+        d.records = d.records.filter(function (r) {
+            if (r.courseId === courseId && r.workerId === workerId) { recCnt++; return false; }
+            return true;
+        });
+        d.enrolls.forEach(function (e) {
+            if (e.courseId !== courseId) return;
+            e.workerIds = (e.workerIds || []).filter(function (w) { return w !== workerId; });
+        });
+        /* 대상자가 모두 빠진 신청 행은 제거 */
+        d.enrolls = d.enrolls.filter(function (e) { return e.courseId !== courseId || (e.workerIds || []).length; });
+        var left = d.enrolls.filter(function (e) { return e.courseId === courseId; })
+                .reduce(function (n, e) { return n + (e.workerIds || []).length; }, 0) +
+            d.records.filter(function (r) { return r.courseId === courseId; }).length;
+        var courseRemoved = false;
+        if (!left) {
+            d.courses = d.courses.filter(function (c) {
+                if (c.id === courseId) { courseRemoved = true; return false; }
+                return true;
+            });
+        }
+        save();
+        return { records: recCnt, courseRemoved: courseRemoved };
+    }
     /* 부서 신청 취소 — 교육이 이미 종료(DONE)된 뒤라면 해당 부서 근로자의 이수기록도 회수 */
     function removeEnroll(courseId, deptId) {
         var d = load();
@@ -585,6 +614,7 @@
         courseSessions: courseSessions, sessionHours: sessionHours, sumSessionHours: sumSessionHours,
         /* 신청·이수 */
         enrolls: enrolls, addEnroll: addEnroll, removeEnroll: removeEnroll,
+        removeWorkerFromCourse: removeWorkerFromCourse,
         records: records, recordsFor: recordsFor, addRecord: addRecord,
         recordCourseCompletion: recordCourseCompletion, recordKindForCourse: recordKindForCourse,
         syncCourseRecordHours: syncCourseRecordHours,

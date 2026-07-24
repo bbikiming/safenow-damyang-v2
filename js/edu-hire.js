@@ -252,27 +252,45 @@
     }
 
     /* =============== 이수 취소 =============== */
-    /* 일괄 처리로 만들어진 근로자별 HIRE 교육 건을 지워 '미이수'로 되돌린다.
-     * 잘못 처리했을 때 전체 초기화 말고는 복구 수단이 없어 시연 사고에 취약했다. */
+    /* 그 근로자의 채용시교육 이수기록만 회수해 '미이수'로 되돌린다.
+     * 묶인 교육 건(일괄 이수처리 '한 건으로 묶기')은 통째로 지우면 다른 대상자의 이수까지
+     * 사라지므로, DYEDU.removeWorkerFromCourse 로 본인 몫만 빼고 남은 대상자가 없을 때만 건을 회수한다. */
+    function coursesOfWorker(workerId) {
+        return E().courses({ kind: ['HIRE'] }).filter(function (c) {
+            var inEnroll = E().enrolls(c.id).some(function (e) { return (e.workerIds || []).indexOf(workerId) !== -1; });
+            var inRecord = E().records().some(function (r) { return r.courseId === c.id && r.workerId === workerId; });
+            return inEnroll || inRecord;
+        });
+    }
     function confirmUndo(workerId) {
         var w = E().workerOf(workerId); if (!w) return;
-        var mine = E().courses({ kind: ['HIRE'] }).filter(function (c) {
-            return E().enrolls(c.id).some(function (e) { return (e.workerIds || []).indexOf(workerId) !== -1; });
-        });
+        var mine = coursesOfWorker(workerId);
         if (!mine.length) { toast('되돌릴 채용시교육 이수 건이 없습니다.'); return; }
+        /* 본인 외 대상자가 남는 교육 건(묶인 건)은 삭제되지 않고 유지됨을 명시한다 */
+        var shared = mine.filter(function (c) {
+            return courseWorkers(c).filter(function (x) { return x.id !== workerId; }).length > 0;
+        }).length;
+        var hours = E().records().filter(function (r) {
+            return r.workerId === workerId && r.kind === 'HIRE';
+        }).reduce(function (n, r) { return n + (r.hours || 0); }, 0);
         V().openModal('채용시교육 이수 취소',
             '<p style="font-size:var(--fs-13);"><b>' + esc(w.name) + '</b> (' + esc(E().deptName(w.deptId)) + ')</p>' +
-            '<div class="check-notice" style="margin-top:10px;">이수 처리된 <b>' + mine.length + '건</b>과 반영된 이수시간이 함께 회수되어 <b>미이수</b> 상태로 돌아갑니다.</div>',
+            '<div class="check-notice" style="margin-top:10px;">교육 <b>' + mine.length + '건</b>에서 이 대상자의 이수기록(<b>' + hours + 'h</b>)만 회수되어 <b>미이수</b> 상태로 돌아갑니다.' +
+                (shared ? ' 다른 대상자가 함께 묶인 <b>' + shared + '건</b>은 삭제되지 않고 유지됩니다.' : ' 대상자가 본인뿐인 교육 건은 함께 삭제됩니다.') +
+            '</div>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="EDUH.doUndo(\'' + workerId + '\')">이수 취소</button>');
     }
     function doUndo(workerId) {
-        var mine = E().courses({ kind: ['HIRE'] }).filter(function (c) {
-            return E().enrolls(c.id).some(function (e) { return (e.workerIds || []).indexOf(workerId) !== -1; });
+        var mine = coursesOfWorker(workerId);
+        var recs = 0, removed = 0;
+        mine.forEach(function (c) {
+            var res = E().removeWorkerFromCourse(c.id, workerId);
+            recs += res.records;
+            if (res.courseRemoved) removed++;
         });
-        mine.forEach(function (c) { E().removeCourse(c.id); });
         V().closeModal();
-        toast(mine.length + '건 이수 취소 · 미이수로 되돌렸습니다.');
+        toast('이수기록 ' + recs + '건 회수 · 미이수로 되돌렸습니다' + (removed ? ' (빈 교육 건 ' + removed + '건 삭제)' : ''));
         render();
     }
 
@@ -297,11 +315,25 @@
             ids: ids,
             /* 기본값: 각자 채용일 처리(정상 이수). 해제 시 일괄 이수일 지정. */
             useHireDate: true,
+            /* merge — 교육 건 생성 방식. false=근로자별 개별 건(기본) · true=한 건으로 묶기.
+             * 묶으려면 이수일이 하나여야 하므로 '일괄 이수일 지정'과 함께만 성립한다. */
+            merge: false,
             date: E().today(), time: '09:00',
             instructor: '외부위탁',
             desc: '채용시 안전보건교육 (일괄 이수처리)'
         };
         renderBulk();
+    }
+    /* 묶기 시 생성 단위 — 필요시간(1h·4h·8h)이 다르면 법정 교육시간이 다른 별개 과정이므로 건을 나눈다 */
+    function bulkGroups() {
+        var map = {};
+        B.ids.forEach(function (id) {
+            var w = E().workerOf(id); if (!w) return;
+            var h = E().hireHours(w);
+            (map[h] = map[h] || []).push(id);
+        });
+        return Object.keys(map).map(Number).sort(function (a, b) { return b - a; })
+            .map(function (h) { return { hours: h, ids: map[h] }; });
     }
     function captureBulk() {
         var el = function (id) { return document.getElementById(id); };
@@ -333,6 +365,22 @@
                       '<input type="time" class="form-input" id="eh-b-time" value="' + esc(B.time) + '"></div>' +
                   '</div>'
                 : '') +
+            /* 교육 건 생성 방식 — 개별/묶기. 묶기는 이수일이 하나여야 성립하므로 일괄 이수일과 함께 쓴다. */
+            '<div class="edu-modal-row"><label class="form-label">교육 건 생성 방식</label>' +
+                '<label style="display:flex;align-items:center;gap:6px;font-size:var(--fs-12);padding:4px 0;">' +
+                    '<input type="radio" name="eh-merge"' + (!B.merge ? ' checked' : '') + ' onchange="EDUH.setBulkMerge(false)"> ' +
+                    '<b>근로자별 개별 건</b> (기본 · 1명당 교육 건 1개)' +
+                '</label>' +
+                '<label style="display:flex;align-items:center;gap:6px;font-size:var(--fs-12);padding:4px 0;">' +
+                    '<input type="radio" name="eh-merge"' + (B.merge ? ' checked' : '') + ' onchange="EDUH.setBulkMerge(true)"> ' +
+                    '<b>한 건으로 묶기</b> <span style="color:var(--text-gray);">(선택 시 일괄 이수일로 전환됩니다)</span>' +
+                '</label>' +
+                (B.merge
+                    ? '<div class="check-notice" style="margin-top:6px;">필요시간(1h·4h·8h)이 다른 인원은 <b>법정 교육시간이 다른 별개 과정</b>이라 건이 나뉩니다. ' +
+                        '<b>예상 생성 ' + bulkGroups().length + '건</b> — ' +
+                        bulkGroups().map(function (g) { return g.hours + 'h ' + g.ids.length + '명'; }).join(' · ') + '</div>'
+                    : '') +
+            '</div>' +
             '<div class="edu-modal-row"><label class="form-label" for="eh-b-inst">강사·주관</label>' +
                 '<input type="text" class="form-input" id="eh-b-inst" value="' + esc(B.instructor) + '"></div>' +
             '<div class="edu-modal-row"><label class="form-label" for="eh-b-desc">내용</label>' +
@@ -341,7 +389,10 @@
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="EDUH.doBulk()">이수 처리</button>');
     }
-    function setBulkMode(useHire) { captureBulk(); B.useHireDate = useHire; renderBulk(); }
+    /* 각자 채용일로 되돌리면 이수일이 사람마다 달라지므로 묶기는 자동 해제된다 */
+    function setBulkMode(useHire) { captureBulk(); B.useHireDate = useHire; if (useHire) B.merge = false; renderBulk(); }
+    /* 묶기를 켜면 이수일이 하나여야 하므로 일괄 이수일 모드로 전환한다 */
+    function setBulkMerge(on) { captureBulk(); B.merge = on; if (on) B.useHireDate = false; renderBulk(); }
     function doBulk() {
         if (!B.useHireDate) {
             var d = document.getElementById('eh-b-date').value;
@@ -352,24 +403,51 @@
         }
         B.instructor = document.getElementById('eh-b-inst').value.trim();
         B.desc = document.getElementById('eh-b-desc').value.trim() || '채용시 안전보건교육';
-        var count = 0;
-        B.ids.forEach(function (id) {
-            var w = E().workerOf(id); if (!w) return;
-            var hours = E().hireHours(w);
-            var date = B.useHireDate ? w.hireDate : B.date;
-            var time = B.useHireDate ? '' : B.time; /* 각자 채용일 처리 시 시간 정보 없음 */
-            /* 부서별로 course를 새로 만들면 지나치게 늘어나므로 근로자별 개별 course. */
-            var c = E().addCourse({
-                kind: 'HIRE', deptId: w.deptId, date: date, time: time, hours: hours,
-                instructor: B.instructor, place: '', desc: B.desc + ' · ' + w.name,
-                status: 'DONE', createdBy: '재난안전과 (일괄)'
+        var count = 0, made = 0;
+
+        if (B.merge) {
+            /* 한 건으로 묶기 — 필요시간이 같은 인원끼리 교육 건 1개.
+             * 여러 부서가 섞이므로 deptId 는 비우고(집합교육과 동일) 부서별 신청 행으로 나눈다. */
+            bulkGroups().forEach(function (g) {
+                var c = E().addCourse({
+                    kind: 'HIRE', deptId: '', date: B.date, time: B.time, hours: g.hours,
+                    instructor: B.instructor, place: '',
+                    desc: B.desc + ' (' + g.hours + 'h · ' + g.ids.length + '명)',
+                    status: 'DONE', createdBy: '재난안전과 (일괄)'
+                });
+                var byDept = {};
+                g.ids.forEach(function (id) {
+                    var w = E().workerOf(id); if (!w) return;
+                    (byDept[w.deptId] = byDept[w.deptId] || []).push(id);
+                });
+                Object.keys(byDept).forEach(function (d) {
+                    E().addEnroll({ courseId: c.id, deptId: d, workerIds: byDept[d], at: B.date });
+                });
+                g.ids.forEach(function (id) {
+                    E().addRecord({ workerId: id, courseId: c.id, kind: 'HIRE', hours: g.hours, date: B.date });
+                    count++;
+                });
+                made++;
             });
-            E().addEnroll({ courseId: c.id, deptId: w.deptId, workerIds: [id], at: date });
-            E().addRecord({ workerId: id, courseId: c.id, kind: 'HIRE', hours: hours, date: date });
-            count++;
-        });
+        } else {
+            B.ids.forEach(function (id) {
+                var w = E().workerOf(id); if (!w) return;
+                var hours = E().hireHours(w);
+                var date = B.useHireDate ? w.hireDate : B.date;
+                var time = B.useHireDate ? '' : B.time; /* 각자 채용일 처리 시 시간 정보 없음 */
+                /* 근로자별 개별 course (묶기를 끄면 종전 동작) */
+                var c = E().addCourse({
+                    kind: 'HIRE', deptId: w.deptId, date: date, time: time, hours: hours,
+                    instructor: B.instructor, place: '', desc: B.desc + ' · ' + w.name,
+                    status: 'DONE', createdBy: '재난안전과 (일괄)'
+                });
+                E().addEnroll({ courseId: c.id, deptId: w.deptId, workerIds: [id], at: date });
+                E().addRecord({ workerId: id, courseId: c.id, kind: 'HIRE', hours: hours, date: date });
+                count++; made++;
+            });
+        }
         V().closeModal();
-        toast(count + '명 채용시교육 이수 처리 완료');
+        toast(count + '명 채용시교육 이수 처리 완료 · 교육 건 ' + made + '건 생성');
         state.checked = {};
         render();
     }
@@ -515,7 +593,7 @@
         setCF: setCF, resetCF: resetCF,
         toggle: toggle, toggleAll: toggleAll,
         setGroupBy: setGroupBy, toggleGroup: toggleGroup,
-        openBulk: openBulk, setBulkMode: setBulkMode, doBulk: doBulk,
+        openBulk: openBulk, setBulkMode: setBulkMode, setBulkMerge: setBulkMerge, doBulk: doBulk,
         confirmUndo: confirmUndo, doUndo: doUndo,
         /* 채용시 교육 추가 (EDUFORM 공용 구성) */
         openAdd: openAdd, doAdd: doAdd, aToggle: aToggle, aToggleDept: aToggleDept, aDept: aDept,

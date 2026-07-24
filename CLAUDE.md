@@ -97,7 +97,7 @@
 - **교육 시간은 회차(sessions)에서만 파생한다 (MUST)** — 등록 폼은 `일자 + 시작~종료 시각`의 회차 탭(최대 5일)이고, 교육 시간 입력란은 없다. 합계는 `DYEDU.sumSessionHours()`(0.1h 단위) 단일 출처이며, 저장 시 `date`·`time`·`endTime` 은 1회차, `hours` 는 합계로 파생한다(기존 화면·집계 호환). 시간을 바꾸는 수정은 반드시 `DYEDU.syncCourseRecordHours()` 로 이미 쌓인 이수기록까지 함께 갱신한다 — 안 맞추면 교육 카드의 'Nh'와 이수현황의 '인정 Nh'가 조용히 어긋난다. 표시는 `courseDateTime()`(다회차면 '외 N일')·`courseSessions()` 를 쓰고 화면에서 직접 시각을 빼지 않는다.
 - **이수현황 필터는 모집단 기준을 요약·상세가 공유한다** — 구분·고용형태·채용연도·출처는 `inPopulation()` 한 곳에서 판정하고, 부서별 요약의 완료율도 같은 조건으로 다시 집계한다(`DYEDU.deptSummary(date, filterFn)`). 필터를 건 화면에는 집계 모집단 배지(`.edu-pop-note`)를 함께 노출해 전체 수치로 오독되지 않게 한다.
 - **CRUD 는 회수 경로까지 갖춘다 (MUST)** — 등록만 있고 지울 수단이 없으면 시연을 반복할수록 데이터가 쌓여 발표가 망가진다. 교육은 `수정`·`삭제`(EDUR/EDUE), 신청은 `신청 취소`(EDURD), 채용시 이수는 `이수 취소`(EDUH)를 제공한다.
-  - 데이터 회수는 `DYEDU.removeCourse(id)`(교육+신청+이수기록 연쇄) · `DYEDU.removeEnroll(courseId, deptId)`(신청+해당 부서 이수기록)만 사용하고, 확인 모달에 **회수되는 이수시간·건수를 반드시 명시**한다.
+  - 데이터 회수는 `DYEDU.removeCourse(id)`(교육+신청+이수기록 연쇄) · `DYEDU.removeEnroll(courseId, deptId)`(신청+해당 부서 이수기록) · `DYEDU.removeWorkerFromCourse(courseId, workerId)`(근로자 1명분만 — 여러 명이 묶인 교육 건에서 통째 삭제를 막는다. 남은 대상자가 없을 때만 건까지 회수)만 사용하고, 확인 모달에 **회수되는 이수시간·건수를 반드시 명시**한다.
   - 수정 모달에서는 **대상자를 바꾸지 않는다** — 이미 붙은 이수기록과 어긋나므로 신청 취소 → 재신청(집합) 또는 삭제 → 재등록(자체·기타) 경로로만 처리한다.
 - 딥링크: `edu-status.html?dept={deptId}&short=1`(상세뷰+미달 필터, `?status=done|short|over|soon` 도 지원) · `edu-reg-detail.html?id={courseId}`(백링크는 body `data-back-href`).
 - `layout.js` `renderSidebar`의 SNB 3뎁스(`item.section`) 로직과 `style.css`의 `.dy-sidebar-section`·`.dy-sidebar-sep`·`.dy-sidebar-item.is-nested`는 **이 그룹이 실사용처**다.
