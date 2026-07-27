@@ -708,8 +708,20 @@
 
 /* 표·목록 안 개별 근거 표기 (DYLAW.basisChip) — 유해위험요인 행 등 */
 .law-basis-inline { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px; max-width: 100%; }
+/* 표 행 안에서 조문 전문이 펼쳐지면 행이 과도하게 늘어난다 — 자체 스크롤로 가둔다.
+   (페이지 제목 아래 .law-basis-row 패널은 제한하지 않는다) */
+.law-basis-inline .lawinfo-inline { max-height: 300px; overflow-y: auto; }
 .law-basis-chip-sm { min-height: 26px; padding: 2px 9px; }
 .law-basis-plain { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-12); color: var(--text-lightgray); }
+/* 근거 조문이 아직 지정되지 않은 유해위험요인 — 빈칸 대신 상태를 드러낸다 */
+.law-basis-none {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px; border-radius: var(--radius-md);
+  font-size: var(--fs-12); font-weight: 700;
+  background: var(--status-warning-bg); color: var(--status-warning-fg);
+  border: 1px solid var(--status-warning-border);
+}
+.rl-imp-basis { margin-top: 4px; }
 
 .lawinfo-soon {
   margin-top: 10px; padding: 7px 10px;

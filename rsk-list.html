@@ -78,7 +78,8 @@
         .rl-rv-foot-actions { display: flex; gap: 8px; align-items: center; }
 
         /* 부서 상세 모달 */
-        .rl-dept-modal-table { width: 100%; border-collapse: collapse; }
+        .rl-dept-modal-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .rl-dept-modal-table { width: 100%; min-width: 780px; border-collapse: collapse; }
         .rl-dept-modal-table th, .rl-dept-modal-table td { padding: 7px 9px; font-size: var(--fs-12); border: 1px solid var(--card-line); text-align: left; vertical-align: top; }
         .rl-dept-modal-table th { background: var(--gray-50); color: var(--text-gray); font-weight: 700; }
 

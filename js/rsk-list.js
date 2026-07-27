@@ -16,6 +16,13 @@
     var V = function () { return global.DYV2; };
     var D = function () { return global.DYRSK; };
     function esc(s) { return V().esc(String(s == null ? '' : s)); }
+    /* 유해위험요인의 법령 근거 — DYLAW 칩(CLAUDE.md §10). 근거 없으면 '법령 매핑 대기'. */
+    function basisHtml(h) {
+        var b = h && h.basis;
+        if (!b) return '<span class="law-basis-none">법령 매핑 대기</span>';
+        return window.DYLAW ? DYLAW.basisChip(b) : '<span class="law-basis-plain">' + esc(b) + '</span>';
+    }
+
     function toast(m) { V().toast(m); }
 
     var state = {
@@ -418,11 +425,11 @@
             var body = '';
             if (open) {
                 var tbody = rows.map(function (r, i) { return reviewRow(a.id, deptId, i, r); }).join('');
-                if (!rows.length) tbody = '<tr><td colspan="5" style="text-align:center;color:var(--text-lightgray);padding:14px;">추출된 항목이 없습니다. 필요 시 [＋행 추가]로 직접 입력하세요.</td></tr>';
+                if (!rows.length) tbody = '<tr><td colspan="6" style="text-align:center;color:var(--text-lightgray);padding:14px;">추출된 항목이 없습니다. 필요 시 [＋행 추가]로 직접 입력하세요.</td></tr>';
                 body = '<div class="rl-rv-dept-body">' +
                     '<table class="rl-rv-table"><thead><tr>' +
-                        '<th style="width:24%;">유해위험요인</th><th style="width:12%;">분류</th>' +
-                        '<th style="width:20%;">원인</th><th>개선조치</th>' +
+                        '<th style="width:21%;">유해위험요인</th><th style="width:10%;">분류</th>' +
+                        '<th style="width:16%;">원인</th><th style="width:18%;">법령 근거</th><th>개선조치</th>' +
                         '<th style="width:34px;"></th>' +
                     '</tr></thead><tbody>' + tbody + '</tbody></table>' +
                     '<button type="button" class="btn btn-outline btn-sm" onclick="RSKLIST.reviewAdd(\'' + deptId + '\')">＋ 행 추가</button>' +
@@ -464,6 +471,10 @@
                 cats.map(function (c) { return '<option value="' + c + '"' + (r.category === c ? ' selected' : '') + '>' + (c || '분류') + '</option>'; }).join('') +
             '</select></td>' +
             '<td><input type="text" value="' + esc(r.cause) + '" placeholder="원인" onchange="RSKLIST.reviewSet(\'' + deptId + '\',' + i + ',\'cause\',this.value)"></td>' +
+            /* 법령 근거 — 값은 DYLAW 조문 키. 짐작으로 채우지 않도록 기본값은 '법령 매핑 대기'. */
+            '<td><select class="form-select" onchange="RSKLIST.reviewSet(\'' + deptId + '\',' + i + ',\'basis\',this.value)">' +
+                (window.DYLAW ? DYLAW.optionsHtml(r.basis || '') : '<option value="">법령 매핑 대기</option>') +
+            '</select></td>' +
             '<td><textarea rows="2" placeholder="개선조치" onchange="RSKLIST.reviewSet(\'' + deptId + '\',' + i + ',\'action\',this.value)">' + esc(r.action) + '</textarea></td>' +
             '<td style="text-align:center;"><button type="button" class="rl-rv-del" onclick="RSKLIST.reviewDel(\'' + deptId + '\',' + i + ')" title="삭제">×</button></td>' +
         '</tr>';
@@ -631,7 +642,8 @@
                 ? '<button type="button" class="btn btn-outline btn-sm" style="border-color:var(--status-warning-border);color:var(--status-warning-fg);" onclick="RSKLIST.remindOne(\'' + m.id + '\')">재촉</button>'
                 : '';
             return '<tr>' +
-                '<td>' + esc((m.hazard && m.hazard.name) || m.hazard_risk_factor || '-') + '</td>' +
+                '<td>' + esc((m.hazard && m.hazard.name) || m.hazard_risk_factor || '-') +
+                    '<div class="rl-imp-basis">' + basisHtml(m.hazard) + '</div></td>' +
                 '<td>' + esc((m.hazard && m.hazard.category) || '-') + '</td>' +
                 '<td>' + esc(m.description || m.action || '-') + '</td>' +
                 '<td class="' + (overdue ? 'rl-overdue' : '') + '">' + esc(m.due || m.due_date || '-') + '</td>' +
@@ -649,11 +661,15 @@
             '</div>';
         var body = meta +
             '<label class="form-label">전달된 개선조치 (' + ms.length + '건)</label>' +
+            /* 근거 조문이 요인명 칸 안에서 펼쳐지므로 칸이 좁으면 글자가 두세 자씩 끊긴다.
+             * 표에 최소 폭을 주고 래퍼에서 가로 스크롤한다. */
+            '<div class="rl-dept-modal-scroll">' +
             '<table class="rl-dept-modal-table"><thead><tr>' +
-                '<th style="width:24%;">요인명</th><th style="width:10%;">분류</th>' +
-                '<th style="width:30%;">개선조치</th><th style="width:14%;">기한</th>' +
+                '<th style="width:28%;">요인명</th><th style="width:9%;">분류</th>' +
+                '<th style="width:28%;">개선조치</th><th style="width:13%;">기한</th>' +
                 '<th style="width:10%;">상태</th><th style="width:12%;"></th>' +
             '</tr></thead><tbody>' + rows + '</tbody></table>' +
+            '</div>' +
             '<p style="font-size:12px;color:var(--text-gray);margin-top:6px;">개선조치는 <b>개선조치 메뉴(rsk-imp)</b>가 원본입니다. 부서 담당자는 <b>내 할일(my-work)</b>에서 완료 처리·재촉 응답을 수행합니다.</p>';
         V().openModal(name + ' — 개선조치 상세', body,
             '<button type="button" class="btn btn-primary" onclick="DYV2.closeModal()">닫기</button>');

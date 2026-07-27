@@ -615,12 +615,40 @@
 
         /* 같은 조문이 한 화면에 여러 번 나올 수 있어 패널 id 를 인스턴스마다 준다 */
         const pid = 'lawinfo-' + key + '-' + (++_seq);
+        /* 툴팁 — 값이 조문 키면 키를 그대로 보여줘봐야 의미가 없으므로 조문 제목을 쓴다.
+         * 레거시 표기 문자열('§32 보호구' 등)이면 그 원문이 주제 힌트라 그대로 둔다. */
+        const raw = String(basis);
+        const tip = (raw === key) ? ((ARTICLES[key] || {}).title || raw) : raw;
         return '<span class="law-basis-inline">' + lead +
             '<button type="button" class="law-basis-chip law-basis-chip-sm" aria-expanded="false"' +
-            ' aria-controls="' + pid + '" title="' + esc(basis) + '"' +
-            ' onclick="DYLAW.toggle(this, \'' + esc(key) + '\', \'' + pid + '\')">' +
+            ' aria-controls="' + pid + '" title="' + esc(tip) + '"' +
+            /* 행 전체가 클릭 가능한 표(개선조치 목록 등) 안에 놓이므로 전파를 끊는다.
+             * 끊지 않으면 근거를 펼치려다 상세 화면으로 이동해 버린다. */
+            ' onclick="event.stopPropagation(); DYLAW.toggle(this, \'' + esc(key) + '\', \'' + pid + '\')">' +
             esc(shortRef(key)) + '<span class="law-basis-i" aria-hidden="true">ⓘ</span></button>' +
             '<span class="law-basis-panels"></span></span>';
+    }
+
+    /* 근거 조문 선택 <option> — 법령별 optgroup. 값은 **조문 키**를 쓴다.
+     *  (표기 문자열이 아니라 키로 저장해야 라벨이 바뀌어도 연결이 끊기지 않는다.
+     *   resolveBasis() 가 키를 그대로 받아주므로 렌더 경로는 동일하다.) */
+    function optionsHtml(selectedKey, placeholder) {
+        const byLaw = {};
+        Object.keys(ARTICLES).forEach(k => {
+            const a = ARTICLES[k];
+            (byLaw[a.law] = byLaw[a.law] || []).push(k);
+        });
+        const ph = '<option value="">' + esc(placeholder || '법령 매핑 대기') + '</option>';
+        return ph + Object.keys(byLaw).map(lawKey => {
+            const L = LAWS[lawKey] || {};
+            const opts = byLaw[lawKey].map(k => {
+                const a = ARTICLES[k];
+                const label = shortRef(k) + ' — ' + a.title;
+                return '<option value="' + esc(k) + '"' + (selectedKey === k ? ' selected' : '') + '>' +
+                       esc(label) + '</option>';
+            }).join('');
+            return '<optgroup label="' + esc(L.name || lawKey) + '">' + opts + '</optgroup>';
+        }).join('');
     }
 
     /* 조문 펼침 패널 — CLAUDE.md §1 인라인 패널 규칙 (.lawinfo-inline) */
@@ -738,6 +766,6 @@
     global.DYLAW = {
         SNAPSHOT, LAWS, ARTICLES, MAP,
         pageId, article, law, forPage, shortRef, lawUrl,
-        chipsHtml, basisChip, panelHtml, toggle, inject, resolveBasis
+        chipsHtml, basisChip, optionsHtml, panelHtml, toggle, inject, resolveBasis
     };
 })(window);

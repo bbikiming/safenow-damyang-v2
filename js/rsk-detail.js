@@ -157,10 +157,10 @@
         EM = {
             deptId: deptId, delivered: !!dp.deliveredAt, bulkDue: dp.dueDate || '',
             rows: (dp.hazards || []).map(function (h) {
-                return { name: h.name || '', category: h.category || '', cause: h.cause || '', action: h.action || '', due: '' };
+                return { name: h.name || '', category: h.category || '', cause: h.cause || '', basis: h.basis || '', action: h.action || '', due: '' };
             })
         };
-        if (!EM.rows.length) EM.rows.push({ name: '', category: '', cause: '', action: '', due: '' });
+        if (!EM.rows.length) EM.rows.push({ name: '', category: '', cause: '', basis: '', action: '', due: '' });
         renderDeptModal();
     }
     function renderDeptModal() {
@@ -251,7 +251,7 @@
     }
     function emSet(i, k, v) { if (EM && EM.rows[i]) EM.rows[i][k] = v; }
     function emAdd() { EM.rows.push({ name: '', category: '', cause: '', action: '', due: '' }); renderDeptModal(); }
-    function emDel(i) { EM.rows.splice(i, 1); if (!EM.rows.length) EM.rows.push({ name: '', category: '', cause: '', action: '', due: '' }); renderDeptModal(); }
+    function emDel(i) { EM.rows.splice(i, 1); if (!EM.rows.length) EM.rows.push({ name: '', category: '', cause: '', basis: '', action: '', due: '' }); renderDeptModal(); }
     function emBulkDue(v) { EM.bulkDue = v; }
 
     /* 임시 저장 — 하자드만 dp.hazards 에 반영, 전달은 아님 */
@@ -259,7 +259,7 @@
         var a = D().assessmentOf(state.aid);
         var dp = (a.depts || []).find(function (x) { return x.deptId === EM.deptId; });
         var kept = EM.rows.filter(function (r) { return (r.name || '').trim(); });
-        dp.hazards = kept.map(function (r) { return { name: r.name.trim(), category: r.category || '', cause: r.cause || '', action: r.action || '' }; });
+        dp.hazards = kept.map(function (r) { return { name: r.name.trim(), category: r.category || '', cause: r.cause || '', basis: r.basis || '', action: r.action || '' }; });
         D().saveAssessment();
         V().closeModal(); toast('임시 저장됨 · ' + kept.length + '건'); render();
     }
@@ -273,7 +273,7 @@
         if (missingDue.length) { toast('일괄 기한 또는 개별 기한을 지정하세요.'); return; }
 
         var deptNm = D().deptName(EM.deptId);
-        dp.hazards = valid.map(function (r) { return { name: r.name.trim(), category: r.category || '', cause: r.cause || '', action: r.action.trim() }; });
+        dp.hazards = valid.map(function (r) { return { name: r.name.trim(), category: r.category || '', cause: r.cause || '', basis: r.basis || '', action: r.action.trim() }; });
         dp.dueDate = EM.bulkDue || '';
         dp.deliveredAt = D().today();
         dp.status = 'BEFORE';
@@ -284,7 +284,7 @@
             var m = D().addImprovement({
                 source_type: 'risk_assessment',
                 assessment_id: a.id, dept_id: EM.deptId,
-                hazard: { name: r.name.trim(), category: r.category || '', cause: r.cause || '' },
+                hazard: { name: r.name.trim(), category: r.category || '', cause: r.cause || '', basis: r.basis || '' },
                 description: r.action.trim(), action: r.action.trim(),
                 due: due, due_date: due,
                 assigned_to: deptNm + ' 담당자',

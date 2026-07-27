@@ -11,6 +11,13 @@
     var D = function () { return global.DYRSK; };
     var KO = function () { return global.DYRSK.KOSHA; };
     function esc(s) { return V().esc(String(s == null ? '' : s)); }
+    /* 유해위험요인의 법령 근거 — DYLAW 칩(CLAUDE.md §10). 근거 없으면 '법령 매핑 대기'. */
+    function basisHtml(h) {
+        var b = h && h.basis;
+        if (!b) return '<span class="law-basis-none">법령 매핑 대기</span>';
+        return window.DYLAW ? DYLAW.basisChip(b) : '<span class="law-basis-plain">' + esc(b) + '</span>';
+    }
+
     function toast(m) { V().toast(m); }
 
     var state = { id: null, mount: null };
@@ -30,6 +37,7 @@
                 '<div class="id-meta">' +
                     '<span>관리대상 <b>' + esc(t ? t.name : '-') + '</b></span>' +
                     (isRA && m.hazard_risk_factor ? '<span>유해위험요인 <b>' + esc(m.hazard_risk_factor) + '</b></span>' : '') +
+                    (isRA ? '<span>법령 근거 ' + basisHtml(m.hazard) + '</span>' : '') +
                     '<span>담당자 <b>' + esc(m.assigned_to || '미지정') + '</b></span>' +
                     '<span>기한 <b>' + esc(m.due_date || '-') + '</b></span>' +
                     (isRA ? '<span>평가 <b><a href="rsk-detail.html?id=' + esc(m.assessment_id) + '" style="color:var(--main-dark);">' + esc(m.assessment_id) + '</a></b></span>' : '') +

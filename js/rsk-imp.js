@@ -10,6 +10,13 @@
     var D = function () { return global.DYRSK; };
     var KO = function () { return global.DYRSK.KOSHA; };
     function esc(s) { return V().esc(String(s == null ? '' : s)); }
+    /* 유해위험요인의 법령 근거 — DYLAW 칩(CLAUDE.md §10). 근거 없으면 '법령 매핑 대기'. */
+    function basisHtml(h) {
+        var b = h && h.basis;
+        if (!b) return '<span class="law-basis-none">법령 매핑 대기</span>';
+        return window.DYLAW ? DYLAW.basisChip(b) : '<span class="law-basis-plain">' + esc(b) + '</span>';
+    }
+
     function toast(m) { V().toast(m); }
 
     var state = { mount: null, fSource: '', fStatus: '' };
@@ -49,6 +56,7 @@
             var titleCell = esc(m.description) +
                 (hazardName ? '<div class="ri-hrf">' + esc(hazardName) +
                     (m.hazard && m.hazard.category ? ' <span class="chip-mini wt" style="margin-left:4px;">' + esc(m.hazard.category) + '</span>' : '') +
+                    ' ' + basisHtml(m.hazard) +
                 '</div>' : '');
             var owner = m.assigned_to ? esc(m.assigned_to) : '<a href="#" onclick="RSKIMP.assign(\'' + m.id + '\');return false;" style="color:var(--main-dark);">지정</a>';
             var due = m.due || m.due_date || '';

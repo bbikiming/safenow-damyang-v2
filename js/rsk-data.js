@@ -22,8 +22,9 @@
      *   · r7 (0건 부서 처리): deliverFromReview에서 지적사항 없는 부서는 DONE로 처리·이력 기록,
      *     refreshAssessmentStatus는 개선건 있는 부서 기준으로 완료 판정.
      * → 이전 세션 캐시와 충돌하지 않도록 스토리지 키 버전 갱신. */
-    /* r8 — 근거 오기 정정(기준규칙 §310 → §319). 시드가 바뀌었으므로 캐시를 무효화한다. */
-    var SKEY = 'damyangRskV2r8';
+    /* r8 — 근거 오기 정정(기준규칙 §310 → §319). 시드가 바뀌었으므로 캐시를 무효화한다.
+     * r9 — 유해위험요인 스키마에 basis(DYLAW 조문 키) 추가 · 검수 행 → 개선조치까지 전파. */
+    var SKEY = 'damyangRskV2r9';
 
     /* ================= 스토어 ================= */
     var db = null;
@@ -113,27 +114,30 @@
              *   ─ 2026 assessment는 시연 중 마법사로 생성되므로 ID가 유동적이라 연도 키로 조회. */
             reportParseMock: {
                 2026: {
+                    /* basis = DYLAW 조문 키(js/law-map.js). 조문이 명확히 특정되는 항목에만 넣고,
+                     * 특정되지 않으면 빈 값으로 두어 검수 화면에서 '법령 매핑 대기'로 남긴다.
+                     * (근거를 짐작으로 채우면 시스템이 틀린 법조문을 주장하게 된다.) */
                     safety: [
-                        { name: '중대재해팀 사무실 소화설비 미점검',    category: '기타',       cause: '점검 주기 미준수',        action: '월 1회 소화기 압력·유효기한 점검 체계 수립' },
-                        { name: '옥상 옥외기 점검 시 추락 위험',        category: '고소작업',   cause: '안전난간·안전대 미비',    action: '옥상 안전난간 보강 및 작업 시 안전대 부착 의무화' }
+                        { name: '중대재해팀 사무실 소화설비 미점검',    category: '기타',       cause: '점검 주기 미준수',        action: '월 1회 소화기 압력·유효기한 점검 체계 수립', basis: '' },
+                        { name: '옥상 옥외기 점검 시 추락 위험',        category: '고소작업',   cause: '안전난간·안전대 미비',    action: '옥상 안전난간 보강 및 작업 시 안전대 부착 의무화', basis: 'oshs-43' }
                     ],
                     env: [
-                        { name: '폐기물 상하차 시 지게차 협착 위험',    category: '기계적',     cause: '유도자 부재',              action: '유도자 배치·후진 경보기 설치' },
-                        { name: '수집 차량 도로 진출입 접촉사고',       category: '작업특성',   cause: '시야 확보 불량',           action: '반사경 설치 및 진출입 통제 인원 배치' },
-                        { name: '자원순환팀 신규 압축기 협착',          category: '기계적',     cause: '안전문 인터록 미설치',    action: '압축기 안전문 인터록 설치 및 작업표준서 재정비' }
+                        { name: '폐기물 상하차 시 지게차 협착 위험',    category: '기계적',     cause: '유도자 부재',              action: '유도자 배치·후진 경보기 설치', basis: 'oshs-171' },
+                        { name: '수집 차량 도로 진출입 접촉사고',       category: '작업특성',   cause: '시야 확보 불량',           action: '반사경 설치 및 진출입 통제 인원 배치', basis: 'oshs-172' },
+                        { name: '자원순환팀 신규 압축기 협착',          category: '기계적',     cause: '안전문 인터록 미설치',    action: '압축기 안전문 인터록 설치 및 작업표준서 재정비', basis: 'oshs-87' }
                     ],
                     water: [
-                        { name: '약품 투입실 염소 누출 위험',           category: '화학적',     cause: '누출감지기 노후화',        action: '누출감지기 교체 · 비상세안설비 점검 주기 단축' },
-                        { name: '밀폐공간(밸브실) 산소결핍',            category: '작업특성',   cause: '환기 미확보',              action: '작업허가제 도입 및 산소농도계 상시 비치' },
-                        { name: '정수팀 약품 이송 배관 파손 위험',      category: '화학적',     cause: '배관 부식 상태 미점검',    action: '배관 두께 측정 정기 점검(연 2회) 실시' }
+                        { name: '약품 투입실 염소 누출 위험',           category: '화학적',     cause: '누출감지기 노후화',        action: '누출감지기 교체 · 비상세안설비 점검 주기 단축', basis: 'oshs-420' },
+                        { name: '밀폐공간(밸브실) 산소결핍',            category: '작업특성',   cause: '환기 미확보',              action: '작업허가제 도입 및 산소농도계 상시 비치', basis: 'oshs-619' },
+                        { name: '정수팀 약품 이송 배관 파손 위험',      category: '화학적',     cause: '배관 부식 상태 미점검',    action: '배관 두께 측정 정기 점검(연 2회) 실시', basis: '' }
                     ],
                     facility: [
-                        { name: '환경시설팀 지붕 방수공사 시 추락',     category: '고소작업',   cause: '작업발판 부실',            action: '표준 작업발판 설치 후 작업 · 안전대 필수 착용' },
-                        { name: '시설운영팀 전동공구 감전',             category: '전기',       cause: '누전차단기 미설치',        action: '작업구역 이동식 누전차단기 배치' }
+                        { name: '환경시설팀 지붕 방수공사 시 추락',     category: '고소작업',   cause: '작업발판 부실',            action: '표준 작업발판 설치 후 작업 · 안전대 필수 착용', basis: 'oshs-43' },
+                        { name: '시설운영팀 전동공구 감전',             category: '전기',       cause: '누전차단기 미설치',        action: '작업구역 이동식 누전차단기 배치', basis: '' }
                     ],
                     construct: [
-                        { name: '도로관리팀 절단기 작업 시 절창',       category: '기계적',     cause: '보호구 착용 미흡',         action: '방호장갑 · 보안면 지급 및 착용 점검' },
-                        { name: '시설관리팀 도로 야간작업 교통사고',    category: '작업특성',   cause: '반사조끼·경광등 미비',    action: '야간작업 반사조끼·경광등 지급 · 신호수 배치' }
+                        { name: '도로관리팀 절단기 작업 시 절창',       category: '기계적',     cause: '보호구 착용 미흡',         action: '방호장갑 · 보안면 지급 및 착용 점검', basis: 'oshs-32' },
+                        { name: '시설관리팀 도로 야간작업 교통사고',    category: '작업특성',   cause: '반사조끼·경광등 미비',    action: '야간작업 반사조끼·경광등 지급 · 신호수 배치', basis: '' }
                     ]
                 }
             },
@@ -367,7 +371,7 @@
             parsed[dp.deptId] = seedRows.map(function (r) {
                 return {
                     name: r.name || '', category: r.category || '', cause: r.cause || '',
-                    action: r.action || '', deleted: false
+                    action: r.action || '', basis: r.basis || '', deleted: false
                 };
             });
         });
@@ -404,7 +408,7 @@
         var a = assessmentOf(aid); if (!a || !a.review) return;
         a.review.parsedDepts = a.review.parsedDepts || {};
         a.review.parsedDepts[deptId] = a.review.parsedDepts[deptId] || [];
-        a.review.parsedDepts[deptId].push({ name: '', category: '', cause: '', action: '', deleted: false });
+        a.review.parsedDepts[deptId].push({ name: '', category: '', cause: '', action: '', basis: '', deleted: false });
         save();
     }
     /* 검토완료 → 조치기한 적용 → improvements 전달 (부서별 자동 배분)
@@ -435,7 +439,7 @@
             }
             var deptDue = deptDues[deptId] || bulkDue;
             if (!deptDue) return;
-            dp.hazards = rows.map(function (r) { return { name: r.name.trim(), category: r.category || '', cause: r.cause || '', action: r.action.trim() }; });
+            dp.hazards = rows.map(function (r) { return { name: r.name.trim(), category: r.category || '', cause: r.cause || '', basis: r.basis || '', action: r.action.trim() }; });
             dp.dueDate = deptDue;
             dp.deliveredAt = today();
             dp.status = 'BEFORE';
@@ -443,7 +447,7 @@
                 addImprovement({
                     source_type: 'risk_assessment',
                     assessment_id: aid, dept_id: deptId,
-                    hazard: { name: r.name.trim(), category: r.category || '', cause: r.cause || '' },
+                    hazard: { name: r.name.trim(), category: r.category || '', cause: r.cause || '', basis: r.basis || '' },
                     description: r.action.trim(), action: r.action.trim(),
                     due: deptDue, due_date: deptDue,
                     assigned_to: deptNm + ' 담당자',
@@ -485,7 +489,11 @@
             assessment_id: o.assessment_id || '',
             dept_id: o.dept_id || '',
             target_id: o.target_id || '', process_id: o.process_id || '',
-            hazard: o.hazard || { name: '', category: '', cause: '' },
+            /* basis(법령 근거 조문 키)는 여기서 유실되면 화면에 근거를 못 그린다 — 반드시 보존 */
+            hazard: o.hazard ? {
+                name: o.hazard.name || '', category: o.hazard.category || '',
+                cause: o.hazard.cause || '', basis: o.hazard.basis || ''
+            } : { name: '', category: '', cause: '', basis: '' },
             hazard_risk_factor: (o.hazard && o.hazard.name) || o.hazard_risk_factor || '',
             description: o.description || (o.hazard && o.hazard.action) || '',
             action: o.action || o.description || '',
