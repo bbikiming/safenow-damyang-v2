@@ -563,6 +563,10 @@
                 // body[data-page-title]/[data-page-subtitle] 가 있으면 페이지 헤더 자동 주입
                 injectPageTitle(main);
 
+                // 화면별 법령 근거 칩 주입 (DYLAW / js/law-map.js) — 매핑 없으면 무동작
+                // id 는 DYLAW 가 직접 해석한다 (menu.html 의 ?m=·?sub= 까지 반영)
+                if (window.DYLAW) window.DYLAW.inject(main);
+
                 // [data-pagination] 마커 자동 렌더
                 renderPaginationMarkers(main);
 

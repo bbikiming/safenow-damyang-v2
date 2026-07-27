@@ -679,6 +679,55 @@
 /* 관련 법령 상세 — 별도 모달 없이 점검 항목 아래 인라인 펼침 */
 .lawinfo-inline { margin-top: 8px; padding: 12px 14px; border: 1px solid var(--card-line); border-left: 3px solid var(--main); border-radius: var(--radius-button); background: var(--gray-50, var(--surface-alt)); }
 
+/* ── 화면별 법령 근거 (DYLAW / js/law-map.js) ─────────────────────────
+ *  페이지 제목 아래 근거 조문 칩 한 줄 + 클릭 시 조문 원문 인라인 펼침.
+ *  적층 모달 금지 규칙(CLAUDE.md §1)에 따라 패널은 .lawinfo-inline 재사용.
+ * ------------------------------------------------------------------ */
+.law-basis-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; }
+.law-basis-lead {
+  font-size: var(--fs-12); font-weight: 700; color: var(--text-lightgray);
+  letter-spacing: -0.01em; margin-right: 2px;
+}
+.law-basis-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  min-height: 36px; padding: 5px 11px;
+  font-size: var(--fs-12); font-weight: 700; line-height: 1.4;
+  color: var(--main-dark); background: var(--brand-50);
+  border: 1px solid var(--card-line); border-radius: var(--radius-full);
+  cursor: pointer; transition: background .15s, border-color .15s, color .15s;
+}
+.law-basis-chip:hover { background: var(--brand-100); border-color: var(--main-light); }
+.law-basis-chip:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
+.law-basis-chip[aria-expanded="true"] {
+  background: var(--main); border-color: var(--main); color: var(--surface);
+}
+.law-basis-i { font-size: var(--fs-12); opacity: .75; }
+.law-basis-panels { flex-basis: 100%; }
+.law-basis-panels:empty { display: none; }
+.law-basis-panels .lawinfo-text { white-space: pre-line; }
+
+/* 표·목록 안 개별 근거 표기 (DYLAW.basisChip) — 유해위험요인 행 등 */
+.law-basis-inline { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px; max-width: 100%; }
+.law-basis-chip-sm { min-height: 26px; padding: 2px 9px; }
+.law-basis-plain { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-12); color: var(--text-lightgray); }
+
+.lawinfo-soon {
+  margin-top: 10px; padding: 7px 10px;
+  font-size: var(--fs-12); line-height: 1.6; font-weight: 700;
+  color: var(--status-warning-fg); background: var(--status-warning-bg);
+  border: 1px solid var(--status-warning-border); border-radius: var(--radius-button);
+}
+.lawinfo-meta {
+  margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--card-line);
+  font-size: var(--fs-12); line-height: 1.6; color: var(--text-lightgray);
+}
+.lawinfo-link { color: var(--main); font-weight: 700; text-decoration: none; white-space: nowrap; }
+.lawinfo-link:hover { text-decoration: underline; }
+
+@media (max-width: 559px) {
+  .law-basis-chip { min-height: 44px; }
+}
+
 /* ── 첨부파일 업로드 안내 (지원 형식·용량·개수) ── */
 .file-hint {
   margin-top: 8px; padding: 8px 11px;
@@ -778,7 +827,9 @@
 .law-tip-float .law-tip-ref { font-size: var(--fs-12); color: var(--main-dark2); margin-bottom: 6px; }
 .law-tip-float .law-tip-ref b { color: var(--main); }
 .law-tip-float .law-tip-title { font-size: var(--fs-12); font-weight: 700; color: var(--text-black); margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--card-line); }
-.law-tip-float .law-tip-text { font-size: var(--fs-12); line-height: 1.6; color: var(--text-black); }
+/* DYLAW 원문 폴백은 항·목 줄바꿈을 담고 있어 pre-line + 높이 상한이 필요하다 */
+.law-tip-float .law-tip-text { font-size: var(--fs-12); line-height: 1.6; color: var(--text-black); white-space: pre-line; max-height: 40vh; overflow: hidden; }
+.law-tip-float .law-tip-src { margin-top: 8px; padding-top: 7px; border-top: 1px solid var(--card-line); font-size: var(--fs-12); color: var(--text-lightgray); }
 
 /* ===== 이행 점검 안내 배너 / 이전 버전 잠금 ===== */
 .check-notice { font-size: var(--fs-12); color: var(--text-black); background: var(--brand-100); border: 1px solid var(--card-line); border-left: 3px solid var(--main-dark2); border-radius: var(--radius-button); padding: 9px 12px; margin-bottom: 12px; line-height: 1.6; }

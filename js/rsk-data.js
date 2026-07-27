@@ -22,7 +22,8 @@
      *   · r7 (0건 부서 처리): deliverFromReview에서 지적사항 없는 부서는 DONE로 처리·이력 기록,
      *     refreshAssessmentStatus는 개선건 있는 부서 기준으로 완료 판정.
      * → 이전 세션 캐시와 충돌하지 않도록 스토리지 키 버전 갱신. */
-    var SKEY = 'damyangRskV2r7';
+    /* r8 — 근거 오기 정정(기준규칙 §310 → §319). 시드가 바뀌었으므로 캐시를 무효화한다. */
+    var SKEY = 'damyangRskV2r8';
 
     /* ================= 스토어 ================= */
     var db = null;
@@ -67,7 +68,7 @@
                     evaluator: '물순환사업소 · 물순환사업소장 / 오순환', source: 'STD', revision_no: 1, seq: 2,
                     equip: ['pump_motor', 'valve_pit'], hf: ['elec', 'rot', 'conf'],
                     hrf: [
-                        { id: 'h3', name: '활선 근접작업 감전', category: '전기', basis: '산업안전보건기준규칙 §310 정전작업', source: 'STD', legal_status: 'MAPPED' },
+                        { id: 'h3', name: '활선 근접작업 감전', category: '전기', basis: '산업안전보건기준규칙 §319 정전작업', source: 'STD', legal_status: 'MAPPED' },
                         { id: 'h4', name: '회전체 접촉 끼임', category: '기계적', basis: '산업안전보건기준규칙 §87 원동기·회전축 방호', source: 'STD', legal_status: 'MAPPED' }
                     ]
                 }

@@ -141,6 +141,7 @@
 | 탭 | `.tabs` / `.tab` | `sh-vtab` · `sh-ptab` · `edu-tab` · `sd-tab` 등 |
 | 모달 | `DYV2.openModal` (§1) | 자작 백드롭 `.ev-modal-backdrop` · `.evl-modal-backdrop` |
 | 조직도 픽커 | `ORGPICK` / `.org-inline` (§1) | `.evp-*` · `.org-tree-panel` · `.bgt-tree-*` · `.admp-tree` |
+| 법령 근거 | `DYLAW` / `.law-basis-chip` (§10) | 화면별 근거 문자열 하드코딩 |
 
 **상태 어휘 → tone 은 `DYV2.STATUS_TONE`(`js/common.js`) 단일 출처**다. 화면에서 라벨별 색을 직접 고르지 않고 `DYV2.toneOf(label)`로 tone 을 얻어 `--status-{tone}-*` 토큰을 쓴다. 매핑에 없는 라벨은 `neutral` 로 수렴하므로, 새 어휘는 표에 추가한다.
 
@@ -162,3 +163,15 @@
 4. 모달은 `DYV2.openModal` 1개만, 적층 없음 (§1).
 5. **375px에서 확인** — 가로 스크롤 없음(표는 스크롤 래퍼 안), 겹침·과밀 없음, 미디어쿼리는 4단계 표준값만 (§7).
 6. 본문·배지 최소 폰트 **12px**(장식 글리프 `▸▾` 등은 예외), 주요 터치 타깃 44px.
+7. 법령 근거가 있는 화면이면 `DYLAW.MAP`에 매핑을 추가한다 (§10). 근거가 없으면 `[]`로 명시한다.
+
+### 10. 법령 근거 — 단일 출처 (MUST)
+
+화면·문서의 근거 조문은 `DYLAW`(`js/law-map.js`)에만 정의한다. 근거를 문자열로 화면에 직접 쓰지 않는다. 근거: `docs/planning/기획-법령연계-v1.md`.
+
+- **조문 텍스트는 손으로 고치지 않는다.** 이 파일은 법제처 국가법령정보 OPEN API 스냅샷의 **생성물**이다(수집일 `DYLAW.SNAPSHOT.fetchedAt`). 내용이 틀렸으면 재수집해서 파일을 다시 만든다. 요약·의역해서 넣으면 "원문"이라는 약속이 깨진다.
+- **`MAP` 은 페이지 id → 조문 키.** 법령 근거가 없는 화면(시스템 관리 등)은 **빈 배열 `[]` 로 명시**한다 — 억지로 조문을 붙이지 않는다. 근거 없음도 정보다.
+- **칩 주입은 `layout.js` `mount()` 한 곳**에서 `DYLAW.inject(main)` 으로 처리한다. 화면 모듈이 자체 근거 UI 를 그리지 않는다. `menu.html` 은 `?m=`·`?sub=` 까지 `DYLAW.pageId()` 가 환원하므로 페이지 id 를 직접 넘기지 말 것.
+- **조문 펼침은 인라인**(`.lawinfo-inline`)이다 — 모달을 띄우지 않는다(§1).
+- 기존에 흩어진 `basis:` 문자열은 `DYLAW.resolveBasis()` 로 흡수한다. 새 근거 표기를 만들지 말고 별칭 표(`BASIS_ALIAS`)에 추가한다.
+- `lawId`·`mst` 는 **배치 재조회 키**다. 실 개발에서 백엔드가 이 키로 법제처 API 를 직접 호출해 개정을 감지한다. 임의 변경 금지.
