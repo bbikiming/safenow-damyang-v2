@@ -1660,8 +1660,24 @@
                 ctx: { menuLabel: '이행관리 · 반기', checklist: T.CHECKLIST_PRESETS.comply }, onChange: render,
             });
             PG.cmpClose = () => E.onnaraPopup('2026 상반기 의무이행 점검 마감 보고');
-            return sectionCard('의무이행 점검 (반기) ' + docStChip('EDOC-의무이행점검-2026H1'),
-                '<p style="font-size:12px; color:var(--text-gray);">중처법 시행령 §4·§5 항목별 이행 여부를 점검합니다. 각 항목에는 해당 메뉴의 실데이터가 근거로 연결되며, <b>X(미이행) 항목은 확정 시 개선조치로 자동 등록</b>됩니다.</p>' +
+            /* 관계 법령 목록은 발주처·재난안전과가 확정할 대상이라 시스템이 임의로 채우지
+             * 않는다. 무엇을 정해야 하는지만 안내한다. */
+            PG.cmpLawList = () => V.openModal('관계 법령 목록 — 무엇을 정해야 하나',
+                '<p style="font-size:13px; line-height:1.7;">중처법 시행령 §5①·§11①은 "안전·보건 관계 법령"을 ' +
+                '<b>"해당 사업장(또는 공중이용시설)에 적용되는 것으로서 안전·보건 확보에 관련되는 법령"</b>이라고 ' +
+                '정의만 하고 <b>목록을 주지 않습니다</b>. 따라서 담양군이 직접 목록을 확정해야 합니다.</p>' +
+                '<p style="font-size:12px; color:var(--text-gray); margin-top:10px;">관리대상 유형별로 검토가 필요한 예시 — ' +
+                '아래는 <b>확정 목록이 아니라 검토 출발점</b>이며, 실제 적용 여부는 시설 종별·규모에 따라 갈립니다.</p>' +
+                '<ul style="font-size:12px; line-height:1.9; color:var(--text-black); margin:8px 0 0 18px;">' +
+                '<li><b>사업장(정수장·하수처리장 등)</b> — 산업안전보건법, 화학물질관리법, 위험물안전관리법, 고압가스 안전관리법</li>' +
+                '<li><b>공중이용시설(청사·체육관·문화시설)</b> — 시설물의 안전 및 유지관리에 관한 특별법, 건축물관리법, 소방시설 설치 및 관리에 관한 법률, 전기안전관리법, 승강기 안전관리법</li>' +
+                '<li><b>도로·공원 시설</b> — 도로법, 어린이놀이시설 안전관리법</li>' +
+                '</ul>' +
+                '<p style="font-size:12px; color:var(--status-warning-fg); margin-top:12px;">' +
+                '확정해야 할 것 — ① 목록에 넣을 법령 ② 법령별 점검 항목과 증빙 ③ 점검 주체(부서) ④ 위탁 점검 여부.</p>',
+                '<button class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
+            return sectionCard('안전보건관리체계 점검 (반기) ' + docStChip('EDOC-의무이행점검-2026H1'),
+                '<p style="font-size:12px; color:var(--text-gray);">중처법 시행령 <b>§4</b>(안전보건관리체계 구축·이행) 항목별 이행 여부를 점검합니다. 각 항목에는 해당 메뉴의 실데이터가 근거로 연결되며, <b>X(미이행) 항목은 확정 시 개선조치로 자동 등록</b>됩니다.</p>' +
                 tbl(['항목', '근거 메뉴', '근거 현황'], [
                     ['§4-1 목표·경영방침 수립', '<a href="menu.html?m=policy" style="color:var(--main); font-weight:700;">경영방침</a>', '2026 방침 수립 · 점검 ' + (E.statusOf('EDOC-경영방침점검-2026H1') || '미작성')],
                     ['§4-3 유해·위험요인 확인·개선', '<a href="rsk-list.html" style="color:var(--main); font-weight:700;">위험성평가</a>', '정기 1회 · 수시 2회 실시'],
@@ -1671,6 +1687,20 @@
                 '<div style="display:flex; gap:6px;">' +
                 '<button class="btn btn-sm btn-primary" onclick="PG.cmpCheck()">점검표 작성</button>' +
                 '<button class="btn btn-sm btn-outline" onclick="PG.cmpClose()">반기 마감 · 온나라 상신</button></div>') +
+            /* 시행령 §5·§11 — 관계 법령 의무이행 점검.
+             * §4(체계 구축)와 완전히 다른 의무다. 이 영역이 없으면 화면이 "§5를
+             * 이행한다"고 주장만 하고 실제로는 §4만 점검하게 된다. */
+            sectionCard('관계 법령 의무이행 점검 <span class="chip-status warning" style="margin-left:6px;">목록 미등록</span>',
+                '<p style="font-size:12px; color:var(--text-gray);">중처법 시행령 <b>§5</b>(종사자 · 반기 1회) · <b>§11</b>(공중이용시설 이용자 · 연 1회)이 요구하는 점검입니다. ' +
+                '§4가 "우리 기관이 체계를 갖췄나"라면, 여기는 <b>"개별 관계 법령을 실제로 지켰나"</b>입니다. ' +
+                '두 조문 모두 관계 법령을 <b>정의만 하고 목록을 주지 않으므로</b>, 담양군 관리대상에 적용되는 법령 목록을 기관이 직접 확정해야 점검이 성립합니다.</p>' +
+                tbl(['점검 항목', '주기', '현황'], [
+                    ['§5-1 관계 법령 의무이행 점검 (종사자)', '반기 1회', '<span class="chip-status warning">관계 법령 목록 미등록</span>'],
+                    ['§5-3 유해·위험작업 안전보건교육 실시 점검', '반기 1회', '<a href="edu-status.html" style="color:var(--main); font-weight:700;">이수현황</a> 연결 가능'],
+                    ['§11-1 관계 법령 의무이행 점검 (공중이용시설)', '연 1회', '<span class="chip-status warning">관계 법령 목록 미등록</span>'],
+                    ['§11-3 시설 안전관리자 의무교육 이수 점검', '연 1회', '<span class="chip-status warning">대상자·교육 미정의</span>'],
+                ]),
+                '<button class="btn btn-sm btn-primary" onclick="PG.cmpLawList()">관계 법령 목록이란</button>') +
             sectionCard('안전보건 예산 편성·집행',
                 '<p style="font-size:12px; color:var(--text-gray);">예산 편성·집행·집행률 관리는 <b>예산관리</b> 대메뉴로 이관되었습니다. 총괄표에서 기관·시설별 진행 현황을 확인하세요.</p>',
                 '<a class="btn btn-sm btn-primary" href="bgt-main.html">예산 총괄표 바로가기</a>');
