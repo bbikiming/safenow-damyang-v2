@@ -187,6 +187,7 @@
                     sub: m.description || m.action || '',
                     due: m.due || m.due_date || '',
                     status: m.status || 'IN_PROGRESS',
+                    basis: (m.hazard && m.hazard.basis) || '',
                     dept: m.dept_id, dept_label: D().deptName(m.dept_id),
                     href: 'rsk-list.html' + (m.assessment_id ? '?year=' + (m.assessment_id.match(/RA-(\d{4})/) || [])[1] : ''),
                     atype: 'inline',
@@ -457,6 +458,15 @@
 
         var actionBtn = actionButtons(it);
         var subLine = it.sub ? '<div class="mw-item-sub">' + esc(it.sub) + '</div>' : '';
+        /* 법령 근거 — 카드 자체가 대표 액션을 실행하므로 칩은 전파를 끊는다(원문만 펼침).
+           조문 번호만으로는 이유를 알 수 없어 조문 제목을 함께 보여준다. */
+        var basisRow = '';
+        if (it.basis && window.DYLAW) {
+            basisRow = '<div class="mw-item-basis">' +
+                '<span class="mw-item-basis-lead">근거</span>' +
+                DYLAW.basisChip(it.basis, { withTitle: true }) +
+            '</div>';
+        }
         var remindTag = it.remind ? '<span class="mw-remind-tag">' + ICO.bell + ' 재촉</span> ' : '';
         var catBadge = '<span class="mw-cat" style="color:' + meta.color + ';background:' + meta.bg + ';">' + esc(meta.label) + '</span>';
         var destChip = (it.atype === 'menu' && it.destLabel)
@@ -468,6 +478,7 @@
                     catBadge + ' ' + remindTag +
                     '<span class="mw-item-title">' + esc(it.title) + '</span>' +
                     subLine +
+                    basisRow +
                     '<div class="mw-item-meta">' +
                         '<span class="' + dCls + '">' + esc(dTxt) + '</span>' +
                         (it.due ? '<span class="mw-item-due">' + esc(it.due) + '</span>' : '') +

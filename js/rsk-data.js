@@ -29,6 +29,16 @@
     /* ================= 스토어 ================= */
     var db = null;
 
+    /* 이력·알림 문면에 붙일 근거 문구 — 근거가 없으면 아무것도 붙이지 않는다 */
+    function basisMemo(basis) {
+        try {
+            if (!basis || !global.DYLAW) return '';
+            var key = global.DYLAW.resolveBasis(basis);
+            if (!key) return '';
+            return ' · 근거 ' + global.DYLAW.shortRef(key) + ' ' + global.DYLAW.basisTitle(key, { short: true });
+        } catch (e) { return ''; }
+    }
+
     /* 부서(=DYV2.ORG deptId) 시연 시드 */
     function deptName(deptId) {
         try {
@@ -452,7 +462,9 @@
                     due: deptDue, due_date: deptDue,
                     assigned_to: deptNm + ' 담당자',
                     status: 'IN_PROGRESS', created: today(),
-                    history: [{ type: 'NOTIFY', at: nowTs(), by: '재난안전과', memo: '개선조치 전달 (기한 ' + deptDue + ')' }]
+                    /* 전달 문면에 근거를 함께 실어야 부서 담당자가 "왜 하는지"를 그 자리에서 안다 */
+                    history: [{ type: 'NOTIFY', at: nowTs(), by: '재난안전과',
+                        memo: '개선조치 전달 (기한 ' + deptDue + ')' + basisMemo(r.basis) }]
                 });
                 total++;
             });

@@ -601,6 +601,35 @@
                '<div class="law-basis-panels"></div></div>';
     }
 
+    /* 조문 제목만 — 알림·업무 요청 문면에서 "왜 하는지"를 전달하는 핵심 문구.
+     *  (조문 번호만으로는 담당자가 이유를 알 수 없다.) */
+    function basisTitle(basis, opts) {
+        const key = resolveBasis(basis);
+        if (!key || !ARTICLES[key]) return '';
+        const t = ARTICLES[key].title;
+        /* short — 알림처럼 한 줄로 스캔하는 자리에서는 호(號)의 요지만 쓴다.
+         * '조 제목 — 호 요지' 형태에서 조 제목은 조문 표기로 이미 드러나므로 중복이다. */
+        if (opts && opts.short) {
+            const parts = t.split(' — ');
+            return parts.length > 1 ? parts[parts.length - 1] : t;
+        }
+        return t;
+    }
+
+    /* 근거 한 줄 — **비대화형**. 항목 전체가 링크인 알림처럼
+     *  그 안에 또 다른 클릭 대상을 두면 제스처가 충돌하는 자리에 쓴다.
+     *  '근거' 라벨 + 조문 표기 + 조문 제목을 한 줄로 붙인다. */
+    function basisLine(basis, opts) {
+        const o = opts || {};
+        const key = resolveBasis(basis);
+        if (!key) return '';
+        const label = shortRef(key) + ' ' + basisTitle(key, { short: true });
+        return '<span class="law-basis-line' + (o.compact ? ' is-compact' : '') + '">' +
+            '<span class="law-basis-line-lead">근거</span>' +
+            '<span class="law-basis-line-text">' + esc(label) + '</span>' +
+        '</span>';
+    }
+
     /* 개별 근거 표기용 칩 — 표·목록 안 어디서나 쓴다(위험성평가 유해위험요인 등).
      *  해석되지 않는 표기(법령이 아닌 KOSHA GUIDE·자체 기준·'법령 매핑 대기')는
      *  없는 조문을 있는 척하지 않도록 **평문 그대로** 둔다.
@@ -625,7 +654,10 @@
             /* 행 전체가 클릭 가능한 표(개선조치 목록 등) 안에 놓이므로 전파를 끊는다.
              * 끊지 않으면 근거를 펼치려다 상세 화면으로 이동해 버린다. */
             ' onclick="event.stopPropagation(); DYLAW.toggle(this, \'' + esc(key) + '\', \'' + pid + '\')">' +
-            esc(shortRef(key)) + '<span class="law-basis-i" aria-hidden="true">ⓘ</span></button>' +
+            /* withTitle — 조문 제목을 칩 안에 넣어 "조문 번호 = 무슨 이유"를 한 덩어리로 만든다.
+             * 제목을 형제 요소로 두면 조문을 펼쳤을 때 전체 폭 패널에 밀려 줄이 어긋난다. */
+            esc(shortRef(key) + (o.withTitle ? ' ' + basisTitle(key, { short: true }) : '')) +
+            '<span class="law-basis-i" aria-hidden="true">ⓘ</span></button>' +
             '<span class="law-basis-panels"></span></span>';
     }
 
@@ -766,6 +798,6 @@
     global.DYLAW = {
         SNAPSHOT, LAWS, ARTICLES, MAP,
         pageId, article, law, forPage, shortRef, lawUrl,
-        chipsHtml, basisChip, optionsHtml, panelHtml, toggle, inject, resolveBasis
+        chipsHtml, basisChip, basisTitle, basisLine, optionsHtml, panelHtml, toggle, inject, resolveBasis
     };
 })(window);

@@ -713,6 +713,20 @@
 .law-basis-inline .lawinfo-inline { max-height: 300px; overflow-y: auto; }
 .law-basis-chip-sm { min-height: 26px; padding: 2px 9px; }
 .law-basis-plain { display: inline-flex; align-items: center; gap: 4px; font-size: var(--fs-12); color: var(--text-lightgray); }
+/* 근거 한 줄 (DYLAW.basisLine) — 알림·업무 요청처럼 항목 전체가 링크인 자리.
+   클릭 대상을 만들지 않고 "왜 하는지"만 전달한다. 색만으로 구분하지 않도록
+   '근거' 라벨을 항상 함께 둔다. */
+.law-basis-line {
+  display: flex; align-items: baseline; gap: 6px;
+  margin-top: 5px; padding: 4px 8px;
+  border-left: 2px solid var(--main-light);
+  background: var(--brand-50); border-radius: var(--radius-xs);
+  font-size: var(--fs-12); line-height: 1.5;
+}
+.law-basis-line-lead { flex-shrink: 0; font-weight: 700; color: var(--main-dark); }
+.law-basis-line-text { color: var(--text-gray); word-break: keep-all; }
+.law-basis-line.is-compact { margin-top: 4px; padding: 3px 7px; }
+
 /* 근거 조문이 아직 지정되지 않은 유해위험요인 — 빈칸 대신 상태를 드러낸다 */
 .law-basis-none {
   display: inline-flex; align-items: center;
@@ -722,6 +736,12 @@
   border: 1px solid var(--status-warning-border);
 }
 .rl-imp-basis { margin-top: 4px; }
+
+/* 내 할일 카드의 법령 근거 — 조문 번호(칩·펼침) + 조문 제목(이유) */
+.mw-item-basis { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.mw-item-basis-lead { flex-shrink: 0; padding-top: 5px; font-size: var(--fs-12); font-weight: 700; color: var(--text-lightgray); }
+.mw-item-basis .law-basis-inline { flex: 1 1 auto; min-width: 0; }
+.mw-item-basis .law-basis-chip { text-align: left; white-space: normal; word-break: keep-all; }
 
 .lawinfo-soon {
   margin-top: 10px; padding: 7px 10px;
