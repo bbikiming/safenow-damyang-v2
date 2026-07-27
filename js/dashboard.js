@@ -23,12 +23,28 @@
         const d = ddays(iso);
         return d < 0 ? 'D+' + (-d) : d === 0 ? 'D-day' : 'D-' + d;
     }
+    /* 근거 표기는 법령 근거 단일 출처(js/law-map.js)에서 파생한다 — 화면에 문자열을 직접 쓰지 않는다 */
+    function lawRef(basis) {
+        if (!basis) return '';
+        var k = window.DYLAW && DYLAW.resolveBasis(basis);
+        return k ? E(DYLAW.shortRef(k)) : E(basis);
+    }
+    /* 주기 근거 — 법률 조문은 "대통령령/고용노동부령으로 정한다"로 위임만 하므로,
+       "왜 이 주기인가"의 답은 시행령·시행규칙에 있다. 그 출처를 함께 보여준다. */
+    function cycleSrc(basis) {
+        if (!basis) return '';
+        var k = window.DYLAW && DYLAW.resolveBasis(basis);
+        return k ? ' <span class="dsh-law-cyclesrc">주기 ' + E(DYLAW.shortRef(k)) + '</span>' : '';
+    }
+
     function lawRow(x) {
         const d = x.due ? ddays(x.due) : null;
         const dCls = d == null ? '' : d < 0 ? ' over' : d <= 30 ? ' soon' : '';
         return '<a class="dsh-law-row" href="' + x.href + '">' +
             '<div class="dsh-law-main"><b>' + E(x.name) + '</b>' +
-                '<span class="dsh-law-meta">' + E(x.basis) + ' · ' + E(x.cycle) + (x.note ? ' · ' + E(x.note) : '') + '</span></div>' +
+                '<span class="dsh-law-meta">' + lawRef(x.basis) + ' · ' + E(x.cycle) +
+                    cycleSrc(x.cycleBasis === x.basis ? '' : x.cycleBasis) +
+                    (x.note ? ' · ' + E(x.note) : '') + '</span></div>' +
             (x.due ? '<span class="dsh-law-dday' + dCls + '">' + dday(x.due) + '</span>' : '') +
             chip(x.st) +
         '</a>';
@@ -525,12 +541,12 @@
          *   산안법 §29(정기교육)·§36(위험성평가)·§24(산보위)·§125(작업환경측정) +
          *   중처법 시행령 §5(의무이행 점검표). 마감 D-day 순으로 표기, 내 할일과 딥링크 연동. */
         const lawItems = [
-            { name: '의무이행 점검표 반기 제출',       basis: '중처법 시행령 §5', cycle: '반기 1회',    st: '기한초과', href: 'my-work.html?cat=comply', due: '2026-07-08' },
-            { name: '산업안전보건위원회 정기회의',     basis: '산안법 §24',       cycle: '분기 1회',    st: '예정',     href: 'menu.html?m=opinion&sub=committee', due: '2026-09-30', note: '회의록 등록 필요' },
-            { name: '정기 위험성평가 결과 등록',       basis: '산안법 §36',       cycle: '연 1회 + 수시', st: '진행',   href: 'rsk-list.html', due: '2026-12-31' },
-            { name: '근로자 정기 안전보건교육',        basis: '산안법 §29',       cycle: '반기 6h/12h', st: '진행',     href: 'edu-status.html', due: '2026-12-31', note: '미달 2부서' },
-            { name: '채용 시 안전보건교육 (신규자)',   basis: '산안법 §29',       cycle: '채용 즉시 8h', st: '주의',    href: 'edu-hire.html', note: '대상 2명 미이수' },
-            { name: '작업환경측정',                    basis: '산안법 §125',      cycle: '반기 1회',    st: '미착수',   href: 'work-env.html', due: '2026-12-31' },
+            { name: '의무이행 점검표 반기 제출',       basis: 'cse-5',   cycleBasis: 'cse-5',    cycle: '반기 1회',    st: '기한초과', href: 'my-work.html?cat=comply', due: '2026-07-08' },
+            { name: '산업안전보건위원회 정기회의',     basis: 'osh-24',  cycleBasis: 'oshe-37',  cycle: '분기 1회',    st: '예정',     href: 'menu.html?m=opinion&sub=committee', due: '2026-09-30', note: '회의록 등록 필요' },
+            { name: '정기 위험성평가 결과 등록',       basis: 'osh-36',  cycle: '연 1회 + 수시', st: '진행',   href: 'rsk-list.html', due: '2026-12-31' },
+            { name: '근로자 정기 안전보건교육',        basis: 'osh-29',  cycle: '반기 6h/12h', st: '진행',     href: 'edu-status.html', due: '2026-12-31', note: '미달 2부서' },
+            { name: '채용 시 안전보건교육 (신규자)',   basis: 'osh-29',  cycle: '채용 즉시 8h', st: '주의',    href: 'edu-hire.html', note: '대상 2명 미이수' },
+            { name: '작업환경측정',                    basis: 'osh-125', cycleBasis: 'oshr-190', cycle: '반기 1회',    st: '미착수',   href: 'work-env.html', due: '2026-12-31' },
         ];
         const lawCalCard =
             '<div class="card" style="margin-bottom:16px;">' +
