@@ -11,6 +11,11 @@
     var D = function () { return global.DYRSK; };
     var KO = function () { return global.DYRSK.KOSHA; };
     function esc(s) { return V().esc(String(s == null ? '' : s)); }
+    /* 법령 근거는 DYLAW 칩으로 그린다(CLAUDE.md §10). 미로드 시 평문으로 안전 폴백. */
+    function basisHtml(basis) {
+        return window.DYLAW ? DYLAW.basisChip(basis, { lead: '근거' })
+                            : '<span class="law-basis-plain">근거 ' + esc(basis) + '</span>';
+    }
     function toast(m) { V().toast(m); }
 
     var state = { aid: null, pid: null, mount: null, method: '4x4', rows: [], done: false, panel: null, reassess: false };
@@ -87,7 +92,7 @@
             }
             var panelHtml = (state.panel && state.panel.row === i) ? renderPanel(i, r) : '';
             return '<tr>' +
-                '<td><div class="re-hrf-name">' + esc(r.name) + '</div><div class="re-hrf-basis">근거 ' + esc(r.basis) + '</div>' + panelHtml + '</td>' +
+                '<td><div class="re-hrf-name">' + esc(r.name) + '</div><div class="re-hrf-basis">' + basisHtml(r.basis) + '</div>' + panelHtml + '</td>' +
                 '<td>' + freqCell + '</td><td>' + sevCell + '</td><td>' + gradeCell + '</td><td>' + accCell + '</td><td>' + measureCell + '</td>' +
             '</tr>';
         }).join('');

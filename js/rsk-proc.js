@@ -15,6 +15,11 @@
     var D = function () { return global.DYRSK; };
     var KO = function () { return global.DYRSK.KOSHA; };
     function esc(s) { return V().esc(String(s == null ? '' : s)); }
+    /* 법령 근거는 DYLAW 칩으로 그린다(CLAUDE.md §10). 미로드 시 평문으로 안전 폴백. */
+    function basisHtml(basis) {
+        return window.DYLAW ? DYLAW.basisChip(basis)
+                            : '<span class="law-basis-plain">' + esc(basis) + '</span>';
+    }
     function toast(m) { V().toast(m); }
 
     var state = { targetId: 'f_jns', mount: null, edit: null, panel: null };
@@ -111,7 +116,7 @@
         var hrfRows = w.hrf.length
             ? w.hrf.map(function (h, i) {
                 var badge = h.source === 'STD' ? '<span class="src-badge kosha">표준</span>' : (h.source === 'INSPECTION' ? '<span class="src-badge ins">점검</span>' : '<span class="src-badge manual">직접</span>');
-                var legal = (h.legal_status === 'MAPPED' && h.basis) ? '<span class="rp-hrf-legal">' + esc(h.basis) + '</span>' : '<span class="rp-pending">법령 매핑 대기</span>';
+                var legal = (h.legal_status === 'MAPPED' && h.basis) ? basisHtml(h.basis) : '<span class="rp-pending">법령 매핑 대기</span>';
                 return '<div class="rp-hrf' + (h.on ? '' : ' off') + '">' +
                     '<input type="checkbox"' + (h.on ? ' checked' : '') + ' onchange="RSKPROC.toggleHrf(' + i + ',this.checked)"> ' +
                     '<span class="rp-hrf-name">' + esc(h.name) + '</span> ' + badge + legal +
