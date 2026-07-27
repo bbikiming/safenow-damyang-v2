@@ -804,5 +804,18 @@
     "defFile": "SCR-COM-007_공통페이지크롬.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/js/layout.js",
     "unresolvedCount": 1
+  },
+  {
+    "scrId": "SCR-COM-008",
+    "daemenu": "공통/전역",
+    "jungmenu": "법령 근거 연계",
+    "name": "법령 근거 연계(메뉴별 근거 조문 노출·지정)",
+    "type": "기타",
+    "route": "전역 — 페이지 제목 아래 자동 노출 / 근거 지정은 rsk-list.html 보고서 검수",
+    "components": "law-map.js, layout.js, rsk-list.js, rsk-imp.js, rsk-imp-detail.js, rsk-exec.js, rsk-proc.js, edoc.js",
+    "existingSfr": "없음(전 화면 공통)",
+    "defFile": "SCR-COM-008_법령근거연계.md",
+    "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/js/law-map.js",
+    "unresolvedCount": 11
   }
 ]
