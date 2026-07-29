@@ -652,7 +652,11 @@
         'admin-roles':       [],
         'admin-notify':      [],
         'admin-presets':     [],
-        'admin-integration': []
+        'admin-integration': [],
+        /* 법령 관리 — 법령을 **다루는** 화면이지 어떤 조문의 직접 이행 수단이 아니다.
+         * 여기에 근거를 붙이면 검증 6문 #2를 이 화면 스스로 어기게 된다. */
+        'admin-law':         [],
+        'admin-law-map':     []
     };
 
     /* menu.html 은 ?m= / ?sub= 로 여러 화면을 서빙한다 — 실효 페이지 id 로 환원 */
@@ -816,9 +820,13 @@
         const a = ARTICLES[key];
         if (!a) return '';
         const L = LAWS[a.law] || {};
+        /* 시행예정은 **법령 단위** 정보다. 그 법령의 모든 조문에 '개정 시행예정 N건'을
+         * 붙이면 무관한 조문까지 경고를 뒤집어쓴다(검증 6문 #6의 조문판 위반).
+         * 조문별 영향은 아직 알 수 없으므로 그 사실을 문구로 밝힌다. — 2026-07-29 */
         const soon = (L.upcoming || []).length
-            ? '<div class="lawinfo-soon">개정 시행예정 ' + L.upcoming.length + '건 — ' +
-              esc(L.upcoming.map(u => u.efYd).join(' · ')) + '</div>'
+            ? '<div class="lawinfo-soon">이 법령에 개정 시행예정 ' + L.upcoming.length + '건 — ' +
+              esc(L.upcoming.map(u => u.efYd).join(' · ')) +
+              '<span class="lawinfo-soon-note">해당 조문 영향은 확인되지 않았습니다</span></div>'
             : '';
         return '<div class="lawinfo-inline" id="' + esc(panelId || ('lawinfo-' + key)) + '">' +
             '<div class="lawinfo-ref">' +
@@ -923,9 +931,85 @@
         return (head !== s && BASIS_ALIAS[head]) || null;
     }
 
+    /* ── 관리 화면(법령 관리)용 파생 API ────────────────────────────────
+     *  관리 화면이 이 규칙들을 자기 쪽에 복제하면 진실이 둘이 되고,
+     *  이 파일이 재생성될 때 복제본은 따라오지 않는다. 전부 여기서 내보낸다.
+     *  읽기 전용 파생이므로 §10("조문은 손으로 고치지 않는다")과 충돌하지 않는다.
+     * ------------------------------------------------------------------- */
+
+    /* 검색·비교용 정규화 — 표기 체계가 둘이라(ARTICLES[].jo='제43조' / shortRef='§43')
+     * 정규화 없이 '43'을 치면 0건이 뜬다. */
+    function normalize(t) {
+        return String(t == null ? '' : t)
+            .replace(/[§제조항호\s·ㆍ()（）]/g, '')
+            .toLowerCase();
+    }
+
+    /* 페이지 id → 그 id 를 쓰는 HTML 파일들.
+     * 상세 화면이 목록 id 를 공유하는 1:N 관계가 실재하므로(예: rsk-exec.html → 'rsk-list'),
+     * 매핑을 바꾸면 어느 화면들에 적용되는지 알아야 한다. */
+    const PAGES = {
+        'index': ['index.html'], 'my-work': ['my-work.html'],
+        'base-targets': ['base-targets.html'], 'base-bulk': ['base-bulk.html'],
+        'fac-list': ['fac-list.html'], 'fac-risk': ['fac-risk.html'],
+        'fac-sync': ['fac-sync.html'], 'fac-settings': ['fac-settings.html'],
+        'rsk-list': ['rsk-list.html', 'rsk-exec.html'], 'rsk-occ': ['rsk-occ.html'],
+        'rsk-imp': ['rsk-imp.html', 'rsk-imp-detail.html'], 'rsk-proc': ['rsk-proc.html'],
+        'sbm-policy': ['menu.html?m=policy'], 'sbm-org': ['menu.html?m=org'],
+        'sbm-workenv': ['work-env.html', 'work-env-detail.html'],
+        'sbm-health': ['health-exam.html', 'health-exam-detail.html'],
+        'sbm-contract': ['menu.html?m=contract'], 'sbm-comply': ['menu.html?m=comply'],
+        'edu-reg': ['edu-reg.html', 'edu-reg-detail.html'], 'edu-hire': ['edu-hire.html'],
+        'edu-etc': ['edu-etc.html'], 'edu-sup': ['edu-sup.html'], 'edu-sup-etc': ['edu-sup-etc.html'],
+        'edu-status': ['edu-status.html'], 'edu-workers': ['edu-workers.html'],
+        'edu-approval': ['edu-approval.html'],
+        'opn-voice': ['menu.html?m=opinion&sub=voice'],
+        'opn-committee': ['menu.html?m=opinion&sub=committee'],
+        'opn-council': ['menu.html?m=opinion&sub=council'],
+        'evl-eval': ['evl-eval.html'], 'evl-status': ['evl-list.html'], 'evl-settings': ['evl-settings.html'],
+        'bgt-main': ['bgt-main.html'], 'bgt-settings': ['bgt-settings.html'],
+        'docs-archive': ['docs-archive.html'], 'docs-preset': ['docs-preset.html', 'doc-detail.html'],
+        'docs-exec': ['docs-exec.html'],
+        'stats': ['stats.html'], 'reports': ['reports.html'], 'info-center': ['info-center.html'],
+        'admin-users': ['admin-users.html'], 'admin-sites': ['admin-sites.html'],
+        'admin-menus': ['admin-menus.html'], 'admin-roles': ['admin-roles.html'],
+        'admin-notify': ['admin-notify.html'], 'admin-presets': ['admin-presets.html'],
+        'admin-integration': ['admin-integration.html'],
+        'admin-law': ['admin-law.html'], 'admin-law-map': ['admin-law-map.html']
+    };
+    /* 근거 칩은 .dy-page-title 앵커가 있어야 뜬다. 앵커가 없는 화면은
+     * 근거를 지정해도 조용히 표시되지 않으므로 관리 화면이 이를 밝혀야 한다. */
+    const NO_TITLE_ANCHOR = ['doc-detail.html'];
+
+    function pagesOf(pageId) { return (PAGES[pageId] || []).slice(); }
+    /* 실제로 도달 가능한 페이지 id — 매핑 편집 대상의 모집단 */
+    function reachablePages() { return Object.keys(PAGES); }
+    /* MAP 에는 있으나 어떤 HTML 에도 붙지 않아 화면에 반영되지 않는 키 */
+    function unreachableMapKeys() { return Object.keys(MAP).filter(k => !PAGES[k]); }
+    /* 조문 → 그 조문을 근거로 쓰는 페이지 id 목록 (역참조) */
+    function pagesUsing(articleKey) {
+        return Object.keys(MAP).filter(k => (MAP[k] || []).indexOf(articleKey) >= 0);
+    }
+    /* 어느 화면 매핑에도 쓰이지 않는 조문. **미사용이라는 뜻이 아니다** —
+     * 기준규칙 조문은 항목 근거(유해위험요인)로, 주기 조문은 대시보드에서 쓰인다. */
+    function articlesWithoutMapping() {
+        return Object.keys(ARTICLES).filter(k => pagesUsing(k).length === 0);
+    }
+    /* MAP 이 가리키는데 ARTICLES 에 없는 조문키(끊어진 참조) */
+    function danglingKeys() {
+        const out = [];
+        Object.keys(MAP).forEach(k => (MAP[k] || []).forEach(a => {
+            if (!ARTICLES[a] && out.indexOf(a) < 0) out.push(a);
+        }));
+        return out;
+    }
+
     global.DYLAW = {
-        SNAPSHOT, LAWS, ARTICLES, MAP,
+        SNAPSHOT, LAWS, ARTICLES, MAP, BASIS_ALIAS, MENU_ALIAS, OPINION_SUB,
+        PAGES, NO_TITLE_ANCHOR,
         pageId, article, law, forPage, shortRef, lawUrl,
-        chipsHtml, basisChip, basisTitle, basisLine, optionsHtml, panelHtml, toggle, inject, resolveBasis
+        chipsHtml, basisChip, basisTitle, basisLine, optionsHtml, panelHtml, toggle, inject, resolveBasis,
+        normalize, pagesOf, reachablePages, unreachableMapKeys,
+        pagesUsing, articlesWithoutMapping, danglingKeys
     };
 })(window);

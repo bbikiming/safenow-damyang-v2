@@ -1,0 +1,380 @@
+/* =============================================================================
+ *  admin-law-map.js — 시스템 관리 > 메뉴 근거 매핑 (ADM05-S, 전역 DYADMLAWMAP)
+ * -----------------------------------------------------------------------------
+ *  화면별 근거 조문을 붙이고 떼는 화면. 조문(사실)을 다루는 admin-law 와 나눈 이유는
+ *  파괴 성격이 다르기 때문이다 — 조문 쪽 사고는 "참조가 조용히 끊김",
+ *  매핑 쪽 사고는 **"그럴듯한 오답"**이다. 하루 감사에서 나온 결함 5종이 전부 후자였다.
+ *
+ *  ■ 붙이기와 떼기는 비대칭이다
+ *    떼기는 과잉 주장을 줄이는 방향이라 사유 1줄이면 된다.
+ *    붙이기는 결함이 나온 방향이라 **검증 6문을 통과해야** 저장된다.
+ *
+ *  ■ 저장 전에 반드시 보여주는 것
+ *    ① 이 근거가 적용되는 HTML 목록(1:N 관계가 실재한다)
+ *    ② 화면 상단에 실제로 어떻게 보이는지 미리보기
+ *    ③ 칩이 표시되지 않는 화면이면 그 사실
+ *
+ *  단일 모달 규칙(§1): 근거 추가는 패널 안 인라인 단계로 진행하고 모달을 띄우지 않는다.
+ * ========================================================================== */
+(function (global) {
+    'use strict';
+
+    var V = function () { return global.DYV2; };
+    var L = function () { return global.DYLAW; };
+    var A = function () { return global.LAWADM; };
+    function esc(s) { return V().esc(String(s == null ? '' : s)); }
+    function toast(m) { V().toast(m); }
+    function chip(label) { return '<span class="chip-status ' + V().toneOf(label) + '">' + esc(label) + '</span>'; }
+
+    var state = {
+        mount: null, sel: '', q: '', filter: '',
+        draft: null,        /* { mode, items:[{key,role}], reason } */
+        adding: null        /* { step, key, answers, reason } */
+    };
+
+    /* =============== 렌더 =============== */
+    function render() {
+        if (!state.mount) return;
+        state.mount.innerHTML =
+            topbar() +
+            '<div class="admp-2col">' +
+                '<div class="admp-listcard card">' + leftCard() + '</div>' +
+                '<div class="admp-panel">' + panel() + '</div>' +
+            '</div>';
+    }
+
+    function counts() {
+        var rows = A().pageRows();
+        var c = { basis: 0, none: 0, unset: 0, unreach: L().unreachableMapKeys().length };
+        rows.forEach(function (r) {
+            var s = A().statusOf(r);
+            if (s === '근거 있음') c.basis++;
+            else if (s === '근거 없음(확정)') c.none++;
+            else c.unset++;
+        });
+        return c;
+    }
+
+    function topbar() {
+        var c = counts();
+        return '<div class="admp-topbar">' +
+            '<span class="admp-topbar-hint">' +
+                '근거 있음 <b>' + c.basis + '</b> · 근거 없음(확정) <b>' + c.none + '</b> · 미판단 <b>' + c.unset + '</b> · 반영 안 됨 <b>' + c.unreach + '</b>' +
+                '<br><b>진척률은 표시하지 않습니다</b> — 근거는 채울수록 좋은 것이 아니라 <b>맞아야</b> 하는 것이고, ' +
+                '과잉으로 붙여서 생긴 결함이 실제로 있었습니다.' +
+            '</span>' +
+            '<span style="flex:1;"></span>' +
+            '<a class="btn btn-sm btn-outline" href="admin-law.html">법령·조문</a>' +
+        '</div>';
+    }
+
+    /* ── 좌측 ── */
+    function leftCard() {
+        var rows = A().pageRows().filter(function (r) {
+            if (state.filter && A().statusOf(r) !== state.filter) return false;
+            if (!state.q) return true;
+            return L().normalize(r.id + ' ' + r.files.join(' ')).indexOf(L().normalize(state.q)) >= 0;
+        });
+        var unreach = L().unreachableMapKeys();
+
+        return '<div class="card-header"><span class="card-title">관리 대상 화면</span></div>' +
+            '<div class="admm-search">' +
+                '<input id="admlm-q" type="text" placeholder="화면 id · 파일명 검색" value="' + esc(state.q) + '" ' +
+                    'oninput="DYADMLAWMAP.search(this.value)">' +
+            '</div>' +
+            '<div class="adml-sec" style="padding-top:8px;">' +
+                '<div class="adml-sec-head">상태 필터</div>' +
+                '<div style="padding:0 14px 4px;display:flex;gap:4px;flex-wrap:wrap;">' +
+                    ['', '근거 있음', '근거 없음(확정)', '미판단'].map(function (f) {
+                        return '<button type="button" class="btn btn-sm ' + (state.filter === f ? 'btn-primary' : 'btn-outline') + '" ' +
+                            'onclick="DYADMLAWMAP.setFilter(\'' + f + '\')">' + (f || '전체') + '</button>';
+                    }).join('') +
+                '</div>' +
+            '</div>' +
+            '<div class="admm-tree-body">' +
+                '<div class="adml-sec">' +
+                    '<div class="adml-sec-head">화면 <span class="adml-count">' + rows.length + '</span></div>' +
+                    (rows.length ? rows.map(rowHtml).join('')
+                        : '<div class="adml-empty-note">조건에 맞는 화면이 없습니다.</div>') +
+                '</div>' +
+                (unreach.length ? '<div class="adml-sec">' +
+                    '<div class="adml-sec-head">반영 안 됨 <span class="adml-count">' + unreach.length + '</span></div>' +
+                    unreach.map(function (k) {
+                        return '<div class="adml-row" style="cursor:default;">' +
+                            '<span class="adml-row-main">' + esc(k) + '</span>' + chip('개발 수정 필요') + '</div>';
+                    }).join('') +
+                    '<div class="adml-empty-note">매핑은 있으나 <b>어떤 화면도 이 페이지 id 를 쓰지 않습니다.</b> ' +
+                    '화면에서 고칠 수 없고 코드 정리가 필요합니다.</div>' +
+                '</div>' : '') +
+            '</div>';
+    }
+
+    function rowHtml(r) {
+        var st = A().statusOf(r);
+        var on = state.sel === r.id;
+        return '<button type="button" class="adml-row' + (on ? ' is-on' : '') + '" ' +
+            'onclick="DYADMLAWMAP.sel(\'' + r.id + '\')">' +
+            '<span class="adml-row-main">' + esc(r.id) +
+                (r.chipBlocked.length ? ' <span class="adml-art-t">표시 불가</span>' : '') +
+            '</span>' + chip(st) + '</button>';
+    }
+
+    /* ── 우측 ── */
+    function panel() {
+        if (!state.sel) {
+            return '<div class="card"><div class="card-body"><div class="v2-empty">' +
+                '<div class="v2-empty-title">좌측에서 화면을 선택하세요</div>' +
+                '<div class="v2-empty-sub">화면마다 어떤 조문을 근거로 삼을지 지정합니다.<br>' +
+                '근거를 붙일 때는 <b>검증 6문</b>을 통과해야 저장됩니다.</div></div></div></div>';
+        }
+        var r = A().pageRows().filter(function (x) { return x.id === state.sel; })[0];
+        if (!r) return '';
+        var d = state.draft || { mode: r.eff.mode === 'unset' ? 'none' : r.eff.mode, items: r.eff.items.slice(), reason: r.eff.reason || '' };
+        var dirty = !!state.draft;
+
+        return '<div class="card">' +
+            '<div class="card-header"><span class="card-title">' + esc(r.id) + '</span>' +
+                (dirty ? '<span class="chip-status warning">저장 필요</span>' : '') + '</div>' +
+            '<div class="card-body">' +
+
+            /* 적용 범위 — 1:N 이 실재하므로 저장 전에 반드시 보여준다 */
+            '<div class="adml-formrow"><label class="form-label">적용 화면</label>' +
+                '<span class="adml-hint">' + esc(r.files.join(' · ')) +
+                (r.files.length > 1 ? ' <b>— ' + r.files.length + '개 화면이 이 근거를 공유합니다</b>' : '') + '</span></div>' +
+            (r.chipBlocked.length
+                ? '<div class="admlm-warn">이 화면에는 제목 영역이 없어 <b>근거를 지정해도 칩이 표시되지 않습니다</b> (' +
+                  esc(r.chipBlocked.join(', ')) + '). 표시하려면 화면에 제목 영역을 추가해야 합니다 — 개발 수정 필요.</div>'
+                : '') +
+
+            /* 판정 */
+            '<div class="adml-block-head">근거 판정</div>' +
+            '<div class="adml-formrow">' +
+                ['basis', 'none'].map(function (m) {
+                    return '<label class="adml-hint" style="display:flex;align-items:center;gap:5px;">' +
+                        '<input type="radio" name="admlm-mode" value="' + m + '"' + (d.mode === m ? ' checked' : '') +
+                        ' onchange="DYADMLAWMAP.setMode(\'' + m + '\')"> ' +
+                        (m === 'basis' ? '근거 있음' : '근거 없음(확정)') + '</label>';
+                }).join('') +
+            '</div>' +
+
+            (d.mode === 'basis' ? itemsBlock(d, r) : noneBlock(d, r)) +
+
+            /* 미리보기 — 저장 전 실제 렌더 모양을 보는 것 자체가 오배정 방지책이다 */
+            (d.mode === 'basis' && d.items.length ? previewBlock(d) : '') +
+
+            '<div class="adml-formrow" style="margin-top:16px;gap:6px;">' +
+                '<button type="button" class="btn btn-primary btn-sm" onclick="DYADMLAWMAP.save()">저장</button>' +
+                (dirty ? '<button type="button" class="btn btn-outline btn-sm" onclick="DYADMLAWMAP.discard()">되돌리기</button>' : '') +
+                '<span class="adml-hint">검증 기록 ' + r.verified + '건</span>' +
+            '</div>' +
+        '</div></div>' +
+        (state.adding ? addPanel(r) : '');
+    }
+
+    function itemsBlock(d, r) {
+        var body = d.items.length
+            ? d.items.map(function (it, i) {
+                var a = L().ARTICLES[it.key];
+                return '<div class="admlm-item">' +
+                    '<div class="admlm-order">' +
+                        '<button type="button" class="admlm-obtn" onclick="DYADMLAWMAP.move(' + i + ',-1)" aria-label="위로">▲</button>' +
+                        '<button type="button" class="admlm-obtn" onclick="DYADMLAWMAP.move(' + i + ',1)" aria-label="아래로">▼</button>' +
+                    '</div>' +
+                    '<span class="admlm-item-main"><b>' + esc(L().shortRef(it.key)) + '</b> ' +
+                        '<span class="adml-art-t">' + esc(a ? a.title : '(수록되지 않은 조문)') + '</span></span>' +
+                    '<select class="form-select" onchange="DYADMLAWMAP.setRole(' + i + ',this.value)" style="max-width:110px;">' +
+                        '<option value="duty"' + (it.role === 'duty' ? ' selected' : '') + '>의무 근거</option>' +
+                        '<option value="cycle"' + (it.role === 'cycle' ? ' selected' : '') + '>주기 근거</option>' +
+                    '</select>' +
+                    '<button type="button" class="btn btn-sm btn-outline" onclick="DYADMLAWMAP.remove(' + i + ')">제거</button>' +
+                '</div>';
+              }).join('')
+            : '<div class="adml-empty-note">지정된 근거가 없습니다.</div>';
+        return '<div class="adml-block-head">근거 조문 <span class="adml-sub">순서가 칩 표시 순서입니다</span></div>' +
+            body +
+            '<button type="button" class="btn btn-sm btn-outline" onclick="DYADMLAWMAP.addStart()">＋ 근거 추가</button>' +
+            '<div class="adml-hint" style="margin-top:6px;">' +
+                '<b>주기 근거</b>는 "왜 이 주기인가"의 답을 담은 조문입니다 — 법률은 대개 위임만 하고 주기는 시행령·시행규칙에 있습니다.' +
+            '</div>';
+    }
+
+    function noneBlock(d, r) {
+        return '<div class="adml-block-head">근거 없음 사유</div>' +
+            '<textarea class="form-textarea" rows="2" placeholder="예: 법령이 정한 의무가 아니라 시스템 운영 기능이다" ' +
+                'oninput="DYADMLAWMAP.setReason(this.value)">' + esc(d.reason || '') + '</textarea>' +
+            '<div class="adml-hint" style="margin-top:6px;">' +
+                '근거가 없는 것도 정보입니다. <b>억지로 조문을 붙이지 않습니다.</b> 사유를 남겨야 다음 담당자가 재검토하지 않습니다.' +
+            '</div>';
+    }
+
+    function previewBlock(d) {
+        /* 실제 렌더 함수를 draft 값으로 호출한다 — 화면과 다른 모양을 그리면 의미가 없다 */
+        var chips = d.items.map(function (it) {
+            return '<span class="law-basis-chip" style="cursor:default;">' + esc(L().shortRef(it.key)) +
+                   '<span class="law-basis-i" aria-hidden="true">ⓘ</span></span>';
+        }).join('');
+        return '<div class="admlm-preview">' +
+            '<div class="admlm-preview-lab">미리보기 — 이 화면 상단에 이렇게 표시됩니다</div>' +
+            '<div class="law-basis-row"><span class="law-basis-lead">법령 근거</span>' + chips + '</div>' +
+        '</div>';
+    }
+
+    /* ── 근거 추가 — 인라인 3단계 (모달 아님) ── */
+    function addPanel(r) {
+        var s = state.adding;
+        var head = '<div class="card" style="margin-top:12px;"><div class="card-header">' +
+            '<span class="card-title">근거 추가 — ' + (s.step === 1 ? '조문 선택' : s.step === 2 ? '원문 확인' : '검증 6문') + '</span>' +
+            '<button type="button" class="btn btn-sm btn-outline" onclick="DYADMLAWMAP.addCancel()">취소</button>' +
+        '</div><div class="card-body">';
+
+        if (s.step === 1) {
+            return head +
+                '<div class="adml-formrow"><label class="form-label">조문</label>' +
+                    '<select class="form-select" onchange="DYADMLAWMAP.addPick(this.value)">' +
+                        L().optionsHtml(s.key || '', '-- 조문 선택 --') + '</select></div>' +
+                '<div class="adml-hint">조문을 고르면 <b>원문을 먼저 보여줍니다</b> — 번호만 보고 붙여서 생긴 결함이 실제로 있었습니다.</div>' +
+            '</div></div>';
+        }
+        var a = L().ARTICLES[s.key];
+        if (s.step === 2) {
+            var Lw = L().LAWS[a.law] || {};
+            return head +
+                '<div class="lawinfo-inline">' +
+                    '<div class="lawinfo-ref"><span class="lawinfo-law">' + esc(Lw.name || '') + '</span>' +
+                        '<span class="lawinfo-art">' + esc(a.jo) + (a.clause ? ' ' + esc(a.clause) : '') + '</span></div>' +
+                    '<div class="lawinfo-title">' + esc(a.title) + '</div>' +
+                    '<div class="lawinfo-text" style="white-space:pre-line;">' + esc(a.text) + '</div>' +
+                '</div>' +
+                '<div class="adml-formrow" style="margin-top:12px;">' +
+                    '<button type="button" class="btn btn-primary btn-sm" onclick="DYADMLAWMAP.addStep(3)">원문을 확인했습니다 — 검증으로</button>' +
+                '</div>' +
+            '</div></div>';
+        }
+        /* step 3 — 검증 6문 */
+        var qs = A().VERIFY_Q.map(function (q) {
+            var on = !!(s.answers || {})[q.id];
+            return '<label class="admlm-q">' +
+                '<input type="checkbox"' + (on ? ' checked' : '') + ' onchange="DYADMLAWMAP.answer(\'' + q.id + '\',this.checked)">' +
+                '<span class="admlm-q-body"><span class="admlm-q-t">' + esc(q.text) + '</span>' +
+                '<span class="admlm-q-h">' + esc(q.hint) + '</span></span></label>';
+        }).join('');
+        var all = A().VERIFY_Q.every(function (q) { return (s.answers || {})[q.id]; });
+        var hasReason = (s.reason || '').trim().length > 0;
+        return head +
+            '<div class="adml-hint" style="margin-bottom:8px;">' +
+                '<b>' + esc(L().shortRef(s.key)) + '</b> — ' + esc(a ? a.title : '') +
+            '</div>' +
+            qs +
+            '<div class="adml-block-head">판단 근거 <span class="adml-sub">필수</span></div>' +
+            '<textarea class="form-textarea" rows="2" placeholder="이 화면이 이 조문의 어떤 의무를 이행하는지 한 줄로" ' +
+                'oninput="DYADMLAWMAP.addReason(this.value)">' + esc(s.reason || '') + '</textarea>' +
+            (all && hasReason ? '' :
+                '<div class="admlm-warn">6문을 모두 확인하고 판단 근거를 적어야 추가할 수 있습니다. ' +
+                '이 게이트는 하루 감사에서 결함 5종이 나온 뒤 만들어졌습니다.</div>') +
+            '<div class="adml-formrow" style="margin-top:12px;">' +
+                '<button type="button" class="btn btn-primary btn-sm"' + (all && hasReason ? '' : ' disabled') +
+                    ' onclick="DYADMLAWMAP.addCommit()">근거 추가</button>' +
+            '</div>' +
+        '</div></div>';
+    }
+
+    /* =============== 액션 =============== */
+    function ensureDraft() {
+        if (state.draft) return state.draft;
+        var r = A().pageRows().filter(function (x) { return x.id === state.sel; })[0];
+        var e = r ? r.eff : { mode: 'none', items: [], reason: '' };
+        state.draft = { mode: e.mode === 'unset' ? 'none' : e.mode, items: e.items.slice(), reason: e.reason || '' };
+        return state.draft;
+    }
+    function sel(id) {
+        if (state.draft && !confirm('저장하지 않은 변경이 있습니다. 이동하면 사라집니다.')) return;
+        state.sel = id; state.draft = null; state.adding = null; render();
+    }
+    function search(v) {
+        state.q = v;
+        var host = state.mount.querySelector('.admm-tree-body');
+        if (host) {
+            var tmp = document.createElement('div');
+            tmp.innerHTML = leftCard();
+            host.innerHTML = tmp.querySelector('.admm-tree-body').innerHTML;
+        } else render();
+    }
+    function setFilter(f) { state.filter = f; render(); }
+    function setMode(m) {
+        var d = ensureDraft();
+        if (d.mode !== m) {
+            /* 판정을 바꾸면 직전 판정에 딸린 값은 비운다.
+             * 안 비우면 '근거 없음' 사유가 '근거 있음' 매핑에 그대로 붙어 저장된다. */
+            d.reason = '';
+            if (m === 'none') d.items = [];
+        }
+        d.mode = m;
+        state.adding = null;
+        render();
+    }
+    function setReason(v) { ensureDraft().reason = v; }
+    function setRole(i, v) { ensureDraft().items[i].role = v; }
+    function move(i, dir) {
+        var d = ensureDraft(), j = i + dir;
+        if (j < 0 || j >= d.items.length) return;
+        var t = d.items[i]; d.items[i] = d.items[j]; d.items[j] = t;
+        render();
+    }
+    function remove(i) {
+        var d = ensureDraft();
+        d.items.splice(i, 1); render();
+    }
+    function discard() { state.draft = null; state.adding = null; render(); toast('변경 내용을 되돌렸습니다.'); }
+
+    function addStart() { state.adding = { step: 1, key: '', answers: {}, reason: '' }; render(); }
+    function addCancel() { state.adding = null; render(); }
+    function addPick(k) { if (!k) return; state.adding.key = k; state.adding.step = 2; render(); }
+    function addStep(n) { state.adding.step = n; render(); }
+    function answer(q, on) { state.adding.answers[q] = on; render(); }
+    function addReason(v) {
+        state.adding.reason = v;
+        /* 버튼 활성 상태만 갱신 — 전체 재렌더하면 입력 캐럿이 날아간다 */
+        var all = A().VERIFY_Q.every(function (q) { return state.adding.answers[q.id]; });
+        var btn = state.mount.querySelector('.admp-panel .card:last-child .btn-primary');
+        if (btn) btn.disabled = !(all && v.trim());
+    }
+    function addCommit() {
+        var s = state.adding, d = ensureDraft();
+        if (d.items.some(function (it) { return it.key === s.key; })) { toast('이미 추가된 조문입니다.'); return; }
+        d.items.push({ key: s.key, role: 'duty' });
+        var a = L().ARTICLES[s.key];
+        A().addVerify(state.sel, {
+            articleKey: s.key, answers: s.answers, reason: s.reason,
+            againstTitle: a ? a.title : ''
+        });
+        state.adding = null; render();
+        toast('근거를 추가했습니다 — 검증 기록이 남았습니다.');
+    }
+
+    function save() {
+        var d = state.draft;
+        if (!d) { toast('변경 내용이 없습니다.'); return; }
+        if (d.mode === 'none' && !(d.reason || '').trim()) { toast('근거 없음 사유를 적어주세요.'); return; }
+        if (d.mode === 'basis' && !d.items.length) { toast('근거 조문이 없습니다. 근거 없음으로 확정하거나 조문을 추가하세요.'); return; }
+        var r = A().pageRows().filter(function (x) { return x.id === state.sel; })[0];
+        A().saveMapping(state.sel, d.mode, d.items, d.reason);
+        state.draft = null; render();
+        toast('저장되었습니다 — ' + (r ? r.files.join(' · ') : '') + ' 에 적용됩니다. 근거 칩은 해당 화면을 새로 열 때 반영됩니다.');
+    }
+
+    function init(mountId) {
+        state.mount = document.getElementById(mountId);
+        if (!state.mount) return;
+        var q = new URLSearchParams(location.search).get('page');
+        if (q) state.sel = q;
+        render();
+    }
+
+    global.DYADMLAWMAP = {
+        init: init, sel: sel, search: search, setFilter: setFilter,
+        setMode: setMode, setReason: setReason, setRole: setRole, move: move, remove: remove,
+        discard: discard, save: save,
+        addStart: addStart, addCancel: addCancel, addPick: addPick, addStep: addStep,
+        answer: answer, addReason: addReason, addCommit: addCommit
+    };
+})(window);

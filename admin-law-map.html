@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>메뉴 근거 매핑 - 담양군 중대재해예방통합관리시스템 v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="admin-law-map" data-page-title="메뉴 근거 매핑" data-page-subtitle="시스템 관리 > 법령 관리 — 화면별 근거 조문 지정 · 검증 6문 기록 (ADM05-S)">
+    <main>
+        <div id="adm-lawmap-app"></div>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/law-map.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/rsk-kosha.js"></script>
+    <script src="./js/rsk-data.js"></script>
+    <script src="./js/sets-data-v2.js"></script>
+    <script src="./js/law-sync-seed.js"></script>
+    <script src="./js/law-admin.js"></script>
+    <script src="./js/admin-law-map.js"></script>
+    <script>DYADMLAWMAP.init('adm-lawmap-app');</script>
+</body>
+</html>

@@ -184,6 +184,13 @@
         '인사연동': 'info', '직접등록': 'neutral', '엑셀업로드': 'purple',
         /* 안전보건교육 — 온나라 결재 상태 (미상신→결재중→결재완료 / 반려) */
         '미상신': 'neutral', '상신': 'info', '결재중': 'info', '결재완료': 'success',
+        /* 법령 관리 (admin-law·admin-law-map) — 조문 생애주기·수집·매핑 판정 */
+        '현행': 'success', '보관': 'neutral', '대체됨': 'purple', '시행 전': 'info',
+        '신규': 'purple', '내용 변경': 'warning', '시행일 변경': 'warning', '변경 없음': 'neutral',
+        '수집 실패': 'danger', '승인': 'success', '보류': 'warning',
+        '근거 있음': 'success', '근거 없음(확정)': 'neutral', '미판단': 'warning',
+        '반영 안 됨': 'danger', '개발 수정 필요': 'danger',
+        '법령 매핑 대기': 'warning', '검증 기록 없음': 'warning',
     };
     /* 매핑에 없는 라벨은 neutral 로 수렴(색을 임의로 만들지 않는다). */
     function toneOf(label) { return STATUS_TONE[String(label || '').trim()] || 'neutral'; }
