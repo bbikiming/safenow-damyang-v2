@@ -204,8 +204,6 @@
         if (!a) return introPanel();
         var Lw = L().LAWS[a.law] || {};
         var imp = A().impactOf(k);
-        var adm = (A().load().articleAdmin || {})[k] || {};
-        var life = adm.lifecycle || '현행';
 
         var srcRows = imp.sources.map(function (s) {
             var n = s.n == null ? '—' : s.n + '곳';
@@ -256,27 +254,19 @@
                     : '합계 참조 <b>' + imp.total + '건</b> — 조문을 바꾸면 이 참조들이 함께 움직입니다.') +
             '</div>' +
 
-            /* 운영 판단 (사람이 쓰는 값 — 조문 사실과 분리 저장) */
-            '<div class="adml-block-head">운영 판단 <span class="adml-sub">조문 사실과 분리 저장됩니다</span></div>' +
+            /* 분류 — 편집값이 아니라 조문 성격에서 파생된다. 편집 select 를 두면
+             * 소비자 없는 저장값이 생기고(구 축 지정), 매핑 탭의 역할 오표시와
+             * 같은 사고가 난다. 검토 대장 원칙(2026-07-30)과 동일. */
+            '<div class="adml-block-head">분류 <span class="adml-sub">조문 성격에서 파생됩니다</span></div>' +
             '<div class="adml-formrow">' +
-                '<label class="form-label">적용 축</label>' +
-                '<select class="form-select" onchange="DYADMLAW.setAxis(\'' + k + '\',this.value)">' +
-                    ['', '중대산업재해', '중대시민재해', '양쪽', '미판정'].map(function (o) {
-                        return '<option value="' + o + '"' + ((adm.axis || '') === o ? ' selected' : '') + '>' +
-                               (o || '-- 선택 --') + '</option>';
-                    }).join('') +
-                '</select>' +
-                '<span class="adml-hint">중처법 양축(산업재해/시민재해) 분류 — 축 누락 점검(감사에서 실제로 나온 결함 유형)에 쓰입니다</span>' +
+                chip(a.civil ? '시민재해 축' : '산업재해 축') +
+                (a.cycle ? ' ' + chip('주기·기준 근거') : '') +
+                '<span class="adml-hint">중처법 양축 점검용 — 축 누락(시민재해 축 통째 누락)이 실제 감사에서 나온 결함 유형입니다</span>' +
             '</div>' +
-            '<div class="adml-formrow">' +
-                '<label class="form-label">생애주기</label>' + chip(life) +
-                '<button type="button" class="btn btn-sm btn-outline" ' +
-                    (imp.total === 0 ? 'onclick="DYADMLAW.archive(\'' + k + '\')"' : 'disabled') + '>보관</button>' +
-                '<span class="adml-hint">' +
-                    (imp.total === 0
-                        ? '참조가 없어 보관할 수 있습니다. 원문은 지워지지 않습니다.'
-                        : '참조 ' + imp.total + '건이 남아 보관할 수 없습니다. <b>삭제 기능은 두지 않습니다</b> — 조문키는 저장 스키마라 지우면 조용히 끊깁니다.') +
-                '</span>' +
+            '<div class="adml-hint" style="margin-top:8px;">' +
+                '이 화면에 조문 <b>삭제·보관 조작은 없습니다</b> — 조문키는 저장 스키마라 지우면 참조가 조용히 끊기고, ' +
+                '수록 목록의 변경(제외 포함)도 조문 본문과 같은 경로(재수집·재생성)로만 합니다. ' +
+                '화면 매핑이 없는 조문도 항목 근거·주기 근거로 쓰이므로 수록을 유지합니다.' +
             '</div>' +
         '</div></div>';
     }
@@ -418,33 +408,9 @@
             if (inp && document.activeElement !== inp) { inp.value = v; }
         } else render();
     }
-    function setAxis(k, v) {
-        var d = A().load();
-        var before = (d.articleAdmin[k] || {}).axis || '';
-        d.articleAdmin[k] = Object.assign({}, d.articleAdmin[k], { axis: v, at: A().nowTs(), by: A().actor() });
-        A().save();
-        A().log({ layer: '조문', target: L().shortRef(k), action: '적용 축 지정', before: before, after: v });
-        toast('축을 지정했습니다 — 검증 6문 #4 경고에 반영됩니다.');
-        render();
-    }
-    function archive(k) {
-        var imp = A().impactOf(k);
-        if (imp.total > 0) { toast('참조가 남아 보관할 수 없습니다.'); return; }
-        V().openModal('조문 보관',
-            '<p style="font-size:13px;line-height:1.7;"><b>' + esc(L().shortRef(k)) + '</b> 을(를) 보관 상태로 둡니다.<br>' +
-            '원문은 <b>지워지지 않습니다</b> — 목록에서만 내려가고, 참조가 생기면 다시 현행으로 돌아옵니다.</p>' +
-            '<p style="font-size:12px;color:var(--text-gray);margin-top:8px;">이 시스템에는 조문 삭제 기능이 없습니다. ' +
-            '조문키는 저장 스키마라 지우면 유해위험요인·개선조치의 근거가 조용히 끊깁니다.</p>',
-            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-            '<button type="button" class="btn btn-primary" onclick="DYADMLAW.doArchive(\'' + k + '\')">보관</button>');
-    }
-    function doArchive(k) {
-        var d = A().load();
-        d.articleAdmin[k] = Object.assign({}, d.articleAdmin[k], { lifecycle: '보관', at: A().nowTs(), by: A().actor() });
-        A().save();
-        A().log({ layer: '조문', target: L().shortRef(k), action: '보관', before: '현행', after: '보관', impact: '참조 0건' });
-        V().closeModal(); toast('보관했습니다. 참조가 생기면 자동으로 현행으로 돌아옵니다.'); render();
-    }
+    /* 축 지정(setAxis)·보관(archive)은 2026-07-30 제거 — 저장값을 읽는 소비자가
+     * 없었고, 축은 조문 성격에서 파생된다(ARTICLES[].civil). 수록 목록 변경은
+     * 재수집(재생성)으로만 한다. */
     function triage(i, verdict) {
         var rows = A().unlinkedBasis();
         var r = rows[i]; if (!r) return;
@@ -500,7 +466,6 @@
 
     global.DYADMLAW = {
         init: init, sel: sel, toggleLaw: toggleLaw, search: search,
-        setAxis: setAxis, archive: archive, doArchive: doArchive,
         triage: triage, sync: sync, decide: decide,
         exportOpen: exportOpen, resetDemo: resetDemo, doReset: doReset
     };
