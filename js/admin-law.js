@@ -45,10 +45,20 @@
         /* 변경 이력은 탭 3(단일 타임라인)으로 이동 — 이 탭에는 그리지 않는다 */
     }
 
+    /* 수집 신선도 — 마지막 성공 수집이 며칠 전인가. 인증키 만료·조용한 배치 실패의
+     * 유일한 증상이 "조문이 안 바뀜"이라 이 숫자가 1급 지표다. */
+    function freshness() {
+        var H = (global.DYLAWSYNC || {}).health;
+        if (!H || !H.lastOk) return null;
+        var days = Math.max(0, Math.round((new Date(A().today()) - new Date(H.lastOk.split(' ')[0])) / 86400000));
+        return { days: days, ok: days <= 1, H: H };
+    }
+
     function topbar() {
         var S = L().SNAPSHOT, laws = Object.keys(L().LAWS).length, arts = Object.keys(L().ARTICLES).length;
         var bad = A().integrityBad();
         var stage = A().stageLoad();
+        var f = freshness();
         return '<div class="admp-topbar">' +
             '<span class="admp-topbar-hint">' +
                 '법제처 스냅샷 <b>' + esc(S.fetchedAt) + '</b> · 법령 <b>' + laws + '종</b> · 조문 <b>' + arts + '건</b>' +
@@ -56,6 +66,8 @@
                 '수록 목록은 완결된 것이 아니며, <b>관계 법령 목록은 발주처 확정 대기</b>입니다.' +
             '</span>' +
             '<span style="flex:1;"></span>' +
+            (f ? '<button type="button" class="btn btn-sm btn-outline" onclick="DYADMLAW.sel(\'health\',\'\')">' +
+                 '법제처 수집 D+' + f.days + ' · ' + (f.ok ? '정상' : '지연') + '</button>' : '') +
             (bad ? '<button type="button" class="btn btn-sm btn-outline" onclick="DYADMLAW.sel(\'integrity\',\'\')">무결성 ' + bad + '건</button>' : '') +
             '<button type="button" class="btn btn-sm btn-primary" onclick="DYADMLAW.sync()">' +
                 (stage ? '수집 결과 검토' : '수집 요청 등록 (시뮬레이션)') + '</button>' +
@@ -68,12 +80,40 @@
     function leftCard() {
         return '<div class="card-header"><span class="card-title">수록 법령·조문</span></div>' +
             '<div class="admm-search">' +
-                '<input id="adml-q" type="text" placeholder="조문 검색 — §43 · 제43조 · 43 · 개구부" ' +
+                '<input id="adml-q" type="text" placeholder="검색 — 교육 시간 · 건강검진 · 지게차 · §43" ' +
                     'value="' + esc(state.q) + '" oninput="DYADMLAW.search(this.value)">' +
             '</div>' +
             '<div class="admm-tree-body">' +
-                queueSection() + integritySection() + lawSection() + unlinkedSection() +
+                quickSection() + queueSection() + healthSection() + integritySection() + lawSection() + unlinkedSection() +
             '</div>';
+    }
+
+    /* 자주 찾는 질문 — 법을 모르는 사람의 진입점. 조문 번호를 몰라도
+     * 질문으로 바로 해당 조문에 도달한다. (law-plain.js 로드 시) */
+    function quickSection() {
+        var P = global.DYLAWPLAIN;
+        if (!P || !P.QUICK || !P.QUICK.length) return '';
+        return '<div class="adml-sec">' +
+            '<div class="adml-sec-head">자주 찾는 질문</div>' +
+            '<div class="adml-quick">' +
+                P.QUICK.map(function (x) {
+                    return '<button type="button" class="adml-quick-q" ' +
+                        'onclick="DYADMLAW.sel(\'article\',\'' + esc(x.key) + '\')">' + esc(x.q) + '</button>';
+                }).join('') +
+            '</div>' +
+        '</div>';
+    }
+
+    /* 법제처 수집 상태 — "데이터가 잘 받아와지는가" 요약 행 */
+    function healthSection() {
+        var f = freshness();
+        if (!f) return '';
+        return '<div class="adml-sec">' +
+            '<div class="adml-sec-head">법제처 수집 상태</div>' +
+            '<button type="button" class="adml-row" onclick="DYADMLAW.sel(\'health\',\'\')">' +
+                '<span class="adml-row-main">마지막 성공 수집 ' + esc(f.H.lastOk) + '</span>' +
+                chip(f.ok ? '정상' : '지연') + '</button>' +
+        '</div>';
     }
 
     function queueSection() {
@@ -126,18 +166,34 @@
         var n = L().normalize(state.q);
         if (!n) return true;
         var hay = [k, a.jo, a.clause || '', a.title, a.text, L().shortRef(k)].join(' ');
+        /* 쉬운 설명도 검색 대상 — "교육 시간"·"건강검진" 같은 일상어로도 찾아진다 */
+        var P = global.DYLAWPLAIN && global.DYLAWPLAIN.A && global.DYLAWPLAIN.A[k];
+        if (P) hay += ' ' + [P.s, P.w, P.a, P.t].join(' ');
         return L().normalize(hay).indexOf(n) >= 0;
     }
 
+    /* 법령 계열 구조 — 법을 모르는 사람에게 위계(법률 → 시행령 → 규칙 → 고시)를
+     * 이름으로 보여준다. 계열·위계 라벨은 표시용이며 데이터는 LAWS 그대로다. */
+    var LAW_TIER = {
+        csa: '법률', cse: '시행령',
+        osh: '법률', oshe: '시행령', oshr: '시행규칙', oshs: '현장 수칙', rae: '고시'
+    };
+    var FAMILY_VIEW = [
+        { label: '중대재해처벌법 계열', hint: '경영책임자(군수)의 예방 체계 의무', laws: ['csa', 'cse'] },
+        { label: '산업안전보건법 계열', hint: '교육·평가·측정·검진과 현장 안전 수칙', laws: ['osh', 'oshe', 'oshr', 'oshs', 'rae'] }
+    ];
+
     function lawSection() {
         var laws = L().LAWS, arts = L().ARTICLES;
+        var P = global.DYLAWPLAIN || { LAWS: {} };
         var byLaw = {};
         Object.keys(arts).forEach(function (k) {
             if (!matches(k, arts[k])) return;
             (byLaw[arts[k].law] = byLaw[arts[k].law] || []).push(k);
         });
         var total = Object.keys(byLaw).reduce(function (s, l) { return s + byLaw[l].length; }, 0);
-        var body = Object.keys(laws).map(function (lk) {
+
+        function lawBlock(lk) {
             var list = byLaw[lk] || [];
             if (state.q && !list.length) return '';
             var Lw = laws[lk];
@@ -145,25 +201,43 @@
             return '<div class="adml-law">' +
                 '<button type="button" class="adml-row adml-law-head" onclick="DYADMLAW.toggleLaw(\'' + lk + '\')">' +
                     '<span class="adml-caret">' + (isOpen ? '▾' : '▸') + '</span>' +
-                    '<span class="adml-row-main">' + esc(Lw.short) + '</span>' +
+                    '<span class="adml-row-main">' + esc(Lw.short) +
+                        ' <span class="adml-art-t">' + esc(LAW_TIER[lk] || Lw.kind) + '</span></span>' +
                     '<span class="adml-count">' + list.length + '</span>' +
                 '</button>' +
-                (isOpen ? list.map(function (k) {
-                    var a = arts[k];
-                    var imp = A().impactOf(k);
-                    var on = state.sel.type === 'article' && state.sel.key === k;
-                    return '<button type="button" class="adml-row adml-art' + (on ? ' is-on' : '') + '" ' +
-                        'onclick="DYADMLAW.sel(\'article\',\'' + k + '\')">' +
-                        '<span class="adml-row-main">' + esc(L().shortRef(k)) + ' <span class="adml-art-t">' + esc(a.title) + '</span></span>' +
-                        '<span class="adml-ref">참조 ' + imp.total + '</span></button>';
-                  }).join('') : '') +
+                (isOpen
+                    ? ((P.LAWS[lk] ? '<div class="adml-lawdesc">' + esc(P.LAWS[lk]) + '</div>' : '') +
+                       list.map(function (k) {
+                        var a = arts[k];
+                        var imp = A().impactOf(k);
+                        var on = state.sel.type === 'article' && state.sel.key === k;
+                        var pk = global.DYLAWPLAIN && global.DYLAWPLAIN.A && global.DYLAWPLAIN.A[k];
+                        return '<button type="button" class="adml-row adml-art' + (on ? ' is-on' : '') + '" ' +
+                            (pk ? 'title="' + esc(pk.s) + '" ' : '') +
+                            'onclick="DYADMLAW.sel(\'article\',\'' + k + '\')">' +
+                            '<span class="adml-row-main">' + esc(L().shortRef(k)) + ' <span class="adml-art-t">' + esc(a.title) + '</span></span>' +
+                            '<span class="adml-ref">참조 ' + imp.total + '</span></button>';
+                      }).join(''))
+                    : '') +
+            '</div>';
+        }
+
+        var body = FAMILY_VIEW.map(function (fam) {
+            var blocks = fam.laws.map(lawBlock).join('');
+            if (!blocks) return '';
+            return '<div class="adml-fam">' +
+                '<div class="adml-fam-head">' + esc(fam.label) +
+                    '<span class="adml-fam-hint">' + esc(fam.hint) + '</span></div>' +
+                blocks +
             '</div>';
         }).join('');
+
         return '<div class="adml-sec">' +
             '<div class="adml-sec-head">법령·조문 <span class="adml-count">' +
                 (state.q ? total + ' / ' + Object.keys(arts).length : Object.keys(arts).length) + '</span></div>' +
             (total || !state.q ? body :
               '<div class="adml-empty-note">검색 결과가 없습니다 — <b>' + esc(state.q) + '</b>' +
+              '<br>조문 번호(§43)뿐 아니라 <b>일상어</b>(교육 시간 · 건강검진 · 지게차)로도 찾을 수 있습니다.' +
               '<br><button type="button" class="btn btn-sm btn-outline" onclick="DYADMLAW.search(\'\')">검색 초기화</button></div>') +
         '</div>';
     }
@@ -186,6 +260,7 @@
             case 'integrity': return integrityPanel();
             case 'triage':    return triagePanel();
             case 'sync':      return syncPanel();
+            case 'health':    return healthPanel();
             case 'page':      return pageHintPanel(state.sel.key);
             default:          return introPanel();
         }
@@ -194,8 +269,66 @@
     function introPanel() {
         return '<div class="card"><div class="card-body">' +
             '<div class="v2-empty"><div class="v2-empty-title">좌측에서 조문을 선택하세요</div>' +
-            '<div class="v2-empty-sub">조문을 고르면 원문과 <b>영향 범위</b>(이 조문을 쓰는 곳)를 함께 봅니다.<br>' +
-            '조문을 바꾸기 전에 무엇이 흔들리는지 먼저 확인하기 위한 화면입니다.</div></div>' +
+            '<div class="v2-empty-sub">법을 몰라도 됩니다 — <b>자주 찾는 질문</b>을 누르거나, 검색창에 ' +
+            '<b>일상어</b>(교육 시간 · 건강검진 · 지게차)를 입력해도 조문을 찾아줍니다.<br>' +
+            '조문을 고르면 <b>쉬운 설명</b>(누가·무엇을·언제)과 원문, <b>영향 범위</b>(이 조문을 쓰는 곳)를 함께 봅니다.</div></div>' +
+        '</div></div>';
+    }
+
+    /* ── 법제처 수집 상태 패널 — "데이터가 잘 받아와지는가" ── */
+    function healthPanel() {
+        var f = freshness();
+        if (!f) {
+            return '<div class="card"><div class="card-body"><div class="v2-empty">' +
+                '<div class="v2-empty-title">수집 기록이 없습니다</div></div></div></div>';
+        }
+        var H = f.H;
+        var lawRows = (H.laws || []).map(function (r) {
+            var Lw = L().LAWS[r.key] || {};
+            return '<tr>' +
+                '<td><b>' + esc(Lw.short || r.key) + '</b><div class="adml-imp-detail">' + esc(Lw.kind || '') + '</div></td>' +
+                '<td>' + esc(r.lastOk) + '</td>' +
+                '<td>' + chip(r.result) + '</td>' +
+                '<td class="adml-imp-n">' + (r.ms != null ? r.ms + 'ms' : '—') + '</td>' +
+                '<td>' + (r.mstMatch ? chip('일치') : chip('불일치')) +
+                    '<div class="adml-imp-detail">저장 mst ' + esc(Lw.mst || '-') + '</div></td>' +
+                '<td>' + esc(r.note || '') + '</td>' +
+            '</tr>';
+        }).join('');
+        var runRows = (H.runs || []).map(function (r) {
+            return '<tr>' +
+                '<td>' + esc(r.at) + '</td>' +
+                '<td>' + chip(r.result) + '</td>' +
+                '<td>법령 ' + r.laws + ' · 조문 ' + r.arts + '</td>' +
+                '<td class="adml-imp-n">' + (r.changed ? '변경 ' + r.changed + '건' : '변경 없음') + '</td>' +
+                '<td>' + esc(r.note || '') + '</td>' +
+            '</tr>';
+        }).join('');
+        return '<div class="card"><div class="card-header">' +
+            '<span class="card-title">법제처 수집 상태</span>' +
+            '<span class="adml-readonly">배치 기록</span></div><div class="card-body">' +
+
+            '<div class="adml-formrow">' + chip(f.ok ? '정상' : '지연') +
+                '<span class="adml-hint"><b>마지막 성공 수집 D+' + f.days + '</b> (' + esc(H.lastOk) + ') · ' +
+                '다음 배치 ' + esc(H.nextRun) + ' · 수집 주기 ' + esc(H.schedule) + ' · 인증키 ' + esc(H.keyState) + '</span>' +
+            '</div>' +
+            '<div class="adml-notice">' +
+                '화면은 법제처를 <b>직접 호출하지 않습니다</b>(방화벽 명세: 배치 서버 단독 아웃바운드). 여기 보이는 것은 야간 배치의 수집 기록입니다.<br>' +
+                '<b>"마지막 성공 수집 D+N"이 1급 지표입니다</b> — 인증키 만료나 배치의 조용한 실패는 오류 화면이 아니라 ' +
+                '"조문이 안 바뀜"으로만 나타나기 때문에, 이 숫자가 커지면 연계 관리에서 원인을 확인해야 합니다.' +
+            '</div>' +
+
+            '<div class="adml-block-head">법령별 최근 수집 <span class="adml-sub">원본 대조 = 저장된 재조회 키(mst)와 법제처 현행본 일치 여부</span></div>' +
+            '<div class="adml-tablewrap"><table class="table-figma table-compact">' +
+                '<thead><tr><th>법령</th><th>최근 수집</th><th>결과</th><th>응답</th><th>원본 대조</th><th>비고</th></tr></thead>' +
+                '<tbody>' + lawRows + '</tbody></table></div>' +
+
+            '<div class="adml-block-head">최근 배치 이력</div>' +
+            '<div class="adml-tablewrap"><table class="table-figma table-compact">' +
+                '<thead><tr><th>일시</th><th>결과</th><th>대상</th><th>변경 감지</th><th>비고</th></tr></thead>' +
+                '<tbody>' + runRows + '</tbody></table></div>' +
+            '<div class="adml-hint" style="margin-top:8px;">각 행의 [실측]/[시연 구성] 표기는 관측 출처입니다. ' +
+                '수집 실패 알림·재시도는 <a class="adml-jump" href="admin-integration.html">연계 관리</a>가 단일 창구입니다.</div>' +
         '</div></div>';
     }
 
@@ -229,14 +362,17 @@
                 '<span class="adml-readonly">읽기 전용</span>' +
             '</div><div class="card-body">' +
 
-            /* 조문 원문 — 편집 컨트롤이 없다 */
+            /* 조문 원문 — 편집 컨트롤이 없다. 쉬운 설명(요약 라벨 명시)이 원문 위에 온다 */
             '<div class="lawinfo-inline">' +
                 '<div class="lawinfo-ref"><span class="lawinfo-law">' + esc(Lw.name || '') + '</span>' +
                     '<span class="lawinfo-art">' + esc(a.jo) + (a.clause ? ' ' + esc(a.clause) : '') + '</span></div>' +
                 '<div class="lawinfo-title">' + esc(a.title) + '</div>' +
+                L().plainHtml(k) +
                 '<div class="lawinfo-text" style="white-space:pre-line;">' + esc(a.text) + '</div>' +
-                '<div class="lawinfo-meta">시행 ' + esc(Lw.efYd || '-') + ' · 법령ID ' + esc(Lw.lawId || '-') +
-                    ' · 조회 ' + esc(L().SNAPSHOT.fetchedAt) + '</div>' +
+                '<div class="lawinfo-meta">' +
+                    '<span title="이 날짜부터 효력이 있는 본문입니다">시행 ' + esc(Lw.efYd || '-') + '</span> · ' +
+                    '<span title="법제처가 부여한 법령 식별번호 — 배치가 재조회할 때 쓰는 키입니다">법령ID ' + esc(Lw.lawId || '-') + '</span> · ' +
+                    '<span title="법제처에서 이 본문을 받아온 날짜입니다">조회 ' + esc(L().SNAPSHOT.fetchedAt) + '</span></div>' +
             '</div>' +
             '<div class="adml-notice">' +
                 '이 본문은 <b>' + esc(L().SNAPSHOT.fetchedAt) + ' 기준 스냅샷</b>이며, 법적 효력은 국가법령정보센터 정본에 있습니다.<br>' +

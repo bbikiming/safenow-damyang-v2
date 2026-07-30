@@ -2321,6 +2321,31 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
   font-size: var(--fs-12); color: var(--main-dark); text-decoration: underline; text-underline-offset: 2px; }
 .adml-jump:hover { color: var(--main); }
 .adml-jump:focus-visible { outline: 2px solid var(--main); outline-offset: 1px; border-radius: var(--radius-xs); }
+
+/* 자주 찾는 질문 — 법을 모르는 사람의 진입점 */
+.adml-quick { padding: 0 8px 6px; display: flex; flex-direction: column; gap: 2px; }
+.adml-quick-q { text-align: left; border: 0; background: none; cursor: pointer; font-family: inherit;
+  padding: 5px 8px; border-radius: var(--radius-xs); font-size: var(--fs-12); color: var(--main-dark);
+  line-height: 1.5; word-break: keep-all; }
+.adml-quick-q::before { content: 'Q. '; font-weight: 700; }
+.adml-quick-q:hover { background: var(--brand-50); }
+.adml-quick-q:focus-visible { outline: 2px solid var(--main); outline-offset: -2px; }
+
+/* 법령 계열 헤더·법령 한 줄 소개 (트리) */
+.adml-fam-head { padding: 8px 14px 4px; font-size: var(--fs-12); font-weight: 700; color: var(--text-gray); }
+.adml-fam-hint { display: block; font-weight: 400; color: var(--text-lightgray); line-height: 1.5; word-break: keep-all; }
+.adml-lawdesc { padding: 0 14px 6px 30px; font-size: var(--fs-12); color: var(--text-lightgray);
+  line-height: 1.55; word-break: keep-all; }
+
+/* 쉬운 설명 카드 — 원문과 구분되는 요약 레이어 (law-plain.js 로드 시, lawinfo 계열) */
+.lawinfo-plain { margin: 8px 0 10px; padding: 10px 12px; border-radius: var(--radius-button);
+  background: var(--brand-50); border: 1px solid var(--card-line); }
+.lawinfo-plain-lab { font-size: var(--fs-12); font-weight: 700; color: var(--main-dark); margin-bottom: 4px; }
+.lawinfo-plain-lab span { font-weight: 400; color: var(--text-lightgray); margin-left: 6px; }
+.lawinfo-plain-sum { font-size: var(--fs-13); font-weight: 700; line-height: 1.6; color: var(--text-black); word-break: keep-all; }
+.lawinfo-plain-grid { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin-top: 6px;
+  font-size: var(--fs-12); line-height: 1.6; color: var(--text-gray); word-break: keep-all; }
+.lawinfo-plain-grid .k { font-weight: 700; color: var(--text-lightgray); white-space: nowrap; }
 .adml-imp-sum { margin-top: 8px; font-size: var(--fs-12); line-height: 1.7; color: var(--text-gray); }
 .adml-formrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
 .adml-formrow .form-label { flex-shrink: 0; min-width: 72px; margin: 0; }

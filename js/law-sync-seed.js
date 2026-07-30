@@ -23,6 +23,36 @@
         note: '시연 데이터 — 2026-07-30 재수집 결과의 재현 (스냅샷에 반영 완료)',
         /* 배치가 돌았다고 가정한 시각 */
         batchAt: '2026-07-30 06:00',
+
+        /* ── 법제처 수집 상태(health) — "데이터가 잘 받아와지는가" 표시용 ─────
+         *  화면은 법제처를 직접 호출하지 않으므로(방화벽: 배치 서버 단독),
+         *  여기 값은 배치 수집 기록이다. 실측 2회(07-27 최초·07-30 재수집)에
+         *  일일 배치 시연 행을 더했고, 행마다 출처를 명시한다.
+         *  "마지막 성공 수집 D+N"이 1급 지표다 — 인증키 만료·조용한 배치 실패의
+         *  유일한 증상이 "조문이 안 바뀜"이기 때문이다. */
+        health: {
+            schedule: '매일 06:00 야간 배치 (1일 1회)',
+            lastOk: '2026-07-30 06:00',
+            nextRun: '2026-07-31 06:00 (예정)',
+            keyState: '정상',   /* 인증키(OC) 상태 — 읽기 전용 표시. 키 자체는 서버 환경변수 */
+            runs: [
+                { at: '2026-07-30 06:00', result: '성공', laws: 7, arts: 48, changed: 4,
+                  note: '개정 1(산안법 시행령 즉시시행)·구본문 정정 2·결손 복구 — 전 조문 재수집 [실측]' },
+                { at: '2026-07-29 06:00', result: '성공', laws: 6, arts: 41, changed: 0, note: '변경 없음 [시연 구성]' },
+                { at: '2026-07-28 06:00', result: '성공', laws: 6, arts: 41, changed: 0, note: '변경 없음 [시연 구성]' },
+                { at: '2026-07-27 06:00', result: '성공', laws: 6, arts: 41, changed: 41, note: '최초 수집 — 스냅샷 구축 [실측]' }
+            ],
+            /* 법령별 최근 수집 결과 — mstMatch: 저장 mst 와 법제처 현행 mst 일치 여부 */
+            laws: [
+                { key: 'csa',  lastOk: '2026-07-30 06:00', result: '성공', ms: 380, mstMatch: true },
+                { key: 'cse',  lastOk: '2026-07-30 06:00', result: '성공', ms: 460, mstMatch: true },
+                { key: 'osh',  lastOk: '2026-07-30 06:00', result: '성공', ms: 520, mstMatch: true, note: '시행예정 3건 감시 중(첫 건 08-01)' },
+                { key: 'oshe', lastOk: '2026-07-30 06:00', result: '성공', ms: 410, mstMatch: true, note: '07-28 즉시시행 개정분 반영 완료' },
+                { key: 'oshr', lastOk: '2026-07-30 06:00', result: '성공', ms: 640, mstMatch: true, note: '별표4 는 파일(HWP) 추출 경로' },
+                { key: 'oshs', lastOk: '2026-07-30 06:00', result: '성공', ms: 590, mstMatch: true },
+                { key: 'rae',  lastOk: '2026-07-30 06:00', result: '성공', ms: 710, mstMatch: true, note: '행정규칙 API — 법령과 조회 경로가 다름' }
+            ]
+        },
         rows: [
             {
                 lawKey: 'oshe', lawName: '산업안전보건법 시행령', articleKey: 'oshe-15',

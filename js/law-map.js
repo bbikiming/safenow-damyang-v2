@@ -1050,6 +1050,23 @@
         }).join('');
     }
 
+    /* 쉬운 설명 카드 — law-plain.js(DYLAWPLAIN, 사람이 쓴 해설)가 로드된 화면에서만
+     * 그려진다. 원문과 물리적으로 분리된 별도 레이어이며 "요약 — 원문 아님" 라벨을
+     * 반드시 붙인다(§10 원문 불변 원칙은 text 필드에만 적용). */
+    function plainHtml(key) {
+        const P = global.DYLAWPLAIN && global.DYLAWPLAIN.A && global.DYLAWPLAIN.A[key];
+        if (!P) return '';
+        return '<div class="lawinfo-plain">' +
+            '<div class="lawinfo-plain-lab">쉬운 설명<span>요약 — 법적 효력은 원문에 있습니다</span></div>' +
+            '<div class="lawinfo-plain-sum">' + esc(P.s) + '</div>' +
+            '<div class="lawinfo-plain-grid">' +
+                '<span class="k">누가</span><span>' + esc(P.w) + '</span>' +
+                '<span class="k">무엇을</span><span>' + esc(P.a) + '</span>' +
+                (P.t && P.t !== '—' ? '<span class="k">언제</span><span>' + esc(P.t) + '</span>' : '') +
+            '</div>' +
+        '</div>';
+    }
+
     /* 조문 펼침 패널 — CLAUDE.md §1 인라인 패널 규칙 (.lawinfo-inline) */
     function panelHtml(key, panelId) {
         const a = ARTICLES[key];
@@ -1073,6 +1090,7 @@
                 '<span class="lawinfo-art">' + esc(a.jo) + (a.clause ? ' ' + esc(a.clause) : '') + '</span>' +
             '</div>' +
             '<div class="lawinfo-title">' + esc(a.title) + '</div>' +
+            plainHtml(key) +
             '<div class="lawinfo-text">' + esc(a.text) + '</div>' +
             excerptNote + soon +
             '<div class="lawinfo-meta">' +
@@ -1283,7 +1301,7 @@
         SNAPSHOT, LAWS, ARTICLES, MAP, BASIS_ALIAS, MENU_ALIAS, OPINION_SUB,
         PAGES, NO_TITLE_ANCHOR,
         pageId, article, law, forPage, shortRef, lawUrl,
-        chipsHtml, basisChip, basisTitle, basisLine, optionsHtml, panelHtml, toggle, inject, resolveBasis,
+        chipsHtml, basisChip, basisTitle, basisLine, optionsHtml, panelHtml, plainHtml, toggle, inject, resolveBasis,
         normalize, pagesOf, reachablePages, unreachableMapKeys,
         pagesUsing, articlesWithoutMapping, danglingKeys
     };
