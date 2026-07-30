@@ -305,11 +305,16 @@
         '</div><div class="card-body">';
 
         if (s.step === 1) {
+            var S = L().SNAPSHOT;
             return head +
-                '<div class="adml-formrow"><label class="form-label">조문</label>' +
-                    '<select class="form-select" onchange="DYADMLAWMAP.addPick(this.value)">' +
-                        L().optionsHtml(s.key || '', '-- 조문 선택 --') + '</select></div>' +
-                '<div class="adml-hint">조문을 고르면 <b>원문을 먼저 보여줍니다</b> — 번호만 보고 붙여서 생긴 결함이 실제로 있었습니다.</div>' +
+                '<button type="button" class="btn btn-primary" onclick="DYADMLAWMAP.openPicker()">조문 찾기</button>' +
+                '<div class="adml-hint" style="margin-top:8px;">' +
+                    '중대재해처벌법·산업안전보건법 계열을 <b>검색해서</b> 고릅니다. ' +
+                    '고른 뒤 <b>원문을 먼저 보여줍니다</b> — 번호만 보고 붙여서 생긴 결함이 실제로 있었습니다.' +
+                '</div>' +
+                '<div class="adml-notice">' +
+                    '조문 데이터는 <b>' + esc(S.source) + '</b> 수집분입니다 · 최종 업데이트 <b>' + esc(S.fetchedAt) + '</b>' +
+                '</div>' +
             '</div></div>';
         }
         var a = L().ARTICLES[s.key];
@@ -408,6 +413,8 @@
     function addStart() { state.adding = { step: 1, key: '', answers: {}, reason: '' }; render(); }
     function addCancel() { state.adding = null; render(); }
     function addPick(k) { if (!k) return; state.adding.key = k; state.adding.step = 2; render(); }
+    /* 조문 선택기 — 이 시점에 열린 모달이 없으므로 모달 1개는 적층이 아니다(§1) */
+    function openPicker() { A().openPicker('DYADMLAWMAP.addPick'); }
     function addStep(n) { state.adding.step = n; render(); }
     function answer(q, on) { state.adding.answers[q] = on; render(); }
     function addReason(v) {
@@ -454,6 +461,6 @@
         setMode: setMode, setReason: setReason, setRole: setRole, move: move, remove: remove,
         discard: discard, save: save,
         addStart: addStart, addCancel: addCancel, addPick: addPick, addStep: addStep,
-        answer: answer, addReason: addReason, addCommit: addCommit
+        answer: answer, addReason: addReason, addCommit: addCommit, openPicker: openPicker
     };
 })(window);

@@ -28,6 +28,7 @@
 
     var L = function () { return global.DYLAW; };
     var V = function () { return global.DYV2; };
+    function esc(x) { return V().esc(String(x == null ? '' : x)); }
 
     /* v1 — 스키마 변경 시 범프. 구 버전 스토어는 읽지 않고 시드로 되돌린다. */
     var SKEY = 'dy-lawadm-v1';
@@ -210,6 +211,151 @@
             else c.unset++;
         });
         return c;
+    }
+
+    /* ── 조문 선택기 ─────────────────────────────────────────────────────
+     *  조문이 41건이고 앞으로 수백 건이 된다. 드롭다운으로는 고를 수 없어
+     *  검색이 있는 선택 창을 쓴다.
+     *
+     *  단일 모달 규칙(§1) — 근거 추가 3단계는 인라인 패널이라 이 시점에 열린
+     *  모달이 없다. 따라서 여기서 여는 모달 1개는 적층이 아니다.
+     *
+     *  법령 계열 필터는 **담당자가 부르는 이름**을 따른다 — 중처법 계열(법+시행령),
+     *  산안법 계열(법+시행령+시행규칙+기준규칙).
+     * ------------------------------------------------------------------- */
+    var LAW_FAMILY = [
+        { id: 'csa', label: '중대재해처벌법', laws: ['csa', 'cse'] },
+        { id: 'osh', label: '산업안전보건법', laws: ['osh', 'oshe', 'oshr', 'oshs'] }
+    ];
+    function familyOf(lawKey) {
+        var f = LAW_FAMILY.filter(function (x) { return x.laws.indexOf(lawKey) >= 0; })[0];
+        return f ? f.id : 'etc';
+    }
+    /* 선택기 상태는 모달이 열려 있는 동안만 산다 */
+    var pick = null;
+
+    function pickerCount(family, q) {
+        return Object.keys(L().ARTICLES).filter(function (k) {
+            return pickerHit(k, family, q);
+        }).length;
+    }
+    function pickerHit(k, family, q) {
+        var a = L().ARTICLES[k];
+        if (!a) return false;
+        if (family && familyOf(a.law) !== family) return false;
+        if (!q) return true;
+        var hay = [k, a.jo, a.clause || '', a.title, a.text, L().shortRef(k)].join(' ');
+        return L().normalize(hay).indexOf(L().normalize(q)) >= 0;
+    }
+
+    /* 선택 목록만 그린다 — 검색어 입력 중 전체를 다시 그리면 한글 조합이 끊긴다 */
+    function pickerListHtml() {
+        var arts = L().ARTICLES, laws = L().LAWS;
+        var byLaw = {};
+        Object.keys(arts).forEach(function (k) {
+            if (!pickerHit(k, pick.family, pick.q)) return;
+            (byLaw[arts[k].law] = byLaw[arts[k].law] || []).push(k);
+        });
+        var n = Object.keys(byLaw).reduce(function (s, l) { return s + byLaw[l].length; }, 0);
+        if (!n) {
+            return '<div class="lawpick-empty">' +
+                '조건에 맞는 조문이 없습니다' + (pick.q ? ' — <b>' + esc(pick.q) + '</b>' : '') +
+                '<div class="lawpick-empty-sub">조문 번호(§43 · 제43조 · 43)나 제목·본문 낱말로 찾을 수 있습니다.</div>' +
+                '<button type="button" class="btn btn-sm btn-outline" onclick="LAWADM.pickerReset()">조건 초기화</button>' +
+            '</div>';
+        }
+        var body = Object.keys(laws).map(function (lk) {
+            var list = byLaw[lk] || [];
+            if (!list.length) return '';
+            var Lw = laws[lk];
+            return '<div class="lawpick-group">' +
+                '<div class="lawpick-group-head">' +
+                    '<span class="lawpick-law">' + esc(Lw.name) + '</span>' +
+                    '<span class="lawpick-eff">시행 ' + esc(Lw.efYd) + '</span>' +
+                    ((Lw.upcoming || []).length
+                        ? '<span class="lawpick-soon">개정 시행예정 ' + Lw.upcoming.length + '건</span>' : '') +
+                '</div>' +
+                list.map(function (k) {
+                    var a = arts[k];
+                    var used = L().pagesUsing(k).length;
+                    return '<button type="button" class="lawpick-item" onclick="LAWADM.pickerChoose(\'' + k + '\')">' +
+                        '<span class="lawpick-ref">' + esc(L().shortRef(k)) + '</span>' +
+                        '<span class="lawpick-body">' +
+                            '<span class="lawpick-title">' + esc(a.title) + '</span>' +
+                            '<span class="lawpick-snip">' + esc(a.text.replace(/\s+/g, ' ').slice(0, 70)) + '…</span>' +
+                        '</span>' +
+                        '<span class="lawpick-used">' + (used ? '화면 ' + used : '') + '</span>' +
+                    '</button>';
+                }).join('') +
+            '</div>';
+        }).join('');
+        return body + '<div class="lawpick-count" aria-live="polite">' +
+            n + '건 표시 · 전체 ' + Object.keys(arts).length + '건</div>';
+    }
+
+    function pickerFilterHtml() {
+        var all = Object.keys(L().ARTICLES).length;
+        var tabs = [{ id: '', label: '전체', n: pickerCount('', pick.q) }].concat(
+            LAW_FAMILY.map(function (f) {
+                return { id: f.id, label: f.label, n: pickerCount(f.id, pick.q) };
+            }));
+        return tabs.map(function (t) {
+            return '<button type="button" class="btn btn-sm ' + (pick.family === t.id ? 'btn-primary' : 'btn-outline') + '" ' +
+                'onclick="LAWADM.pickerFamily(\'' + t.id + '\')">' + esc(t.label) + ' ' + t.n + '</button>';
+        }).join('');
+    }
+
+    /* onPick(articleKey) — 고르면 모달이 닫히고 콜백이 실행된다 */
+    function openPicker(onPickPath) {
+        pick = { q: '', family: '', onPick: onPickPath };
+        var S = L().SNAPSHOT;
+        V().openModal('조문 선택',
+            '<div class="lawpick-src">' +
+                '<b>' + esc(S.source) + '</b> 수집분 · 최종 업데이트 <b>' + esc(S.fetchedAt) + '</b>' +
+                '<div class="lawpick-src-sub">수집일과 법령별 <b>시행일</b>은 다릅니다 — 시행일은 각 법령 머리에 표시됩니다. ' +
+                '조문 본문은 이 화면에서 고칠 수 없고 재수집으로만 바뀝니다.</div>' +
+            '</div>' +
+            '<div class="lawpick-search">' +
+                '<input id="lawpick-q" type="text" aria-label="조문 검색" ' +
+                    'placeholder="조문 번호·제목·본문 검색 — §43 · 제43조 · 43 · 개구부" ' +
+                    'oninput="LAWADM.pickerSearch(this.value)">' +
+            '</div>' +
+            '<div class="lawpick-tabs" id="lawpick-tabs">' + pickerFilterHtml() + '</div>' +
+            '<div class="lawpick-list" id="lawpick-list">' + pickerListHtml() + '</div>',
+            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>');
+        var el = document.getElementById('lawpick-q');
+        if (el) el.focus();
+    }
+    function pickerSearch(v) {
+        if (!pick) return;
+        pick.q = v;
+        var list = document.getElementById('lawpick-list');
+        var tabs = document.getElementById('lawpick-tabs');
+        if (list) list.innerHTML = pickerListHtml();
+        if (tabs) tabs.innerHTML = pickerFilterHtml();
+    }
+    function pickerFamily(f) {
+        if (!pick) return;
+        pick.family = f;
+        pickerSearch(pick.q);
+    }
+    function pickerReset() {
+        if (!pick) return;
+        pick.q = ''; pick.family = '';
+        var el = document.getElementById('lawpick-q');
+        if (el) el.value = '';
+        pickerSearch('');
+    }
+    function pickerChoose(k) {
+        var cb = pick && pick.onPick;
+        V().closeModal();
+        pick = null;
+        if (!cb) return;
+        /* 전역 함수 경로 문자열로 받는다 — 이 코드베이스의 인라인 onclick 관례 */
+        try {
+            var fn = cb.split('.').reduce(function (o, p) { return o && o[p]; }, global);
+            if (typeof fn === 'function') fn(k);
+        } catch (e) {}
     }
 
     /* ── 검증 6문 (CLAUDE.md §10) ────────────────────────────────────────
@@ -448,6 +594,8 @@
         log: log, logs: logs,
         effective: effective, pageRows: pageRows, statusOf: statusOf,
         menuTree: menuTree, labelOf: labelOf, navIndex: navIndex,
+        LAW_FAMILY: LAW_FAMILY, openPicker: openPicker, pickerSearch: pickerSearch,
+        pickerFamily: pickerFamily, pickerReset: pickerReset, pickerChoose: pickerChoose,
         verifyList: verifyList, verifyCount: verifyCount, addVerify: addVerify, staleVerifies: staleVerifies,
         impactOf: impactOf,
         unlinkedBasis: unlinkedBasis, setTriage: setTriage,

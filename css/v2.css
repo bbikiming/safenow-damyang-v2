@@ -579,6 +579,8 @@
 /* 테이블·점검표를 담은 모달은 넓게 (기본 500px → 720px) */
 .modal:has(.table-figma) .modal-content,
 .modal:has(#edoc-form) .modal-content { max-width: 720px; }
+/* 조문 선택기 — 조문 표기·제목·본문 미리보기가 한 줄에 들어가야 한다 */
+.modal:has(#lawpick-list) .modal-content { max-width: 760px; }
 /* e-Doc 폼: 라벨을 위, 입력을 아래로 — 모든 항목 1열 세로 정렬 */
 #edoc-form, .edoc-form-grid { grid-template-columns: 1fr; row-gap: 5px; align-items: stretch; }
 #edoc-form > .k, .edoc-form-grid > .k { margin-top: 14px; line-height: 1.4; }
@@ -592,7 +594,8 @@
   .preset-form-grid { grid-template-columns: 1fr; row-gap: 6px; }
   .preset-form-grid > .k { margin-top: 8px; }
   .preset-form-grid > .k:first-child { margin-top: 0; }
-  .modal:has(.table-figma) .modal-content, .modal:has(#edoc-form) .modal-content { max-width: 100%; }
+  .modal:has(.table-figma) .modal-content, .modal:has(#edoc-form) .modal-content,
+  .modal:has(#lawpick-list) .modal-content { max-width: 100%; }
 }
 
 /* ── 조직도 트리 오버레이 (점검자 선택, 상위 모달 위에 적층) ── */
@@ -2360,3 +2363,45 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .admlm-mini.success { background: var(--status-success-bg); color: var(--status-success-fg); }
 .admlm-mini.neutral { background: var(--status-neutral-bg); color: var(--status-neutral-fg); }
 .admlm-mini.warning { background: var(--status-warning-bg); color: var(--status-warning-fg); }
+
+/* ── 조문 선택기 (LAWADM.openPicker) — 모달 1개, 검색 + 법령 계열 필터 ── */
+.lawpick-src { padding: 9px 11px; margin-bottom: 10px; border-radius: var(--radius-button);
+  border: 1px solid var(--card-line); background: var(--brand-50);
+  font-size: var(--fs-12); line-height: 1.6; color: var(--text-gray); }
+.lawpick-src-sub { margin-top: 4px; color: var(--text-lightgray); }
+.lawpick-search input { width: 100%; box-sizing: border-box; min-height: 44px; padding: 10px 12px;
+  border: 1px solid var(--card-line); border-radius: var(--radius-button);
+  font-size: var(--fs-13); font-family: inherit; outline: none; }
+.lawpick-search input:focus-visible { border-color: var(--main); outline: 2px solid var(--main); outline-offset: 1px; }
+.lawpick-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 8px; }
+.lawpick-list { max-height: 46vh; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--card-line); border-radius: var(--radius-button); }
+.lawpick-group-head { position: sticky; top: 0; z-index: var(--z-base);
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  padding: 7px 12px; background: var(--gray-50, var(--surface-alt));
+  border-bottom: 1px solid var(--card-line); font-size: var(--fs-12); }
+.lawpick-law { font-weight: 700; color: var(--text-black); }
+.lawpick-eff { color: var(--text-lightgray); }
+.lawpick-soon { padding: 0 6px; border-radius: var(--radius-full);
+  background: var(--status-warning-bg); color: var(--status-warning-fg); font-weight: 700; }
+.lawpick-item { display: flex; align-items: flex-start; gap: 10px; width: 100%;
+  min-height: 44px; padding: 9px 12px; border: 0; border-bottom: 1px solid var(--card-line);
+  background: none; text-align: left; cursor: pointer; font-family: inherit; }
+.lawpick-item:last-child { border-bottom: 0; }
+.lawpick-item:hover { background: var(--brand-50); }
+.lawpick-item:focus-visible { outline: 2px solid var(--main); outline-offset: -2px; }
+.lawpick-ref { flex-shrink: 0; min-width: 118px; font-size: var(--fs-12); font-weight: 700; color: var(--main-dark); }
+.lawpick-body { flex: 1; min-width: 0; }
+.lawpick-title { display: block; font-size: var(--fs-12); font-weight: 700; color: var(--text-black); word-break: keep-all; }
+.lawpick-snip { display: block; margin-top: 2px; font-size: var(--fs-12); color: var(--text-lightgray); line-height: 1.5; }
+.lawpick-used { flex-shrink: 0; font-size: var(--fs-12); color: var(--text-lightgray); }
+.lawpick-count { padding: 8px 12px; border-top: 1px solid var(--card-line);
+  background: var(--gray-50, var(--surface-alt)); font-size: var(--fs-12); color: var(--text-gray); }
+.lawpick-empty { padding: 24px 16px; text-align: center; font-size: var(--fs-12); color: var(--text-gray); line-height: 1.7; }
+.lawpick-empty-sub { margin: 4px 0 10px; color: var(--text-lightgray); }
+
+@media (max-width: 559px) {
+  .lawpick-item { flex-direction: column; gap: 3px; }
+  .lawpick-ref { min-width: 0; }
+  .lawpick-list { max-height: 52vh; }
+}
