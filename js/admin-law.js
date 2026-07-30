@@ -6,11 +6,12 @@
  *  "2화면" 결정을 대체). 탭 셸이 LAWTABS 이고, 조문 탭 본체가 DYADMLAW 다.
  *
  *    탭1 법령·조문     — 수록 대장·원문·영향 범위·무결성·수집 검토 (DYADMLAW)
- *    탭2 메뉴 근거 매핑 — 화면별 근거 지정·검증 6문 (DYADMLAWMAP, admin-law-map.js)
+ *    탭2 메뉴 근거 매핑 — 화면별 근거 검토 대장·재검토 요청 (DYADMLAWMAP, admin-law-map.js)
  *    탭3 변경 이력     — 두 탭의 조작이 쌓이는 단일 타임라인
  *
- *  조문(사실)과 매핑(판단)의 파괴 성격 차이는 탭 분리로 유지된다 — 저장 단위가
- *  탭 안에 갇히고, 매핑 탭의 dirty 가드는 탭 전환에도 걸린다.
+ *  두 탭 모두 **편집 화면이 아니다** — 조문도 매핑도 생성물(law-map.js)이라
+ *  화면에서 고치지 않는다. 사람이 남기는 것은 판단 기록(재검토 요청·분류·
+ *  운영 판단)뿐이다.
  *
  *  수록 조문 대장. 이 화면의 핵심은 **조문을 고칠 수 없다는 것**이다.
  *  원문 옆에 편집 아이콘이 없는 것이 설계의 시각적 핵심이며, 규칙 문구보다
@@ -95,6 +96,10 @@
             if (c.n > 0 && (c.id === 'dangling' || c.id === 'unreachable')) {
                 out.push({ type: 'integrity', key: c.id, label: c.label + ' ' + c.n + '건', state: '개발 수정 필요' });
             }
+        });
+        /* 매핑 재검토 요청 — 담당자 이의가 묻히지 않게 큐 최상단 계열로 노출 */
+        A().reviewAll().forEach(function (r) {
+            out.push({ type: 'review', key: r.pageId, label: A().labelOf(r.pageId) + ' — 매핑 재검토 요청', state: '재검토 요청' });
         });
         A().staleVerifies().forEach(function (s) {
             out.push({ type: 'page', key: s.pageId, label: s.pageId + ' — 조문 변경으로 재검증', state: '검증 기록 없음' });
@@ -261,7 +266,7 @@
                                (o || '-- 선택 --') + '</option>';
                     }).join('') +
                 '</select>' +
-                '<span class="adml-hint">검증 6문 #4(법률의 다른 축) 경고에 쓰입니다</span>' +
+                '<span class="adml-hint">중처법 양축(산업재해/시민재해) 분류 — 축 누락 점검(감사에서 실제로 나온 결함 유형)에 쓰입니다</span>' +
             '</div>' +
             '<div class="adml-formrow">' +
                 '<label class="form-label">생애주기</label>' + chip(life) +
@@ -388,6 +393,8 @@
 
     /* =============== 액션 =============== */
     function sel(type, key) {
+        /* 재검토 요청 큐 항목은 매핑 탭의 해당 화면으로 바로 보낸다 */
+        if (type === 'review') { global.LAWTABS.open('map', key); return; }
         state.sel = { type: type, key: key };
         render();
         /* lg 미만에서는 2단이 세로로 쌓여 상세 패널이 트리 아래(뷰포트 밖)다 —
@@ -470,16 +477,16 @@
     }
     function resetDemo() {
         var d = A().load();
-        var n = Object.keys(d.mapOverride).length;
-        var v = Object.keys(d.verify).reduce(function (s, k) { return s + d.verify[k].length; }, 0);
+        var rv = Object.keys(d.reviewReq || {}).length;
         V().openModal('데모 데이터 초기화',
             '<p style="font-size:13px;line-height:1.7;">아래가 삭제됩니다.</p>' +
             '<ul style="font-size:13px;line-height:1.9;margin-left:18px;">' +
-                '<li>매핑 변경 <b>' + n + '건</b></li>' +
-                '<li>검증 기록 <b>' + v + '건</b></li>' +
+                '<li>재검토 요청 <b>' + rv + '건</b></li>' +
                 '<li>변경 이력 <b>' + d.log.length + '건</b></li>' +
+                '<li>화면에서 남긴 조문 운영 판단·표기 분류 변경</li>' +
             '</ul>' +
-            '<p style="font-size:12px;color:var(--status-warning-fg);margin-top:10px;">되돌릴 수 없습니다. 조문 원문은 영향받지 않습니다.</p>',
+            '<p style="font-size:12px;color:var(--text-gray);margin-top:10px;">빈 상태가 아니라 <b>2026-07-30 전수 검토 시드</b>로 되돌아갑니다 — ' +
+            '검증 기록 74건·판정 사유·표기 분류가 초기값입니다. 조문 원문·매핑은 영향받지 않습니다.</p>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="DYADMLAW.doReset()">초기화</button>');
     }
@@ -536,11 +543,7 @@
 
     function tabOpen(id, pageId) {
         var M = global.DYADMLAWMAP;
-        /* 매핑 탭의 미저장 변경은 탭 전환에도 보호한다 — 화면 이동과 같은 파괴다 */
-        if (tabState.current === 'map' && id !== 'map' && M && M.isDirty && M.isDirty()) {
-            if (!confirm('저장하지 않은 변경이 있습니다. 탭을 이동하면 사라집니다.')) return;
-            if (M.dropDraft) M.dropDraft();
-        }
+        /* 매핑 탭은 검토 대장(읽기 전용)이라 미저장 변경이 없다 — 전환 가드 불필요 */
         tabState.current = id;
         var bar = document.getElementById('lawtabs-bar');
         if (bar) bar.innerHTML = tabBar();

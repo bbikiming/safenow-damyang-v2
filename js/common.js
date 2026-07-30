@@ -191,6 +191,7 @@
         '근거 있음': 'success', '근거 없음(확정)': 'neutral', '미판단': 'warning',
         '반영 안 됨': 'danger', '개발 수정 필요': 'danger',
         '법령 매핑 대기': 'warning', '검증 기록 없음': 'warning',
+        '재검토 요청': 'warning', '의무 근거': 'neutral', '주기·기준 근거': 'info',
     };
     /* 매핑에 없는 라벨은 neutral 로 수렴(색을 임의로 만들지 않는다). */
     function toneOf(label) { return STATUS_TONE[String(label || '').trim()] || 'neutral'; }

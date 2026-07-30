@@ -11,10 +11,13 @@
  *
  *      base(js/law-map.js)        override(localStorage)
  *      ├ LAWS      법령 메타       ├ articleAdmin  조문 운영 판단(축·생애주기·대체)
- *      ├ ARTICLES  조문 원문       ├ mapOverride   화면별 근거 매핑
- *      └ MAP       기본 매핑       ├ verify        검증 6문 기록
+ *      ├ ARTICLES  조문 원문       ├ reviewReq     매핑 재검토 요청(비파괴 이의)
+ *      └ MAP       화면별 매핑     ├ verify        검증 6문 기록
  *                                  ├ basisTriage   미연계 근거 표기 분류
  *                                  └ log           변경 이력(append-only)
+ *
+ *    ※ 2026-07-30 — 매핑 편집(mapOverride)을 제거했다. 매핑도 조문과 같은
+ *      생성물이라 화면에서 고치지 않는다. 변경은 law-map.js 재생성으로만.
  *
  *  ■ 삭제가 없다
  *    조문 물리 삭제·조문키 개명 기능을 두지 않는다. 조문키는 저장 스키마이고
@@ -53,7 +56,7 @@
         var S = seed();
         var d = {
             v: SVER, rev: 0,
-            mapOverride: {},   /* pageId → { mode:'basis'|'none', items:[{key,role}], reason, at, by } */
+            reviewReq: {},     /* pageId → { reason, at, by } — 매핑 재검토 요청(비파괴 이의 기록) */
             verify: {},        /* pageId|articleKey → [{answers, reason, at, by, againstTitle}] */
             articleAdmin: {},  /* articleKey → { axis, lifecycle, replacedBy, note, at, by } */
             basisTriage: {},   /* 원문표기 → { verdict, note, at, by } */
@@ -134,15 +137,15 @@
     }
     function logs() { return load().log.slice(); }
 
-    /* ── 실효 매핑 — base + override 병합 ─────────────────────────────────
-     *  **병합은 반드시 이 함수 하나만 쓴다.** 화면이 각자 병합하면
-     *  새 화면이 옛 스토어를 가진 브라우저에서만 다르게 보이는, 재현이 어려운
-     *  사고가 난다(권한 관리에서 같은 취지의 주석이 이미 있다).
+    /* ── 실효 매핑 — base(law-map.js) 단일 진실 ──────────────────────────
+     *  2026-07-30 — **매핑도 생성물이다.** 화면 편집(mapOverride 병합)을 제거했다.
+     *  근거 추가 UI 제거(af303ba)와 같은 논리의 완결이다: 근거는 안전보건 법령과
+     *  전수 검토로 확정된 값이라 화면에서 즉석 수정하지 않는다. 브라우저 로컬
+     *  값이 재생성된 base 를 가리는 사고도 이로써 구조적으로 사라진다.
+     *  이견은 재검토 요청(reviewReq)으로 **기록만** 남긴다.
+     *  역할(의무/주기·기준)은 편집값이 아니라 조문 속성(ARTICLES[].cycle) 파생이다.
      * ------------------------------------------------------------------- */
     function effective(pageId) {
-        var d = load();
-        var ov = d.mapOverride[pageId];
-        if (ov) return { mode: ov.mode, items: (ov.items || []).slice(), reason: ov.reason || '', source: 'override' };
         var base = (L().MAP || {})[pageId];
         /* MAP 에 키가 아예 없다 = 아직 판정하지 않았다 */
         if (!base) return { mode: 'unset', items: [], reason: '', source: 'none' };
@@ -154,9 +157,37 @@
         }
         return {
             mode: 'basis',
-            items: base.map(function (k) { return { key: k, role: 'duty' }; }),
+            items: base.map(function (k) {
+                var a = L().ARTICLES[k];
+                return { key: k, role: (a && a.cycle) ? 'cycle' : 'duty' };
+            }),
             reason: '', source: 'base'
         };
+    }
+
+    /* ── 매핑 재검토 요청 — 편집을 대신하는 비파괴 이의 경로 ────────────── */
+    function reviewOf(pageId) {
+        var d = load(); d.reviewReq = d.reviewReq || {};
+        return d.reviewReq[pageId] || null;
+    }
+    function reviewAll() {
+        var d = load(); d.reviewReq = d.reviewReq || {};
+        return Object.keys(d.reviewReq).map(function (pid) {
+            return Object.assign({ pageId: pid }, d.reviewReq[pid]);
+        });
+    }
+    function requestReview(pageId, reason) {
+        var d = load(); d.reviewReq = d.reviewReq || {};
+        d.reviewReq[pageId] = { reason: reason || '', at: nowTs(), by: actor() };
+        save();
+        log({ layer: '매핑', target: pageId, action: '재검토 요청', after: reason || '', reason: reason || '' });
+    }
+    function withdrawReview(pageId) {
+        var d = load(); d.reviewReq = d.reviewReq || {};
+        var r = d.reviewReq[pageId];
+        delete d.reviewReq[pageId];
+        save();
+        log({ layer: '매핑', target: pageId, action: '재검토 요청 철회', before: (r || {}).reason || '' });
     }
     /* 매핑 편집 대상 모집단 — 실제 도달 가능한 페이지 전부 */
     function pageRows() {
@@ -620,8 +651,10 @@
         });
         return JSON.stringify({
             생성: nowTs(), 스냅샷: L().SNAPSHOT,
-            안내: '이 파일은 law-map.js 재생성 입력이다. 조문 원문은 포함하지 않는다(법제처 수집분).',
+            안내: '이 파일은 law-map.js 재생성 입력이다. 조문 원문은 포함하지 않는다(법제처 수집분). ' +
+                  '매핑은 base 그대로다(화면 편집 없음) — 사람이 남긴 것은 재검토요청·검증기록·표기분류·조문운영판단이다.',
             매핑: map,
+            재검토요청: d.reviewReq || {},
             조문운영판단: d.articleAdmin,
             검증기록: d.verify,
             표기분류: d.basisTriage
@@ -642,28 +675,9 @@
         integrity: integrity, integrityBad: integrityBad,
         stageLoad: stageLoad, stageClear: stageClear, runSync: runSync, stageDecide: stageDecide,
         exportJson: exportJson,
-        /* 매핑 저장 — 화면 2가 쓴다 */
-        saveMapping: function (pageId, mode, items, reason) {
-            var d = load();
-            var before = effective(pageId);
-            d.mapOverride[pageId] = {
-                mode: mode, items: items || [], reason: reason || '',
-                at: nowTs(), by: actor()
-            };
-            save();
-            log({
-                layer: '매핑', target: pageId, action: '근거 저장',
-                before: before.items.map(function (i) { return i.key; }).join(', ') || (before.mode === 'none' ? '근거 없음' : '미판단'),
-                after: mode === 'none' ? '근거 없음(확정)' : (items || []).map(function (i) { return i.key; }).join(', '),
-                impact: L().pagesOf(pageId).join(', '),
-                reason: reason || ''
-            });
-        },
-        clearMapping: function (pageId) {
-            var d = load();
-            delete d.mapOverride[pageId];
-            save();
-            log({ layer: '매핑', target: pageId, action: '기본값으로 되돌림' });
-        }
+        /* 매핑 재검토 요청 — 저장(saveMapping)은 2026-07-30 제거됨.
+         * 매핑 변경은 law-map.js 재생성으로만 반영된다(조문과 같은 경로). */
+        reviewOf: reviewOf, reviewAll: reviewAll,
+        requestReview: requestReview, withdrawReview: withdrawReview
     };
 })(window);

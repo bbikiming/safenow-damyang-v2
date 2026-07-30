@@ -1,25 +1,22 @@
 /* =============================================================================
  *  admin-law-map.js — 법령 관리 > 메뉴 근거 매핑 탭 (전역 DYADMLAWMAP)
  * -----------------------------------------------------------------------------
- *  2026-07-30 통합 — 별도 메뉴(구 ADM05, admin-law-map.html)에서 법령 관리
- *  화면(admin-law.html)의 **탭 2**로 흡수됐다. 셸은 LAWTABS(admin-law.js),
- *  이 모듈은 탭 본문만 그린다. 구 주소는 리다이렉트 스텁이 승계한다.
+ *  2026-07-30 통합 — 별도 메뉴(구 ADM05)에서 법령 관리 화면(admin-law.html)의
+ *  **탭 2**로 흡수됐다. 셸은 LAWTABS(admin-law.js), 이 모듈은 탭 본문만 그린다.
  *
- *  화면별 근거 조문을 붙이고 떼는 탭. 조문(사실) 탭과 나눠 두는 이유는
- *  파괴 성격이 다르기 때문이다 — 조문 쪽 사고는 "참조가 조용히 끊김",
- *  매핑 쪽 사고는 **"그럴듯한 오답"**이다. 하루 감사에서 나온 결함 5종이 전부 후자였다.
- *  미저장 변경(draft)은 탭 전환에도 confirm 가드가 걸린다(LAWTABS).
+ *  ■ 이 탭은 **검토 대장**이다 — 편집 화면이 아니다 (2026-07-30 사용자 결정)
+ *    근거 조문은 안전보건 법령이 정한 것이고, 화면별 매핑은 전수 검토
+ *    (2026-07-30, 검증 6문 74건)로 확정된 초기 DB 다. 조문(원문)과 같은 논리로
+ *    매핑도 화면에서 고치지 않는다 — 저장·제거·순서·역할 편집 조작을 두지 않는다.
  *
- *  ■ 붙이기와 떼기는 비대칭이다
- *    떼기는 과잉 주장을 줄이는 방향이라 사유 1줄이면 된다.
- *    붙이기는 결함이 나온 방향이라 **검증 6문을 통과해야** 저장된다.
- *
- *  ■ 저장 전에 반드시 보여주는 것
- *    ① 이 근거가 적용되는 HTML 목록(1:N 관계가 실재한다)
- *    ② 화면 상단에 실제로 어떻게 보이는지 미리보기
- *    ③ 칩이 표시되지 않는 화면이면 그 사실
- *
- *  단일 모달 규칙(§1): 근거 추가는 패널 안 인라인 단계로 진행하고 모달을 띄우지 않는다.
+ *    · 근거 추가 UI 제거(af303ba) → 저장·제거·순서·역할까지 제거(이번)로 완결.
+ *      하루 감사에서 나온 결함 5종이 전부 "즉석 판단으로 붙인" 방향이었다 —
+ *      즉석 판단으로 떼는 것도 같은 종류의 사고를 만든다.
+ *    · 역할(의무/주기·기준)은 편집값이 아니라 조문 속성(ARTICLES[].cycle) 파생이다.
+ *      편집 select 시절에는 기본값 때문에 주기 조문(§190 등)이 전부 "의무 근거"로
+ *      잘못 표시됐다 — 파생 표기로 정정.
+ *    · 이견은 **[매핑 재검토 요청]** 으로 기록만 남긴다(비파괴). 요청은 정비 큐와
+ *      변경 이력에 나타나고, 실제 변경은 law-map.js 재생성(개발·배치)으로만 반영된다.
  * ========================================================================== */
 (function (global) {
     'use strict';
@@ -33,8 +30,7 @@
 
     var state = {
         mount: null, sel: '', q: '', filter: '',
-        open: null,         /* 대메뉴 접힘 상태 { groupId: true } — null 이면 최초 1회 자동 세팅 */
-        draft: null         /* { mode, items:[{key,role}], reason } */
+        open: null          /* 대메뉴 접힘 상태 { groupId: true } — null 이면 최초 1회 자동 세팅 */
     };
 
     /* =============== 렌더 =============== */
@@ -50,7 +46,7 @@
 
     function counts() {
         var rows = A().pageRows();
-        var c = { basis: 0, none: 0, unset: 0, unreach: L().unreachableMapKeys().length };
+        var c = { basis: 0, none: 0, unset: 0, unreach: L().unreachableMapKeys().length, review: A().reviewAll().length };
         rows.forEach(function (r) {
             var s = A().statusOf(r);
             if (s === '근거 있음') c.basis++;
@@ -64,9 +60,11 @@
         var c = counts();
         return '<div class="admp-topbar">' +
             '<span class="admp-topbar-hint">' +
-                '근거 있음 <b>' + c.basis + '</b> · 근거 없음(확정) <b>' + c.none + '</b> · 미판단 <b>' + c.unset + '</b> · 반영 안 됨 <b>' + c.unreach + '</b>' +
-                '<br><b>진척률은 표시하지 않습니다</b> — 근거는 채울수록 좋은 것이 아니라 <b>맞아야</b> 하는 것이고, ' +
-                '과잉으로 붙여서 생긴 결함이 실제로 있었습니다.' +
+                '근거 있음 <b>' + c.basis + '</b> · 근거 없음(확정) <b>' + c.none + '</b> · 미판단 <b>' + c.unset + '</b>' +
+                (c.unreach ? ' · 반영 안 됨 <b>' + c.unreach + '</b>' : '') +
+                (c.review ? ' · 재검토 요청 <b>' + c.review + '</b>' : '') +
+                '<br>이 탭은 <b>검토 대장</b>입니다 — 근거는 안전보건 법령과 전수 검토(2026-07-30)로 확정되어 ' +
+                '화면에서 고치지 않습니다. 이견은 <b>재검토 요청</b>으로 남기고, 변경은 법령 데이터 재생성으로만 반영됩니다.' +
             '</span>' +
             '<span style="flex:1;"></span>' +
         '</div>';
@@ -157,7 +155,7 @@
             '</div>';
         }
 
-        /* 반영 안 되는 매핑 — 편집 잠금 */
+        /* 반영 안 되는 매핑 — 코드 정리 대상 */
         var unreach = L().unreachableMapKeys();
         if (unreach.length && !state.q && !state.filter) {
             html += '<div class="adml-sec">' +
@@ -190,112 +188,108 @@
 
     function itemRow(r, depth) {
         var on = state.sel === r.id;
+        var review = A().reviewOf(r.id);
         return '<button type="button" class="adml-row admlm-item-row d' + depth + (on ? ' is-on' : '') + '" ' +
             'onclick="DYADMLAWMAP.sel(\'' + r.id + '\')">' +
             '<span class="adml-row-main">' + esc(r.label) +
                 (r.chipBlocked.length ? ' <span class="adml-art-t">표시 불가</span>' : '') +
-            '</span>' + chip(A().statusOf(r)) + '</button>';
+            '</span>' + (review ? chip('재검토 요청') : chip(A().statusOf(r))) + '</button>';
     }
 
-    /* ── 우측 ── */
+    /* ── 우측 — 읽기 전용 검토 패널 ── */
     function panel() {
         if (!state.sel) {
             return '<div class="card"><div class="card-body"><div class="v2-empty">' +
                 '<div class="v2-empty-title">좌측에서 화면을 선택하세요</div>' +
-                '<div class="v2-empty-sub">화면마다 어떤 조문을 근거로 삼을지 지정합니다.<br>' +
-                '근거를 붙일 때는 <b>검증 6문</b>을 통과해야 저장됩니다.</div></div></div></div>';
+                '<div class="v2-empty-sub">화면마다 어떤 조문이 근거인지, 왜 그렇게 판정했는지(검토 논거)를 확인합니다.<br>' +
+                '매핑이 틀렸다고 판단되면 <b>재검토 요청</b>으로 기록을 남깁니다.</div></div></div></div>';
         }
         var r = A().pageRows().filter(function (x) { return x.id === state.sel; })[0];
         if (!r) return '';
-        var d = state.draft || { mode: r.eff.mode === 'unset' ? 'none' : r.eff.mode, items: r.eff.items.slice(), reason: r.eff.reason || '' };
-        var dirty = !!state.draft;
+        var eff = r.eff;
+        var review = A().reviewOf(r.id);
 
         return '<div class="card">' +
             '<div class="card-header"><span class="card-title">' + esc(A().labelOf(r.id)) + '</span>' +
-                (dirty ? '<span class="chip-status warning">저장 필요</span>' : '') + '</div>' +
+                (review ? chip('재검토 요청') : chip(A().statusOf(r))) + '</div>' +
             '<div class="card-body">' +
 
-            /* 적용 범위 — 1:N 이 실재하므로 저장 전에 반드시 보여준다 */
+            /* 적용 범위 — 1:N 이 실재하므로 반드시 보여준다 */
             '<div class="adml-formrow"><label class="form-label">화면 식별자</label>' +
                 '<span class="adml-hint"><code>' + esc(r.id) + '</code></span></div>' +
             '<div class="adml-formrow"><label class="form-label">적용 화면</label>' +
                 '<span class="adml-hint">' +
-                /* 실제 화면으로 이동하는 링크 — 새 탭으로 열어 편집 중인 draft 를 잃지 않는다 */
                 r.files.map(function (f) {
                     return '<a class="adml-jump" href="' + esc(f) + '" target="_blank" rel="noopener noreferrer">' + esc(f) + ' ↗</a>';
                 }).join(' · ') +
                 (r.files.length > 1 ? ' <b>— ' + r.files.length + '개 화면이 이 근거를 공유합니다</b>' : '') + '</span></div>' +
             (r.chipBlocked.length
-                ? '<div class="admlm-warn">이 화면에는 제목 영역이 없어 <b>근거를 지정해도 칩이 표시되지 않습니다</b> (' +
+                ? '<div class="admlm-warn">이 화면에는 제목 영역이 없어 <b>근거가 있어도 칩이 표시되지 않습니다</b> (' +
                   esc(r.chipBlocked.join(', ')) + '). 표시하려면 화면에 제목 영역을 추가해야 합니다 — 개발 수정 필요.</div>'
                 : '') +
 
-            /* 판정 */
-            '<div class="adml-block-head">근거 판정</div>' +
-            '<div class="adml-formrow">' +
-                ['basis', 'none'].map(function (m) {
-                    return '<label class="adml-hint" style="display:flex;align-items:center;gap:5px;">' +
-                        '<input type="radio" name="admlm-mode" value="' + m + '"' + (d.mode === m ? ' checked' : '') +
-                        ' onchange="DYADMLAWMAP.setMode(\'' + m + '\')"> ' +
-                        (m === 'basis' ? '근거 있음' : '근거 없음(확정)') + '</label>';
-                }).join('') +
-            '</div>' +
+            (eff.mode === 'basis' ? itemsBlock(eff, r) : noneBlock(eff)) +
 
-            (d.mode === 'basis' ? itemsBlock(d, r) : noneBlock(d, r)) +
+            /* 미리보기 — 대상 화면 상단의 실제 렌더 모양 */
+            (eff.mode === 'basis' && eff.items.length ? previewBlock(eff) : '') +
 
-            /* 미리보기 — 저장 전 실제 렌더 모양을 보는 것 자체가 오배정 방지책이다 */
-            (d.mode === 'basis' && d.items.length ? previewBlock(d) : '') +
-
-            '<div class="adml-formrow" style="margin-top:16px;gap:6px;">' +
-                '<button type="button" class="btn btn-primary btn-sm" onclick="DYADMLAWMAP.save()">저장</button>' +
-                (dirty ? '<button type="button" class="btn btn-outline btn-sm" onclick="DYADMLAWMAP.discard()">되돌리기</button>' : '') +
-                '<span class="adml-hint">검증 기록 ' + r.verified + '건</span>' +
+            /* 재검토 요청 — 편집을 대신하는 유일한 조작(비파괴) */
+            '<div class="adml-block-head">재검토</div>' +
+            (review
+                ? '<div class="admlm-warn">재검토 요청 중 — ' + esc(review.reason || '(사유 없음)') +
+                  '<div class="adml-imp-detail">' + esc(review.at) + ' · ' + esc(review.by) + '</div></div>' +
+                  '<div class="adml-formrow" style="margin-top:8px;">' +
+                      '<button type="button" class="btn btn-sm btn-outline" onclick="DYADMLAWMAP.withdraw()">요청 철회</button>' +
+                  '</div>'
+                : '<div class="adml-formrow">' +
+                      '<button type="button" class="btn btn-sm btn-outline" onclick="DYADMLAWMAP.askReview()">매핑 재검토 요청</button>' +
+                      '<span class="adml-hint">틀렸다고 판단되면 사유를 남기세요 — 정비 큐와 변경 이력에 올라갑니다.</span>' +
+                  '</div>') +
+            '<div class="adml-hint" style="margin-top:10px;">' +
+                '매핑 변경은 이 화면이 아니라 <b>법령 데이터 재생성</b>(law-map.js·조문과 같은 경로)으로만 반영됩니다. ' +
+                '검증 기록 ' + r.verified + '건.' +
             '</div>' +
         '</div></div>';
     }
 
-    function itemsBlock(d, r) {
-        var body = d.items.length
-            ? d.items.map(function (it, i) {
-                var a = L().ARTICLES[it.key];
-                return '<div class="admlm-item">' +
-                    '<div class="admlm-order">' +
-                        '<button type="button" class="admlm-obtn" onclick="DYADMLAWMAP.move(' + i + ',-1)" aria-label="위로">▲</button>' +
-                        '<button type="button" class="admlm-obtn" onclick="DYADMLAWMAP.move(' + i + ',1)" aria-label="아래로">▼</button>' +
-                    '</div>' +
-                    '<span class="admlm-item-main"><b>' + esc(L().shortRef(it.key)) + '</b> ' +
-                        '<span class="adml-art-t">' + esc(a ? a.title : '(수록되지 않은 조문)') + '</span> ' +
-                        (a ? '<button type="button" class="adml-jump" onclick="LAWTABS.openArticle(\'' + esc(it.key) + '\')">원문 보기</button>' : '') +
-                    '</span>' +
-                    '<select class="form-select" onchange="DYADMLAWMAP.setRole(' + i + ',this.value)" style="max-width:110px;">' +
-                        '<option value="duty"' + (it.role === 'duty' ? ' selected' : '') + '>의무 근거</option>' +
-                        '<option value="cycle"' + (it.role === 'cycle' ? ' selected' : '') + '>주기 근거</option>' +
-                    '</select>' +
-                    '<button type="button" class="btn btn-sm btn-outline" onclick="DYADMLAWMAP.remove(' + i + ')">제거</button>' +
-                '</div>';
-              }).join('')
-            : '<div class="adml-empty-note">지정된 근거가 없습니다.</div>';
-        return '<div class="adml-block-head">근거 조문 <span class="adml-sub">순서가 칩 표시 순서입니다</span></div>' +
+    /* 근거 조문 목록 — 조문 + 역할(파생) + 전수 검토 논거. 편집 컨트롤이 없다 */
+    function itemsBlock(eff, r) {
+        /* 조문키 → 최신 검증 기록(전수 검토 논거) */
+        var recs = {};
+        A().verifyList(r.id).forEach(function (v) {
+            if (v.articleKey && !recs[v.articleKey]) recs[v.articleKey] = v;
+        });
+        var body = eff.items.map(function (it) {
+            var a = L().ARTICLES[it.key];
+            var rec = recs[it.key];
+            return '<div class="admlm-item">' +
+                '<span class="admlm-item-main"><b>' + esc(L().shortRef(it.key)) + '</b> ' +
+                    '<span class="adml-art-t">' + esc(a ? a.title : '(수록되지 않은 조문)') + '</span> ' +
+                    (a ? '<button type="button" class="adml-jump" onclick="LAWTABS.openArticle(\'' + esc(it.key) + '\')">원문 보기</button>' : '') +
+                    (rec ? '<div class="adml-imp-detail">검토 논거 — ' + esc(rec.reason) +
+                           ' <span>(' + esc(rec.at.split(' ')[0]) + ' · ' + esc(rec.by) + ')</span></div>' : '') +
+                '</span>' +
+                chip(it.role === 'cycle' ? '주기·기준 근거' : '의무 근거') +
+            '</div>';
+        }).join('');
+        return '<div class="adml-block-head">근거 조문 <span class="adml-sub">순서가 칩 표시 순서입니다 · 역할은 조문 성격에서 파생됩니다</span></div>' +
             body +
             '<div class="adml-notice">' +
-                '근거 조문은 <b>안전보건 법령이 정한 것</b>이며 이 화면에서 새로 지정하지 않습니다. ' +
-                '여기서는 지정된 근거가 <b>맞는지 검토</b>하고, 틀렸으면 제거하거나 판정을 바꿉니다.<br>' +
-                '<b>주기 근거</b>는 "왜 이 주기인가"의 답을 담은 조문입니다 — 법률은 대개 위임만 하고 주기는 시행령·시행규칙에 있습니다.' +
+                '근거 조문은 <b>안전보건 법령이 정한 것</b>이며 이 화면에서 지정·수정하지 않습니다. ' +
+                '<b>주기·기준 근거</b>는 "왜 이 주기·시간인가"의 답을 담은 조문입니다 — 법률은 대개 위임만 하고 주기는 시행령·시행규칙·별표·고시에 있습니다.' +
             '</div>';
     }
 
-    function noneBlock(d, r) {
+    function noneBlock(eff) {
         return '<div class="adml-block-head">근거 없음 사유</div>' +
-            '<textarea class="form-textarea" rows="2" placeholder="예: 법령이 정한 의무가 아니라 시스템 운영 기능이다" ' +
-                'oninput="DYADMLAWMAP.setReason(this.value)">' + esc(d.reason || '') + '</textarea>' +
+            '<div class="adml-notice">' + esc(eff.reason || '판정 사유 미기록') + '</div>' +
             '<div class="adml-hint" style="margin-top:6px;">' +
-                '근거가 없는 것도 정보입니다. <b>억지로 조문을 붙이지 않습니다.</b> 사유를 남겨야 다음 담당자가 재검토하지 않습니다.' +
+                '근거가 없는 것도 정보입니다. <b>억지로 조문을 붙이지 않습니다.</b>' +
             '</div>';
     }
 
-    function previewBlock(d) {
-        /* 실제 렌더 함수를 draft 값으로 호출한다 — 화면과 다른 모양을 그리면 의미가 없다 */
-        var chips = d.items.map(function (it) {
+    function previewBlock(eff) {
+        var chips = eff.items.map(function (it) {
             return '<span class="law-basis-chip" style="cursor:default;">' + esc(L().shortRef(it.key)) +
                    '<span class="law-basis-i" aria-hidden="true">ⓘ</span></span>';
         }).join('');
@@ -306,19 +300,11 @@
     }
 
     /* =============== 액션 =============== */
-    function ensureDraft() {
-        if (state.draft) return state.draft;
-        var r = A().pageRows().filter(function (x) { return x.id === state.sel; })[0];
-        var e = r ? r.eff : { mode: 'none', items: [], reason: '' };
-        state.draft = { mode: e.mode === 'unset' ? 'none' : e.mode, items: e.items.slice(), reason: e.reason || '' };
-        return state.draft;
-    }
     function sel(id) {
-        if (state.draft && !confirm('저장하지 않은 변경이 있습니다. 이동하면 사라집니다.')) return;
-        state.sel = id; state.draft = null; render();
+        state.sel = id; render();
         focusPanel();
     }
-    /* lg 미만에서는 2단이 세로로 쌓여 편집 패널이 트리 아래(뷰포트 밖)에 있다.
+    /* lg 미만에서는 2단이 세로로 쌓여 검토 패널이 트리 아래(뷰포트 밖)에 있다.
      * 스크롤해 주지 않으면 "눌러도 아무 일도 안 일어난다"로 보인다.
      * innerHTML 교체 직후의 동기 smooth 스크롤은 브라우저가 취소하므로
      * rAF 로 렌더 정착 뒤에 실행한다. */
@@ -341,41 +327,35 @@
     function setFilter(f) { state.filter = f; render(); }
     function toggle(gid) { state.open[gid] = !state.open[gid]; render(); }
     function clearFind() { state.q = ''; state.filter = ''; render(); }
-    function setMode(m) {
-        var d = ensureDraft();
-        if (d.mode !== m) {
-            /* 판정을 바꾸면 직전 판정에 딸린 값은 비운다.
-             * 안 비우면 '근거 없음' 사유가 '근거 있음' 매핑에 그대로 붙어 저장된다. */
-            d.reason = '';
-            if (m === 'none') d.items = [];
-        }
-        d.mode = m;
+
+    /* 재검토 요청 — 단일 모달 규칙(§1): 이 시점에 열린 모달이 없어 적층이 아니다 */
+    function askReview() {
+        if (!state.sel) return;
+        V().openModal('매핑 재검토 요청 — ' + A().labelOf(state.sel),
+            '<p style="font-size:13px;line-height:1.7;">이 화면의 근거 매핑이 틀렸다고 판단한 이유를 남겨주세요.<br>' +
+            '요청은 <b>정비 큐와 변경 이력</b>에 올라가며, 매핑 자체는 바뀌지 않습니다 — ' +
+            '검토 후 법령 데이터 재생성으로 반영됩니다.</p>' +
+            '<textarea id="admlm-review-reason" class="form-textarea" rows="3" ' +
+                'placeholder="예: 이 화면은 결과 보관만 하므로 §OO 은 직접 이행 수단이 아니다"></textarea>',
+            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+            '<button type="button" class="btn btn-primary" onclick="DYADMLAWMAP.doReview()">요청</button>');
+        var el = document.getElementById('admlm-review-reason');
+        if (el) el.focus();
+    }
+    function doReview() {
+        var el = document.getElementById('admlm-review-reason');
+        var reason = (el && el.value || '').trim();
+        if (!reason) { toast('재검토 사유를 적어주세요.'); return; }
+        A().requestReview(state.sel, reason);
+        V().closeModal();
+        toast('재검토 요청을 남겼습니다 — 정비 큐와 변경 이력에서 확인할 수 있습니다.');
         render();
     }
-    function setReason(v) { ensureDraft().reason = v; }
-    function setRole(i, v) { ensureDraft().items[i].role = v; }
-    function move(i, dir) {
-        var d = ensureDraft(), j = i + dir;
-        if (j < 0 || j >= d.items.length) return;
-        var t = d.items[i]; d.items[i] = d.items[j]; d.items[j] = t;
+    function withdraw() {
+        if (!state.sel) return;
+        A().withdrawReview(state.sel);
+        toast('재검토 요청을 철회했습니다.');
         render();
-    }
-    function remove(i) {
-        var d = ensureDraft();
-        d.items.splice(i, 1); render();
-    }
-    function discard() { state.draft = null; render(); toast('변경 내용을 되돌렸습니다.'); }
-
-
-    function save() {
-        var d = state.draft;
-        if (!d) { toast('변경 내용이 없습니다.'); return; }
-        if (d.mode === 'none' && !(d.reason || '').trim()) { toast('근거 없음 사유를 적어주세요.'); return; }
-        if (d.mode === 'basis' && !d.items.length) { toast('근거 조문이 없습니다. 근거 없음으로 확정하거나 조문을 추가하세요.'); return; }
-        var r = A().pageRows().filter(function (x) { return x.id === state.sel; })[0];
-        A().saveMapping(state.sel, d.mode, d.items, d.reason);
-        state.draft = null; render();
-        toast('저장되었습니다 — ' + A().labelOf(state.sel) + ' 에 적용됩니다. 근거 칩은 해당 화면을 새로 열 때 반영됩니다.');
     }
 
     function init(mountId) {
@@ -388,10 +368,6 @@
 
     global.DYADMLAWMAP = {
         init: init, sel: sel, search: search, setFilter: setFilter, toggle: toggle, clearFind: clearFind,
-        setMode: setMode, setReason: setReason, setRole: setRole, move: move, remove: remove,
-        discard: discard, save: save,
-        /* 탭 셸(LAWTABS)의 전환 가드용 — draft 유무와 무언 폐기 */
-        isDirty: function () { return !!state.draft; },
-        dropDraft: function () { state.draft = null; render(); }
+        askReview: askReview, doReview: doReview, withdraw: withdraw
     };
 })(window);
