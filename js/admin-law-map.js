@@ -28,6 +28,7 @@
 
     var state = {
         mount: null, sel: '', q: '', filter: '',
+        open: null,         /* 대메뉴 접힘 상태 { groupId: true } — null 이면 최초 1회 자동 세팅 */
         draft: null,        /* { mode, items:[{key,role}], reason } */
         adding: null        /* { step, key, answers, reason } */
     };
@@ -68,18 +69,21 @@
         '</div>';
     }
 
-    /* ── 좌측 ── */
+    /* ── 좌측 — 대메뉴 › 중메뉴 트리 ──────────────────────────────────
+     *  화면 식별자가 아니라 **담당자가 실제로 보는 메뉴명**으로 보여준다.
+     *  메뉴명·구조는 NAV 파생이라 메뉴가 개편되면 이 화면도 함께 따라간다.
+     * ------------------------------------------------------------------- */
     function leftCard() {
-        var rows = A().pageRows().filter(function (r) {
-            if (state.filter && A().statusOf(r) !== state.filter) return false;
-            if (!state.q) return true;
-            return L().normalize(r.id + ' ' + r.files.join(' ')).indexOf(L().normalize(state.q)) >= 0;
-        });
-        var unreach = L().unreachableMapKeys();
-
+        var tree = A().menuTree();
+        if (state.open === null) {
+            /* 최초 진입은 전부 펼침 — 담당자가 전체 구조를 한 번 보고 시작해야 한다 */
+            state.open = {};
+            tree.groups.forEach(function (g) { state.open[g.id] = true; });
+            state.open.__orphan = true;
+        }
         return '<div class="card-header"><span class="card-title">관리 대상 화면</span></div>' +
             '<div class="admm-search">' +
-                '<input id="admlm-q" type="text" placeholder="화면 id · 파일명 검색" value="' + esc(state.q) + '" ' +
+                '<input id="admlm-q" type="text" placeholder="메뉴명 검색 — 위험성평가 · 정기교육" value="' + esc(state.q) + '" ' +
                     'oninput="DYADMLAWMAP.search(this.value)">' +
             '</div>' +
             '<div class="adml-sec" style="padding-top:8px;">' +
@@ -91,32 +95,103 @@
                     }).join('') +
                 '</div>' +
             '</div>' +
-            '<div class="admm-tree-body">' +
-                '<div class="adml-sec">' +
-                    '<div class="adml-sec-head">화면 <span class="adml-count">' + rows.length + '</span></div>' +
-                    (rows.length ? rows.map(rowHtml).join('')
-                        : '<div class="adml-empty-note">조건에 맞는 화면이 없습니다.</div>') +
-                '</div>' +
-                (unreach.length ? '<div class="adml-sec">' +
-                    '<div class="adml-sec-head">반영 안 됨 <span class="adml-count">' + unreach.length + '</span></div>' +
-                    unreach.map(function (k) {
-                        return '<div class="adml-row" style="cursor:default;">' +
-                            '<span class="adml-row-main">' + esc(k) + '</span>' + chip('개발 수정 필요') + '</div>';
-                    }).join('') +
-                    '<div class="adml-empty-note">매핑은 있으나 <b>어떤 화면도 이 페이지 id 를 쓰지 않습니다.</b> ' +
-                    '화면에서 고칠 수 없고 코드 정리가 필요합니다.</div>' +
-                '</div>' : '') +
-            '</div>';
+            '<div class="admm-tree-body">' + treeBody(tree) + '</div>';
     }
 
-    function rowHtml(r) {
-        var st = A().statusOf(r);
+    /* 검색·필터를 통과하는가 — 메뉴명(한글)·구분·식별자·파일명 모두로 찾는다 */
+    function hit(r) {
+        if (state.filter && A().statusOf(r) !== state.filter) return false;
+        if (!state.q) return true;
+        var hay = [r.group, r.section, r.label, r.id].concat(r.files).join(' ');
+        return L().normalize(hay).indexOf(L().normalize(state.q)) >= 0;
+    }
+
+    function treeBody(tree) {
+        var searching = !!(state.q || state.filter);
+        var html = '';
+        var shown = 0;
+
+        tree.groups.forEach(function (g) {
+            /* 노드를 순서대로 훑으며 통과한 항목만 남긴다.
+             * 구분 헤더는 그 아래 살아남은 항목이 있을 때만 그린다. */
+            var out = [], pendingSec = null, n = 0;
+            g.nodes.forEach(function (nd) {
+                if (nd.type === 'section') { pendingSec = nd.name; return; }
+                if (!hit(nd.row)) return;
+                if (pendingSec) { out.push('<div class="admlm-section">' + esc(pendingSec) + '</div>'); pendingSec = null; }
+                out.push(itemRow(nd.row, nd.depth));
+                n++;
+            });
+            if (!n) return;
+            shown += n;
+            /* 검색 중에는 결과를 감추지 않는다 */
+            var isOpen = searching ? true : !!state.open[g.id];
+            html += '<div class="adml-law">' +
+                '<button type="button" class="adml-row adml-law-head" onclick="DYADMLAWMAP.toggle(\'' + g.id + '\')">' +
+                    '<span class="adml-caret">' + (isOpen ? '▾' : '▸') + '</span>' +
+                    '<span class="adml-row-main">' + esc(g.label) + '</span>' +
+                    summaryChips(g.summary) +
+                '</button>' +
+                (isOpen ? out.join('') : '') +
+            '</div>';
+        });
+
+
+        /* NAV 에 없는 관리 대상 — 메뉴에서 제외됐으나 파일이 살아 있다 */
+        var orph = tree.orphan.filter(hit);
+        if (orph.length) {
+            var oOpen = searching ? true : !!state.open.__orphan;
+            shown += orph.length;
+            html += '<div class="adml-law">' +
+                '<button type="button" class="adml-row adml-law-head" onclick="DYADMLAWMAP.toggle(\'__orphan\')">' +
+                    '<span class="adml-caret">' + (oOpen ? '▾' : '▸') + '</span>' +
+                    '<span class="adml-row-main">메뉴 미등록 화면</span>' +
+                    '<span class="adml-count">' + orph.length + '</span>' +
+                '</button>' +
+                (oOpen ? orph.map(function (r) { return itemRow(r, 1); }).join('') +
+                    '<div class="adml-empty-note">메뉴에서 제외됐지만 파일이 살아 있어 직접 주소로 열립니다. ' +
+                    '트리에서 빼면 <b>관리 화면이 관리하지 못하는 근거</b>가 생깁니다.</div>' : '') +
+            '</div>';
+        }
+
+        /* 반영 안 되는 매핑 — 편집 잠금 */
+        var unreach = L().unreachableMapKeys();
+        if (unreach.length && !state.q && !state.filter) {
+            html += '<div class="adml-sec">' +
+                '<div class="adml-sec-head">반영 안 됨 <span class="adml-count">' + unreach.length + '</span></div>' +
+                unreach.map(function (k) {
+                    return '<div class="adml-row" style="cursor:default;">' +
+                        '<span class="adml-row-main">' + esc(k) + '</span>' + chip('개발 수정 필요') + '</div>';
+                }).join('') +
+                '<div class="adml-empty-note">매핑은 있으나 <b>어떤 화면도 이 식별자를 쓰지 않습니다.</b> ' +
+                '화면에서 고칠 수 없고 코드 정리가 필요합니다.</div>' +
+            '</div>';
+        }
+
+        if (!shown) {
+            html = '<div class="adml-empty-note">조건에 맞는 화면이 없습니다' +
+                (state.q ? ' — <b>' + esc(state.q) + '</b>' : '') +
+                '<br><button type="button" class="btn btn-sm btn-outline" onclick="DYADMLAWMAP.clearFind()">조건 초기화</button></div>';
+        }
+        return html;
+    }
+
+    /* 대메뉴 요약 — 진척률이 아니라 판정 분포다 */
+    function summaryChips(c) {
+        var out = '';
+        if (c.basis) out += '<span class="admlm-mini success">' + c.basis + '</span>';
+        if (c.none) out += '<span class="admlm-mini neutral">' + c.none + '</span>';
+        if (c.unset) out += '<span class="admlm-mini warning">' + c.unset + '</span>';
+        return '<span class="admlm-minis">' + out + '</span>';
+    }
+
+    function itemRow(r, depth) {
         var on = state.sel === r.id;
-        return '<button type="button" class="adml-row' + (on ? ' is-on' : '') + '" ' +
+        return '<button type="button" class="adml-row admlm-item-row d' + depth + (on ? ' is-on' : '') + '" ' +
             'onclick="DYADMLAWMAP.sel(\'' + r.id + '\')">' +
-            '<span class="adml-row-main">' + esc(r.id) +
+            '<span class="adml-row-main">' + esc(r.label) +
                 (r.chipBlocked.length ? ' <span class="adml-art-t">표시 불가</span>' : '') +
-            '</span>' + chip(st) + '</button>';
+            '</span>' + chip(A().statusOf(r)) + '</button>';
     }
 
     /* ── 우측 ── */
@@ -133,11 +208,13 @@
         var dirty = !!state.draft;
 
         return '<div class="card">' +
-            '<div class="card-header"><span class="card-title">' + esc(r.id) + '</span>' +
+            '<div class="card-header"><span class="card-title">' + esc(A().labelOf(r.id)) + '</span>' +
                 (dirty ? '<span class="chip-status warning">저장 필요</span>' : '') + '</div>' +
             '<div class="card-body">' +
 
             /* 적용 범위 — 1:N 이 실재하므로 저장 전에 반드시 보여준다 */
+            '<div class="adml-formrow"><label class="form-label">화면 식별자</label>' +
+                '<span class="adml-hint"><code>' + esc(r.id) + '</code></span></div>' +
             '<div class="adml-formrow"><label class="form-label">적용 화면</label>' +
                 '<span class="adml-hint">' + esc(r.files.join(' · ')) +
                 (r.files.length > 1 ? ' <b>— ' + r.files.length + '개 화면이 이 근거를 공유합니다</b>' : '') + '</span></div>' +
@@ -300,6 +377,8 @@
         } else render();
     }
     function setFilter(f) { state.filter = f; render(); }
+    function toggle(gid) { state.open[gid] = !state.open[gid]; render(); }
+    function clearFind() { state.q = ''; state.filter = ''; render(); }
     function setMode(m) {
         var d = ensureDraft();
         if (d.mode !== m) {
@@ -359,7 +438,7 @@
         var r = A().pageRows().filter(function (x) { return x.id === state.sel; })[0];
         A().saveMapping(state.sel, d.mode, d.items, d.reason);
         state.draft = null; render();
-        toast('저장되었습니다 — ' + (r ? r.files.join(' · ') : '') + ' 에 적용됩니다. 근거 칩은 해당 화면을 새로 열 때 반영됩니다.');
+        toast('저장되었습니다 — ' + A().labelOf(state.sel) + ' 에 적용됩니다. 근거 칩은 해당 화면을 새로 열 때 반영됩니다.');
     }
 
     function init(mountId) {
@@ -371,7 +450,7 @@
     }
 
     global.DYADMLAWMAP = {
-        init: init, sel: sel, search: search, setFilter: setFilter,
+        init: init, sel: sel, search: search, setFilter: setFilter, toggle: toggle, clearFind: clearFind,
         setMode: setMode, setReason: setReason, setRole: setRole, move: move, remove: remove,
         discard: discard, save: save,
         addStart: addStart, addCancel: addCancel, addPick: addPick, addStep: addStep,

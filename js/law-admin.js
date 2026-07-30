@@ -141,6 +141,77 @@
         return '미판단';   /* MAP 키 자체가 없는 경우만 */
     }
 
+    /* ── 메뉴 트리 ────────────────────────────────────────────────────────
+     *  화면 식별자(rsk-list)는 담당자가 읽을 수 없다. 실제 메뉴명으로 보여준다.
+     *  **메뉴명·구조는 NAV(js/layout.js)가 단일 출처**이므로 여기서 복제하지 않고
+     *  파생만 한다 — 복제하면 메뉴가 개편될 때 이 화면만 옛 이름으로 남는다.
+     *
+     *  구조: 대메뉴(NAV 그룹) → [구분(section)] → 중메뉴(NAV 항목)
+     *  안전보건교육은 '정기교육'이 현업근로자·관리감독자 양쪽에 있어
+     *  section 을 빼면 두 화면을 구별할 수 없다.
+     * ------------------------------------------------------------------- */
+    function navIndex() {
+        var NAV = (global.DYLayout && global.DYLayout.NAV) || [];
+        var idx = {};
+        NAV.forEach(function (g) {
+            (g.items || []).forEach(function (it) {
+                idx[it.id] = { group: g.label, groupId: g.id, section: it.section || '', label: it.label };
+            });
+        });
+        return idx;
+    }
+    /* 한 화면의 사람이 읽는 이름 — '위험성평가 › 정기 위험성평가' */
+    function labelOf(pageId) {
+        var n = navIndex()[pageId];
+        if (!n) return pageId;
+        return n.group + ' › ' + (n.section ? n.section + ' ' : '') + n.label;
+    }
+    function menuTree() {
+        var NAV = (global.DYLayout && global.DYLayout.NAV) || [];
+        var rows = {}; pageRows().forEach(function (r) { rows[r.id] = r; });
+        var used = {};
+        var groups = [];
+
+        NAV.forEach(function (g) {
+            /* **NAV 정의 순서를 그대로 따른다.** 좌측 사이드바와 순서가 다르면
+             * 담당자가 아는 위치에서 메뉴를 찾지 못한다. 구분(section)이 바뀌는
+             * 지점에 헤더를 끼워 넣는 방식이라 순서가 보존된다. */
+            var nodes = [], all = [], curSec = null;
+            (g.items || []).forEach(function (it) {
+                var r = rows[it.id];
+                if (!r) return;                     /* 관리 대상이 아닌 메뉴는 건너뛴다 */
+                used[it.id] = true;
+                r.label = it.label; r.group = g.label; r.section = it.section || '';
+                var sec = it.section || '';
+                if (sec !== curSec) {
+                    curSec = sec;
+                    if (sec) nodes.push({ type: 'section', name: sec });
+                }
+                nodes.push({ type: 'item', row: r, depth: sec ? 2 : 1 });
+                all.push(r);
+            });
+            if (!all.length) return;
+            groups.push({ id: g.id, label: g.label, nodes: nodes, all: all, summary: summarize(all) });
+        });
+
+        /* NAV 에 없지만 관리 대상인 화면 — 메뉴에서 제외됐으나 파일이 살아 있다.
+         * 트리에서 빠뜨리면 "관리 화면이 관리하지 못하는 근거"가 생긴다. */
+        var orphan = Object.keys(rows).filter(function (id) { return !used[id]; })
+            .map(function (id) { var r = rows[id]; r.label = id; r.group = '메뉴 미등록'; r.section = ''; return r; });
+
+        return { groups: groups, orphan: orphan, orphanSummary: summarize(orphan) };
+    }
+    function summarize(list) {
+        var c = { basis: 0, none: 0, unset: 0 };
+        list.forEach(function (r) {
+            var s = statusOf(r);
+            if (s === '근거 있음') c.basis++;
+            else if (s === '근거 없음(확정)') c.none++;
+            else c.unset++;
+        });
+        return c;
+    }
+
     /* ── 검증 6문 (CLAUDE.md §10) ────────────────────────────────────────
      *  매핑을 붙일 때 판단 근거를 데이터로 남긴다. 하루 6회 감사에서 결함
      *  5종이 나온 뒤 규칙이 된 항목들이다.
@@ -376,6 +447,7 @@
         load: load, save: save, reset: reset, today: today, nowTs: nowTs, actor: actor,
         log: log, logs: logs,
         effective: effective, pageRows: pageRows, statusOf: statusOf,
+        menuTree: menuTree, labelOf: labelOf, navIndex: navIndex,
         verifyList: verifyList, verifyCount: verifyCount, addVerify: addVerify, staleVerifies: staleVerifies,
         impactOf: impactOf,
         unlinkedBasis: unlinkedBasis, setTriage: setTriage,

@@ -2348,3 +2348,15 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
   .adml-row { min-height: 44px; }
   .admlm-obtn { min-height: 22px; }
 }
+
+/* ADM05-S 관리 대상 트리 — 대메뉴 › [구분] › 중메뉴 3뎁스 */
+.admlm-section { padding: 6px 14px 3px 28px; font-size: var(--fs-12); font-weight: 700;
+  color: var(--text-lightgray); letter-spacing: -0.01em; }
+.admlm-item-row.d1 { padding-left: 28px; }
+.admlm-item-row.d2 { padding-left: 40px; }
+.admlm-minis { display: inline-flex; gap: 3px; flex-shrink: 0; }
+.admlm-mini { min-width: 18px; padding: 0 5px; border-radius: var(--radius-full);
+  font-size: var(--fs-12); font-weight: 700; text-align: center; }
+.admlm-mini.success { background: var(--status-success-bg); color: var(--status-success-fg); }
+.admlm-mini.neutral { background: var(--status-neutral-bg); color: var(--status-neutral-fg); }
+.admlm-mini.warning { background: var(--status-warning-bg); color: var(--status-warning-fg); }

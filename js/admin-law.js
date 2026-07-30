@@ -343,7 +343,7 @@
 
     function pageHintPanel(pid) {
         return '<div class="card"><div class="card-body">' +
-            '<div class="v2-empty"><div class="v2-empty-title">' + esc(pid) + ' — 매핑 재검증 필요</div>' +
+            '<div class="v2-empty"><div class="v2-empty-title">' + esc(A().labelOf(pid)) + ' — 매핑 재검증 필요</div>' +
             '<div class="v2-empty-sub">검증 당시와 조문 제목이 달라졌습니다. 매핑 편집은 <b>메뉴 근거 매핑</b> 화면에서 합니다.<br><br>' +
             '<a class="btn btn-primary btn-sm" href="admin-law-map.html?page=' + encodeURIComponent(pid) + '">메뉴 근거 매핑으로 이동</a></div></div>' +
         '</div></div>';
