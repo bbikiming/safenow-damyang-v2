@@ -219,7 +219,11 @@
             '<div class="adml-formrow"><label class="form-label">화면 식별자</label>' +
                 '<span class="adml-hint"><code>' + esc(r.id) + '</code></span></div>' +
             '<div class="adml-formrow"><label class="form-label">적용 화면</label>' +
-                '<span class="adml-hint">' + esc(r.files.join(' · ')) +
+                '<span class="adml-hint">' +
+                /* 실제 화면으로 이동하는 링크 — 새 탭으로 열어 편집 중인 draft 를 잃지 않는다 */
+                r.files.map(function (f) {
+                    return '<a class="adml-jump" href="' + esc(f) + '" target="_blank" rel="noopener noreferrer">' + esc(f) + ' ↗</a>';
+                }).join(' · ') +
                 (r.files.length > 1 ? ' <b>— ' + r.files.length + '개 화면이 이 근거를 공유합니다</b>' : '') + '</span></div>' +
             (r.chipBlocked.length
                 ? '<div class="admlm-warn">이 화면에는 제목 영역이 없어 <b>근거를 지정해도 칩이 표시되지 않습니다</b> (' +
@@ -312,6 +316,18 @@
     function sel(id) {
         if (state.draft && !confirm('저장하지 않은 변경이 있습니다. 이동하면 사라집니다.')) return;
         state.sel = id; state.draft = null; render();
+        focusPanel();
+    }
+    /* lg 미만에서는 2단이 세로로 쌓여 편집 패널이 트리 아래(뷰포트 밖)에 있다.
+     * 스크롤해 주지 않으면 "눌러도 아무 일도 안 일어난다"로 보인다.
+     * innerHTML 교체 직후의 동기 smooth 스크롤은 브라우저가 취소하므로
+     * rAF 로 렌더 정착 뒤에 실행한다. */
+    function focusPanel() {
+        if (!V().below('lg')) return;
+        requestAnimationFrame(function () {
+            var p = state.mount && state.mount.querySelector('.admp-panel');
+            if (p) p.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
     }
     function search(v) {
         state.q = v;

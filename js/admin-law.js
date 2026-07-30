@@ -387,7 +387,19 @@
     }
 
     /* =============== 액션 =============== */
-    function sel(type, key) { state.sel = { type: type, key: key }; render(); }
+    function sel(type, key) {
+        state.sel = { type: type, key: key };
+        render();
+        /* lg 미만에서는 2단이 세로로 쌓여 상세 패널이 트리 아래(뷰포트 밖)다 —
+         * 스크롤해 주지 않으면 선택이 "안 되는 것처럼" 보인다.
+         * (rAF — innerHTML 교체 직후의 동기 smooth 스크롤은 취소된다) */
+        if (V().below('lg')) {
+            requestAnimationFrame(function () {
+                var p = state.mount && state.mount.querySelector('.admp-panel');
+                if (p) p.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        }
+    }
     function toggleLaw(lk) { state.open[lk] = !state.open[lk]; render(); }
     function search(v) {
         state.q = v;
