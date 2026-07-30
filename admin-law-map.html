@@ -3,28 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>메뉴 근거 매핑 - 담양군 중대재해예방통합관리시스템 v2</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="./js/tailwind-config.js"></script>
-    <link rel="stylesheet" href="./css/style.css">
-    <link rel="stylesheet" href="./css/v2.css">
+    <title>메뉴 근거 매핑 → 법령 관리 (리다이렉트)</title>
+    <script>
+        /* 법령 관리 화면 통합 (2026-07-30): 법령·조문(ADM04) + 메뉴 근거 매핑(ADM05)
+         *   2메뉴 → admin-law.html 단일 화면의 탭 구조로 합침(사용자 결정).
+         *   이 스텁은 구 주소를 매핑 탭으로 승계한다 — ?page= 딥링크 보존.
+         *   (edu.html 리다이렉트 스텁과 같은 패턴) */
+        (function () {
+            var p = new URLSearchParams(location.search);
+            p.set('tab', 'map');
+            location.replace('admin-law.html?' + p.toString());
+        })();
+    </script>
 </head>
-<body data-dy-page="admin-law-map" data-page-title="메뉴 근거 매핑" data-page-subtitle="시스템 관리 > 법령 관리 — 화면별 근거 조문 지정 · 검증 6문 기록 (ADM05-S)">
-    <main>
-        <div id="adm-lawmap-app"></div>
-    </main>
-
-    <div id="toast" class="toast"></div>
-
-    <script src="./js/layout.js"></script>
-    <script src="./js/law-map.js"></script>
-    <script src="./js/common.js"></script>
-    <script src="./js/rsk-kosha.js"></script>
-    <script src="./js/rsk-data.js"></script>
-    <script src="./js/sets-data-v2.js"></script>
-    <script src="./js/law-sync-seed.js"></script>
-    <script src="./js/law-admin.js"></script>
-    <script src="./js/admin-law-map.js"></script>
-    <script>DYADMLAWMAP.init('adm-lawmap-app');</script>
+<body>
+    <p style="font-family:sans-serif;padding:20px;color:#666;">
+        <a href="admin-law.html?tab=map">법령 관리 › 메뉴 근거 매핑</a>으로 이동합니다…
+    </p>
 </body>
 </html>

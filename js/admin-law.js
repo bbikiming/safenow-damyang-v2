@@ -1,14 +1,20 @@
 /* =============================================================================
- *  admin-law.js — 시스템 관리 > 법령·조문 (ADM04-S, 전역 DYADMLAW)
+ *  admin-law.js — 시스템 관리 > 법령 관리 (ADM04-S, 전역 DYADMLAW + LAWTABS)
  * -----------------------------------------------------------------------------
+ *  2026-07-30 통합 — 법령·조문(구 ADM04)과 메뉴 근거 매핑(구 ADM05) 2메뉴를
+ *  이 화면 하나의 **탭 3개**로 합쳤다(사용자 결정, 기획-법령관리-화면-v1 §2.3
+ *  "2화면" 결정을 대체). 탭 셸이 LAWTABS 이고, 조문 탭 본체가 DYADMLAW 다.
+ *
+ *    탭1 법령·조문     — 수록 대장·원문·영향 범위·무결성·수집 검토 (DYADMLAW)
+ *    탭2 메뉴 근거 매핑 — 화면별 근거 지정·검증 6문 (DYADMLAWMAP, admin-law-map.js)
+ *    탭3 변경 이력     — 두 탭의 조작이 쌓이는 단일 타임라인
+ *
+ *  조문(사실)과 매핑(판단)의 파괴 성격 차이는 탭 분리로 유지된다 — 저장 단위가
+ *  탭 안에 갇히고, 매핑 탭의 dirty 가드는 탭 전환에도 걸린다.
+ *
  *  수록 조문 대장. 이 화면의 핵심은 **조문을 고칠 수 없다는 것**이다.
  *  원문 옆에 편집 아이콘이 없는 것이 설계의 시각적 핵심이며, 규칙 문구보다
  *  없는 입력란이 세다(CLAUDE.md §10).
- *
- *  영역
- *    좌 : 정비 큐 · 무결성 · 법령/조문 목록 · 미연계 근거 표기
- *    우 : P2 조문 · P3 법령 · P4 무결성 · P5 표기 분류 · P6 수집 검토
- *    하 : 변경 이력 (단일 타임라인)
  *
  *  단일 모달 규칙(§1): 확인이 필요한 조작만 DYV2.openModal 1개. 그 외는 인라인 패널.
  * ========================================================================== */
@@ -34,8 +40,8 @@
             '<div class="admp-2col">' +
                 '<div class="admp-listcard card">' + leftCard() + '</div>' +
                 '<div class="admp-panel">' + panel() + '</div>' +
-            '</div>' +
-            historyCard();
+            '</div>';
+        /* 변경 이력은 탭 3(단일 타임라인)으로 이동 — 이 탭에는 그리지 않는다 */
     }
 
     function topbar() {
@@ -198,10 +204,19 @@
 
         var srcRows = imp.sources.map(function (s) {
             var n = s.n == null ? '—' : s.n + '곳';
-            var det = (s.detail || []).length
-                ? '<div class="adml-imp-detail">' + esc((s.detail || []).slice(0, 6).join(' · ')) +
-                  ((s.detail || []).length > 6 ? ' 외 ' + ((s.detail || []).length - 6) + '건' : '') + '</div>'
-                : '';
+            var det = '';
+            if ((s.detail || []).length) {
+                /* 화면 매핑 소스는 매핑 탭으로 바로 이동할 수 있게 한다 —
+                 * "이 조문을 쓰는 화면"에서 그 화면의 매핑 편집까지 두 번 클릭 */
+                var items = (s.id === 'map')
+                    ? s.detail.slice(0, 6).map(function (pid) {
+                        return '<button type="button" class="adml-jump" ' +
+                            'onclick="LAWTABS.open(\'map\',\'' + esc(pid) + '\')">' + esc(A().labelOf(pid)) + '</button>';
+                      }).join(' · ')
+                    : esc(s.detail.slice(0, 6).join(' · '));
+                det = '<div class="adml-imp-detail">' + items +
+                      (s.detail.length > 6 ? ' 외 ' + (s.detail.length - 6) + '건' : '') + '</div>';
+            }
             return '<tr><td>' + esc(s.label) + '</td><td class="adml-imp-n">' + n + '</td>' +
                    '<td>' + esc(s.fix) + det + '</td></tr>';
         }).join('');
@@ -344,8 +359,8 @@
     function pageHintPanel(pid) {
         return '<div class="card"><div class="card-body">' +
             '<div class="v2-empty"><div class="v2-empty-title">' + esc(A().labelOf(pid)) + ' — 매핑 재검증 필요</div>' +
-            '<div class="v2-empty-sub">검증 당시와 조문 제목이 달라졌습니다. 매핑 편집은 <b>메뉴 근거 매핑</b> 화면에서 합니다.<br><br>' +
-            '<a class="btn btn-primary btn-sm" href="admin-law-map.html?page=' + encodeURIComponent(pid) + '">메뉴 근거 매핑으로 이동</a></div></div>' +
+            '<div class="v2-empty-sub">검증 당시와 조문 제목이 달라졌습니다. 매핑 편집은 <b>메뉴 근거 매핑</b> 탭에서 합니다.<br><br>' +
+            '<button type="button" class="btn btn-primary btn-sm" onclick="LAWTABS.open(\'map\',\'' + esc(pid) + '\')">메뉴 근거 매핑 탭으로 이동</button></div></div>' +
         '</div></div>';
     }
 
@@ -470,4 +485,87 @@
         triage: triage, sync: sync, decide: decide,
         exportOpen: exportOpen, resetDemo: resetDemo, doReset: doReset
     };
+
+    /* =============== 탭 셸 (전역 LAWTABS) ===================================
+     *  법령·조문 / 메뉴 근거 매핑 / 변경 이력 3탭. 각 탭 본체는 기존 모듈
+     *  (DYADMLAW · DYADMLAWMAP)을 그대로 쓰고, 셸은 전환·지연 초기화·딥링크만
+     *  담당한다. 딥링크: admin-law.html?tab=map&page=rsk-list
+     * ======================================================================= */
+    var TABS = [
+        { id: 'articles', label: '법령·조문' },
+        { id: 'map', label: '메뉴 근거 매핑' },
+        { id: 'history', label: '변경 이력' }
+    ];
+    var tabState = { host: null, current: '', inited: {} };
+
+    function tabBar() {
+        return '<div class="sub-tabs" role="tablist" aria-label="법령 관리 탭">' +
+            TABS.map(function (t) {
+                var on = tabState.current === t.id;
+                return '<button type="button" class="sub-tab' + (on ? ' active' : '') + '" role="tab" ' +
+                    'aria-selected="' + (on ? 'true' : 'false') + '" ' +
+                    'onclick="LAWTABS.open(\'' + t.id + '\')">' + esc(t.label) + '</button>';
+            }).join('') +
+        '</div>';
+    }
+
+    function tabInit(mountId) {
+        tabState.host = document.getElementById(mountId);
+        if (!tabState.host) return;
+        tabState.host.innerHTML =
+            '<div id="lawtabs-bar" style="margin-bottom:16px;"></div>' +
+            '<div id="lawtab-articles" role="tabpanel" aria-label="법령·조문"></div>' +
+            '<div id="lawtab-map" role="tabpanel" aria-label="메뉴 근거 매핑" hidden></div>' +
+            '<div id="lawtab-history" role="tabpanel" aria-label="변경 이력" hidden></div>';
+        var p = new URLSearchParams(location.search);
+        var t = p.get('tab');
+        tabOpen((t === 'map' || t === 'history') ? t : 'articles', p.get('page') || '');
+    }
+
+    function tabOpen(id, pageId) {
+        var M = global.DYADMLAWMAP;
+        /* 매핑 탭의 미저장 변경은 탭 전환에도 보호한다 — 화면 이동과 같은 파괴다 */
+        if (tabState.current === 'map' && id !== 'map' && M && M.isDirty && M.isDirty()) {
+            if (!confirm('저장하지 않은 변경이 있습니다. 탭을 이동하면 사라집니다.')) return;
+            if (M.dropDraft) M.dropDraft();
+        }
+        tabState.current = id;
+        var bar = document.getElementById('lawtabs-bar');
+        if (bar) bar.innerHTML = tabBar();
+        TABS.forEach(function (t) {
+            var pane = document.getElementById('lawtab-' + t.id);
+            if (pane) pane.hidden = t.id !== id;
+        });
+
+        if (id === 'articles' && !tabState.inited.articles) {
+            tabState.inited.articles = true;
+            init('lawtab-articles');
+        }
+        if (id === 'map' && M) {
+            if (!tabState.inited.map) { tabState.inited.map = true; M.init('lawtab-map'); }
+            if (pageId) M.sel(pageId);
+        }
+        /* 이력은 열 때마다 새로 그린다 — 두 탭의 조작이 그 사이 쌓였을 수 있다 */
+        if (id === 'history') {
+            var h = document.getElementById('lawtab-history');
+            if (h) h.innerHTML = historyCard();
+        }
+
+        /* URL 동기화 — 새로고침·공유해도 같은 탭이 열린다 */
+        try {
+            var u = new URL(location.href);
+            u.searchParams.set('tab', id);
+            if (pageId) u.searchParams.set('page', pageId);
+            else u.searchParams.delete('page');
+            history.replaceState(null, '', u.toString());
+        } catch (e) {}
+    }
+
+    /* 매핑 탭 등에서 조문 원문으로 점프 — 검증 6문 #1(원문을 실제로 열어봤나) */
+    function tabOpenArticle(key) {
+        tabOpen('articles');
+        sel('article', key);
+    }
+
+    global.LAWTABS = { init: tabInit, open: tabOpen, openArticle: tabOpenArticle };
 })(window);

@@ -30,19 +30,28 @@
     var V = function () { return global.DYV2; };
     function esc(x) { return V().esc(String(x == null ? '' : x)); }
 
-    /* v1 — 스키마 변경 시 범프. 구 버전 스토어는 읽지 않고 시드로 되돌린다. */
-    var SKEY = 'dy-lawadm-v1';
+    /* v2 — 스키마 변경 시 범프. 구 버전 스토어는 읽지 않고 시드로 되돌린다.
+     * (v2: 2026-07-30 전수 검토 시드 도입 — 검증 기록·근거 없음 사유·표기 분류가
+     *  초기 DB 로 실린다. v1 스토어는 시드 없는 빈 상태라 폐기하고 재시드.) */
+    var SKEY = 'dy-lawadm-v2';
     var STAGE_KEY = 'dy-lawadm-stage-v1';
-    var SVER = 1;
+    var SVER = 2;
     var LOG_MAX = 200;
 
     /* ── 스토어 ────────────────────────────────────────────────────────────
      *  localStorage 를 쓴다 — 이웃 시스템 관리 화면(권한·연계 설정)과 같은 급의
      *  **설정 데이터**이기 때문이다. 탭을 닫았다고 검증 기록이 증발하면
      *  "저장했는데 없어졌다" 사고가 된다. 대신 [데모 데이터 초기화]를 반드시 둔다.
+     *
+     *  ■ 초기 DB 시드 (js/law-admin-seed.js, 전역 DYLAWADMSEED)
+     *    2026-07-30 전수 검토의 검증 기록·판정 사유·표기 분류가 blank() 에서
+     *    초기값으로 실린다. [데모 데이터 초기화]도 빈 상태가 아니라 이 시드로
+     *    되돌아온다 — 검토가 끝난 상태가 이 화면의 영점(零點)이다.
      * ------------------------------------------------------------------- */
+    function seed() { return global.DYLAWADMSEED || { verify: {}, noneReasons: {}, basisTriage: {} }; }
     function blank() {
-        return {
+        var S = seed();
+        var d = {
             v: SVER, rev: 0,
             mapOverride: {},   /* pageId → { mode:'basis'|'none', items:[{key,role}], reason, at, by } */
             verify: {},        /* pageId|articleKey → [{answers, reason, at, by, againstTitle}] */
@@ -50,6 +59,32 @@
             basisTriage: {},   /* 원문표기 → { verdict, note, at, by } */
             log: []            /* append-only. 프로토타입 상한 LOG_MAX */
         };
+        /* 검증 기록 시드 — answers(6문 전부 예)·검증 당시 조문 제목은 여기서 파생.
+         * againstTitle 을 현재 조문 제목으로 굳혀 두면, 이후 재수집으로 제목이
+         * 바뀐 조문의 매핑이 staleVerifies() 에 자동으로 걸린다. */
+        Object.keys(S.verify || {}).forEach(function (pid) {
+            d.verify[pid] = (S.verify[pid] || []).map(function (r) {
+                var art = (L() && L().ARTICLES || {})[r.key] || {};
+                return {
+                    articleKey: r.key,
+                    answers: { q1: true, q2: true, q3: true, q4: true, q5: true, q6: true },
+                    reason: r.reason || '',
+                    at: (S.reviewedAt || '2026-07-30') + ' 09:00',
+                    by: S.reviewer || '전수 검토',
+                    againstTitle: art.title || ''
+                };
+            });
+        });
+        /* 표기 분류 시드 — 검토-법적근거-정확성-v1 의 53종 판정 */
+        Object.keys(S.basisTriage || {}).forEach(function (t) {
+            var v = S.basisTriage[t] || {};
+            d.basisTriage[t] = {
+                verdict: v.verdict || '', note: v.note || '',
+                at: (S.reviewedAt || '2026-07-30') + ' 09:00',
+                by: S.reviewer || '전수 검토'
+            };
+        });
+        return d;
     }
     var db = null;
 
@@ -72,7 +107,7 @@
         try { global.sessionStorage.removeItem(STAGE_KEY); } catch (e) {}
     }
 
-    function today() { return '2026-07-29'; }
+    function today() { return '2026-07-30'; }
     function nowTs() { return today() + ' ' + new Date().toTimeString().slice(0, 5); }
     /* 프로토타입에 로그인이 없다. 실 개발에서 로그인 사용자로 대체된다. */
     function actor() { return '시연 계정'; }
@@ -112,8 +147,11 @@
         /* MAP 에 키가 아예 없다 = 아직 판정하지 않았다 */
         if (!base) return { mode: 'unset', items: [], reason: '', source: 'none' };
         /* 빈 배열은 "근거 없음"을 **명시적으로 판정한 것**이다(억지 매핑 금지 원칙).
-         * 다만 그 사유가 코드 주석에만 있어 화면에서 읽을 수 없다 — 그 사실을 밝힌다. */
-        if (!base.length) return { mode: 'none', items: [], reason: '판정 사유가 코드 주석에만 있습니다', source: 'base' };
+         * 판정 사유는 전수 검토 시드(noneReasons)에서 읽는다 — 없으면 그 사실을 밝힌다. */
+        if (!base.length) {
+            var why = (seed().noneReasons || {})[pageId] || '';
+            return { mode: 'none', items: [], reason: why || '판정 사유 미기록', source: 'base', reasonSeeded: !!why };
+        }
         return {
             mode: 'basis',
             items: base.map(function (k) { return { key: k, role: 'duty' }; }),
@@ -225,7 +263,7 @@
      * ------------------------------------------------------------------- */
     var LAW_FAMILY = [
         { id: 'csa', label: '중대재해처벌법', laws: ['csa', 'cse'] },
-        { id: 'osh', label: '산업안전보건법', laws: ['osh', 'oshe', 'oshr', 'oshs'] }
+        { id: 'osh', label: '산업안전보건법', laws: ['osh', 'oshe', 'oshr', 'oshs', 'rae'] }
     ];
     function familyOf(lawKey) {
         var f = LAW_FAMILY.filter(function (x) { return x.laws.indexOf(lawKey) >= 0; })[0];
@@ -459,6 +497,7 @@
         { id: 'map', label: '조문 매핑 가능', tone: 'success' },
         { id: 'range', label: '범위 표기 — 분해 필요', tone: 'warning' },
         { id: 'missing', label: '미수록 조문 — 수집 필요', tone: 'purple' },
+        { id: 'fix', label: '오류 — 정정 필요', tone: 'danger' },
         { id: 'notlaw', label: '법령 아님(확정)', tone: 'neutral' }
     ];
     function unlinkedBasis() {
@@ -511,9 +550,10 @@
         out.push({ id: 'unjudged', label: '미판단 화면', n: un.length, detail: un.map(function (r) { return r.id; }),
                    severity: 'warning', note: '근거가 있는지 없는지 아직 판정되지 않았다' });
 
-        /* 4-b. 판정 사유가 데이터로 남지 않은 "근거 없음" — 화면에서 왜 없는지 읽을 수 없다 */
+        /* 4-b. 판정 사유가 데이터로 남지 않은 "근거 없음" — 화면에서 왜 없는지 읽을 수 없다.
+         * 전수 검토 시드(noneReasons)가 사유를 채운 화면은 제외한다. */
         var noReason = pageRows().filter(function (r) {
-            return r.eff.mode === 'none' && r.eff.source === 'base';
+            return r.eff.mode === 'none' && r.eff.source === 'base' && !r.eff.reasonSeeded;
         });
         out.push({ id: 'noreason', label: '근거 없음 — 사유 미기록', n: noReason.length,
                    detail: noReason.map(function (r) { return r.id; }), severity: 'warning',

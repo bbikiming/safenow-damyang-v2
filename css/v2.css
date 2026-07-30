@@ -2316,6 +2316,11 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .adml-tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .adml-imp-n { white-space: nowrap; font-weight: 700; }
 .adml-imp-detail { margin-top: 3px; font-size: var(--fs-12); color: var(--text-lightgray); line-height: 1.6; word-break: keep-all; }
+/* 탭 간 점프 링크 — 영향 범위의 화면 → 매핑 탭, 매핑 항목 → 조문 원문 */
+.adml-jump { border: 0; padding: 0; background: none; cursor: pointer; font-family: inherit;
+  font-size: var(--fs-12); color: var(--main-dark); text-decoration: underline; text-underline-offset: 2px; }
+.adml-jump:hover { color: var(--main); }
+.adml-jump:focus-visible { outline: 2px solid var(--main); outline-offset: 1px; border-radius: var(--radius-xs); }
 .adml-imp-sum { margin-top: 8px; font-size: var(--fs-12); line-height: 1.7; color: var(--text-gray); }
 .adml-formrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
 .adml-formrow .form-label { flex-shrink: 0; min-width: 72px; margin: 0; }

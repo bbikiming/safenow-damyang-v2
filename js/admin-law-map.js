@@ -1,9 +1,14 @@
 /* =============================================================================
- *  admin-law-map.js — 시스템 관리 > 메뉴 근거 매핑 (ADM05-S, 전역 DYADMLAWMAP)
+ *  admin-law-map.js — 법령 관리 > 메뉴 근거 매핑 탭 (전역 DYADMLAWMAP)
  * -----------------------------------------------------------------------------
- *  화면별 근거 조문을 붙이고 떼는 화면. 조문(사실)을 다루는 admin-law 와 나눈 이유는
+ *  2026-07-30 통합 — 별도 메뉴(구 ADM05, admin-law-map.html)에서 법령 관리
+ *  화면(admin-law.html)의 **탭 2**로 흡수됐다. 셸은 LAWTABS(admin-law.js),
+ *  이 모듈은 탭 본문만 그린다. 구 주소는 리다이렉트 스텁이 승계한다.
+ *
+ *  화면별 근거 조문을 붙이고 떼는 탭. 조문(사실) 탭과 나눠 두는 이유는
  *  파괴 성격이 다르기 때문이다 — 조문 쪽 사고는 "참조가 조용히 끊김",
  *  매핑 쪽 사고는 **"그럴듯한 오답"**이다. 하루 감사에서 나온 결함 5종이 전부 후자였다.
+ *  미저장 변경(draft)은 탭 전환에도 confirm 가드가 걸린다(LAWTABS).
  *
  *  ■ 붙이기와 떼기는 비대칭이다
  *    떼기는 과잉 주장을 줄이는 방향이라 사유 1줄이면 된다.
@@ -64,7 +69,6 @@
                 '과잉으로 붙여서 생긴 결함이 실제로 있었습니다.' +
             '</span>' +
             '<span style="flex:1;"></span>' +
-            '<a class="btn btn-sm btn-outline" href="admin-law.html">법령·조문</a>' +
         '</div>';
     }
 
@@ -256,7 +260,9 @@
                         '<button type="button" class="admlm-obtn" onclick="DYADMLAWMAP.move(' + i + ',1)" aria-label="아래로">▼</button>' +
                     '</div>' +
                     '<span class="admlm-item-main"><b>' + esc(L().shortRef(it.key)) + '</b> ' +
-                        '<span class="adml-art-t">' + esc(a ? a.title : '(수록되지 않은 조문)') + '</span></span>' +
+                        '<span class="adml-art-t">' + esc(a ? a.title : '(수록되지 않은 조문)') + '</span> ' +
+                        (a ? '<button type="button" class="adml-jump" onclick="LAWTABS.openArticle(\'' + esc(it.key) + '\')">원문 보기</button>' : '') +
+                    '</span>' +
                     '<select class="form-select" onchange="DYADMLAWMAP.setRole(' + i + ',this.value)" style="max-width:110px;">' +
                         '<option value="duty"' + (it.role === 'duty' ? ' selected' : '') + '>의무 근거</option>' +
                         '<option value="cycle"' + (it.role === 'cycle' ? ' selected' : '') + '>주기 근거</option>' +
@@ -367,6 +373,9 @@
     global.DYADMLAWMAP = {
         init: init, sel: sel, search: search, setFilter: setFilter, toggle: toggle, clearFind: clearFind,
         setMode: setMode, setReason: setReason, setRole: setRole, move: move, remove: remove,
-        discard: discard, save: save
+        discard: discard, save: save,
+        /* 탭 셸(LAWTABS)의 전환 가드용 — draft 유무와 무언 폐기 */
+        isDirty: function () { return !!state.draft; },
+        dropDraft: function () { state.draft = null; render(); }
     };
 })(window);

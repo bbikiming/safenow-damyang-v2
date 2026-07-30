@@ -361,10 +361,11 @@
             { id: 'admin-notify',      label: '알림 관리',        icon: 'bell',  href: 'admin-notify.html',      screen: 'SFR-017' },
             { id: 'admin-presets',     label: '프리셋 양식 관리', icon: 'cog',   href: 'admin-presets.html' },
             { id: 'admin-integration', label: '연계 관리',        icon: 'cog',   href: 'admin-integration.html', screen: 'SIR-001' },
-            /* 법령 관리 — 조문(사실)과 매핑(판단)은 파괴 성격이 달라 화면을 나눈다.
-             * 조문 쪽 사고는 "참조가 조용히 끊김", 매핑 쪽 사고는 "그럴듯한 오답"이다. */
-            { id: 'admin-law',         label: '법령·조문',        icon: 'file',  href: 'admin-law.html',         screen: 'ADM04-S' },
-            { id: 'admin-law-map',     label: '메뉴 근거 매핑',   icon: 'list',  href: 'admin-law-map.html',     screen: 'ADM05-S' },
+            /* 법령 관리 — 법령·조문 / 메뉴 근거 매핑 / 변경 이력 3탭 단일 화면
+             * (2026-07-30 통합, 구 ADM05 메뉴 근거 매핑 흡수. admin-law-map.html 은
+             *  매핑 탭으로 가는 리다이렉트 스텁). 조문(사실)과 매핑(판단)의 파괴
+             *  성격 차이는 탭 분리로 유지된다. */
+            { id: 'admin-law',         label: '법령 관리',        icon: 'file',  href: 'admin-law.html',         screen: 'ADM04-S' },
         ]},
     ];
 
