@@ -29,8 +29,7 @@
     var state = {
         mount: null, sel: '', q: '', filter: '',
         open: null,         /* 대메뉴 접힘 상태 { groupId: true } — null 이면 최초 1회 자동 세팅 */
-        draft: null,        /* { mode, items:[{key,role}], reason } */
-        adding: null        /* { step, key, answers, reason } */
+        draft: null         /* { mode, items:[{key,role}], reason } */
     };
 
     /* =============== 렌더 =============== */
@@ -244,8 +243,7 @@
                 (dirty ? '<button type="button" class="btn btn-outline btn-sm" onclick="DYADMLAWMAP.discard()">되돌리기</button>' : '') +
                 '<span class="adml-hint">검증 기록 ' + r.verified + '건</span>' +
             '</div>' +
-        '</div></div>' +
-        (state.adding ? addPanel(r) : '');
+        '</div></div>';
     }
 
     function itemsBlock(d, r) {
@@ -269,8 +267,9 @@
             : '<div class="adml-empty-note">지정된 근거가 없습니다.</div>';
         return '<div class="adml-block-head">근거 조문 <span class="adml-sub">순서가 칩 표시 순서입니다</span></div>' +
             body +
-            '<button type="button" class="btn btn-sm btn-outline" onclick="DYADMLAWMAP.addStart()">＋ 근거 추가</button>' +
-            '<div class="adml-hint" style="margin-top:6px;">' +
+            '<div class="adml-notice">' +
+                '근거 조문은 <b>안전보건 법령이 정한 것</b>이며 이 화면에서 새로 지정하지 않습니다. ' +
+                '여기서는 지정된 근거가 <b>맞는지 검토</b>하고, 틀렸으면 제거하거나 판정을 바꿉니다.<br>' +
                 '<b>주기 근거</b>는 "왜 이 주기인가"의 답을 담은 조문입니다 — 법률은 대개 위임만 하고 주기는 시행령·시행규칙에 있습니다.' +
             '</div>';
     }
@@ -296,70 +295,6 @@
         '</div>';
     }
 
-    /* ── 근거 추가 — 인라인 3단계 (모달 아님) ── */
-    function addPanel(r) {
-        var s = state.adding;
-        var head = '<div class="card" style="margin-top:12px;"><div class="card-header">' +
-            '<span class="card-title">근거 추가 — ' + (s.step === 1 ? '조문 선택' : s.step === 2 ? '원문 확인' : '검증 6문') + '</span>' +
-            '<button type="button" class="btn btn-sm btn-outline" onclick="DYADMLAWMAP.addCancel()">취소</button>' +
-        '</div><div class="card-body">';
-
-        if (s.step === 1) {
-            var S = L().SNAPSHOT;
-            return head +
-                '<button type="button" class="btn btn-primary" onclick="DYADMLAWMAP.openPicker()">조문 찾기</button>' +
-                '<div class="adml-hint" style="margin-top:8px;">' +
-                    '중대재해처벌법·산업안전보건법 계열을 <b>검색해서</b> 고릅니다. ' +
-                    '고른 뒤 <b>원문을 먼저 보여줍니다</b> — 번호만 보고 붙여서 생긴 결함이 실제로 있었습니다.' +
-                '</div>' +
-                '<div class="adml-notice">' +
-                    '조문 데이터는 <b>' + esc(S.source) + '</b> 수집분입니다 · 최종 업데이트 <b>' + esc(S.fetchedAt) + '</b>' +
-                '</div>' +
-            '</div></div>';
-        }
-        var a = L().ARTICLES[s.key];
-        if (s.step === 2) {
-            var Lw = L().LAWS[a.law] || {};
-            return head +
-                '<div class="lawinfo-inline">' +
-                    '<div class="lawinfo-ref"><span class="lawinfo-law">' + esc(Lw.name || '') + '</span>' +
-                        '<span class="lawinfo-art">' + esc(a.jo) + (a.clause ? ' ' + esc(a.clause) : '') + '</span></div>' +
-                    '<div class="lawinfo-title">' + esc(a.title) + '</div>' +
-                    '<div class="lawinfo-text" style="white-space:pre-line;">' + esc(a.text) + '</div>' +
-                '</div>' +
-                '<div class="adml-formrow" style="margin-top:12px;">' +
-                    '<button type="button" class="btn btn-primary btn-sm" onclick="DYADMLAWMAP.addStep(3)">원문을 확인했습니다 — 검증으로</button>' +
-                '</div>' +
-            '</div></div>';
-        }
-        /* step 3 — 검증 6문 */
-        var qs = A().VERIFY_Q.map(function (q) {
-            var on = !!(s.answers || {})[q.id];
-            return '<label class="admlm-q">' +
-                '<input type="checkbox"' + (on ? ' checked' : '') + ' onchange="DYADMLAWMAP.answer(\'' + q.id + '\',this.checked)">' +
-                '<span class="admlm-q-body"><span class="admlm-q-t">' + esc(q.text) + '</span>' +
-                '<span class="admlm-q-h">' + esc(q.hint) + '</span></span></label>';
-        }).join('');
-        var all = A().VERIFY_Q.every(function (q) { return (s.answers || {})[q.id]; });
-        var hasReason = (s.reason || '').trim().length > 0;
-        return head +
-            '<div class="adml-hint" style="margin-bottom:8px;">' +
-                '<b>' + esc(L().shortRef(s.key)) + '</b> — ' + esc(a ? a.title : '') +
-            '</div>' +
-            qs +
-            '<div class="adml-block-head">판단 근거 <span class="adml-sub">필수</span></div>' +
-            '<textarea class="form-textarea" rows="2" placeholder="이 화면이 이 조문의 어떤 의무를 이행하는지 한 줄로" ' +
-                'oninput="DYADMLAWMAP.addReason(this.value)">' + esc(s.reason || '') + '</textarea>' +
-            (all && hasReason ? '' :
-                '<div class="admlm-warn">6문을 모두 확인하고 판단 근거를 적어야 추가할 수 있습니다. ' +
-                '이 게이트는 하루 감사에서 결함 5종이 나온 뒤 만들어졌습니다.</div>') +
-            '<div class="adml-formrow" style="margin-top:12px;">' +
-                '<button type="button" class="btn btn-primary btn-sm"' + (all && hasReason ? '' : ' disabled') +
-                    ' onclick="DYADMLAWMAP.addCommit()">근거 추가</button>' +
-            '</div>' +
-        '</div></div>';
-    }
-
     /* =============== 액션 =============== */
     function ensureDraft() {
         if (state.draft) return state.draft;
@@ -370,7 +305,7 @@
     }
     function sel(id) {
         if (state.draft && !confirm('저장하지 않은 변경이 있습니다. 이동하면 사라집니다.')) return;
-        state.sel = id; state.draft = null; state.adding = null; render();
+        state.sel = id; state.draft = null; render();
     }
     function search(v) {
         state.q = v;
@@ -393,7 +328,6 @@
             if (m === 'none') d.items = [];
         }
         d.mode = m;
-        state.adding = null;
         render();
     }
     function setReason(v) { ensureDraft().reason = v; }
@@ -408,34 +342,8 @@
         var d = ensureDraft();
         d.items.splice(i, 1); render();
     }
-    function discard() { state.draft = null; state.adding = null; render(); toast('변경 내용을 되돌렸습니다.'); }
+    function discard() { state.draft = null; render(); toast('변경 내용을 되돌렸습니다.'); }
 
-    function addStart() { state.adding = { step: 1, key: '', answers: {}, reason: '' }; render(); }
-    function addCancel() { state.adding = null; render(); }
-    function addPick(k) { if (!k) return; state.adding.key = k; state.adding.step = 2; render(); }
-    /* 조문 선택기 — 이 시점에 열린 모달이 없으므로 모달 1개는 적층이 아니다(§1) */
-    function openPicker() { A().openPicker('DYADMLAWMAP.addPick'); }
-    function addStep(n) { state.adding.step = n; render(); }
-    function answer(q, on) { state.adding.answers[q] = on; render(); }
-    function addReason(v) {
-        state.adding.reason = v;
-        /* 버튼 활성 상태만 갱신 — 전체 재렌더하면 입력 캐럿이 날아간다 */
-        var all = A().VERIFY_Q.every(function (q) { return state.adding.answers[q.id]; });
-        var btn = state.mount.querySelector('.admp-panel .card:last-child .btn-primary');
-        if (btn) btn.disabled = !(all && v.trim());
-    }
-    function addCommit() {
-        var s = state.adding, d = ensureDraft();
-        if (d.items.some(function (it) { return it.key === s.key; })) { toast('이미 추가된 조문입니다.'); return; }
-        d.items.push({ key: s.key, role: 'duty' });
-        var a = L().ARTICLES[s.key];
-        A().addVerify(state.sel, {
-            articleKey: s.key, answers: s.answers, reason: s.reason,
-            againstTitle: a ? a.title : ''
-        });
-        state.adding = null; render();
-        toast('근거를 추가했습니다 — 검증 기록이 남았습니다.');
-    }
 
     function save() {
         var d = state.draft;
@@ -459,8 +367,6 @@
     global.DYADMLAWMAP = {
         init: init, sel: sel, search: search, setFilter: setFilter, toggle: toggle, clearFind: clearFind,
         setMode: setMode, setReason: setReason, setRole: setRole, move: move, remove: remove,
-        discard: discard, save: save,
-        addStart: addStart, addCancel: addCancel, addPick: addPick, addStep: addStep,
-        answer: answer, addReason: addReason, addCommit: addCommit, openPicker: openPicker
+        discard: discard, save: save
     };
 })(window);
