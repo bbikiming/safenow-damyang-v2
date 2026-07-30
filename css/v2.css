@@ -2405,3 +2405,27 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
   .lawpick-ref { min-width: 0; }
   .lawpick-list { max-height: 52vh; }
 }
+
+/* 검수 표 법령 근거 셀 — 드롭다운 대신 선택 창 호출 버튼 */
+.rl-rv-basis-btn { display: inline-flex; align-items: center; min-height: 32px; padding: 5px 10px;
+  border: 1px solid var(--status-warning-border); border-radius: var(--radius-full);
+  background: var(--status-warning-bg); color: var(--status-warning-fg);
+  font-size: var(--fs-12); font-weight: 700; font-family: inherit; cursor: pointer; }
+.rl-rv-basis-btn:hover { filter: brightness(0.97); }
+.rl-rv-basis-btn:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
+.rl-rv-basis-btn.is-set { border-color: var(--card-line); background: var(--brand-50); color: var(--main-dark); }
+.rl-rv-basis-set { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.rl-rv-basis-clear { min-width: 24px; min-height: 24px; padding: 0; border: 1px solid var(--card-line);
+  border-radius: var(--radius-xs); background: var(--surface); color: var(--text-gray);
+  font-size: var(--fs-12); line-height: 1; cursor: pointer; }
+.rl-rv-basis-clear:hover { background: var(--status-danger-bg); color: var(--status-danger-fg);
+  border-color: var(--status-danger-border); }
+.rl-rv-basis-t { flex-basis: 100%; margin-top: 3px; font-size: var(--fs-12);
+  color: var(--text-lightgray); line-height: 1.5; word-break: keep-all; }
+@media (max-width: 559px) {
+  .rl-rv-basis-btn { min-height: 44px; }
+  /* 해제는 되돌리기 쉬운 동작이지만 터치 기준(44px)은 지킨다.
+     인접 간격을 함께 벌려 조문 칩을 누르려다 해제되는 오조작을 막는다. */
+  .rl-rv-basis-clear { min-width: 44px; min-height: 44px; }
+  .rl-rv-basis-set { gap: 8px; }
+}

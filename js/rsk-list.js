@@ -463,6 +463,51 @@
             '</div>' +
         '</div>';
     }
+    /* 검수 행의 법령 근거 셀 — 지정됨 / 미지정 두 상태 */
+    function basisCell(deptId, i, r) {
+        var k = window.DYLAW ? DYLAW.resolveBasis(r.basis || '') : '';
+        var a = k && DYLAW.ARTICLES[k];
+        if (!k) {
+            return '<button type="button" class="rl-rv-basis-btn" ' +
+                'onclick="RSKLIST.basisPick(\'' + deptId + '\',' + i + ')">법령 매핑 대기</button>';
+        }
+        return '<div class="rl-rv-basis-set">' +
+            '<button type="button" class="rl-rv-basis-btn is-set" ' +
+                'onclick="RSKLIST.basisPick(\'' + deptId + '\',' + i + ')" ' +
+                'title="' + esc(a ? a.title : '') + ' — 눌러서 변경">' +
+                esc(DYLAW.shortRef(k)) + '</button>' +
+            '<button type="button" class="rl-rv-basis-clear" aria-label="근거 지정 해제" ' +
+                'onclick="RSKLIST.basisClear(\'' + deptId + '\',' + i + ')">×</button>' +
+            '<div class="rl-rv-basis-t">' + esc(a ? a.title : '(수록되지 않은 조문)') + '</div>' +
+        '</div>';
+    }
+    /* 선택 창은 조문키만 돌려준다 — 어느 행이었는지는 여기서 기억한다 */
+    function basisPick(deptId, i) {
+        if (!window.LAWADM) { toast('조문 선택기를 불러오지 못했습니다.'); return; }
+        state.basisTarget = { deptId: deptId, i: i };
+        LAWADM.openPicker('RSKLIST.basisPicked');
+    }
+    function basisPicked(key) {
+        var t = state.basisTarget; if (!t) return;
+        reviewSet(t.deptId, t.i, 'basis', key);
+        refreshBasisCell(t.deptId, t.i);
+        state.basisTarget = null;
+        toast('근거를 지정했습니다 — ' + DYLAW.shortRef(key));
+    }
+    function basisClear(deptId, i) {
+        reviewSet(deptId, i, 'basis', '');
+        refreshBasisCell(deptId, i);
+        toast('근거 지정을 해제했습니다.');
+    }
+    /* 표 전체를 다시 그리면 입력 중이던 다른 칸과 스크롤이 날아간다 — 그 칸만 교체 */
+    function refreshBasisCell(deptId, i) {
+        var a = (D().assessments(state.year) || [])[0]; if (!a) return;
+        var rows = ((a.review && a.review.parsedDepts) || {})[deptId] || [];
+        var r = rows[i]; if (!r) return;
+        var td = state.mount.querySelector('.rl-rv-basis[data-dept="' + deptId + '"][data-idx="' + i + '"]');
+        if (td) td.innerHTML = basisCell(deptId, i, r);
+    }
+
     function reviewRow(aid, deptId, i, r) {
         var cats = ['', '기계적', '화학적', '작업특성', '전기', '고소작업', '보건', '기타'];
         return '<tr>' +
@@ -471,10 +516,11 @@
                 cats.map(function (c) { return '<option value="' + c + '"' + (r.category === c ? ' selected' : '') + '>' + (c || '분류') + '</option>'; }).join('') +
             '</select></td>' +
             '<td><input type="text" value="' + esc(r.cause) + '" placeholder="원인" onchange="RSKLIST.reviewSet(\'' + deptId + '\',' + i + ',\'cause\',this.value)"></td>' +
-            /* 법령 근거 — 값은 DYLAW 조문 키. 짐작으로 채우지 않도록 기본값은 '법령 매핑 대기'. */
-            '<td><select class="form-select" onchange="RSKLIST.reviewSet(\'' + deptId + '\',' + i + ',\'basis\',this.value)">' +
-                (window.DYLAW ? DYLAW.optionsHtml(r.basis || '') : '<option value="">법령 매핑 대기</option>') +
-            '</select></td>' +
+            /* 법령 근거 — 값은 DYLAW 조문 키. 짐작으로 채우지 않도록 기본값은 '법령 매핑 대기'.
+             * 드롭다운이 아니라 **검색 가능한 선택 창**을 쓴다 — 조문이 수십 건이고
+             * 행마다 전체 목록을 렌더하면 조문이 늘수록 이 표가 먼저 무너진다. */
+            '<td class="rl-rv-basis" data-dept="' + esc(deptId) + '" data-idx="' + i + '">' +
+                basisCell(deptId, i, r) + '</td>' +
             '<td><textarea rows="2" placeholder="개선조치" onchange="RSKLIST.reviewSet(\'' + deptId + '\',' + i + ',\'action\',this.value)">' + esc(r.action) + '</textarea></td>' +
             '<td style="text-align:center;"><button type="button" class="rl-rv-del" onclick="RSKLIST.reviewDel(\'' + deptId + '\',' + i + ')" title="삭제">×</button></td>' +
         '</tr>';
@@ -856,6 +902,7 @@
         /* 보고서·검수 (검수 화면에서는 확인 체크박스·행별 기한이 없다 — 조치기한은 다음 단계 모달에서만) */
         uploadReport: uploadReport, clearReport: clearReport, doClearReport: doClearReport,
         reviewToggleDept: reviewToggleDept, reviewSet: reviewSet,
+        basisPick: basisPick, basisPicked: basisPicked, basisClear: basisClear,
         reviewDel: reviewDel, reviewAdd: reviewAdd,
         openDueSet: openDueSet, dueApplyBulk: dueApplyBulk, dueSetDept: dueSetDept, dueDeliver: dueDeliver,
         /* 부서 상세·재촉 */
