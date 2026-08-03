@@ -125,7 +125,7 @@
                     '<span style="flex-shrink:0; width:24px; height:24px; border-radius:6px; background:var(--main); color:var(--surface); font-weight:700; display:flex; align-items:center; justify-content:center;">' + s[0] + '</span>' +
                     '<div><div style="font-weight:700; color:var(--main-dark2);">' + s[1] + '</div>' +
                     '<div style="color:var(--text-black);">' + s[2] + '</div>' +
-                    '<div style="font-size:12px; color:var(--main); font-weight:600; margin-top:2px;">근거: ' + s[3] + '</div></div></div>').join('') + '</div>',
+                    '<div style="font-size:12px; color:var(--main-dark); font-weight:600; margin-top:2px;">근거: ' + s[3] + '</div></div></div>').join('') + '</div>',
                 '<button class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
 
             /* 근거·고려사항 관리 모달 (CRUD) */
@@ -385,6 +385,7 @@
             PG.polTab = name => PG.go(name, 'list', null);
             PG.polOpen = ver => PG.go(S.tab, 'detail', ver);
             PG.polBack = () => PG.go(S.tab, 'list', null);
+            PG.polGoBoard = () => PG.go('board', 'list', null);
 
             /* 등록(최초/제정/개정) */
             PG.polNew = () => {
@@ -617,11 +618,40 @@
                 const foot = act ? '<button class="btn btn-sm btn-outline" onclick="PG.polChkBasis(\'' + act.ver + '\')">점검표 근거 설정</button><button class="btn btn-sm btn-primary" onclick="PG.polCheckWrite(\'' + act.ver + '\')">현행본 이행점검 작성</button>' : '';
                 return subtabs + sectionCard('이행 점검 (반기)', body, foot);
             }
+            /* 게시 현황 — 2026-07-30 회의로 **기준 단위를 버전에서 부서로** 바꿨다.
+             * 종전에는 버전별 게시 건수(1~2건)만 셌는데, 실제 의무는 전 부서·사업장이
+             * 각자 게시하는 것이라 그 수를 세는 건 의미가 없었다.
+             *   참석자1 "모든 부서를 다 적으셔야 돼요 … 그 부서에 사업장이 있어요.
+             *            그 사업장마다 다 붙여야 돼요."
+             *   참석자4 "과 쭈르륵 사업소 쭈르륵 해가지고 돼 있는지 안 돼 있는지 체크리스트"
+             * 부서 축 표는 의무 이행점검과 같은 엔진(DEPTCHK)을 쓴다 — 회의 결론이
+             * "경영방침 원본은 계획에서, 게시 여부는 이행점검에서 확인"이라 축이 같기 때문이다. */
+            const BOARD_KEY = 'policy-post';
+            const boardOpts = () => ({
+                ns: 'PG.POLCHK', title: '경영방침 게시 확인',
+                labels: { DONE: '게시', TODO: '미게시', NA: '해당없음' }, statusLabel: '게시 여부', rateLabel: '게시율',
+                placeLabel: '게시 위치', placePlaceholder: '예: 군청 본관 1층 게시판 / 내부망 전자게시',
+                evidenceLabel: '게시 사진', onChange: render,
+            });
+            PG.POLCHK = {
+                open: (id) => DEPTCHK.open(BOARD_KEY, id, boardOpts()),
+                setStatus: (v) => DEPTCHK.setStatus(v),
+                addPhoto: (files) => DEPTCHK.addPhoto(files),
+                mDelPhoto: (i) => DEPTCHK.mDelPhoto(i),
+                save: () => DEPTCHK.save(),
+                delPhoto: (id, i) => { DEPTCHK.delPhoto(BOARD_KEY, id, i); render(); },
+                remind: (id) => DEPTCHK.remind(BOARD_KEY, id),
+            };
             function renderListBoard() {
-                const body = '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>버전</th><th>방침명</th><th>게시 건수</th><th>최근 게시일</th><th>시행일</th></tr></thead><tbody>' +
-                    S.VERSIONS.map(v => '<tr style="cursor:pointer;" onclick="PG.polOpen(\'' + v.ver + '\')"><td><b>v' + v.ver + '</b></td><td>' + V.esc(v.title) + '</td><td>' + (v.postings || []).length + '건</td><td>' + (v.postedDate || '-') + '</td><td>' + (v.effDate || '-') + '</td></tr>').join('') +
-                    '</tbody></table></div>';
-                return subtabs + sectionCard('게시 현황 <span class="chip-mini wt" style="margin-left:6px; font-weight:600;">산안법 §14</span>', body, '');
+                const act = POL.active();
+                const body =
+                    '<p style="font-size:var(--fs-12); color:var(--text-gray); margin-bottom:10px;">' +
+                        '현행 경영방침 <b>v' + (act ? act.ver : '-') + '</b>' + (act ? ' · ' + V.esc(act.title) : '') +
+                        ' 을 <b>전 부서·사업장이 게시</b>했는지 확인합니다. ' +
+                        '게시로 등록하려면 <b>게시 위치와 게시 사진</b>이 있어야 합니다. ' +
+                        '이 결과는 <a href="menu.html?m=comply" style="color:var(--main-dark); font-weight:700;">의무 이행점검</a>의 부서별 이행 현황과 같은 축을 씁니다.</p>' +
+                    DEPTCHK.render(Object.assign({ key: BOARD_KEY }, boardOpts()));
+                return subtabs + sectionCard('부서별 게시 현황 <span class="chip-mini wt" style="margin-left:6px; font-weight:600;">산안법 §14</span>', body, '');
             }
             function renderDetail(v) {
                 if (!v) return renderListPolicy();
@@ -644,10 +674,15 @@
                     (v.inspections && v.inspections.length ? '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>회차</th><th>점검일</th><th>점검자</th><th>결과</th><th></th></tr></thead><tbody>' + v.inspections.map((i, idx) => '<tr><td>' + i.half + '</td><td>' + i.date + '</td><td>' + (i.inspector || '-') + '</td><td>' + resultChip(i.result) + '</td><td><button class="btn btn-sm btn-outline" onclick="PG.checkSheet(\'' + v.ver + '\',' + idx + ')">점검표 보기</button></td></tr>').join('') + '</tbody></table></div>' : '<p style="color:var(--text-gray); font-size:13px;">점검 이력이 없습니다.</p>') +
                     (editable ? '' : '<p class="lock-note">이전 버전입니다. 점검 이력 열람만 가능하며 신규 점검 작성·수정은 현행본에서만 할 수 있습니다.</p>'),
                     editable ? '<button class="btn btn-sm btn-outline" onclick="PG.polChkBasis(\'' + v.ver + '\')">점검표 근거 설정</button><button class="btn btn-sm btn-primary" onclick="PG.polCheckWrite(\'' + v.ver + '\')">이행점검 작성</button>' : '');
+                /* 게시 여부는 **부서 전수 체크리스트([게시 현황] 탭)** 가 단일 출처다(2026-07-30 회의).
+                   버전별 게시 카드를 여기 남겨 두면 같은 화면에서 '게시율 0%'와 '게시완료 2건'이
+                   동시에 보인다 — 구 카드를 지우고 그 탭으로 보낸다. */
                 const boardSec = sectionCard('게시 현황 <span class="chip-mini wt" style="margin-left:6px;">산안법 §14</span>',
-                    '<div class="ba-board">' + ((v.postings || []).length ? (v.postings || []).map(p => baCard(v.ver, p, editable)).join('') : '<p style="color:var(--text-gray); font-size:13px;">게시 이력이 없습니다.</p>') + '</div>' +
+                    '<div class="pol-board-moved">게시 여부는 <b>부서별 전수 점검</b>으로 관리합니다 — ' +
+                        '상단 <b>[게시 현황]</b> 탭에서 과·사업소별 게시 여부·위치·게시사진을 확인·등록하세요.' +
+                        '<button class="btn btn-sm btn-outline" style="margin-left:10px;" onclick="PG.polGoBoard()">게시 현황 탭 열기</button></div>' +
                     '<div class="attach-list" style="margin-top:16px;"><div class="attach-list-head">관련 증빙 (방침 본문·의견수렴 등)</div><div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>파일명</th><th>구분</th>' + (editable ? '<th></th>' : '') + '</tr></thead><tbody>' + (v.evidence || []).map(e => '<tr><td>' + V.esc(e.name) + '</td><td><span class="chip-mini wt">' + e.kind + '</span></td>' + (editable ? '<td><button class="btn btn-sm btn-outline" onclick="PG.evidenceDel(\'' + v.ver + '\',\'' + e.id + '\')">삭제</button></td>' : '') + '</tr>').join('') + '</tbody></table></div>' + (editable ? '<button class="btn btn-sm btn-outline" style="margin-top:8px;" onclick="PG.evidenceAdd(\'' + v.ver + '\')">+ 증빙 추가</button>' : '') + '</div>',
-                    editable ? '<button class="btn btn-sm btn-primary" onclick="PG.boardLocAdd(\'' + v.ver + '\')">+ 게시 추가</button>' : '');
+                    '');
                 const header = '<div class="pol-detail-top"><button class="btn btn-sm btn-outline" onclick="PG.polBack()">‹ 목록</button>' +
                     '<div class="pol-detail-actions"><button class="btn btn-sm btn-outline" onclick="PG.polRevise()">개정</button><button class="btn btn-sm btn-outline" onclick="PG.polEnact()">제정</button>' +
                     (v.appr === '미상신' || v.appr === '반려' ? '<button class="btn btn-sm btn-primary" onclick="PG.polOnnara(\'' + v.ver + '\')">온나라 결재 상신</button>' : '') + '</div></div>';
@@ -726,7 +761,7 @@
         /* ── 의견청취 [SFR-011]: 1메뉴 3탭(의견청취·건의함 / 산업안전보건위원회 / 협의체·점검표) — 기획 v0.1 + RFP 보완(접수경로·부서별·안건이행·점검결과지 CRUD) ── */
         opinion() {
             /* ===== 프로토타입 시각/이력 헬퍼 ===== */
-            const PROTO_TODAY = '2026-07-02';
+            const PROTO_TODAY = DYV2.today();  /* 오늘 단일 출처 (구 '2026-07-02' 하드코딩 제거) */
             const pad2 = n => String(n).padStart(2, '0');
             const nowStamp = () => { const d = new Date(); return PROTO_TODAY + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()); };
             const addDays = (dateStr, n) => { const dt = new Date((dateStr || PROTO_TODAY) + 'T00:00:00Z'); if (isNaN(dt.getTime())) return '2026-07-31'; dt.setUTCDate(dt.getUTCDate() + n); return dt.toISOString().slice(0, 10); };
@@ -1653,7 +1688,14 @@
                 '<p style="font-size:12px; color:var(--text-gray); margin-top:8px;">외 ' + (aDocs.length - 8) + '건 — 업무문서 &gt; 이행문서에서 A 조치 필터로 전체 조회</p>');
         },
 
-        /* ── 이행관리 [SFR-008·014]: 점검표(F5) → N→개선조치 → 마감(온나라) / 예산 e호조 ── */
+        /* ── 의무 이행점검 [SFR-008·014] ──────────────────────────────────
+         * 2026-07-30 회의: 이 화면의 본질은 "부서·사업장이 실제로 했는지 훑는 것"이다.
+         *   참석자1 "안전보건 관리 체계 안에 산업 시민 재해 이행 점검을 넣어야 돼요.
+         *            그 안에 경영 방침도 있고 교육도 있고 다 있어요. 그걸 연계시키게끔"
+         * 그래서 §4/§5 조문 축(기존) 위에 **부서 전수 축(신규)** 을 얹는다.
+         * 중대재해처벌법은 중대산업재해(§4·§5)와 중대시민재해(§9·시행령 §10·§11) 두 축이고
+         * 담양군은 양쪽 다 적용 대상이라 부서 점검도 두 축으로 나눈다(CLAUDE.md §10 검증 6문 ④).
+         * 점검 항목 자체는 발주처가 양식을 주기로 해 아직 확정 전이다 — 항목을 지어내지 않는다. */
         comply() {
             PG.cmpCheck = () => E.openForm({
                 id: 'EDOC-의무이행점검-2026H1', title: '2026 상반기 의무이행 점검표 (중처법 시행령 §4·§5)', form: 'F5',
@@ -1676,13 +1718,54 @@
                 '<p style="font-size:12px; color:var(--status-warning-fg); margin-top:12px;">' +
                 '확정해야 할 것 — ① 목록에 넣을 법령 ② 법령별 점검 항목과 증빙 ③ 점검 주체(부서) ④ 위탁 점검 여부.</p>',
                 '<button class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
-            return sectionCard('안전보건관리체계 점검 (반기) ' + docStChip('EDOC-의무이행점검-2026H1'),
+            /* ── 부서별 이행 현황 (전수) ── */
+            window.COMPLY_STATE = window.COMPLY_STATE || { axis: 'industrial' };
+            const S = window.COMPLY_STATE;
+            S.axis = S.axis || 'industrial';
+            const AXES = {
+                industrial: { key: 'comply-industrial', label: '중대산업재해 이행점검',
+                              note: '종사자 안전·보건 확보의무(중처법 §4·§5) 이행 여부를 부서·사업장 단위로 점검합니다.' },
+                citizen:    { key: 'comply-citizen',    label: '중대시민재해 이행점검',
+                              note: '공중이용시설·원료제조물 이용자 안전 확보의무(중처법 §9 · 시행령 §10·§11) 이행 여부를 점검합니다.' },
+            };
+            const axis = AXES[S.axis];
+            PG.cmpAxis = (a) => { S.axis = a; render(); };
+            /* DEPTCHK 위임 래퍼 — 표의 버튼이 부르는 전역 진입점 */
+            const cmpOpts = () => ({
+                ns: 'PG.CMPCHK', title: axis.label + ' 확인 등록',
+                placeLabel: '점검 결과·비고', placePlaceholder: '예: 점검표 작성 완료 · 지적 없음',
+                evidenceLabel: '증빙 사진·문서', onChange: render,
+            });
+            PG.CMPCHK = {
+                open: (id) => DEPTCHK.open(axis.key, id, cmpOpts()),
+                setStatus: (v) => DEPTCHK.setStatus(v),
+                addPhoto: (files) => DEPTCHK.addPhoto(files),
+                mDelPhoto: (i) => DEPTCHK.mDelPhoto(i),
+                save: () => DEPTCHK.save(),
+                delPhoto: (id, i) => { DEPTCHK.delPhoto(axis.key, id, i); render(); },
+                remind: (id) => DEPTCHK.remind(axis.key, id),
+            };
+            const axisTabs =
+                '<div class="tabs" style="margin-bottom:12px;">' +
+                    Object.keys(AXES).map(k =>
+                        '<button type="button" class="tab' + (S.axis === k ? ' is-active' : '') +
+                        '" onclick="PG.cmpAxis(\'' + k + '\')">' + AXES[k].label + '</button>').join('') +
+                '</div>';
+
+            return sectionCard('부서별 이행 현황 (전수 점검)',
+                axisTabs +
+                '<p style="font-size:var(--fs-12); color:var(--text-gray); margin-bottom:10px;">' + axis.note +
+                ' 이행으로 등록하려면 <b>증빙</b>이 있어야 하고, <b>해당없음</b>은 사유를 적어야 합니다 — ' +
+                '사유 없는 해당없음은 미이행과 함께 관리 대상으로 남습니다.</p>' +
+                DEPTCHK.render(Object.assign({ key: axis.key }, cmpOpts())),
+                '') +
+            sectionCard('안전보건관리체계 점검 (반기) ' + docStChip('EDOC-의무이행점검-2026H1'),
                 '<p style="font-size:12px; color:var(--text-gray);">중처법 시행령 <b>§4</b>(안전보건관리체계 구축·이행) 항목별 이행 여부를 점검합니다. 각 항목에는 해당 메뉴의 실데이터가 근거로 연결되며, <b>X(미이행) 항목은 확정 시 개선조치로 자동 등록</b>됩니다.</p>' +
                 tbl(['항목', '근거 메뉴', '근거 현황'], [
-                    ['§4-1 목표·경영방침 수립', '<a href="menu.html?m=policy" style="color:var(--main); font-weight:700;">경영방침</a>', '2026 방침 수립 · 점검 ' + (E.statusOf('EDOC-경영방침점검-2026H1') || '미작성')],
-                    ['§4-3 유해·위험요인 확인·개선', '<a href="rsk-list.html" style="color:var(--main); font-weight:700;">위험성평가</a>', '정기 1회 · 수시 2회 실시'],
-                    ['§4-5 책임자 평가·관리', '<a href="menu.html?m=org" style="color:var(--main); font-weight:700;">조직</a>', '수행평가 ' + (E.statusOf('EDOC-수행평가-2026H1') || '미작성')],
-                    ['§4-7 종사자 의견청취', '<a href="menu.html?m=opinion" style="color:var(--main); font-weight:700;">의견청취</a>', '접수·처리 운영 중'],
+                    ['§4-1 목표·경영방침 수립', '<a href="menu.html?m=policy" style="color:var(--main-dark); font-weight:700;">경영방침</a>', '2026 방침 수립 · 점검 ' + (E.statusOf('EDOC-경영방침점검-2026H1') || '미작성')],
+                    ['§4-3 유해·위험요인 확인·개선', '<a href="rsk-list.html" style="color:var(--main-dark); font-weight:700;">위험성평가</a>', '정기 1회 · 수시 2회 실시'],
+                    ['§4-5 책임자 평가·관리', '<a href="menu.html?m=org" style="color:var(--main-dark); font-weight:700;">조직</a>', '수행평가 ' + (E.statusOf('EDOC-수행평가-2026H1') || '미작성')],
+                    ['§4-7 종사자 의견청취', '<a href="menu.html?m=opinion" style="color:var(--main-dark); font-weight:700;">의견청취</a>', '접수·처리 운영 중'],
                 ]),
                 '<div style="display:flex; gap:6px;">' +
                 '<button class="btn btn-sm btn-primary" onclick="PG.cmpCheck()">점검표 작성</button>' +
@@ -1696,7 +1779,7 @@
                 '두 조문 모두 관계 법령을 <b>정의만 하고 목록을 주지 않으므로</b>, 담양군 관리대상에 적용되는 법령 목록을 기관이 직접 확정해야 점검이 성립합니다.</p>' +
                 tbl(['점검 항목', '주기', '현황'], [
                     ['§5-1 관계 법령 의무이행 점검 (종사자)', '반기 1회', '<span class="chip-status warning">관계 법령 목록 미등록</span>'],
-                    ['§5-3 유해·위험작업 안전보건교육 실시 점검', '반기 1회', '<a href="edu-status.html" style="color:var(--main); font-weight:700;">이수현황</a> 연결 가능'],
+                    ['§5-3 유해·위험작업 안전보건교육 실시 점검', '반기 1회', '<a href="edu-status.html" style="color:var(--main-dark); font-weight:700;">이수현황</a> 연결 가능'],
                     ['§11-1 관계 법령 의무이행 점검 (공중이용시설)', '연 1회', '<span class="chip-status warning">관계 법령 목록 미등록</span>'],
                     ['§11-3 시설 안전관리자 의무교육 이수 점검', '연 1회', '<span class="chip-status warning">대상자·교육 미정의</span>'],
                 ]),
@@ -1714,7 +1797,7 @@
         window.DYSETLIST.render(pane, { menuKey: KEY, hideTabs: true });
         pane.insertAdjacentHTML('beforeend',
             '<p style="font-size:12px; color:var(--text-gray); margin-top:4px;">' +
-                '전 메뉴 통합 보기는 <a href="docs-preset.html?menu=' + KEY + '" style="color:var(--main); font-weight:700;">업무문서 &gt; 업무 목록</a>에서.' +
+                '전 메뉴 통합 보기는 <a href="docs-preset.html?menu=' + KEY + '" style="color:var(--main-dark); font-weight:700;">업무문서 &gt; 업무 목록</a>에서.' +
             '</p>');
     })();
 

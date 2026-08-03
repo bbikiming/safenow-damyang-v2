@@ -4,7 +4,7 @@
    집합교육 상세를 모달 대신 별도 화면으로. ?id=course_id 로 진입.
    · 교육 정보(일정·시간·강사·장소·내용·첨부)
    · 신청현황 테이블: 부서 · 신청자 명단 · 인원 · 서명파일 · 신청일 (전체 노출)
-   · [부서 신청] · [교육 종료 처리] · 이력
+   · [참석자 등록부 등록] · [교육 종료 처리] · 이력
    표준: 배지 chip-status+DYV2.toneOf · 표 .table-figma · 부서 선택 ORGPICK ·
         시연 훅 EDUTOUR.onEvent('applied'|'closed')
    ===================================================================== */
@@ -17,7 +17,7 @@
     function tourEvt(e) { if (global.EDUTOUR) global.EDUTOUR.onEvent(e); }
 
     var state = { mount: null, courseId: null };
-    var G = null; /* 부서 신청 폼 */
+    var G = null; /* 참석자 등록부 등록 폼 */
 
     function render() {
         if (!state.mount) return;
@@ -35,7 +35,7 @@
         var actions = '';
         if (c.status === 'OPEN') {
             actions =
-                '<button type="button" class="btn btn-outline" onclick="EDURD.openApply()">＋ 부서 신청</button>' +
+                '<button type="button" class="btn btn-outline" onclick="EDURD.openApply()">＋ 참석자 등록부 등록</button>' +
                 '<button type="button" class="btn btn-primary" data-tour="close" onclick="EDURD.closeCourse()">교육 종료 처리</button>';
         }
 
@@ -73,7 +73,7 @@
                 '<td class="edu-name">' + esc(E().deptName(e.deptId)) + '</td>' +
                 '<td>' + esc(names) + '</td>' +
                 '<td>' + (e.workerIds || []).length + '명</td>' +
-                '<td>' + (e.signFile ? '<span style="color:var(--main-dark);font-size:var(--fs-12);">📎 ' + esc(e.signFile) + '</span>' : '<span style="color:var(--text-lightgray);">-</span>') + '</td>' +
+                '<td>' + (e.signFile ? '<span style="color:var(--main-dark);font-size:var(--fs-12);">📎 ' + esc(e.signFile) + '</span>' : '<span style="color:var(--text-gray);">-</span>') + '</td>' +
                 '<td>' + esc(e.at) + '</td>' +
                 '<td class="col-action"><button type="button" class="btn btn-outline btn-sm" style="border-color:var(--status-danger-border);color:var(--status-danger-fg);" onclick="EDURD.confirmCancel(\'' + esc(e.deptId) + '\')">신청 취소</button></td>' +
             '</tr>';
@@ -94,13 +94,13 @@
                     (h.by ? '<span class="edu-hist-by">— ' + esc(h.by) + '</span>' : '') +
                 '</span>' +
             '</div>';
-        }).join('') : '<div style="color:var(--text-lightgray);font-size:var(--fs-12);padding:12px;">이력이 없습니다.</div>';
+        }).join('') : '<div style="color:var(--text-gray);font-size:var(--fs-12);padding:12px;">이력이 없습니다.</div>';
         var histCard = '<div class="edu-card"><div class="edu-card-title">이력</div><div class="edu-hist">' + hist + '</div></div>';
 
         state.mount.innerHTML = summary + enrollTable + histCard;
     }
 
-    /* =============== 부서 신청 =============== */
+    /* =============== 참석자 등록부 등록 =============== */
     function openApply() {
         var depts = E().deptCandidates();
         G = { deptId: depts[0].id, workerIds: {}, signFile: '' };
@@ -123,7 +123,7 @@
                 '<span>' + esc(w.name) + '</span>' +
                 '<span style="color:var(--text-gray);font-size:var(--fs-12);">' + esc(E().catLabel(w.category)) + '</span>' +
             '</label>';
-        }).join('') : '<div style="color:var(--text-lightgray);font-size:var(--fs-12);padding:8px;">이 부서에 대상자가 없습니다.</div>';
+        }).join('') : '<div style="color:var(--text-gray);font-size:var(--fs-12);padding:8px;">이 부서에 대상자가 없습니다.</div>';
         var body =
             '<div style="font-size:var(--fs-12);color:var(--text-gray);margin-bottom:10px;">' +
                 '<b>' + esc(c.desc) + '</b> · 일정 ' + esc(E().courseDateTime(c)) + ' · ' + c.hours + 'h' +
@@ -134,7 +134,7 @@
                     '<button type="button" class="btn btn-sm btn-outline" onclick="ORGPICK.toggle(\'erd-applydept\',\'deptId\',\'EDURD.applyPickDept\')">조직도</button>' +
                 '</div></div></div>' +
             '<div class="edu-modal-row"><label class="form-label">근로자 선택 <span style="color:var(--status-danger-fg)">*</span> ' +
-                '<span style="color:var(--text-lightgray);font-weight:var(--fw-regular);">(' + selCnt + ' / ' + ws.length + '명)</span></label>' +
+                '<span style="color:var(--text-gray);font-weight:var(--fw-regular);">(' + selCnt + ' / ' + ws.length + '명)</span></label>' +
                 '<div class="edu-tg-body" style="max-height:240px;">' + rows + '</div>' +
             '</div>' +
             '<div class="edu-modal-row"><label class="form-label">서명파일 업로드 <span style="color:var(--status-danger-fg)">*</span></label>' +
@@ -144,7 +144,7 @@
                     : '<button type="button" class="btn btn-sm btn-outline" onclick="EDURD.applyAttachSign()">＋ 서명파일 첨부 (프로토타입)</button>') +
                 V().fileHint() +
             '</div>';
-        V().openModal('부서 신청 · ' + esc(E().deptName(G.deptId)), body,
+        V().openModal('참석자 등록부 등록 · ' + esc(E().deptName(G.deptId)), body,
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="EDURD.doApply()">신청 완료</button>');
     }
@@ -157,21 +157,21 @@
         if (!ids.length) { toast('근로자를 1명 이상 선택하세요.'); return; }
         if (!G.signFile) { toast('서명파일을 업로드하세요 (필수).'); return; }
         E().addEnroll({ courseId: state.courseId, deptId: G.deptId, workerIds: ids, signFile: G.signFile, at: E().today() });
-        E().pushCourseHistory(state.courseId, { type: 'STATUS', by: E().deptName(G.deptId), memo: '부서 신청 · ' + ids.length + '명 · 서명파일 첨부' });
+        E().pushCourseHistory(state.courseId, { type: 'STATUS', by: E().deptName(G.deptId), memo: '참석자 등록부 등록 · ' + ids.length + '명 · 서명파일 첨부' });
         V().closeModal();
         toast(E().deptName(G.deptId) + ' · ' + ids.length + '명 신청 완료');
         render();
         tourEvt('applied');
     }
 
-    /* =============== 부서 신청 취소 =============== */
+    /* =============== 참석자 등록부 등록 취소 =============== */
     /* 잘못 신청한 부서를 되돌린다. 이미 종료 처리된 교육이면 그 부서 몫의
      * 이수기록까지 회수되므로 확인 문구에 명시한다. */
     function confirmCancel(deptId) {
         var c = E().courseOf(state.courseId); if (!c) return;
         var mine = E().enrolls(state.courseId).filter(function (e) { return e.deptId === deptId; });
         var cnt = mine.reduce(function (n, e) { return n + (e.workerIds || []).length; }, 0);
-        V().openModal('부서 신청 취소',
+        V().openModal('참석자 등록부 등록 취소',
             '<p style="font-size:var(--fs-13);"><b>' + esc(E().deptName(deptId)) + '</b> · 신청 ' + cnt + '명</p>' +
             (c.status === 'DONE'
                 ? '<div class="check-notice" style="margin-top:10px;">이미 종료 처리된 교육이라 <b>반영된 이수시간 ' + c.hours + 'h 도 함께 회수</b>됩니다.</div>'
@@ -184,7 +184,7 @@
         if (r) {
             E().pushCourseHistory(state.courseId, {
                 type: 'STATUS', by: E().deptName(deptId),
-                memo: '부서 신청 취소 · ' + r.workers + '명' + (r.records ? ' · 이수기록 ' + r.records + '건 회수' : '')
+                memo: '참석자 등록부 등록 취소 · ' + r.workers + '명' + (r.records ? ' · 이수기록 ' + r.records + '건 회수' : '')
             });
         }
         V().closeModal();

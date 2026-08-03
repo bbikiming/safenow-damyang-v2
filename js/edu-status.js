@@ -56,6 +56,13 @@
         ];
     }
 
+    /* 개인별 결재 상신은 2026-07-30 회의로 잠시 꺼져 있다(EDUAPV.SUBMIT_ENABLED).
+     * 꺼진 동안 빈 열이 남으면 표만 넓어지므로 열 자체를 빼고, 다시 켜지면 자동으로 돌아온다. */
+    function apvOn() { return !!(global.EDUAPV && global.EDUAPV.submitEnabled && global.EDUAPV.submitEnabled()); }
+    function apvCell(w) {
+        return apvOn() ? '<td class="edu-apv-cell">' + global.EDUAPV.personControl(w.id) + '</td>' : '';
+    }
+
     function render() {
         if (!state.mount) return;
         var tabs =
@@ -162,7 +169,7 @@
                 '<td>' + esc(E().catLabel(w.category)) + '</td>' +
                 '<td>' + esc(empLabel) + '</td>' +
                 '<td>' + esc(w.hireDate) + '</td>' +
-                '<td>' + esc(cyc.start) + '<br><span style="font-size:var(--fs-12);color:var(--text-lightgray);">~ ' + esc(cyc.end) + '</span></td>' +
+                '<td>' + esc(cyc.start) + '<br><span style="font-size:var(--fs-12);color:var(--text-gray);">~ ' + esc(cyc.end) + '</span></td>' +
                 '<td><span class="chip-status chip-sm ' + dTone + '">' + dTxt + '</span></td>' +
                 '<td>' + r.need + 'h</td>' +
                 '<td>' + r.done + 'h</td>' +
@@ -170,9 +177,9 @@
                 '<td>' + (r.complete
                     ? '<span class="chip-status chip-sm ' + V().toneOf('완료') + '">완료</span>'
                     : '<span class="chip-status chip-sm ' + V().toneOf('미이수') + '">미이수</span>') + '</td>' +
-                '<td class="edu-apv-cell">' + (global.EDUAPV ? global.EDUAPV.personControl(w.id) : '') + '</td>' +
+                apvCell(w) +
             '</tr>';
-        }).join('') : '<tr><td colspan="13"><div class="v2-empty">조건에 맞는 대상자가 없습니다.</div></td></tr>';
+        }).join('') : '<tr><td colspan="' + (apvOn() ? 13 : 12) + '"><div class="v2-empty">조건에 맞는 대상자가 없습니다.</div></td></tr>';
 
         var bar = EDUFILTER.bar([
             { type: 'search', id: 'es-q', value: state.fQ, placeholder: '이름·부서·구분 검색', on: "EDUS.setF('Q', this.value)" },
@@ -202,7 +209,7 @@
             '<table class="table-figma table-compact table-nowrap"><thead><tr>' +
                 '<th style="width:44px;"></th><th>이름</th><th>부서</th><th>구분</th><th>고용형태</th>' +
                 '<th>채용일</th><th>현재 사이클</th><th>종료 D-day</th>' +
-                '<th>필요</th><th>인정</th><th>미달</th><th>정기</th><th>개인 결재</th>' +
+                '<th>필요</th><th>인정</th><th>미달</th><th>정기</th>' + (apvOn() ? '<th>개인 결재</th>' : '') +
             '</tr></thead><tbody>' + rows + '</tbody></table>' +
             '</div>' +
         '</div>';

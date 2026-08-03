@@ -3,7 +3,7 @@
    ---------------------------------------------------------------------
    구 edu.html 3탭 시연 투어(발표용 핵심 자산)를 재설계 v1 다화면 구조로 포팅.
    실제 업무 플로우를 화면을 건너다니며 그대로 구동한다:
-     1. 집합교육 등록 (edu-reg)  → 2. 부서 신청·서명 업로드 (edu-reg)
+     1. 집합교육 등록 (edu-reg)  → 2. 참석자 등록부 등록·서명 업로드 (edu-reg)
      → 3. 교육 종료 처리 (edu-reg-detail) → 4. 이수현황 반영 확인 (edu-status)
    · 단계 상태는 sessionStorage 로 페이지 간 유지, 각 화면 하단 고정 패널로 안내.
    · 시연 데이터 복원·초기화는 DYEDU.reset() (sessionStorage 시드 재생성).
@@ -35,12 +35,12 @@
             href: function () { return 'edu-reg.html'; },
             selector: '[data-tour="reg-create"]',
             title: '1. 재난안전과가 집합교육을 등록합니다',
-            desc: '과정 일정·시간·강사·장소·내용과 계획서 첨부를 한 건으로 등록하면 부서 신청 접수가 시작됩니다.',
+            desc: '과정 일정·시간·강사·장소·내용과 계획서 첨부를 한 건으로 등록하면 참석자 등록부 접수가 시작됩니다.',
             script: '엑셀로 나눠 관리하던 월별 교육 일정·계획 문서를 하나의 교육 건으로 등록합니다.',
             actionLabel: '집합교육 등록 열기',
             action: function () { global.EDUR.openCreate('group'); },
             advanceOn: 'created',
-            modalGuide: '등록 즉시 부서 신청 접수가 시작됩니다. 일자·시간·내용을 확인하고 [등록]을 누르세요.'
+            modalGuide: '등록 즉시 참석자 등록부 접수가 시작됩니다. 일자·시간·내용을 확인하고 [등록]을 누르세요.'
         },
         {
             label: '신청', page: 'edu-reg.html',
@@ -49,7 +49,7 @@
             title: '2. 부서가 대상자를 선택해 신청합니다',
             desc: '부서 담당자가 근로자 명단에서 대상자를 체크하고 서명파일을 필수로 업로드해 신청합니다.',
             script: '서명파일은 신청 시점에 업로드합니다. 정원·마감·불참 개념 없이 신청 명단이 곧 카운트 대상입니다.',
-            actionLabel: '부서 신청 열기',
+            actionLabel: '참석자 등록부 등록 열기',
             action: function () {
                 var c = openCourse();
                 if (!c) { V().toast('신청 접수 중인 집합교육이 없습니다. 시연을 다시 시작해 데이터를 복원하세요.'); return; }
@@ -111,7 +111,7 @@
         bar.innerHTML =
             '<div class="edu-demo-copy">' +
                 '<strong>안전보건교육 핵심 업무 시연</strong>' +
-                '<span>집합교육 등록 → 부서 신청(서명 업로드) → 교육 종료 처리 → 이수현황 반영까지 실제 화면 흐름으로 시연합니다.</span>' +
+                '<span>집합교육 등록 → 참석자 등록부 등록(서명 업로드) → 교육 종료 처리 → 이수현황 반영까지 실제 화면 흐름으로 시연합니다.</span>' +
             '</div>' +
             '<div class="edu-demo-actions">' +
                 '<button class="btn btn-primary" type="button" onclick="EDUTOUR.start()">시연</button>' +

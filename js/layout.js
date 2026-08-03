@@ -51,9 +51,12 @@
         super: { label: '관리감독자', tone: 'info',     who: '실과장·사업소장·읍면장',
                  law: '산업안전보건법 §16 — 소속 부서 관리·감독',
                  hideNav: ['admin'] },
+        /* 업무담당자는 '가장 낮은 권한'이다 — 종전에는 hideNav 가 비어 있어서
+         * 물순환사업소 주무관이 사용자·권한 관리까지 볼 수 있었다(계층 역전).
+         * 시스템 관리는 페르소나의 sysAdmin 플래그로만 열린다. */
         staff: { label: '업무담당자', tone: 'success',  who: '실무 수행자',
                  law: '부서 안전보건 업무 실무 수행·기록',
-                 hideNav: [] },
+                 hideNav: ['admin'] },
     };
     const ROLE_PERSONAS = [
         { id: 'mayor',  tier: 'head',  uid: 'u_mayor', name: '김담양', role: '군수',
@@ -65,7 +68,20 @@
         { id: 'town',   tier: 'super', uid: 'u_twn1',  name: '노읍장', role: '담양읍장',
           org: '담양읍', deptId: 'town_damyang', deptName: '담양읍', desc: '읍면장 — 담양읍 관리·감독' },
         { id: 'staff',  tier: 'staff', uid: 'u_jjt2',  name: '박안전', role: '안전관리 주무관',
-          org: '담양군청 · 재난안전과', deptId: 'safety', deptName: '재난안전과', desc: '중대재해팀 — 실무 수행' },
+          org: '담양군청 · 재난안전과', deptId: 'safety', deptName: '재난안전과',
+          /* 주관부서 실무자는 시스템 관리(메뉴·권한·법령)를 겸한다 — 이 프로토타입에서
+             유일하게 admin 그룹을 보는 사람이다. */
+          sysAdmin: true,
+          desc: '주관부서(재난안전과) 실무 · 시스템 관리 — 전 부서 취합·점검' },
+        /* 업무를 '배정받는' 쪽 관점 — 주관부서 실무자(박안전)와 성격이 다르다.
+           이 사람들은 자기 부서 일만 보고, 위험성평가를 직접 실시해 개선조치를 끝낸다.
+           uid·deptId 는 DYV2.ORG 값과 동일해야 한다(CLAUDE.md §3). */
+        { id: 'wat',    tier: 'staff', uid: 'u_wat3',  name: '하정수', role: '주무관',
+          org: '물순환사업소 · 정수팀', deptId: 'water', deptName: '물순환사업소',
+          desc: '배정 부서 담당자 — 물순환사업소 실무' },
+        { id: 'envst',  tier: 'staff', uid: 'u_env2',  name: '정환경', role: '유해·위험요인 담당 주무관',
+          org: '담양군청 · 환경과', deptId: 'env', deptName: '환경과',
+          desc: '배정 부서 담당자 — 환경과 실무' },
     ];
     function rolePersona() {
         let id = null;
@@ -73,6 +89,43 @@
         return ROLE_PERSONAS.find(p => p.id === id) || ROLE_PERSONAS.find(p => p.id === 'staff');
     }
     function roleTier(p) { return ROLE_TIERS[(p || rolePersona()).tier]; }
+
+    /* =========================================================================
+     * 조회 범위 (DYROLE.scope) — '무엇이 보이는가'의 단일 출처
+     * -------------------------------------------------------------------------
+     * 'all' 이면 전 부서, 그 밖에는 그 deptId 소관만 본다.
+     *   · 군수(head)      — 총괄이므로 전 부서
+     *   · 재난안전과(주관) — 과장·주무관 모두 전 부서(전 부서를 봐야 총괄 업무가 된다)
+     *   · 그 밖의 실과장·사업소장·읍면장·주무관 — **소속 부서만**
+     *
+     * 조작 권한(rsk-list canManage / my-work canAct)과는 **다른 축**이다.
+     * 그쪽은 '무엇을 바꿀 수 있는가'이고 이건 '무엇이 보이는가'다.
+     * 화면마다 `p.deptId` 로 직접 판정하지 말고 이 함수만 볼 것 —
+     * 종전에는 위험성평가·개선조치·수시평가·내 할일 4개 화면이 각자 달랐다
+     * (물순환사업소 주무관이 재난안전과 개선조치를 열람하고 등록까지 할 수 있었다).
+     * ========================================================================= */
+    const OWNER_DEPT = 'safety';                     /* 주관부서 = 재난안전과 */
+    function roleScope(p) {
+        p = p || rolePersona();
+        if (!p || p.tier === 'head') return 'all';
+        if (p.deptId === OWNER_DEPT) return 'all';
+        return p.deptId || 'all';
+    }
+    /* 이 레코드가 지금 사람의 조회 범위 안인가 (deptId 없는 전사 항목은 항상 보인다) */
+    function roleInScope(deptId) {
+        const s = roleScope();
+        return s === 'all' || !deptId || deptId === s;
+    }
+    /* 실제로 가릴 GNB 그룹 — 계층 기본값에 페르소나 예외(sysAdmin)를 얹는다 */
+    function roleHidden(p) {
+        p = p || rolePersona();
+        const base = ROLE_TIERS[p.tier].hideNav.slice();
+        if (p.sysAdmin) {
+            const i = base.indexOf('admin');
+            if (i >= 0) base.splice(i, 1);
+        }
+        return base;
+    }
     function roleSet(id) {
         const p = ROLE_PERSONAS.find(x => x.id === id);
         if (!p || p.id === rolePersona().id) { roleClose(); return; }
@@ -84,7 +137,7 @@
         /* 새 권한에서 숨겨지는 GNB 그룹의 화면이면 대시보드로, 아니면 현재 화면 유지 */
         const pageId = document.body.getAttribute('data-dy-page') || 'index';
         const group = findGroup(pageId);
-        if (ROLE_TIERS[p.tier].hideNav.indexOf(group.id) >= 0) {
+        if (roleHidden(p).indexOf(group.id) >= 0) {
             window.location.href = 'index.html';
         } else {
             window.location.reload();
@@ -280,23 +333,32 @@
         //    정기(RSK01-L, 목록·상세 통합) · 수시(RSK03-L) · 개선조치(IMP01-L).
         //    v1.1 §6.2: '내 할일'은 위험성평가 그룹에서 빠져 대시보드 그룹의 전역 메뉴로 이관 (my-work.html).
         //    작업공정 관리(rsk-proc) · 위험성 추정(rsk-exec)은 메뉴에서 제거하되 파일은 보존.
+        //    ※ 개선조치(rsk-imp)는 2026-07-30 회의에서 **독립 메뉴 제외** 확정 — 정기평가 상세 안에서
+        //       부서별로 처리한다("저기서 지금 개선 조치를 우리 이제 추가하기로 했잖아요. 그러니까
+        //       개선 조치 저거는 이제 필요 없죠"). 프로세스가 없어진 게 아니라 화면이 합쳐진 것이므로
+        //       rsk-imp.html·rsk-imp-detail.html 과 DYLAW 매핑은 **보존**한다(rsk-proc·rsk-exec 선례와 동일).
+        //       딥링크(dashboard·my-work·menu)는 그대로 동작한다. 메뉴로 되살리지 말 것.
         { id: 'risk', label: '위험성평가', icon: 'alert', items: [
             { id: 'rsk-list', label: '정기 위험성평가', icon: 'alert', href: 'rsk-list.html', screen: 'RSK01-L / SFR-007' },
             { id: 'rsk-occ',  label: '수시 위험성평가', icon: 'alert', href: 'rsk-occ.html',  screen: 'RSK03-L / SFR-007' },
-            { id: 'rsk-imp',  label: '개선조치',        icon: 'check', href: 'rsk-imp.html',  screen: 'IMP01-L / SFR-003' },
+            /* hidden — 사이드바에는 안 뜨지만 그룹 소속은 유지한다. 딥링크(내 할일·대시보드)로
+             * 들어온 개선조치 화면이 엉뚱하게 '대시보드' SNB 를 달고 뜨는 것을 막는다. */
+            { id: 'rsk-imp',        hidden: true, label: '개선조치',      icon: 'check', href: 'rsk-imp.html',        screen: 'IMP01-L / SFR-003' },
+            { id: 'rsk-imp-detail', hidden: true, label: '개선조치 상세', icon: 'check', href: 'rsk-imp-detail.html', screen: 'IMP01-D / SFR-003' },
         ]},
 
-        // GNB 4. 안전보건관리체계 — 핵심 대메뉴, 공통 레이아웃 menu.html 공유
-        //    ※ 위험성평가·유해위험요인·개선조치는 위 '위험성평가' 그룹으로 이관(레퍼런스 정본). rsk-imp.html 등 스텁은 하위호환 유지.
-        //    ※ 안전보건교육은 재설계 v1 구조 적용(2026-07-20)으로 별도 'edu' 그룹 승격 — 아래 참고. edu.html 은 리다이렉트 스텁.
+        // GNB 4. 안전보건관리체계 — 2026-07-30 회의로 **2카테고리**로 재편.
+        //    발주처: "안전 보건 관리 체계는 두 카테고리로 해주세요. 첫 번째 중대 산업 시민 재해 계획 …
+        //             두 번째 … 중대 산업 시민재해 의무 이행 점검 이 두 개만 만들어 주시면 돼요."
+        //    ※ 하위 점검항목·계획 서식은 발주처가 양식을 주기로 해 아직 확정 전이다 — 트리를 더 쪼개지 말 것.
+        //    ※ 작업환경측정·특수건강검진은 같은 회의에서 **대메뉴로 분리**되어 아래로 빠졌다.
+        //    ※ 도급관리는 재무과 계약자료 회신·컨설팅 자문 대기 중이라 직속으로 남긴다(삭제 아님).
         { id: 'sbm', label: '안전보건관리체계', icon: 'shield', items: [
-            { id: 'sbm-policy',   label: '경영방침',           icon: 'shield',   href: 'menu.html?m=policy',   screen: 'SFR-005' },
-            { id: 'sbm-org',      label: '조직',               icon: 'users',    href: 'menu.html?m=org',      screen: 'SFR-006·009·010' },
-            // 안전보건관리책임자 법정 직무 실행·이행 (산안법 §15 — 위탁용역 계획·실시·증빙·후속조치, 인력평가 자동 연계)
-            { id: 'sbm-workenv',  label: '작업환경측정',       icon: 'gauge',    href: 'work-env.html',        screen: 'WEM01-L' },
-            { id: 'sbm-health',   label: '건강검진',           icon: 'activity', href: 'health-exam.html',     screen: 'HEX01-L' },
-            { id: 'sbm-contract', label: '도급관리',           icon: 'building', href: 'menu.html?m=contract', screen: 'SFR-013' },
-            { id: 'sbm-comply',   label: '이행관리',           icon: 'coins',    href: 'menu.html?m=comply',   screen: 'SFR-008·014' },
+            { id: 'sbm-policy',   section: '중대산업·시민재해 계획',      label: '경영방침', icon: 'shield', href: 'menu.html?m=policy', screen: 'SFR-005' },
+            { id: 'sbm-org',      section: '중대산업·시민재해 계획',      label: '조직',     icon: 'users',  href: 'menu.html?m=org',    screen: 'SFR-006·009·010' },
+            { id: 'sbm-comply',   section: '중대산업·시민재해 의무 이행점검', label: '이행점검', icon: 'check', href: 'menu.html?m=comply', screen: 'SFR-008·014' },
+            /* 직속 (section 없음) */
+            { id: 'sbm-contract', label: '도급관리', icon: 'building', href: 'menu.html?m=contract', screen: 'SFR-013' },
         ]},
 
         // GNB. 안전보건교육 — 재설계 v1 §8.5 (SNB 3뎁스, 2026-07-20 적용)
@@ -315,6 +377,22 @@
             { id: 'edu-workers', label: '근로자 명단 관리',    icon: 'users', href: 'edu-workers.html', screen: 'EDU-WORKERS / SFR-004' },
             /* 온나라 결재 상신 이력 통합 조회 (총괄·교육별·개인별) — js/edu-apv-log.js */
             { id: 'edu-approval', label: '결재 이력',          icon: 'file',  href: 'edu-approval.html', screen: 'EDU-APV-LOG / SFR-004' },
+        ]},
+
+        // GNB. 작업환경측정 · 특수건강검진 — 2026-07-30 회의에서 안전보건관리체계 하위에서 **대메뉴로 승격**.
+        //   근거: 매년 반복 수행하고 예산 과목이 직접 편성되는 업무라 첫 화면에서 바로 보여야 한다
+        //         (발주처: "작업 환경 측정 그리고 특수 건강 검진 이 항목은 예산 과목에 들어 있어요" /
+        //          개발측 "일단 이 두 개만 대메뉴를 빼는 걸로 할게요" → 발주처 "예. 일단 빼주시고").
+        //   ※ page id 는 sbm-* 를 그대로 둔다 — DYLAW.MAP(law-map.js)·역참조 표가 이 키에 묶여 있고
+        //     law-map.js 는 법제처 스냅샷 생성물이라 손으로 키를 고칠 수 없다(CLAUDE.md §10).
+        //   ※ 두 화면의 **내용은 이번 회차 수정 대상이 아니다** — 발주처가 작업환경측정은 "따로 이거는
+        //     안 건들게요", 건강검진은 "아예 안 봤어요"라고 명시했다. 메뉴 위치만 옮긴다.
+        { id: 'workenv', label: '작업환경측정', icon: 'gauge', items: [
+            { id: 'sbm-workenv', label: '작업환경측정', icon: 'gauge', href: 'work-env.html', screen: 'WEM01-L' },
+        ]},
+        { id: 'health', label: '특수건강검진', icon: 'activity', items: [
+            /* 화면은 일반·특수를 함께 다룬다(무수정) — SNB 라벨로 그 범위를 밝힌다 */
+            { id: 'sbm-health', label: '건강검진 (일반·특수)', icon: 'activity', href: 'health-exam.html', screen: 'HEX01-L' },
         ]},
 
         // GNB 4. 의견청취 (SFR-011) — 대메뉴 승격. 화면 내부 3탭을 SNB 3메뉴로 분리 (menu.html?m=opinion&sub=)
@@ -486,9 +564,56 @@
         });
     }
 
+    /* GNB 가로 넘침 처리 (2026-07-30 회의로 그룹 14개)
+     *   · 실제로 넘칠 때만 우측 페이드(.is-scrollable)를 붙인다 — 안 넘치는데 붙이면
+     *     마지막 항목만 괜히 흐려 보인다.
+     *   · 활성 항목이 잘려 있으면 화면 안으로 끌어온다. 지금 어느 메뉴에 있는지 안 보이면
+     *     스크롤이 있다는 사실 자체를 눈치채지 못한다.
+     *   · PC(≥1024px)에서는 알림·사용자 칩이 GNB 라인 위로 겹쳐 오므로(compact 상단)
+     *     그만큼 오른쪽 여백을 확보해 마지막 항목이 칩 밑에 깔리지 않게 한다. */
+    function wireGnbOverflow() {
+        const gnb = document.querySelector('.dy-gnb');
+        if (!gnb) return;
+        const sync = () => {
+            gnb.style.paddingRight = '';
+            gnb.style.removeProperty('--gnb-fade');
+            const actions = document.querySelector('.dy-header-actions');
+            const gr0 = gnb.getBoundingClientRect();
+            if (actions) {
+                const ar0 = actions.getBoundingClientRect();
+                /* 브레이크포인트 상수 대신 실제 겹침으로 판정한다 — compact 상단(PC)에서만
+                   칩이 GNB 라인 위로 내려오므로, 세로로 겹칠 때만 오른쪽을 비운다.
+                   padding 은 스크롤 끝을 늘려 마지막 항목까지 끌어올 수 있게 하고,
+                   mask 는 칩 밑으로 들어간 부분을 지워 글자가 겹쳐 보이지 않게 한다. */
+                const vOverlap = Math.min(gr0.bottom, ar0.bottom) - Math.max(gr0.top, ar0.top) > 0;
+                if (vOverlap && ar0.left < gr0.right) {
+                    const reserve = gr0.right - ar0.left + 16;
+                    gnb.style.paddingRight = reserve + 'px';
+                    gnb.style.setProperty('--gnb-fade', reserve + 'px');
+                }
+            }
+            gnb.classList.toggle('is-scrollable', gnb.scrollWidth > gnb.clientWidth + 1);
+            const active = gnb.querySelector('.dy-gnb-item.is-active');
+            if (active) {
+                const ar = active.getBoundingClientRect(), gr = gnb.getBoundingClientRect();
+                if (ar.left < gr.left || ar.right > gr.right) {
+                    gnb.scrollLeft += (ar.left - gr.left) - (gnb.clientWidth - ar.width) / 2;
+                }
+            }
+        };
+        /* 왼쪽으로 스크롤된 상태에서는 왼쪽에도 페이드를 줘 "더 있다"를 알린다 */
+        const syncLeft = () => {
+            gnb.style.setProperty('--gnb-fade-l', gnb.scrollLeft > 4 ? '24px' : '0px');
+        };
+        const all = () => { sync(); syncLeft(); };
+        all();
+        gnb.addEventListener('scroll', syncLeft, { passive: true });
+        window.addEventListener('resize', all);
+    }
+
     function renderGnb(activeGroupId) {
         /* 권한 계층별 GNB 차등 노출 — hideNav 그룹은 렌더하지 않음 (DYROLE) */
-        const hidden = roleTier().hideNav || [];
+        const hidden = roleHidden();
         return html`
             <nav class="dy-gnb">
                 ${NAV.filter(g => hidden.indexOf(g.id) < 0).map(g => {
@@ -508,7 +633,8 @@
          *   item.section 값이 바뀌면 섹션 헤더 삽입, 섹션→비섹션 전환 시 구분선.
          *   섹션 소속 아이템은 is-nested 클래스로 들여쓰기. */
         let prevSection = null;
-        const parts = activeGroup.items.map((it, idx) => {
+        /* hidden 항목은 그룹 소속만 유지하고 사이드바에는 그리지 않는다 */
+        const parts = activeGroup.items.filter(it => !it.hidden).map((it, idx) => {
             let prefix = '';
             const curSection = it.section || null;
             if (curSection !== prevSection) {
@@ -583,15 +709,11 @@
                 // [data-pagination] 마커 자동 렌더
                 renderPaginationMarkers(main);
 
-                // 3자 책임 라인 푸터 자동 주입 (v0.2 LAW-PERM)
-                injectThreePartyFooter(main);
-
                 bodyGrid.appendChild(main);
             } else {
                 const ph = document.createElement('main');
                 ph.className = 'dy-main';
                 injectPageTitle(ph);
-                injectThreePartyFooter(ph);
                 bodyGrid.appendChild(ph);
             }
 
@@ -604,6 +726,7 @@
             wireMobileMenu();
             wireNotification();
             wireRoleSwitcher();
+            wireGnbOverflow();
 
             /* 권한 전환 직후 도착 토스트 (DYROLE) */
             try {
@@ -674,19 +797,10 @@
         mainEl.insertBefore(frag, mainEl.firstChild);
     }
 
-    /* 3자 책임 라인 푸터 자동 주입 (v0.2 LAW-PERM)
-     *  - 컨설팅 안전일터관리원 · 구축 ㈜다온플레이스 · 발주 담양군청
-     *  - 페이지 내 이미 .three-party-footer 가 있으면 건너뜀
+    /* ※ 3자 책임 라인 푸터(컨설팅 안전일터관리원 · 구축 ㈜다온플레이스 · 발주 담양군청)는
+     *    2026-07-30 회의에서 전체 영역 삭제가 확정되어 제거했다. 다시 만들지 말 것.
+     *    (발주처: "컨설팅 이거 업체 아예 날려버리고" / "이거는 다른 회사거든요")
      */
-    function injectThreePartyFooter(mainEl) {
-        if (!mainEl || mainEl.querySelector('.three-party-footer')) return;
-        const footer = document.createElement('footer');
-        footer.className = 'three-party-footer';
-        footer.style.cssText = 'text-align:center; padding:12px; font-size:var(--fs-12); color:var(--text-gray); border-top:1px solid var(--card-line); margin-top:24px;';
-        footer.innerHTML = '컨설팅 <strong>안전일터관리원</strong> · 구축 <strong>㈜다온플레이스</strong> · 발주 <strong>담양군청 (재난안전과 중대재해팀)</strong>' +
-            '<span style="margin-left:12px; opacity:0.7;">프로토타입 v2</span>';
-        mainEl.appendChild(footer);
-    }
 
     /* main 안의 [data-pagination] 마커를 renderPagination 결과로 자동 교체
      *   <div data-pagination data-current="1" data-total="4"></div>
@@ -894,11 +1008,19 @@
     };
 
     /* 권한 시연 API — 대시보드(js/dashboard.js) 등 화면 모듈이 참조 */
+    /* 로그인한 사람의 소속 부서 — 화면이 '내 부서 관점'의 기본값으로 쓴다.
+       군수·주관부서처럼 전 부서를 보는 자리는 부서가 없으므로 '' 를 돌려준다. */
+    function roleDeptId() { const p = rolePersona(); return p && p.deptId ? p.deptId : ''; }
     window.DYROLE = {
         TIERS: ROLE_TIERS,
         PERSONAS: ROLE_PERSONAS,
         current: rolePersona,
+        deptId: roleDeptId,
+        hidden: roleHidden,
         tier: roleTier,
+        OWNER_DEPT: OWNER_DEPT,
+        scope: roleScope,
+        inScope: roleInScope,
         set: roleSet,
         open: roleOpen,
         close: roleClose,

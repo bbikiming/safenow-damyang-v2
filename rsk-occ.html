@@ -12,27 +12,46 @@
         .roc-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); padding: 12px 16px; margin-bottom: 14px; }
         .roc-tb-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         .roc-tb-label { font-size: var(--fs-12); font-weight: 700; color: var(--text-gray); }
-        .roc-table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); overflow: hidden; }
+        .roc-table-scroll { overflow-x: auto; }
+        .roc-table { width: 100%; min-width: 940px; border-collapse: collapse; background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); overflow: hidden; }
         .roc-table th { font-size: var(--fs-12); font-weight: 700; color: var(--text-gray); text-align: left; padding: 11px 14px; background: var(--surface-alt); border-bottom: 1px solid var(--card-line); }
         .roc-table td { font-size: var(--fs-13); color: var(--text-black); padding: 12px 14px; border-bottom: 1px solid var(--card-line); vertical-align: top; }
         .roc-table tr:last-child td { border-bottom: none; }
         .roc-reason { display: inline-block; padding: 2px 9px; border-radius: var(--radius-md); font-size: var(--fs-12); font-weight: 700; }
+        /* 실시 사유 6종 — 위험성평가 고시 §15② 각 호 (js/rsk-data.js OCC_REASONS 와 키 일치) */
         .roc-reason.ACCIDENT     { background: var(--status-danger-bg); color: var(--status-danger-fg); border: 1px solid var(--status-danger-border); }
+        .roc-reason.BUILDING,
         .roc-reason.EQUIP_CHANGE { background: var(--status-warning-bg); color: var(--status-warning-fg); border: 1px solid var(--status-warning-border); }
+        .roc-reason.REPAIR,
+        .roc-reason.METHOD       { background: var(--status-info-bg); color: var(--status-info-fg); border: 1px solid var(--status-info-border); }
         .roc-reason.OTHER        { background: var(--gray-100); color: var(--text-gray); border: 1px solid var(--card-line); }
+        /* 실시 사유 선택 카드 (등록 진입점) */
+        .roc-reason-list { display: grid; gap: 8px; }
+        .roc-reason-pick { display: flex; gap: 10px; align-items: flex-start; width: 100%; text-align: left;
+            padding: 12px 14px; min-height: 44px; background: var(--surface); border: 1px solid var(--card-line);
+            border-radius: var(--radius-md); cursor: pointer; }
+        .roc-reason-pick:hover { border-color:var(--main-dark); background: var(--surface-alt); }
+        .roc-reason-pick:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
+        .roc-reason-no { flex: none; width: 22px; height: 22px; border-radius: var(--radius-full);
+            background: var(--main); color: var(--surface); font-size: var(--fs-12); font-weight: var(--fw-bold);
+            display: flex; align-items: center; justify-content: center; }
+        .roc-reason-body { display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-13); color: var(--text-black); }
+        .roc-reason-desc { font-size: var(--fs-12); color: var(--text-gray); }
         .roc-modal-row { margin-bottom: 12px; }
         .roc-modal-row .form-label { display: block; font-size: var(--fs-12); font-weight: 700; color: var(--text-gray); margin-bottom: 5px; }
         .roc-desc { font-size: var(--fs-12); color: var(--text-gray); margin-top: 4px; }
-        .roc-files { font-size: var(--fs-12); color: var(--text-lightgray); margin-top: 4px; }
+        /* 첨부 파일명·검토자는 의미를 담은 정보다 — 장식용 회색(--text-lightgray, 1.98:1)을 쓰지 않는다 */
+        .roc-files { font-size: var(--fs-12); color: var(--text-gray); margin-top: 4px; }
     </style>
 </head>
 <body data-dy-page="rsk-occ"
       data-page-title="수시 위험성평가"
-      data-page-subtitle="사유별 즉시 등록 · 재난안전과 검토 (RSK03-L)">
+      data-page-subtitle="법정 실시 사유 선택 → 양식 작성·첨부 → 안전관리자 검토 (RSK03-L)">
     <main>
         <div class="check-notice">
-            정기평가와 별개로 <b>재해사고 발생 · 설비/물질 변경 · 기타</b> 사유로 즉시 실시하는 위험성평가입니다.
-            등록 후 재난안전과가 <b>검토완료</b> 처리하며, 이력이 자동 기록됩니다.
+            정기평가와 별개로 <b>법이 정한 사유가 생겼을 때</b> 즉시 실시하는 위험성평가입니다.
+            등록은 <b>실시 사유 선택</b>에서 시작하고, 작성은 <b>HWPX 양식</b>을 내려받아 합니다.
+            <b>안전관리자가 서명한 검토파일을 올리면 검토 완료</b>로 처리되며, 이력이 자동 기록됩니다.
         </div>
         <div id="roc-root"></div>
     </main>
@@ -43,6 +62,7 @@
     <script src="./js/org-pick.js"></script>
     <script src="./js/rsk-kosha.js"></script>
     <script src="./js/rsk-data.js"></script>
+    <script src="./js/rsk-imp-cards.js"></script>
     <script src="./js/rsk-occ.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () { window.RSKOCC.init('roc-root'); });

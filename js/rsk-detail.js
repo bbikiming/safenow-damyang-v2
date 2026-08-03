@@ -1,7 +1,7 @@
 /* =====================================================================
    rsk-detail.js · 정기 위험성평가 상세 (RSK02-D, 재설계 v1)
    · 상단: 연도·전체 완료율. 단계 프로그레스 없음.
-   · 부서별 테이블 (부서·점검일·설문지·개선건수 N/M·조치기한·상태·관리)
+   · 부서별 테이블 (부서·점검일·설문조사표·개선건수 N/M·조치기한·상태·관리)
    · 보고서(hwpx) 업로드 · 부서 편집 모달(하자드·개선조치 입력 → 검토완료·전달)
    · 재촉 · 이력 탭 (알림·전달·재촉·사유·기한변경·상태변경 타임라인)
    · 전 부서 조치완료 시 평가 상태 자동 완료 (DYRSK.refreshAssessmentStatus)
@@ -34,7 +34,7 @@
             '<div class="rd-meta">' +
                 '<span>연도 <b>' + a.year + '</b></span>' +
                 '<span>대상 부서 <b>' + (a.depts || []).length + '개</b></span>' +
-                '<span>공통 설문지 <b>' + (a.files && a.files.surveyAll ? esc(a.files.surveyAll) : '미첨부') + '</b></span>' +
+                '<span>공통 유해위험요인 설문조사표 <b>' + (a.files && a.files.surveyAll ? esc(a.files.surveyAll) : '미첨부') + '</b></span>' +
                 (a.status === 'COMPLETED' ? '<span>완료일 <b>' + esc(a.completed_at) + '</b></span>' : '') +
             '</div>' +
             '<div class="rd-progress">' +
@@ -76,11 +76,11 @@
                 ? ' <button type="button" class="btn btn-outline btn-sm" style="border-color:var(--status-warning-border);color:var(--status-warning-fg);" onclick="RSKDETAIL.remindDept(\'' + dp.deptId + '\')">재촉</button>'
                 : '';
             var surveyCell = dp.surveyFile ? '<span class="rd-tiny-file">' + esc(dp.surveyFile) + '</span>' :
-                (a.files && a.files.surveyAll ? '<span class="rd-tiny-file">' + esc(a.files.surveyAll) + '</span>' : '<span style="color:var(--text-lightgray);">-</span>');
-            var impCell = c.total ? c.done + ' / ' + c.total : '<span style="color:var(--text-lightgray);">-</span>';
+                (a.files && a.files.surveyAll ? '<span class="rd-tiny-file">' + esc(a.files.surveyAll) + '</span>' : '<span style="color:var(--text-gray);">-</span>');
+            var impCell = c.total ? c.done + ' / ' + c.total : '<span style="color:var(--text-gray);">-</span>';
             var dueCell = dp.dueDate
                 ? '<span class="' + (overdue ? 'rd-overdue' : '') + '">' + esc(dp.dueDate) + '</span>'
-                : '<span style="color:var(--text-lightgray);">-</span>';
+                : '<span style="color:var(--text-gray);">-</span>';
             return '<tr>' +
                 '<td class="rd-dept-name">' + esc(name) + '</td>' +
                 '<td>' + esc(dp.inspectDate || '-') + '</td>' +
@@ -88,16 +88,16 @@
                 '<td>' + impCell + '</td>' +
                 '<td>' + dueCell + '</td>' +
                 '<td><span class="chip-mini ' + stCls + '">' + stLbl + '</span>' +
-                    (dp.deliveredAt ? '<div style="font-size:11px;color:var(--text-lightgray);margin-top:3px;">전달 ' + esc(dp.deliveredAt) + '</div>' : '') + '</td>' +
+                    (dp.deliveredAt ? '<div style="font-size:var(--fs-12);color:var(--text-gray);margin-top:3px;">전달 ' + esc(dp.deliveredAt) + '</div>' : '') + '</td>' +
                 '<td>' + mngBtn + remindBtn + '</td>' +
                 '</tr>';
         }).join('');
-        if (!rows) rows = '<tr><td colspan="7" style="text-align:center;color:var(--text-lightgray);padding:24px;">선정된 부서가 없습니다.</td></tr>';
+        if (!rows) rows = '<tr><td colspan="7" style="text-align:center;color:var(--text-gray);padding:24px;">선정된 부서가 없습니다.</td></tr>';
 
         var table =
             '<div class="rd-card"><div class="rd-card-title">부서별 조치</div>' +
                 '<table class="rd-table"><thead><tr>' +
-                    '<th>부서</th><th>점검일</th><th>설문지</th><th>개선건수</th><th>조치기한</th><th>상태</th><th>관리</th>' +
+                    '<th>부서</th><th>점검일</th><th>설문조사표</th><th>개선건수</th><th>조치기한</th><th>상태</th><th>관리</th>' +
                 '</tr></thead><tbody>' + rows + '</tbody></table>' +
             '</div>';
 
@@ -171,7 +171,7 @@
 
         var body = '<div class="rd-em-row" style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--text-gray);">' +
                 '<span>점검일자 <b>' + esc(dp.inspectDate || '-') + '</b></span>' +
-                '<span>설문지 <b>' + esc(dp.surveyFile || (a.files && a.files.surveyAll) || '-') + '</b></span>' +
+                '<span>설문조사표 <b>' + esc(dp.surveyFile || (a.files && a.files.surveyAll) || '-') + '</b></span>' +
                 (delivered ? '<span>전달일 <b>' + esc(dp.deliveredAt) + '</b></span>' : '') +
                 (delivered ? '<span>조치기한 <b>' + esc(dp.dueDate || '-') + '</b></span>' : '') +
             '</div>';
@@ -216,7 +216,7 @@
                 '<button type="button" class="btn btn-outline btn-sm" onclick="RSKDETAIL.emAdd()">＋ 행 추가</button>' +
             '</div>' +
             '<div class="rd-em-row">' +
-                '<label class="form-label">부서 단위 일괄 조치기한 <span style="color:var(--text-lightgray);font-weight:400;">(개별 기한이 비어있으면 이 값 사용)</span></label>' +
+                '<label class="form-label">부서 단위 일괄 조치기한 <span style="color:var(--text-gray);font-weight:400;">(개별 기한이 비어있으면 이 값 사용)</span></label>' +
                 '<input type="date" class="form-input" value="' + esc(EM.bulkDue) + '" onchange="RSKDETAIL.emBulkDue(this.value)" style="max-width:200px;">' +
             '</div>';
     }
@@ -238,7 +238,7 @@
                 '<td>' + remindBtn + '</td>' +
             '</tr>';
         }).join('');
-        if (!rows) rows = '<tr><td colspan="6" style="text-align:center;color:var(--text-lightgray);padding:18px;">전달된 개선조치가 없습니다.</td></tr>';
+        if (!rows) rows = '<tr><td colspan="6" style="text-align:center;color:var(--text-gray);padding:18px;">전달된 개선조치가 없습니다.</td></tr>';
         return '<div class="rd-em-row">' +
                 '<label class="form-label">전달된 개선조치 (' + ms.length + '건)</label>' +
                 '<table class="rd-hz-table"><thead><tr>' +

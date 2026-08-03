@@ -173,7 +173,7 @@
     function notify() {
         var r = S().workEnvOf(state.id);
         V().openModal('알림 발송',
-            '<div style="margin-bottom:12px;"><label class="form-label" for="wd-nt-to">수신자 <span style="font-weight:400;color:var(--text-lightgray)">(조직도에서 선택)</span></label>' +
+            '<div style="margin-bottom:12px;"><label class="form-label" for="wd-nt-to">수신자 <span style="font-weight:400;color:var(--text-gray)">(조직도에서 선택)</span></label>' +
                 '<div class="orgpick-field" id="wd-nt-tofield"><div style="display:flex;gap:8px;">' +
                     '<input type="text" class="form-input" id="wd-nt-to" style="flex:1;" value="' + esc(r.owner) + '">' +
                     '<button type="button" class="btn btn-outline" onclick="ORGPICK.toggle(\'wd-nt-tofield\',\'member\',\'WENVD.pickRecipient\')">조직도</button>' +

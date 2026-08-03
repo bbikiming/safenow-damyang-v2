@@ -30,6 +30,25 @@
     /* 결재 상태 4단계 — 미상신은 스토어에 기록이 없는 상태(파생) */
     var ST_SUBMITTED = '결재중', ST_DONE = '결재완료', ST_REJECT = '반려', ST_NONE = '미상신';
 
+    /* ===================== 상신 진입점 차단 스위치 (2026-07-30 회의) =====================
+     * 발주처가 교육 화면의 결재 상신을 두 번 지워 달라고 했다.
+     *   "일단 결재 상신 이거 파일 지워버리세요. 이건 필요 없는 내용이니까" (녹취 775)
+     *   "아까 교육 결재 상신 지워버려 주세요."                              (녹취 788)
+     * 이유는 앞선 발언에 있다 — "나는 이게 뭘까 왜 갑자기 뜬금없이 결재 상신이 있지"(691).
+     * 즉 기능이 틀린 게 아니라 **공문 작성 단계 없이 결재만 있는 순서가 틀렸다**는 것이다.
+     *   참석자4 "결재 상신하는 프로세스가 먼저 공문이 가야 되고 공문 뿌린 다음에 결재가 태워져야"(687)
+     *   참석자4 "모든 결재 보내기 전에 공문 작성하기가 다 떠야 될 것 같아"(822)
+     * 그리고 나중에 어떻게 돌아와야 하는지도 말했다 —
+     *   참석자1 "등록을 시킬 때 옆에 버튼에 결재 상신이 있을 거예요 … 결재 상신을 눌러요.
+     *            그럼 공문 내용이 있을 거 아니에요? 작성을 하고 … 붙임 파일에 넣어놨었잖아요.
+     *            그러면은 끝나는 거죠."(916~921)
+     *
+     * 그래서 모듈을 지우지 않고 **진입점만 끈다**. 결재 문서 렌더러·결재선·상태 스토어·
+     * 이력 화면은 그대로 두고, 공문 작성 화면이 준비되면 그 뒤에 연결하면서 이 값만 되돌린다.
+     * 화면 8곳을 각각 고치면 되살릴 때 또 8곳을 찾아야 하므로 스위치는 여기 하나만 둔다. */
+    var SUBMIT_ENABLED = false;
+
+
     /* 총괄 문서 3종 — 라벨·부제·용도. 탭 순서가 곧 결재 서식 번호다. */
     var VIEWS = [
         { id: 'kind', tab: '① 교육 종류별 목록',
@@ -90,6 +109,16 @@
     function summaryTarget() { return 'S|' + state.view + '|' + curYear() + '|' + (state.dept || 'ALL'); }
     function courseTarget(id) { return 'C|' + id; }
     function personTarget(wid, year) { return 'P|' + wid + '|' + (year || curYear()); }
+
+    /* 기록 잠금 — 공문(기안문)이 붙어 결재가 올라간 뒤에는 원본을 고칠 수 없다.
+     * 발주처: "공문을 여기다 첨부하면은 문서들에 대한 기록이 남잖아요. 그러면 더 이상
+     *          수정이 안 돼요. 이건 문서 위조예요." (2026-07-30 회의)
+     * 반려(ST_REJECT)는 고쳐서 다시 올리라는 뜻이므로 잠그지 않는다.
+     * 잠김이면 상태 문자열을, 수정 가능하면 null 을 돌려준다 — 판정은 여기 한 곳에서만 한다. */
+    function lockOf(kind, id) {
+        var st = statusOf(kind, kind === 'course' ? courseTarget(id) : personTarget(id));
+        return (st === ST_SUBMITTED || st === ST_DONE) ? st : null;
+    }
 
     /* =========================== 결재선 =========================== */
     function stepLabel(i, len) { return i === len - 1 ? '결재' : '검토'; }
@@ -849,6 +878,7 @@
     /* ==================== 목록 상태 칩 · 행 컨트롤 ==================== */
     /* 교육별 상태 칩/버튼 — 미상신이면 '결재 상신' 액션, 아니면 상태 칩(→ 상태 팝업) */
     function courseControl(courseId) {
+        if (!SUBMIT_ENABLED) return '';   /* 상신 진입점 차단 (2026-07-30 회의) */
         var st = statusOf('course', courseTarget(courseId));
         if (st === ST_NONE) {
             return '<button type="button" class="btn btn-outline btn-sm eduapv-newbtn" onclick="EDUAPV.openCourse(\'' + esc(courseId) + '\')" title="이 교육 결재 상신">' + submitGlyph() + ' 결재 상신</button>';
@@ -856,6 +886,7 @@
         return '<button type="button" class="chip-status chip-sm ' + V().toneOf(st) + ' eduapv-chip" onclick="EDUAPV.status(\'course\',\'' + esc(courseId) + '\')" title="결재 상태: ' + esc(st) + '">' + esc(st) + '</button>';
     }
     function personControl(workerId) {
+        if (!SUBMIT_ENABLED) return '';   /* 상신 진입점 차단 (2026-07-30 회의) */
         var st = statusOf('person', personTarget(workerId));
         if (st === ST_NONE) {
             return '<button type="button" class="btn btn-outline btn-sm eduapv-newbtn" onclick="EDUAPV.openPerson(\'' + esc(workerId) + '\')" title="개인 결재 상신">' + submitGlyph() + ' 개인 상신</button>';
@@ -891,11 +922,13 @@
     function refreshAll() { _refreshed.forEach(function (fn) { try { fn(); } catch (e) {} }); }
 
     /* 각 edu 화면이 모듈 init 후 호출. opts.view 기본 서식 · opts.mode 'course' 상세 진입 · opts.refresh 재렌더 */
+
     function boot(opts) {
         opts = opts || {};
         if (opts.view) state.view = opts.view;
         if (opts.mode) state.mode = opts.mode;
         if (opts.refresh) registerRefresh(opts.refresh);
+        if (!SUBMIT_ENABLED) return;   /* 상신 버튼 주입 안 함 */
         if (!injectButton()) global.setTimeout(injectButton, 0);
     }
 
@@ -911,7 +944,11 @@
         STATUSES: [ST_SUBMITTED, ST_DONE, ST_REJECT],
         /* 목록 상태 칩/버튼 (화면 렌더러가 셀에 삽입) */
         courseControl: courseControl, personControl: personControl,
-        statusOf: statusOf,
+        statusOf: statusOf, lockOf: lockOf,
+        /* 공문 작성 화면이 붙으면 위 SUBMIT_ENABLED 리터럴만 true 로 되돌린다 — 화면은 고칠 필요 없다.
+         * 값이 아니라 함수로 내보낸다: 값으로 내보내면 소비처(edu-status 의 개인 결재 열 등)가
+         * 모듈 초기화 시점의 스냅샷을 들고 있게 되어, 나중에 켜도 그 화면만 꺼진 채로 남는다. */
+        submitEnabled: function () { return SUBMIT_ENABLED; },
         /* 결재선 편집 */
         pickOpen: pickOpen, pickApprover: pickApprover, addStep: addStep, delStep: delStep, resetLine: resetLine, line: line,
         /* 호환 (구 API) */

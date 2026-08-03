@@ -194,7 +194,7 @@
         }).join('') + '</div>';
     }
     function submitCell(r) {
-        if (r.resultBy) return '<span class="sh-res ok">제출 완료</span> <span style="font-size:11px;color:var(--text-gray)">' + esc(r.resultBy) + '</span>';
+        if (r.resultBy) return '<span class="sh-res ok">제출 완료</span> <span style="font-size:var(--fs-12);color:var(--text-gray)">' + esc(r.resultBy) + '</span>';
         if (r.proc && r.proc.qSent) return '<span class="sh-res warn">제출 대기</span>';
         return '<span class="sh-res none">요청 전</span>';
     }
@@ -206,7 +206,7 @@
             '<td>' + typeTag(r.type) + '</td>' +
             '<td>' + esc(r.agency) + '</td>' +
             '<td>' + stepBar(r) + '</td>' +
-            '<td class="num">' + (tCount ? tCount + '명' : '<span style="color:var(--text-lightgray)">미선정</span>') + '</td>' +
+            '<td class="num">' + (tCount ? tCount + '명' : '<span style="color:var(--text-gray)">미선정</span>') + '</td>' +
             '<td>' + submitCell(r) + '</td>' +
             '<td>' + esc(ownerName(r.owner)) + '</td></tr>';
     }
@@ -214,7 +214,7 @@
     function rowDeptInbox(r) {
         var reqAt = (r.proc && r.proc.qSentAt) ? r.proc.qSentAt : '-';
         var submitted = !!r.resultBy;
-        var fileCell = submitted ? '<span class="sh-attached">' + S().icon('file') + '검진결과.pdf</span>' : '<span style="color:var(--text-lightgray)">미제출</span>';
+        var fileCell = submitted ? '<span class="sh-attached">' + S().icon('file') + '검진결과.pdf</span>' : '<span style="color:var(--text-gray)">미제출</span>';
         var stat = submitted ? '<span class="sh-res ok">제출 완료</span>' : '<span class="sh-res warn">제출 대기</span>';
         var action = submitted
             ? '<button type="button" class="sh-pill-link" onclick="event.stopPropagation();HEX.detail(\'' + r.id + '\')">보기</button>'
@@ -272,7 +272,7 @@
         return '<td><a class="sh-rowlink" href="health-exam-detail.html?id=' + r.id + '" onclick="event.stopPropagation()">' + esc(r.dept) + '</a></td>' +
             '<td>' + typeTag(r.type) + '</td>' +
             '<td>' + esc(r.agency) + '</td>' +
-            '<td>' + esc(r.planned) + ' <span style="color:var(--text-lightgray)">/</span> ' + doneTxt + '</td>';
+            '<td>' + esc(r.planned) + ' <span style="color:var(--text-gray)">/</span> ' + doneTxt + '</td>';
     }
 
     /* 단순 첨부형 행 — 대상 인원·수검률(집계)·결과보고서 첨부 중심 */

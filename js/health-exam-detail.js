@@ -359,7 +359,7 @@
                 '<div class="sh-priv-mask"><span class="lock-ic">' + S().icon('lock', 30) + '</span>' +
                 '개인정보 보호를 위해 개인별 수검 결과는 <b>보건담당 권한</b> 사용자만 열람할 수 있습니다.<br>' +
                 '목록·집계(인원수·수검률)만 열람 가능합니다. 열람이 필요하면 <b>[권한 전환]</b> 하세요. ' +
-                '<span style="display:block;margin-top:6px;font-size:11px;color:var(--text-gray);">※ 프로토타입 권한 시연 — 실제로는 역할(보건담당) 기반 접근제어가 적용됩니다.</span></div></div>';
+                '<span style="display:block;margin-top:6px;font-size:var(--fs-12);color:var(--text-gray);">※ 프로토타입 권한 시연 — 실제로는 역할(보건담당) 기반 접근제어가 적용됩니다.</span></div></div>';
         }
 
         if (!r.persons || !r.persons.length) {
@@ -439,7 +439,7 @@
     function notify() {
         var r = S().healthOf(state.id);
         V().openModal('알림 발송',
-            '<div style="margin-bottom:12px;"><label class="form-label" for="hd-nt-to">수신자 <span style="font-weight:400;color:var(--text-lightgray)">(조직도에서 선택)</span></label>' +
+            '<div style="margin-bottom:12px;"><label class="form-label" for="hd-nt-to">수신자 <span style="font-weight:400;color:var(--text-gray)">(조직도에서 선택)</span></label>' +
                 '<div class="orgpick-field" id="hd-nt-tofield"><div style="display:flex;gap:8px;">' +
                     '<input type="text" class="form-input" id="hd-nt-to" style="flex:1;" value="' + esc(r.owner) + '">' +
                     '<button type="button" class="btn btn-outline" onclick="ORGPICK.toggle(\'hd-nt-tofield\',\'member\',\'HEXD.pickRecipient\')">조직도</button>' +

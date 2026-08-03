@@ -11,8 +11,17 @@
 (function (global) {
     'use strict';
 
-    var SKEY = 'damyangEduV1r4'; /* 독촉 이력 시드 추가 */
-    var TODAY = '2026-07-16';
+    /* r5 — 2026-07-30 회의: 기타교육 분류를 법정 3유형으로 재정의(구 5종 폐지) ·
+     * 첨부 슬롯(file.slot) 도입. 구 etcType 이 남으면 필터·표시가 어긋나므로 버전 범프. */
+    var SKEY = 'damyangEduV1r5';
+    /* 오늘 기준 — DYV2.today() 단일 출처. TODAY 는 하위호환 게터(DYEDU.TODAY)로 유지. */
+    function today() { return (global.DYV2 && global.DYV2.today) ? global.DYV2.today() : realToday(); }
+    function realToday() {
+        var t = new Date(); var mm = t.getMonth() + 1, dd = t.getDate();
+        return t.getFullYear() + '-' + (mm < 10 ? '0' : '') + mm + '-' + (dd < 10 ? '0' : '') + dd;
+    }
+    /* 지역변수 today 가 섀도잉하는 함수 안에서 쓰는 별칭 */
+    function todayIso() { return today(); }
 
     /* ================= 계산 함수 (설계서 §2) ================= */
 
@@ -26,7 +35,7 @@
     }
     function cycleOf(worker, dateISO) {
         var hire = new Date(worker.hireDate);
-        var today = new Date(dateISO || TODAY);
+        var today = new Date(dateISO || todayIso());
         var cycleMonths = worker.category === 'SUPERVISOR' ? 12 : 6;
         var months = (today.getFullYear() - hire.getFullYear()) * 12 + (today.getMonth() - hire.getMonth());
         if (today.getDate() < hire.getDate()) months--;
@@ -446,7 +455,7 @@
         save();
         return { records: recCnt, courseRemoved: courseRemoved };
     }
-    /* 부서 신청 취소 — 교육이 이미 종료(DONE)된 뒤라면 해당 부서 근로자의 이수기록도 회수 */
+    /* 참석자 등록부 등록 취소 — 교육이 이미 종료(DONE)된 뒤라면 해당 부서 근로자의 이수기록도 회수 */
     function removeEnroll(courseId, deptId) {
         var d = load();
         var target = d.enrolls.filter(function (e) { return e.courseId === courseId && e.deptId === deptId; });
@@ -526,10 +535,7 @@
     }
 
     /* ================= 헬퍼 ================= */
-    function today() {
-        var t = new Date(); var mm = t.getMonth() + 1, dd = t.getDate();
-        return t.getFullYear() + '-' + (mm < 10 ? '0' : '') + mm + '-' + (dd < 10 ? '0' : '') + dd;
-    }
+    /* today()/realToday() 는 파일 상단에 정의 — 오늘 기준 단일 출처(DYV2.today()) */
     function nowTs() {
         var t = new Date(), pad = function (n) { return (n < 10 ? '0' : '') + n; };
         return t.getFullYear() + '-' + pad(t.getMonth() + 1) + '-' + pad(t.getDate()) +
@@ -561,7 +567,43 @@
     function empLabel(e) { return EMP_LABEL[e] || e; }
     var SRC_LABEL = { HR: '인사연동', MANUAL: '직접등록', EXCEL: '엑셀업로드' };
     function srcLabel(s) { return SRC_LABEL[s] || s; }
-    var ETC_TYPES = ['특별교육', '작업내용 변경 시', 'MSDS', '직무교육', '자체·기타'];
+    /* ===== 기타교육 유형 — 2026-07-30 회의 확정 3종 =====
+     * 발주처: "작업 내용 변경 시 교육 특별 교육 건설 기초 안전 보건 교육 이 세 가지죠."
+     *   ※ 구 5종(MSDS·직무교육·자체·기타)은 법정 교육구분이 아니어서 폐지 — 되살리지 말 것.
+     *   ※ '정기교육'을 여기 넣지 않은 이유: 담양군은 현업 판매직이 없고 사무직 위주라
+     *      정기교육은 일반사항으로 별도 화면(edu-reg)에서 다룬다(발주처 설명, 녹취 1165~1167).
+     *
+     * hours — 산업안전보건법 시행규칙 **별표4**(DYLAW 'oshr-t4')가 정한 법정 최소 교육시간.
+     *   발주처: "여기에 목록에 대한 시간도 적어주셔야 되는 거 잊지 마시고"
+     *   채용시교육 필요시간(hireHours)과 같은 방식으로 여기에 둔다. 값을 고칠 일이 생기면
+     *   화면이 아니라 **별표4 조문을 먼저 열어보고** 바꾼다(CLAUDE.md §10 검증 6문 #1).
+     * works — 그 유형의 대상 작업 목록. 특별교육 대상 작업(39종)은 별표4가 아니라
+     *   **시행규칙 별표5 제1호라목**이 정하는데 DYLAW 스냅샷에 아직 수록되지 않았다.
+     *   그럴듯하게 지어내지 않고 미등록으로 드러낸다(CLAUDE.md 말미 원칙). */
+    var ETC_TYPES = ['작업내용 변경 시 교육', '특별교육', '건설업 기초안전보건교육'];
+    var ETC_TYPE_INFO = {
+        '작업내용 변경 시 교육': {
+            basis: 'oshr-t4',
+            hours: [{ who: '일용·1주 이하 기간제', h: 1 }, { who: '그 밖의 근로자', h: 2 }],
+            guide: '작업 내용을 바꿔 새로운 유해·위험에 노출될 때 실시합니다.'
+        },
+        '특별교육': {
+            basis: 'oshr-t4',
+            hours: [
+                { who: '일용·1주 이하 기간제', h: 2, note: '별표5 제1호라목 제39호는 8시간' },
+                { who: '그 밖의 근로자', h: 16, note: '최초 작업 전 4시간 + 12시간은 3개월 내 분할 / 단기간·간헐 작업은 2시간' }
+            ],
+            guide: '시행규칙 별표5 제1호라목의 대상 작업에 종사할 때 실시합니다.',
+            worksSource: '산업안전보건법 시행규칙 별표5 제1호라목',
+            works: []   /* 미수록 — 화면에서 "목록 미등록"으로 드러낸다 */
+        },
+        '건설업 기초안전보건교육': {
+            basis: 'oshr-t4',
+            hours: [{ who: '건설 일용근로자', h: 4 }],
+            guide: '건설 일용근로자가 최초로 취업할 때 실시합니다.'
+        }
+    };
+    function etcTypeInfo(label) { return ETC_TYPE_INFO[label] || null; }
 
     /* ================= 이수현황 요약 (설계서 §8) ================= */
     /* 현업(현업/사무직/판매) 정기교육 이수 여부 — 미달자 도출 */
@@ -602,7 +644,7 @@
 
     global.DYEDU = {
         /* 스토어 */
-        reset: reset, load: load, save: save, today: today, nowTs: nowTs, TODAY: TODAY,
+        reset: reset, load: load, save: save, today: today, nowTs: nowTs, TODAY: today(),
         /* 근로자 */
         workers: workers, workerOf: workerOf, addWorker: addWorker, bulkAddWorkers: bulkAddWorkers,
         updateWorker: updateWorker, removeWorker: removeWorker,
@@ -626,7 +668,7 @@
         statusRow: statusRow, deptSummary: deptSummary,
         /* 메타 */
         KIND_LABEL: KIND_LABEL, CAT_LABEL: CAT_LABEL, EMP_LABEL: EMP_LABEL, SRC_LABEL: SRC_LABEL,
-        ETC_TYPES: ETC_TYPES,
+        ETC_TYPES: ETC_TYPES, ETC_TYPE_INFO: ETC_TYPE_INFO, etcTypeInfo: etcTypeInfo,
         kindLabel: kindLabel, catLabel: catLabel, empLabel: empLabel, srcLabel: srcLabel,
         deptName: deptName, deptCandidates: deptCandidates
     };

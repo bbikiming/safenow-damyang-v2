@@ -5,6 +5,36 @@
 (function () {
     'use strict';
 
+    /* =========================================================================
+     * ★ 시연 기준일 (DEMO_TODAY) — **시연 당일에 이 한 줄만 바꾼다** ★
+     * -------------------------------------------------------------------------
+     * 프로토타입은 시드 날짜가 고정이라 '오늘'도 고정해야 D-day·기한초과·이수 판정이
+     * 서로 맞는다. 종전에는 하드코딩 4곳(2026-07-16 ×3 · 2026-07-14 ×1)과
+     * 실제 시스템 날짜 2곳이 섞여 있어 **한 화면 안에서 오늘이 두 개**였다
+     * (대시보드는 6월을 '오늘'로, 내 할일은 7-16 기준으로 D-day 를 계산).
+     *
+     * 이제 전 모듈이 DYV2.today() 하나만 본다 —
+     *   dashboard.TODAY · edu-data.TODAY/today() · my-work.TODAY_ISO ·
+     *   rsk-data.today()/isOverdue
+     *
+     * '' (빈 문자열)로 두면 실제 시스템 날짜를 쓴다(실 개발 전환 시).
+     * ========================================================================= */
+    const DEMO_TODAY = '2026-07-16';
+
+    function realToday() {
+        const t = new Date(), mm = t.getMonth() + 1, dd = t.getDate();
+        return t.getFullYear() + '-' + (mm < 10 ? '0' : '') + mm + '-' + (dd < 10 ? '0' : '') + dd;
+    }
+    /* 전 모듈의 '오늘' 단일 출처 */
+    function today() { return DEMO_TODAY || realToday(); }
+    /* 두 ISO 날짜의 일수 차 (미래 +, 과거 −) — D-day 계산도 한 곳에서 */
+    function daysTo(iso, from) {
+        if (!iso) return null;
+        const a = new Date(from || today()), b = new Date(iso);
+        if (isNaN(a) || isNaN(b)) return null;
+        return Math.round((b - a) / 86400000);
+    }
+
     /* 안전보건관리체계 9개 대메뉴 메타 (재구축 프롬프트 §3 — 명칭 문자열 고정)
      * href — 대메뉴 진입 화면. 위험성평가·유해·위험요인 관리는 기존 프로토타입 UX 전용 화면 직결. */
     const MENUS = {
@@ -16,7 +46,8 @@
         opinion:  { label: '의견청취',           sfr: 'SFR-011',          dept: '재난안전과 중대재해팀', href: 'menu.html?m=opinion' },
         contract: { label: '도급관리',           sfr: 'SFR-013',          dept: '회계과·각 발주부서',    href: 'menu.html?m=contract' },
         improve:  { label: '개선조치',           sfr: 'SFR-003',          dept: '재난안전과 중대재해팀', href: 'rsk-imp.html' },
-        comply:   { label: '이행관리',           sfr: 'SFR-008·014',      dept: '재난안전과·기획예산실', href: 'menu.html?m=comply' },
+        /* 2026-07-30 회의 — '이행관리' → '중대산업·시민재해 의무 이행점검'. 부서별 이행 여부 점검이 본질이다. */
+        comply:   { label: '이행점검',           sfr: 'SFR-008·014',      dept: '재난안전과·기획예산실', href: 'menu.html?m=comply' },
     };
 
     /* =========================================================================
@@ -176,6 +207,10 @@
         '완료': 'success', '적합': 'success', '승인': 'success', '이행': 'success',
         '진행': 'info', '진행중': 'info', '검토중': 'info', '접수': 'info',
         '미착수': 'neutral', '미완료': 'neutral', '해당없음': 'neutral', '대기': 'neutral',
+        /* 마감이 아직 남은 법정 의무 — 대시보드 법정 의무 캘린더·로드맵 어휘 */
+        '예정': 'info',
+        /* 부서 전수 이행 체크리스트 (dept-check.js) — 미이행·미게시는 조치 대상이라 danger */
+        '게시': 'success', '미이행': 'danger', '미게시': 'danger',
         '지연': 'warning', '보완필요': 'warning', '보완 필요': 'warning', '주의': 'warning',
         '기한초과': 'danger', '기한 초과': 'danger', '부적합': 'danger', '반려': 'danger',
         '수시': 'purple', '임시저장': 'purple',
@@ -220,7 +255,15 @@
      *   onAct     : 활성화 시 실행할 인라인 JS 표현식(기존 onclick 관례대로 작은따옴표 문자열).
      *               생략 시 프로토타입 토스트. 실제 등록/제출은 모달 하단 [등록]·[제출] 버튼이 담당.
      *   opts.hint : true → fileHint() 를 함께 렌더하고 aria-describedby 로 제약 문구를 연결.
-     *   opts.style: 드롭존에 덧붙일 인라인 style 문자열. */
+     *   opts.style: 드롭존에 덧붙일 인라인 style 문자열.
+     *   opts.pick : **실제 파일 선택**을 붙인다. 값은 선택 결과를 받을 전역 함수 경로 문자열이며
+     *               fn(files) 형태로 [{name, size, type}] 배열을 받는다. onAct 는 무시된다.
+     *               지정하면 숨은 <input type="file"> 을 함께 렌더하고 클릭·키보드·**끌어놓기**를
+     *               모두 이 입력으로 연결한다. accept 는 FILE_LIMITS.extensions 파생.
+     *   opts.multiple : opts.pick 과 함께 쓰면 다중 선택 허용.
+     *
+     *   ※ 종전에는 실제 input 을 붙이려면 화면이 드롭존 마크업을 직접 써야 해서 §2 의 예외로
+     *      남아 있었다. 이 헬퍼가 실제 입력까지 감당하므로 새 화면은 예외 없이 여기만 쓰면 된다. */
     let _dropSeq = 0;
     function dropKey(e) {
         if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
@@ -228,19 +271,112 @@
             e.currentTarget.click();
         }
     }
+    /* 전역 함수 경로 문자열('RSKLIST.onPickSurvey')을 실제 함수로 해석 */
+    function _resolveFn(path) {
+        return String(path || '').split('.').reduce(function (o, k) { return o ? o[k] : null; }, window);
+    }
+    /* 선택·드롭된 파일을 검증해 소비처로 넘긴다 — 형식·용량·개수 규칙은 FILE_LIMITS 단일 출처.
+     * 검증을 화면마다 다시 쓰면 어떤 경로는 20MB 초과 파일을 그대로 통과시키게 된다. */
+    function acceptFiles(fileList, path, multiple) {
+        const all = Array.prototype.slice.call(fileList || []);
+        if (!all.length) return;
+        const ok = [], bad = [];
+        all.forEach(function (f) {
+            const ext = (f.name.split('.').pop() || '').toLowerCase();
+            if (FILE_LIMITS.extensions.indexOf(ext) === -1) { bad.push(f.name + ' — 지원하지 않는 형식'); return; }
+            if (f.size > FILE_LIMITS.maxMB * 1024 * 1024) { bad.push(f.name + ' — ' + FILE_LIMITS.maxMB + 'MB 초과'); return; }
+            ok.push({ name: f.name, size: f.size, type: f.type, _f: f });
+        });
+        if (bad.length) toast('첨부할 수 없는 파일 ' + bad.length + '건 — ' + bad[0]);
+        if (!ok.length) return;
+        const use = multiple ? ok.slice(0, FILE_LIMITS.maxCount) : ok.slice(0, 1);
+        const fn = _resolveFn(path);
+        if (typeof fn !== 'function') return;
+        /* 이미지면 썸네일을 만들어 붙인 뒤 넘긴다 — 소비처가 각자 캔버스를 돌리면
+           축소 규격이 화면마다 갈린다. 비이미지는 그대로 즉시 전달. */
+        withThumbs(use, function (items) { fn(items); });
+    }
+
+    /* ── 이미지 썸네일 ───────────────────────────────────────────────
+     * 원본 dataURL 을 저장소에 넣으면 sessionStorage 용량(약 5MB)이 사진 몇 장에
+     * 바로 잠식된다. 그래서 **저장은 축소 썸네일(THUMB_MAX)만** 하고, 원본은
+     * 메모리 objectURL(`url`)로만 들고 있다가 미리보기에서 쓴다. 새로고침하면
+     * objectURL 은 죽으므로 미리보기는 썸네일로 자동 폴백해야 한다. */
+    const THUMB_MAX = 480, THUMB_Q = 0.7;
+    const IMG_EXT = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    function isImageFile(f) {
+        if (!f) return false;
+        if (f.thumb) return true;
+        const ext = (String(f.name || '').split('.').pop() || '').toLowerCase();
+        return IMG_EXT.indexOf(ext) !== -1;
+    }
+    function withThumbs(items, cb) {
+        const targets = items.filter(function (it) { return it._f && isImageFile(it); });
+        let left = targets.length;
+        const finish = function () {
+            items.forEach(function (it) { delete it._f; });   /* File 은 직렬화되지 않는다 — 저장 전에 뗀다 */
+            cb(items);
+        };
+        if (!left) return finish();
+        targets.forEach(function (it) {
+            const done = function () { if (--left === 0) finish(); };
+            try { it.url = URL.createObjectURL(it._f); } catch (e) { /* 미리보기는 썸네일로 폴백 */ }
+            const reader = new FileReader();
+            reader.onload = function () {
+                const img = new Image();
+                img.onload = function () {
+                    try {
+                        const s = Math.min(1, THUMB_MAX / Math.max(img.width, img.height));
+                        const c = document.createElement('canvas');
+                        c.width = Math.max(1, Math.round(img.width * s));
+                        c.height = Math.max(1, Math.round(img.height * s));
+                        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                        it.thumb = c.toDataURL('image/jpeg', THUMB_Q);
+                        it.w = img.width; it.h = img.height;
+                    } catch (e) { /* 썸네일 없이도 파일명으로는 동작한다 */ }
+                    done();
+                };
+                img.onerror = done;
+                img.src = reader.result;
+            };
+            reader.onerror = done;
+            reader.readAsDataURL(it._f);
+        });
+    }
+    function dropFiles(e, path, multiple) {
+        e.preventDefault(); e.stopPropagation();
+        e.currentTarget.classList.remove('is-dragover');
+        acceptFiles(e.dataTransfer && e.dataTransfer.files, path, multiple);
+    }
+    function dropOver(e, on) {
+        e.preventDefault(); e.stopPropagation();
+        e.currentTarget.classList.toggle('is-dragover', !!on);
+    }
     function uploadDrop(labelHtml, onAct, opts) {
         opts = opts || {};
-        const act = onAct || "DYV2.toast('파일 선택 (프로토타입)')";
         const style = opts.style ? ' style="' + opts.style + '"' : '';
-        let desc = '', hint = '';
+        let desc = '', hint = '', input = '', act = onAct || "DYV2.toast('파일 선택 (프로토타입)')";
+        let dnd = '';
+        if (opts.pick) {
+            const fid = 'updrop-file-' + (++_dropSeq);
+            const accept = FILE_LIMITS.extensions.map(function (x) { return '.' + x; }).join(',');
+            const p = esc(opts.pick), m = opts.multiple ? 'true' : 'false';
+            act = "document.getElementById('" + fid + "').click()";
+            input = '<input type="file" id="' + fid + '" accept="' + accept + '"' +
+                (opts.multiple ? ' multiple' : '') + ' style="display:none"' +
+                ' onchange="DYV2.acceptFiles(this.files, \'' + p + '\', ' + m + '); this.value=\'\';">';
+            /* 드롭존이 "끌어다 놓기"를 문구로 약속하므로 실제로 받는다 */
+            dnd = ' ondragover="DYV2.dropOver(event, true)" ondragleave="DYV2.dropOver(event, false)"' +
+                ' ondrop="DYV2.dropFiles(event, \'' + p + '\', ' + m + ')"';
+        }
         if (opts.hint) {
             const hid = 'updrop-hint-' + (++_dropSeq);
             desc = ' aria-describedby="' + hid + '"';
             hint = fileHint().replace('class="file-hint"', 'class="file-hint" id="' + hid + '"');
         }
         return '<div class="upload-drop" role="button" tabindex="0"' + style +
-            ' onclick="' + act + '" onkeydown="DYV2.dropKey(event)"' + desc + '>' +
-            labelHtml + '</div>' + hint;
+            ' onclick="' + act + '" onkeydown="DYV2.dropKey(event)"' + dnd + desc + '>' +
+            labelHtml + '</div>' + input + hint;
     }
 
     function byMenu(key) { return docs().filter(d => d.menuKey === key); }
@@ -367,6 +503,9 @@
         unassignedBadge, secondReviewBadge,
         openModal, closeModal, toast, openDoc,
         docs, FILE_LIMITS, fileHint, uploadDrop, dropKey,
+        /* 실제 파일 선택·끌어놓기 (uploadDrop opts.pick 이 인라인으로 호출) */
+        TODAY: DEMO_TODAY, today, daysTo, realToday,
+        acceptFiles, dropFiles, dropOver, isImageFile,
         BP, below, STATUS_TONE, toneOf,
         ORG, orgFlat, orgNode, orgCount, orgTotal, orgWalk, deptNames, orgDepts,
     };

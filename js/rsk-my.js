@@ -13,7 +13,7 @@
     function esc(s) { return V().esc(String(s == null ? '' : s)); }
     function toast(m) { V().toast(m); }
 
-    var state = { mount: null, deptId: '', openInline: {} };
+    var state = { mount: null, deptId: '', openInline: {}, cmplId: null, cmplDesc: '', cmplPhoto: '', cmplSign: '' };
     /* openInline: { [impId]: { reason:'', due:'' } } — 어떤 개선조치의 재촉 응답 폼이 펼쳐져 있는지 */
 
     function candidateDeptsWithWork() {
@@ -28,10 +28,17 @@
         return all;
     }
 
+    /* 기본 부서는 '목록 첫 번째'가 아니라 **로그인한 사람의 소속 부서**다.
+       권한 전환으로 부서 담당자가 되면 자기 부서 일이 바로 보여야 한다(?dept= 가 있으면 그게 우선). */
+    function defaultDeptId(depts) {
+        var mine = global.DYROLE && global.DYROLE.deptId ? global.DYROLE.deptId() : '';
+        if (mine && depts.some(function (d) { return d.id === mine; })) return mine;
+        return depts[0] && depts[0].id;
+    }
     function render() {
         if (!state.mount) return;
         var depts = candidateDeptsWithWork();
-        if (!state.deptId) state.deptId = depts[0] && depts[0].id;
+        if (!state.deptId) state.deptId = defaultDeptId(depts);
 
         var opts = depts.map(function (d) {
             return '<option value="' + d.id + '"' + (d.id === state.deptId ? ' selected' : '') + '>' + esc(d.name) + '</option>';
@@ -74,7 +81,7 @@
                             '</div>' +
                         '</div>' +
                         '<div class="my-item-actions">' +
-                            (f ? '<button type="button" class="btn btn-outline btn-sm" onclick="DYV2.toast(\'설문지 다운로드: ' + esc(f) + ' (프로토타입)\')">📥 점검설문지 다운로드</button>' : '<span style="font-size:12px;color:var(--text-lightgray);">설문지 없음</span>') +
+                            (f ? '<button type="button" class="btn btn-outline btn-sm" onclick="DYV2.toast(\'설문조사표 다운로드: ' + esc(f) + ' (프로토타입)\')">📥 유해위험요인 설문조사표 다운로드</button>' : '<span style="font-size:12px;color:var(--text-gray);">설문조사표 없음</span>') +
                         '</div>' +
                     '</div>' +
                 '</div>';
@@ -115,18 +122,31 @@
     function itemHtml(m) {
         var isRemind = (m.history || []).some(function (h) { return h.type === 'REMIND'; }) && m.status !== 'DONE';
         var overdue = D().isOverdue(m);
-        var stChip = m.status === 'DONE'
+        var stChip = returned
+            ? '<span class="chip-status danger chip-sm">확인 반려</span>'
+            : m.status === 'DONE'
             ? '<span class="chip-mini st-done">완료</span>'
             : (m.status === 'IN_PROGRESS' ? '<span class="chip-mini st-doing">진행중</span>' : '<span class="chip-mini st-todo">예정</span>');
         var due = m.due || m.due_date || '-';
         var dueTxt = overdue ? '<span class="my-overdue">' + esc(due) + ' (기한초과)</span>' : esc(due);
+        /* 확인 반려 건은 status 가 DONE 이어도 담당자가 다시 제출해야 한다(DYRSK.needsAction) */
+        var cf = D().confirmOf(m);
+        var returned = D().confirmState(m) === 'RETURNED';
+        var act = D().needsAction(m);
+        var returnBanner = returned
+            ? '<div class="mw-returned" role="note"><b>재난안전과 반려</b> · ' + esc(cf.at || '') + ' · ' + esc(cf.by || '') +
+              ((cf.round || 1) > 1 ? ' <span class="mw-returned-r">' + cf.round + '회차 제출</span>' : '') +
+              '<p>' + esc(cf.reason || '') + '</p>' +
+              '<span class="mw-returned-how">증빙을 보완해 <b>재제출</b>하면 확인 대기로 돌아갑니다.</span></div>'
+            : '';
         var actions = '';
-        if (m.status !== 'DONE') {
+        if (act) {
             if (isRemind) {
                 actions += '<button type="button" class="btn btn-outline btn-sm" onclick="RSKMY.toggleRespond(\'' + m.id + '\')">' +
                     (state.openInline[m.id] ? '재촉 응답 닫기' : '재촉 응답 (사유·기한)') + '</button>';
             }
-            actions += '<button type="button" class="btn btn-primary btn-sm" onclick="RSKMY.complete(\'' + m.id + '\')">완료 처리</button>';
+            actions += '<button type="button" class="btn btn-primary btn-sm" onclick="RSKMY.complete(\'' + m.id + '\')">' +
+                (returned ? '재제출' : '완료 처리') + '</button>';
         }
         var head =
             '<div class="my-item-head">' +
@@ -154,7 +174,7 @@
                 '</div>' +
             '</div>';
         }
-        return '<div class="my-item' + (isRemind ? ' remind' : '') + '">' + head + inline + '</div>';
+        return '<div class="my-item' + (isRemind ? ' remind' : '') + '">' + head + returnBanner + inline + '</div>';
     }
 
     function setDept(id) { state.deptId = id; state.openInline = {}; render(); }
@@ -186,24 +206,56 @@
         delete state.openInline[id];
         toast('재촉 응답 제출 완료'); render();
     }
+    /* 완료 요건(조치내용·완료일·개선 후 사진·서명)은 DYRSK.completeImprovement 가 강제한다.
+     * 화면은 입력만 받고, 통과 여부는 데이터 계층 판정을 그대로 따른다 — 화면마다 규칙을
+     * 다시 쓰면 어느 한 경로가 빠져나가 증빙 없는 완료가 기록된다. */
+    function signerDefault() {
+        var p = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
+        return p ? p.name : '';
+    }
+    function pickPhoto() {
+        state.cmplPhoto = '개선후_' + (state.cmplId || 'IMP') + '.jpg';
+        var d = document.getElementById('my-cmpl-desc'); if (d) state.cmplDesc = d.value;
+        var s = document.getElementById('my-cmpl-sign'); if (s) state.cmplSign = s.value;
+        complete(state.cmplId);
+        V().toast('개선 후 사진 첨부 (프로토타입)');
+    }
+
     function complete(id) {
         var m = D().improvementOf(id); if (!m) return;
+        state.cmplId = id;
         V().openModal('개선조치 완료 처리',
             '<div style="font-size:13px;">' +
                 '<p><b>' + esc((m.hazard && m.hazard.name) || m.hazard_risk_factor || '') + '</b></p>' +
                 '<p style="color:var(--text-gray);margin:6px 0 14px;">' + esc(m.description || m.action || '') + '</p>' +
                 '<label style="font-size:12px;font-weight:700;color:var(--text-gray);display:block;margin-bottom:5px;">조치 내용 <span style="color:var(--status-danger-fg)">*</span></label>' +
-                '<textarea class="form-textarea" id="my-cmpl-desc" rows="3" placeholder="실제 조치한 내용을 입력하세요"></textarea>' +
+                '<textarea class="form-textarea" id="my-cmpl-desc" rows="3" placeholder="실제 조치한 내용을 입력하세요">' + esc(state.cmplDesc || '') + '</textarea>' +
+                '<label style="font-size:var(--fs-12);font-weight:700;color:var(--text-gray);display:block;margin:14px 0 5px;">완료일 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                '<input type="date" class="form-input" id="my-cmpl-date" value="' + esc(D().today()) + '" style="max-width:180px;">' +
+                '<label style="font-size:var(--fs-12);font-weight:700;color:var(--text-gray);display:block;margin:14px 0 5px;">개선 후 사진 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                '<button type="button" class="btn btn-outline btn-sm" onclick="RSKMY.pickPhoto()">＋ 사진 첨부</button>' +
+                (state.cmplPhoto ? ' <span class="chip-status chip-sm success" style="margin-left:8px;">' + esc(state.cmplPhoto) + '</span>' : '') +
+                '<p class="file-hint">개선 후 사진은 조치 완료의 증빙입니다. 없으면 완료 처리되지 않습니다.</p>' +
+                '<label style="font-size:var(--fs-12);font-weight:700;color:var(--text-gray);display:block;margin:14px 0 5px;">완료 확인 (전자서명) <span style="color:var(--status-danger-fg)">*</span></label>' +
+                '<input type="text" class="form-input" id="my-cmpl-sign" value="' + esc(state.cmplSign || signerDefault()) + '" placeholder="확인자 이름" style="max-width:220px;">' +
             '</div>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="RSKMY.doComplete(\'' + id + '\')">완료 처리</button>');
     }
     function doComplete(id) {
-        var t = document.getElementById('my-cmpl-desc');
-        var v = (t && t.value || '').trim();
-        if (!v) { toast('조치 내용을 입력하세요.'); return; }
-        var m = D().completeImprovement(id, v, D().deptName(state.deptId) + ' 담당자');
-        V().closeModal(); toast('완료 처리 · 평가 상세에 반영'); render();
+        var el = function (x) { return document.getElementById(x); };
+        var payload = {
+            action: (el('my-cmpl-desc') && el('my-cmpl-desc').value || '').trim(),
+            completedDate: el('my-cmpl-date') && el('my-cmpl-date').value,
+            afterPhoto: state.cmplPhoto,
+            by: (el('my-cmpl-sign') && el('my-cmpl-sign').value || '').trim(),
+            signedBy: (el('my-cmpl-sign') && el('my-cmpl-sign').value || '').trim()
+        };
+        var err = D().completionError(payload);
+        if (err) { toast(err); return; }
+        D().completeImprovement(id, payload);
+        state.cmplPhoto = ''; state.cmplDesc = ''; state.cmplSign = ''; state.cmplId = null;
+        V().closeModal(); toast('완료 처리 · 전자서명 기록 · 평가 상세에 반영'); render();
     }
 
     function init(mountId) {
@@ -217,6 +269,6 @@
     global.RSKMY = {
         init: init, setDept: setDept,
         toggleRespond: toggleRespond, setRespReason: setRespReason, setRespDue: setRespDue, submitRespond: submitRespond,
-        complete: complete, doComplete: doComplete
+        complete: complete, doComplete: doComplete, pickPhoto: pickPhoto
     };
 })(window);

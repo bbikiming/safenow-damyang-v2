@@ -14,11 +14,46 @@
     const chip = label => '<span class="chip-status ' + global.DYV2.toneOf(label) + '">' + E(label) + '</span>';
     const barCls = r => r >= 70 ? 'green' : r >= 40 ? 'warning' : 'danger';
 
-    /* ── 법정 의무 행 공용 (기준일: 프로토타입 정적 오늘 2026-07-16) ──
+    /* ── 법정 의무 행 공용 ──
      *   중처법 시행령 §4·§5 의 "반기 1회 이상 점검" 의무와 산안법 주기 의무를
-     *   근거 조문·주기·마감 D-day 와 함께 표기한다. */
-    const TODAY = '2026-07-16';
-    function ddays(iso) { return Math.round((new Date(iso) - new Date(TODAY)) / 86400000); }
+     *   근거 조문·주기·마감 D-day 와 함께 표기한다.
+     *   기준일은 DYV2.today() 단일 출처 — 시연일 변경은 common.js DEMO_TODAY 한 줄. */
+    function ddays(iso) { return DYV2.daysTo(iso); }
+    /* 상태는 **기한에서 파생**한다 — 시드에 '진행'이라 적어 두면 오늘이 바뀔 때 조용히 어긋난다.
+     * (실제 결함: 기한이 지난 3건이 '진행'으로 남아 상단 '기한 초과 0건'과 모순됐다.)
+     * 시드는 여전히 시드다 — 바뀌는 건 표시 라벨뿐이고 집계 구조는 그대로다. */
+    function dueSt(iso, fallback) {
+        if (fallback === '완료') return fallback;
+        const d = ddays(iso);
+        if (d == null) return fallback || '진행';
+        return d < 0 ? '기한초과' : d <= 7 ? '주의' : (fallback || '진행');
+    }
+    /* 미니 달력 — '오늘'이 든 달을 DYV2.today() 에서 그린다(§11).
+     * 종전에는 6월 그리드가 통째로 하드코딩돼 있어 지난달 11일을 '오늘'로 표시했다.
+     * 마크업·클래스(mini-cal / day / today / has-due / muted)는 그대로 쓴다. */
+    function miniCal(dueIsoList) {
+        const t = DYV2.today(), y = +t.slice(0, 4), m = +t.slice(5, 7), d = +t.slice(8, 10);
+        const first = new Date(Date.UTC(y, m - 1, 1)).getUTCDay();      /* 0=일 */
+        const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+        const prevLast = new Date(Date.UTC(y, m - 1, 0)).getUTCDate();
+        const due = {};
+        (dueIsoList || []).forEach(iso => {
+            if (String(iso).slice(0, 7) === t.slice(0, 7)) due[+String(iso).slice(8, 10)] = 1;
+        });
+        const cells = [];
+        for (let i = first - 1; i >= 0; i--) cells.push({ n: prevLast - i, muted: true });
+        for (let i = 1; i <= last; i++) cells.push({ n: i });
+        let nx = 1;
+        while (cells.length % 7) cells.push({ n: nx++, muted: true });
+        let rows = '';
+        for (let i = 0; i < cells.length; i += 7) {
+            rows += '<tr>' + cells.slice(i, i + 7).map(c =>
+                '<td><span class="day' + (c.muted ? ' muted' : '') +
+                (!c.muted && c.n === d ? ' today' : '') +
+                (!c.muted && due[c.n] ? ' has-due' : '') + '">' + c.n + '</span></td>').join('') + '</tr>';
+        }
+        return { title: y + '년 ' + m + '월', rows: rows, off: !Object.keys(due).length };
+    }
     function dday(iso) {
         const d = ddays(iso);
         return d < 0 ? 'D+' + (-d) : d === 0 ? 'D-day' : 'D-' + d;
@@ -96,17 +131,23 @@
     /* ── 시연 시드 — 관리감독자 부서 스코프 (deptId 키) ── */
     /* 시각화 시드 필드 — funnel: 위험성평가 파이프라인 {t 대상, a 평가완료, i 개선 발행, d 개선 완료}
      *   aging: 개선조치 미완료 경과 구간 [1주 미만, 1~4주, 1개월 이상]
-     *   hazards: 부서 위험요인 유형 TOP [이름, 건수] · eduHours: 반기 필요/인정 시간 */
+     *   hazards: 부서 위험요인 유형 TOP [이름, 건수] · eduHours: 반기 필요/인정 시간
+     *
+     * ⚠ tasks 의 due 는 **DEPT_RATES[해당부서].overdue 와 개수가 맞아야 한다** —
+     *   기한이 지난 tasks 수 = 그 부서의 기한초과 건수다. 군수 뷰(부서별 이행 현황 표)와
+     *   관리감독자 뷰(상단 '기한 초과' 카드)가 같은 부서에 다른 숫자를 내면 안 된다.
+     *   safety 0건 · facility 3건 · town_damyang 2건. 날짜를 고칠 때 이 불변식을 지킬 것. */
     const SUPER_SEED = {
         safety: {
             eduRate: 96, rsk: { total: 14, done: 12, delay: 0 }, imp: { open: 2, delay: 0 },
             funnel: { t: 14, a: 12, i: 9, d: 7 }, aging: [2, 0, 0],
             hazards: [['추락', 3], ['전도', 2], ['끼임', 2], ['화재·감전', 1], ['온열질환', 1]],
             eduHours: { need: 48, done: 46 },
+            /* 이행률 92% · 기한초과 0 — 3건 모두 기한 전이어야 한다 */
             tasks: [
-                { title: '정기 위험성평가 결과 등록', due: '2026-06-11', owner: '박안전', st: '진행', href: 'rsk-list.html' },
-                { title: '상반기 안전보건교육 결과 취합', due: '2026-06-17', owner: '김안전', st: '진행', href: 'edu-status.html' },
-                { title: '의무이행 점검표 부서 확인', due: '2026-06-30', owner: '박담당', st: '미착수', href: 'menu.html?m=comply' },
+                { title: '정기 위험성평가 결과 등록', due: '2026-07-24', owner: '박안전', st: '진행', href: 'rsk-list.html' },
+                { title: '상반기 안전보건교육 결과 취합', due: '2026-07-31', owner: '김안전', st: '진행', href: 'edu-status.html' },
+                { title: '의무이행 점검표 부서 확인', due: '2026-08-31', owner: '박담당', st: '미착수', href: 'menu.html?m=comply' },
             ],
             confirms: [
                 { title: '수시 위험성평가 결과 — 하수처리장 설비 변경', by: '박안전 주무관', when: '오늘 10:20' },
@@ -190,7 +231,7 @@
               '<td style="font-weight:600;">' + E(d.name) + '</td>' +
               '<td><div class="dsh-dept-bar"><div class="progress"><div class="progress-bar ' + barCls(d.rate) + '" style="width:' + d.rate + '%"></div></div>' +
                 '<span class="dsh-dept-num">' + d.rate + '%</span></div></td>' +
-              '<td style="text-align:center;">' + (d.overdue ? '<span class="chip-status danger chip-sm">' + d.overdue + '건</span>' : '<span style="color:var(--text-lightgray);">—</span>') + '</td>' +
+              '<td style="text-align:center;">' + (d.overdue ? '<span class="chip-status danger chip-sm">' + d.overdue + '건</span>' : '<span style="color:var(--text-gray);">—</span>') + '</td>' +
               '<td>' + chip(d.rate >= 70 ? '이행' : d.rate >= 60 ? '주의' : '보완필요') + '</td>' +
             '</tr>').join('');
         const deptCard =
@@ -298,7 +339,7 @@
                 '<div class="dsh-mbar" role="img" aria-label="월별 아차사고·신고 건수 — 1월 2건부터 7월 1건까지, 중대재해 0건 지속">' + accCols + '</div>' +
                 '<div class="dsh-viz-legend"><span><i style="background:var(--status-info-fg);"></i>아차사고·종사자 신고</span>' +
                   '<span><i style="background:var(--gray-200);"></i>0건</span>' +
-                  '<a href="rsk-occ.html" style="margin-left:auto; color:var(--main); font-weight:700;">신고 현황 →</a></div>' +
+                  '<a href="rsk-occ.html" style="margin-left:auto; color:var(--main-dark); font-weight:700;">신고 현황 →</a></div>' +
               '</div>' +
             '</div>';
 
@@ -369,9 +410,11 @@
      * ===================================================================== */
     function superView(p) {
         const seed = SUPER_SEED[p.deptId] || SUPER_SEED.safety;
+        const impDelay = staffCounts(p.deptId).over;   /* 실집계 — staffView 와 같은 원본 */
         const deptRow = DEPT_RATES.find(d => d.id === p.deptId) || { rate: 60, overdue: 0 };
         const headcount = global.DYV2.orgCount(p.deptId, true);
-        const overdueN = seed.tasks.filter(t => t.st === '기한초과').length;
+        /* 기한초과는 시드 라벨이 아니라 **기한**으로 센다 — 라벨은 오늘이 바뀌면 거짓말이 된다 */
+        const overdueN = seed.tasks.filter(t => dueSt(t.due, t.st) === '기한초과').length;
 
         const hero =
             '<div class="dsh-hero is-dept">' +
@@ -383,7 +426,8 @@
               '</div>' +
               '<div class="dsh-hero-stats">' +
                 '<a class="dsh-hero-stat' + (overdueN ? ' is-danger' : '') + '" href="my-work.html"><b>' + overdueN + '<em>건</em></b><span>기한 초과</span></a>' +
-                '<a class="dsh-hero-stat" href="my-work.html"><b>' + seed.tasks.length + '<em>건</em></b><span>부서 진행 업무</span></a>' +
+                /* '진행 업무'라 부르면 미착수·기한초과 행까지 진행 중으로 읽힌다 — 아래 표와 같은 모수다 */
+                '<a class="dsh-hero-stat" href="my-work.html"><b>' + seed.tasks.length + '<em>건</em></b><span>부서 업무</span></a>' +
                 '<a class="dsh-hero-stat" href="edu-status.html?dept=' + E(p.deptId) + '"><b>' + seed.eduRate + '<em>%</em></b><span>교육 이수율</span></a>' +
                 '<a class="dsh-hero-stat" href="rsk-imp.html"><b>' + seed.imp.open + '<em>건</em></b><span>개선조치 미완료</span></a>' +
               '</div>' +
@@ -392,7 +436,7 @@
         const taskRows = seed.tasks.map(t =>
             '<tr><td style="font-weight:600;">' + E(t.title) + '</td>' +
             '<td>' + E(t.due) + '</td><td>' + E(t.owner) + '</td>' +
-            '<td>' + chip(t.st) + '</td>' +
+            '<td>' + chip(dueSt(t.due, t.st)) + '</td>' +
             '<td><a class="btn btn-sm btn-outline" href="' + t.href + '">이동</a></td></tr>').join('');
         const taskCard =
             '<div class="card">' +
@@ -411,8 +455,10 @@
                 '<span class="chip-status info chip-sm">' + E(p.deptName) + '</span></div>' +
               '<div class="card-body">' +
                 '<div class="dsh-law-note">관리감독자는 소관 부서의 <b>생산과 관련되는 업무와 소속 직원을 직접 지휘·감독</b>하며 아래 직무를 수행합니다. 미이행 시 중처법 시행령 §4 5호 평가에 반영됩니다.</div>' +
+                /* 개선 지연은 **실집계(impDelay)** 로만 말한다 — 같은 페이지 아래 statbox 가
+                   실데이터로 0건을 찍는데 여기만 시드로 '3건 지연'이라 하면 정면 충돌이다. */
                 lawRow({ name: '기계·기구·설비 안전 점검, 이상 시 즉시 조치', basis: '시행령 §15 1호', cycle: '수시',
-                         st: seed.imp.delay ? '주의' : '진행', href: 'fac-list.html', note: seed.imp.delay ? '개선 지연 ' + seed.imp.delay + '건' : '' }) +
+                         st: impDelay ? '주의' : '진행', href: 'fac-list.html', note: impDelay ? '개선 지연 ' + impDelay + '건' : '' }) +
                 lawRow({ name: '보호구·방호장치 점검과 착용·사용 교육·지도', basis: '시행령 §15 2호', cycle: '수시', st: '완료', href: 'edu-status.html?dept=' + E(p.deptId) }) +
                 lawRow({ name: '산업재해 보고와 응급조치 (발생 시)',          basis: '시행령 §15 3호', cycle: '발생 즉시', st: '완료', href: 'rsk-occ.html', note: '보고체계 정비' }) +
                 lawRow({ name: '작업장 정리정돈·통로 확보 확인·감독',        basis: '시행령 §15 4호', cycle: '수시', st: '완료', href: 'fac-list.html' }) +
@@ -434,11 +480,15 @@
         const rskCard =
             '<div class="card">' +
               '<div class="card-header"><span class="card-title">위험성평가 · 개선조치</span>' +
+                '<span class="dsh-seed-note">개선조치 지연 = 실데이터 · 평가 건수는 시연 시드</span>' +
                 '<a class="btn btn-sm btn-secondary" href="rsk-list.html">위험성평가</a></div>' +
               '<div class="card-body"><div class="statbox-grid cols-3">' +
                 '<div class="statbox info"><div class="statbox-num">' + seed.rsk.done + '/' + seed.rsk.total + '</div><div class="statbox-label">평가 완료 (건)</div></div>' +
                 '<div class="statbox ' + (seed.rsk.delay ? 'danger' : 'success') + '"><div class="statbox-num">' + seed.rsk.delay + '</div><div class="statbox-label">평가 지연 (건)</div></div>' +
-                '<div class="statbox ' + (seed.imp.delay ? 'danger' : 'neutral') + '"><div class="statbox-num">' + seed.imp.delay + '</div><div class="statbox-label">개선조치 지연 (건)</div></div>' +
+                /* 개선조치는 시드가 아니라 **실데이터**로 센다 — 여기서 '3건 지연'이라 해 놓고
+                   눌러 들어간 화면이 0건이면 그 순간부터 대시보드를 아무도 안 믿는다. */
+                '<a class="statbox ' + (impDelay ? 'danger' : 'neutral') + '" href="my-work.html?cat=improve&due=over&dept=' + E(p.deptId) + '" style="text-decoration:none;">' +
+                    '<div class="statbox-num">' + impDelay + '</div><div class="statbox-label">개선조치 지연 (건)</div></a>' +
               '</div>' + funnelHtml + '</div>' +
             '</div>';
 
@@ -458,6 +508,9 @@
         const agingCard =
             '<div class="card">' +
               '<div class="card-header"><span class="card-title">개선조치 미완료 ' + seed.imp.open + '건 — 경과 기간</span>' +
+                /* 이 카드는 전부 시드다 — 위 statbox 는 실집계라 숫자가 다르다. 밝히지 않으면
+                   '어느 쪽이 맞느냐'가 되고, 그 순간 두 숫자 다 못 믿게 된다. */
+                '<span class="dsh-seed-note">시연 시드 — 실집계는 위 개선조치 지연</span>' +
                 '<a class="btn btn-sm btn-secondary" href="rsk-imp.html">개선조치</a></div>' +
               '<div class="card-body">' +
                 hbarRow('1주 미만',   seed.aging[0], agMax, 'green',   'rsk-imp.html') +
@@ -513,29 +566,69 @@
     /* =====================================================================
      * staff — 업무담당자(실무 수행자) 대시보드
      * ===================================================================== */
-    function staffView() {
+    /* 내 부서 개선조치 실집계 — 대시보드 숫자와 [내 할일] 숫자가 어긋나면
+     * 링크를 눌러 확인한 사람이 시스템을 못 믿는다. 같은 원본(DYRSK)에서 센다. */
+    function staffCounts(deptId) {
+        const c = { over: 0, today: 0, week: 0, later: 0, done: 0, total: 0 };
+        try {
+            const D = global.DYRSK; if (!D) return c;
+            const today = D.today();
+            D.improvements().forEach(function (m) {
+                if (deptId && m.dept_id !== deptId) return;
+                c.total++;
+                if (m.status === 'DONE') { c.done++; return; }
+                const due = m.due || m.due_date || '';
+                if (!due) { c.later++; return; }
+                if (D.isOverdue(m)) c.over++;
+                else if (due === today) c.today++;
+                else {
+                    const d = (new Date(due) - new Date(today)) / 86400000;
+                    if (d > 0 && d <= 7) c.week++; else c.later++;
+                }
+            });
+        } catch (e) {}
+        return c;
+    }
+    function staffView(p) {
+        p = p || (global.DYROLE && global.DYROLE.current());
+        const deptId = (p && p.deptId) || '';
+        const deptNm = deptId && global.DYV2.orgNode(deptId) ? global.DYV2.orgNode(deptId).name : '';
+        const c = staffCounts(deptId);
+        const dq = deptId ? '&dept=' + E(deptId) : '';
+        /* 라벨을 '개선조치'로 좁힌다 — 내 할일 전체(교육·점검 포함)와 모수가 다르므로
+           같은 이름을 쓰면 또 어긋나 보인다. 이 4칸이 세는 건 개선조치다. */
         const myWork =
+            (deptNm ? '<p class="dsh-scope">' + E(deptNm) + ' — 내 부서 개선조치</p>' : '') +
             '<div class="statbox-grid cols-4" style="margin-bottom:16px;">' +
-              '<a class="statbox danger" href="my-work.html?due=over" style="text-decoration:none;"><div class="statbox-num">4</div><div class="statbox-label">기한 초과 (건)</div></a>' +
-              '<a class="statbox warning" href="my-work.html?due=today" style="text-decoration:none;"><div class="statbox-num">2</div><div class="statbox-label">오늘 마감 (건)</div></a>' +
-              '<a class="statbox info" href="my-work.html?due=week" style="text-decoration:none;"><div class="statbox-num">7</div><div class="statbox-label">1주일 이내 (건)</div></a>' +
-              '<a class="statbox neutral" href="docs-preset.html" style="text-decoration:none;"><div class="statbox-num">12</div><div class="statbox-label">내 담당 문서 (건)</div></a>' +
+              '<a class="statbox danger" href="my-work.html?cat=improve&due=over' + dq + '" style="text-decoration:none;"><div class="statbox-num">' + c.over + '</div><div class="statbox-label">기한 초과 (건)</div></a>' +
+              '<a class="statbox warning" href="my-work.html?cat=improve&due=today' + dq + '" style="text-decoration:none;"><div class="statbox-num">' + c.today + '</div><div class="statbox-label">오늘 마감 (건)</div></a>' +
+              '<a class="statbox info" href="my-work.html?cat=improve&due=week' + dq + '" style="text-decoration:none;"><div class="statbox-num">' + c.week + '</div><div class="statbox-label">1주일 이내 (건)</div></a>' +
+              '<a class="statbox neutral" href="my-work.html?view=done' + dq + '" style="text-decoration:none;"><div class="statbox-num">' + c.done + '</div><div class="statbox-label">완료 (건)</div></a>' +
             '</div>';
 
-        /* D-day 구간 스트립 — 내 할일 분포를 하나의 축으로 (구간 클릭 = 해당 필터) */
+        /* D-day 구간 스트립 — 위 집계와 같은 원본. 0건 구간은 스트립에서 뺀다(폭 0은 안 읽힌다) */
         const dueSeg = [
-            ['지연 4',    4, 't-danger',  'my-work.html?due=over'],
-            ['오늘 2',    2, 't-warning', 'my-work.html?due=today'],
-            ['이번주 7',  7, 't-info',    'my-work.html?due=week'],
-            ['예정 9',    9, 't-neutral', 'my-work.html'],
-        ];
-        const dueTotal = dueSeg.reduce((a, s) => a + s[1], 0);
-        const dueStrip =
-            '<div class="dsh-stack" role="group" aria-label="내 할일 마감 분포 — 지연 4건, 오늘 2건, 이번주 7건, 예정 9건">' +
+            ['지연 ' + c.over,   c.over,  't-danger',  'my-work.html?cat=improve&due=over' + dq],
+            ['오늘 ' + c.today,  c.today, 't-warning', 'my-work.html?cat=improve&due=today' + dq],
+            ['이번주 ' + c.week, c.week,  't-info',    'my-work.html?cat=improve&due=week' + dq],
+            ['예정 ' + c.later,  c.later, 't-neutral', 'my-work.html?cat=improve' + dq],
+        ].filter(function (s) { return s[1] > 0; });
+        const dueStrip = dueSeg.length
+            ? '<div class="dsh-stack" role="group" aria-label="내 부서 개선조치 마감 분포 — ' +
+                  dueSeg.map(s => s[0] + '건').join(', ') + '">' +
                 dueSeg.map(s =>
                     '<a class="' + s[2] + '" href="' + s[3] + '" style="flex:' + s[1] + ' 1 0;"' +
                     ' title="' + s[0] + '건 — 클릭하면 내 할일에서 필터됩니다">' + s[0] + '</a>').join('') +
-            '</div>';
+              '</div>'
+            /* 0건을 빈 막대로 두면 '데이터가 안 나온다'로 읽힌다. 사실을 문장으로 말하고,
+               할 일이 없는 담당자에게 **다음 행동**(직접 발굴 → 수시평가)을 준다. 빈 화면은
+               막다른 길이 되기 쉽다. */
+            : '<div class="dsh-empty-strip">' +
+              '<b>진행 중인 개선조치가 없습니다.</b>' +
+              '<div class="dsh-empty-acts">' +
+                (c.done ? '<a class="btn btn-outline btn-sm" href="my-work.html?view=done' + dq + '">완료한 업무 ' + c.done + '건 보기</a>' : '') +
+                '<a class="btn btn-outline btn-sm" href="rsk-occ.html">유해위험요인을 발견했다면 — 수시평가 등록</a>' +
+              '</div></div>';
 
         /* 실무자 법정 의무 캘린더 — 이번 반기(2026 하반기) 기준.
          *   산안법 §29(정기교육)·§36(위험성평가)·§24(산보위)·§125(작업환경측정) +
@@ -560,7 +653,7 @@
 
         /* 연간 법정 의무 로드맵 (미니 간트) — 어느 달에 의무가 몰리는지 부하 예측.
          *   셀 상태: done 완료 / due 예정 / over 기한초과 / always 상시 · 7월 = 현재(외곽선) */
-        const NOW_M = 7;
+        const NOW_M = +DYV2.today().slice(5, 7);  /* 로드맵 '이번 달' — 오늘 단일 출처 파생 */
         const roadRows = [
             { name: '의무이행 점검표',      basis: '시행령 §5 · 반기',  m: { 7: 'over', 12: 'due' } },
             { name: '산업안전보건위원회',   basis: '산안법 §24 · 분기', m: { 3: 'done', 6: 'done', 9: 'due', 12: 'due' } },
@@ -582,10 +675,13 @@
             }).join('');
             return '<div class="dsh-road-row"><span class="dsh-road-label" title="' + E(r.basis) + '">' + E(r.name) + '</span>' + cells + '</div>';
         }).join('');
+        /* 집중 마감 월은 roadRows 에서 센다 — 숫자를 손으로 적으면 행을 늘릴 때 어긋난다
+           (실제로 '12월 4건'이라 적혀 있는데 행은 5개였고 같은 카드 aria-label 은 5를 말했다) */
+        const decN = roadRows.filter(r => !r.always && r.m[12]).length;
         const roadCard =
             '<div class="card" style="margin-bottom:16px;">' +
               '<div class="card-header"><span class="card-title">연간 법정 의무 로드맵 (2026)</span>' +
-                '<span class="chip-status info chip-sm">12월 마감 4건 집중</span></div>' +
+                '<span class="chip-status info chip-sm">12월 마감 ' + decN + '건 집중</span></div>' +
               '<div class="card-body">' +
                 '<div class="dsh-road-wrap"><div class="dsh-road" role="img" aria-label="연간 법정 의무 로드맵 — 12월에 점검표·산보위·위험성평가·정기교육·측정 마감이 집중됩니다">' +
                     roadHead + roadBody +
@@ -595,11 +691,26 @@
                   '<span><i style="background:var(--status-info-bg);"></i>예정</span>' +
                   '<span><i style="background:var(--status-danger-bg);"></i>기한초과</span>' +
                   '<span><i style="background:var(--brand-50);"></i>상시</span>' +
-                  '<span style="margin-left:auto;">굵은 외곽선 = 이번 달 (7월)</span>' +
+                  '<span style="margin-left:auto;">굵은 외곽선 = 이번 달 (' + NOW_M + '월)</span>' +
                 '</div>' +
               '</div>' +
             '</div>';
 
+        /* 시기도래 — 상태를 하드코딩하면 오늘이 바뀔 때 조용히 어긋난다(lawItems 와 같은 방식).
+           의무이행 점검표는 위 법정 의무 캘린더와 **같은 기한**이어야 한다(한 화면에 두 번 나온다). */
+        const dueItems = [
+            { name: '의무이행 점검표 반기 마감',            menu: '이행점검',     due: '2026-07-08', href: 'menu.html?m=comply' },
+            { name: '상반기 안전보건교육 실시 결과',        menu: '안전보건교육', due: '2026-07-31', href: 'edu-status.html' },
+            { name: '도급사업 안전보건 점검 (군도 5호선)',  menu: '도급관리',     due: '2026-08-14', href: 'menu.html?m=contract' },
+            { name: '정기 위험성평가 결과 등록',            menu: '위험성평가',   due: '2026-12-31', href: 'rsk-list.html' },
+        ];
+        const dueRows = dueItems.map(x =>
+            '<tr><td style="font-weight:600;">' + E(x.name) + '</td>' +
+            '<td><span class="chip-mini pdca">' + E(x.menu) + '</span></td>' +
+            '<td>' + E(x.due) + '</td><td>' + chip(dueSt(x.due)) + '</td>' +
+            '<td><a class="btn btn-sm btn-outline" href="' + x.href + '">이동</a></td></tr>').join('');
+
+        const cal = miniCal(dueItems.map(x => x.due));
         const dueCard =
             '<div class="card" style="margin-bottom:16px;">' +
               '<div class="card-header"><span class="card-title">시기도래 알림</span>' +
@@ -611,25 +722,15 @@
                 '<div id="due-list">' +
                   '<div style="overflow-x:auto;"><table class="table-figma">' +
                     '<thead><tr><th>문서·업무</th><th>대메뉴</th><th>기한</th><th>상태</th><th></th></tr></thead>' +
-                    '<tbody>' +
-                      '<tr><td style="font-weight:600;">의무이행 점검표 반기 마감</td><td><span class="chip-mini pdca">이행관리</span></td><td>2026-06-03</td><td>' + chip('기한초과') + '</td><td><a class="btn btn-sm btn-outline" href="menu.html?m=comply">이동</a></td></tr>' +
-                      '<tr><td style="font-weight:600;">정기 위험성평가 결과 등록</td><td><span class="chip-mini pdca">위험성평가</span></td><td>2026-06-11</td><td>' + chip('진행') + '</td><td><a class="btn btn-sm btn-outline" href="rsk-list.html">이동</a></td></tr>' +
-                      '<tr><td style="font-weight:600;">상반기 안전보건교육 실시 결과</td><td><span class="chip-mini pdca">안전보건교육</span></td><td>2026-06-17</td><td>' + chip('진행') + '</td><td><a class="btn btn-sm btn-outline" href="edu-status.html">이동</a></td></tr>' +
-                      '<tr><td style="font-weight:600;">도급사업 안전보건 점검 (군도 5호선)</td><td><span class="chip-mini pdca">도급관리</span></td><td>2026-06-30</td><td>' + chip('진행') + '</td><td><a class="btn btn-sm btn-outline" href="menu.html?m=contract">이동</a></td></tr>' +
-                    '</tbody></table></div>' +
+                    '<tbody>' + dueRows + '</tbody></table></div>' +
                 '</div>' +
                 '<div id="due-cal" style="display:none;">' +
-                  '<p style="font-size:var(--fs-12); font-weight:700; margin-bottom:8px; text-align:center;">2026년 6월</p>' +
+                  '<p style="font-size:var(--fs-12); font-weight:700; margin-bottom:8px; text-align:center;">' + cal.title + '</p>' +
                   '<table class="mini-cal">' +
                     '<thead><tr><th>일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th></tr></thead>' +
-                    '<tbody>' +
-                      '<tr><td><span class="day muted">31</span></td><td><span class="day">1</span></td><td><span class="day">2</span></td><td><span class="day has-due">3</span></td><td><span class="day">4</span></td><td><span class="day">5</span></td><td><span class="day">6</span></td></tr>' +
-                      '<tr><td><span class="day">7</span></td><td><span class="day">8</span></td><td><span class="day">9</span></td><td><span class="day">10</span></td><td><span class="day today has-due">11</span></td><td><span class="day">12</span></td><td><span class="day">13</span></td></tr>' +
-                      '<tr><td><span class="day">14</span></td><td><span class="day">15</span></td><td><span class="day">16</span></td><td><span class="day has-due">17</span></td><td><span class="day">18</span></td><td><span class="day">19</span></td><td><span class="day">20</span></td></tr>' +
-                      '<tr><td><span class="day">21</span></td><td><span class="day">22</span></td><td><span class="day">23</span></td><td><span class="day">24</span></td><td><span class="day">25</span></td><td><span class="day">26</span></td><td><span class="day">27</span></td></tr>' +
-                      '<tr><td><span class="day">28</span></td><td><span class="day">29</span></td><td><span class="day has-due">30</span></td><td><span class="day muted">1</span></td><td><span class="day muted">2</span></td><td><span class="day muted">3</span></td><td><span class="day muted">4</span></td></tr>' +
-                    '</tbody></table>' +
-                  '<p style="font-size:var(--fs-12); color:var(--text-gray); text-align:center; margin-top:8px;">● 빨간 점 = 마감 도래 일자</p>' +
+                    '<tbody>' + cal.rows + '</tbody></table>' +
+                  '<p style="font-size:var(--fs-12); color:var(--text-gray); text-align:center; margin-top:8px;">● 빨간 점 = 마감 도래 일자' +
+                    (cal.off ? ' · 이번 달 마감 없음 — 위 목록에서 확인하세요' : '') + '</p>' +
                 '</div>' +
               '</div>' +
             '</div>';
@@ -644,19 +745,22 @@
         }).join('');
         const ratesCard =
             '<div class="card">' +
-              '<div class="card-header"><span class="card-title">안전관리 진행현황 — 대메뉴별 이행률</span></div>' +
+              '<div class="card-header"><span class="card-title">업무문서 처리율 — 대메뉴별</span>' +
+                '<span class="dsh-seed-note">기준문서함 문서 기준</span></div>' +
               '<div class="card-body">' + ratesRows + '</div>' +
             '</div>';
 
         /* 카테고리별 잔여 업무 미니 바 — 내 할일 ?cat= 딥링크 연동 */
         const catSeed = [
-            ['결재', 'approval', 2], ['개선', 'improve', 2], ['점검', 'inspection', 2], ['이행', 'comply', 2],
+            ['결재', 'approval', 2], ['개선', 'improve', c.over + c.today + c.week + c.later],
+            ['점검', 'inspection', 2], ['이행', 'comply', 2],
             ['교육', 'edu', 2], ['도급', 'contract', 2], ['평가', 'eval', 1], ['의견', 'opinion', 1],
         ];
         const catMax = Math.max.apply(null, catSeed.map(c => c[2]));
         const catCard =
             '<div class="card">' +
               '<div class="card-header"><span class="card-title">카테고리별 잔여 업무</span>' +
+                '<span class="dsh-seed-note">개선 = 실데이터 · 그 외 시연 시드</span>' +
                 '<a class="btn btn-sm btn-secondary" href="my-work.html">내 할일</a></div>' +
               '<div class="card-body">' +
                 catSeed.map(c => hbarRow(c[0], c[2], catMax, 'blue', 'my-work.html?cat=' + c[1])).join('') +
@@ -667,12 +771,13 @@
             '<div style="display:flex; flex-direction:column; gap:16px;">' +
               catCard +
               '<div class="card">' +
-                '<div class="card-header"><span class="card-title">예방활동 요약</span></div>' +
+                '<div class="card-header"><span class="card-title">예방활동 요약</span>' +
+                    '<span class="dsh-seed-note">시연 시드</span></div>' +
                 '<div class="card-body">' +
-                  '<div class="dsh-feed-item"><span class="dsh-feed-time">오늘 10:20</span><span>수시 위험성평가 완료 — 하수처리장 설비 변경 <a href="rsk-list.html" style="color:var(--main); font-weight:700;">보기</a></span></div>' +
-                  '<div class="dsh-feed-item"><span class="dsh-feed-time">오늘 09:05</span><span>종사자 신고 1건 접수 — 보도블록 침하 <a href="rsk-occ.html" style="color:var(--main); font-weight:700;">보기</a></span></div>' +
+                  '<div class="dsh-feed-item"><span class="dsh-feed-time">오늘 10:20</span><span>수시 위험성평가 완료 — 하수처리장 설비 변경 <a href="rsk-list.html" style="color:var(--main-dark); font-weight:700;">보기</a></span></div>' +
+                  '<div class="dsh-feed-item"><span class="dsh-feed-time">오늘 09:05</span><span>종사자 신고 1건 접수 — 보도블록 침하 <a href="rsk-occ.html" style="color:var(--main-dark); font-weight:700;">보기</a></span></div>' +
                   '<div class="dsh-feed-item"><span class="dsh-feed-time">어제 16:40</span><span>관리감독자 교육 이수율 100% 달성</span></div>' +
-                  '<div class="dsh-feed-item"><span class="dsh-feed-time">06-09</span><span>개선조치 2건 완료 처리 — 노후 사다리 교체 외</span></div>' +
+                  
                   '<div class="dsh-feed-item"><span class="dsh-feed-time">06-08</span><span>도급사업 서약서 3건 첨부 완료</span></div>' +
                 '</div>' +
               '</div>' +
@@ -707,7 +812,7 @@
         const p = global.DYROLE.current();
         const body = p.tier === 'head' ? headView()
                    : p.tier === 'super' ? superView(p)
-                   : staffView();
+                   : staffView(p);
         root.innerHTML = body;
     }
 

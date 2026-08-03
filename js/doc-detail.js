@@ -27,7 +27,7 @@
 
     if (!d) {
         document.getElementById('dd-main').innerHTML =
-            '<div class="card"><div class="card-body"><div class="v2-empty">문서를 찾을 수 없습니다. <a href="' + listHref + '" style="color:var(--main); font-weight:700;">업무 목록</a>으로 돌아가기</div></div></div>';
+            '<div class="card"><div class="card-body"><div class="v2-empty">문서를 찾을 수 없습니다. <a href="' + listHref + '" style="color:var(--main-dark); font-weight:700;">업무 목록</a>으로 돌아가기</div></div></div>';
         return;
     }
 
