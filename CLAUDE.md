@@ -93,7 +93,7 @@
 - **관리감독자 2화면은 별도 코드가 아니다** — `EDUR/EDUE.init(mount, { supMode: true })` 플래그 재사용(`edu-sup.html`·`edu-sup-etc.html`). 관리감독자용 파일을 새로 만들지 말 것.
 - `edu.html`은 `edu-status.html`(대표 진입) 리다이렉트 스텁(쿼리 보존). 기존 링크는 무수정 동작.
 - **`js/edu-data.js`는 삭제·덮어쓰기 금지** — `js/my-work.js`가 `global.DYEDU`로 참조하고, 현재본이 소스 스냅샷의 상위집합(v1r4, 독촉 시드 3건 포함)이다. 시드 변경 시 `SKEY` 버전 범프.
-- **시연 투어(EDUTOUR)는 발표용 핵심 자산 — 제거 금지.** 4단계(집합교육 등록 → 부서 신청·서명 업로드 → 교육 종료 처리 → 이수현황 반영)를 실제 화면을 건너다니며 구동하는 크로스 페이지 투어다. 단계 상태는 sessionStorage(`dy-edu-tour-v1`), 모듈이 저장 성공 시 `EDUTOUR.onEvent('created'|'applied'|'closed')` 호출로 자동 진행하고 모달에는 `.edu-tour-inline` 시연 포인트가 자동 주입된다. **각 edu 화면은 모듈 init 후 `EDUTOUR.boot()`를 반드시 호출**(시연 바+패널 렌더). 시연 데이터 복원·초기화는 `DYEDU.reset()`.
+- **시연 투어(EDUTOUR)는 발표용 핵심 자산 — 제거 금지.** (2026-08-04 엔진을 `DYTOUR`(`js/tour-core.js`)로 이관 — 공개 API 12개는 계약이라 불변. 상세는 §4-3.) 4단계(집합교육 등록 → 부서 신청·서명 업로드 → 교육 종료 처리 → 이수현황 반영)를 실제 화면을 건너다니며 구동하는 크로스 페이지 투어다. 단계 상태는 sessionStorage(`dy-edu-tour-v1`), 모듈이 저장 성공 시 `EDUTOUR.onEvent('created'|'applied'|'closed')` 호출로 자동 진행하고 모달에는 `.edu-tour-inline` 시연 포인트가 자동 주입된다. **각 edu 화면은 모듈 init 후 `EDUTOUR.boot()`를 반드시 호출**(시연 바+패널 렌더). 시연 데이터 복원·초기화는 `DYEDU.reset()`.
 - 표준 준수 이식: 탭 `.sub-tabs` · 표 `.table-figma`(+`.table-compact`·`.table-nowrap`·`tr.row-short` modifier) · 배지 `chip-status`(+`.chip-sm`)+`DYV2.toneOf` · 빈상태 `.v2-empty` · 게이지 `.progress` · 등록 폼 부서 선택 `ORGPICK('deptId')`(목록 상단 필터는 `<select>` 유지). 모달 상호작용 재렌더 전 `capture*()`로 입력값 보존.
 - **목록 필터는 `EDUFILTER`(`js/edu-filter.js`)로만 렌더 (MUST)** — 화면마다 필터 UI 를 새로 짜지 않는다. `EDUFILTER.bar(fields, opts)` 가 [검색어][셀렉트…][체크] … [결과 건수][필터 초기화][액션] 한 줄을 만들고, `opts.reset` 은 적용 중인 조건 개수를 배지로 보여준다(0건이면 비활성). 보조: `yearOptions(dates)`(데이터에 실재하는 연도만) · `monthOptions()` · `match(q, parts)`(다중 필드 부분일치).
   - **검색어가 있는 화면의 재렌더는 반드시 `EDUFILTER.rerender(render)`로 감싼다** — mount 를 통째로 다시 그리는 이 코드베이스 관례상, 감싸지 않으면 타이핑 도중 포커스·캐럿이 날아간다.
@@ -143,7 +143,7 @@
 - **대시보드 시드의 상태·기한은 파생한다 (MUST, 2026-08-03)** — `dashboard.js` 는 `dueSt(due, fallback)` 로 상태를, `miniCal()` 로 달력을 `DYV2.today()`(§11)에서 만든다. 시드에 `st: '진행'` 을 박아 두면 시연일이 바뀌는 순간 '기한 초과 0건' 옆에 지난 기한 3건이 '진행'으로 남는다(실제 결함).
   - `SUPER_SEED[dept].tasks` 중 **기한이 지난 건수 = `DEPT_RATES[dept].overdue`** 여야 한다 — 군수 뷰의 부서별 표와 관리감독자 뷰의 `기한 초과` 카드가 같은 부서에 다른 숫자를 내면 안 된다(safety 0 · facility 3 · town_damyang 2).
   - **실집계와 시드를 같은 카드에 섞지 말 것** — 개선조치 지연은 `staffCounts().over` 실집계 하나로만 말한다. 시드로만 그리는 카드(에이징 등)는 `.dsh-seed-note` 로 밝힌다.
-- **시연 투어 엔진은 `DYTOUR`(`js/tour-core.js`) 하나다 (2026-08-04 신설)** — 정기 `RSKTOUR`(`js/rsk-tour.js`, **9단계**)와 수시 `OCCTOUR`(`js/occ-tour.js`, **5단계**)가 같은 엔진에 단계 정의만 얹는다. 세 번째 투어가 생겨도 엔진을 복제하지 말 것. 각 투어는 ① 전체 흐름 보드(`openFlow()`)와 ② 단계별 가이드(`start()`)를 제공한다.
+- **시연 투어 엔진은 `DYTOUR`(`js/tour-core.js`) 하나다 (2026-08-04 신설)** — 정기 `RSKTOUR`(`js/rsk-tour.js`, **9단계**) · 수시 `OCCTOUR`(`js/occ-tour.js`, **5단계**) · 안전보건교육 `EDUTOUR`(`js/edu-tour.js`, **4단계**) 셋이 같은 엔진에 단계 정의만 얹는다. 네 번째 투어가 생겨도 엔진을 복제하지 말 것. 각 투어는 ① 전체 흐름 보드(`openFlow()`)와 ② 단계별 가이드(`start()`)를 제공한다.
   - 진입 바는 그 도메인의 대표 화면에서만 — `rsk-list`(정기)·`rsk-occ`(수시)는 `boot({bar:true})`, `my-work` 는 두 투어 모두 `boot()`(바 없이 진행 중일 때만 패널). 여러 도메인이 모이는 화면에 도메인 바를 상시 노출하지 않는다.
   - **패널은 한 번에 하나** — `my-work` 는 두 투어를 함께 로드하므로 `DYTOUR` 가 인스턴스를 등록해 두고 `go()`·`boot()` 에서 다른 투어를 끈다(`stopOthers`). 두 패널이 겹치면 어느 쪽 안내인지 알 수 없다.
   - **수시는 흐름의 방향이 반대다** — 정기는 주관부서가 열어 부서로 내려보내고, 수시는 **부서가 사유가 생겨 올리고** 주관부서가 안전관리자 검토를 붙인다. 그래서 1단계 주체가 부서 담당자다. 완료 확인·공문 단계는 없다(§4-3 — 수시는 확인 주체가 외부 용역 안전관리자다).
@@ -155,7 +155,11 @@
   - **페르소나 전환은 투어가 한다** — 주관부서(박안전)와 부서 담당자를 오가는 흐름이라 `DYROLE.set()` 대신 `ROLE_KEY` 만 바꾸고 목적 화면으로 직접 이동한다(`DYROLE.set` 은 자체 reload 로 목적지를 덮어쓴다).
   - **시연 대상 부서를 하드코딩하지 않는다** — `demoDept()` 가 실제 `a.depts` 에서 고른다(부서 담당자 페르소나가 있는 `water`·`env` 우선). 대상 부서가 많으면 공문 기안 조건(`docReady` = 전 부서 확인 완료)을 채우느라 시연이 끝나지 않으므로, 1단계 모달에 한 곳만 남기는 도우미(`pickDemoDept()`)를 둔다.
   - **CSS 는 교육 투어와 공유한다** — `css/v2.css` 의 `.edu-tour-*`·`.edu-demo-*` 규칙에 중립 이름 `.dy-tour-*`·`.dy-demo-*` 를 **쉼표로 병기**했다(§7 계열 신설 금지). 단계 칩 줄만 `.dy-tour-steps` 로 분리한다 — 교육은 4단 고정 그리드이고 위험성평가는 9단계라 유연 배치가 필요하다(교육 투어 시각 회귀 0, 실측 확인). 흐름 보드의 단계 목록은 `.rl-my-step` 계열을 그대로 쓴다.
-  - `js/edu-tour.js`(EDUTOUR)는 손대지 않는다 — CLAUDE.md §4 가 "발표용 핵심 자산 · 제거 금지"로 못박았고, rsk 3화면과 edu 9화면은 교집합이 0이라 두 엔진이 충돌하지 않는다. **교육 투어를 `DYTOUR` 로 이관한다면 공개 API 12개 이름은 계약(HTML 9곳 + 인라인 onclick + §4)이므로 그대로 유지할 것.**
+  - **교육 투어(EDUTOUR)도 2026-08-04 에 `DYTOUR` 로 이관했다 — 공개 API 12개는 계약이라 그대로다** (`boot`·`start`·`stop`·`go`·`next`·`prev`·`action`·`onEvent`·`restoreAndStart`·`resetDemo`·`confirmReset`·`active`). edu 화면 HTML 9곳이 `EDUTOUR.boot()` 를 **인자 없이** 부르므로 파사드가 기본값을 `{bar:true}` 로 맞춘다(엔진 기본은 바 없음). `onEvent()` 는 무동작이다 — 자동 진행을 `done()` 변화로 감지하므로 훅이 필요 없고, 호출부 5곳(`edu-reg.js` 3 · `edu-reg-detail.js` 2)은 계약이라 그대로 둔다.
+    - 교육은 4단계 고정이라 칩 줄을 `cfg.stepsClass: 'is-grid4'` 로 종전 4열 그리드에 고정한다(위험성평가는 유연 배치).
+    - 데이터 복원(`restoreAndStart`·`resetDemo`·`confirmReset`)과 "항상 1단계부터 시작"은 교육 고유 동작이라 파사드가 `start()` 를 덮어쓴다 — 발표자가 아는 흐름을 바꾸지 않기 위해서다.
+    - **추적 대상 폴백은 '접수 중'이 아니라 '가장 최근 집합교육'이다** — OPEN 만 보면 3단계 종료 처리 순간 대상을 잃어 전 단계 체크가 한꺼번에 풀린다(실제로 낸 결함).
+  - **흐름 보드 모달에는 단계 안내(`modalGuide`)를 주입하지 않는다** — 보드는 전체 지도이지 특정 단계의 작업 모달이 아니다. `syncModalState()` 가 `.dy-tour-flow` 를 보고 건너뛴다.
 - 인쇄에서 빼야 할 편집 크롬은 **`.pdf-noprint`** 를 단다. 인쇄 규칙에 모듈별 클래스 이름을 추가하지 말 것(다음 모듈에서 또 잊는다).
 - **지면은 표준 공문 서식이다 (MUST)** — 「행정업무의 운영 및 혁신에 관한 규정 시행규칙」 별지 제1호서식(기안문·시행문)은 **전 행정기관 공통**이라 담양군 고유 양식이 따로 없다. `.pdf-gm` modifier 로 그린다: 행정기관명 → 수신/제목 → 본문(`1.→가.→1)`) → 붙임+`끝.` → 발신명의·관인 → **하단** 기안자/검토자/결재권자 서명 → 시행/접수 → 기관정보. **보고서 서식(절 구분·KPI 카드)을 쓰지 말 것** — 초판이 그 오류를 냈다. 결재란은 상단이 아니라 **하단**이고, 큰 표는 본문이 아니라 **붙임 별지**(`.pdf-gm-annex`)로 뺀다.
   - **내부결재 / 외부발송은 지면이 실제로 다르다** — 내부결재는 수신 `내부결재`·발신명의·관인·접수란·기관정보 없음. 하나로 합치지 말 것.

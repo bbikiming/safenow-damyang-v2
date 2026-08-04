@@ -1858,6 +1858,9 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
    칩(.dy-tour-step)은 기존 클래스를 그대로 쓰므로 시각은 같다(교육 투어 회귀 0). */
 .dy-tour-steps { display: flex; flex-wrap: wrap; grid-template-columns: none; }
 .dy-tour-steps .dy-tour-step { flex: 1 1 auto; padding: 6px 8px; }
+/* 교육 투어는 4단계 고정이라 종전 그대로 4열 그리드를 쓴다 (DYTOUR cfg.stepsClass) */
+.dy-tour-steps.is-grid4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.dy-tour-steps.is-grid4 .dy-tour-step { flex: none; padding: 6px 2px; }
 
 /* 위험성평가 투어 전용 — 교육 투어에 없던 3가지.
    ① 요구 페르소나 ② 어디를 누르는지 ③ 클릭 순서 · 앵커 미탐 사유 */

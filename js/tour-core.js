@@ -200,7 +200,7 @@
                         (done ? ' · <b>이 단계 완료</b>' : '') + '</div>' +
                     '<div class="dy-tour-title" id="' + TITLE_ID + '" tabindex="-1">' + (idx + 1) + '. ' + esc(s.title) + '</div></div>' +
                     '<button class="dy-tour-close" type="button" onclick="' + NS + '.stop()">가이드 종료</button></div>' +
-                '<div class="dy-tour-steps" aria-label="시연 단계">' + STEPS.map(function (x, i) {
+                '<div class="dy-tour-steps' + (cfg.stepsClass ? ' ' + cfg.stepsClass : '') + '" aria-label="시연 단계">' + STEPS.map(function (x, i) {
                     return '<button type="button" class="dy-tour-step' + (safeDone(x) ? ' done' : '') + (i === idx ? ' active' : '') + '"' +
                         (i === idx ? ' aria-current="step"' : '') +
                         ' title="' + esc((i + 1) + '. ' + x.title) + '" onclick="' + NS + '.go(' + i + ')">' + esc(x.label) + '</button>';
@@ -243,6 +243,9 @@
             if (modal && active()) {
                 var s = STEPS[stateIdx()];
                 var body = modal.querySelector('.modal-body');
+                /* 흐름 보드 자신에게는 넣지 않는다 — 보드는 전체 지도이지 특정 단계의
+                   작업 모달이 아니다. 넣으면 엉뚱한 단계의 안내가 보드 위에 뜬다. */
+                if (body && body.querySelector('.dy-tour-flow')) return;
                 if (s && s.modalGuide && body && !body.querySelector('.dy-tour-inline')) {
                     var g = document.createElement('div');
                     g.className = 'dy-tour-inline';
@@ -369,6 +372,11 @@
                 '<div class="dy-demo-actions">' +
                     '<button class="btn btn-primary" type="button" onclick="' + NS + '.start()">시연 가이드 시작</button>' +
                     '<button class="btn btn-outline" type="button" onclick="' + NS + '.openFlow()">전체 흐름 보기</button>' +
+                    /* 시연 데이터를 되돌릴 수단이 있는 도메인만 (교육) */
+                    (cfg.resetLabel
+                        ? '<button class="btn btn-secondary" type="button" onclick="' + NS + '.resetDemo()">' +
+                          esc(cfg.resetLabel) + '</button>'
+                        : '') +
                 '</div>';
             main.insertBefore(bar, main.firstChild);
         }
