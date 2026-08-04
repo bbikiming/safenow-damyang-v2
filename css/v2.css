@@ -3371,3 +3371,43 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .pol-board-moved b { color: var(--text-black); }
 /* 대시보드 — 시드와 실데이터가 섞인 카드에 범위를 밝힌다 */
 .dsh-seed-note { margin-left: auto; margin-right: 8px; font-size: var(--fs-12); color: var(--text-gray); }
+
+
+/* ── 발주처 확정 필요 항목 (DYPOLICY / js/policy-open.js) ──
+   시연 중 그 자리에서 묻고 답을 기록하는 목록. 표준 토큰만 사용. */
+.pol-lead { margin: 0 0 12px; font-size: var(--fs-13); line-height: 1.6; color: var(--text-gray); }
+.pol-sum {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 9px 12px; margin-bottom: 12px;
+  border-radius: var(--radius-button); background: var(--brand-50);
+  color: var(--main-dark2); font-size: var(--fs-12);
+}
+.pol-here-note { color: var(--text-gray); }
+.pol-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.pol-item {
+  padding: 13px 14px; border: 1px solid var(--card-line);
+  border-radius: var(--radius-sm); background: var(--surface);
+}
+.pol-item.is-here { border-color: var(--main-dark); background: var(--brand-50); }
+.pol-item.is-decided { opacity: 0.9; }
+.pol-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pol-title { font-size: var(--fs-14); color: var(--text-black); }
+.pol-menu { font-size: var(--fs-12); color: var(--text-gray); }
+.pol-q { margin: 8px 0 0; font-size: var(--fs-13); line-height: 1.6; color: var(--text-black); font-weight: var(--fw-bold); }
+.pol-now, .pol-why, .pol-impact { margin: 6px 0 0; font-size: var(--fs-12); line-height: 1.55; color: var(--text-gray); }
+.pol-now b, .pol-why b, .pol-impact b { color: var(--main-dark2); }
+.pol-opts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.pol-opt {
+  padding: 5px 11px; border: 1px solid var(--card-line); border-radius: var(--radius-full);
+  background: var(--surface); color: var(--text-gray);
+  font-size: var(--fs-12); font-weight: var(--fw-bold); cursor: pointer;
+}
+.pol-opt.on { border-color: var(--main-dark); background: var(--main-dark); color: var(--surface); }
+.pol-opt:focus-visible { outline: 2px solid var(--main-dark); outline-offset: 2px; }
+.pol-memo { display: flex; align-items: center; gap: 8px; margin-top: 9px; }
+.pol-memo > span { flex: none; font-size: var(--fs-12); color: var(--text-gray); }
+.pol-memo .form-input { flex: 1; min-width: 0; }
+.pol-sumtext { width: 100%; font-size: var(--fs-12); line-height: 1.6; }
+@media (max-width: 559px) {
+  .pol-memo { flex-direction: column; align-items: stretch; gap: 4px; }
+}

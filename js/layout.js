@@ -512,6 +512,9 @@
                     </a>
                     ${PRE_REVIEW ? `<button type="button" class="dy-prereview" onclick="window.DYLayout.preReviewInfo()"
                         title="담양군 주무관님 검토 전 시연본입니다 — 눌러서 상세 보기">검토 전<span> 시연본</span></button>` : ''}
+                    ${PRE_REVIEW ? `<button type="button" class="dy-prereview is-policy" id="dy-policy-chip"
+                        onclick="window.DYPOLICY && window.DYPOLICY.open()"
+                        title="발주처 확정 필요 항목">정책 확인 <span class="dy-policy-n">·</span></button>` : ''}
                 </div>
                 <div class="dy-header-actions" style="display:flex; align-items:center; gap:6px;">
                     <div class="dy-ntf-wrap" id="dy-ntf-wrap" style="position:relative;">
@@ -770,6 +773,10 @@
             wireNotification();
             wireRoleSwitcher();
             wireGnbOverflow();
+            /* 발주처 확정 필요 항목 — 헤더 칩 카운트 동기화 (DYPOLICY / js/policy-open.js).
+               칩이 DOM 에 붙은 **뒤** 불러야 한다. 이 화면 관련 항목이 있으면 칩이 강조된다. */
+            if (window.DYPOLICY) window.DYPOLICY.syncChip();
+
 
             /* 권한 전환 직후 도착 토스트 (DYROLE) */
             try {

@@ -2051,6 +2051,19 @@ body.sidebar-locked {
   cursor: pointer;
 }
 .dy-prereview:hover { filter: brightness(0.97); }
+/* 정책 확인 칩 — 같은 헤더 칩 계열의 modifier (§7 계열 신설 금지).
+   이 화면과 관련된 항목이 있으면(is-here) 채워서 눈에 띄게 한다. */
+.dy-prereview.is-policy {
+  border-color: var(--status-info-border);
+  background: var(--status-info-bg);
+  color: var(--status-info-fg);
+}
+.dy-prereview.is-policy.is-here {
+  border-color: var(--status-info-fg);
+  background: var(--status-info-fg);
+  color: var(--surface);
+}
+.dy-prereview.is-policy:focus-visible { outline-color: var(--status-info-fg); }
 .dy-prereview:focus-visible { outline: 2px solid var(--status-warning-fg); outline-offset: 2px; }
 /* 모달 본문 — 표준 타이포만 쓰고 자체 색을 만들지 않는다 */
 .dy-prereview-doc h4 { margin: 14px 0 6px; font-size: var(--fs-14); font-weight: var(--fw-bold); }
@@ -4433,7 +4446,8 @@ body.sidebar-locked {
   /* 좁은 화면에서는 '검토 전'만 남긴다 — 브랜드명과 폭을 다투면 안 된다.
      칩을 지우지 않는 이유: 검토 전임을 알리는 것이 이 칩의 존재 이유다. */
   .dy-prereview { margin-left: 8px; padding: 4px 8px; }
-  .dy-prereview > span { display: none; }
+  /* '시연본' 꼬리말만 접는다 — 정책 칩의 **건수**는 남겨야 한다(그게 정보다) */
+  .dy-prereview > span:not(.dy-policy-n) { display: none; }
   .dy-brand-icon {
     width: 24px;
     height: 26px;
