@@ -2029,6 +2029,36 @@ body.sidebar-locked {
   font-weight: 300;
 }
 
+/* --- 검토 전 시연본 칩 (layout.js PRE_REVIEW) ---
+   배포 링크를 받은 사람이 완성본으로 오인하지 않도록 전 화면 헤더에 상시 노출한다.
+   눌러서 무엇이 검토 대기인지 볼 수 있으므로 button 이다(장식이 아니다). */
+.dy-prereview {
+  flex: none;
+  margin-left: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  padding: 4px 10px;
+  border: 1px solid var(--status-warning-border);
+  border-radius: var(--radius-full);
+  background: var(--status-warning-bg);
+  color: var(--status-warning-fg);
+  font-size: var(--fs-12);
+  font-weight: var(--fw-bold);
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.dy-prereview:hover { filter: brightness(0.97); }
+.dy-prereview:focus-visible { outline: 2px solid var(--status-warning-fg); outline-offset: 2px; }
+/* 모달 본문 — 표준 타이포만 쓰고 자체 색을 만들지 않는다 */
+.dy-prereview-doc h4 { margin: 14px 0 6px; font-size: var(--fs-14); font-weight: var(--fw-bold); }
+.dy-prereview-doc p { margin: 0; font-size: var(--fs-13); line-height: 1.6; }
+/* 전역 리셋이 list-style 을 지워 항목이 그냥 들여쓴 문단으로 보인다 — 여기서 되살린다 */
+.dy-prereview-doc ul { margin: 0; padding-left: 18px; font-size: var(--fs-13); line-height: 1.7; list-style: disc; }
+.dy-prereview-note { color: var(--text-gray); }
+
 /* --- 사용자 칩 (시안 #2C7D60) --- */
 .dy-user-pill {
   display: inline-flex;
@@ -4400,6 +4430,10 @@ body.sidebar-locked {
     white-space: nowrap;
   }
   .dy-header-actions { flex: none; }
+  /* 좁은 화면에서는 '검토 전'만 남긴다 — 브랜드명과 폭을 다투면 안 된다.
+     칩을 지우지 않는 이유: 검토 전임을 알리는 것이 이 칩의 존재 이유다. */
+  .dy-prereview { margin-left: 8px; padding: 4px 8px; }
+  .dy-prereview > span { display: none; }
   .dy-brand-icon {
     width: 24px;
     height: 26px;

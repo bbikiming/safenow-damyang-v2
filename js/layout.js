@@ -11,6 +11,17 @@
 (function () {
     'use strict';
 
+    /* =========================================================================
+     * ★ 검토 전 표시 (PRE_REVIEW) — **검토가 끝나면 이 한 줄만 false 로 바꾼다** ★
+     * -------------------------------------------------------------------------
+     * 배포 링크를 받아 여는 사람에게는 이 화면이 완성본으로 보인다. README·배포 안내에
+     * 적어 둔 "검토 전" 고지는 저장소를 여는 사람만 보므로, 화면 자체에도 표시한다.
+     * 헤더 셸 한 곳에서 렌더하므로 전 화면(54개)에 한 번에 붙고 한 번에 걷힌다
+     * (js/edu-approval.js 의 SUBMIT_ENABLED 와 같은 스위치 방식).
+     * 걷어낼 때 함께 정리할 것 — README.md 상단 안내 블록 · 배포본의 배포-안내.md
+     * ========================================================================= */
+    const PRE_REVIEW = true;
+
     /* --- 아이콘 (Lucide 스타일, stroke 1.75) --- */
     const ICON = {
         shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>',
@@ -469,6 +480,8 @@
                         <span class="dy-brand-icon">${ICON.pocket}</span>
                         <span class="dy-brand-name"><strong>담양군</strong><span>중대재해예방 시스템</span></span>
                     </a>
+                    ${PRE_REVIEW ? `<button type="button" class="dy-prereview" onclick="window.DYLayout.preReviewInfo()"
+                        title="담양군 주무관님 검토 전 시연본입니다 — 눌러서 상세 보기">검토 전<span> 시연본</span></button>` : ''}
                 </div>
                 <div class="dy-header-actions" style="display:flex; align-items:center; gap:6px;">
                     <div class="dy-ntf-wrap" id="dy-ntf-wrap" style="position:relative;">
@@ -994,9 +1007,41 @@
         return html;
     }
 
+    /* 검토 전 칩 클릭 — 무엇이 검토 대기이고 무엇이 발주처 확정 대기인지 밝힌다.
+       칩만 띄우고 설명이 없으면 "왜 검토 전인지"를 아무도 알 수 없다.
+       모달은 공용 헬퍼만 쓴다 (CLAUDE.md §1). */
+    function preReviewInfo() {
+        const V = window.DYV2;
+        if (!V || !V.openModal) return;
+        V.openModal('검토 전 시연본입니다',
+            '<div class="dy-prereview-doc">' +
+              '<p><b>이 화면은 담양군 주무관님 검토를 받기 전 상태입니다.</b> 확정 사양이 아니며, ' +
+                '검토 결과에 따라 화면·용어·플로우가 바뀔 수 있습니다. ' +
+                '확정 사양으로 인용하거나 개발 착수 근거로 삼지 마세요.</p>' +
+              '<h4>검토 대기 중인 변경</h4>' +
+              '<ul>' +
+                '<li>2026-07-30 회의 반영 — 안전보건교육 첨부·탭 구성, 이행관리 → <b>이행점검</b> 개칭과 부서 전수 체크리스트, 경영방침 게시 현황</li>' +
+                '<li>개선조치 완료 확인 → <b>공문 기안</b> → 온나라 이관 (신설)</li>' +
+                '<li>권한 계층별 조작 권한·조회 범위 정비</li>' +
+              '</ul>' +
+              '<h4>발주처 확정이 필요해 비워 둔 항목</h4>' +
+              '<p class="dy-prereview-note">아래는 화면에서 <b>“미등록”</b>으로 드러나 있습니다 — 임의로 채우지 않았습니다.</p>' +
+              '<ul>' +
+                '<li>공문 기관정보 — 처리과 기호·주소·전화·팩스·전자우편·공개구분·관인</li>' +
+                '<li>부서 명단 — 현재 11개 등록 / 회의에서 확인된 대상 39개</li>' +
+                '<li>문서대장 5년치 · 산업안전보건법 시행규칙 별표5 · 시행규칙 §37</li>' +
+                '<li>온나라 실연동 방식 (현재는 시연용 시뮬레이션)</li>' +
+              '</ul>' +
+              '<p class="dy-prereview-note">시연 기준일은 <b>2026-07-16</b>으로 고정되어 있습니다.</p>' +
+            '</div>',
+            '<button type="button" class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
+    }
+
     /* 외부 노출 */
     window.DYLayout = {
         mount,
+        PRE_REVIEW,
+        preReviewInfo,
         _soon: showComingSoon,
         renderPagination,
         renderFilterRow,
