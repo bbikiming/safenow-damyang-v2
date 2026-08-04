@@ -153,6 +153,19 @@
     function deptNames() { const out = []; orgWalk(n => { if (isDeptLike(n)) out.push(n.name); }); return out; }
     /* 부서형 노드 [{id, name, count}] — deptId 로 저장하는 도메인(위험성평가·안전보건교육)의 부서 선택 공용 파생.
      * orgFlat() 은 EDOC 호환을 위해 id 를 버리고 부서명만 투영하므로 id 기준 화면에서는 이 헬퍼를 쓴다. */
+    /* 부서 **이름 → id**. 부서를 이름으로 저장하는 도메인(작업환경측정·건강검진)이
+       조회 범위(DYROLE.inScope)를 물어보려면 id 가 필요하다(§3 dept/deptId 이원화).
+       못 찾으면 '' 를 돌려주고, inScope('') 는 전사 항목으로 보아 통과시킨다. */
+    function deptIdOf(name) {
+        var n = String(name == null ? '' : name).trim();
+        if (!n) return '';
+        var found = '';
+        orgWalk(function (x) {
+            if (found) return;
+            if (['dept', 'office', 'town'].indexOf(x.type) >= 0 && x.name === n) found = x.id;
+        });
+        return found;
+    }
     function orgDepts() {
         const out = [];
         orgWalk(n => { if (isDeptLike(n)) out.push({ id: n.id, name: n.name, count: orgCount(n.id) }); });
@@ -507,6 +520,6 @@
         TODAY: DEMO_TODAY, today, daysTo, realToday,
         acceptFiles, dropFiles, dropOver, isImageFile,
         BP, below, STATUS_TONE, toneOf,
-        ORG, orgFlat, orgNode, orgCount, orgTotal, orgWalk, deptNames, orgDepts,
+        ORG, orgFlat, orgNode, orgCount, orgTotal, orgWalk, deptNames, orgDepts, deptIdOf,
     };
 })();

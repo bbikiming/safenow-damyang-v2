@@ -10,6 +10,14 @@
     var V = function () { return global.DYV2; };
     var S = function () { return global.DYSH; };
     function esc(s) { return V().esc(String(s == null ? '' : s)); }
+    /* ===== 권한 (CLAUDE.md §12) =====
+     * 건강검진은 **개인 건강정보**다 — 남의 부서 검진 결과·대상 인원을 볼 이유가 없다.
+     * 조회 범위는 DYROLE.scope(), 조작(계획 등록·증빙 첨부)은 DYROLE.canAct() 단일 출처.
+     * 부서를 **이름**으로 저장하는 도메인이라 DYV2.deptIdOf() 로 id 를 얻어 물어본다(§3). */
+    function R() { return global.DYROLE; }
+    function inScope(r) { return !R() || R().inScope(V().deptIdOf(r.dept)); }
+    function canAct(deptName) { return !R() || R().canAct(deptName ? V().deptIdOf(deptName) : ''); }
+    function roNote() { return R() ? R().readOnlyNote('검진 계획 등록·증빙 첨부') : ''; }
 
     var state = { mount: null, year: '2026', type: '', dept: '', tile: 'all' };
 
@@ -17,7 +25,8 @@
 
     function baseRows() {
         return S().health().filter(function (r) {
-            return (!state.year || String(r.year) === state.year)
+            return inScope(r)
+                && (!state.year || String(r.year) === state.year)
                 && (!state.type || r.type === state.type)
                 && (!state.dept || r.dept === state.dept);
         });
@@ -78,7 +87,9 @@
 
     function toolbarHtml() {
         var deptOpts = ['<option value="">부서 전체</option>'].concat(
-            uniq(S().health().map(function (r) { return r.dept; })).map(function (d) {
+            /* 조회 범위 밖 부서는 필터 선택지에도 내지 않는다 — 목록에서 지워 놓고
+               드롭다운에 남기면 '있는데 안 보여준다'로 읽힌다(§12). */
+            uniq(S().health().filter(inScope).map(function (r) { return r.dept; })).map(function (d) {
                 return '<option value="' + esc(d) + '"' + (state.dept === d ? ' selected' : '') + '>' + esc(d) + '</option>';
             })).join('');
         return '<div class="sh-toolbar"><div class="sh-filters">' +
@@ -93,7 +104,7 @@
             '<span class="sh-fl">부서</span>' +
             '<select class="form-select" aria-label="부서" onchange="HEX.setDept(this.value)">' + deptOpts + '</select>' +
             '</div>' +
-            '<button type="button" class="btn btn-primary" onclick="HEX.openNew()">＋ 검진 계획 등록</button></div>';
+            (canAct() ? '<button type="button" class="btn btn-primary" onclick="HEX.openNew()">＋ 검진 계획 등록</button>' : '') + '</div>';
     }
 
     function render() {
@@ -127,7 +138,7 @@
         var rows = list.length ? list.map(rowFn).join('') :
             '<tr><td colspan="' + cols + '" class="sh-empty">조건에 맞는 건강검진 건이 없습니다.</td></tr>';
 
-        state.mount.innerHTML = vbar() + linkbar + tiles(sum) + toolbarHtml() +
+        state.mount.innerHTML = vbar() + linkbar + tiles(sum) + toolbarHtml() + roNote() +
             '<div class="sh-wrap"><table class="sh-table"><thead><tr>' + thead + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
     }
 
@@ -171,7 +182,7 @@
             var bodyD = rows.length ? rows.map(rowDeptInbox).join('') :
                 '<tr><td colspan="6" class="sh-empty">' + (dept ? esc(dept) + '에 요청된 검진 결과 제출 건이 없습니다.' : '결과 제출이 요청된 부서가 없습니다.') + '</td></tr>';
             /* 담당부서 관점은 관리버전 탭(vbar) 미노출 — 결과 제출에만 집중(관점 바로 주관부서 복귀) */
-            state.mount.innerHTML = perspBar() + procLinkbar('dept') + deptTiles(sum) +
+            state.mount.innerHTML = perspBar() + procLinkbar('dept') + deptTiles(sum) + roNote() +
                 '<div class="sh-wrap"><table class="sh-table"><thead><tr>' + theadD + '</tr></thead><tbody>' + bodyD + '</tbody></table></div>';
             return;
         }
@@ -180,7 +191,7 @@
         var theadA = '<th>대상 부서</th><th>검진 유형</th><th>위탁 검진기관</th><th>진행 단계</th><th class="num">대상자</th><th>결과 제출</th><th>담당자</th>';
         var bodyA = base.length ? base.map(rowProc).join('') :
             '<tr><td colspan="7" class="sh-empty">조건에 맞는 건강검진 건이 없습니다.</td></tr>';
-        state.mount.innerHTML = vbar() + perspBar() + procLinkbar('admin') + procTiles(base) + toolbarHtml() +
+        state.mount.innerHTML = vbar() + perspBar() + procLinkbar('admin') + procTiles(base) + toolbarHtml() + roNote() +
             '<div class="sh-wrap"><table class="sh-table"><thead><tr>' + theadA + '</tr></thead><tbody>' + bodyA + '</tbody></table></div>';
     }
 
@@ -260,7 +271,9 @@
     function eviCell(r) {
         return r.evidence
             ? '<span class="sh-attached">' + S().icon('file') + '첨부됨</span>'
-            : '<button type="button" class="sh-pill-link" onclick="event.stopPropagation();HEX.attach(\'' + r.id + '\')">＋ 첨부</button>';
+            : (canAct(r.dept)
+                ? '<button type="button" class="sh-pill-link" onclick="event.stopPropagation();HEX.attach(\'' + r.id + '\')">＋ 첨부</button>'
+                : '<span class="sh-pill-none">미첨부</span>');
     }
     function followupCell(r) {
         return r.followupNeeded
@@ -315,6 +328,7 @@
 
     /* 목록 인라인 증빙 첨부 — 상세 진입 없이 실시확인서 등록(개인별 결과는 상세 권한 열람) */
     function attach(id) {
+        if (!canAct()) { V().toast('증빙 첨부은(는) 해당 부서 담당자가 수행합니다.'); return; }
         var r = S().healthOf(id); if (!r) return;
         V().openModal('실시 증빙 등록',
             '<p style="font-size:13px;margin-bottom:10px;color:var(--text-gray);"><b>' + esc(r.dept) + ' · ' + esc(r.type) + '</b> 검진기관 실시확인서·집계 결과를 첨부합니다. (개인별 결과는 상세 권한 열람)</p>' +
@@ -322,7 +336,8 @@
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="HEX.saveAttach(\'' + id + '\')">등록</button>');
     }
-    function saveAttach(id) { S().attachEvidence('hc', id, '실시 증빙'); V().closeModal(); render(); V().toast('증빙이 등록되었습니다.'); }
+    function saveAttach(id) {
+        if (!canAct()) { V().toast('증빙 첨부은(는) 해당 부서 담당자가 수행합니다.'); return; } S().attachEvidence('hc', id, '실시 증빙'); V().closeModal(); render(); V().toast('증빙이 등록되었습니다.'); }
 
     /* 담당부서 관점 — 결과 문서 제출(목록 인라인) */
     function deptUpload(id) {
@@ -340,6 +355,7 @@
     }
 
     function openNew() {
+        if (!canAct()) { V().toast('검진 계획 등록은(는) 해당 부서 담당자가 수행합니다.'); return; }
         V().openModal('건강검진 계획 등록',
             /* 대상 부서 — 조직도(DYV2.ORG) 인라인 트리에서 선택 */
             '<div class="ri-modal-row" style="margin-bottom:12px;"><label class="form-label" for="he-n-deptname">대상 부서 <span style="color:var(--status-danger-fg)">*</span></label>' +
@@ -361,6 +377,7 @@
     }
     function pickDept(name) { var inp = document.getElementById('he-n-deptname'); if (inp) inp.value = name; }
     function saveNew() {
+        if (!canAct()) { V().toast('검진 계획 등록은(는) 해당 부서 담당자가 수행합니다.'); return; }
         var dept = (document.getElementById('he-n-deptname').value || '').trim();
         var agency = (document.getElementById('he-n-agency').value || '').trim();
         if (!dept) { V().toast('대상 부서를 선택하세요.'); return; }

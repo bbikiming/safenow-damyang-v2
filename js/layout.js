@@ -127,6 +127,36 @@
         const s = roleScope();
         return s === 'all' || !deptId || deptId === s;
     }
+
+    /* =========================================================================
+     * 조작 권한 (DYROLE.canAct) — '무엇을 **바꿀** 수 있는가'
+     * -------------------------------------------------------------------------
+     * 조회 범위(scope)와 **다른 축**이다. 조회가 'all' 이어도 조작은 담당자만인
+     * 경우가 정상이다(재난안전과장).
+     *   · 관리·감독(head/super)은 조회만 한다 — 담당자 이름으로 대신 등록·서명하면
+     *     그건 문서 위조다(§4-3 완료확인 규칙과 같은 근거).
+     *   · 담당자(staff)는 자기 부서 건만. 주관부서(재난안전과) 담당자는 전 부서.
+     * 화면마다 tier·deptId 로 직접 판정하지 말고 이 함수만 볼 것.
+     * ========================================================================= */
+    function roleCanAct(deptId) {
+        const p = rolePersona();
+        if (!p) return true;                       /* 롤 스위처가 없는 환경은 종전대로 */
+        if (p.tier !== 'staff') return false;      /* 총괄·관리감독자는 조회 전용 */
+        if (p.deptId === OWNER_DEPT) return true;  /* 주관부서 담당자 */
+        return !deptId || deptId === p.deptId;     /* 그 밖에는 자기 부서 건만 */
+    }
+    /* 조회 전용 안내 — 화면마다 다른 말을 하지 않도록 문구도 한 곳에서 낸다.
+       what: '작업환경측정 계획 등록·결과 첨부' 처럼 그 화면이 막는 행위 */
+    function roleReadOnlyNote(what, deptId) {
+        const p = rolePersona();
+        if (!p || roleCanAct(deptId)) return '';
+        const esc = (s) => (window.DYV2 ? window.DYV2.esc(String(s == null ? '' : s)) : s);
+        let why;
+        if (p.tier === 'head') why = '총괄 책임자는 <b>전 부서</b> 진행 상황을 조회합니다. 처리는 각 부서 담당자가 수행합니다.';
+        else if (p.tier === 'super') why = '관리감독자는 소속 부서 진행 상황을 <b>조회</b>합니다. ' + esc(what) + '은(는) <b>담당자 본인</b>이 수행합니다.';
+        else why = '<b>' + esc(p.deptName || '') + '</b> 소관 건만 처리할 수 있습니다 — ' + esc(what) + '은(는) 그 부서 담당자가 수행합니다.';
+        return '<div class="dy-readonly" role="note"><b>조회 전용</b> — ' + why + '</div>';
+    }
     /* 실제로 가릴 GNB 그룹 — 계층 기본값에 페르소나 예외(sysAdmin)를 얹는다 */
     function roleHidden(p) {
         p = p || rolePersona();
@@ -1066,6 +1096,8 @@
         OWNER_DEPT: OWNER_DEPT,
         scope: roleScope,
         inScope: roleInScope,
+        canAct: roleCanAct,
+        readOnlyNote: roleReadOnlyNote,
         set: roleSet,
         open: roleOpen,
         close: roleClose,

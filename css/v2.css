@@ -3092,6 +3092,7 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .mw-done-more-row { padding: 10px 16px; text-align: center; }
 
 /* 내 할일 — 조회 전용 안내 (권한이 없는 계층·타 부서) */
+.dy-readonly,
 .mw-readonly {
   display: flex; align-items: flex-start; gap: 8px;
   padding: 10px 14px; margin-bottom: 12px;

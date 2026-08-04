@@ -9,6 +9,14 @@
     var V = function () { return global.DYV2; };
     var S = function () { return global.DYSH; };
     function esc(s) { return V().esc(String(s == null ? '' : s)); }
+    /* ===== 권한 (CLAUDE.md §12) =====
+     * 작업환경측정 결과는 그 부서 사업장의 것이다 — 남의 부서 측정 결과를 볼 이유가 없다.
+     * 조회 범위는 DYROLE.scope(), 조작(계획 등록·결과 첨부)은 DYROLE.canAct() 단일 출처.
+     * 부서를 **이름**으로 저장하는 도메인이라 DYV2.deptIdOf() 로 id 를 얻어 물어본다(§3). */
+    function R() { return global.DYROLE; }
+    function inScope(r) { return !R() || R().inScope(V().deptIdOf(r.dept)); }
+    function canAct(deptName) { return !R() || R().canAct(deptName ? V().deptIdOf(deptName) : ''); }
+    function roNote() { return R() ? R().readOnlyNote('측정 계획 등록·결과 첨부') : ''; }
 
     var state = { mount: null, year: '2026', half: '', dept: '', tile: 'all' };
 
@@ -17,7 +25,8 @@
     /* 필터 적용 (요약 카드는 tile 제외 집계에 쓰므로 base/list 분리) */
     function baseRows() {
         return S().workEnv().filter(function (r) {
-            return (!state.year || String(r.year) === state.year)
+            return inScope(r)
+                && (!state.year || String(r.year) === state.year)
                 && (!state.half || r.half === state.half)
                 && (!state.dept || r.dept === state.dept);
         });
@@ -69,7 +78,9 @@
         var sum = S().workEnvSummary(base);
         var list = base.filter(tilePass);
         var deptOpts = ['<option value="">부서 전체</option>'].concat(
-            uniq(S().workEnv().map(function (r) { return r.dept; })).map(function (d) {
+            /* 조회 범위 밖 부서는 필터 선택지에도 내지 않는다 — 목록에서 지워 놓고
+               드롭다운에 남기면 '있는데 안 보여준다'로 읽힌다(§12). */
+            uniq(S().workEnv().filter(inScope).map(function (r) { return r.dept; })).map(function (d) {
                 return '<option value="' + esc(d) + '"' + (state.dept === d ? ' selected' : '') + '>' + esc(d) + '</option>';
             })).join('');
 
@@ -97,12 +108,12 @@
                 '<span class="sh-fl">부서</span>' +
                 '<select class="form-select" aria-label="부서" onchange="WENV.setDept(this.value)">' + deptOpts + '</select>' +
             '</div>' +
-            '<button type="button" class="btn btn-primary" onclick="WENV.openNew()">＋ 측정 계획 등록</button></div>';
+            (canAct() ? '<button type="button" class="btn btn-primary" onclick="WENV.openNew()">＋ 측정 계획 등록</button>' : '') + '</div>';
 
         var rows = list.length ? list.map(rowHtml).join('') :
             '<tr><td colspan="9" class="sh-empty">조건에 맞는 작업환경측정 건이 없습니다.</td></tr>';
 
-        state.mount.innerHTML = linkbar + tiles(sum) + toolbar +
+        state.mount.innerHTML = linkbar + tiles(sum) + toolbar + roNote() +
             '<div class="sh-wrap"><table class="sh-table"><thead><tr>' +
                 '<th>대상 부서 / 사업장</th><th>측정 대상</th><th>위탁업체</th><th>측정 예정일 · 실시일</th>' +
                 '<th>결과보고서</th><th>측정 결과</th><th>개선조치 기한</th><th>완료 여부</th><th>담당자</th>' +
@@ -113,7 +124,9 @@
         // 목록에서 바로 증빙 첨부 → 상세 왕복 제거(고빈도 액션). 첨부 완료 시 상태 표시.
         var report = r.report
             ? '<span class="sh-attached">' + S().icon('file') + '첨부됨</span>'
-            : '<button type="button" class="sh-pill-link" onclick="event.stopPropagation();WENV.attach(\'' + r.id + '\')">＋ 첨부</button>';
+            : (canAct(r.dept)
+                ? '<button type="button" class="sh-pill-link" onclick="event.stopPropagation();WENV.attach(\'' + r.id + '\')">＋ 첨부</button>'
+                : '<span class="sh-pill-none">미첨부</span>');
         var doneTxt = r.done ? esc(r.done) : '<span style="color:var(--text-gray)">미실시</span>';
         return '<tr onclick="WENV.detail(\'' + r.id + '\')">' +
             '<td><a class="sh-rowlink" href="work-env-detail.html?id=' + r.id + '" onclick="event.stopPropagation()">' + esc(r.dept) + '</a><div class="sh-cellsub">' + esc(r.site) + '</div></td>' +
@@ -138,6 +151,7 @@
 
     /* 목록 인라인 증빙 첨부 — 상세 진입 없이 결과보고서 등록 */
     function attach(id) {
+        if (!canAct()) { V().toast('결과 첨부은(는) 해당 부서 담당자가 수행합니다.'); return; }
         var r = S().workEnvOf(id); if (!r) return;
         V().openModal('결과보고서 · 증빙 등록',
             '<p style="font-size:13px;margin-bottom:10px;color:var(--text-gray);"><b>' + esc(r.dept) + ' · ' + esc(r.site) + '</b> 작업환경측정 결과보고서를 첨부합니다.</p>' +
@@ -145,9 +159,11 @@
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="WENV.saveAttach(\'' + id + '\')">등록</button>');
     }
-    function saveAttach(id) { S().attachEvidence('we', id, '결과보고서'); V().closeModal(); render(); V().toast('증빙이 등록되었습니다.'); }
+    function saveAttach(id) {
+        if (!canAct()) { V().toast('결과 첨부은(는) 해당 부서 담당자가 수행합니다.'); return; } S().attachEvidence('we', id, '결과보고서'); V().closeModal(); render(); V().toast('증빙이 등록되었습니다.'); }
 
     function openNew() {
+        if (!canAct()) { V().toast('측정 계획 등록은(는) 해당 부서 담당자가 수행합니다.'); return; }
         V().openModal('작업환경측정 계획 등록',
             /* 대상 부서 — 조직도(DYV2.ORG) 인라인 트리에서 선택(단일 모달 규칙: 별도 모달 없이 입력 아래 펼침) */
             '<div class="ri-modal-row" style="margin-bottom:12px;"><label class="form-label" for="we-n-deptname">대상 부서 <span style="color:var(--status-danger-fg)">*</span></label>' +
@@ -194,6 +210,7 @@
         if (subj && haz && !subj.value.trim()) subj.value = haz;   // 유해인자 자동 채움(비어있을 때만)
     }
     function saveNew() {
+        if (!canAct()) { V().toast('측정 계획 등록은(는) 해당 부서 담당자가 수행합니다.'); return; }
         var dept = (document.getElementById('we-n-deptname').value || '').trim();
         var site = document.getElementById('we-n-site').value || '';
         var subject = (document.getElementById('we-n-subject').value || '').trim();

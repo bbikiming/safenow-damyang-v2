@@ -33,6 +33,18 @@
     var V = function () { return global.DYV2; };
     function esc(s) { return V().esc(String(s == null ? '' : s)); }
     function toast(m) { V().toast(m); }
+    /* ===== 권한 (CLAUDE.md §12) =====
+     * 이 표는 부서 전수 점검표다 — **표는 전 부서를 보여주되**(전수 점검이 목적),
+     * 각 행의 '확인 등록·독촉'은 그 부서 담당자와 주관부서만 할 수 있다.
+     * 관리·감독(군수·과장·소장)은 조회만 한다 — 담당자 이름으로 대신 등록하면 문서 위조다. */
+    function R() { return global.DYROLE; }
+    function canAct(deptId) { return !R() || R().canAct(deptId); }
+    function denied(deptId) {
+        var p = R() && R().current ? R().current() : null;
+        toast(p && p.tier !== 'staff'
+            ? '관리감독자는 조회만 합니다 — 확인 등록은 담당자 본인이 수행합니다.'
+            : '해당 부서 담당자와 주관부서(재난안전과)만 등록할 수 있습니다.');
+    }
 
     var SKEY = 'dy-deptcheck-v2';
 
@@ -209,9 +221,11 @@
             '<td>' + (st.date ? esc(st.date) : '<span class="dchk-none">-</span>') + '</td>' +
             '<td>' + photos + '</td>' +
             '<td class="col-action">' +
-                '<button type="button" class="btn btn-outline btn-sm" onclick="' + ns + '.open(\'' + esc(d.id) + '\')">확인 등록</button>' +
+                (canAct(d.id)
+                    ? '<button type="button" class="btn btn-outline btn-sm" onclick="' + ns + '.open(\'' + esc(d.id) + '\')">확인 등록</button>'
+                    : '<span class="dchk-ro">조회</span>') +
                 (st.status !== ST.DONE
-                    ? ' <button type="button" class="btn btn-outline btn-sm" onclick="' + ns + '.remind(\'' + esc(d.id) + '\')">독촉</button>'
+                    ? (canAct(d.id) ? ' <button type="button" class="btn btn-outline btn-sm" onclick="' + ns + '.remind(\'' + esc(d.id) + '\')">독촉</button>' : '')
                     : '') +
             '</td>' +
         '</tr>';
@@ -220,6 +234,7 @@
     /* ================= 확인 등록 모달 ================= */
     var F = null;
     function open(key, deptId, opts) {
+        if (!canAct(deptId)) { denied(deptId); return; }
         var d = depts().filter(function (x) { return x.id === deptId; })[0];
         if (!d) return;
         var st = stateOf(key, deptId);
@@ -280,18 +295,22 @@
         if (el('dchk-na')) F.naReason = el('dchk-na').value.trim();
         if (el('dchk-date')) F.date = el('dchk-date').value;
     }
-    function setStatus(v) { capture(); F.status = v; renderModal(deptOf(F.deptId)); }
+    function setStatus(v) {
+        if (!F || !canAct(F.deptId)) { denied(F && F.deptId); return; } capture(); F.status = v; renderModal(deptOf(F.deptId)); }
     function deptOf(id) { return depts().filter(function (x) { return x.id === id; })[0]; }
     function addPhoto(files) {
+        if (!F || !canAct(F.deptId)) { denied(F && F.deptId); return; }
         capture();
         if (!files || !files.length) return;
         F.photos = F.photos.concat(files).slice(0, V().FILE_LIMITS.maxCount);
         renderModal(deptOf(F.deptId));
         toast('증빙 ' + files.length + '건 첨부');
     }
-    function mDelPhoto(i) { capture(); F.photos.splice(i, 1); renderModal(deptOf(F.deptId)); }
+    function mDelPhoto(i) {
+        if (!F || !canAct(F.deptId)) { denied(F && F.deptId); return; } capture(); F.photos.splice(i, 1); renderModal(deptOf(F.deptId)); }
 
     function saveModal() {
+        if (!F || !canAct(F.deptId)) { denied(F && F.deptId); return; }
         capture();
         /* '이행'이라고 적으려면 증빙이 있어야 한다 — 시스템 존재 자체가 증빙 역할이라는 것이 회의 결론이다 */
         var L = labelsOf(F.opts);
@@ -314,6 +333,7 @@
         if (F.opts.onChange) F.opts.onChange();
     }
     function delPhoto(key, deptId, i) {
+        if (!canAct(deptId)) { denied(deptId); return; }
         var st = stateOf(key, deptId);
         var ph = (st.photos || []).slice();
         ph.splice(i, 1);
@@ -321,6 +341,7 @@
     }
     /* 독촉 — 회의에서 미이행 부서 대응으로 나온 수단은 전화와 알림이다 */
     function remind(key, deptId) {
+        if (!canAct(deptId)) { denied(deptId); return; }
         var d = deptOf(deptId);
         toast((d ? d.name : deptId) + ' 담당자에게 독촉 알림 발송 (프로토타입)');
     }

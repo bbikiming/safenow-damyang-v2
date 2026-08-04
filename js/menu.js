@@ -17,6 +17,15 @@
         return;
     }
 
+    /* ===== 조작 권한 (CLAUDE.md §12) =====
+     * 관리·감독(군수·과장·소장)은 조회만 한다 — 담당자 이름으로 대신 등록·평가하면
+     * 그건 문서 위조다. 판정은 DYROLE.canAct() 단일 출처. */
+    function canAct(deptId) { return !window.DYROLE || window.DYROLE.canAct(deptId || ''); }
+    function actGate(what) {
+        if (canAct()) return false;
+        V.toast(what + '은(는) 담당자 본인이 수행합니다 — 관리감독자는 조회만 합니다.');
+        return true;
+    }
     const META = V.MENUS[KEY];
     const MY_DOCS = V.byMenu(KEY);
     const esc = V.esc;
@@ -720,11 +729,11 @@
                     '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
                     '<button class="btn btn-primary" onclick="DYV2.closeModal(); EDOC.notify(\'선임 등록 완료 — 고용노동부 선임 신고 안내\', \'메일\')">등록</button>');
             };
-            PG.orgEval = () => E.openForm({
+            PG.orgEval = () => actGate('수행평가 작성') ? null : E.openForm({
                 id: 'EDOC-수행평가-2026H1', title: '2026 상반기 안전보건관리책임자등 수행평가', form: 'F6',
                 ctx: { menuLabel: '조직 · 반기', scorelist: T.SCORE_PRESETS.org }, onChange: render,
             });
-            PG.orgFollow = () => E.openForm({
+            PG.orgFollow = () => actGate('후속조치 등록') ? null : E.openForm({
                 id: 'EDOC-후속조치-2026H1', title: '수행평가 후속 조치 (포상·인사 반영)', form: 'F7',
                 ctx: { menuLabel: '조직' }, source: '2026 상반기 수행평가 — 판정 미흡 1건',
                 fields: { source: '수행평가: 예산·인력 지원의 충분성 — 보완 판정' }, onChange: render,
@@ -1572,6 +1581,7 @@
         /* ── 도급관리 [SFR-013]: e호조 불러오기 → 적격 평가 → 점검표 → 수급인 평가 ── */
         contract() {
             PG.conAdd = () => {
+                if (actGate('도급사업 등록')) return;
                 V.openModal('도급·용역·위탁 사업 등록',
                     '<div class="edoc-linkcard"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:3px;" aria-hidden="true"><path d="M9 15a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M15 9a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/></svg>차세대 e호조 연계 — 계약 정보를 불러오면 항목이 자동 입력됩니다 (연계 61건)</div>' +
                     '<div class="preset-form-grid">' +
@@ -1591,15 +1601,15 @@
                     V.toast('e호조에서 계약 정보를 불러왔습니다');
                 });
             };
-            PG.conCheck = name => E.openForm({
+            PG.conCheck = name => actGate('도급 점검표 작성') ? null : E.openForm({
                 id: 'EDOC-도급점검-' + name, title: '도급사업 안전보건 점검표 — ' + name, form: 'F5',
                 ctx: { menuLabel: '도급관리 · 반기', checklist: T.CHECKLIST_PRESETS.contract }, onChange: render,
             });
-            PG.conEval = co => E.openForm({
+            PG.conEval = co => actGate('수급인 평가 작성') ? null : E.openForm({
                 id: 'EDOC-수급인평가-' + co, title: '수급인 안전보건 수준 평가 — ' + co, form: 'F6',
                 ctx: { menuLabel: '도급관리', scorelist: T.SCORE_PRESETS.contract }, onChange: render,
             });
-            PG.conPledge = () => V.openModal('안전보건 서약서 첨부',
+            PG.conPledge = () => actGate('안전보건 서약서 첨부') ? null : V.openModal('안전보건 서약서 첨부',
                 DYV2.uploadDrop('서약서·계약서 사본을 첨부하세요 (다중 가능)', null, { hint: true }),
                 '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
                 '<button class="btn btn-primary" onclick="DYV2.closeModal(); DYV2.toast(\'서약서가 첨부되었습니다\')">업로드</button>');
@@ -1617,14 +1627,14 @@
                     biz.map(b => [
                         '<b>' + b[0] + '</b> ' + docStChip('EDOC-도급점검-' + b[0]), cat(b[1]), b[2], b[3],
                         '<button class="btn btn-sm btn-primary" onclick="PG.conCheck(\'' + b[0] + '\')">점검표 작성</button>',
-                        '<button class="btn btn-sm btn-secondary" onclick="PG.conPledge()">첨부</button>',
+                        (canAct() ? '<button class="btn btn-sm btn-secondary" onclick="PG.conPledge()">첨부</button>' : '<span class="rl-ro-none">조회</span>'),
                     ])),
-                '<button class="btn btn-sm btn-primary" onclick="PG.conAdd()">+ 사업 등록 (e호조)</button>') +
+                (canAct() ? '<button class="btn btn-sm btn-primary" onclick="PG.conAdd()">+ 사업 등록 (e호조)</button>' : '')) +
             sectionCard('수급인 안전보건 수준 평가',
                 tbl(['업체', '시점', '상태', ''], [
-                    ['○○건설', '계약 전 적격심사 + 반기', docStChip('EDOC-수급인평가-○○건설'), '<button class="btn btn-sm btn-primary" onclick="PG.conEval(\'○○건설\')">평가 작성</button>'],
-                    ['△△서비스', '계약 전 적격심사 + 반기', docStChip('EDOC-수급인평가-△△서비스'), '<button class="btn btn-sm btn-primary" onclick="PG.conEval(\'△△서비스\')">평가 작성</button>'],
-                    ['☆☆종합건설', '계약 전 적격심사 (신규)', docStChip('EDOC-수급인평가-☆☆종합건설'), '<button class="btn btn-sm btn-primary" onclick="PG.conEval(\'☆☆종합건설\')">평가 작성</button>'],
+                    ['○○건설', '계약 전 적격심사 + 반기', docStChip('EDOC-수급인평가-○○건설'), (canAct() ? '<button class="btn btn-sm btn-primary" onclick="PG.conEval(\'○○건설\')">평가 작성</button>' : '<span class="rl-ro-none">조회</span>')],
+                    ['△△서비스', '계약 전 적격심사 + 반기', docStChip('EDOC-수급인평가-△△서비스'), (canAct() ? '<button class="btn btn-sm btn-primary" onclick="PG.conEval(\'△△서비스\')">평가 작성</button>' : '<span class="rl-ro-none">조회</span>')],
+                    ['☆☆종합건설', '계약 전 적격심사 (신규)', docStChip('EDOC-수급인평가-☆☆종합건설'), (canAct() ? '<button class="btn btn-sm btn-primary" onclick="PG.conEval(\'☆☆종합건설\')">평가 작성</button>' : '<span class="rl-ro-none">조회</span>')],
                 ]));
         },
 
