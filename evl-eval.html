@@ -49,7 +49,7 @@
         .ev-matrix td.ev-name { font-weight:600; color:var(--text-black); white-space:nowrap; }
         .ev-matrix td.ev-name .sub { display:block; font-size:12px; color:var(--text-gray); font-weight:500; margin-top:2px; }
         .ev-matrix td.ev-eor { font-weight:600; color:var(--text-black); }
-        .ev-matrix .ev-cell-empty { color:var(--text-lightgray); }
+        .ev-matrix .ev-cell-empty { color:var(--text-gray); }
         .ev-col-div { border-left:2px solid var(--card-line) !important; }
 
         /* 결과 등급 배지 = 표준 .chip-status 재사용 (gradeBadge 참고) */
@@ -62,10 +62,10 @@
             background:white; color:var(--text-gray); cursor:pointer; white-space:nowrap;
             transition:all .12s ease;
         }
-        .ev-mini:hover { border-color:var(--main); color:var(--main-dark); }
-        .ev-mini.primary { background:var(--main); border-color:var(--main); color:white; }
-        .ev-mini.primary:hover { background:var(--main-dark); }
-        .ev-mini:disabled { opacity:.55; cursor:not-allowed; background:var(--gray-100); color:var(--text-lightgray); border-color:var(--card-line); }
+        .ev-mini:hover { border-color:var(--main-dark); color:var(--main-dark); }
+        .ev-mini.primary { background:var(--main-dark); border-color:var(--main-dark2); color:white; }
+        .ev-mini.primary:hover { background:var(--main-dark2); }
+        .ev-mini:disabled { opacity:.55; cursor:not-allowed; background:var(--gray-100); color:var(--text-gray); border-color:var(--card-line); }
 
         .ev-help {
             display:flex; align-items:center; gap:8px;
@@ -101,7 +101,7 @@
         .ev-criteria { margin-bottom:16px; font-size:12px; }
         .ev-criteria > summary { display:inline-flex; align-items:center; gap:4px; padding:8px 12px; background:var(--brand-50); border:1px solid var(--status-success-border); border-radius:var(--radius-button); color:var(--main-dark2); font-weight:700; cursor:pointer; list-style:none; }
         .ev-criteria > summary::-webkit-details-marker { display:none; }
-        .ev-criteria > summary::before { content:'▸'; font-size:9px; }
+        .ev-criteria > summary::before { content:'▸'; font-size:var(--fs-12); }
         .ev-criteria[open] > summary { border-radius:var(--radius-button) var(--radius-button) 0 0; }
         .ev-criteria[open] > summary::before { content:'▾'; }
         .ev-criteria-body { display:flex; flex-direction:column; gap:5px; padding:12px 14px; background:var(--brand-50); border:1px solid var(--status-success-border); border-top:none; border-radius:0 0 var(--radius-button) var(--radius-button); }
@@ -120,12 +120,12 @@
         .ev-item-crit { margin-top:4px; font-size:11.5px; }
         .ev-item-crit summary { display:inline-flex; align-items:center; gap:3px; color:var(--main-dark2); font-weight:700; cursor:pointer; list-style:none; user-select:none; }
         .ev-item-crit summary::-webkit-details-marker { display:none; }
-        .ev-item-crit summary::before { content:'▸'; font-size:9px; }
+        .ev-item-crit summary::before { content:'▸'; font-size:var(--fs-12); }
         .ev-item-crit[open] summary::before { content:'▾'; }
         .ev-item-crit > div { margin-top:4px; padding:6px 9px; background:var(--brand-50); border:1px solid var(--status-success-border); border-radius:var(--radius-xs); color:var(--text-gray); line-height:1.5; }
         .ev-judge-group { display:inline-flex; gap:14px; }
         .ev-judge-label { display:inline-flex; align-items:center; gap:5px; cursor:pointer; font-size:13px; }
-        .ev-judge-label input { accent-color:var(--main); width:15px; height:15px; cursor:pointer; }
+        .ev-judge-label input { accent-color:var(--main-dark); width:15px; height:15px; cursor:pointer; }
         .ev-judge-label span { color:var(--text-gray); }
         .ev-judge-label.poor   input:checked + span { color:var(--status-danger-fg); font-weight:700; }
         .ev-judge-label.normal input:checked + span { color:var(--text-black); font-weight:700; }
@@ -139,7 +139,7 @@
         .evp-pane-head { padding:12px 16px; border-bottom:1px solid var(--card-line); }
         .evp-pane-head .t { font-size:13px; font-weight:700; color:var(--main-dark2); margin-bottom:8px; display:block; }
         .evp-search { width:100%; padding:7px 10px; font-size:13px; border:1px solid var(--card-line); border-radius:var(--radius-button); }
-        .evp-search:focus { outline:none; border-color:var(--main); }
+        .evp-search:focus { outline:none; border-color:var(--main-dark); }
         .evp-scroll { padding:10px 12px; overflow-y:auto; flex:1; min-height:0; }
 
         /* org-tree (org-chart.html 재사용) */
@@ -150,9 +150,9 @@
         .org-tree-row.is-selected { background:var(--brand-100); box-shadow:inset 3px 0 0 var(--main); }
         .org-tree-row.is-group { cursor:default; }
         .org-tree-row.is-group:hover { background:transparent; }
-        .org-tree-toggle { width:18px; height:18px; display:inline-flex; align-items:center; justify-content:center; color:var(--text-lightgray); flex-shrink:0; }
+        .org-tree-toggle { width:18px; height:18px; display:inline-flex; align-items:center; justify-content:center; color:var(--text-gray); flex-shrink:0; }
         .org-tree-toggle.is-placeholder { visibility:hidden; }
-        .org-tree-icon { width:18px; height:18px; display:inline-flex; align-items:center; justify-content:center; color:var(--main); flex-shrink:0; }
+        .org-tree-icon { width:18px; height:18px; display:inline-flex; align-items:center; justify-content:center; color:var(--main-dark); flex-shrink:0; }
         .org-tree-icon.root { color:var(--main-dark); }
         .org-tree-name { flex:1; display:flex; align-items:center; gap:6px; font-weight:500; color:var(--text-black); min-width:0; }
         .org-tree-name .name { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -163,13 +163,13 @@
         .evp-members-head { font-size:12px; color:var(--text-gray); margin-bottom:10px; }
         .evp-members-head strong { color:var(--main-dark2); font-weight:700; }
         .evp-member { display:flex; align-items:center; gap:10px; padding:9px 11px; border:1px solid var(--card-line); border-radius:var(--radius-button); margin-bottom:6px; cursor:pointer; background:white; transition:all .12s ease; }
-        .evp-member:hover { border-color:var(--main); }
-        .evp-member.is-checked { border-color:var(--main); background:var(--brand-100); }
-        .evp-member input { accent-color:var(--main); width:16px; height:16px; flex-shrink:0; }
+        .evp-member:hover { border-color:var(--main-dark); }
+        .evp-member.is-checked { border-color:var(--main-dark); background:var(--brand-100); }
+        .evp-member input { accent-color:var(--main-dark); width:16px; height:16px; flex-shrink:0; }
         .evp-member-text { font-size:13px; color:var(--text-black); }
         .evp-member-text .team { color:var(--text-gray); }
         .evp-member-text strong { font-weight:700; }
-        .evp-empty { color:var(--text-lightgray); font-size:13px; text-align:center; padding:30px 0; }
+        .evp-empty { color:var(--text-gray); font-size:13px; text-align:center; padding:30px 0; }
 
         /* ─── 결재 문서 / PDF 미리보기 모달 ─── */
         #doc-modal { z-index:120; }
@@ -467,6 +467,7 @@
     <div id="toast" class="toast" role="status"></div>
 
     <script src="./js/layout.js"></script>
+    <script src="./js/law-map.js"></script>
     <script src="./js/common.js"></script>
     <script src="./js/sh-data.js"></script>
     <script src="./js/evl-data.js"></script>
@@ -604,7 +605,7 @@
             );
             document.getElementById('hist-count').textContent = list.length;
             if (!list.length) {
-                histBody$.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-lightgray); padding:24px;">평가 이력이 없습니다</td></tr>';
+                histBody$.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-gray); padding:24px;">평가 이력이 없습니다</td></tr>';
                 return;
             }
             histBody$.innerHTML = list.map(r => {
@@ -772,7 +773,7 @@
             document.getElementById('eval-title').textContent = r.cycle + ' · ' + r.roleLabel + ' 평가표';
             document.getElementById('eval-sub').textContent = '피평가자 ' + r.name + ' (' + r.team + ') · 평가자 ' + r.evaluator + ' · 평가일자 ' + r.date;
             evalItems$.innerHTML = buildItems(ITEMS[r.role], r.grades, true, { dept: r.dept, role: r.role, year: parseInt(r.cycle, 10) });
-            document.getElementById('eval-foot-stat').innerHTML = '종합 결과 ' + gradeBadge(r.result) + ' <span style="color:var(--text-lightgray); margin-left:6px;">조회 전용</span>';
+            document.getElementById('eval-foot-stat').innerHTML = '종합 결과 ' + gradeBadge(r.result) + ' <span style="color:var(--text-gray); margin-left:6px;">조회 전용</span>';
             document.getElementById('eval-save').style.display = 'none';
             document.getElementById('eval-draft').style.display = 'none';
             document.getElementById('eval-pdf').style.display = '';
@@ -975,7 +976,7 @@
         let viewedRec = null;
 
         function docGrade(g) {
-            if (!g || !GKEY[g]) return '<span style="color:var(--text-lightgray);">-</span>';
+            if (!g || !GKEY[g]) return '<span style="color:var(--text-gray);">-</span>';
             return '<span class="doc-grade-' + GKEY[g] + '">' + g + '</span>';
         }
 
@@ -989,7 +990,7 @@
             const rows = spec.table.rows.length
                 ? spec.table.rows.map(r => '<tr>' + r.map((c, i) =>
                     '<td' + (align[i] === 'l' ? '' : ' class="c"') + '>' + c + '</td>').join('') + '</tr>').join('')
-                : '<tr><td colspan="' + spec.table.headers.length + '" style="text-align:center; color:var(--text-lightgray); padding:18px;">완료된 평가가 없습니다</td></tr>';
+                : '<tr><td colspan="' + spec.table.headers.length + '" style="text-align:center; color:var(--text-gray); padding:18px;">완료된 평가가 없습니다</td></tr>';
             const summary = spec.summary
                 ? '<div class="doc-summary"><span class="lbl">' + spec.summary.label + '</span><span>' + spec.summary.value + '</span>'
                   + (spec.summary.note ? '<span style="margin-left:auto; font-size:12px; color:var(--text-gray);">' + spec.summary.note + '</span>' : '') + '</div>'
@@ -1097,8 +1098,8 @@
             /* 온나라 결재결과 회신 등록(1단계 연계) — 상신 후 결재 완료 시 부여되는 문서등록번호·결재일을 시스템에 회신 저장 */
             const mockNo = '재난안전과-' + Math.floor(1000 + Math.random() * 9000);
             DYV2.openModal('온나라 결재결과 회신 등록',
-                '<p style="font-size:13px;line-height:1.6;margin-bottom:12px;color:var(--text-gray);">규격 기안문이 온나라로 상신되었습니다. 온나라에서 <b>결재 완료</b> 시 부여되는 <b>문서등록번호</b>·결재일을 등록하면 평가 이력과 연결됩니다. <span style="color:var(--text-lightgray);">(프로토타입 — 실제 연계 시 온나라가 자동 회신)</span></p>' +
-                '<div style="margin-bottom:12px;"><label class="form-label" for="onnara-docno">문서등록번호 <span style="color:var(--text-lightgray);font-weight:400;">(온나라 부여)</span></label>' +
+                '<p style="font-size:13px;line-height:1.6;margin-bottom:12px;color:var(--text-gray);">규격 기안문이 온나라로 상신되었습니다. 온나라에서 <b>결재 완료</b> 시 부여되는 <b>문서등록번호</b>·결재일을 등록하면 평가 이력과 연결됩니다. <span style="color:var(--text-gray);">(프로토타입 — 실제 연계 시 온나라가 자동 회신)</span></p>' +
+                '<div style="margin-bottom:12px;"><label class="form-label" for="onnara-docno">문서등록번호 <span style="color:var(--text-gray);font-weight:400;">(온나라 부여)</span></label>' +
                     '<input type="text" class="form-input" id="onnara-docno" value="' + mockNo + '"></div>' +
                 '<div><label class="form-label" for="onnara-date">결재일</label>' +
                     '<input type="date" class="form-input" id="onnara-date" value="' + TODAY + '"></div>',

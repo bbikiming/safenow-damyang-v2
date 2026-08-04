@@ -16,7 +16,7 @@
    · 처리 유형(atype)별 액션 — "지금 할 수 있는 건 여기서 끝낸다":
        attach   → 팝업(단일 모달 DYV2.openModal)에서 파일 첨부 후 완료
        menu     → 해당 메뉴로 딥링크 (처리 위치 라벨 함께 표기)
-       download → 설문지 등 즉시 다운로드 (프로토타입 토스트)
+       download → 설문조사표 등 즉시 다운로드 (프로토타입 토스트)
        inline   → 재촉 응답·완료 처리 등 기존 인라인 폼/모달
    · 카드 자체 클릭 = 대표 액션 실행 (menu형 이동 / attach형 첨부 팝업) —
      알림에서 넘어와 "누르면 바로 진행"되는 흐름 (버튼·링크 클릭은 제외)
@@ -41,19 +41,16 @@
         download: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
         check: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
         pin: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1z"/></svg>',
+        eye: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>',
         fileText: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>'
     };
     function groupDot(tone) {
         return '<span class="mw-group-dot" style="background:var(--status-' + tone + '-fg);"></span>';
     }
 
-    /* 오늘 기준 (프로토타입 정적 기준일 2026-07-16, CLAUDE.md currentDate) */
-    var TODAY_ISO = '2026-07-16';
-    function daysBetween(dueIso) {
-        if (!dueIso) return null;
-        var t = new Date(TODAY_ISO), d = new Date(dueIso);
-        return Math.round((d - t) / 86400000);
-    }
+    /* 오늘 기준 — DYV2.today() 단일 출처 (시연일 변경은 common.js DEMO_TODAY 한 줄) */
+    function todayIso() { return DYV2.today(); }
+    function daysBetween(dueIso) { return DYV2.daysTo(dueIso); }
     function bucket(dueIso, status) {
         if (status === 'DONE') return 'done';
         var d = daysBetween(dueIso);
@@ -117,7 +114,7 @@
             /* 이행 */
             { id: 'C-01', cat: 'comply',     title: '의무이행 점검표 반기 마감 (D+8 기한초과)',
               due: '2026-07-08', dept: 'safety', dept_label: '재난안전과',
-              atype: 'menu', href: 'menu.html?m=comply', action: '점검표 작성', destLabel: '이행관리' },
+              atype: 'menu', href: 'menu.html?m=comply', action: '점검표 작성', destLabel: '이행점검' },
             { id: 'C-02', cat: 'comply',     title: '안전보건교육 상반기 실시 결과 정리',
               due: '2026-07-25', dept: 'safety', dept_label: '재난안전과',
               atype: 'menu', href: 'edu-status.html', action: '보러 가기', destLabel: '이수현황' },
@@ -139,6 +136,7 @@
     var state = {
         mount: null, deptId: '',
         view: 'due',                    /* 'due' 마감 할일 | 'pub' 발행된 업무 | 'done' 완료한 업무 */
+        doneMore: false,                /* 완료한 발행 업무 전체 펼침 여부 */
         fStatus: '', fCat: '', sort: 'due',
         openInline: {},                 /* {impId: {reason, due}} 재촉 응답 */
         attachCtx: null,                /* {id, kind:'seed'|'pub', redo} 열려있는 첨부 팝업 */
@@ -146,6 +144,8 @@
         doneSeeds: {},                  /* {seedId: {at, files}} 첨부로 완료한 시드 */
         pubFiles: {},                   /* {docId: [파일명,...]} 발행 업무 첨부 완료본 (재등록용) */
         pubType: '', pubStatus: 'open', /* 발행 업무 필터 (open=미시행+진행) */
+        /* 개선조치 완료 모달 입력 보존 — cmplPhotos 는 썸네일을 가진 파일 객체 배열 */
+        cmplId: null, cmplDesc: '', cmplPhoto: '', cmplPhotos: [], cmplSign: '', cmplDate: '',
         syncedAt: '2026-07-16 09:15'
     };
 
@@ -155,22 +155,34 @@
         /* 위험성평가 실데이터 — 점검예정 (카테고리 '위험') */
         try {
             (D().assessments() || []).forEach(function (a) {
-                if (a.status === 'COMPLETED') return;
+                var closed = a.status === 'COMPLETED';
                 (a.depts || []).forEach(function (dp) {
                     if (dp.deptId !== state.deptId) return;
+                    /* 끝난 평가는 할 일이 아니다 — 다만 **제출한 기록**은 완료한 업무 탭에
+                       남아야 한다. 끝났다고 지우면 소명할 자료가 사라진다. */
+                    if (closed && !dp.reportFile) return;
                     var f = dp.surveyFile || (a.files && a.files.surveyAll) || '';
+                    /* 부서가 정기평가에서 실제로 하는 일은 '점검일에 참여'가 아니라
+                     * **설문조사표를 작성해 제출**하는 것이다. 종전에는 양식 다운로드만 있고
+                     * 제출 경로가 주관부서 화면에만 있어, 담당자가 자기 화면에서 끝낼 수 없었다. */
+                    var done = !!dp.reportFile;
                     out.push({
-                        id: 'RSK-' + a.id + '-' + dp.deptId + '-inspect',
+                        id: 'RSK-' + a.id + '-' + dp.deptId + '-report',
                         cat: 'risk',
-                        title: a.title + ' — 점검일 참여',
-                        sub: '설문지: ' + (f || '없음'),
+                        title: a.title + ' — 유해위험요인 설문조사표 작성·제출',
+                        sub: (dp.inspectDate ? '점검일 ' + dp.inspectDate + ' · ' : '') +
+                             '양식 ' + (f || '미배포') +
+                             (done ? ' · 제출 ' + esc(dp.reportFile) : ''),
                         due: dp.inspectDate || '',
-                        status: 'IN_PROGRESS',
+                        status: done ? 'DONE' : 'IN_PROGRESS',
                         dept: dp.deptId, dept_label: D().deptName(dp.deptId),
                         href: 'rsk-list.html?year=' + a.year,
-                        atype: f ? 'download' : 'menu',
-                        action: f ? '설문지 다운' : '보러 가기', destLabel: '정기 위험성평가',
-                        onclick: f ? "DYV2.toast('설문지 다운로드: " + f.replace(/'/g, "&#39;") + " (프로토타입)')" : null,
+                        atype: 'rskreport',
+                        rsk: { aid: a.id, deptId: dp.deptId, form: f, file: dp.reportFile || '' },
+                        doneDate: dp.reportAt || '',
+                        doneBy: dp.reportBy || '',
+                        doneText: done ? '제출본 ' + dp.reportFile : '',
+                        destLabel: '정기 위험성평가',
                         remind: false
                     });
                 });
@@ -180,19 +192,34 @@
         try {
             D().improvements().filter(function (m) { return m.dept_id === state.deptId; }).forEach(function (m) {
                 var isRemind = (m.history || []).some(function (h) { return h.type === 'REMIND'; }) && m.status !== 'DONE';
+                /* 확인 반려 건은 status 가 DONE 이어도 담당자가 **다시 제출해야 한다**.
+                 * 판정은 DYRSK.needsAction 한 곳에서만 한다(화면이 재구현하지 않는다). */
+                var cf = D().confirmOf(m);
+                var returned = D().confirmState(m) === 'RETURNED';
+                var act = D().needsAction(m);
                 out.push({
                     id: 'IMP-' + m.id,
                     cat: 'improve',
                     title: (m.hazard && m.hazard.name) || m.hazard_risk_factor || '개선조치',
                     sub: m.description || m.action || '',
                     due: m.due || m.due_date || '',
-                    status: m.status || 'IN_PROGRESS',
+                    /* 반려 건은 '할 일'로 되돌린다 — 완료 탭에 묻히면 담당자가 영원히 못 본다 */
+                    status: act ? 'IN_PROGRESS' : 'DONE',
+                    returned: returned, returnReason: cf.reason || '', returnBy: cf.by || '', returnAt: cf.at || '',
+                    round: cf.round || 1,
+                    basis: (m.hazard && m.hazard.basis) || '',
                     dept: m.dept_id, dept_label: D().deptName(m.dept_id),
                     href: 'rsk-list.html' + (m.assessment_id ? '?year=' + (m.assessment_id.match(/RA-(\d{4})/) || [])[1] : ''),
                     atype: 'inline',
-                    action: m.status === 'DONE' ? '보기' : (isRemind ? '재촉 응답' : '완료 처리'),
+                    action: returned ? '재제출' : (act ? (isRemind ? '재촉 응답' : '완료 처리') : '보기'),
                     remind: isRemind,
-                    impId: m.id
+                    impId: m.id,
+                    /* 완료 사실 — '완료했다'만으로는 소명이 안 된다. 언제·누가·무엇을 했고
+                       증빙이 무엇인지가 함께 있어야 완료한 업무 탭이 기록으로 쓸모가 있다. */
+                    doneDate: m.completed_date || '',
+                    doneBy: (m.signature && m.signature.by) || '',
+                    doneText: m.action_content || '',
+                    shots: (global.IMPCARD ? IMPCARD.photoItems(m, 'after') : (m.after_photos || []))
                 });
             });
         } catch (e) {}
@@ -208,7 +235,7 @@
                     out.push({
                         id: 'EDU-APPLY-' + c.id,
                         cat: 'edu',
-                        title: c.desc + ' — 부서 신청 필요',
+                        title: c.desc + ' — 참석자 등록부 등록 필요',
                         sub: '일정 ' + c.date + ' · ' + c.hours + 'h · ' + (c.instructor || ''),
                         due: c.date,
                         status: 'IN_PROGRESS',
@@ -331,10 +358,59 @@
     ];
 
     /* ================= 렌더 ================= */
+    /* ===== 처리 권한 =====
+     * 이 화면의 처리 액션(완료 처리·전자서명·제출·첨부)은 **그 부서 담당자 본인**만 한다.
+     *   · 군수·실과장이 담당자 이름으로 완료 서명하면 그건 문서 위조다.
+     *   · 담당자라도 **다른 부서**를 골라 보는 중이면 처리는 막는다.
+     * 조회는 막지 않는다 — 진행 상황을 보는 것은 총괄·감독의 정당한 권한이다. */
+    function canAct() {
+        var p = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
+        if (!p) return true;                        /* 롤 스위처가 없는 환경은 종전대로 */
+        if (p.tier !== 'staff') return false;       /* 총괄·관리감독자는 조회 전용 */
+        return !!p.deptId && p.deptId === state.deptId;
+    }
+    function readOnlyNote() {
+        var p = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
+        if (!p || canAct()) return '';
+        var why = p.tier === 'head'
+            ? '총괄 책임자는 전 부서 진행 상황을 <b>조회</b>합니다. 처리는 각 부서 담당자가 수행합니다.'
+            : (p.tier === 'super'
+                ? '관리감독자는 소속 부서 진행 상황을 <b>조회</b>합니다. 완료 처리·전자서명은 <b>담당자 본인</b>이 수행합니다.'
+                : '지금 보고 있는 부서는 <b>' + esc(D().deptName(state.deptId) || '') + '</b>입니다 — ' +
+                  '내 소속(<b>' + esc(p.deptName || '') + '</b>)이 아니라 조회만 됩니다.');
+        return '<div class="mw-readonly" role="note">' + ICO.eye + ' <span><b>조회 전용</b> — ' + why + '</span></div>';
+    }
+
+    /* 기본 부서는 '목록 첫 번째'가 아니라 **로그인한 사람의 소속 부서**다.
+       권한 전환으로 부서 담당자가 되면 자기 부서 일이 바로 보여야 한다(?dept= 가 있으면 그게 우선). */
+    function defaultDeptId(depts) {
+        var mine = global.DYROLE && global.DYROLE.deptId ? global.DYROLE.deptId() : '';
+        if (mine && depts.some(function (d) { return d.id === mine; })) return mine;
+        return depts[0] && depts[0].id;
+    }
+    /* 관점 전환으로 갈 수 있는 부서 — **조회 범위 안**으로만 좁힌다(DYROLE.scope, layout.js).
+       종전에는 11개 부서가 전원에게 열려 있어 물순환사업소 주무관이 재난안전과 할 일을
+       열람할 수 있었다. 군수·재난안전과는 전 부서를 봐야 하므로 그대로 둔다. */
+    function scopedDepts(depts) {
+        var R = global.DYROLE;
+        if (!R || !R.scope) return depts;
+        var s = R.scope();
+        if (s === 'all') return depts;
+        var only = depts.filter(function (d) { return d.id === s; });
+        /* 소속 부서가 후보에 없으면(데이터 0건) 이름만이라도 만들어 준다 — 빈 select 는 고장으로 읽힌다 */
+        if (!only.length) {
+            var n = V().orgNode(s);
+            if (n) only = [{ id: s, name: n.name }];
+        }
+        return only.length ? only : depts;
+    }
     function render() {
         if (!state.mount) return;
-        var depts = candidateDepts();
-        if (!state.deptId) state.deptId = depts[0] && depts[0].id;
+        var depts = scopedDepts(candidateDepts());
+        /* 범위 밖 부서가 이미 물려 있으면(딥링크·이전 세션) 소속으로 되돌린다 */
+        if (!state.deptId || !depts.some(function (d) { return d.id === state.deptId; })) {
+            state.deptId = defaultDeptId(depts);
+        }
 
         var items = collectItems();
         var k = kpis(items);
@@ -351,8 +427,13 @@
                     '<button type="button" class="btn btn-outline btn-sm" onclick="MYWORK.sync()">' + ICO.sync + ' 동기화</button>' +
                 '</div>' +
                 '<div class="mw-head-right">' +
-                    '<label class="mw-deptlabel" for="mw-dept-sel">부서 (관점 전환)</label>' +
-                    '<select id="mw-dept-sel" class="form-select" onchange="MYWORK.setDept(this.value)">' + deptOpts + '</select>' +
+                    /* 고를 수 있는 부서가 하나뿐이면 select 를 띄우지 않는다 —
+                       선택지가 1개인 드롭다운은 '더 있는데 안 나온다'로 읽힌다 */
+                    (depts.length > 1
+                        ? '<label class="mw-deptlabel" for="mw-dept-sel">부서 (관점 전환)</label>' +
+                          '<select id="mw-dept-sel" class="form-select" onchange="MYWORK.setDept(this.value)">' + deptOpts + '</select>'
+                        : '<span class="mw-deptlabel">부서</span>' +
+                          '<b class="mw-deptfixed">' + esc((depts[0] && depts[0].name) || '') + '</b>') +
                 '</div>' +
             '</div>';
 
@@ -378,7 +459,7 @@
                  : state.view === 'done' ? renderDone(items, pubs)
                  : renderDue(items);
 
-        state.mount.innerHTML = head + kpi + tabs + body;
+        state.mount.innerHTML = head + readOnlyNote() + kpi + tabs + body;
     }
 
     /* ---- 마감 할일 뷰 (미완료만 — 완료는 '완료한 업무' 탭) ---- */
@@ -457,6 +538,15 @@
 
         var actionBtn = actionButtons(it);
         var subLine = it.sub ? '<div class="mw-item-sub">' + esc(it.sub) + '</div>' : '';
+        /* 법령 근거 — 카드 자체가 대표 액션을 실행하므로 칩은 전파를 끊는다(원문만 펼침).
+           조문 번호만으로는 이유를 알 수 없어 조문 제목을 함께 보여준다. */
+        var basisRow = '';
+        if (it.basis && window.DYLAW) {
+            basisRow = '<div class="mw-item-basis">' +
+                '<span class="mw-item-basis-lead">근거</span>' +
+                DYLAW.basisChip(it.basis, { withTitle: true }) +
+            '</div>';
+        }
         var remindTag = it.remind ? '<span class="mw-remind-tag">' + ICO.bell + ' 재촉</span> ' : '';
         var catBadge = '<span class="mw-cat" style="color:' + meta.color + ';background:' + meta.bg + ';">' + esc(meta.label) + '</span>';
         var destChip = (it.atype === 'menu' && it.destLabel)
@@ -468,6 +558,7 @@
                     catBadge + ' ' + remindTag +
                     '<span class="mw-item-title">' + esc(it.title) + '</span>' +
                     subLine +
+                    basisRow +
                     '<div class="mw-item-meta">' +
                         '<span class="' + dCls + '">' + esc(dTxt) + '</span>' +
                         (it.due ? '<span class="mw-item-due">' + esc(it.due) + '</span>' : '') +
@@ -479,6 +570,15 @@
             '</div>';
 
         var inline = '';
+        /* 확인 반려 — 무엇을 왜 다시 해야 하는지가 담당자 화면에 도착해야 반려가 작동한다 */
+        if (it.returned) {
+            inline += '<div class="mw-returned" role="note">' +
+                '<b>재난안전과 반려</b> · ' + esc(it.returnAt) + ' · ' + esc(it.returnBy) +
+                (it.round > 1 ? ' <span class="mw-returned-r">' + it.round + '회차 제출</span>' : '') +
+                '<p>' + esc(it.returnReason) + '</p>' +
+                '<span class="mw-returned-how">증빙을 보완해 <b>재제출</b>하면 확인 대기로 돌아갑니다.</span>' +
+            '</div>';
+        }
         /* 재촉 응답 인라인 폼 */
         if (it.impId && state.openInline[it.impId]) {
             var v = state.openInline[it.impId];
@@ -495,8 +595,9 @@
         }
         /* 카드 자체 클릭 = 대표 액션 (menu형 이동 · attach형 첨부 팝업) */
         var cardAct = '';
-        if (it.status !== 'DONE') {
-            if (it.atype === 'attach') cardAct = ' onclick="MYWORK.cardAttach(\'' + it.id + '\',\'seed\',event)"';
+        if (it.status !== 'DONE' && canAct()) {
+            if (it.atype === 'rskreport') cardAct = ' onclick="MYWORK.openReport(\'' + it.rsk.aid + '\',\'' + it.rsk.deptId + '\',event)"';
+            else if (it.atype === 'attach') cardAct = ' onclick="MYWORK.cardAttach(\'' + it.id + '\',\'seed\',event)"';
             else if (it.atype === 'menu' && it.href) cardAct = ' onclick="MYWORK.go(\'' + esc(it.href) + '\',event)"';
         }
 
@@ -505,6 +606,16 @@
     }
 
     function actionButtons(it) {
+        /* 처리 권한이 없으면 액션 대신 '보기' 만 — 눌러도 막힐 버튼을 띄우지 않는다
+           (없는 권한을 시각적으로 약속하지 않는다) */
+        if (!canAct()) {
+            if (it.impId) {
+                return '<button type="button" class="btn btn-outline btn-sm" onclick="MYWORK.openDone(\'' + it.impId + '\')">상세 보기</button>';
+            }
+            return it.href
+                ? '<a class="btn btn-outline btn-sm" href="' + esc(it.href) + '">보기 ' + ICO.arrow + '</a>'
+                : '';
+        }
         /* 개선조치 (인라인 폼/모달) */
         if (it.impId && it.remind) {
             return '<button type="button" class="btn btn-outline btn-sm" onclick="MYWORK.toggleRespond(\'' + it.impId + '\')">' +
@@ -512,10 +623,22 @@
                 ' <button type="button" class="btn btn-primary btn-sm" onclick="MYWORK.complete(\'' + it.impId + '\')">완료 처리</button>';
         }
         if (it.impId && it.status !== 'DONE') {
-            return '<button type="button" class="btn btn-primary btn-sm" onclick="MYWORK.complete(\'' + it.impId + '\')">완료 처리</button>';
+            return '<button type="button" class="btn btn-primary btn-sm" onclick="MYWORK.complete(\'' + it.impId + '\')">' +
+                (it.returned ? '재제출' : '완료 처리') + '</button>';
         }
         if (it.impId) {
             return '<a class="btn btn-outline btn-sm" href="' + esc(it.href) + '">보기</a>';
+        }
+        /* 정기평가 설문조사표 — 양식 받기 + 작성본 제출(실제 파일)을 이 자리에서 끝낸다 */
+        if (it.atype === 'rskreport') {
+            var call = "MYWORK.openReport('" + it.rsk.aid + "','" + it.rsk.deptId + "',event)";
+            if (it.status === 'DONE') {
+                return '<span class="mw-done-mark">' + ICO.check + ' 제출 완료</span>' +
+                    ' <button type="button" class="btn btn-outline btn-sm" onclick="' + call + '">' +
+                    ICO.clip + ' 교체</button>';
+            }
+            return '<button type="button" class="btn btn-primary btn-sm" onclick="' + call + '">' +
+                ICO.clip + ' 작성본 제출</button>';
         }
         /* 파일 첨부형 — 팝업(모달)에서 첨부해 완료 · 완료 후엔 재등록 가능 */
         if (it.atype === 'attach') {
@@ -603,7 +726,7 @@
         try { deptName = D().deptName(state.deptId) || ''; } catch (e) {}
         if (!pubs.length) {
             return '<div class="mw-empty"><b>' + esc(deptName) + '</b> 부서로 발행된 업무가 없습니다.<br>' +
-                '<span style="color:var(--text-lightgray);">업무 목록에서 세트를 발행하면 담당 부서의 내 할일에 나타납니다.</span><br><br>' +
+                '<span style="color:var(--text-gray);">업무 목록에서 세트를 발행하면 담당 부서의 내 할일에 나타납니다.</span><br><br>' +
                 '<a class="btn btn-sm btn-outline" href="docs-preset.html">업무 목록 열기 ' + ICO.arrow + '</a></div>';
         }
         var counts = { all: 0, '첨부파일': 0, '전자문서': 0, '프로그램': 0 };
@@ -692,38 +815,179 @@
         '</div>';
     }
 
-    /* ---- 완료한 업무 뷰 — 마감 할일 완료분 + 발행 업무 완료분 ----
-       첨부형은 [첨부 재등록]으로 추후 수정 가능, 메뉴형은 [보기]로 처리 화면 이동 */
+    /* ---- 완료한 업무 뷰 ------------------------------------------------
+     * 설계 의도: '완료했다'는 사실만 남기면 목록이 쓸모가 없다. 이 탭을 여는 이유는
+     * (a) 내가 뭘 끝냈는지 되짚거나 (b) 감사·소명에 쓸 기록을 찾는 것이다. 그래서
+     *   · 날짜는 기한이 아니라 **완료일** — 종전에는 기한을 '완료 2026-10-31'로 찍어
+     *     완료일인 것처럼 보였다(실제 완료일은 2026-07-31이었다).
+     *   · 개선조치는 **개선 후 사진 썸네일**을 카드에 바로 붙이고, 누르면 전·후 대조
+     *     상세(IMPCARD)로 들어간다 — 정기·수시 상세와 같은 화면.
+     *   · **완료일 기준 시간 그룹**(이번 주 / 이번 달 / 이전) — 회고는 시간순이 자연스럽다.
+     *   · 지연 완료는 감추지 않는다. 기한을 넘겨 끝낸 것도 사실이다.
+     * -------------------------------------------------------------------- */
+    function doneStamp(it) {
+        return it.doneDate || it.due || '';
+    }
+    /* 완료일이 오늘로부터 며칠 전인지 — 그룹 배정용 */
+    function doneAgo(it) {
+        var s = doneStamp(it);
+        if (!s) return 9999;
+        var d = daysBetween(s);
+        return d == null ? 9999 : -d;   /* daysBetween 은 미래가 +, 과거가 - 다 */
+    }
+    var DONE_BUCKETS = [
+        { id: 'w', label: '최근 7일', tone: 'success', max: 7 },
+        { id: 'm', label: '최근 30일', tone: 'neutral', max: 30 },
+        { id: 'o', label: '그 이전', tone: 'neutral', max: Infinity }
+    ];
+    /* 기한을 넘겨 끝낸 건 — 사실이므로 배지로 드러낸다 */
+    function lateDone(it) {
+        if (!it.doneDate || !it.due) return false;
+        return it.doneDate > it.due;
+    }
+    function doneShots(it) {
+        var arr = it.shots || [];
+        if (!arr.length) return '';
+        var cells = arr.slice(0, 3).map(function (f) {
+            var src = f.thumb || f.url;
+            return '<span class="mw-done-shot">' +
+                (src ? '<img src="' + esc(src) + '" alt="">' : '<span class="mw-done-shot-x">파일</span>') +
+                '</span>';
+        }).join('');
+        return '<span class="mw-done-shots" aria-label="증빙 사진 ' + arr.length + '장">' + cells +
+            (arr.length > 3 ? '<span class="mw-done-more">+' + (arr.length - 3) + '</span>' : '') + '</span>';
+    }
+    function doneItemHtml(it) {
+        var meta = CATS[it.cat] || { label: it.cat, color: 'var(--text-gray)', bg: 'var(--gray-200)' };
+        var late = lateDone(it);
+        var facts = [];
+        if (it.doneBy) facts.push('<span>확인 <b>' + esc(it.doneBy) + '</b></span>');
+        if (it.due) facts.push('<span>기한 ' + esc(it.due) + '</span>');
+        if (it.dept_label) facts.push('<span>' + esc(it.dept_label) + '</span>');
+        var act = it.impId
+            ? '<button type="button" class="btn btn-outline btn-sm" onclick="MYWORK.openDone(\'' + it.impId + '\')">조치 상세</button>'
+            : (it.atype === 'rskreport'
+                ? '<button type="button" class="btn btn-outline btn-sm" onclick="MYWORK.openReport(\'' + it.rsk.aid + '\',\'' + it.rsk.deptId + '\',event)">제출본 교체</button>'
+                : (it.atype === 'attach'
+                    ? '<button type="button" class="btn btn-outline btn-sm" onclick="MYWORK.openAttach(\'' + it.id + '\',\'seed\',true)">첨부 재등록</button>'
+                    : (it.href ? '<a class="btn btn-outline btn-sm" href="' + esc(it.href) + '">보기</a>' : '')));
+        return '<div class="mw-done-item">' +
+            '<span class="mw-done-check" aria-hidden="true">' + ICO.check + '</span>' +
+            '<div class="mw-done-body">' +
+                '<div class="mw-done-top">' +
+                    '<span class="mw-cat" style="color:' + meta.color + ';background:' + meta.bg + ';">' + esc(meta.label) + '</span>' +
+                    '<span class="mw-done-title">' + esc(it.title) + '</span>' +
+                    (late ? '<span class="chip-status warning chip-sm">기한 후 완료</span>' : '') +
+                '</div>' +
+                (it.doneText ? '<p class="mw-done-text">' + esc(it.doneText) + '</p>'
+                             : (it.sub ? '<p class="mw-done-text is-sub">' + esc(it.sub) + '</p>' : '')) +
+                '<div class="mw-done-facts">' +
+                    '<span class="mw-done-date">완료 <b>' + esc(doneStamp(it) || '-') + '</b></span>' +
+                    facts.join('') +
+                '</div>' +
+            '</div>' +
+            doneShots(it) +
+            (act ? '<div class="mw-done-act">' + act + '</div>' : '') +
+        '</div>';
+    }
+
     function renderDone(items, pubs) {
         var dueDone = items.filter(function (i) { return i.status === 'DONE'; });
         var pubDone = pubs.filter(function (d) { return d.status === '완료'; });
         if (!dueDone.length && !pubDone.length) {
             return '<div class="mw-empty">아직 완료한 업무가 없습니다.<br>' +
-                '<span style="color:var(--text-lightgray);">마감 할일이나 발행된 업무를 처리하면 여기에 모입니다.</span></div>';
+                '<span style="color:var(--text-gray);">마감 할일이나 발행된 업무를 처리하면 여기에 모입니다.</span></div>';
         }
-        var note =
-            '<div class="mw-pub-note">완료 처리된 업무 모음입니다. ' +
-            '<b>첨부형</b>은 <b>첨부 재등록</b>으로 파일을 나중에 교체할 수 있고, 메뉴 진행형은 처리 화면에서 이력을 확인합니다.</div>';
-        var html = note;
-        if (dueDone.length) {
-            html += '<div class="mw-group mw-g-done">' +
-                '<div class="mw-group-head">' + groupDot('success') +
-                    '<span class="mw-group-label">완료한 마감 할일</span>' +
-                    '<span class="mw-group-count">' + dueDone.length + '건</span>' +
-                '</div>' +
-                '<div class="mw-group-body">' + dueDone.map(itemHtml).join('') + '</div>' +
+        /* 카테고리 필터는 마감 할일 탭과 같은 상태(state.fCat)를 쓴다 — 탭을 옮겨도 관점이 유지된다 */
+        var cats = {};
+        dueDone.forEach(function (i) { cats[i.cat] = (cats[i.cat] || 0) + 1; });
+        var withShots = dueDone.filter(function (i) { return (i.shots || []).length; }).length;
+        var lates = dueDone.filter(lateDone).length;
+
+        var sum =
+            '<div class="mw-done-sum">' +
+                '<span class="mw-done-sum-n"><b>' + (dueDone.length + pubDone.length) + '</b>건 완료</span>' +
+                (withShots ? '<span class="mw-done-sum-i">' + ICO.check + ' 증빙 사진 ' + withShots + '건</span>' : '') +
+                (lates ? '<span class="mw-done-sum-l">기한 후 완료 ' + lates + '건</span>' : '') +
             '</div>';
+
+        var chips = Object.keys(cats).length > 1
+            ? '<div class="mw-done-filters" role="group" aria-label="완료 업무 분류 필터">' +
+                  '<button type="button" class="mw-done-fchip' + (state.fCat ? '' : ' is-on') +
+                      '" onclick="MYWORK.setCat(\'\')"' + (state.fCat ? '' : ' aria-current="true"') +
+                      '>전체 <b>' + dueDone.length + '</b></button>' +
+                  Object.keys(cats).map(function (c) {
+                      var m = CATS[c] || { label: c };
+                      return '<button type="button" class="mw-done-fchip' + (state.fCat === c ? ' is-on' : '') +
+                          '" onclick="MYWORK.setCat(\'' + c + '\')"' + (state.fCat === c ? ' aria-current="true"' : '') +
+                          '>' + esc(m.label) + ' <b>' + cats[c] + '</b></button>';
+                  }).join('') +
+              '</div>'
+            : '';
+
+        var shown = state.fCat ? dueDone.filter(function (i) { return i.cat === state.fCat; }) : dueDone;
+        /* 최근 완료가 위로 */
+        shown = shown.slice().sort(function (a, b) { return doneAgo(a) - doneAgo(b); });
+
+        var html = sum + chips;
+        if (!shown.length && !pubDone.length) {
+            html += '<div class="mw-empty">이 분류로 완료한 업무가 없습니다. ' +
+                '<button type="button" class="btn btn-sm btn-outline" onclick="MYWORK.setCat(\'\')">필터 해제</button></div>';
         }
-        if (pubDone.length) {
+        DONE_BUCKETS.forEach(function (b, bi) {
+            var min = bi === 0 ? -Infinity : DONE_BUCKETS[bi - 1].max;
+            var list = shown.filter(function (i) { var d = doneAgo(i); return d > min && d <= b.max; });
+            if (!list.length) return;
             html += '<div class="mw-group mw-g-done">' +
-                '<div class="mw-group-head">' + groupDot('success') +
+                '<div class="mw-group-head">' + groupDot(b.tone) +
+                    '<span class="mw-group-label">' + b.label + '</span>' +
+                    '<span class="mw-group-count">' + list.length + '건</span>' +
+                '</div>' +
+                '<div class="mw-group-body mw-done-list">' + list.map(doneItemHtml).join('') + '</div>' +
+            '</div>';
+        });
+        if (pubDone.length) {
+            /* 발행 업무는 수십 건까지 쌓인다 — 한 번에 다 펼치면 마감 할일 완료분이
+               스크롤 아래로 밀려 보이지 않는다. 처음엔 접고 필요할 때 펼친다. */
+            var CAP = 10;
+            var capped = state.doneMore ? pubDone : pubDone.slice(0, CAP);
+            html += '<div class="mw-group mw-g-done">' +
+                '<div class="mw-group-head">' + groupDot('neutral') +
                     '<span class="mw-group-label">완료한 발행 업무</span>' +
                     '<span class="mw-group-count">' + pubDone.length + '건</span>' +
                 '</div>' +
-                '<div class="mw-group-body">' + pubDone.map(pubItemHtml).join('') + '</div>' +
+                '<div class="mw-group-body">' + capped.map(pubItemHtml).join('') +
+                    (pubDone.length > CAP
+                        ? '<div class="mw-done-more-row">' +
+                              '<button type="button" class="btn btn-outline btn-sm" onclick="MYWORK.toggleDoneMore()"' +
+                              ' aria-expanded="' + (state.doneMore ? 'true' : 'false') + '">' +
+                              (state.doneMore ? '접기' : '나머지 ' + (pubDone.length - CAP) + '건 더 보기') +
+                              '</button></div>'
+                        : '') +
+                '</div>' +
             '</div>';
         }
+        html += '<p class="mw-done-note">완료 기록은 되돌릴 수 없습니다 — 증빙이 붙은 기록을 지우면 소명 자료가 사라집니다. ' +
+            '내용을 고쳐야 하면 <b>제출본 교체</b>·<b>첨부 재등록</b>으로 파일만 바꾸세요.</p>';
         return html;
+    }
+
+    /* 완료한 개선조치 상세 — 정기·수시와 같은 카드 화면(IMPCARD)을 그대로 쓴다 */
+    function openDone(impId) {
+        var m = D().improvementOf(impId); if (!m) return;
+        if (!global.IMPCARD) { toast('개선조치 상세 모듈을 불러오지 못했습니다.'); return; }
+        IMPCARD.open({
+            key: 'mywork:' + impId,
+            title: '완료한 개선조치 — ' + D().deptName(m.dept_id),
+            metaHtml:
+                '<span>출처 <b>' + esc((D().SRC_META[m.source_type] || {}).label || '-') + '</b></span>' +
+                (m.assessment_id ? '<span>평가 <b>' + esc(m.assessment_id) + '</b></span>' : '') +
+                (m.occ_id ? '<span>수시평가 <b>' + esc(m.occ_id) + '</b></span>' : '') +
+                '<span>조치기한 <b>' + esc(m.due || m.due_date || '-') + '</b></span>',
+            noteHtml: '개선 전·후 사진을 눌러 크게 볼 수 있습니다.',
+            items: function () { var x = D().improvementOf(impId); return x ? [x] : []; },
+            canRemind: false
+        });
     }
 
     /* ================= 부서 후보 (DYV2.ORG 파생) ================= */
@@ -746,8 +1010,14 @@
     }
 
     /* ================= 액션 ================= */
-    function setDept(id) { state.deptId = id; state.openInline = {}; state.attachCtx = null; render(); }
+    function setDept(id) {
+        /* URL(?dept=)·직접 호출로도 범위를 벗어나지 못하게 한다 */
+        var R = global.DYROLE, s = R && R.scope ? R.scope() : 'all';
+        if (s !== 'all' && id !== s) { V().toast('소속 부서만 조회할 수 있습니다.'); return; }
+        state.deptId = id; state.openInline = {}; state.attachCtx = null; render();
+    }
     function setView(v) { state.view = v; render(); }
+    function toggleDoneMore() { state.doneMore = !state.doneMore; render(); }
     function setStatus(v) { state.fStatus = v; render(); }
     function setCat(v) { state.fCat = v; render(); }
     function setSort(v) { state.sort = v; render(); }
@@ -788,12 +1058,12 @@
         if (!files.length) { toast('첨부할 파일을 선택하세요.'); return; }
         if (ctx.kind === 'pub') {
             var d = (global.DY_DOCS_V2 || []).find(function (x) { return x.id === ctx.id; });
-            if (d) { d.status = '완료'; d.updated = TODAY_ISO; }
+            if (d) { d.status = '완료'; d.updated = todayIso(); }
             state.pubFiles[ctx.id] = files.slice();
             toast(ctx.redo ? '첨부 재등록 완료 — 새 파일로 교체되었습니다.'
                 : '첨부 완료 — 업무 목록' + (d && d.setId ? ' (세트 ' + d.setId + ')' : '') + '에 반영되었습니다.');
         } else {
-            state.doneSeeds[ctx.id] = { at: TODAY_ISO, files: files.slice() };
+            state.doneSeeds[ctx.id] = { at: todayIso(), files: files.slice() };
             toast(ctx.redo ? '첨부 재등록 완료 — 새 파일로 교체되었습니다.'
                 : '첨부 완료 — 완료한 업무 탭으로 이동했습니다.');
         }
@@ -832,24 +1102,141 @@
         toast('재촉 응답 제출 완료'); render();
     }
     /* ---- 완료 처리 (단일 모달) ---- */
+    /* 완료 요건(조치내용·완료일·개선 후 사진·서명)은 DYRSK.completeImprovement 가 강제한다.
+     * 화면은 입력만 받고, 통과 여부는 데이터 계층 판정을 그대로 따른다 — 화면마다 규칙을
+     * 다시 쓰면 어느 한 경로가 빠져나가 증빙 없는 완료가 기록된다. */
+    function signerDefault() {
+        var p = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
+        return p ? p.name : '';
+    }
+    function captureCmpl() {
+        var el = function (x) { return document.getElementById(x); };
+        if (el('mw-cmpl-desc')) state.cmplDesc = el('mw-cmpl-desc').value;
+        if (el('mw-cmpl-sign')) state.cmplSign = el('mw-cmpl-sign').value;
+        if (el('mw-cmpl-date')) state.cmplDate = el('mw-cmpl-date').value;
+    }
+    /* 개선 후 사진은 실제 파일을 고른다 — 이 사진 한 장이 조치 완료의 증빙이라
+       파일명만 지어내면 담당자가 끝냈다는 사실을 소명할 수 없다. */
+    function onPickAfter(files) {
+        captureCmpl();
+        state.cmplPhotos = (state.cmplPhotos || []).concat(files).slice(0, V().FILE_LIMITS.maxCount);
+        state.cmplPhoto = state.cmplPhotos.map(function (f) { return f.name; }).join(', ');
+        complete(state.cmplId);
+        V().toast('개선 후 사진 ' + files.length + '건 첨부');
+    }
+    function delAfter(n) {
+        captureCmpl();
+        (state.cmplPhotos || []).splice(n, 1);
+        state.cmplPhoto = (state.cmplPhotos || []).map(function (f) { return f.name; }).join(', ');
+        complete(state.cmplId);
+    }
+    function afterShotsHtml() {
+        var arr = state.cmplPhotos || [];
+        if (!arr.length) return '';
+        return '<div class="mw-cmpl-shots">' + arr.map(function (f, n) {
+            var src = f.thumb || f.url;
+            return '<span class="mw-cmpl-shot">' +
+                (src ? '<img src="' + esc(src) + '" alt="">' : '<span class="mw-cmpl-shot-x">파일</span>') +
+                '<button type="button" class="mw-cmpl-shot-del" aria-label="' + esc(f.name) + ' 삭제"' +
+                ' onclick="MYWORK.delAfter(' + n + ')">×</button></span>';
+        }).join('') + '</div>';
+    }
+
     function complete(id) {
+        if (!canAct()) { toast('이 부서의 담당자만 완료 처리할 수 있습니다.'); return; }
         var m = D().improvementOf(id); if (!m) return;
+        state.cmplId = id;
         V().openModal('개선조치 완료 처리',
             '<div style="font-size:var(--fs-13);">' +
                 '<p><b>' + esc((m.hazard && m.hazard.name) || m.hazard_risk_factor || '') + '</b></p>' +
                 '<p style="color:var(--text-gray);margin:6px 0 14px;">' + esc(m.description || m.action || '') + '</p>' +
                 '<label style="font-size:var(--fs-12);font-weight:700;color:var(--text-gray);display:block;margin-bottom:5px;">조치 내용 <span style="color:var(--status-danger-fg)">*</span></label>' +
-                '<textarea class="form-textarea" id="mw-cmpl-desc" rows="3" placeholder="실제 조치한 내용을 입력하세요"></textarea>' +
+                '<textarea class="form-textarea" id="mw-cmpl-desc" rows="3" placeholder="실제 조치한 내용을 입력하세요">' + esc(state.cmplDesc || '') + '</textarea>' +
+                '<label style="font-size:var(--fs-12);font-weight:700;color:var(--text-gray);display:block;margin:14px 0 5px;">완료일 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                '<input type="date" class="form-input" id="mw-cmpl-date" value="' + esc(state.cmplDate || D().today()) + '" style="max-width:180px;">' +
+                '<label style="font-size:var(--fs-12);font-weight:700;color:var(--text-gray);display:block;margin:14px 0 5px;">개선 후 사진 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                afterShotsHtml() +
+                V().uploadDrop('<b>개선 후 사진</b> <span style="font-size:var(--fs-12);color:var(--text-gray);">클릭 또는 끌어놓기</span>',
+                    null, { pick: 'MYWORK.onPickAfter', multiple: true, style: 'padding:12px;' }) +
+                '<p class="file-hint">개선 후 사진은 조치 완료의 증빙입니다. 없으면 완료 처리되지 않습니다.</p>' +
+                '<label style="font-size:var(--fs-12);font-weight:700;color:var(--text-gray);display:block;margin:14px 0 5px;">완료 확인 (전자서명) <span style="color:var(--status-danger-fg)">*</span></label>' +
+                '<input type="text" class="form-input" id="mw-cmpl-sign" value="' + esc(state.cmplSign || signerDefault()) + '" placeholder="확인자 이름" style="max-width:220px;">' +
             '</div>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="MYWORK.doComplete(\'' + id + '\')">완료 처리</button>');
     }
     function doComplete(id) {
-        var t = document.getElementById('mw-cmpl-desc');
-        var v = (t && t.value || '').trim();
-        if (!v) { toast('조치 내용을 입력하세요.'); return; }
-        D().completeImprovement(id, v, D().deptName(state.deptId) + ' 담당자');
-        V().closeModal(); toast('완료 처리 · 평가 상세에 반영'); render();
+        var el = function (x) { return document.getElementById(x); };
+        var payload = {
+            action: (el('mw-cmpl-desc') && el('mw-cmpl-desc').value || '').trim(),
+            completedDate: el('mw-cmpl-date') && el('mw-cmpl-date').value,
+            afterPhoto: state.cmplPhoto,
+            afterPhotos: state.cmplPhotos || [],
+            by: (el('mw-cmpl-sign') && el('mw-cmpl-sign').value || '').trim(),
+            signedBy: (el('mw-cmpl-sign') && el('mw-cmpl-sign').value || '').trim()
+        };
+        var err = D().completionError(payload);
+        if (err) { toast(err); return; }
+        D().completeImprovement(id, payload);
+        state.cmplPhoto = ''; state.cmplPhotos = []; state.cmplDesc = ''; state.cmplSign = '';
+        state.cmplDate = ''; state.cmplId = null;
+        V().closeModal(); toast('완료 처리 · 전자서명 기록 · 평가 상세에 반영'); render();
+    }
+
+    /* ===== 정기평가 — 유해위험요인 설문조사표 작성본 제출 =====
+     * 부서가 정기평가에서 지는 몫이 여기서 끝난다. 제출하면 주관부서 화면
+     * (rsk-list 부서별 보고서)에 그대로 뜨고, 이력에 '누가 언제' 가 남는다. */
+    var RPT = null;   /* {aid, deptId, files:[]} */
+    function openReport(aid, deptId, ev) {
+        if (ev) { ev.preventDefault(); ev.stopPropagation(); }
+        if (!canAct()) { toast('이 부서의 담당자만 제출할 수 있습니다.'); return; }
+        var a = D().assessmentOf(aid); if (!a) return;
+        var dp = (a.depts || []).filter(function (x) { return x.deptId === deptId; })[0];
+        if (!dp) return;
+        if (!RPT || RPT.aid !== aid || RPT.deptId !== deptId) RPT = { aid: aid, deptId: deptId, files: [] };
+        renderReport();
+    }
+    function renderReport() {
+        var a = D().assessmentOf(RPT.aid); if (!a) return;
+        var dp = (a.depts || []).filter(function (x) { return x.deptId === RPT.deptId; })[0];
+        var form = dp.surveyFile || (a.files && a.files.surveyAll) || '';
+        var picked = RPT.files.map(function (f, n) {
+            return '<li><span class="mw-rpt-name">' + esc(f.name) + '</span>' +
+                '<button type="button" class="mw-rpt-del" aria-label="' + esc(f.name) + ' 제외"' +
+                ' onclick="MYWORK.delReport(' + n + ')">×</button></li>';
+        }).join('');
+        V().openModal('유해위험요인 설문조사표 제출 — ' + esc(D().deptName(RPT.deptId)),
+            '<p class="mw-rpt-lead">' + esc(a.title) +
+                (dp.inspectDate ? ' · 점검일 <b>' + esc(dp.inspectDate) + '</b>' : '') + '</p>' +
+            '<div class="mw-rpt-step"><span class="mw-rpt-no">1</span>' +
+                '<div><b>양식 받기</b>' +
+                    (form
+                        ? '<div><button type="button" class="btn btn-outline btn-sm" onclick="MYWORK.dlForm(\'' +
+                              esc(form).replace(/'/g, "&#39;") + '\')">📥 ' + esc(form) + '</button></div>'
+                        : '<p class="file-hint">배포된 양식이 없습니다 — 재난안전과에 문의하세요.</p>') +
+                '</div></div>' +
+            '<div class="mw-rpt-step"><span class="mw-rpt-no">2</span>' +
+                '<div style="flex:1;min-width:0;"><b>작성본 제출</b>' +
+                    (picked ? '<ul class="mw-rpt-list">' + picked + '</ul>' : '') +
+                    V().uploadDrop('<b>작성한 설문조사표</b> <span style="font-size:var(--fs-12);color:var(--text-gray);">클릭 또는 끌어놓기</span>',
+                        null, { pick: 'MYWORK.onPickReport', hint: true, style: 'padding:12px;' }) +
+                    (dp.reportFile ? '<p class="file-hint">현재 제출본 <b>' + esc(dp.reportFile) + '</b>' +
+                        (dp.reportAt ? ' (' + esc(dp.reportAt) + (dp.reportBy ? ' · ' + esc(dp.reportBy) : '') + ')' : '') +
+                        ' — 새 파일을 올리면 교체됩니다.</p>' : '') +
+                '</div></div>',
+            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+            '<button type="button" class="btn btn-primary" onclick="MYWORK.doReport()">제출</button>');
+    }
+    function dlForm(name) { toast('설문조사표 다운로드: ' + name + ' (프로토타입 — 실제 파일은 미연결)'); }
+    function onPickReport(files) { RPT.files = files.slice(0, 1); renderReport(); }
+    function delReport(n) { RPT.files.splice(n, 1); renderReport(); }
+    function doReport() {
+        if (!RPT.files.length) { toast('작성한 설문조사표 파일을 선택하세요.'); return; }
+        var p = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
+        var who = p ? (D().deptName(RPT.deptId) + ' · ' + p.name) : (D().deptName(RPT.deptId) + ' 담당자');
+        D().setDeptReport(RPT.aid, RPT.deptId, RPT.files[0].name, who);
+        RPT = null;
+        V().closeModal(); toast('설문조사표 제출 · 재난안전과로 전달되었습니다'); render();
     }
 
     /* ================= init ================= */
@@ -869,6 +1256,9 @@
     }
 
     global.MYWORK = {
+        onPickAfter: onPickAfter, delAfter: delAfter,
+        openReport: openReport, onPickReport: onPickReport, delReport: delReport, doReport: doReport, dlForm: dlForm,
+        openDone: openDone, toggleDoneMore: toggleDoneMore,
         init: init, setDept: setDept, setView: setView,
         setStatus: setStatus, setCat: setCat, setSort: setSort, sync: sync,
         setPubType: setPubType, setPubStatus: setPubStatus, kpiFilter: kpiFilter,

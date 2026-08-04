@@ -31,7 +31,7 @@
         .evl-tab:hover { color: var(--main-dark); }
         .evl-tab.is-active {
             color: var(--main-dark2);
-            border-bottom-color: var(--main);
+            border-bottom-color:var(--main-dark);
         }
         .evl-pane { display: none; }
         .evl-pane.is-active { display: block; }
@@ -73,7 +73,7 @@
         }
         .evl-half-toggle button:last-child { border-right: none; }
         .evl-half-toggle button.is-active {
-            background: var(--main);
+            background: var(--main-dark);
             color: white;
         }
         .evl-cycle-meta {
@@ -126,7 +126,7 @@
         .evl-kpi-icon.info    { background: var(--status-info-bg);    color: var(--status-info-fg); }
         .evl-kpi-icon.warn    { background: var(--status-warning-bg); color: var(--status-warning-fg); }
         .evl-kpi-value {
-            font-size: 26px; font-weight: 700; color: var(--main);
+            font-size: 26px; font-weight: 700; color:var(--main-dark);
             line-height: 1; letter-spacing: -0.8px;
         }
         .evl-kpi-value .small {
@@ -328,7 +328,7 @@
         .evl-score.improve   { color: var(--status-warning-fg); }
         .evl-score.insufficient { color: var(--status-danger-fg); }
         .evl-score-empty {
-            color: var(--text-lightgray);
+            color:var(--text-gray);
             font-weight: 500;
             font-size: 12px;
         }
@@ -348,7 +348,7 @@
         /* 결과 카운트 */
         .evl-meta-row { display: flex; align-items: center; gap: 12px; }
         .evl-meta-count { font-size: 14px; color: var(--text-gray); }
-        .evl-meta-count strong { color: var(--main); font-weight: 700; }
+        .evl-meta-count strong { color:var(--main-dark); font-weight: 700; }
 
         /* (일괄 생성 모달 CSS 삭제 — 마크업·호출부 없는 사문화 코드였음. 모달은 DYV2.openModal §1) */
         .evl-form-row { margin-bottom: 14px; }
@@ -369,7 +369,7 @@
         }
         .evl-form-row select:focus,
         .evl-form-row input:focus {
-            border-color: var(--main);
+            border-color:var(--main-dark);
             box-shadow: 0 0 0 3px rgba(32, 159, 132, 0.12);
         }
         .evl-preview-box {
@@ -449,6 +449,7 @@
     <div id="toast" class="toast" role="status"></div>
 
     <script src="./js/layout.js"></script>
+    <script src="./js/law-map.js"></script>
     <script src="./js/common.js"></script>
     <script>
     (function () {
@@ -547,7 +548,7 @@
             if (!data) {
                 meta$.innerHTML = '해당 사이클 데이터 없음';
                 kpi$.innerHTML = ''; banner$.innerHTML = ''; roles$.innerHTML = '';
-                depts$.innerHTML = '<div style="padding:20px; color:var(--text-lightgray);">표시할 데이터가 없습니다.</div>';
+                depts$.innerHTML = '<div style="padding:20px; color:var(--text-gray);">표시할 데이터가 없습니다.</div>';
                 depthead$.textContent = '';
                 return;
             }
@@ -569,7 +570,7 @@
                 kpiCell('완료', 'success', SVG.check, done + '<span class="small">명</span>',
                     '진행률 <strong>' + comp + '%</strong>', comp) +
                 kpiCell('진행 중', 'info', SVG.clock, prog + '<span class="small">명</span>',
-                    prog ? ('평균 진행 <strong>' + data.avgProgress + '</strong>') : '<span style="color:var(--text-lightgray);">임시저장 없음</span>') +
+                    prog ? ('평균 진행 <strong>' + data.avgProgress + '</strong>') : '<span style="color:var(--text-gray);">임시저장 없음</span>') +
                 kpiCell('미시작', 'warn', SVG.warn, notStart + '<span class="small">명</span>', data.notNote);
 
             /* 마감 배너 — 진행 중 사이클 + 미시작 있을 때만 */

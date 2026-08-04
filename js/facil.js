@@ -235,8 +235,8 @@
                 if (r.jur === '미상') flags.push('<span class="chip-mini wt-attach">소관확인</span>');
                 if (!e.lat) flags.push('<span class="chip-mini wt-attach">좌표없음</span>');
                 return '<tr onclick="DYFACIL._detail(\'' + r.facilNo + '\')" style="cursor:pointer;">' +
-                    '<td><b>' + esc(r.facilNm) + '</b><div style="font-size:11px; color:var(--text-gray);">' + esc(r.facilNo) + '</div></td>' +
-                    '<td>' + esc(r.gbnNm) + '<div style="font-size:11px; color:var(--text-gray);">' + esc(r.kindNm) + '</div></td>' +
+                    '<td><b>' + esc(r.facilNm) + '</b><div style="font-size:var(--fs-12); color:var(--text-gray);">' + esc(r.facilNo) + '</div></td>' +
+                    '<td>' + esc(r.gbnNm) + '<div style="font-size:var(--fs-12); color:var(--text-gray);">' + esc(r.kindNm) + '</div></td>' +
                     '<td>' + (CLASS_NM[r.facilClass] || '-') + '</td>' +
                     '<td style="font-size:12px;">' + esc(r.addrDong || '') + '</td>' +
                     '<td>' + (age != null ? age + '년' : '-') + '</td>' +
@@ -291,7 +291,7 @@
             '<div class="fac-f2"><span class="fac-f-l">안전등급 (A~E)</span>' + sel('ex-grade', e.safetyGrade, ['A', 'B', 'C', 'D', 'E'].map(g => [g, g + ' — ' + GRADE_DESC[g].split(' — ')[1]]), '미평가') + '</div>' +
             '<div class="fac-f2"><span class="fac-f-l">소관부서</span>' + inp('ex-dept', e.deptNm, '예: 건설과') + '</div>' +
             '<div class="fac-f2"><span class="fac-f-l">최근 점검일</span>' + inp('ex-last', e.lastInspectYmd, 'YYYY-MM-DD', 'date') + '</div>' +
-            '<div class="fac-f2"><span class="fac-f-l">차기 점검예정일 ' + (nextSuggest ? '<span style="font-size:11px; color:var(--primary);">(법정주기 제안 ' + nextSuggest + ')</span>' : '') + '</span>' + inp('ex-next', e.nextInspectYmd, 'YYYY-MM-DD', 'date') + '</div>' +
+            '<div class="fac-f2"><span class="fac-f-l">차기 점검예정일 ' + (nextSuggest ? '<span style="font-size:var(--fs-12); color:var(--primary);">(법정주기 제안 ' + nextSuggest + ')</span>' : '') + '</span>' + inp('ex-next', e.nextInspectYmd, 'YYYY-MM-DD', 'date') + '</div>' +
             '<div class="fac-f2"><span class="fac-f-l">중대결함 유무</span>' + sel('ex-defyn', e.defectYn, [['N', '없음'], ['Y', '있음']], '미확인') + '</div>' +
             '<div class="fac-f2"><span class="fac-f-l">중대결함 유형</span>' + sel('ex-deftype', e.defectType, DEFECT_TYPES, '해당 없음') + '</div>' +
             '<div class="fac-f2"><span class="fac-f-l">보수보강 진행</span>' + sel('ex-repair', e.repairStatus, REPAIR_STATUS, '해당 없음') + '</div>' +
@@ -347,12 +347,12 @@
                 const btn = s.rk.level === 'na'
                     ? '<button class="btn btn-sm btn-outline" onclick="DYFACIL._detail(\'' + s.r.facilNo + '\')">보완입력</button>'
                     : '<button class="btn btn-sm btn-primary" onclick="DYFACIL._toRisk(\'' + s.r.facilNo + '\')">평가 착수</button>';
-                return '<tr><td><b>' + esc(s.r.facilNm) + '</b><div style="font-size:11px;color:var(--text-gray);">' + esc(s.r.gbnNm) + ' · ' + (CLASS_NM[s.r.facilClass] || '') + '</div></td>' +
+                return '<tr><td><b>' + esc(s.r.facilNm) + '</b><div style="font-size:var(--fs-12);color:var(--text-gray);">' + esc(s.r.gbnNm) + ' · ' + (CLASS_NM[s.r.facilClass] || '') + '</div></td>' +
                     '<td>' + gradeChip(s.e.safetyGrade) + '</td>' +
                     '<td>' + (ageOf(s.r) != null ? ageOf(s.r) + '년' : '-') + '</td>' +
                     '<td>' + (s.e.dailyUsers ? Number(s.e.dailyUsers).toLocaleString() + '명' : '-') + '</td>' +
                     '<td>' + riskChip(s.rk) + '</td>' +
-                    '<td style="font-size:11px;color:var(--text-gray);">' + s.rk.have.length + '/8</td>' +
+                    '<td style="font-size:var(--fs-12);color:var(--text-gray);">' + s.rk.have.length + '/8</td>' +
                     '<td class="col-action">' + btn + '</td></tr>';
             }).join('');
             app.innerHTML =
@@ -457,7 +457,7 @@
                 fld('기관코드', 'set-org', s.orgCode) +
                 fld('사용자 ID', 'set-uid', s.userId) +
                 '<div class="fac-f2"><span class="fac-f-l">일 배치 수신</span><select class="select" id="set-batch" style="width:100%;"><option value="1"' + (s.batchDaily ? ' selected' : '') + '>사용 (06:00)</option><option value="0"' + (!s.batchDaily ? ' selected' : '') + '>미사용</option></select></div>' +
-                '<div class="fac-f2"><span class="fac-f-l">1일 실행 상한</span><input class="select" id="set-limit" style="width:100%;" type="number" value="' + esc(s.batchLimit) + '"> <span style="font-size:11px; color:var(--text-gray);">가이드 최대 10회</span></div>' +
+                '<div class="fac-f2"><span class="fac-f-l">1일 실행 상한</span><input class="select" id="set-limit" style="width:100%;" type="number" value="' + esc(s.batchLimit) + '"> <span style="font-size:var(--fs-12); color:var(--text-gray);">가이드 최대 10회</span></div>' +
                 '<div class="fac-f2"><span class="fac-f-l">자동 승인요청</span><select class="select" id="set-appr" style="width:100%;"><option value="0"' + (!s.autoApprove ? ' selected' : '') + '>미사용</option><option value="1"' + (s.autoApprove ? ' selected' : '') + '>사용 (approveReqYn=Y)</option></select></div>' +
                 '</div>' +
                 '<p style="font-size:12px; color:var(--text-gray); margin-top:10px;">인증키·비밀번호 등 자격증명은 보안 절차상 이 화면에서 입력·저장하지 않습니다. (별도 보안 위임)</p>' +

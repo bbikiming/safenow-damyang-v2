@@ -13,8 +13,9 @@
     'use strict';
 
     var SKEY = 'damyangShV2';
-    var TODAY = '2026-07-14';   /* 정적 프로토타입 기준일 */
-    var CURYEAR = 2026;
+    /* 기준일·기준연도 — DYV2.today() 단일 출처 (시연일 변경은 common.js DEMO_TODAY 한 줄) */
+    var TODAY = (global.DYV2 && global.DYV2.today) ? global.DYV2.today() : '2026-07-16';
+    var CURYEAR = Number(TODAY.slice(0, 4));
 
     /* ================= 공용 상태 메타 ================= */
     /* 4개 공용 상태 — 목록/요약/칩에서 동일하게 사용 */

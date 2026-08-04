@@ -1,8 +1,13 @@
 /* =====================================================================
    edu-etc.js · 기타 교육 (EDU-ETC, EDU-SUP-ETC 공용)
    ---------------------------------------------------------------------
-   docs/planning/기획-안전보건교육-재설계-v1.md §6.
-   자체교육 형식 + 분류 셀렉트(특별교육/작업내용 변경 시/MSDS/직무교육/자체·기타).
+   docs/planning/기획-2026-07-30-회의반영-v1.md §1-4 · 기획-안전보건교육-재설계-v1.md §6.
+   자체교육 형식 + **법정 3유형**(작업내용 변경 시 / 특별교육 / 건설업 기초안전보건교육) 선택.
+   등록 주체는 **각 과**이고(연도마다 용역·채용자가 달라져 고정할 수 없다), 화면 상단에
+   해당 여부 **판단 기준을 상시 노출**해 담당자가 법령 원문을 읽고 판단하지 않게 한다 —
+     발주처 "이 기준을 위에다가 띄워놓고 이 기준에 해당하면 이거 만들어서 교육해야 된다"(녹취 1138)
+     발주처 "법을 기준으로 해서 판단해서 눌러가지고 하는 것보다는 … 그 법의 근거를
+             적어두는 게 나아요"(녹취 1155~1158)
    등록·진행 시 즉시 완료·카운트(참여자에 ETC 유형으로 기록).
    표준: 배지 chip-status+DYV2.toneOf · 빈상태 .v2-empty · 부서 선택 ORGPICK('deptId')
    ===================================================================== */
@@ -49,7 +54,35 @@
         var cards = list.length ? list.map(cardHtml).join('') :
             '<div class="edu-card"><div class="v2-empty">' +
                 (all.length ? '조건에 맞는 기타 교육이 없습니다.' : '등록된 기타 교육이 없습니다.') + '</div></div>';
-        state.mount.innerHTML = head + cards;
+        state.mount.innerHTML = criteriaHtml() + head + cards;
+    }
+
+    /* 해당 여부 판단 기준 — 목록 상단 상시 노출 (2026-07-30 회의).
+     * 법령 원문을 읽고 판단하게 하지 않고, 조문에 근거해 미리 만들어 둔 유형을 고르게 한다.
+     * 근거 표기는 DYLAW 칩으로만 낸다(CLAUDE.md §10). */
+    function criteriaHtml() {
+        var types = E().ETC_TYPES;
+        var rows = types.map(function (t) {
+            var info = E().etcTypeInfo(t) || {};
+            var hrs = (info.hours || []).map(function (x) {
+                return esc(x.who) + ' <b>' + x.h + 'h</b>';
+            }).join(' · ') || '-';
+            var pending = (info.worksSource && !(info.works || []).length)
+                ? ' <span class="chip-status chip-sm warning">대상 작업 목록 미등록</span>' : '';
+            return '<tr><td><b>' + esc(t) + '</b>' + pending + '</td>' +
+                '<td>' + esc(info.guide || '-') + '</td>' +
+                '<td>' + hrs + '</td></tr>';
+        }).join('');
+        var chip = window.DYLAW ? ' ' + DYLAW.basisChip('oshr-t4') : '';
+        return '<details class="edu-criteria" open>' +
+            '<summary><b>어떤 교육을 해야 하나 — 해당 여부 판단 기준</b>' + chip + '</summary>' +
+            '<div class="edu-scroll"><table class="table-figma table-compact"><thead><tr>' +
+                '<th style="min-width:150px;">교육 유형</th><th style="min-width:230px;">이럴 때 실시합니다</th>' +
+                '<th style="min-width:200px;">법정 최소 교육시간</th>' +
+            '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
+            '<p class="file-hint">기준에 해당하면 <b>[＋ 기타 교육 등록·진행]</b>으로 각 과가 직접 등록합니다. ' +
+            '교육시간은 산업안전보건법 시행규칙 별표4 기준입니다.</p>' +
+        '</details>';
     }
     function cardHtml(c) {
         var stChip = c.status === 'DONE'
@@ -104,6 +137,33 @@
         };
         renderCreate();
     }
+    /* 선택한 교육 분류의 법정 최소 교육시간 + 대상 작업 안내.
+     * 발주처 원칙 — "법을 기준으로 해서 판단해서 눌러가지고 하는 것보다는 이 법에 근거해서
+     * 만들어 놓은 상태에서 그 법의 근거를 적어두는 게 나아요": 담당자에게 조문을 읽혀
+     * 판단시키지 않고, 시스템이 만든 분류를 고르게 하고 근거는 참고로만 붙인다. */
+    function typeGuideHtml(label) {
+        var info = E().etcTypeInfo(label);
+        if (!info) return '';
+        var chip = (window.DYLAW && info.basis) ? ' ' + DYLAW.basisChip(info.basis) : '';
+        var rows = info.hours.map(function (x) {
+            return '<li><b>' + esc(x.who) + '</b> — 최소 <b>' + x.h + '시간</b>' +
+                (x.note ? ' <span style="color:var(--text-gray);">(' + esc(x.note) + ')</span>' : '') + '</li>';
+        }).join('');
+        /* 대상 작업 목록이 아직 확보되지 않은 유형은 채워 넣지 않고 미등록으로 드러낸다 */
+        var works = '';
+        if (info.worksSource) {
+            works = info.works && info.works.length
+                ? '<p style="margin:6px 0 0;">대상 작업 ' + info.works.length + '종</p>'
+                : '<p style="margin:6px 0 0;color:var(--status-warning-fg);"><b>대상 작업 목록 미등록</b> — ' +
+                  esc(info.worksSource) + ' 수집 후 선택 목록으로 제공됩니다.</p>';
+        }
+        return '<div class="check-notice" style="margin-bottom:12px;">' +
+            '<div style="font-weight:var(--fw-bold);">' + esc(label) + chip + '</div>' +
+            '<p style="margin:4px 0 0;">' + esc(info.guide) + '</p>' +
+            '<div style="margin-top:4px;">법정 최소 교육시간</div>' +
+            '<ul style="margin:2px 0 0;padding-left:18px;">' + rows + '</ul>' + works +
+        '</div>';
+    }
     function renderCreate() {
         var typeOpts = E().ETC_TYPES.map(function (t) { return '<option value="' + esc(t) + '"' + (t === F.etcType ? ' selected' : '') + '>' + esc(t) + '</option>'; }).join('');
         var ws = pickWorkers(F.deptId);
@@ -115,18 +175,19 @@
                 '<span>' + esc(w.name) + '</span>' +
                 '<span style="color:var(--text-gray);font-size:var(--fs-12);">' + esc(E().catLabel(w.category)) + '</span>' +
             '</label>';
-        }).join('') : '<div style="color:var(--text-lightgray);font-size:var(--fs-12);padding:8px;">이 부서에 대상자가 없습니다.</div>';
+        }).join('') : '<div style="color:var(--text-gray);font-size:var(--fs-12);padding:8px;">이 부서에 대상자가 없습니다.</div>';
 
         var body =
             '<div class="edu-modal-row-2">' +
                 '<div><label class="form-label" for="ee-type">교육 분류 <span style="color:var(--status-danger-fg)">*</span></label>' +
-                    '<select class="form-select" id="ee-type">' + typeOpts + '</select></div>' +
+                    '<select class="form-select" id="ee-type" onchange="EDUE.pickType(this.value)">' + typeOpts + '</select></div>' +
                 '<div><label class="form-label">부서 <span style="color:var(--status-danger-fg)">*</span></label>' +
                     '<div class="orgpick-field" id="ee-deptfield"><div style="display:flex;gap:8px;align-items:center;">' +
                         '<input type="text" class="form-input" value="' + esc(E().deptName(F.deptId)) + '" readonly aria-label="부서" style="flex:1;background:var(--gray-50);">' +
                         '<button type="button" class="btn btn-sm btn-outline" onclick="ORGPICK.toggle(\'ee-deptfield\',\'deptId\',\'EDUE.pickDept\')">조직도</button>' +
                     '</div></div></div>' +
             '</div>' +
+            typeGuideHtml(F.etcType) +
             '<div class="edu-modal-row-2">' +
                 '<div><label class="form-label" for="ee-date">일자 <span style="color:var(--status-danger-fg)">*</span></label>' +
                     '<input type="date" class="form-input" id="ee-date" value="' + esc(F.date) + '"></div>' +
@@ -144,14 +205,12 @@
             (F.edit
                 ? '<div class="check-notice">대상자는 이 화면에서 바꾸지 않습니다 — 이미 반영된 이수시간과 어긋나므로 <b>삭제 후 재등록</b>으로 처리합니다.</div>'
                 : '<div class="edu-modal-row"><label class="form-label">대상자 <span style="color:var(--status-danger-fg)">*</span> ' +
-                    '<span style="color:var(--text-lightgray);font-weight:var(--fw-regular);">(' + selCnt + ' / ' + ws.length + '명)</span></label>' +
+                    '<span style="color:var(--text-gray);font-weight:var(--fw-regular);">(' + selCnt + ' / ' + ws.length + '명)</span></label>' +
                     '<div class="edu-tg-body" style="max-height:200px;">' + rows + '</div>' +
                   '</div>') +
-            '<div class="edu-modal-row"><label class="form-label">증빙 첨부(서명 등)</label>' +
-                '<button type="button" class="btn btn-sm btn-outline" onclick="EDUE.attachFile()">＋ 파일 첨부 (프로토타입)</button>' +
-                (F.files.length ? '<div style="font-size:var(--fs-12);color:var(--main-dark);margin-top:6px;">' + F.files.map(function (f) { return esc(f.name); }).join(', ') + '</div>' : '') +
-                V().fileHint() +
-            '</div>';
+            /* 첨부는 자체교육과 동일 구성 — 발주처: "교육하는 방법은 똑같이 정기 교육에
+             * 자체 교육 버튼에 들어가 가지고 하는 그거" (교육일지 및 교육사진 등 한 칸) */
+            EDUFORM.renderAttach(F, 'EDUE', 'done');
         V().openModal((SUP_MODE ? '관리감독자 ' : '') + (F.edit ? '기타 교육 수정' : '기타 교육 등록·진행'), body,
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="EDUE.doCreate()">' + (F.edit ? '저장' : '진행 처리') + '</button>');
@@ -167,9 +226,11 @@
         if (el('ee-place')) F.place = el('ee-place').value.trim();
         if (el('ee-desc')) F.desc = el('ee-desc').value.trim();
     }
+    function pickType(v) { captureCreate(); F.etcType = v; renderCreate(); }
     function pickDept(id, name) { captureCreate(); F.deptId = id; F.workerIds = {}; renderCreate(); }
     function toggleTarget(id, on) { captureCreate(); if (on) F.workerIds[id] = true; else delete F.workerIds[id]; renderCreate(); }
-    function attachFile() { captureCreate(); F.files.push({ name: (F.etcType || '기타') + '_증빙.pdf' }); renderCreate(); }
+    function addFile(slot) { captureCreate(); EDUFORM.addFile(F, slot); renderCreate(); }
+    function delFile(i) { captureCreate(); EDUFORM.delFile(F, i); renderCreate(); }
     function doCreate() {
         captureCreate();
         if (!F.date || !F.time || !F.hours || !F.desc) { toast('일자·시각·시간·내용을 모두 입력하세요.'); return; }
@@ -207,8 +268,8 @@
         }).join(' · ');
         var hist = (c.history || []).map(function (h) {
             return '<div style="padding:6px 0;border-bottom:1px dashed var(--card-line);font-size:var(--fs-12);">' +
-                '<span style="color:var(--text-lightgray);margin-right:8px;">' + esc(h.at) + '</span>' +
-                esc(h.memo) + (h.by ? '<span style="color:var(--text-lightgray);margin-left:6px;">— ' + esc(h.by) + '</span>' : '') +
+                '<span style="color:var(--text-gray);margin-right:8px;">' + esc(h.at) + '</span>' +
+                esc(h.memo) + (h.by ? '<span style="color:var(--text-gray);margin-left:6px;">— ' + esc(h.by) + '</span>' : '') +
             '</div>';
         }).join('');
         V().openModal((c.etcType || '기타 교육') + ' — 상세',
@@ -253,7 +314,8 @@
     }
     global.EDUE = {
         init: init, setF: setF, resetF: resetF,
-        openCreate: openCreate, openEdit: openEdit, pickDept: pickDept, toggleTarget: toggleTarget, attachFile: attachFile, doCreate: doCreate,
+        openCreate: openCreate, openEdit: openEdit, pickType: pickType, pickDept: pickDept, toggleTarget: toggleTarget, doCreate: doCreate,
+        addFile: addFile, delFile: delFile,
         confirmRemove: confirmRemove, doRemove: doRemove,
         viewDetail: viewDetail
     };

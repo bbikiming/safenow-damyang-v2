@@ -58,6 +58,7 @@
     <div id="toast" class="toast"></div>
 
     <script src="./js/layout.js"></script>
+    <script src="./js/law-map.js"></script>
     <script src="./js/data.js"></script>
     <script src="./js/common.js"></script>
     <script src="./js/adm-perm.js"></script>
@@ -105,8 +106,8 @@
                 var e = eff[m.id];
                 var reason = e.reasons.map(function (r) { return r.via; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).join(', ');
                 return '<tr><td>' + DYV2.esc(m.groupLabel) + '</td><td style="font-weight:600;">' + DYV2.esc(m.label) + '</td>' +
-                    '<td style="text-align:center;">' + (e.view ? '<b style="color:var(--main);">O</b>' : '<span style="color:var(--text-lightgray);">-</span>') + '</td>' +
-                    '<td style="text-align:center;">' + (e.edit ? '<b style="color:var(--main);">O</b>' : '<span style="color:var(--text-lightgray);">-</span>') + '</td>' +
+                    '<td style="text-align:center;">' + (e.view ? '<b style="color:var(--main-dark);">O</b>' : '<span style="color:var(--text-gray);">-</span>') + '</td>' +
+                    '<td style="text-align:center;">' + (e.edit ? '<b style="color:var(--main-dark);">O</b>' : '<span style="color:var(--text-gray);">-</span>') + '</td>' +
                     '<td style="font-size:12px; color:var(--text-gray);">' + DYV2.esc(reason) + '</td></tr>';
             }).join('');
             var body =

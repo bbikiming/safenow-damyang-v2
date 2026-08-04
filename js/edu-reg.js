@@ -2,7 +2,7 @@
    edu-reg.js · 정기교육 - 현업근로자 (EDU-REG) / 관리감독자 (EDU-SUP 재사용)
    ---------------------------------------------------------------------
    docs/planning/기획-안전보건교육-재설계-v1.md §4. (safe-damyang-v2 이식본 — 표준 치환)
-   · 집합교육: 재난안전과 등록 → 부서 신청(서명 필수) → 교육 종료 시 카운트
+   · 집합교육: 재난안전과 등록 → 참석자 등록부 등록(서명 필수) → 교육 종료 시 카운트
    · 자체교육: 부서 등록 → 대상자 선택 → 진행 처리 = 즉시 완료·카운트
    · 정원·마감·불참 개념 없음.
    표준: 탭 .sub-tabs · 배지 chip-status+DYV2.toneOf · 표 .table-figma ·
@@ -23,7 +23,7 @@
     /* 탭별 필터 — 집합/자체가 서로 다른 조건을 쓰므로 탭 전환 시에도 각자 유지 */
     var state = { mount: null, tab: 'group', q: '', st: '', year: '', month: '', dept: '' };
     var F = null;    /* course 등록·수정 폼 */
-    var G = null;    /* 부서 신청 폼 */
+    var G = null;    /* 참석자 등록부 등록 폼 */
 
     function groupKind() { return SUP_MODE ? 'SUP_REG' : 'REG_GROUP'; }
     function selfKind()  { return SUP_MODE ? 'SUP_REG' : 'REG_SELF'; }
@@ -120,9 +120,9 @@
         var detailHref = tabKey === 'group' ? 'edu-reg-detail.html?id=' + encodeURIComponent(c.id) : null;
         var actions = '';
         if (detailHref) {
-            /* 신청 접수 중(OPEN)인 집합교육은 목록에서도 바로 [부서 신청] 가능 (v1.1 후속) */
+            /* 신청 접수 중(OPEN)인 집합교육은 목록에서도 바로 [참석자 등록부 등록] 가능 (v1.1 후속) */
             if (c.status === 'OPEN') {
-                actions += '<button type="button" class="btn btn-outline btn-sm" data-tour="apply" onclick="EDUR.openApply(\'' + c.id + '\')">＋ 부서 신청</button> ';
+                actions += '<button type="button" class="btn btn-outline btn-sm" data-tour="apply" onclick="EDUR.openApply(\'' + c.id + '\')">＋ 참석자 등록부 등록</button> ';
             }
             actions += '<a class="btn btn-primary btn-sm" href="' + detailHref + '">상세 →</a> ';
         } else {
@@ -204,8 +204,8 @@
                 '<input type="text" class="form-input" id="er-place" value="' + esc(F.place) + '"></div>' +
             '<div class="edu-modal-row"><label class="form-label" for="er-desc">내용 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 '<textarea class="form-textarea" id="er-desc" rows="2">' + esc(F.desc) + '</textarea></div>' +
-            /* 첨부파일 + 교육 사진 — 자체·집합 공통(공용 EDUFORM) */
-            EDUFORM.renderAttach(F, 'EDUR') +
+            /* 첨부 — 집합은 [참석자 명단·교육 자료] 2칸, 자체는 [교육일지 및 교육사진 등] 1칸 (2026-07-30 회의) */
+            EDUFORM.renderAttach(F, 'EDUR', F.mode === 'group' ? 'group' : 'done') +
             (F.mode === 'group'
                 ? ''
                 : (F.edit
@@ -228,10 +228,8 @@
     function sessDel(i) { captureCreate(); EDUFORM.sessDel(F, i); renderCreate(); }
     function sessSync() { captureCreate(); renderCreate(); }
     /* 첨부·사진 위임 래퍼 */
-    function addFile() { captureCreate(); EDUFORM.addFile(F); renderCreate(); }
+    function addFile(slot) { captureCreate(); EDUFORM.addFile(F, slot); renderCreate(); }
     function delFile(i) { captureCreate(); EDUFORM.delFile(F, i); renderCreate(); }
-    function addPhoto() { captureCreate(); EDUFORM.addPhoto(F); renderCreate(); }
-    function delPhoto(i) { captureCreate(); EDUFORM.delPhoto(F, i); renderCreate(); }
 
     function renderSelfTargets() {
         var deptId = F.deptId;
@@ -244,9 +242,9 @@
                 '<span>' + esc(w.name) + '</span>' +
                 '<span style="color:var(--text-gray);font-size:var(--fs-12);">' + esc(E().catLabel(w.category)) + '</span>' +
             '</label>';
-        }).join('') : '<div style="color:var(--text-lightgray);font-size:var(--fs-12);padding:8px;">이 부서에 대상자가 없습니다.</div>';
+        }).join('') : '<div style="color:var(--text-gray);font-size:var(--fs-12);padding:8px;">이 부서에 대상자가 없습니다.</div>';
         return '<div class="edu-modal-row"><label class="form-label">교육 대상자 <span style="color:var(--status-danger-fg)">*</span> ' +
-            '<span style="color:var(--text-lightgray);font-weight:var(--fw-regular);">(' + selCnt + ' / ' + ws.length + '명 선택)</span></label>' +
+            '<span style="color:var(--text-gray);font-weight:var(--fw-regular);">(' + selCnt + ' / ' + ws.length + '명 선택)</span></label>' +
             '<div class="edu-tg-body" style="max-height:200px;">' + rows + '</div>' +
         '</div>';
     }
@@ -316,13 +314,13 @@
                 status: 'OPEN', createdBy: '재난안전과'
             });
             V().closeModal();
-            toast(SUP_MODE ? '관리감독자 집합교육 등록' : '집합교육 등록 · 부서 신청 접수 개시');
+            toast(SUP_MODE ? '관리감독자 집합교육 등록' : '집합교육 등록 · 참석자 등록부 접수 개시');
             tourEvt('created');
         }
         render();
     }
 
-    /* =============== 부서 신청 =============== */
+    /* =============== 참석자 등록부 등록 =============== */
     function openApply(courseId) {
         var c = E().courseOf(courseId); if (!c) return;
         var depts = E().deptCandidates();
@@ -340,7 +338,7 @@
                 '<span>' + esc(w.name) + '</span>' +
                 '<span style="color:var(--text-gray);font-size:var(--fs-12);">' + esc(E().catLabel(w.category)) + '</span>' +
             '</label>';
-        }).join('') : '<div style="color:var(--text-lightgray);font-size:var(--fs-12);padding:8px;">이 부서에 대상자가 없습니다.</div>';
+        }).join('') : '<div style="color:var(--text-gray);font-size:var(--fs-12);padding:8px;">이 부서에 대상자가 없습니다.</div>';
 
         var body =
             '<div style="font-size:var(--fs-12);color:var(--text-gray);margin-bottom:10px;">' +
@@ -349,7 +347,7 @@
             '<div class="edu-modal-row"><label class="form-label">부서 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 deptField('er-applydept', G.deptId, 'EDUR.applyPickDept') + '</div>' +
             '<div class="edu-modal-row"><label class="form-label">근로자 선택 <span style="color:var(--status-danger-fg)">*</span> ' +
-                '<span style="color:var(--text-lightgray);font-weight:var(--fw-regular);">(' + selCnt + ' / ' + ws.length + '명)</span></label>' +
+                '<span style="color:var(--text-gray);font-weight:var(--fw-regular);">(' + selCnt + ' / ' + ws.length + '명)</span></label>' +
                 '<div class="edu-tg-body">' + rows + '</div>' +
             '</div>' +
             '<div class="edu-modal-row"><label class="form-label">서명파일 업로드 <span style="color:var(--status-danger-fg)">*</span></label>' +
@@ -359,7 +357,7 @@
                     : '<button type="button" class="btn btn-sm btn-outline" onclick="EDUR.applyAttachSign()">＋ 서명파일 첨부 (프로토타입)</button>') +
                 V().fileHint() +
             '</div>';
-        V().openModal('부서 신청 · ' + esc(E().deptName(G.deptId)), body,
+        V().openModal('참석자 등록부 등록 · ' + esc(E().deptName(G.deptId)), body,
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="EDUR.doApply()">신청 완료</button>');
     }
@@ -372,7 +370,7 @@
         if (!ids.length) { toast('근로자를 1명 이상 선택하세요.'); return; }
         if (!G.signFile) { toast('서명파일을 업로드하세요 (필수).'); return; }
         E().addEnroll({ courseId: G.courseId, deptId: G.deptId, workerIds: ids, signFile: G.signFile, at: E().today() });
-        E().pushCourseHistory(G.courseId, { type: 'STATUS', by: E().deptName(G.deptId), memo: '부서 신청 · ' + ids.length + '명 · 서명파일 첨부' });
+        E().pushCourseHistory(G.courseId, { type: 'STATUS', by: E().deptName(G.deptId), memo: '참석자 등록부 등록 · ' + ids.length + '명 · 서명파일 첨부' });
         V().closeModal();
         toast(E().deptName(G.deptId) + ' · ' + ids.length + '명 신청 완료');
         render();
@@ -440,14 +438,14 @@
                 '<td>' + esc(E().deptName(e.deptId)) + '</td>' +
                 '<td>' + (e.workerIds || []).length + '명</td>' +
                 '<td style="font-size:var(--fs-12);color:var(--text-gray);">' + esc(names) + '</td>' +
-                '<td>' + (e.signFile ? '<span style="color:var(--main-dark);font-size:var(--fs-12);">' + esc(e.signFile) + '</span>' : '<span style="color:var(--text-lightgray);font-size:var(--fs-12);">-</span>') + '</td>' +
+                '<td>' + (e.signFile ? '<span style="color:var(--main-dark);font-size:var(--fs-12);">' + esc(e.signFile) + '</span>' : '<span style="color:var(--text-gray);font-size:var(--fs-12);">-</span>') + '</td>' +
                 '<td>' + esc(e.at) + '</td>' +
             '</tr>';
         }).join('') : '<tr><td colspan="5"><div class="v2-empty">신청이 없습니다.</div></td></tr>';
         var hist = (c.history || []).map(function (h) {
             return '<div style="padding:6px 0;border-bottom:1px dashed var(--card-line);font-size:var(--fs-12);">' +
-                '<span style="color:var(--text-lightgray);margin-right:8px;">' + esc(h.at) + '</span>' +
-                esc(h.memo) + (h.by ? '<span style="color:var(--text-lightgray);margin-left:6px;">— ' + esc(h.by) + '</span>' : '') +
+                '<span style="color:var(--text-gray);margin-right:8px;">' + esc(h.at) + '</span>' +
+                esc(h.memo) + (h.by ? '<span style="color:var(--text-gray);margin-left:6px;">— ' + esc(h.by) + '</span>' : '') +
             '</div>';
         }).join('');
         V().openModal(esc(E().kindLabel(c.kind)) + ' — 상세',
@@ -480,7 +478,7 @@
         openCreate: openCreate, openEdit: openEdit, doCreate: doCreate, toggleTarget: toggleTarget, pickDept: pickDept,
         /* 회차(일자 탭) — 최대 5일, 교육시간 자동 합산 · 첨부/사진 (공용 EDUFORM) */
         sessTab: sessTab, sessAdd: sessAdd, sessDel: sessDel, sessSync: sessSync,
-        addFile: addFile, delFile: delFile, addPhoto: addPhoto, delPhoto: delPhoto,
+        addFile: addFile, delFile: delFile,
         confirmRemove: confirmRemove, doRemove: doRemove,
         openApply: openApply, applyPickDept: applyPickDept, applyToggle: applyToggle,
         applyAttachSign: applyAttachSign, applyClearSign: applyClearSign, doApply: doApply,

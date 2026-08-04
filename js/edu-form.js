@@ -66,7 +66,7 @@
 
         return '<div class="edu-modal-row">' +
             '<label class="form-label">교육 일자 · 시간 <span style="color:var(--status-danger-fg)">*</span> ' +
-                '<span style="color:var(--text-lightgray);font-weight:var(--fw-regular);">(일자별로 탭을 추가 · 최대 ' + MAX_SESSIONS + '일)</span></label>' +
+                '<span style="color:var(--text-gray);font-weight:var(--fw-regular);">(일자별로 탭을 추가 · 최대 ' + MAX_SESSIONS + '일)</span></label>' +
             '<div class="edu-sess-tabs" role="group" aria-label="교육 회차">' + tabs + addBtn + '</div>' +
             '<div class="edu-sess-panel">' +
                 '<div class="edu-sess-grid">' +
@@ -127,61 +127,67 @@
         return { ok: true, payload: { sessions: ss, date: ss[0].date, time: ss[0].start, endTime: ss[0].end, hours: E().sumSessionHours(ss) } };
     }
 
-    /* ===== 첨부파일(문서) + 교육 사진 =====
-     * 드롭존은 접근성 렌더러 DYV2.uploadDrop 만 사용(CLAUDE.md §2).
-     * ns 모듈이 addFile/delFile/addPhoto/delPhoto 위임 래퍼를 노출한다. */
-    function photoHint() {
-        var L = V().FILE_LIMITS;
-        return '<p class="file-hint">이미지 <b>JPG·PNG</b> <span class="fh-sep">·</span> <b>파일당 최대</b> ' +
-            L.maxMB + 'MB <span class="fh-sep">·</span> <b>최대</b> ' + L.maxCount + '장</p>';
+    /* ===== 첨부파일 — 교육 형식별 슬롯 프로필 (2026-07-30 회의 반영) =====
+     * 'group' 집합교육 : 등록 시점에는 교육이 아직 실시 전이므로 **참석자 명단·교육 자료 2칸만** 둔다.
+     *                    교육 사진은 실시 후에 생기므로 등록 단계에서 요구하지 않는다.
+     *                    ("계획서·교재" 라는 표현도 쓰지 않는다 — 발주처가 직접 금지)
+     * 'done'  자체·채용시·기타 : 실시한 뒤 기록하는 형식이라 증빙이 **한 파일로** 올라온다.
+     *                    "교육일지 및 교육사진 등" 한 칸으로 합친다 — 칸을 쪼개면 어디에 넣을지 헷갈린다.
+     * 저장 스키마는 그대로 F.files[] 이고, 어느 칸에서 올렸는지만 file.slot 으로 함께 남긴다.
+     * 드롭존은 접근성 렌더러 DYV2.uploadDrop 만 사용(CLAUDE.md §2). */
+    var ATTACH_SLOTS = {
+        group: [
+            { key: 'roster',   label: '참석자 명단', sub: '참석자 등록부·서명부' },
+            { key: 'material', label: '교육 자료',   sub: '교육에 사용할 자료' }
+        ],
+        done: [
+            { key: 'log', label: '교육일지 및 교육사진 등', sub: '교육일지·교육사진 등 실시 증빙' }
+        ]
+    };
+    var SLOT_FILENAME = { roster: '참석자명단', material: '교육자료', log: '교육일지_교육사진' };
+    /* slot 이 없는 파일(슬롯 도입 전에 저장된 것)은 **그 프로필의 첫 칸**에 보여준다.
+     * 무조건 'log' 로 보면 집합교육(roster·material) 수정 화면에서 기존 첨부가 통째로
+     * 사라져 보이는데, 데이터에는 남아 있어 화면과 저장값이 어긋난다. */
+    function slotOf(f, slots) {
+        if (f && f.slot) return f.slot;
+        return (slots && slots[0] && slots[0].key) || 'log';
     }
-    function fileListHtml(files, ns) {
-        if (!files || !files.length) return '';
-        return '<ul class="edu-attach-list">' + files.map(function (f, i) {
-            return '<li><span class="edu-attach-name">📎 ' + esc(f.name) + '</span>' +
-                '<button type="button" class="edu-attach-del" onclick="' + ns + '.delFile(' + i + ')" aria-label="' + esc(f.name) + ' 삭제">×</button></li>';
+
+    function fileListHtml(files, ns, slotKey, slots) {
+        var rows = (files || []).map(function (f, i) { return { f: f, i: i }; })
+            .filter(function (x) { return slotOf(x.f, slots) === slotKey; });
+        if (!rows.length) return '';
+        return '<ul class="edu-attach-list">' + rows.map(function (x) {
+            return '<li><span class="edu-attach-name">📎 ' + esc(x.f.name) + '</span>' +
+                '<button type="button" class="edu-attach-del" onclick="' + ns + '.delFile(' + x.i + ')" aria-label="' + esc(x.f.name) + ' 삭제">×</button></li>';
         }).join('') + '</ul>';
     }
-    function photoListHtml(photos, ns) {
-        if (!photos || !photos.length) return '';
-        return '<div class="edu-photo-grid">' + photos.map(function (p, i) {
-            return '<div class="edu-photo-chip"><span class="edu-photo-thumb" aria-hidden="true">🖼️</span>' +
-                '<span class="edu-photo-name">' + esc(p.name) + '</span>' +
-                '<button type="button" class="edu-attach-del" onclick="' + ns + '.delPhoto(' + i + ')" aria-label="' + esc(p.name) + ' 삭제">×</button></div>';
-        }).join('') + '</div>';
-    }
-    function renderAttach(F, ns) {
-        var files = F.files || [], photos = F.photos || [];
-        var fileDrop = V().uploadDrop(
-            '<b>파일 첨부</b> <span class="edu-drop-sub">계획서·교재·출석부 등 (클릭 또는 끌어놓기 · 프로토타입)</span>',
-            ns + '.addFile()', { hint: true, style: 'padding:12px;' });
-        var photoDrop = V().uploadDrop(
-            '<b>사진 첨부</b> <span class="edu-drop-sub">교육 진행 사진 (클릭 또는 끌어놓기 · 프로토타입)</span>',
-            ns + '.addPhoto()', { style: 'padding:12px;' });
-        return '<div class="edu-modal-row"><label class="form-label">첨부파일 (계획서·교재 등)</label>' +
-                fileDrop + fileListHtml(files, ns) +
-            '</div>' +
-            '<div class="edu-modal-row"><label class="form-label">교육 사진</label>' +
-                photoDrop + photoHint() + photoListHtml(photos, ns) +
+    /* profile: 'group' | 'done'(기본) */
+    function renderAttach(F, ns, profile) {
+        var slots = ATTACH_SLOTS[profile] || ATTACH_SLOTS.done;
+        return slots.map(function (s) {
+            return '<div class="edu-modal-row"><label class="form-label">' + s.label + '</label>' +
+                V().uploadDrop(
+                    '<b>' + s.label + '</b> <span class="edu-drop-sub">' + s.sub + ' (클릭 또는 끌어놓기 · 프로토타입)</span>',
+                    ns + '.addFile(\'' + s.key + '\')', { hint: true, style: 'padding:12px;' }) +
+                fileListHtml(F.files, ns, s.key, slots) +
             '</div>';
+        }).join('');
     }
-    function addFile(F) {
+    function addFile(F, slotKey) {
         F.files = F.files || [];
         if (F.files.length >= V().FILE_LIMITS.maxCount) { V().toast('첨부는 최대 ' + V().FILE_LIMITS.maxCount + '개까지 가능합니다.'); return; }
-        F.files.push({ name: '첨부_' + (F.files.length + 1) + '.pdf' });
+        var key = slotKey || 'log';
+        var n = F.files.filter(function (f) { return f.slot === key; }).length + 1;
+        F.files.push({ name: (SLOT_FILENAME[key] || '첨부') + '_' + n + '.pdf', slot: key });
     }
     function delFile(F, i) { if (F.files) F.files.splice(i, 1); }
-    function addPhoto(F) {
-        F.photos = F.photos || [];
-        if (F.photos.length >= V().FILE_LIMITS.maxCount) { V().toast('사진은 최대 ' + V().FILE_LIMITS.maxCount + '장까지 가능합니다.'); return; }
-        F.photos.push({ name: '교육사진_' + (F.photos.length + 1) + '.jpg' });
-    }
-    function delPhoto(F, i) { if (F.photos) F.photos.splice(i, 1); }
 
     global.EDUFORM = {
         MAX_SESSIONS: MAX_SESSIONS, newSession: newSession,
         renderSessions: renderSessions, captureSessions: captureSessions,
         sessAdd: sessAdd, sessDel: sessDel, sessionPayload: sessionPayload, totalHours: totalHours,
-        renderAttach: renderAttach, addFile: addFile, delFile: delFile, addPhoto: addPhoto, delPhoto: delPhoto
+        ATTACH_SLOTS: ATTACH_SLOTS,
+        renderAttach: renderAttach, addFile: addFile, delFile: delFile
     };
 })(window);

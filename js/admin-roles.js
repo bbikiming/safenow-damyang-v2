@@ -112,8 +112,8 @@
             const am = A.roleAppliedMenus(RUI.sel);
             const list = am.length ? am.map(x =>
                 '<tr><td>' + esc(x.menu.groupLabel) + '</td><td style="font-weight:600;">' + esc(x.menu.label) + '</td>' +
-                '<td style="text-align:center;">' + (x.view ? '<b style="color:var(--main);">O</b>' : '<span style="color:var(--text-lightgray);">-</span>') + '</td>' +
-                '<td style="text-align:center;">' + (x.edit ? '<b style="color:var(--main);">O</b>' : '<span style="color:var(--text-lightgray);">-</span>') + '</td></tr>').join('')
+                '<td style="text-align:center;">' + (x.view ? '<b style="color:var(--main-dark);">O</b>' : '<span style="color:var(--text-gray);">-</span>') + '</td>' +
+                '<td style="text-align:center;">' + (x.edit ? '<b style="color:var(--main-dark);">O</b>' : '<span style="color:var(--text-gray);">-</span>') + '</td></tr>').join('')
                 : '<tr><td colspan="4"><div class="v2-empty" style="padding:16px;">아직 적용된 메뉴가 없습니다.</div></td></tr>';
             applied = '<div class="card" style="margin-bottom:16px;"><div class="card-header"><span class="card-title">적용 현황 <span class="chip-mini wt">메뉴 ' + am.length + '개</span></span></div>' +
                 '<div class="card-body">' +

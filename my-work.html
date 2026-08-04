@@ -59,7 +59,7 @@
         .mw-item-title { font-size: var(--fs-13); font-weight: 700; color: var(--text-black); margin-left: 4px; }
         .mw-item-sub { font-size: var(--fs-12); color: var(--text-gray); margin-top: 4px; }
         .mw-item-meta { display: flex; gap: 8px; margin-top: 5px; font-size: var(--fs-12); align-items: center; flex-wrap: wrap; }
-        .mw-item-due { color: var(--text-lightgray); }
+        .mw-item-due { color:var(--text-gray); }
         .mw-item-dept { color: var(--text-gray); padding: 1px 8px; border-radius: var(--radius-xs); background: var(--gray-100); font-size: var(--fs-12); }
         .mw-item-actions { flex-shrink: 0; display: flex; gap: 6px; align-items: center; }
         .mw-cat { display: inline-block; padding: 2px 8px; border-radius: var(--radius-full); font-size: var(--fs-12); font-weight: 700; }
@@ -72,7 +72,7 @@
         /* KPI 칩 = 클릭 필터 (버튼화) */
         .mw-kpi { cursor: pointer; text-align: left; font-family: inherit; transition: box-shadow .12s ease, transform .12s ease; }
         .mw-kpi:hover { box-shadow: var(--shadow-md); }
-        .mw-kpi.active { box-shadow: var(--focus-ring); border-color: var(--main); }
+        .mw-kpi.active { box-shadow: var(--focus-ring); border-color:var(--main-dark); }
         .mw-kpi:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
 
         /* 뷰 탭 (마감 할일 | 발행된 업무) — 표준 .tabs 위 여백만 보정 */
@@ -109,8 +109,8 @@
         .mw-pub-chips { display: flex; gap: 6px; flex-wrap: wrap; }
         .mw-pub-chip { border: 1px solid var(--card-line); background: var(--surface); color: var(--text-gray); padding: 6px 12px; border-radius: var(--radius-full); font-size: var(--fs-12); font-weight: 700; cursor: pointer; font-family: inherit; transition: all .12s ease; }
         .mw-pub-chip b { font-weight: 800; margin-left: 2px; }
-        .mw-pub-chip:hover { border-color: var(--main); color: var(--main-dark); }
-        .mw-pub-chip.active { background: var(--brand-100); border-color: var(--main); color: var(--main-dark); }
+        .mw-pub-chip:hover { border-color:var(--main-dark); color: var(--main-dark); }
+        .mw-pub-chip.active { background: var(--brand-100); border-color:var(--main-dark); color: var(--main-dark); }
         .mw-pub-note { font-size: var(--fs-12); color: var(--text-gray); background: var(--surface-alt); border: 1px solid var(--card-line); border-radius: var(--radius-button); padding: 9px 12px; margin-bottom: 10px; line-height: 1.5; }
 
         /* 버튼 안 SVG 정렬 */
@@ -124,7 +124,7 @@
         .mw-inline-row input[type=date] { max-width: 220px; }
         .mw-inline-foot { display: flex; gap: 6px; justify-content: flex-end; }
 
-        .mw-empty { background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); padding: 40px 20px; text-align: center; color: var(--text-lightgray); font-size: var(--fs-13); }
+        .mw-empty { background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); padding: 40px 20px; text-align: center; color:var(--text-gray); font-size: var(--fs-13); }
 
         @media (max-width: 767px) {
             .mw-kpis { grid-template-columns: repeat(2, 1fr); }
@@ -145,10 +145,13 @@
     </main>
 
     <script src="./js/layout.js"></script>
+    <script src="./js/law-map.js"></script>
     <script src="./js/common.js"></script>
     <script src="./js/rsk-kosha.js"></script>
     <script src="./js/rsk-data.js"></script>
     <script src="./js/edu-data.js"></script>
+    <script src="./js/rsk-imp-cards.js"></script>
+    <script src="./js/rsk-doc.js"></script><!-- 상신 후 잠금 판정(DYRSKDOC.lockOf) --><!-- 완료 상세(개선조치 카드) 공용 -->
     <script src="./js/sets-data-v2.js"></script><!-- 발행된 업무 탭 (DY_DOCS_V2·DY_MENUS_V2) -->
     <script src="./js/my-work.js"></script>
     <script>

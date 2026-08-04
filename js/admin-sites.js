@@ -57,7 +57,7 @@
             '<td><b>' + esc(s.name) + '</b></td>' +
             '<td>' + typeTag(s.type) + '</td>' +
             '<td>' + esc(s.hazards || '-') + '</td>' +
-            '<td>' + (s.note ? esc(s.note) : '<span style="color:var(--text-lightgray)">-</span>') + '</td>' +
+            '<td>' + (s.note ? esc(s.note) : '<span style="color:var(--text-gray)">-</span>') + '</td>' +
             '<td><button type="button" class="btn btn-sm btn-outline" onclick="DYADMSITE.openEdit(\'' + s.id + '\')">편집</button> ' +
                 '<button type="button" class="btn btn-sm btn-outline" onclick="DYADMSITE.confirmRemove(\'' + s.id + '\')">삭제</button></td>' +
         '</tr>';

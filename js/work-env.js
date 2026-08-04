@@ -38,7 +38,7 @@
         return r.result === '적정' ? '<span class="sh-res ok">적정</span>' : '<span class="sh-res warn">개선 필요</span>';
     }
     function dueCell(r) {
-        if (r.result !== '개선 필요' || r.improveDone) return '<span style="color:var(--text-lightgray)">—</span>';
+        if (r.result !== '개선 필요' || r.improveDone) return '<span style="color:var(--text-gray)">—</span>';
         var dl = S().daysLeft(r.improveDue);
         var cls = dl == null ? '' : (dl < 0 ? 'over' : (dl <= 14 ? 'soon' : ''));
         var tag = dl == null ? '' : (dl < 0 ? ' (' + (-dl) + '일 초과)' : (dl <= 14 ? ' (D-' + dl + ')' : ''));
@@ -119,7 +119,7 @@
             '<td><a class="sh-rowlink" href="work-env-detail.html?id=' + r.id + '" onclick="event.stopPropagation()">' + esc(r.dept) + '</a><div class="sh-cellsub">' + esc(r.site) + '</div></td>' +
             '<td>' + esc(r.subject) + '</td>' +
             '<td>' + esc(r.vendor) + '</td>' +
-            '<td>' + esc(r.planned) + ' <span style="color:var(--text-lightgray)">/</span> ' + doneTxt + '</td>' +
+            '<td>' + esc(r.planned) + ' <span style="color:var(--text-gray)">/</span> ' + doneTxt + '</td>' +
             '<td>' + report + '</td>' +
             '<td>' + resBadge(r) + '</td>' +
             '<td>' + dueCell(r) + '</td>' +
@@ -158,7 +158,7 @@
             /* 사업장 — 사업장 마스터(시스템 관리)에서 부서별로 등록된 사업장 드롭다운 */
             '<div class="ri-modal-row" style="margin-bottom:12px;"><label class="form-label" for="we-n-site">사업장 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 '<select class="form-select" id="we-n-site" onchange="WENV.onSiteChange()"><option value="">부서를 먼저 선택하세요</option></select>' +
-                '<div style="font-size:11px;color:var(--text-lightgray);margin-top:3px;">사업장 목록은 <b>시스템 관리 &gt; 사업장 관리</b>에서 관리합니다.</div></div>' +
+                '<div style="font-size:var(--fs-12);color:var(--text-gray);margin-top:3px;">사업장 목록은 <b>시스템 관리 &gt; 사업장 관리</b>에서 관리합니다.</div></div>' +
             '<div class="ri-modal-row" style="margin-bottom:12px;"><label class="form-label" for="we-n-subject">측정 대상(유해인자) <span style="color:var(--status-danger-fg)">*</span></label>' +
                 '<input type="text" class="form-input" id="we-n-subject" placeholder="예: 소음·분진·유기용제 등 (사업장 선택 시 자동 채움)"></div>' +
             '<div class="ri-modal-row" style="margin-bottom:12px;"><label class="form-label" for="we-n-vendor">위탁업체</label>' +

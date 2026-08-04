@@ -1,0 +1,11 @@
+# Vercel 업로드 제외 — "Too many files (max 1000)" 재발 방지 (2026-07-30)
+# .git(961개 파일)이 업로드에 포함되면 한도를 초과한다. 배포에는 HTML + js/ + css/ +
+# vercel.json 만 필요하다. (CLI 배포 기준. 대시보드 드래그 업로드는 이 파일을 읽지
+# 않으므로 배포본 폴더(프로토타입-v2-배포)를 쓸 것.)
+.git
+docs
+.claude
+.vercel
+.gitignore
+CLAUDE.md
+README.md

@@ -37,6 +37,18 @@
         "8786"
       ],
       "port": 8786
+    },
+    {
+      "name": "deploy-check",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8788",
+        "--directory",
+        "../프로토타입-v2-배포"
+      ],
+      "port": 8788
     }
   ]
 }

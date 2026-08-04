@@ -30,7 +30,7 @@
 
     /* 공통 조직도 트리(.otr-*) 마크업 재사용 — 전자문서 점검자·회의록 참석자 픽커와 동일 GUI.
        데이터는 공통 파생 DYV2.orgFlat() = [{dept, members:[[role,name],...]}]. */
-    function emptyRow() { return '<div style="padding:10px;color:var(--text-lightgray);font-size:12px;">검색 결과 없음</div>'; }
+    function emptyRow() { return '<div style="padding:10px;color:var(--text-gray);font-size:12px;">검색 결과 없음</div>'; }
 
     /* 부서 선택 — 공통 트리의 부서 노드(.otr-dept)를 그대로 쓰되 부서 헤더 클릭 = 선택(하위 미확장) */
     function deptTree(q) {

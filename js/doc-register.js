@@ -174,7 +174,7 @@
     }
 
     function step2() {
-        return '<p class="reg-lab">처리유형 <span class="reg-req">*</span> <span style="font-weight:400; color:var(--text-lightgray);">— 선택에 따라 다음 단계 입력 폼이 달라집니다</span></p>' +
+        return '<p class="reg-lab">처리유형 <span class="reg-req">*</span> <span style="font-weight:400; color:var(--text-gray);">— 선택에 따라 다음 단계 입력 폼이 달라집니다</span></p>' +
             '<div class="reg-pcards" id="reg-pt">' + PROC_TYPES.map(p =>
                 '<div class="reg-pcard ' + (S.pt === p[0] ? 'on' : '') + '" data-k="' + p[0] + '">' +
                 '<span class="ic">' + p[1] + '</span><b>' + p[0] + '</b><span>' + p[2] + '</span></div>').join('') + '</div>';

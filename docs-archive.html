@@ -54,6 +54,7 @@
     <div id="toast" class="toast"></div>
 
     <script src="./js/layout.js"></script>
+    <script src="./js/law-map.js"></script>
     <script src="./js/data.js"></script>
     <script src="./js/common.js"></script>
     <script src="./js/edoc-templates.js"></script>
@@ -116,7 +117,7 @@
                     '</tr>'
                 ).join('') || '<tr><td colspan="7"><div class="v2-empty">조건에 맞는 문서가 없습니다.</div></td></tr>';
                 document.getElementById('archive-note').innerHTML = list.length > shown.length
-                    ? shown.length + ' / ' + list.length + '건 표시 — <a href="#" style="color:var(--main); font-weight:700;" onclick="DYV2._more(); return false;">더 보기</a>'
+                    ? shown.length + ' / ' + list.length + '건 표시 — <a href="#" style="color:var(--main-dark); font-weight:700;" onclick="DYV2._more(); return false;">더 보기</a>'
                     : list.length + '건 전체 표시';
             }
             DYV2._more = function () { shownLimit += PAGE; render(); };

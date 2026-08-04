@@ -67,7 +67,7 @@
         var srcChip = '<span class="chip-status chip-sm ' + V().toneOf(srcLabel) + '" style="margin-right:5px;">' + esc(srcLabel) + '</span>';
         var empLabel = E().empLabel(w.empType) + (w.contractMonths ? '[' + w.contractMonths + '개월]' : '');
         var act = w.source === 'HR'
-            ? '<span style="color:var(--text-lightgray);font-size:var(--fs-12);">읽기 전용</span>'
+            ? '<span style="color:var(--text-gray);font-size:var(--fs-12);">읽기 전용</span>'
             : '<button type="button" class="btn btn-outline btn-sm" onclick="EDUW.openEdit(\'' + w.id + '\')">수정</button>' +
               ' <button type="button" class="btn btn-outline btn-sm" style="border-color:var(--status-danger-border);color:var(--status-danger-fg);" onclick="EDUW.remove(\'' + w.id + '\')">삭제</button>';
         return '<tr>' +

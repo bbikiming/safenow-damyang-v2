@@ -585,6 +585,32 @@
     "unresolvedCount": 6
   },
   {
+    "scrId": "SCR-ADMIN-007",
+    "daemenu": "시스템 관리",
+    "jungmenu": "법령·조문",
+    "name": "법령·조문 (수록 조문 대장·영향 범위·갱신 검토)",
+    "type": "기타",
+    "route": "admin-law.html",
+    "components": "law-map.js, law-admin.js, admin-law.js, law-sync-seed.js",
+    "existingSfr": "없음(v2 신설)",
+    "defFile": "SCR-ADMIN-007_법령조문관리.md",
+    "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/admin-law.html",
+    "unresolvedCount": 11
+  },
+  {
+    "scrId": "SCR-ADMIN-008",
+    "daemenu": "시스템 관리",
+    "jungmenu": "메뉴 근거 매핑",
+    "name": "메뉴 근거 매핑 (화면별 근거 지정·검증 기록)",
+    "type": "기타",
+    "route": "admin-law-map.html",
+    "components": "law-map.js, law-admin.js, admin-law-map.js",
+    "existingSfr": "없음(v2 신설)",
+    "defFile": "SCR-ADMIN-008_메뉴근거매핑.md",
+    "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/admin-law-map.html",
+    "unresolvedCount": 8
+  },
+  {
     "scrId": "SCR-EDOC-001",
     "daemenu": "전자문서(공통)",
     "jungmenu": "F1 계획서",
@@ -804,5 +830,18 @@
     "defFile": "SCR-COM-007_공통페이지크롬.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/js/layout.js",
     "unresolvedCount": 1
+  },
+  {
+    "scrId": "SCR-COM-008",
+    "daemenu": "공통/전역",
+    "jungmenu": "법령 근거 연계",
+    "name": "법령 근거 연계(메뉴별 근거 조문 노출·지정)",
+    "type": "기타",
+    "route": "전역 — 페이지 제목 아래 자동 노출 / 근거 지정은 rsk-list.html 보고서 검수",
+    "components": "law-map.js, layout.js, rsk-list.js, rsk-imp.js, rsk-imp-detail.js, rsk-exec.js, rsk-proc.js, edoc.js",
+    "existingSfr": "없음(전 화면 공통)",
+    "defFile": "SCR-COM-008_법령근거연계.md",
+    "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/js/law-map.js",
+    "unresolvedCount": 11
   }
 ]

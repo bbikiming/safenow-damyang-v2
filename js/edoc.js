@@ -441,11 +441,22 @@
     function lawTipShow(el) {
         lawTipHide();
         const basis = el.getAttribute('data-basis');
-        const d = (T.LAW_DICT || {})[basis];
+        /* 1순위 기존 요약 사전, 2순위 DYLAW 조문 원문 스냅샷 (js/law-map.js) */
+        let d = (T.LAW_DICT || {})[basis];
+        let src = '';
+        if (!d && window.DYLAW) {
+            const key = DYLAW.resolveBasis(basis);
+            const a = key && DYLAW.article(key);
+            if (a) {
+                const L = DYLAW.law(a.law) || {};
+                d = { law: L.name || '', art: a.jo, clause: a.clause || '', title: a.title, text: a.text };
+                src = '법제처 원문 · 시행 ' + (L.efYd || '-');
+            }
+        }
         const tip = document.createElement('div');
         tip.id = 'law-tip-float'; tip.className = 'law-tip-float';
         tip.innerHTML = d
-            ? '<div class="law-tip-ref">' + esc(d.law) + ' <b>' + esc(d.art) + (d.clause ? ' ' + esc(d.clause) : '') + '</b></div><div class="law-tip-title">' + esc(d.title) + '</div><div class="law-tip-text">' + esc(d.text) + '</div>'
+            ? '<div class="law-tip-ref">' + esc(d.law) + ' <b>' + esc(d.art) + (d.clause ? ' ' + esc(d.clause) : '') + '</b></div><div class="law-tip-title">' + esc(d.title) + '</div><div class="law-tip-text">' + esc(d.text) + '</div>' + (src ? '<div class="law-tip-src">' + esc(src) + '</div>' : '')
             : '<div class="law-tip-text">' + esc(basis) + ' — 상세 조문 정보가 아직 등록되지 않았습니다.</div>';
         document.body.appendChild(tip);
         const r = el.getBoundingClientRect();

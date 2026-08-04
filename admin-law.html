@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>법령 관리 - 담양군 중대재해예방통합관리시스템 v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="admin-law" data-page-title="법령 관리" data-page-subtitle="시스템 관리 — 법령·조문 대장 · 메뉴 근거 매핑 · 변경 이력 (ADM04-S, 구 ADM05-S 통합)">
+    <main>
+        <div id="adm-law-app"></div>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <!-- 로드 순서 고정: layout → law-map(DYLAW) → common(DYV2) → 도메인 데이터 → 시드 → 코어 → 탭 모듈 → 셸 init -->
+    <script src="./js/layout.js"></script>
+    <script src="./js/law-map.js"></script>
+    <script src="./js/common.js"></script>
+    <!-- 영향 범위 역참조가 위험성평가 저장 데이터를 센다 -->
+    <script src="./js/rsk-kosha.js"></script>
+    <script src="./js/rsk-data.js"></script>
+    <!-- 미연계 근거 표기(업무문서 legalBasis) 집계 -->
+    <script src="./js/sets-data-v2.js"></script>
+    <script src="./js/law-sync-seed.js"></script>
+    <!-- 초기 DB 시드 — 2026-07-30 전수 검토 기록. law-admin.js 보다 먼저 로드 -->
+    <script src="./js/law-admin-seed.js"></script>
+    <!-- 쉬운 설명 레이어(사람 해설 · 원문 아님) — 조문 패널·검색·자주 찾는 질문에 쓰임 -->
+    <script src="./js/law-plain.js"></script>
+    <script src="./js/law-admin.js"></script>
+    <script src="./js/admin-law.js"></script>
+    <script src="./js/admin-law-map.js"></script>
+    <script>LAWTABS.init('adm-law-app');</script>
+</body>
+</html>

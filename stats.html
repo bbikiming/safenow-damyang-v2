@@ -52,6 +52,7 @@
     <div id="toast" class="toast"></div>
 
     <script src="./js/layout.js"></script>
+    <script src="./js/law-map.js"></script>
     <script src="./js/data.js"></script>
     <script src="./js/common.js"></script>
     <script>
@@ -100,7 +101,7 @@
                 const docs = V.byMenu(k).filter(d => d.workType !== '첨부');
                 const c = s => docs.filter(d => d.status === s).length;
                 const rate = V.complianceRate(k);
-                return '<tr><td style="font-weight:600;"><a href="' + V.MENUS[k].href + '" style="color:var(--main);">' + V.MENUS[k].label + '</a></td>' +
+                return '<tr><td style="font-weight:600;"><a href="' + V.MENUS[k].href + '" style="color:var(--main-dark);">' + V.MENUS[k].label + '</a></td>' +
                     '<td>' + docs.length + '</td><td>' + c('완료') + '</td><td>' + c('진행') + '</td><td>' + c('미시행') + '</td>' +
                     '<td><b style="color:var(--main-dark);">' + rate + '%</b></td></tr>';
             }).join('');

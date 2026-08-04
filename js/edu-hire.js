@@ -14,11 +14,12 @@
     function esc(s) { return V().esc(String(s == null ? '' : s)); }
     function toast(m) { V().toast(m); }
 
-    var state = { mount: null, tab: 'undone', fDept: '', fEmp: '', fQ: '', fYear: '', fDone: '', groupBy: 'dept', checked: {},
-                  cQ: '', cDept: '', cYear: '' };
-    /* tab: 'undone' 미이수 | 'done' 이수 | 'courses' 교육 건(실시한 채용시 교육 목록 · 교육별 결재 상신)
-     * groupBy: 'dept' 부서별 | 'hire' 채용일(월)별 | 'none' 안 묶기
-     * c* — '교육 건' 탭 전용 필터(근로자 필터와 의미가 달라 별도 상태로 둔다) */
+    var state = { mount: null, tab: 'all', fDept: '', fEmp: '', fQ: '', fYear: '', fDone: '', groupBy: 'dept', checked: {} };
+    /* tab: 'all' 전체 | 'undone' 미이수 | 'done' 이수
+     *   ※ 구 '교육 건' 탭은 2026-07-30 회의에서 제거 확정 — 발주처: "이 교육 건 지워버리고
+     *      미이수랑 이수만 나오게끔… 전체가 200명, 미이수 50명, 이수 150명 그런 식으로".
+     *      다시 만들지 말 것. 채용시교육의 결재 상신은 우측 상단 [총괄 결재 상신](EDUAPV Type 1)으로 건다.
+     * groupBy: 'dept' 부서별 | 'hire' 채용일(월)별 | 'none' 안 묶기 */
     var B = null; /* 일괄 이수처리 폼 */
     var A = null; /* 채용시 교육 추가 폼 (자체교육과 동일 구성 · EDUFORM) */
 
@@ -27,6 +28,7 @@
         var arr = E().workers().filter(function (w) { return w.category !== 'SUPERVISOR'; }).map(function (w) {
             return { w: w, hs: E().hireStatus(w.id) };
         });
+        if (state.tab === 'all') return arr;
         return state.tab === 'undone'
             ? arr.filter(function (r) { return r.hs.status === 'NONE'; })
             : arr.filter(function (r) { return r.hs.status !== 'NONE'; });
@@ -47,15 +49,17 @@
     function render() {
         if (!state.mount) return;
 
+        /* 전체 / 미이수 / 이수 — 세 숫자를 그대로 보여주는 것이 요구사항이다
+         * (발주처: "전체가 200명, 미이수 50명, 이수 150명 그런 식으로 숫자를 이렇게 표현") */
         var tabs =
             '<div class="sub-tabs" style="margin-bottom:12px;">' +
-                '<button type="button" class="sub-tab' + (state.tab === 'undone' ? ' active' : '') + '" onclick="EDUH.setTab(\'undone\')">미이수 <span class="count">' + tabCount('undone') + '</span></button>' +
-                '<button type="button" class="sub-tab' + (state.tab === 'done' ? ' active' : '') + '" onclick="EDUH.setTab(\'done\')">이수 <span class="count">' + tabCount('done') + '</span></button>' +
-                '<button type="button" class="sub-tab' + (state.tab === 'courses' ? ' active' : '') + '" onclick="EDUH.setTab(\'courses\')">교육 건 <span class="count">' + hireCourses().length + '</span></button>' +
+                ['all:전체', 'undone:미이수', 'done:이수'].map(function (o) {
+                    var k = o.split(':')[0], lb = o.split(':')[1];
+                    return '<button type="button" class="sub-tab' + (state.tab === k ? ' active' : '') +
+                        '" onclick="EDUH.setTab(\'' + k + '\')">' + lb +
+                        ' <span class="count">' + tabCount(k) + '</span></button>';
+                }).join('') +
             '</div>';
-
-        /* '교육 건' 탭 — 실시한 채용시 교육을 건 단위로 보고 교육별 결재 상신(Type 2)을 건다 */
-        if (state.tab === 'courses') { state.mount.innerHTML = tabs + renderCourses(); return; }
 
         var all = tabRows();
         var list = rowsForTab();
@@ -109,7 +113,9 @@
                 return (state.groupBy === 'none' ? '' : groupHeadRow(g)) + g.rows.map(rowHtml).join('');
             }).join('')
             : '<tr><td colspan="9"><div class="v2-empty">' +
-                (state.tab === 'undone' ? '조건에 맞는 미이수자가 없습니다.' : '조건에 맞는 이수 이력이 없습니다.') +
+                (state.tab === 'undone' ? '조건에 맞는 미이수자가 없습니다.'
+                    : state.tab === 'done' ? '조건에 맞는 이수 이력이 없습니다.'
+                    : '조건에 맞는 대상자가 없습니다.') +
               '</div></td></tr>';
 
         state.mount.innerHTML = tabs + filters + groupBar +
@@ -119,69 +125,14 @@
             '</tr></thead><tbody>' + body + '</tbody></table></div></div>';
     }
 
-    /* ===== '교육 건' 탭 — 채용시 교육 목록 + 교육별 결재 상신 =====
-     * 채용시교육은 근로자 단위 화면이라 그동안 교육 건 목록이 없었고, 그래서 교육별 상신(Type 2)을
-     * 걸 자리도 없었다. 실제로는 HIRE 교육 건이 존재하므로(일괄 이수처리=근로자별 1건,
-     * 교육 추가=다수 대상 1건) 이 탭에서 건 단위로 노출하고 다른 교육 화면과 같은 컨트롤을 쓴다. */
-    function hireCourses() { return E().courses({ kind: ['HIRE'] }); }
+    /* courseWorkers — 이수 수정·회수 시 "그 교육 건에 다른 대상자가 남아 있는지" 판정에 쓴다.
+     * (구 '교육 건' 탭과 그 필터·카드 렌더러는 2026-07-30 회의 지시로 제거됨 — 부활 금지) */
     function courseWorkers(c) {
         var ids = {};
         E().enrolls(c.id).forEach(function (e) { (e.workerIds || []).forEach(function (w) { ids[w] = true; }); });
         E().records().forEach(function (r) { if (r.courseId === c.id) ids[r.workerId] = true; });
         return Object.keys(ids).map(function (id) { return E().workerOf(id); }).filter(Boolean);
     }
-    function renderCourses() {
-        var all = hireCourses();
-        var list = all.filter(function (c) {
-            if (state.cDept && c.deptId !== state.cDept) return false;
-            if (state.cYear && String(c.date || '').slice(0, 4) !== state.cYear) return false;
-            return EDUFILTER.match(state.cQ, [c.desc, c.instructor, E().deptName(c.deptId)]);
-        });
-        var head = EDUFILTER.bar([
-            { type: 'search', id: 'eh-c-q', value: state.cQ, placeholder: '교육명·강사 검색', on: "EDUH.setCF('Q', this.value)" },
-            { type: 'select', id: 'eh-c-dept', value: state.cDept, label: '부서',
-              options: [['', '부서 전체']].concat(E().deptCandidates().map(function (d) { return [d.id, d.name]; })),
-              on: "EDUH.setCF('Dept', this.value)" },
-            { type: 'select', id: 'eh-c-year', value: state.cYear, label: '연도',
-              options: EDUFILTER.yearOptions(all.map(function (c) { return c.date; })),
-              on: "EDUH.setCF('Year', this.value)" }
-        ], {
-            count: list.length, unit: '건', reset: 'EDUH.resetCF()',
-            actions: '<button type="button" class="btn btn-primary" onclick="EDUH.openAdd()">＋ 채용시 교육 추가</button>'
-        });
-        var cards = list.length ? list.map(courseCardHtml).join('')
-            : '<div class="edu-card"><div class="v2-empty">' +
-                (all.length ? '조건에 맞는 채용시 교육이 없습니다.' : '실시한 채용시 교육이 없습니다. 미이수 탭에서 이수 처리하면 교육 건이 만들어집니다.') +
-              '</div></div>';
-        return head +
-            '<div class="check-notice" style="margin-bottom:12px;">채용시 교육을 <b>건 단위</b>로 보고, 건별로 <b>온나라 결재 상신</b>합니다. ' +
-            '대상자 이수 취소는 <b>이수</b> 탭에서 처리합니다.</div>' + cards;
-    }
-    function courseCardHtml(c) {
-        var stChip = '<span class="chip-status chip-sm ' + V().toneOf(c.status === 'DONE' ? '완료' : '진행중') + '">' +
-            (c.status === 'DONE' ? '완료' : '진행중') + '</span>';
-        var deptChip = c.deptId ? '<span class="chip-status chip-sm neutral" style="margin-right:6px;">' + esc(E().deptName(c.deptId)) + '</span>' : '';
-        var ws = courseWorkers(c);
-        var names = ws.map(function (w) { return w.name; });
-        var apv = global.EDUAPV ? '<span class="edu-apv-slot">' + global.EDUAPV.courseControl(c.id) + '</span>' : '';
-        return '<div class="edu-course-card" data-course-id="' + esc(c.id) + '">' +
-            '<div class="edu-course-head">' +
-                '<div class="edu-course-title">' + deptChip + esc(c.desc) + ' ' + stChip + '</div>' +
-                '<div class="edu-course-actions">' + apv + '</div>' +
-            '</div>' +
-            '<div class="edu-course-meta">' +
-                '<span>일시 <b>' + esc(E().courseDateTime(c) || '-') + '</b></span>' +
-                '<span>시간 <b>' + c.hours + 'h</b></span>' +
-                '<span>강사 <b>' + esc(c.instructor || '-') + '</b></span>' +
-                '<span>대상자 <b>' + ws.length + '명</b>' +
-                    (names.length ? ' <span style="color:var(--text-gray);">' +
-                        esc(names.length > 5 ? names.slice(0, 5).join(', ') + ' 외 ' + (names.length - 5) : names.join(', ')) + '</span>' : '') +
-                '</span>' +
-            '</div>' +
-        '</div>';
-    }
-    function setCF(k, v) { state['c' + k] = v; EDUFILTER.rerender(render); }
-    function resetCF() { state.cQ = ''; state.cDept = ''; state.cYear = ''; render(); }
 
     /* ===== 묶어보기(그룹) ===== */
     function groupKeyOf(r) {
@@ -220,11 +171,12 @@
         render();
     }
     function tabCount(tab) {
-        return E().workers().filter(function (w) { return w.category !== 'SUPERVISOR'; })
-            .filter(function (w) {
-                var s = E().hireStatus(w.id);
-                return tab === 'undone' ? s.status === 'NONE' : s.status !== 'NONE';
-            }).length;
+        var arr = E().workers().filter(function (w) { return w.category !== 'SUPERVISOR'; });
+        if (tab === 'all') return arr.length;
+        return arr.filter(function (w) {
+            var s = E().hireStatus(w.id);
+            return tab === 'undone' ? s.status === 'NONE' : s.status !== 'NONE';
+        }).length;
     }
     function selectedCount() { return Object.keys(state.checked).filter(function (k) { return state.checked[k]; }).length; }
 
@@ -245,13 +197,61 @@
             '<td>' + hs.need + 'h</td>' +
             '<td>' + esc(hs.lastDate || '-') + '</td>' +
             '<td><span class="chip-status chip-sm ' + V().toneOf(stLabel) + '">' + esc(stLabel) + '</span></td>' +
-            '<td class="col-action">' + (state.tab === 'done'
-                ? '<button type="button" class="btn btn-outline btn-sm" style="border-color:var(--status-danger-border);color:var(--status-danger-fg);" onclick="EDUH.confirmUndo(\'' + w.id + '\')">이수 취소</button>'
-                : '') + '</td>' +
+            '<td class="col-action">' + (hs.status !== 'NONE' ? editBtnHtml(w) : '') + '</td>' +
         '</tr>';
     }
+    /* 이수 기록 손보기 — '취소'가 아니라 '수정'이다.
+     * 발주처: "왜 취소는 왜 할 필요가 왜 있는지 모르겠네. 수정을 차라리 수정 버튼을 누르는 게 낫지"
+     * 결재가 올라간 뒤에는 잠긴다(EDUAPV.lockOf 단일 판정). */
+    function lockOf(workerId) {
+        return global.EDUAPV && global.EDUAPV.lockOf ? global.EDUAPV.lockOf('person', workerId) : null;
+    }
+    function editBtnHtml(w) {
+        var lock = lockOf(w.id);
+        if (lock) {
+            return '<button type="button" class="btn btn-outline btn-sm" disabled title="결재 ' + esc(lock) +
+                ' — 공문 기록이 남아 수정할 수 없습니다">🔒 ' + esc(lock) + '</button>';
+        }
+        return '<button type="button" class="btn btn-outline btn-sm" onclick="EDUH.openEditDone(\'' + w.id + '\')">이수 수정</button>';
+    }
 
-    /* =============== 이수 취소 =============== */
+    /* =============== 이수 수정 =============== */
+    /* 이수일을 고치는 것이 기본 경로이고, 기록 자체를 물릴 때만 아래 회수 경로로 내려간다.
+     * (회수 경로 자체는 CLAUDE.md §4 'CRUD 는 회수 경로까지 갖춘다' 때문에 남긴다 —
+     *  시연을 반복하면 데이터가 쌓여 발표가 망가지므로 지울 수단이 반드시 있어야 한다.
+     *  다만 전면에 노출하는 라벨은 발주처 지시대로 '수정'이다.) */
+    function openEditDone(workerId) {
+        var w = E().workerOf(workerId); if (!w) return;
+        var lock = lockOf(workerId);
+        if (lock) { toast('결재 ' + lock + ' 상태라 수정할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
+        var hs = E().hireStatus(workerId);
+        var recs = E().records().filter(function (r) { return r.workerId === workerId && r.kind === 'HIRE'; });
+        V().openModal('채용시교육 이수 수정',
+            '<p style="font-size:var(--fs-13);"><b>' + esc(w.name) + '</b> (' + esc(E().deptName(w.deptId)) + ') · 채용일 ' + esc(w.hireDate || '-') + '</p>' +
+            '<div class="edu-modal-row"><label class="form-label" for="eh-ed-date">이수일</label>' +
+                '<input type="date" class="form-input" id="eh-ed-date" value="' + esc(hs.lastDate || '') + '"></div>' +
+            '<div class="edu-modal-row"><label class="form-label">인정 시간</label>' +
+                '<p style="font-size:var(--fs-13);margin:0;"><b>' + hs.done + 'h</b> / 필요 ' + hs.need + 'h ' +
+                '<span style="color:var(--text-gray);">(이수기록 ' + recs.length + '건 · 시간은 교육 건의 회차에서 파생됩니다)</span></p></div>' +
+            '<div class="check-notice" style="margin-top:10px;">결재 상신 후에는 공문 기록이 남아 <b>수정할 수 없습니다</b>. 상신 전에 확정하세요.</div>',
+            '<button type="button" class="btn btn-outline" style="border-color:var(--status-danger-border);color:var(--status-danger-fg);margin-right:auto;" onclick="EDUH.confirmUndo(\'' + workerId + '\')">이수 기록 삭제</button>' +
+            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+            '<button type="button" class="btn btn-primary" onclick="EDUH.saveEditDone(\'' + workerId + '\')">저장</button>');
+    }
+    function saveEditDone(workerId) {
+        var el = document.getElementById('eh-ed-date');
+        var d = el ? el.value : '';
+        if (!d) { toast('이수일을 입력하세요.'); if (el) el.focus(); return; }
+        E().records().forEach(function (r) {
+            if (r.workerId === workerId && r.kind === 'HIRE') r.date = d;
+        });
+        E().save();
+        V().closeModal();
+        toast('이수일을 ' + d + ' 로 수정했습니다.');
+        render();
+    }
+
+    /* --- 회수(삭제) 경로 — '이수 수정' 모달 안에서만 들어온다 --- */
     /* 그 근로자의 채용시교육 이수기록만 회수해 '미이수'로 되돌린다.
      * 묶인 교육 건(일괄 이수처리 '한 건으로 묶기')은 통째로 지우면 다른 대상자의 이수까지
      * 사라지므로, DYEDU.removeWorkerFromCourse 로 본인 몫만 빼고 남은 대상자가 없을 때만 건을 회수한다. */
@@ -508,10 +508,10 @@
                 '</label>';
             }).join('');
             return head + members;
-        }).join('') : '<div style="color:var(--text-lightgray);font-size:var(--fs-12);padding:8px;">미이수 대상자가 없습니다.</div>';
+        }).join('') : '<div style="color:var(--text-gray);font-size:var(--fs-12);padding:8px;">미이수 대상자가 없습니다.</div>';
 
         return '<div class="edu-modal-row"><label class="form-label">교육 대상자 (미이수) <span style="color:var(--status-danger-fg)">*</span> ' +
-                '<span style="color:var(--text-lightgray);font-weight:var(--fw-regular);">(' + selCnt + '명 선택)</span></label>' +
+                '<span style="color:var(--text-gray);font-weight:var(--fw-regular);">(' + selCnt + '명 선택)</span></label>' +
             '<select class="form-select" style="margin-bottom:8px;" aria-label="대상자 부서 필터" onchange="EDUH.aDept(this.value)">' + deptOpts + '</select>' +
             '<div class="edu-tg-body" style="max-height:220px;">' + listHtml + '</div>' +
         '</div>';
@@ -528,7 +528,7 @@
             '<div class="edu-modal-row"><label class="form-label" for="eh-a-desc">내용 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 '<textarea class="form-textarea" id="eh-a-desc" rows="2">' + esc(A.desc) + '</textarea></div>' +
             renderAddTargets() +
-            EDUFORM.renderAttach(A, 'EDUH');
+            EDUFORM.renderAttach(A, 'EDUH', 'done');
         V().openModal('채용시 교육 추가', body,
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="EDUH.doAdd()">등록 · 이수 처리</button>');
@@ -538,10 +538,8 @@
     function sessAdd() { captureAdd(); if (!EDUFORM.sessAdd(A)) toast('교육 일자는 최대 ' + EDUFORM.MAX_SESSIONS + '일까지 추가할 수 있습니다.'); renderAdd(); }
     function sessDel(i) { captureAdd(); EDUFORM.sessDel(A, i); renderAdd(); }
     function sessSync() { captureAdd(); renderAdd(); }
-    function addFile() { captureAdd(); EDUFORM.addFile(A); renderAdd(); }
+    function addFile(slot) { captureAdd(); EDUFORM.addFile(A, slot); renderAdd(); }
     function delFile(i) { captureAdd(); EDUFORM.delFile(A, i); renderAdd(); }
-    function addPhoto() { captureAdd(); EDUFORM.addPhoto(A); renderAdd(); }
-    function delPhoto(i) { captureAdd(); EDUFORM.delPhoto(A, i); renderAdd(); }
     function aToggle(id, on) { captureAdd(); if (on) A.workerIds[id] = true; else delete A.workerIds[id]; renderAdd(); }
     function aToggleDept(deptId, on) {
         captureAdd();
@@ -589,15 +587,15 @@
     }
     global.EDUH = {
         init: init, setTab: setTab, setF: setF, resetF: resetF,
-        /* '교육 건' 탭 — 교육별 결재 상신 */
-        setCF: setCF, resetCF: resetCF,
         toggle: toggle, toggleAll: toggleAll,
         setGroupBy: setGroupBy, toggleGroup: toggleGroup,
         openBulk: openBulk, setBulkMode: setBulkMode, setBulkMerge: setBulkMerge, doBulk: doBulk,
+        /* 이수 수정(기본) → 그 안에서만 회수(삭제)로 내려간다 */
+        openEditDone: openEditDone, saveEditDone: saveEditDone,
         confirmUndo: confirmUndo, doUndo: doUndo,
         /* 채용시 교육 추가 (EDUFORM 공용 구성) */
         openAdd: openAdd, doAdd: doAdd, aToggle: aToggle, aToggleDept: aToggleDept, aDept: aDept,
         sessTab: sessTab, sessAdd: sessAdd, sessDel: sessDel, sessSync: sessSync,
-        addFile: addFile, delFile: delFile, addPhoto: addPhoto, delPhoto: delPhoto
+        addFile: addFile, delFile: delFile
     };
 })(window);
