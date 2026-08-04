@@ -623,7 +623,7 @@
                 ' <button type="button" class="btn btn-primary btn-sm" onclick="MYWORK.complete(\'' + it.impId + '\')">완료 처리</button>';
         }
         if (it.impId && it.status !== 'DONE') {
-            return '<button type="button" class="btn btn-primary btn-sm" onclick="MYWORK.complete(\'' + it.impId + '\')">' +
+            return '<button type="button" class="btn btn-primary btn-sm" data-tour="mw-improve" onclick="MYWORK.complete(\'' + it.impId + '\')">' +
                 (it.returned ? '재제출' : '완료 처리') + '</button>';
         }
         if (it.impId) {
@@ -637,7 +637,7 @@
                     ' <button type="button" class="btn btn-outline btn-sm" onclick="' + call + '">' +
                     ICO.clip + ' 교체</button>';
             }
-            return '<button type="button" class="btn btn-primary btn-sm" onclick="' + call + '">' +
+            return '<button type="button" class="btn btn-primary btn-sm" data-tour="mw-rskreport" onclick="' + call + '">' +
                 ICO.clip + ' 작성본 제출</button>';
         }
         /* 파일 첨부형 — 팝업(모달)에서 첨부해 완료 · 완료 후엔 재등록 가능 */

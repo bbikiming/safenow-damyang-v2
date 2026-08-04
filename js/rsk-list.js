@@ -57,7 +57,7 @@
             '<span class="rl-cfm-txt">' + parts.join(' · ') +
                 (mine ? ' — 확인해야 공문을 기안할 수 있습니다.' : ' — 확인은 주관부서(재난안전과)가 수행합니다.') + '</span>' +
             (mine && c.wait
-                ? '<button type="button" class="btn btn-primary btn-sm" onclick="RSKLIST.openConfirmQueue()">확인 대기 건만 보기 →</button>'
+                ? '<button type="button" class="btn btn-primary btn-sm" data-tour="rsk-confirm" onclick="RSKLIST.openConfirmQueue()">확인 대기 건만 보기 →</button>'
                 : '') +
         '</div>';
     }
@@ -94,7 +94,7 @@
                     ' <span class="pdf-note">(임시 채번 — 실제 번호는 온나라가 부여)</span> · ' + esc(doc.at) + '</span>' +
                 '<span class="rl-doc-acts">' +
                     '<button type="button" class="btn btn-outline btn-sm" onclick="DYRSKDOC.openDocSid(\'' + esc(doc.sid) + '\')">문서 보기</button>' +
-                    (mine ? '<button type="button" class="btn btn-outline btn-sm" onclick="DYRSKDOC.openStatus(\'' + esc(a.id) + '\')">결재 상태</button>' : '') +
+                    (mine ? '<button type="button" class="btn btn-outline btn-sm" data-tour="rsk-doc" onclick="DYRSKDOC.openStatus(\'' + esc(a.id) + '\')">결재 상태</button>' : '') +
                 '</span>' +
             '</div>';
         }
@@ -110,7 +110,7 @@
                     : '전달된 개선조치가 없습니다.')) + '</span>' +
             '<span class="rl-doc-acts">' +
                 '<button type="button" class="btn btn-primary btn-sm"' + (ready ? '' : ' disabled') +
-                    ' onclick="DYRSKDOC.open(\'' + esc(a.id) + '\')">공문 기안</button>' +
+                    ' data-tour="rsk-doc" onclick="DYRSKDOC.open(\'' + esc(a.id) + '\')">공문 기안</button>' +
             '</span>' +
         '</div>';
     }
@@ -300,7 +300,7 @@
                     '<div class="rl-empty-sub">생성 시 <b>대상 부서에 점검예정일이 통보</b>됩니다. ' +
                         '유해위험요인 설문조사표는 생성 후 목록에서 공통 또는 부서별로 첨부합니다.</div>' +
                     (canManage()
-                        ? '<button type="button" class="btn btn-primary" onclick="RSKLIST.openWizard()">＋ 정기평가 생성</button>'
+                        ? '<button type="button" class="btn btn-primary" data-tour="rsk-create" onclick="RSKLIST.openWizard()">＋ 정기평가 생성</button>'
                         : '<div class="rl-ro" style="margin:0 auto;max-width:520px;">' +
                           '<b>조회 전용</b> — 정기 위험성평가는 주관부서(<b>재난안전과</b>) 담당자가 생성합니다. ' +
                           EMPTY_TAIL[emptyScope()] + '</div>') +
@@ -330,7 +330,7 @@
         if (!a) {
             /* 평가 생성은 주관부서만 — 없는 권한의 1차 CTA 를 띄우지 않는다 */
             right = canManage()
-                ? '<button type="button" class="btn btn-primary" onclick="RSKLIST.openWizard()">＋ 정기평가 생성</button>'
+                ? '<button type="button" class="btn btn-primary" data-tour="rsk-create" onclick="RSKLIST.openWizard()">＋ 정기평가 생성</button>'
                 : '<span style="font-size:var(--fs-12);color:var(--text-gray);">재난안전과 담당자가 생성하면 여기에 표시됩니다</span>';
         } else if (a.status !== 'COMPLETED') {
             right = '<span style="font-size:var(--fs-12);color:var(--text-gray);">정기평가는 연 1회 등록 원칙</span>';
@@ -428,7 +428,7 @@
             ? '<b>' + esc(p.all) + '</b>'
             : '<b class="rl-survey-none">미첨부</b>';
         var btns = (locked || !canManage()) ? '' :
-            ' <button type="button" class="rl-file-btn" onclick="RSKLIST.openSurveyAll()">' +
+            ' <button type="button" class="rl-file-btn" data-tour="rsk-survey" onclick="RSKLIST.openSurveyAll()">' +
                 (p.all ? '변경' : '＋ 첨부') + '</button>' +
             (p.all ? ' <button type="button" class="rl-file-btn" onclick="RSKLIST.clearSurveyAll()">삭제</button>' : '');
         var note = locked
@@ -780,7 +780,7 @@
         }
         var body;
         if (stage === 'NONE') {
-            body = '<button type="button" class="rl-file-btn" onclick="RSKLIST.uploadReport()">＋ 통합 보고서 첨부</button>' +
+            body = '<button type="button" class="rl-file-btn" data-tour="rsk-report" onclick="RSKLIST.uploadReport()">＋ 통합 보고서 첨부</button>' +
                 '<span style="font-size:12px;color:var(--text-gray);">전체 통합본을 첨부하면 <b>부서별 개선조치 작성표</b>가 열립니다. 부서별 원본은 아래 표의 <b>[부서 보고서]</b>에 각각 첨부하세요.</span>';
         } else if (stage === 'REVIEW') {
             var pd0 = (review.parsedDepts || {});
@@ -890,7 +890,7 @@
                 '<div class="rl-rv-foot-actions">' +
                     '<button type="button" class="btn btn-secondary" onclick="RSKLIST.clearReport()">보고서 취소·재업로드</button>' +
                     '<button type="button" class="btn btn-primary"' + (hasRows ? '' : ' disabled style="opacity:.5;cursor:not-allowed;"') +
-                        ' onclick="RSKLIST.openDueSet()">작성완료 · 조치기한 설정 →</button>' +
+                        ' data-tour="rsk-deliver" onclick="RSKLIST.openDueSet()">작성완료 · 조치기한 설정 →</button>' +
                 '</div>' +
             '</div>' +
         '</div>';

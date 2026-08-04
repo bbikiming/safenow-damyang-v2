@@ -581,6 +581,8 @@
 .modal:has(#edoc-form) .modal-content { max-width: 720px; }
 /* 조문 선택기 — 조문 표기·제목·본문 미리보기가 한 줄에 들어가야 한다 */
 .modal:has(#lawpick-list) .modal-content { max-width: 760px; }
+/* 시연 흐름 보드 — 단계명·주체·실수치·이동 버튼이 한 줄에 들어가야 한다 */
+.modal:has(.dy-tour-flow) .modal-content { max-width: 760px; }
 /* e-Doc 폼: 라벨을 위, 입력을 아래로 — 모든 항목 1열 세로 정렬 */
 #edoc-form, .edoc-form-grid { grid-template-columns: 1fr; row-gap: 5px; align-items: stretch; }
 #edoc-form > .k, .edoc-form-grid > .k { margin-top: 14px; line-height: 1.4; }
@@ -595,7 +597,8 @@
   .preset-form-grid > .k { margin-top: 8px; }
   .preset-form-grid > .k:first-child { margin-top: 0; }
   .modal:has(.table-figma) .modal-content, .modal:has(#edoc-form) .modal-content,
-  .modal:has(#lawpick-list) .modal-content { max-width: 100%; }
+  .modal:has(#lawpick-list) .modal-content,
+  .modal:has(.dy-tour-flow) .modal-content { max-width: 100%; }
 }
 
 /* ── 조직도 트리 오버레이 (점검자 선택, 상위 모달 위에 적층) ── */
@@ -1808,46 +1811,117 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
    안전보건교육 시연 바 + 크로스 페이지 시연 투어 (EDUTOUR · js/edu-tour.js)
    발표용 핵심 자산 — 구 edu.html 인라인 스타일 이식본(토큰 치환).
    ========================================================================= */
-.edu-demo-bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 14px 18px; margin-bottom: 14px; border: 1px solid var(--brand-100); border-radius: var(--radius-card); background: var(--brand-50); }
-.edu-demo-copy { flex: 1; min-width: 280px; }
-.edu-demo-copy strong { display: block; font-size: var(--fs-14); color: var(--main-dark2); }
-.edu-demo-copy span { display: block; margin-top: 4px; font-size: var(--fs-12); color: var(--text-gray); }
-.edu-demo-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.edu-demo-bar,
+.dy-demo-bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 14px 18px; margin-bottom: 14px; border: 1px solid var(--brand-100); border-radius: var(--radius-card); background: var(--brand-50); }
+.edu-demo-copy,
+.dy-demo-copy { flex: 1; min-width: 280px; }
+.edu-demo-copy strong,
+.dy-demo-copy strong { display: block; font-size: var(--fs-14); color: var(--main-dark2); }
+.edu-demo-copy span,
+.dy-demo-copy span { display: block; margin-top: 4px; font-size: var(--fs-12); color: var(--text-gray); }
+.edu-demo-actions,
+.dy-demo-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
-.edu-tour-focus { position: relative; outline: 3px solid var(--main-dark); outline-offset: 4px; z-index: var(--z-base); scroll-margin: 120px 0; }
-.edu-tour-panel {
+.edu-tour-focus,
+.dy-tour-focus { position: relative; outline: 3px solid var(--main-dark); outline-offset: 4px; z-index: var(--z-base); scroll-margin: 120px 0; }
+.edu-tour-panel,
+.dy-tour-panel {
   position: fixed; right: 24px; bottom: 72px; z-index: var(--z-fab);
   width: min(440px, calc(100vw - 32px)); padding: 18px;
   border: 1px solid var(--brand-100); border-radius: var(--radius-statbox); background: var(--surface);
   box-shadow: var(--shadow-lg);
   max-height: calc(100vh - 96px); overflow-y: auto;
 }
-.edu-tour-panel.is-left { left: calc(var(--dy-sidebar-w) + 18px); right: auto; }
-.edu-tour-head { display: flex; align-items: flex-start; gap: 12px; }
-.edu-tour-head-main { flex: 1; min-width: 0; }
-.edu-tour-close { border: 0; background: transparent; color: var(--text-gray); cursor: pointer; padding: 2px 0; font-size: var(--fs-12); text-decoration: underline; text-underline-offset: 2px; }
-.edu-tour-kicker { font-size: var(--fs-12); font-weight: var(--fw-bold); color: var(--main-dark); }
-.edu-tour-title { margin-top: 6px; font-size: var(--fs-18); font-weight: var(--fw-bold); color: var(--main-dark2); }
-.edu-tour-desc { margin-top: 8px; font-size: var(--fs-13); line-height: 1.55; color: var(--text-gray); }
-.edu-tour-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; margin-top: 14px; }
-.edu-tour-step { min-width: 0; border: 1px solid var(--brand-100); border-radius: var(--radius-md); background: var(--surface); padding: 6px 2px; color: var(--text-gray); font-size: var(--fs-12); font-weight: var(--fw-bold); cursor: pointer; }
-.edu-tour-step.done { background: var(--brand-50); color: var(--main-dark); }
-.edu-tour-step.active { border-color: var(--main-dark); background: var(--main-dark); color: var(--surface); }
-.edu-tour-script { margin-top: 12px; padding: 10px 12px; border-left: 3px solid var(--main-dark); border-radius: 0 var(--radius-md) var(--radius-md) 0; background: var(--brand-50); color: var(--main-dark2); font-size: var(--fs-12); line-height: 1.55; }
-.edu-tour-script b { display: block; margin-bottom: 3px; font-size: var(--fs-12); }
-.edu-tour-action { width: 100%; justify-content: center; margin-top: 12px; }
-.edu-tour-foot { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
-.edu-tour-progress { flex: 1; font-size: var(--fs-12); color: var(--text-gray); }
-.edu-tour-inline { margin-bottom: 14px; padding: 11px 12px; border: 1px solid var(--brand-100); border-radius: var(--radius-button); background: var(--brand-50); color: var(--main-dark2); font-size: var(--fs-12); line-height: 1.55; }
-.edu-tour-inline b { display: block; margin-bottom: 3px; }
+.edu-tour-panel.is-left,
+.dy-tour-panel.is-left { left: calc(var(--dy-sidebar-w) + 18px); right: auto; }
+.edu-tour-head,
+.dy-tour-head { display: flex; align-items: flex-start; gap: 12px; }
+.edu-tour-head-main,
+.dy-tour-head-main { flex: 1; min-width: 0; }
+.edu-tour-close,
+.dy-tour-close { border: 0; background: transparent; color: var(--text-gray); cursor: pointer; padding: 2px 0; font-size: var(--fs-12); text-decoration: underline; text-underline-offset: 2px; }
+.edu-tour-kicker,
+.dy-tour-kicker { font-size: var(--fs-12); font-weight: var(--fw-bold); color: var(--main-dark); }
+.edu-tour-title,
+.dy-tour-title { margin-top: 6px; font-size: var(--fs-18); font-weight: var(--fw-bold); color: var(--main-dark2); }
+.edu-tour-desc,
+.dy-tour-desc { margin-top: 8px; font-size: var(--fs-13); line-height: 1.55; color: var(--text-gray); }
+.edu-tour-steps,
+.dy-tour-steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; margin-top: 14px; }
+.edu-tour-step,
+.dy-tour-step { min-width: 0; border: 1px solid var(--brand-100); border-radius: var(--radius-md); background: var(--surface); padding: 6px 2px; color: var(--text-gray); font-size: var(--fs-12); font-weight: var(--fw-bold); cursor: pointer; }
+.edu-tour-step.done,
+.dy-tour-step.done { background: var(--brand-50); color: var(--main-dark); }
+.edu-tour-step.active,
+.dy-tour-step.active { border-color: var(--main-dark); background: var(--main-dark); color: var(--surface); }
+/* 위험성평가 투어는 9단계라 4단 고정 그리드에 안 들어간다 — 중립 계열만 유연 그리드.
+   칩(.dy-tour-step)은 기존 클래스를 그대로 쓰므로 시각은 같다(교육 투어 회귀 0). */
+.dy-tour-steps { display: flex; flex-wrap: wrap; grid-template-columns: none; }
+.dy-tour-steps .dy-tour-step { flex: 1 1 auto; padding: 6px 8px; }
+
+/* 위험성평가 투어 전용 — 교육 투어에 없던 3가지.
+   ① 요구 페르소나 ② 어디를 누르는지 ③ 클릭 순서 · 앵커 미탐 사유 */
+.dy-tour-who {
+  margin-top: 12px; padding: 8px 11px;
+  border-radius: var(--radius-button); background: var(--gray-100);
+  color: var(--text-gray); font-size: var(--fs-12); line-height: 1.5;
+}
+.dy-tour-who b { color: var(--main-dark2); }
+.dy-tour-who.is-warn {
+  background: var(--status-warning-bg); border: 1px solid var(--status-warning-border);
+  color: var(--status-warning-fg);
+}
+.dy-tour-who.is-warn b { color: var(--status-warning-fg); }
+.dy-tour-where {
+  margin-top: 10px; font-size: var(--fs-13); font-weight: var(--fw-bold);
+  color: var(--main-dark2); line-height: 1.5;
+}
+.dy-tour-path {
+  margin: 8px 0 0; padding-left: 20px; list-style: decimal;
+  font-size: var(--fs-12); line-height: 1.7; color: var(--text-gray);
+}
+.dy-tour-why {
+  margin-top: 10px; padding: 8px 11px;
+  border: 1px solid var(--status-warning-border); border-radius: var(--radius-button);
+  background: var(--status-warning-bg); color: var(--status-warning-fg);
+  font-size: var(--fs-12); line-height: 1.5;
+}
+.dy-tour-inline-act { margin-top: 8px; }
+
+/* 전체 흐름 보드 — 단계 목록은 .rl-my-step 계열을 그대로 재사용한다(§7) */
+.dy-tour-flow-lead { margin: 0 0 10px; font-size: var(--fs-13); line-height: 1.6; color: var(--text-gray); }
+.dy-tour-flow .progress { margin-bottom: 10px; }
+.dy-tour-flow-note {
+  margin: 12px 0 0; padding: 9px 11px;
+  border-radius: var(--radius-button); background: var(--brand-50);
+  color: var(--main-dark2); font-size: var(--fs-12); line-height: 1.55;
+}
+.edu-tour-script,
+.dy-tour-script { margin-top: 12px; padding: 10px 12px; border-left: 3px solid var(--main-dark); border-radius: 0 var(--radius-md) var(--radius-md) 0; background: var(--brand-50); color: var(--main-dark2); font-size: var(--fs-12); line-height: 1.55; }
+.edu-tour-script b,
+.dy-tour-script b { display: block; margin-bottom: 3px; font-size: var(--fs-12); }
+.edu-tour-action,
+.dy-tour-action { width: 100%; justify-content: center; margin-top: 12px; }
+.edu-tour-foot,
+.dy-tour-foot { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+.edu-tour-progress,
+.dy-tour-progress { flex: 1; font-size: var(--fs-12); color: var(--text-gray); }
+.edu-tour-inline,
+.dy-tour-inline { margin-bottom: 14px; padding: 11px 12px; border: 1px solid var(--brand-100); border-radius: var(--radius-button); background: var(--brand-50); color: var(--main-dark2); font-size: var(--fs-12); line-height: 1.55; }
+.edu-tour-inline b,
+.dy-tour-inline b { display: block; margin-bottom: 3px; }
 
 @media (max-width: 559px) {
-  .edu-tour-panel { right: 12px; bottom: 64px; width: calc(100vw - 24px); padding: 15px; }
-  .edu-tour-panel.is-left { left: 12px; right: auto; }
-  .edu-tour-steps { gap: 3px; }
+.edu-tour-panel,
+.dy-tour-panel { right: 12px; bottom: 64px; width: calc(100vw - 24px); padding: 15px; }
+.edu-tour-panel.is-left,
+.dy-tour-panel.is-left { left: 12px; right: auto; }
+.edu-tour-steps,
+.dy-tour-steps { gap: 3px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .edu-tour-focus { scroll-behavior: auto; }
+.edu-tour-focus,
+.dy-tour-focus { scroll-behavior: auto; }
 }
 
 /* =========================================================================
