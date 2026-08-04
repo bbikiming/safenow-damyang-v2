@@ -46,7 +46,8 @@
         {
             id: 'target-scope', kind: 'scope', menu: '기본정보',
             title: '관리대상, 누가 등록하나요?',
-            now: '지금은 누구나 등록·수정할 수 있습니다.',
+            /* 화면에 [수정] 버튼은 없다 — [상세] 13개 + [＋ 등록] 2개뿐. '수정'을 쓰면 없는 걸 말한다 */
+            now: '지금은 누구나 등록할 수 있습니다. 엑셀 일괄등록도 막혀 있지 않습니다.',
             options: [
                 { k: 'all', label: '누구나' },
                 { k: 'read-all', label: '보기는 전체 · 등록은 재난안전과' },
@@ -66,21 +67,23 @@
         {
             id: 'opinion-scope', kind: 'scope', menu: '의견청취',
             title: '접수된 의견, 누가 보나요?',
-            now: '지금은 모든 부서가 봅니다. 익명으로 낸 사람이 드러날 수 있습니다.',
+            /* 익명 축은 코드에 없다 — 시드 24건 전원 실명이라 '익명 건만 제한'은 없는 걸 가리켰다 */
+            now: '지금은 모든 부서가 봅니다. 낸 사람 이름도 그대로 보입니다.',
             options: [
                 { k: 'all', label: '모든 부서' },
                 { k: 'related', label: '해당 부서 + 재난안전과' },
-                { k: 'anon', label: '익명 건만 제한' }
+                { k: 'anon', label: '낸 사람 이름은 가림' }
             ]
         },
         {
             id: 'eval-scope', kind: 'scope', menu: '인력 평가',
             title: '평가 결과, 누가 보나요? (개인정보)',
             now: '지금은 전 부서 평가 결과가 다 보이고 평가 등록도 누구나 됩니다.',
+            /* 정리본은 고른 라벨 한 줄만 찍는다 — '위 + …' 는 회의록에서 뜻이 안 선다 */
             options: [
                 { k: 'evaluator', label: '평가한 사람 + 재난안전과' },
-                { k: 'self', label: '위 + 본인 것만' },
-                { k: 'dept', label: '위 + 소속 부서장' }
+                { k: 'self', label: '평가한 사람 + 재난안전과 + 본인 것은 본인도' },
+                { k: 'dept', label: '평가한 사람 + 재난안전과 + 본인 + 소속 부서장' }
             ]
         },
         {
@@ -96,7 +99,8 @@
             options: [{ k: 'given', label: '명단 주심' }, { k: 'partial', label: '대상 부서만 우선' }]
         },
         {
-            id: 'onnara', kind: 'integration', menu: '위험성평가 (온나라)',
+            /* 위험성평가만의 문제가 아니다 — 예산·인력평가도 온나라 결재 회신을 시연한다 */
+            id: 'onnara', kind: 'integration', menu: '온나라 연동',
             title: '온나라에 어떻게 넘기나요?',
             now: '지금은 시연용 흉내입니다. 결재 결과도 실제로 받아오지 않습니다.',
             options: [
@@ -108,13 +112,15 @@
         {
             id: 'edu-annex5', kind: 'data', menu: '안전보건교육',
             title: '특별교육 대상 작업 목록을 넣을까요?',
-            now: '법에 정해진 목록을 못 받아 화면에 ‘목록 미등록’으로 뒀습니다.',
+            /* 별표5 는 공개 법령이라 '못 받아'가 아니라 '아직 안 넣어'가 맞다 */
+            now: '아직 넣지 않아 화면에 ‘대상 작업 목록 미등록’으로 뒀습니다.',
             options: [{ k: 'add', label: '목록 넣기' }, { k: 'manual', label: '담당자가 직접 입력' }]
         },
         {
             id: 'doc-retain', kind: 'data', menu: '업무문서',
-            title: '문서 보존연한 기준을 주실 수 있나요?',
-            now: '기준을 못 받아 보존연한을 표시하지 않습니다. 문서대장 5년치도 필요합니다.',
+            title: '문서 보존연한 기준과 문서대장 5년치를 주실 수 있나요?',
+            /* 등록 폼에 이미 보존연한 select 가 있다 — '표시하지 않습니다'는 거짓이었다 */
+            now: '지금은 등록할 때 3·5·10년·영구 중에서 고릅니다. 저희가 임의로 넣은 값입니다.',
             options: [{ k: 'given', label: '자료 주심' }, { k: 'later', label: '실 개발 때' }]
         }
     ];
@@ -122,12 +128,16 @@
     /* page id → 항목 id (DYLAW.MAP 과 같은 방식). 없는 화면은 생략한다. */
     var MAP = {
         'fac-list': ['facil-scope'], 'fac-risk': ['facil-scope'], 'fac-sync': ['facil-scope'],
-        'base-targets': ['target-scope'],
-        'bgt-main': ['budget-scope'], 'bgt-settings': ['budget-scope'],
+        /* base-bulk 는 엑셀로 관리대상을 대량 등록하는 화면이라 '누가 등록하나요'가 더 크게 걸린다 */
+        'base-targets': ['target-scope'], 'base-bulk': ['target-scope'],
+        'bgt-main': ['budget-scope', 'onnara'], 'bgt-settings': ['budget-scope'],
         'opn-voice': ['opinion-scope'], 'opn-committee': ['opinion-scope'], 'opn-council': ['opinion-scope'],
-        'evl-eval': ['eval-scope'], 'evl-status': ['eval-scope'], 'evl-settings': ['eval-scope'],
+        'evl-eval': ['eval-scope', 'onnara'], 'evl-status': ['eval-scope'], 'evl-settings': ['eval-scope'],
         'rsk-list': ['doc-org', 'onnara'],
-        'sbm-comply': ['dept-list'], 'safety-policy': ['dept-list'],
+        'admin-integration': ['onnara'],
+        /* 경영방침은 menu.html?m=policy → 'sbm-policy' 로 환원된다(DYLAW.MENU_ALIAS).
+           'safety-policy' 라고 적으면 어디에도 도달하지 못한다 — 실제로 냈던 결함. */
+        'sbm-comply': ['dept-list'], 'sbm-policy': ['dept-list'],
         'edu-etc': ['edu-annex5'], 'edu-sup-etc': ['edu-annex5'],
         'docs-archive': ['doc-retain'], 'docs-preset': ['doc-retain'], 'docs-exec': ['doc-retain']
     };
@@ -274,8 +284,29 @@
             : '정해 주셔야 할 것 ' + n + '건 남음');
     }
 
+    /* MAP 키가 실제 page id 인지 자기 점검 — 오타는 "그 화면에서 영영 안 뜸"으로만
+       드러나 눈치채기 어렵다('safety-policy' 오타를 실제로 냈다). DYLAW.MAP 이
+       page id 전수 목록이므로 그것과 대조한다. */
+    function selfCheck() {
+        var L = global.DYLAW && global.DYLAW.MAP;
+        if (!L) return;
+        var bad = Object.keys(MAP).filter(function (k) { return !(k in L); });
+        if (bad.length && global.console) {
+            console.warn('[DYPOLICY] 존재하지 않는 page id 매핑 — 이 화면에서는 항목이 뜨지 않습니다: ' + bad.join(', '));
+        }
+        var unknown = [];
+        Object.keys(MAP).forEach(function (k) {
+            (MAP[k] || []).forEach(function (id) {
+                if (!ITEMS.some(function (x) { return x.id === id; }) && unknown.indexOf(id) < 0) unknown.push(id);
+            });
+        });
+        if (unknown.length && global.console) console.warn('[DYPOLICY] 없는 항목 id: ' + unknown.join(', '));
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', selfCheck);
+    else selfCheck();
+
     global.DYPOLICY = {
-        ITEMS: ITEMS, MAP: MAP,
+        ITEMS: ITEMS, MAP: MAP, selfCheck: selfCheck,
         open: open, summary: summary, copy: copy,
         decide: decide, confirmReset: confirmReset, doReset: doReset,
         itemsForPage: itemsForPage, decidedCount: decidedCount, syncChip: syncChip,
