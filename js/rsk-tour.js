@@ -305,10 +305,15 @@
     ];
 
     var T = global.DYTOUR.define({
-        key: 'rsk', ns: 'RSKTOUR', skey: 'dy-tour-rsk-v1', steps: STEPS, ownerPersona: 'staff',
+        key: 'rsk', ns: 'RSKTOUR', skey: 'dy-tour-rsk-v1', steps: STEPS, ownerPersona: 'staff', pageLabels: { 'rsk-list.html': '정기 위험성평가', 'my-work.html': '내 할일' },
         kicker: function () { return year() + ' 정기 위험성평가'; },
         flowTitle: function () { return year() + '년 정기 위험성평가 — 전체 흐름 ' + STEPS.length + '단계'; },
         flowNote: function () {
+            var R = global.DYROLE;
+            if (R && R.inScope && !R.inScope(demoDept())) {
+                return '시연 대상 부서가 <b>조회 범위 밖</b>이라 부서 단계의 진행은 표시하지 않습니다. ' +
+                    '소속 부서 몫만 보려면 그 부서 담당자 관점으로 접속하세요.';
+            }
             return '시연 대상 부서는 <b>' + V().esc(deptNm()) + '</b> 기준입니다. ' +
                 '대상 부서가 많으면 공문 기안 조건(전 부서 확인 완료)을 채우느라 시연이 끝나지 않으니, ' +
                 '생성 단계에서 한 곳만 고르세요.';
@@ -316,7 +321,7 @@
         barTitle: function () { return '정기 위험성평가 흐름 시연 — ' + STEPS.length + '단계'; },
         barDesc: function () {
             return '생성 → 설문조사표 → 부서 제출 → 보고서 검수 → 전달 → 조치 완료 → 완료 확인 → 공문 기안 → 결재 회신. ' +
-                '가이드가 <b>어디를 누를지</b> 짚어 주고, 부서 담당자 차례가 오면 관점도 알아서 바꿔 줍니다.';
+                '가이드가 <b>어디를 누를지</b> 짚어 줍니다.';
         }
     });
 

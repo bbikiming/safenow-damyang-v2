@@ -168,7 +168,7 @@
     ];
 
     var T = global.DYTOUR.define({
-        key: 'edu', ns: 'EDUTOUR', skey: 'dy-edu-tour-v1', steps: STEPS, ownerPersona: 'staff',
+        key: 'edu', ns: 'EDUTOUR', skey: 'dy-edu-tour-v1', steps: STEPS, ownerPersona: 'staff', pageLabels: { 'edu-reg.html': '정기교육', 'edu-reg-detail.html': '정기교육 상세', 'edu-status.html': '이수현황' },
         stepsClass: 'is-grid4',        /* 4단계 고정 — 종전 4열 그리드 유지 */
         resetLabel: '시연 초기화',
         kicker: function () { return '안전보건교육 시연'; },
@@ -217,6 +217,8 @@
         T.go(0);
     };
     T.resetDemo = function () {
+        /* 버튼을 숨기는 것만으로는 전역 호출로 뚫린다 (§12 와 같은 원칙) */
+        if (T.view() === 'read') { toast('조회 전용 관점에서는 시연 데이터를 초기화할 수 없습니다.'); return; }
         T.stop();
         V().openModal('시연 상태 초기화',
             '<p style="font-size:var(--fs-13);line-height:1.6;">교육 등록·신청·종료 처리와 근로자 명단·독촉 이력 데이터를 처음 상태로 되돌립니다.</p>',
@@ -224,6 +226,7 @@
             '<button class="btn btn-primary" type="button" onclick="EDUTOUR.confirmReset()">초기화</button>');
     };
     T.confirmReset = function () {
+        if (T.view() === 'read') { toast('조회 전용 관점에서는 시연 데이터를 초기화할 수 없습니다.'); return; }
         E().reset();
         T.stop();
         location.reload();

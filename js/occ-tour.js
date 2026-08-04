@@ -55,6 +55,10 @@
     function occId() { var o = O(); return o ? o.id : ''; }
     function impCount() { var o = O(); return o ? D().occImpCount(o.id) : { total: 0, done: 0 }; }
     function occLabel() {
+        /* 조회 범위 밖(§12) 이면 건 식별 정보를 내보내지 않는다 —
+           화면에 안 보이는 건을 패널이 문서번호까지 읊으면 그게 범위 위반이다. */
+        var R = global.DYROLE;
+        if (R && R.inScope && !R.inScope(demoDept())) return '조회 범위 밖 부서 건';
         var o = O();
         if (!o) return deptNm() + ' — 등록된 건 없음';
         var r = (D().OCC_REASONS[o.reason] || {}).label || o.reason;
@@ -110,7 +114,7 @@
         },
         {
             key: 'review', label: '검토', page: 'rsk-occ.html',
-            persona: ownerP,
+            persona: ownerP, scopeDept: demoDept,   /* 대상 건은 그 부서 것이다 — 범위 밖이면 내용을 가린다 */
             href: function () { return 'rsk-occ.html'; },
             selector: '[data-tour="occ-review"]',
             title: '안전관리자 검토파일 등록',
@@ -160,7 +164,7 @@
         },
         {
             key: 'result', label: '결과확인', page: 'rsk-occ.html',
-            persona: ownerP,
+            persona: ownerP, scopeDept: demoDept,
             href: function () { return 'rsk-occ.html'; },
             selector: '[data-tour="occ-imp"]',
             title: '조치 결과와 증빙 확인 · 완결',
@@ -190,7 +194,7 @@
     ];
 
     var T = global.DYTOUR.define({
-        key: 'occ', ns: 'OCCTOUR', skey: 'dy-tour-occ-v1', steps: STEPS, ownerPersona: 'staff',
+        key: 'occ', ns: 'OCCTOUR', skey: 'dy-tour-occ-v1', steps: STEPS, ownerPersona: 'staff', pageLabels: { 'rsk-occ.html': '수시 위험성평가', 'my-work.html': '내 할일' },
         kicker: function () { return year() + ' 수시 위험성평가'; },
         flowTitle: function () { return year() + '년 수시 위험성평가 — 전체 흐름 ' + STEPS.length + '단계'; },
         flowNote: function () {
@@ -202,8 +206,7 @@
         barTitle: function () { return '수시 위험성평가 흐름 시연 — ' + STEPS.length + '단계'; },
         barDesc: function () {
             return '실시 사유 선택·등록 → 감소대책 배분 → 안전관리자 검토 → 부서 조치 완료 → 결과 확인. ' +
-                '정기평가와 반대로 <b>부서가 올리고 주관부서가 검토</b>합니다. ' +
-                '가이드가 어디를 누를지 짚어 주고 관점도 알아서 바꿔 줍니다.';
+                '정기평가와 반대로 <b>부서가 올리고 주관부서가 검토</b>합니다.';
         }
     });
 

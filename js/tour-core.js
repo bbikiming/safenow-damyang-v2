@@ -95,7 +95,18 @@
         function onStepPage(s) { return pageFile() === s.page; }
         function safeCall(fn, fallback) { try { return fn(); } catch (e) { return fallback; } }
         function safeDone(s) { return !!safeCall(s.done, false); }
-        function safeNote(s) { return s.note ? String(safeCall(s.note, '') || '') : ''; }
+        /* note() 는 그 단계의 실수치를 보여준다. 다만 **조회 범위 밖(§12) 데이터는
+           내보내지 않는다** — 화면에서는 안 보이는 남의 부서 건을 패널이 문서번호까지
+           읊으면 그게 곧 범위 위반이다. (실제로 공공시설사업소장에게 환경과
+           OCC-2026-02 내용이 노출됐다.) */
+        function safeNote(s) {
+            if (!s.note) return '';
+            if (s.scopeDept && R() && R().inScope) {
+                var d = safeCall(s.scopeDept, '');
+                if (d && !R().inScope(d)) return '조회 범위 밖 부서입니다';
+            }
+            return String(safeCall(s.note, '') || '');
+        }
         function personaId(s) { return safeCall(s.persona, '') || ''; }
         function doneCount() { var n = 0; STEPS.forEach(function (s) { if (safeDone(s)) n++; }); return n; }
 
@@ -204,7 +215,15 @@
             var s = STEPS[idx];
             if (!s || document.getElementById('v2-modal')) return;
             var el = (onStepPage(s) && curPersonaId() === personaId(s)) ? document.querySelector(s.selector) : null;
-            if (!el) { if (why) { why.hidden = false; why.innerHTML = '⚠ ' + esc(whyMissing(s, idx)); } return; }
+            if (!el) {
+                /* 조회 전용·대기 상태에서는 '왜 버튼이 없나'를 띄우지 않는다 —
+                   조회하라고 해 놓고 "관점을 바꾸세요"라고 하면 모순이다.
+                   그 상황의 설명은 이미 액션 자리(.dy-tour-wait)가 하고 있다. */
+                var vm = viewMode();
+                var quiet = vm === 'read' || (vm === 'mine' && blockedBy(idx).length > 0);
+                if (why) { why.hidden = quiet; if (!quiet) why.innerHTML = '⚠ ' + esc(whyMissing(s, idx)); }
+                return;
+            }
             if (why) why.hidden = true;
             el.classList.add('dy-tour-focus');
             el.setAttribute('aria-describedby', DESC_ID);
@@ -311,7 +330,7 @@
                 }).join('') + '</div>' +
                 '<div class="dy-tour-who' + (wrongWho && !readOnly && !waiting ? ' is-warn' : '') + '">' +
                     (readOnly
-                        ? '<b>' + esc(personaLabel(want)) + '</b> 가 수행하는 단계입니다 · ' + esc(safeNote(s))
+                        ? '<b>' + esc(personaLabel(want)) + '</b>' + josa(personaLabel(want), '이', '가') + ' 수행하는 단계입니다 · ' + esc(safeNote(s))
                         : wrongWho
                             ? '지금은 <b>' + esc(personaLabel(want)) + '</b> 차례입니다 — 아래 버튼을 누르면 관점을 바꿔 이어서 진행합니다.'
                             : '<b>' + esc(personaLabel(want)) + '</b> 관점 · ' + esc(safeNote(s))) + '</div>' +
@@ -486,6 +505,36 @@
         /* 전 과정이 끝나 있으면 처음부터 — 반복 시연의 기본 동작 */
         function start() { V().closeModal(); var c = currentIdx(); go(c >= STEPS.length ? 0 : c); }
 
+        /* 진입 바 문구를 관점에 맞춘다 — 부서 담당자에게 '9단계'라고 하면
+           자기가 9번 뭘 해야 하는 줄 안다. 실제로 하는 건 2단계다. */
+        function scopeSuffix() {
+            var order = stepOrder(), n = order.filter(function (i) { return safeDone(STEPS[i]); }).length;
+            var vm = viewMode();
+            if (vm === 'mine') return ' · 내 역할 ' + order.length + '단계 (현재 ' + n + '/' + order.length + ')';
+            if (vm === 'read') return ' · 조회 (현재 ' + n + '/' + order.length + ')';
+            return ' (현재 ' + n + '/' + order.length + ')';
+        }
+        /* 화면 이름 — 사용자에게 'my-work.html' 같은 파일명을 보여주지 않는다 */
+        function pageLabel(file) {
+            var m = cfg.pageLabels || {};
+            return m[file] || '다른 화면';
+        }
+        function scopeHint() {
+            var vm = viewMode();
+            if (vm === 'mine') {
+                var order = stepOrder();
+                var pages = {}; order.forEach(function (i) { pages[STEPS[i].page] = 1; });
+                var keys = Object.keys(pages);
+                var here = keys.length === 1 && pages[pageFile()];
+                return ' <b>' + esc(personaLabel(curPersonaId())) + '</b> 관점에서 하는 일은 <b>' +
+                    order.length + '단계</b>입니다' +
+                    (here ? '.' : ' — 시작하면 <b>' + esc(keys.map(pageLabel).join(' · ')) + '</b> 화면으로 이동합니다.');
+            }
+            if (vm === 'read') return ' 이 관점은 <b>조회 전용</b>입니다 — 진행은 담당자가 합니다.';
+            /* all — 관점 전환은 이 관점에서만 일어난다 */
+            return multiPersona() ? ' 담당자 차례가 오면 <b>관점도 알아서 바꿔</b> 줍니다.' : '';
+        }
+
         /* ── 진입 바 ── */
         function insertBar() {
             if (document.getElementById(BAR_ID)) return;
@@ -496,14 +545,18 @@
             bar.id = BAR_ID;
             bar.innerHTML =
                 '<div class="dy-demo-copy">' +
-                    '<strong>' + esc(safeCall(cfg.barTitle, '') || '') + ' (현재 ' + doneCount() + '/' + STEPS.length + ')</strong>' +
-                    '<span>' + (safeCall(cfg.barDesc, '') || '') + '</span>' +
+                    '<strong>' + esc(safeCall(cfg.barTitle, '') || '') + scopeSuffix() + '</strong>' +
+                    '<span>' + (safeCall(cfg.barDesc, '') || '') + scopeHint() + '</span>' +
                 '</div>' +
                 '<div class="dy-demo-actions">' +
-                    '<button class="btn btn-primary" type="button" onclick="' + NS + '.start()">시연 가이드 시작</button>' +
+                    '<button class="btn btn-primary" type="button" onclick="' + NS + '.start()">' +
+                        (viewMode() === 'read' ? '흐름 따라보기' : '시연 가이드 시작') + '</button>' +
                     '<button class="btn btn-outline" type="button" onclick="' + NS + '.openFlow()">전체 흐름 보기</button>' +
-                    /* 시연 데이터를 되돌릴 수단이 있는 도메인만 (교육) */
-                    (cfg.resetLabel
+                    /* 시연 데이터를 되돌릴 수단이 있는 도메인만 (교육).
+                       조회 전용 계층에는 내지 않는다 — '조회만 합니다'라고 해 놓고
+                       전 부서 데이터를 날리는 버튼을 남기면 그 안내가 거짓이 된다
+                       (rsk-list 의 [↺ 시연 초기화] 를 canManage() 로 막은 것과 같은 원칙). */
+                    (cfg.resetLabel && viewMode() !== 'read'
                         ? '<button class="btn btn-secondary" type="button" onclick="' + NS + '.resetDemo()">' +
                           esc(cfg.resetLabel) + '</button>'
                         : '') +
@@ -529,6 +582,10 @@
             if (opts.bar) insertBar();
             if (!active()) return;
             stopOthers(inst);
+            /* 페르소나가 바뀌면 관점도 바뀌어 커서가 그 관점 밖에 남을 수 있다.
+               그대로 두면 '내 역할' 인데 "관점을 바꿔 진행합니다"가 떠서 모순이 된다. */
+            var order = stepOrder();
+            if (order.indexOf(stateIdx()) < 0) setIdx(order.length ? order[0] : 0);
             renderStep();
         }
 
