@@ -1891,6 +1891,30 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 }
 .dy-tour-inline-act { margin-top: 8px; }
 
+/* 관점(뷰) — '내 역할' 에서 남의 단계는 지우지 않고 흐리게 남긴다.
+   지우면 전체 그림과 '내가 왜 기다리는지'를 잃는다. */
+.dy-tour-step.other { opacity: 0.45; cursor: default; }
+.dy-tour-view { display: flex; align-items: center; gap: 4px; margin-top: 10px; }
+.dy-tour-viewbtn {
+  padding: 3px 10px; border: 1px solid var(--card-line); border-radius: var(--radius-full);
+  background: var(--surface); color: var(--text-gray);
+  font-size: var(--fs-12); font-weight: var(--fw-bold); cursor: pointer;
+}
+.dy-tour-viewbtn.on { border-color: var(--main-dark); background: var(--main-dark); color: var(--surface); }
+.dy-tour-viewbtn:focus-visible { outline: 2px solid var(--main-dark); outline-offset: 2px; }
+.dy-tour-viewnote { font-size: var(--fs-12); color: var(--text-gray); }
+.dy-tour-wait {
+  margin-top: 12px; padding: 11px 12px;
+  border: 1px solid var(--card-line); border-radius: var(--radius-button);
+  background: var(--gray-100); color: var(--text-gray);
+  font-size: var(--fs-12); line-height: 1.6;
+}
+.dy-tour-wait b { color: var(--text-black); }
+.dy-tour-wait em { font-style: normal; color: var(--main-dark); }
+/* 흐름 보드 — 상대 몫 행 */
+.rl-my-step.is-other { opacity: 0.6; }
+.dy-tour-otherlabel { font-size: var(--fs-12); color: var(--text-gray); white-space: nowrap; }
+
 /* 전체 흐름 보드 — 단계 목록은 .rl-my-step 계열을 그대로 재사용한다(§7) */
 .dy-tour-flow-lead { margin: 0 0 10px; font-size: var(--fs-13); line-height: 1.6; color: var(--text-gray); }
 .dy-tour-flow .progress { margin-bottom: 10px; }

@@ -190,7 +190,7 @@
     ];
 
     var T = global.DYTOUR.define({
-        key: 'occ', ns: 'OCCTOUR', skey: 'dy-tour-occ-v1', steps: STEPS,
+        key: 'occ', ns: 'OCCTOUR', skey: 'dy-tour-occ-v1', steps: STEPS, ownerPersona: 'staff',
         kicker: function () { return year() + ' 수시 위험성평가'; },
         flowTitle: function () { return year() + '년 수시 위험성평가 — 전체 흐름 ' + STEPS.length + '단계'; },
         flowNote: function () {

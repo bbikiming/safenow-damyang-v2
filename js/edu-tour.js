@@ -168,7 +168,7 @@
     ];
 
     var T = global.DYTOUR.define({
-        key: 'edu', ns: 'EDUTOUR', skey: 'dy-edu-tour-v1', steps: STEPS,
+        key: 'edu', ns: 'EDUTOUR', skey: 'dy-edu-tour-v1', steps: STEPS, ownerPersona: 'staff',
         stepsClass: 'is-grid4',        /* 4단계 고정 — 종전 4열 그리드 유지 */
         resetLabel: '시연 초기화',
         kicker: function () { return '안전보건교육 시연'; },

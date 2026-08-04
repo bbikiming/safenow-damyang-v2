@@ -97,11 +97,72 @@
         function safeDone(s) { return !!safeCall(s.done, false); }
         function safeNote(s) { return s.note ? String(safeCall(s.note, '') || '') : ''; }
         function personaId(s) { return safeCall(s.persona, '') || ''; }
+        function doneCount() { var n = 0; STEPS.forEach(function (s) { if (safeDone(s)) n++; }); return n; }
+
+        /* =================== 관점(뷰) ===================
+           "각 권한으로 접속했을 때 그 권한의 흐름만" — 단계마다 persona() 가 이미
+           선언돼 있으므로 그 축으로 거른다.
+             all   전체 흐름 — 발표자 1인이 양쪽을 운전한다(페르소나 자동 전환)
+             mine  내 역할  — 내 단계만 커서가 머문다. 남의 단계는 **지우지 않고**
+                             흐린 칩으로 남긴다 — 지우면 전체 그림과 '내가 왜
+                             기다리는지'를 잃는다.
+             read  조회 전용 — 조작 권한이 없는 계층(군수·과장·소장)
+           기본값은 로그인 페르소나에서 정하고, 패널에서 바꿀 수 있다. */
+        var VKEY = SKEY + ':view';
+        function personaSet() {
+            var m = {}; STEPS.forEach(function (s) { var p = personaId(s); if (p) m[p] = 1; });
+            return Object.keys(m);
+        }
+        /* 주체가 하나뿐인 투어(교육)는 '내 역할'이 전체와 같아 토글이 의미 없다 */
+        function multiPersona() { return personaSet().length > 1; }
+        function defaultView() {
+            var p = R() && R().current ? R().current() : null;
+            if (!p) return 'all';
+            if (p.tier !== 'staff') return 'read';           /* 조작 권한이 없는 계층 */
+            /* 이 투어를 운전하는 주관부서 담당자면 전체 흐름이 기본 — 발표자 자리다 */
+            if (p.id === cfg.ownerPersona) return 'all';
+            if (personaSet().indexOf(p.id) >= 0) return 'mine';
+            return 'read';                                   /* 이 흐름에 등장하지 않는 담당자 */
+        }
+        function viewMode() {
+            var v = null;
+            try { v = sessionStorage.getItem(VKEY); } catch (e) {}
+            if (v === 'all' || v === 'mine' || v === 'read') {
+                /* 주체가 하나뿐이면 mine 은 all 과 같다 — 굳이 다르게 두지 않는다 */
+                if (v === 'mine' && !multiPersona()) return 'all';
+                return v;
+            }
+            return defaultView();
+        }
+        function setView(v) {
+            try { sessionStorage.setItem(VKEY, v); } catch (e) {}
+            var order = stepOrder();
+            /* 관점을 바꾸면 커서가 그 관점 밖일 수 있다 — 가장 가까운 단계로 당긴다 */
+            if (active() && order.indexOf(stateIdx()) < 0) {
+                setIdx(order.length ? order[0] : 0);
+            }
+            renderStep();
+        }
+        function isMine(s) { return personaId(s) === curPersonaId(); }
+        /* 커서가 돌아다닐 수 있는 단계 인덱스 — 'mine' 에서는 내 단계만 */
+        function stepOrder() {
+            var all = STEPS.map(function (_, i) { return i; });
+            if (viewMode() !== 'mine') return all;
+            var mine = all.filter(function (i) { return isMine(STEPS[i]); });
+            return mine.length ? mine : all;
+        }
+        /* 지금 해야 할 단계 — 관점 안에서 처음으로 안 끝난 것 */
         function currentIdx() {
-            for (var i = 0; i < STEPS.length; i++) { if (!safeDone(STEPS[i])) return i; }
+            var order = stepOrder();
+            for (var k = 0; k < order.length; k++) { if (!safeDone(STEPS[order[k]])) return order[k]; }
             return STEPS.length;
         }
-        function doneCount() { var n = 0; STEPS.forEach(function (s) { if (safeDone(s)) n++; }); return n; }
+        /* 이 단계를 막고 있는 앞 단계들 (관점 무관 — 실제 선행이다) */
+        function blockedBy(i) {
+            var out = [];
+            for (var j = 0; j < i; j++) { if (!safeDone(STEPS[j])) out.push(j); }
+            return out;
+        }
 
         /* 전환이 필요하면 localStorage 만 바꾸고 true 를 돌려준다 — 이동은 호출자가 한다.
            DYROLE.set() 을 쓰지 않는 이유: 그쪽은 자체 reload/index 이동으로
@@ -183,8 +244,28 @@
                 if (r.left + r.width / 2 > window.innerWidth / 2) panel.classList.add('is-left');
             }
 
+            var view = viewMode();
+            var order = stepOrder();
+            var pos = order.indexOf(idx);                    /* 관점 안에서의 위치 */
+            var last = pos === order.length - 1;
+            var blocks = blockedBy(idx);
+            /* '내 역할' 뷰에서 선행이 안 끝났으면 **아직 내 차례가 아니다**.
+               실제 업무 감각이 그렇다 — 부서는 주관부서가 내려보낼 때까지 기다린다. */
+            var waiting = view === 'mine' && !done && blocks.length > 0;
+            var readOnly = view === 'read';
+
             var actionBtn;
-            if (wrongWho) {
+            if (readOnly) {
+                actionBtn = '<div class="dy-tour-wait">' + esc(personaLabel(curPersonaId())) +
+                    ' 관점은 <b>조회 전용</b>입니다 — 이 흐름은 담당자가 수행합니다.</div>';
+            } else if (waiting) {
+                actionBtn = '<div class="dy-tour-wait"><b>아직 내 차례가 아닙니다.</b><br>' +
+                    blocks.map(function (j) {
+                        return '⏳ ' + (j + 1) + '. ' + esc(STEPS[j].title) + ' <em>(' + esc(personaLabel(personaId(STEPS[j]))) + ')</em>';
+                    }).join('<br>') +
+                    '<br>끝나면 <b>내 할일</b>에 뜹니다.</div>' +
+                    '<button class="btn btn-secondary dy-tour-action" type="button" onclick="' + NS + '.openFlow()">진행 상황 보기</button>';
+            } else if (wrongWho) {
                 actionBtn = '<button class="btn btn-primary dy-tour-action" type="button" onclick="' + NS + '.go(' + idx + ')">' +
                     esc(personaLabel(want)) + ' 관점으로 전환 →</button>';
             } else if (!onPage) {
@@ -194,34 +275,60 @@
                     esc(s.actionLabel) + '</button>';
             }
 
+            /* 관점 토글 — 주체가 둘 이상인 투어에서만 의미가 있다 */
+            var viewSwitch = multiPersona()
+                ? '<div class="dy-tour-view" role="group" aria-label="시연 관점">' +
+                    ['mine', 'all'].map(function (v) {
+                        return '<button type="button" class="dy-tour-viewbtn' + (view === v ? ' on' : '') + '"' +
+                            (view === v ? ' aria-pressed="true"' : ' aria-pressed="false"') +
+                            ' onclick="' + NS + '.setView(\'' + v + '\')">' +
+                            (v === 'mine' ? '내 역할' : '전체 흐름') + '</button>';
+                    }).join('') +
+                    (view === 'read' ? '<span class="dy-tour-viewnote">조회 전용</span>' : '') +
+                  '</div>'
+                : '';
+
+            /* 진행 표기 — '내 역할' 에서는 내 단계 기준으로 센다 */
+            var myDone = order.filter(function (i) { return safeDone(STEPS[i]); }).length;
+            var scopeLabel = view === 'mine' ? '내 역할' : (view === 'read' ? '조회' : '전체');
+
             panel.innerHTML =
                 '<div class="dy-tour-head"><div class="dy-tour-head-main">' +
-                    '<div class="dy-tour-kicker">' + esc(safeCall(cfg.kicker, '') || '') + ' · ' + doneCount() + ' / ' + STEPS.length + '단계' +
-                        (done ? ' · <b>이 단계 완료</b>' : '') + '</div>' +
+                    '<div class="dy-tour-kicker">' + esc(safeCall(cfg.kicker, '') || '') + ' · ' + esc(scopeLabel) + ' ' +
+                        myDone + ' / ' + order.length + '단계' + (done ? ' · <b>이 단계 완료</b>' : '') + '</div>' +
                     '<div class="dy-tour-title" id="' + TITLE_ID + '" tabindex="-1">' + (idx + 1) + '. ' + esc(s.title) + '</div></div>' +
                     '<button class="dy-tour-close" type="button" onclick="' + NS + '.stop()">가이드 종료</button></div>' +
+                viewSwitch +
+                /* 남의 단계도 **지우지 않고** 흐린 칩으로 남긴다 — 지우면 전체 그림과
+                   '내가 왜 기다리는지'를 잃는다. 다만 커서는 옮기지 않는다. */
                 '<div class="dy-tour-steps' + (cfg.stepsClass ? ' ' + cfg.stepsClass : '') + '" aria-label="시연 단계">' + STEPS.map(function (x, i) {
-                    return '<button type="button" class="dy-tour-step' + (safeDone(x) ? ' done' : '') + (i === idx ? ' active' : '') + '"' +
-                        (i === idx ? ' aria-current="step"' : '') +
-                        ' title="' + esc((i + 1) + '. ' + x.title) + '" onclick="' + NS + '.go(' + i + ')">' + esc(x.label) + '</button>';
+                    var out = order.indexOf(i) < 0;
+                    return '<button type="button" class="dy-tour-step' + (safeDone(x) ? ' done' : '') +
+                        (i === idx ? ' active' : '') + (out ? ' other' : '') + '"' +
+                        (out ? ' disabled' : '') + (i === idx ? ' aria-current="step"' : '') +
+                        ' title="' + esc((i + 1) + '. ' + x.title + (out ? ' — ' + personaLabel(personaId(x)) + ' 몫' : '')) + '"' +
+                        (out ? '' : ' onclick="' + NS + '.go(' + i + ')"') + '>' + esc(x.label) + '</button>';
                 }).join('') + '</div>' +
-                '<div class="dy-tour-who' + (wrongWho ? ' is-warn' : '') + '">' + (wrongWho
-                    ? '지금은 <b>' + esc(personaLabel(want)) + '</b> 차례입니다 — 아래 버튼을 누르면 관점을 바꿔 이어서 진행합니다.'
-                    : '<b>' + esc(personaLabel(want)) + '</b> 관점 · ' + esc(safeNote(s))) + '</div>' +
-                '<div class="dy-tour-where">여기를 누르세요 — ' + s.where + '</div>' +
-                '<ol class="dy-tour-path">' + (s.clickPath || []).map(function (c) {
+                '<div class="dy-tour-who' + (wrongWho && !readOnly && !waiting ? ' is-warn' : '') + '">' +
+                    (readOnly
+                        ? '<b>' + esc(personaLabel(want)) + '</b> 가 수행하는 단계입니다 · ' + esc(safeNote(s))
+                        : wrongWho
+                            ? '지금은 <b>' + esc(personaLabel(want)) + '</b> 차례입니다 — 아래 버튼을 누르면 관점을 바꿔 이어서 진행합니다.'
+                            : '<b>' + esc(personaLabel(want)) + '</b> 관점 · ' + esc(safeNote(s))) + '</div>' +
+                (waiting || readOnly ? '' : '<div class="dy-tour-where">여기를 누르세요 — ' + s.where + '</div>') +
+                (waiting ? '' : '<ol class="dy-tour-path">' + (s.clickPath || []).map(function (c) {
                     return '<li>' + esc(c) + '</li>';
-                }).join('') + '</ol>' +
+                }).join('') + '</ol>') +
                 '<div class="dy-tour-desc" id="' + DESC_ID + '">' + esc(s.desc) + '</div>' +
                 '<div class="dy-tour-why" id="' + WHY_ID + '" hidden></div>' +
                 '<div class="dy-tour-script"><b>시연 멘트</b>' + esc(s.script) + '</div>' +
                 actionBtn +
-                '<div class="dy-tour-foot"><span class="dy-tour-progress">' + (idx + 1) + ' / ' + STEPS.length + '</span>' +
+                '<div class="dy-tour-foot"><span class="dy-tour-progress">' + (pos + 1) + ' / ' + order.length + '</span>' +
                     '<button class="btn btn-secondary btn-sm" type="button" onclick="' + NS + '.openFlow()">전체 흐름</button>' +
-                    (idx ? '<button class="btn btn-secondary btn-sm" type="button" onclick="' + NS + '.prev()">이전</button>' : '') +
+                    (pos > 0 ? '<button class="btn btn-secondary btn-sm" type="button" onclick="' + NS + '.prev()">이전</button>' : '') +
                     '<button class="btn btn-secondary btn-sm" type="button" onclick="' +
-                        (idx === STEPS.length - 1 ? NS + '.stop()' : NS + '.next()') + '">' +
-                        (idx === STEPS.length - 1 ? '마치기' : '다음') + '</button></div>';
+                        (last ? NS + '.stop()' : NS + '.next()') + '">' +
+                        (last ? '마치기' : '다음') + '</button></div>';
             document.body.appendChild(panel);
             applyFocus();
             scrollToTarget();
@@ -279,10 +386,12 @@
                 if (sg === lastSig) { applyFocus(); return; }
                 lastSig = sg;
                 var i = stateIdx();
+                var ord = stepOrder(), ps = ord.indexOf(i);
                 /* 모달이 떠 있으면 사용자가 아직 입력 중이다 — 밀지 않는다 */
-                if (!document.getElementById('v2-modal') && safeDone(STEPS[i]) && i + 1 < STEPS.length) {
+                if (!document.getElementById('v2-modal') && safeDone(STEPS[i]) && ps >= 0 && ps + 1 < ord.length) {
                     /* 저장 토스트가 보이도록 잠깐 두고 넘어간다 */
-                    setTimeout(function () { if (active() && stateIdx() === i) go(i + 1); }, 700);
+                    var nxt = ord[ps + 1];
+                    setTimeout(function () { if (active() && stateIdx() === i) go(nxt); }, 700);
                     return;
                 }
                 renderStep();
@@ -293,31 +402,36 @@
            단계 목록은 이미 있는 .rl-my-step 계열을 그대로 쓴다(§7). */
         function openFlow() {
             var cur = currentIdx();
+            var vorder = stepOrder();
+            var vmode = viewMode();
             var rows = STEPS.map(function (s, i) {
                 var d = safeDone(s);
                 var now = !d && i === cur;
-                return '<li class="rl-my-step' + (d ? ' is-done' : '') + (now ? ' is-now' : '') + '">' +
-                    '<span class="rl-my-no">' + (d ? '✓' : (i + 1)) + '</span>' +
+                var out = vorder.indexOf(i) < 0;      /* 이 관점에서 남의 몫 */
+                return '<li class="rl-my-step' + (d ? ' is-done' : '') + (now ? ' is-now' : '') + (out ? ' is-other' : '') + '">' +
+                    '<span class="rl-my-no">' + (d ? '✓' : (out ? '⏳' : (i + 1))) + '</span>' +
                     '<span class="rl-my-body">' +
                         '<b>' + esc(s.title) + '</b>' +
                         '<span class="rl-my-who">' + esc(personaLabel(personaId(s))) + '</span>' +
                         '<span class="rl-my-note">' + esc(safeNote(s)) + '</span>' +
                     '</span>' +
-                    '<span class="rl-my-act">' +
-                        '<button type="button" class="btn btn-outline btn-sm" onclick="' + NS + '.goFromFlow(' + i + ')">' +
-                            (d ? '다시 보기' : (now ? '여기서 시작 →' : '이 단계로')) + '</button>' +
+                    '<span class="rl-my-act">' + (out
+                        ? '<span class="dy-tour-otherlabel">상대 몫</span>'
+                        : '<button type="button" class="btn btn-outline btn-sm" onclick="' + NS + '.goFromFlow(' + i + ')">' +
+                            (d ? '다시 보기' : (now ? '여기서 시작 →' : '이 단계로')) + '</button>') +
                     '</span>' +
                 '</li>';
             }).join('');
 
-            var n = doneCount();
-            var pct = Math.round(n / STEPS.length * 100);
+            var n = vorder.filter(function (i) { return safeDone(STEPS[i]); }).length;
+            var pct = Math.round(n / vorder.length * 100);
+            var scope = vmode === 'mine' ? '내 역할 ' : (vmode === 'read' ? '조회 ' : '');
             V().openModal(safeCall(cfg.flowTitle, '전체 흐름') || '전체 흐름',
                 '<div class="dy-tour-flow">' +
                     '<p class="dy-tour-flow-lead">체크는 <b>실제 데이터로 판정</b>합니다 — 가이드를 껐다 켜도, 손으로 먼저 처리해도 그대로 맞습니다.</p>' +
                     '<div class="progress" role="img" aria-label="진행 ' + pct + '퍼센트">' +
                         '<div class="progress-bar green" style="width:' + pct + '%;"></div></div>' +
-                    '<p class="dy-tour-flow-lead"><b>' + n + ' / ' + STEPS.length + '단계</b> 완료' +
+                    '<p class="dy-tour-flow-lead"><b>' + esc(scope) + n + ' / ' + vorder.length + '단계</b> 완료' +
                         (cur >= STEPS.length
                             ? ' — 전 과정이 끝났습니다.'
                             : ' · 다음 차례는 <b>' + esc(personaLabel(personaId(STEPS[cur]))) + '</b>') + '</p>' +
@@ -335,14 +449,30 @@
         function go(i) {
             if (i < 0 || i >= STEPS.length) { stop(); return; }
             stopOthers(inst);          /* 다른 투어가 켜져 있으면 끈다 — 패널은 한 번에 하나 */
+            var order = stepOrder();
+            /* 관점 밖 단계로는 커서를 두지 않는다 — 가장 가까운 뒤쪽 내 단계로 당긴다 */
+            if (order.indexOf(i) < 0) {
+                var near = order.filter(function (k) { return k >= i; });
+                i = near.length ? near[0] : order[order.length - 1];
+            }
             setIdx(i);
             var s = STEPS[i];
-            var switched = applyPersona(s);
+            /* '내 역할'·'조회' 관점에서는 페르소나를 바꾸지 않는다 —
+               바꾸면 그 순간 '내 역할'이 아니게 된다. */
+            var switched = (viewMode() === 'all') && applyPersona(s);
             if (!onStepPage(s) || switched) { location.href = s.href(); return; }
             renderStep();
         }
-        function next() { if (active()) go(stateIdx() + 1); }
-        function prev() { if (active()) go(stateIdx() - 1); }
+        function step(delta) {
+            if (!active()) return;
+            var order = stepOrder(), pos = order.indexOf(stateIdx());
+            if (pos < 0) { go(order[0]); return; }
+            var nx = pos + delta;
+            if (nx < 0 || nx >= order.length) { stop(); return; }
+            go(order[nx]);
+        }
+        function next() { step(1); }
+        function prev() { step(-1); }
         function action() {
             var s = STEPS[stateIdx()];
             if (s && typeof s.action === 'function') s.action();
@@ -405,6 +535,7 @@
         var inst = {
             boot: boot, start: start, stop: stop, openFlow: openFlow, goFromFlow: goFromFlow,
             go: go, next: next, prev: prev, action: action,
+            setView: setView, view: viewMode,
             active: active, STEPS: STEPS
         };
         REG.push(inst);

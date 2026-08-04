@@ -24,14 +24,26 @@
     function A() { var l = D().assessments(year()) || []; return l[0] || null; }
 
     /* 시연 대상 부서 — 하드코딩하지 않고 **실제 대상 부서에서 고른다**.
-       발표자가 마법사에서 물순환사업소를 안 골랐어도 투어가 죽지 않아야 한다. */
+       발표자가 마법사에서 물순환사업소를 안 골랐어도 투어가 죽지 않아야 한다.
+       ★ 부서 담당자로 접속했으면 **그 사람의 부서를 먼저** 본다 —
+         '내 역할' 관점에서 남의 부서를 따라가면 그건 내 역할이 아니다. */
     function demoDept() {
         var a = A();
-        if (!a) return 'water';
+        var me = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
+        var mine = (me && me.tier === 'staff' && me.deptId !== 'safety' && DEPT_PERSONA[me.deptId]) ? me.deptId : '';
+        if (!a) return mine || 'water';
         var ids = (a.depts || []).map(function (d) { return d.deptId; });
+        if (mine && ids.indexOf(mine) >= 0) return mine;
+        if (mine) return mine;   /* 대상 부서가 아니어도 내 부서를 가리킨다 — 그래야 '대상 아님'을 정직하게 말한다 */
         for (var i = 0; i < PREF_DEPT.length; i++) { if (ids.indexOf(PREF_DEPT[i]) >= 0) return PREF_DEPT[i]; }
         for (var j = 0; j < ids.length; j++) { if (DEPT_PERSONA[ids[j]]) return ids[j]; }
         return ids[0] || 'water';
+    }
+    /* 내 부서가 그 해 평가 대상인가 — 아니면 3·6단계 자체가 없다 */
+    function deptListed() {
+        var a = A(); if (!a) return false;
+        var id = demoDept();
+        return (a.depts || []).some(function (x) { return x.deptId === id; });
     }
     function deptPersona() { return DEPT_PERSONA[demoDept()] || OWNER_P; }
     function deptNm() { return D().deptName(demoDept()); }
@@ -58,6 +70,8 @@
         return n;
     }
     function ownerP() { return OWNER_P; }
+    /* 받침에 맞는 조사 (DYTOUR 가 노출) */
+    function jo(w, a, b) { return global.DYTOUR ? global.DYTOUR.josa(w, a, b) : a; }
 
     var STEPS = [
         {
@@ -128,6 +142,7 @@
             done: function () { var d = dp(); return !!(d && d.reportFile); },
             note: function () {
                 var a = A(); if (!a) return '평가 생성 후';
+                if (!deptListed()) return deptNm() + jo(deptNm(), '은 ', '는 ') + a.year + '년 평가 대상 부서가 아닙니다';
                 var p = D().deptReportProgress(a);
                 var d = dp();
                 return '제출 ' + p.done + ' / ' + p.total + (d && d.reportFile ? ' · ' + deptNm() + ' 제출 완료' : '');
@@ -210,6 +225,8 @@
                 return ms.length > 0 && ms.every(function (m) { return m.status === 'DONE'; });
             },
             note: function () {
+                var a = A();
+                if (a && !deptListed()) return deptNm() + jo(deptNm(), '은 ', '는 ') + a.year + '년 평가 대상 부서가 아닙니다';
                 var ms = imps();
                 if (!ms.length) return '전달 대기';
                 var n = ms.filter(function (m) { return m.status === 'DONE'; }).length;
@@ -288,7 +305,7 @@
     ];
 
     var T = global.DYTOUR.define({
-        key: 'rsk', ns: 'RSKTOUR', skey: 'dy-tour-rsk-v1', steps: STEPS,
+        key: 'rsk', ns: 'RSKTOUR', skey: 'dy-tour-rsk-v1', steps: STEPS, ownerPersona: 'staff',
         kicker: function () { return year() + ' 정기 위험성평가'; },
         flowTitle: function () { return year() + '년 정기 위험성평가 — 전체 흐름 ' + STEPS.length + '단계'; },
         flowNote: function () {
