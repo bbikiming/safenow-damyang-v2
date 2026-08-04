@@ -1050,7 +1050,7 @@
     function preReviewInfo() {
         const V = window.DYV2;
         if (!V || !V.openModal) return;
-        V.openModal('검토 전 시연본입니다',
+        V.openModal('검토 전 시연본입니다',   /* 셸 크롬 — 투어 안내 주입 대상 아님({chrome:true}) */
             '<div class="dy-prereview-doc">' +
               '<p><b>이 화면은 담양군 주무관님 검토를 받기 전 상태입니다.</b> 확정 사양이 아니며, ' +
                 '검토 결과에 따라 화면·용어·플로우가 바뀔 수 있습니다. ' +
@@ -1071,7 +1071,8 @@
               '</ul>' +
               '<p class="dy-prereview-note">시연 기준일은 <b>2026-07-16</b>으로 고정되어 있습니다.</p>' +
             '</div>',
-            '<button type="button" class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
+            '<button type="button" class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>',
+            { chrome: true });
     }
 
     /* 외부 노출 */

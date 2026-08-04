@@ -216,7 +216,8 @@
             '</div>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
             '<button type="button" class="btn btn-outline" onclick="DYPOLICY.confirmReset()">기록 지우기</button>' +
-            '<button type="button" class="btn btn-primary" onclick="DYPOLICY.summary()">정리본 보기</button>');
+            '<button type="button" class="btn btn-primary" onclick="DYPOLICY.summary()">정리본 보기</button>',
+            { chrome: true });
     }
     /* 열려 있는 모달을 제자리에서 다시 그린다 — openModal 을 다시 부르면 스크롤이 날아간다 */
     function render() {
@@ -252,7 +253,8 @@
                 '<textarea class="form-textarea pol-sumtext" rows="16" readonly>' + esc(summaryText()) + '</textarea>' +
             '</div>',
             '<button type="button" class="btn btn-secondary" onclick="DYPOLICY.open()">← 목록으로</button>' +
-            '<button type="button" class="btn btn-primary" onclick="DYPOLICY.copy()">복사</button>');
+            '<button type="button" class="btn btn-primary" onclick="DYPOLICY.copy()">복사</button>',
+            { chrome: true });
         setTimeout(function () { var t = document.querySelector('.pol-sumtext'); if (t) { t.focus(); t.select(); } }, 0);
     }
     function copy() {
@@ -267,7 +269,8 @@
         V().openModal('기록 지우기',
             '<p class="pol-lead">골라 둔 답을 모두 지웁니다. 항목은 그대로 남습니다.</p>',
             '<button type="button" class="btn btn-secondary" onclick="DYPOLICY.open()">취소</button>' +
-            '<button type="button" class="btn btn-primary" onclick="DYPOLICY.doReset()">지우기</button>');
+            '<button type="button" class="btn btn-primary" onclick="DYPOLICY.doReset()">지우기</button>',
+            { chrome: true });
     }
     function doReset() { resetAll(); open(); }
 

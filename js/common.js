@@ -441,7 +441,11 @@
         closeModal();
         opts = opts || {};
         const wrap = document.createElement('div');
-        wrap.className = 'modal' + (opts.variant ? ' modal-' + opts.variant : '');
+        /* opts.chrome — 셸(헤더) 크롬 모달임을 표시한다. 업무 흐름의 일부가 아니므로
+           시연 투어가 여기에 '시연 포인트' 안내를 주입하지 않는다(DYTOUR.syncModalState).
+           표시가 없으면 투어가 떠 있을 때 정책 확인 모달 위에 엉뚱한 단계 안내가 붙었다. */
+        wrap.className = 'modal' + (opts.variant ? ' modal-' + opts.variant : '') +
+            (opts.chrome ? ' dy-modal-chrome' : '');
         wrap.id = 'v2-modal';
         wrap.innerHTML =
             '<div class="modal-backdrop" onclick="DYV2.closeModal()"></div>' +

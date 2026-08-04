@@ -369,6 +369,10 @@
             if (modal && active()) {
                 var s = STEPS[stateIdx()];
                 var body = modal.querySelector('.modal-body');
+                /* 셸 크롬 모달(정책 확인·검토 전 안내)은 업무 흐름이 아니다 —
+                   투어가 떠 있다고 해서 '파일을 제출하세요' 같은 단계 안내를 얹으면
+                   전혀 다른 맥락의 지시가 된다. openModal(..., {chrome:true}) 로 표시한다. */
+                if (modal.classList.contains('dy-modal-chrome')) return;
                 /* 흐름 보드 자신에게는 넣지 않는다 — 보드는 전체 지도이지 특정 단계의
                    작업 모달이 아니다. 넣으면 엉뚱한 단계의 안내가 보드 위에 뜬다. */
                 if (body && body.querySelector('.dy-tour-flow')) return;
