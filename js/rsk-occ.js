@@ -74,7 +74,7 @@
                 '<div>' +
                     '<button type="button" class="btn btn-outline" onclick="RSKOCC.downloadForm()">📥 양식 다운로드 (HWPX)</button> ' +
                     (canRegister()
-                        ? '<button type="button" class="btn btn-primary" onclick="RSKOCC.openReasonGate()">＋ 수시평가 등록</button>'
+                        ? '<button type="button" class="btn btn-primary" data-tour="occ-create" onclick="RSKOCC.openReasonGate()">＋ 수시평가 등록</button>'
                         : '') +
                 '</div>' +
             '</div>' +
@@ -130,7 +130,7 @@
             '<div class="roc-imp-acts">' +
                 /* 조치가 끝난 뒤 '무엇을 어떻게 고쳤는지'를 사진까지 보는 자리 —
                    정기평가 부서 상세와 같은 화면(IMPCARD)을 쓴다 (CLAUDE.md §7). */
-                '<button type="button" class="btn btn-outline btn-sm" onclick="RSKOCC.openImp(\'' + o.id + '\')">조치 상세</button>' +
+                '<button type="button" class="btn btn-outline btn-sm" data-tour="occ-imp" onclick="RSKOCC.openImp(\'' + o.id + '\')">조치 상세</button>' +
                 (c.done < c.total
                     ? '<a class="btn btn-primary btn-sm" href="my-work.html?dept=' + esc(o.deptId) +
                           '&cat=improve">내 할일에서 마무리 →</a>'
@@ -176,7 +176,7 @@
                   esc(o.reviewer || '안전관리자') + ' · ' + esc(o.reviewedAt || '-') + '</div>' +
               (mayReview ? ' <button type="button" class="btn btn-outline btn-sm" onclick="RSKOCC.clearReviewFile(\'' + o.id + '\')">해제</button>' : '')
             : (mayReview
-                ? '<button type="button" class="btn btn-outline btn-sm" onclick="RSKOCC.openReviewFile(\'' + o.id + '\')">＋ 검토파일 등록</button>'
+                ? '<button type="button" class="btn btn-outline btn-sm" data-tour="occ-review" onclick="RSKOCC.openReviewFile(\'' + o.id + '\')">＋ 검토파일 등록</button>'
                 : '<span style="color:var(--text-gray);font-size:var(--fs-12);">재난안전과 접수 대기</span>');
         return '<tr>' +
             '<td>' + esc(o.date || '-') + '</td>' +

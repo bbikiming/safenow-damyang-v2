@@ -154,11 +154,14 @@
     <script src="./js/rsk-doc.js"></script><!-- 상신 후 잠금 판정(DYRSKDOC.lockOf) --><!-- 완료 상세(개선조치 카드) 공용 -->
     <script src="./js/sets-data-v2.js"></script><!-- 발행된 업무 탭 (DY_DOCS_V2·DY_MENUS_V2) -->
     <script src="./js/my-work.js"></script>
-    <script src="./js/rsk-tour.js"></script><!-- 시연 투어 — 진행 중일 때만 패널이 뜬다 -->
+    <script src="./js/tour-core.js"></script><!-- 시연 투어 공용 엔진 (DYTOUR) -->
+    <script src="./js/rsk-tour.js"></script><!-- 정기 · 수시 투어 — 진행 중일 때만 패널이 뜬다 -->
+    <script src="./js/occ-tour.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             window.MYWORK.init('mw-root');
             window.RSKTOUR.boot();   /* 바 없음 — 가이드 진행 중일 때만 패널 */
+            window.OCCTOUR.boot();
         });
     </script>
 </body>

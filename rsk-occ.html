@@ -64,8 +64,13 @@
     <script src="./js/rsk-data.js"></script>
     <script src="./js/rsk-imp-cards.js"></script>
     <script src="./js/rsk-occ.js"></script>
+    <script src="./js/tour-core.js"></script><!-- 시연 투어 공용 엔진 (DYTOUR) -->
+    <script src="./js/occ-tour.js"></script><!-- 수시 위험성평가 투어 (OCCTOUR) -->
     <script>
-        document.addEventListener('DOMContentLoaded', function () { window.RSKOCC.init('roc-root'); });
+        document.addEventListener('DOMContentLoaded', function () {
+            window.RSKOCC.init('roc-root');
+            window.OCCTOUR.boot({ bar: true });   /* 진입 바 + 진행 중이면 가이드 패널 복원 */
+        });
     </script>
 </body>
 </html>
