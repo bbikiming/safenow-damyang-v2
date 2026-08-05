@@ -372,6 +372,13 @@
         state.tab = 'depts';
         state.reviewOpen = {};
         state.year = 2026;
+        /* 투어 커서도 함께 되돌린다 — 데이터만 지우면 패널이 "9. 결재 결과 수신"을
+           가리킨 채 남아, 두 번째 시연이 마지막 단계에서 시작하는 것처럼 보인다.
+           stop() 이 커서·고정 관점을 함께 푼다(다음 start() 가 1단계부터 잡는다). */
+        ['RSKTOUR', 'OCCTOUR'].forEach(function (n) {
+            var t = global[n];
+            if (t && t.active && t.active()) t.stop();
+        });
         toast('시연 데이터 초기화 완료 · 2026년 미등록 상태로 복귀');
         render();
     }
@@ -864,7 +871,11 @@
                         '<th style="width:130px;">담당자</th><th style="width:104px;">증빙(전/후)</th>' +
                         '<th style="width:84px;">완료</th><th style="width:34px;"></th>' +
                     '</tr></thead><tbody>' + tbody + '</tbody></table></div>' +
-                    '<button type="button" class="btn btn-outline btn-sm" onclick="RSKLIST.reviewAdd(\'' + deptId + '\')">＋ 행 추가</button>' +
+                    /* 4단계 앵커를 이어받는다 — 보고서를 첨부하면 위쪽 [＋ 통합 보고서 첨부]가
+                       사라져 투어가 가리킬 곳을 잃고 "이 화면에 아직 없는 요소입니다" 경고를
+                       띄웠다. 성공한 순간 경고가 뜨면 시연이 어색해진다. 이 단계의 다음 행동이
+                       실제로 [＋ 행 추가]이므로(clickPath 2번) 같은 앵커 이름을 붙인다. */
+                    '<button type="button" class="btn btn-outline btn-sm" data-tour="rsk-report" onclick="RSKLIST.reviewAdd(\'' + deptId + '\')">＋ 행 추가</button>' +
                 '</div>';
             }
             return '<div class="rl-rv-dept">' + head + body + '</div>';

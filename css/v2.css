@@ -611,7 +611,14 @@
 .modal.modal-wide .modal-body {
   flex: 1; overflow: auto; padding: 28px; background: var(--gray-50);
   display: flex; justify-content: center; align-items: flex-start;
+  /* 시연 투어 안내(.dy-tour-inline)가 이 flex 행에 끼어 98px 열로 눌리며
+     열 글자마다 줄바꿈됐다. 감싸기를 켜 두면 안내가 첫 줄을 통째로 쓰고
+     문서는 다음 줄에서 그대로 가운데 정렬된다(안내가 없을 때 동작은 동일). */
+  flex-wrap: wrap;
 }
+/* 화면이 .modal-body 를 flex·grid 로 바꿔도 안내는 한 줄을 통째로 차지한다 —
+   주입 위치(본문 맨 위)는 그대로 두고 배치만 못박는다. */
+.modal-body > .dy-tour-inline { flex: 0 0 100%; width: 100%; grid-column: 1 / -1; }
 /* 폐기된 .pdf-full-panel 이 갖고 있던 sm 규칙이 wide 로 옮겨오며 유실됐다 —
    없으면 375px 에서 문서 좌우가 잘린다. 교육 결재문서에도 함께 이득. */
 @media (max-width: 559px) {
@@ -1935,8 +1942,11 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .dy-tour-progress { flex: 1; font-size: var(--fs-12); color: var(--text-gray); }
 .edu-tour-inline,
 .dy-tour-inline { margin-bottom: 14px; padding: 11px 12px; border: 1px solid var(--brand-100); border-radius: var(--radius-button); background: var(--brand-50); color: var(--main-dark2); font-size: var(--fs-12); line-height: 1.55; }
-.edu-tour-inline b,
-.dy-tour-inline b { display: block; margin-bottom: 3px; }
+/* 맨 앞의 '시연 포인트' 라벨만 줄을 차지한다 — 종전에는 모든 <b> 가 block 이라
+   안내문 안의 강조("…뒤에서 <b>공문 기안 조건</b>을 채우느라…")가 전부 줄바꿈돼
+   한 문장이 대여섯 줄로 쪼개졌다. 3개 투어의 거의 모든 modalGuide 가 해당됐다. */
+.edu-tour-inline > b:first-child,
+.dy-tour-inline > b:first-child { display: block; margin-bottom: 3px; }
 
 @media (max-width: 559px) {
 .edu-tour-panel,

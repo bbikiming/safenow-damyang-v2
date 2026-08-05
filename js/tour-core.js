@@ -491,7 +491,13 @@
             var s = STEPS[i];
             /* '내 역할'·'조회' 관점에서는 페르소나를 바꾸지 않는다 —
                바꾸면 그 순간 '내 역할'이 아니게 된다. */
-            var switched = (viewMode() === 'all') && applyPersona(s);
+            var isAll = viewMode() === 'all';
+            /* 전체 흐름 중 페르소나를 바꾸기 **전에** 관점을 고정한다 (MUST).
+               defaultView() 는 로그인 페르소나에서 파생하므로, 3단계에서 부서
+               담당자로 바꾸는 순간 관점이 조용히 'mine' 으로 뒤집혀 그 뒤 4·5·7·8·9
+               단계(주관부서 몫)를 건너뛴다 — 발표용 9단계 시연이 3단계에서 끊겼다. */
+            if (isAll) { try { sessionStorage.setItem(VKEY, 'all'); } catch (e) {} }
+            var switched = isAll && applyPersona(s);
             if (!onStepPage(s) || switched) { location.href = s.href(); return; }
             renderStep();
         }
@@ -511,12 +517,22 @@
         }
         function stop() {
             clearIdx();
+            /* 고정해 둔 관점도 함께 푼다 — 다음 시연은 그때의 로그인 페르소나에서
+               다시 파생해야 한다("로그인 페르소나가 기본값을 정한다"). */
+            try { sessionStorage.removeItem(VKEY); } catch (e) {}
             lastSig = '';
             removePanel();
             document.querySelectorAll('.dy-tour-focus').forEach(function (el) { el.classList.remove('dy-tour-focus'); });
         }
         /* 전 과정이 끝나 있으면 처음부터 — 반복 시연의 기본 동작 */
-        function start() { V().closeModal(); var c = currentIdx(); go(c >= STEPS.length ? 0 : c); }
+        function start() {
+            V().closeModal();
+            /* 새 시연은 지금 접속한 페르소나 기준으로 관점을 다시 정한다 —
+               지난 run 이 고정해 둔 값을 물려받으면 부서 담당자에게 9단계가 뜬다. */
+            try { sessionStorage.removeItem(VKEY); } catch (e) {}
+            var c = currentIdx();
+            go(c >= STEPS.length ? 0 : c);
+        }
 
         /* 진입 바 문구를 관점에 맞춘다 — 부서 담당자에게 '9단계'라고 하면
            자기가 9번 뭘 해야 하는 줄 안다. 실제로 하는 건 2단계다. */

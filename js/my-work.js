@@ -1130,6 +1130,17 @@
         state.cmplPhoto = (state.cmplPhotos || []).map(function (f) { return f.name; }).join(', ');
         complete(state.cmplId);
     }
+    /* 시연용 개선 후 사진 — 위 주석대로 실사용은 실제 파일이 맞다. 다만 무대에서
+       OS 파일 대화상자를 열면 느리고 발표자 개인 파일이 그대로 노출된다.
+       시드가 이미 쓰는 썸네일(DYRSK.demoShot)을 그대로 넣어 증빙 화면까지 보여준다.
+       시연 투어 6단계의 [시연용 사진 넣기] 가 부른다 — 실제 입력란은 그대로 남는다. */
+    function pickAfterDemo() {
+        captureCmpl();
+        var thumb = D().demoShot ? D().demoShot('after') : '';
+        var m = D().improvementOf(state.cmplId) || {};
+        var nm = ((m.hazard && m.hazard.name) || '개선조치').replace(/\s+/g, '_').slice(0, 20);
+        onPickAfter([{ name: nm + '_개선후.jpg', size: 184320, type: 'image/jpeg', w: 1600, h: 1200, thumb: thumb }]);
+    }
     function afterShotsHtml() {
         var arr = state.cmplPhotos || [];
         if (!arr.length) return '';
@@ -1230,6 +1241,18 @@
     function dlForm(name) { toast('설문조사표 다운로드: ' + name + ' (프로토타입 — 실제 파일은 미연결)'); }
     function onPickReport(files) { RPT.files = files.slice(0, 1); renderReport(); }
     function delReport(n) { RPT.files.splice(n, 1); renderReport(); }
+    /* 시연용 파일 이름 — 무대에서 OS 파일 대화상자를 여는 건 느리고 위험하다
+       (발표자의 개인 파일 목록이 그대로 노출된다). 개선 후 '사진'과 달리 작성본은
+       파일 자체가 증빙이 아니라 제출 사실이 증빙이라 이름만으로도 흐름이 성립한다.
+       시연 투어 3단계의 [시연용 파일 이름 넣기] 가 부른다. */
+    function pickReportDemo() {
+        if (!RPT) return;
+        var a = D().assessmentOf(RPT.aid);
+        var form = (a && ((a.depts || []).filter(function (x) { return x.deptId === RPT.deptId; })[0] || {}).surveyFile)
+            || (a && a.files && a.files.surveyAll) || '유해위험요인설문조사표.hwpx';
+        RPT.files = [{ name: D().deptName(RPT.deptId) + '_' + form.replace(/^.*_/, '') }];
+        renderReport();
+    }
     function doReport() {
         if (!RPT.files.length) { toast('작성한 설문조사표 파일을 선택하세요.'); return; }
         var p = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
@@ -1256,8 +1279,9 @@
     }
 
     global.MYWORK = {
-        onPickAfter: onPickAfter, delAfter: delAfter,
+        onPickAfter: onPickAfter, delAfter: delAfter, pickAfterDemo: pickAfterDemo,
         openReport: openReport, onPickReport: onPickReport, delReport: delReport, doReport: doReport, dlForm: dlForm,
+        pickReportDemo: pickReportDemo,
         openDone: openDone, toggleDoneMore: toggleDoneMore,
         init: init, setDept: setDept, setView: setView,
         setStatus: setStatus, setCat: setCat, setSort: setSort, sync: sync,
