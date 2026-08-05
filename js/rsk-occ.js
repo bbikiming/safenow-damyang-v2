@@ -452,7 +452,12 @@
         var byEl = document.getElementById('roc-rv-by');
         var name = ((nameEl && nameEl.value) || '').trim();
         if (!name) { toast('파일명을 입력하세요.'); if (nameEl) nameEl.focus(); return; }
-        D().setOccReviewFile(id, name, ((byEl && byEl.value) || '').trim());
+        /* 이 단계가 남기는 것은 '누가 검토했는가'다 — 이름 없이 검토완료로 넘기면
+           외부 용역 안전관리자의 검토 사실을 소명할 수 없고, 이력에도 '안전관리자'
+           라는 총칭만 남는다. 파일명과 같은 강도로 막는다. */
+        var by = ((byEl && byEl.value) || '').trim();
+        if (!by) { toast('검토한 안전관리자 이름을 입력하세요.'); if (byEl) byEl.focus(); return; }
+        D().setOccReviewFile(id, name, by);
         V().closeModal(); toast('안전관리자 검토파일 등록 · 검토완료 처리'); render();
     }
     function clearReviewFile(id) {

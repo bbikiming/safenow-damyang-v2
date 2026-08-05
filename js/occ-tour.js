@@ -152,7 +152,9 @@
             ],
             desc: '정기평가에서 내려온 개선조치와 같은 화면·같은 방식으로 마무리합니다. 출처만 다를 뿐 처리는 하나로 모입니다.',
             script: '부서 담당자는 정기든 수시든 내 할일 한 곳에서 끝냅니다 — 어디서 온 일인지 찾아다닐 필요가 없습니다.',
-            modalGuide: '개선 후 사진과 서명이 모두 있어야 저장됩니다.',
+            modalGuide: '조치 내용을 적고 사진을 올리세요 — <b>사진과 서명이 모두 있어야</b> 저장됩니다.',
+            /* 정기 6단계와 같은 모달·같은 이유 — 무대에서 OS 파일 대화상자를 열지 않는다 */
+            modalAction: { label: '시연용 사진 넣기', fn: 'MYWORK.pickAfterDemo()' },
             actionLabel: '내 할일에서 개선조치 보기',
             action: function () { location.href = 'my-work.html?dept=' + demoDept() + '&cat=improve'; },
             done: function () { var c = impCount(); return c.total > 0 && c.done === c.total; },
