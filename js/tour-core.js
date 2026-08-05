@@ -358,13 +358,22 @@
             }, 0);
         }
 
-        /* 모달이 뜨면 패널을 숨기고, 모달 본문 맨 위에 그 단계의 시연 포인트를 넣는다 (§1) */
+        /* 모달이 뜨면 패널을 숨기고, 모달 본문 맨 위에 그 단계의 시연 포인트를 넣는다 (§1)
+
+           헤더 드롭다운(알림·권한 전환)도 같이 본다 — 패널은 --z-fab(90),
+           드롭다운은 --z-nav+2(32) 라 패널이 위에 있고, 실제로 알림 목록의
+           오른쪽을 가렸다. 레이어를 뒤집는 대신 **셸 크롬이 뜨면 투어 패널이
+           접힌다**는 모달과 같은 규칙으로 맞춘다. */
+        function chromeOpen() {
+            return !!document.querySelector('.dy-ntf-dropdown.is-open, .dy-role-dropdown.is-open');
+        }
         function syncModalState() {
             var panel = document.getElementById(PANEL_ID);
             var modal = document.getElementById('v2-modal');
+            var hide = !!modal || chromeOpen();
             if (panel) {
-                panel.hidden = !!modal;
-                if (modal) panel.setAttribute('aria-hidden', 'true'); else panel.removeAttribute('aria-hidden');
+                panel.hidden = hide;
+                if (hide) panel.setAttribute('aria-hidden', 'true'); else panel.removeAttribute('aria-hidden');
             }
             if (modal && active()) {
                 var s = STEPS[stateIdx()];
@@ -597,11 +606,21 @@
             boot: boot, start: start, stop: stop, openFlow: openFlow, goFromFlow: goFromFlow,
             go: go, next: next, prev: prev, action: action,
             setView: setView, view: viewMode,
-            active: active, STEPS: STEPS
+            active: active, STEPS: STEPS,
+            /* 셸(layout.js)이 드롭다운을 여닫을 때 부른다 — 드롭다운은 class 토글이라
+               MutationObserver(childList only)가 못 잡는다. attributes 를 관찰하면
+               classList.add 가 관찰자를 다시 깨워 루프 위험이 생기므로 명시 호출로 둔다. */
+            _syncChrome: syncModalState
         };
         REG.push(inst);
         return inst;
     }
 
-    global.DYTOUR = { define: define, josa: josa, personaLabel: personaLabel, curPersonaId: curPersonaId };
+    /* 셸이 부르는 훅 — 열려 있는 투어가 있으면 패널 노출 상태를 다시 맞춘다 */
+    function syncChrome() { REG.forEach(function (t) { if (t.active()) t._syncChrome(); }); }
+
+    global.DYTOUR = {
+        define: define, josa: josa, personaLabel: personaLabel, curPersonaId: curPersonaId,
+        syncChrome: syncChrome
+    };
 })(window);

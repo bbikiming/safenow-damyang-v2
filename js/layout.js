@@ -184,6 +184,12 @@
             window.location.reload();
         }
     }
+    /* 헤더 드롭다운이 열리면 시연 투어 패널을 접는다 — 패널은 --z-fab(90),
+       드롭다운은 --z-nav+2(32) 라 패널이 알림 목록의 오른쪽을 가렸다.
+       레이어를 뒤집는 대신 '셸 크롬이 뜨면 패널이 접힌다'는 모달과 같은 규칙을 쓴다.
+       class 토글이라 투어의 MutationObserver(childList only)가 못 잡으므로 명시 호출. */
+    function chromeSync() { if (window.DYTOUR && window.DYTOUR.syncChrome) window.DYTOUR.syncChrome(); }
+
     function roleOpen() {
         const d = document.getElementById('dy-role-dropdown');
         const btn = document.getElementById('dy-role-btn');
@@ -193,6 +199,7 @@
         d.classList.add('is-open');
         d.setAttribute('aria-hidden', 'false');
         if (btn) btn.setAttribute('aria-expanded', 'true');
+        chromeSync();
     }
     function roleClose() {
         const d = document.getElementById('dy-role-dropdown');
@@ -201,6 +208,7 @@
         d.classList.remove('is-open');
         d.setAttribute('aria-hidden', 'true');
         if (btn) btn.setAttribute('aria-expanded', 'false');
+        chromeSync();
     }
 
     /* =========================================================================
@@ -880,11 +888,13 @@
         const close = () => {
             dropdown.classList.remove('is-open');
             dropdown.setAttribute('aria-hidden', 'true');
+            chromeSync();
         };
         const open = () => {
             roleClose();  /* 헤더 드롭다운은 한 시점에 1개만 */
             dropdown.classList.add('is-open');
             dropdown.setAttribute('aria-hidden', 'false');
+            chromeSync();
         };
 
         btn.addEventListener('click', (e) => {
