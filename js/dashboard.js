@@ -251,7 +251,7 @@
             { name: '안전·보건 목표와 경영방침 설정',          basis: '시행령 §4 1호', cycle: '상시 게시',    st: '완료',   href: 'menu.html?m=policy' },
             { name: '안전보건 업무 전담조직 구성·운영',        basis: '시행령 §4 2호', cycle: '상시',         st: '완료',   href: 'menu.html?m=org' },
             { name: '유해·위험요인 확인·개선 (위험성평가)',    basis: '시행령 §4 3호', cycle: '반기 1회 점검', st: '진행',   href: 'rsk-list.html', due: H2_DUE },
-            { name: '재해예방 예산 편성·집행',                 basis: '시행령 §4 4호', cycle: '연간·상시',    st: '진행',   href: 'bgt-main.html', note: '집행률 64.5%' },
+            { name: '재해예방 예산 편성·집행',                 basis: '시행령 §4 4호', cycle: '연간·상시',    st: '진행',   href: 'bgt-main.html', note: '집행률 39%' },
             { name: '안전보건관리책임자 등 권한 부여·평가',    basis: '시행령 §4 5호', cycle: '반기 1회 평가', st: '완료',   href: 'evl-eval.html', due: H2_DUE },
             { name: '안전관리자 등 전문인력 배치',             basis: '시행령 §4 6호', cycle: '상시',         st: '완료',   href: 'menu.html?m=org' },
             { name: '종사자 의견청취 절차 운영',               basis: '시행령 §4 7호', cycle: '반기 1회 점검', st: '완료',   href: 'menu.html?m=opinion', note: '산보위 갈음' },
@@ -355,12 +355,15 @@
             '</div>';
 
         /* 예산 집행 도넛 — 항목별 분해 (시행령 §4 4호 "편성·집행" 증빙 관점) */
+        /* 예산 총괄표(DYBGT)와 같은 값이어야 한다 — 이 카드의 [예산 총괄표] 버튼이
+           바로 그 화면을 연다. 종전 리터럴(편성 4.20억·집행률 64.5%)은 시드
+           실집계(편성 630,000천원 · 집행 243,000천원 · 39%)와 어긋나, 시연 중
+           버튼 한 번에 두 숫자가 나란히 드러났다. */
         const BGT = [
-            { name: '시설 개선',      amt: '1.42억', pct: 34,   color: 'var(--main)' },
-            { name: '안전보건교육',   amt: '0.63억', pct: 15,   color: 'var(--status-info-fg)' },
-            { name: '보호구·장비',    amt: '0.38억', pct: 9,    color: 'var(--status-warning-fg)' },
-            { name: '진단·컨설팅',    amt: '0.28억', pct: 6.5,  color: 'var(--status-purple-fg)' },
-            { name: '미집행',         amt: '1.49억', pct: 35.5, color: 'var(--gray-200)' },
+            { name: '시설(소방·안전난간)', amt: '1.86억', pct: 29.5, color: 'var(--main)' },
+            { name: '장비',              amt: '0.20억', pct: 3.2,  color: 'var(--status-info-fg)' },
+            { name: '안전장구류',         amt: '0.37억', pct: 5.9,  color: 'var(--status-warning-fg)' },
+            { name: '미집행',            amt: '3.87억', pct: 61.4, color: 'var(--gray-200)' },
         ];
         let acc2 = 0;
         const donutStops = BGT.map(s => {
@@ -372,18 +375,18 @@
             '<span>' + E(s.name) + '</span><b>' + E(s.amt) + '</b></div>').join('');
         const budgetCard =
             '<div class="card">' +
-              '<div class="card-header"><span class="card-title">안전보건 예산 집행 — 시행령 §4 4호</span>' +
+              '<div class="card-header"><span class="card-title">안전보건 예산 집행 — 시행령 §4 4호</span><span class="dsh-seed-note">예산 총괄표 시드 기준</span>' +
                 '<a class="btn btn-sm btn-secondary" href="bgt-main.html">예산 총괄표</a></div>' +
               '<div class="card-body">' +
                 '<div class="dsh-donut-wrap">' +
-                  '<div class="dsh-donut" data-center="64.5%" role="img"' +
-                    ' aria-label="예산 집행률 64.5% — 시설 개선 1.42억, 교육 0.63억, 보호구 0.38억, 진단 0.28억, 미집행 1.49억"' +
+                  '<div class="dsh-donut" data-center="39%" role="img"' +
+                    ' aria-label="예산 집행률 39% — 시설 1.86억, 장비 0.20억, 안전장구류 0.37억, 미집행 3.87억"' +
                     ' style="background:conic-gradient(' + donutStops + ');"></div>' +
                   '<div class="dsh-donut-legend">' + donutLegend + '</div>' +
                 '</div>' +
-                '<div class="dsh-duty-row"><span>2026년 편성액</span><b>4.20억 원</b></div>' +
-                '<div class="dsh-duty-row"><span>집행액 (6월 기준)</span><b>2.71억 원</b></div>' +
-                '<div class="dsh-duty-row"><span>집행 부진 항목 (진단·컨설팅)</span>' + chip('주의') + '</div>' +
+                '<div class="dsh-duty-row"><span>2026년 편성액</span><b>6.30억 원</b></div>' +
+                '<div class="dsh-duty-row"><span>집행액</span><b>2.43억 원</b></div>' +
+                '<div class="dsh-duty-row"><span>집행 미개시 (환경과·담양하수처리장 2건)</span>' + chip('주의') + '</div>' +
               '</div>' +
             '</div>';
 
@@ -408,6 +411,21 @@
     /* =====================================================================
      * super — 실과장·사업소장·읍면장(관리감독자) 대시보드 (소관 부서 스코프)
      * ===================================================================== */
+    /* 교육 이수율은 이수현황 화면과 같은 값이어야 한다 — 이 숫자를 누르면
+       edu-status.html?dept=… 로 바로 넘어간다. 종전 시드(96/74/82)는 실집계와
+       2~3배 어긋나, 눌러 보는 순간 드러났다. DYEDU 가 없으면 시드로 떨어진다. */
+    function eduRate(deptId) {
+        try {
+            var ED = global.DYEDU;
+            if (ED && ED.deptSummary) {
+                var row = ED.deptSummary(global.DYV2.today()).filter(function (r) { return r.deptId === deptId; })[0];
+                if (row) return row.pct;
+            }
+        } catch (e) {}
+        var sd = SUPER_SEED[deptId];
+        return sd ? sd.eduRate : 0;
+    }
+
     function superView(p) {
         const seed = SUPER_SEED[p.deptId] || SUPER_SEED.safety;
         const impDelay = staffCounts(p.deptId).over;   /* 실집계 — staffView 와 같은 원본 */
@@ -428,7 +446,7 @@
                 '<a class="dsh-hero-stat' + (overdueN ? ' is-danger' : '') + '" href="my-work.html"><b>' + overdueN + '<em>건</em></b><span>기한 초과</span></a>' +
                 /* '진행 업무'라 부르면 미착수·기한초과 행까지 진행 중으로 읽힌다 — 아래 표와 같은 모수다 */
                 '<a class="dsh-hero-stat" href="my-work.html"><b>' + seed.tasks.length + '<em>건</em></b><span>부서 업무</span></a>' +
-                '<a class="dsh-hero-stat" href="edu-status.html?dept=' + E(p.deptId) + '"><b>' + seed.eduRate + '<em>%</em></b><span>교육 이수율</span></a>' +
+                '<a class="dsh-hero-stat" href="edu-status.html?dept=' + E(p.deptId) + '"><b>' + eduRate(p.deptId) + '<em>%</em></b><span>교육 이수율</span></a>' +
                 '<a class="dsh-hero-stat" href="rsk-imp.html"><b>' + seed.imp.open + '<em>건</em></b><span>개선조치 미완료</span></a>' +
               '</div>' +
             '</div>';
@@ -550,8 +568,8 @@
               '<div class="card-header"><span class="card-title">부서원 교육 이수 현황</span>' +
                 '<a class="btn btn-sm btn-secondary" href="edu-status.html?dept=' + E(p.deptId) + '">이수현황</a></div>' +
               '<div class="card-body">' +
-                '<div class="dsh-duty-sum"><div class="progress"><div class="progress-bar ' + barCls(seed.eduRate) + '" style="width:' + seed.eduRate + '%"></div></div>' +
-                  '<span>반기 필요 ' + eh.need + 'h 중 ' + eh.done + 'h 인정 (' + seed.eduRate + '%)</span></div>' +
+                '<div class="dsh-duty-sum"><div class="progress"><div class="progress-bar ' + barCls(eduRate(p.deptId)) + '" style="width:' + eduRate(p.deptId) + '%"></div></div>' +
+                  '<span>부서원 이수 완료 ' + eduRate(p.deptId) + '% · 반기 필요 ' + eh.need + 'h</span></div>' +
                 eduRows +
               '</div>' +
             '</div>';

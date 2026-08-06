@@ -96,7 +96,16 @@
         {
             key: 'apply', label: '신청', page: 'edu-reg.html',
             persona: ownerP, href: function () { return 'edu-reg.html'; },
-            selector: '[data-tour="apply"]',
+            /* 접수 중 집합교육이 여러 건이면 [data-tour="apply"] 가 카드마다 붙고
+               (edu-reg.js) 목록이 일자 내림차순이라 시드 8월 교육이 먼저 걸린다.
+               방금 만든 교육이 아니라 남의 카드를 가리키면, 안내대로 눌러도
+               done() 은 계속 false 라 시연이 2단계에서 멈춘다.
+               엔진이 selector 를 매번 새로 읽으므로 getter 로 추적 대상만 좁힌다. */
+            get selector() {
+                var id = courseId();
+                return id ? '.edu-course-card[data-course-id="' + id + '"] [data-tour="apply"]'
+                          : '[data-tour="apply"]';
+            },
             title: '부서가 대상자를 골라 등록부 제출',
             where: '그 교육 카드의 <b>[＋ 참석자 등록부 등록]</b>',
             clickPath: [

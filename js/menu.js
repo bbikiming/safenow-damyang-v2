@@ -34,8 +34,11 @@
     /* ── 헤더 ── */
     document.title = META.label + ' - 담양군 중대재해예방통합관리시스템 v2';
     document.getElementById('sbm-title').textContent = META.label;
+    /* '문서 N건' 은 이 대메뉴에 걸린 **업무문서** 수인데, 화면 표에는 다른 축이
+       나온다(경영방침은 방침 버전 3건). 나란히 놓이면 "10건이라면서 3개만 보이네요"로
+       읽힌다 — 무엇을 센 숫자인지 밝힌다. */
     document.getElementById('sbm-subtitle').textContent =
-        '안전보건관리체계 > ' + META.label + ' · ' + META.sfr + ' · 문서 ' + MY_DOCS.length + '건';
+        '안전보건관리체계 > ' + META.label + ' · ' + META.sfr + ' · 관련 업무문서 ' + MY_DOCS.length + '건';
 
     /* ── 의견청취: 대메뉴 승격 — sub 파라미터로 3개 SNB 페이지 분기(voice/committee/council) ── */
     const OPN_SUB_MAP = { voice: '의견청취·건의함', committee: '산업안전보건위원회', council: '협의체·점검표' };
