@@ -897,6 +897,30 @@
         if (!String(o.signedBy || o.by || '').trim()) return '완료 확인 서명(이름)을 입력하세요.';
         return '';
     }
+    /* 담당자·기한 변경 (docs/planning/확정-미결사항… §8)
+       "지정·변경 = 주관부서 담당자만 · 모든 변경은 이력에 남긴다"
+       **사유 없이는 바꿀 수 없다.** 기한이 조용히 밀리면 그 기한은 관리 수단이 아니게 된다.
+       화면 권한 판정은 호출부(RSKLIST.canManage)가 하고 여기서는 값과 이력만 다룬다. */
+    function amendImprovement(id, patch, reason, by) {
+        var d = load();
+        var m = (d.improvements || []).filter(function (x) { return x.id === id; })[0];
+        if (!m) return null;
+        if (!String(reason || '').trim()) return null;   /* 사유 필수 */
+        var log = [];
+        if (patch.assigned_to !== undefined && patch.assigned_to !== m.assigned_to) {
+            log.push('담당자 ' + (m.assigned_to || '미지정') + ' → ' + (patch.assigned_to || '미지정'));
+            m.assigned_to = patch.assigned_to;
+        }
+        if (patch.due !== undefined && patch.due !== m.due) {
+            log.push('기한 ' + (m.due || '미지정') + ' → ' + (patch.due || '미지정'));
+            m.due = patch.due; m.due_date = patch.due;
+        }
+        if (!log.length) return m;                       /* 바뀐 것이 없으면 이력도 남기지 않는다 */
+        m.history = m.history || [];
+        m.history.push({ type: 'AMEND', at: nowTs(), by: by || '', memo: log.join(' · ') + ' — 사유: ' + String(reason).trim() });
+        save(); return m;
+    }
+
     function completeImprovement(id, actionContent, by) {
         var m = improvementOf(id); if (!m) return null;
         var o = (actionContent && typeof actionContent === 'object')
@@ -1115,6 +1139,9 @@
             year: o.year, deptId: o.deptId, reason: o.reason,
             date: o.date, desc: o.desc || '',
             files: o.files || [], status: 'REGISTERED',
+            /* 재해 발생(고시 §15② 5호) 전용 — 5호만 "작업을 재개하기 전에" 라는 단서가 붙어
+               재개 예정일이 곧 법정 기한이 된다. 다른 사유에는 비어 있다. */
+            accident: o.accident || '', resumeDate: o.resumeDate || '',
             /* 부서 담당자가 이 자리에서 적은 유해위험요인 — 아래에서 개선조치로 바로 떨어진다 */
             hazardCount: 0,
             /* 안전관리자 검토 — 아래 setOccReviewFile 참고 */
@@ -1296,7 +1323,7 @@
         /* 개선조치 */
         improvements: improvements, improvementOf: improvementOf, improvementsFor: improvementsFor,
         addImprovement: addImprovement, saveImprovement: saveImprovement,
-        completeImprovement: completeImprovement, completionError: completionError, markReassessed: markReassessed,
+        completeImprovement: completeImprovement, amendImprovement: amendImprovement, completionError: completionError, markReassessed: markReassessed,
         pushImpHistory: pushImpHistory, isOverdue: isOverdue, nextImpId: nextImpId,
         /* 수시 평가 */
         occasionals: occasionals, occasionalOf: occasionalOf, occasionalYears: occasionalYears,

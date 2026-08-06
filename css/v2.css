@@ -2896,6 +2896,23 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .roc-hz-del:hover { border-color: var(--status-danger-border); color: var(--status-danger-fg); }
 .roc-hz-del:focus-visible { outline: 2px solid var(--main-dark); outline-offset: 2px; }
 /* 라벨 | 입력 2열 — 좁아지면 세로로 쌓인다 */
+/* 재해 사유(고시 §15② 5호) 전용 안내 — 다른 사유엔 없는 요건이라 눈에 띄게 둔다 */
+/* 개선조치 담당자·기한 변경 (확정 기록 §8) — 변경 사실이 카드에 남는다 */
+.rl-imp-amend {
+  padding: 2px 9px; border: 1px solid var(--card-line); border-radius: var(--radius-full);
+  background: var(--surface); color: var(--main-dark); font-size: var(--fs-12);
+  font-weight: var(--fw-bold); cursor: pointer; font-family: inherit;
+}
+.rl-imp-amend:hover { border-color: var(--main); background: var(--brand-50); }
+.rl-imp-amendlog { color: var(--status-warning-fg); font-size: var(--fs-12); }
+.roc-acc-note {
+  padding: 9px 11px; border-radius: var(--radius-button);
+  background: var(--status-danger-bg); border: 1px solid var(--status-danger-border);
+  color: var(--status-danger-fg); font-size: var(--fs-12); line-height: 1.55;
+}
+.roc-acc-line { margin-top: 4px; font-size: var(--fs-12); color: var(--status-danger-fg); }
+.roc-acc-line span { color: var(--text-gray); }
+.roc-acc-note span { color: var(--text-gray); font-weight: var(--fw-regular, 400); }
 .roc-hz-grid { display: grid; grid-template-columns: 108px minmax(0, 1fr); gap: 8px 10px; align-items: start; }
 .roc-hz-grid .form-label { margin: 6px 0 0; font-size: var(--fs-12); }
 .roc-hz-shots { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }

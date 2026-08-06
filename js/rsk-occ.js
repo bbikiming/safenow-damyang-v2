@@ -183,6 +183,11 @@
             '<td><span class="roc-reason ' + o.reason + '">' + esc(rMeta.label) + '</span></td>' +
             '<td>' + esc(D().deptName(o.deptId)) + '</td>' +
             '<td><div>' + esc(o.desc || '-') + '</div>' +
+                /* 재해 건은 작업 재개 예정일이 곧 법정 기한이다 — 목록에서 바로 보여야
+                   담당자가 "언제까지 끝내야 하는지"를 열어보지 않고 안다 */
+                (o.resumeDate
+                    ? '<div class="roc-acc-line"><b>작업 재개 예정 ' + esc(o.resumeDate) + '</b>' +
+                      ' <span>그 전까지 평가 완료</span></div>' : '') +
                 (files ? '<div class="roc-files">첨부 ' + esc(files) + '</div>' : '') + '</td>' +
             '<td>' + impCell(o) + '</td>' +
             '<td>' + reviewCell + '</td>' +
@@ -230,6 +235,7 @@
             deptId: prefillDeptId || (mine && depts.some(function (d) { return d.id === mine; }) ? mine : '') ||
                     (depts[0] && depts[0].id) || '',
             reason: reason || 'ACCIDENT', date: D().today(), desc: '', files: [],
+            accident: '', resumeDate: '',   /* 재해 사유 전용 (고시 §15② 5호 단서) */
             /* 실시 결과 — 유해위험요인과 감소대책. 여기 적은 행이 개선조치가 된다. */
             hazards: [newHazard()],
             due: ''
@@ -237,6 +243,26 @@
         renderRegister();
     }
     function newHazard() { return { name: '', cause: '', action: '', owner: '', beforePhotos: [] }; }
+
+    /* 재해 발생(고시 §15② 5호)만 추가 필수 항목을 둔다 (docs/planning/확정-미결사항… §2)
+       5호에는 다른 사유에 없는 단서가 붙어 있다 —
+         "재해발생 작업을 대상으로 **작업을 재개하기 전에** 실시하여야 한다"
+       작업 재개 시점이 법정 기한이므로 그 날짜를 남기지 않으면 기한을 셀 수 없고,
+       무엇 때문에 멈춘 작업인지도 함께 있어야 재개 판단을 소명할 수 있다.
+       다른 사유에는 붙이지 않는다 — 없는 요건을 만들면 등록이 무거워질 뿐이다. */
+    function isAccident() { return F && F.reason === 'ACCIDENT'; }
+    function accidentRowsHtml() {
+        if (!isAccident()) return '';
+        return '<div class="roc-modal-row roc-acc-note">' +
+                '<b>재해 발생 건은 작업을 재개하기 전에 평가를 마쳐야 합니다.</b> ' +
+                '<span>위험성평가 고시 §15② 단서 — 다른 사유에는 없는 요건입니다.</span></div>' +
+            '<div class="roc-modal-row"><label class="form-label" for="roc-r-acc">재해 개요 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                '<textarea class="form-textarea" id="roc-r-acc" rows="2"' +
+                    ' placeholder="언제·어디서·누가·어떻게 다쳤는지와 멈춘 작업">' + esc(F.accident || '') + '</textarea></div>' +
+            '<div class="roc-modal-row"><label class="form-label" for="roc-r-resume">작업 재개 예정일 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                '<input type="date" class="form-input" id="roc-r-resume" value="' + esc(F.resumeDate || '') + '" style="max-width:200px;">' +
+                '<p class="file-hint">이 날짜 전까지 평가를 마쳐야 합니다.</p></div>';
+    }
 
     /* ===== 실시 결과 행 — 요인 / 원인 / 감소대책 / 담당자 / 개선 전 사진 ===== */
     function hazRowHtml(h, i) {
@@ -293,7 +319,9 @@
                     '<button type="button" class="btn btn-outline" onclick="ORGPICK.toggle(\'roc-r-deptfield\',\'deptId\',\'RSKOCC.pickDept\')">조직도</button>' +
                 '</div></div></div>' +
             '<div class="roc-modal-row"><label class="form-label" for="roc-r-reason">실시 사유 <span style="color:var(--status-danger-fg)">*</span></label>' +
-                '<select class="form-select" id="roc-r-reason">' + reasonOpts + '</select>' +
+                /* 재해 사유를 고르면 전용 필수 칸이 나타나야 하므로 그 자리에서 다시 그린다.
+                   재렌더 전 captureRegister() 로 적어 둔 값을 반드시 보존한다. */
+                '<select class="form-select" id="roc-r-reason" onchange="RSKOCC.onReasonChange()">' + reasonOpts + '</select>' +
                 '<p class="file-hint">' + esc((D().OCC_REASONS[F.reason] || {}).desc || '') + '</p></div>' +
             /* 작성 양식은 담당자가 직접 위험도 계산표를 짜지 않게 하려고 제공한다 —
              * 발주처: "부서마다 이런 걸 작성을 못해요. 실질적으로 능력이 안 돼요." */
@@ -304,6 +332,7 @@
                 '<input type="date" class="form-input" id="roc-r-date" value="' + esc(F.date) + '" style="max-width:200px;"></div>' +
             '<div class="roc-modal-row"><label class="form-label">내용 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 '<textarea class="form-textarea" id="roc-r-desc" rows="3" placeholder="사고·변경 사항의 경위와 필요한 위험성 재평가 요청 사항">' + esc(F.desc) + '</textarea></div>' +
+            accidentRowsHtml() +
             '<div class="roc-modal-row"><label class="form-label">첨부파일</label>' +
                 '<div>' + fileList + '</div>' +
                 '<button type="button" class="btn btn-outline btn-sm" style="margin-top:6px;" onclick="RSKOCC.regAddFile()">＋ 파일 첨부 (프로토타입)</button>' +
@@ -335,6 +364,7 @@
         F.deptId = id;
         var inp = document.getElementById('roc-r-deptname'); if (inp) inp.value = name;
     }
+    function onReasonChange() { captureRegister(); renderRegister(); }
     function captureRegister() {
         /* 부서는 조직도 선택 시 F.deptId 에 이미 반영되어 있다(읽기전용 입력이라 DOM 에서 읽지 않는다) */
         var el = function (id) { return document.getElementById(id); };
@@ -342,6 +372,8 @@
         if (el('roc-r-date')) F.date = el('roc-r-date').value;
         if (el('roc-r-desc')) F.desc = (el('roc-r-desc').value || '').trim();
         if (el('roc-r-due')) F.due = el('roc-r-due').value;
+        if (el('roc-r-acc')) F.accident = (el('roc-r-acc').value || '').trim();
+        if (el('roc-r-resume')) F.resumeDate = el('roc-r-resume').value;
         /* 재렌더 전에 반드시 부른다 — 안 그러면 사진 한 장 올릴 때마다 적어 둔 글이 날아간다 */
         F.hazards.forEach(function (h, i) {
             if (el('roc-hz-n' + i)) h.name = el('roc-hz-n' + i).value;
@@ -389,6 +421,11 @@
         if (!canRegister()) { toast('수시평가 등록은 부서 담당자 본인이 수행합니다.'); return; }
         captureRegister();
         if (!F.deptId || !F.reason || !F.date || !F.desc) { toast('부서·사유·발생일·내용을 모두 입력하세요.'); return; }
+        /* 재해 건은 작업 재개 시점이 곧 법정 기한이라 비워 두면 기한을 셀 수 없다 */
+        if (isAccident()) {
+            if (!F.accident) { toast('재해 개요를 입력하세요.'); var a = document.getElementById('roc-r-acc'); if (a) a.focus(); return; }
+            if (!F.resumeDate) { toast('작업 재개 예정일을 입력하세요 — 그 전까지 평가를 마쳐야 합니다.'); var r2 = document.getElementById('roc-r-resume'); if (r2) r2.focus(); return; }
+        }
         var hz = F.hazards.filter(function (h) {
             return String(h.name || '').trim() && String(h.action || '').trim();
         });
@@ -401,6 +438,7 @@
         var it = D().addOccasional({
             year: state.year, deptId: F.deptId, reason: F.reason,
             date: F.date, desc: F.desc, files: F.files,
+            accident: F.accident, resumeDate: F.resumeDate,
             hazards: hz, due: F.due
         });
         V().closeModal();
@@ -501,7 +539,7 @@
     global.RSKOCC = {
         init: init, setYear: setYear, setReason: setReason,
         /* 등록은 반드시 실시 사유 선택을 거친다 (2026-07-30 회의) */
-        openReasonGate: openReasonGate, downloadForm: downloadForm,
+        openReasonGate: openReasonGate, downloadForm: downloadForm, onReasonChange: onReasonChange,
         openRegister: openRegister, pickDept: pickDept, regAddFile: regAddFile, regDelFile: regDelFile, doRegister: doRegister,
         /* 실시 결과 행 (유해위험요인 → 개선조치) */
         hzAdd: hzAdd, hzDel: hzDel, hzPickOwner: hzPickOwner, hzDelPhoto: hzDelPhoto,

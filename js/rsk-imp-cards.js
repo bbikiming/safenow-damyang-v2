@@ -99,6 +99,12 @@
         if (m.hazard && m.hazard.category) meta.push('<span>분류 <b>' + esc(m.hazard.category) + '</b></span>');
         meta.push('<span>담당자 <b>' + (m.assigned_to ? esc(m.assigned_to) : '미지정') + '</b></span>');
         meta.push('<span>기한 <b class="' + (overdue ? 'rl-overdue' : '') + '">' + esc(m.due || m.due_date || '-') + '</b></span>');
+        /* 담당자·기한 변경 — 완료 확인과 같은 주체(주관부서 담당자)만.
+           완료된 건은 바꾸지 않는다(끝난 일의 기한을 미루는 건 기록 조작이다). */
+        if (CTX.canConfirm && m.status !== 'DONE') {
+            meta.push('<button type="button" class="rl-imp-amend" onclick="IMPCARD.amendOpen(\'' + esc(m.id) + '\')">변경</button>');
+        }
+        if (amendLogHtml(m)) meta.push(amendLogHtml(m));
         return '<article class="rl-imp-card' + (overdue ? ' is-overdue' : '') + '">' +
             '<header class="rl-imp-card-head">' +
                 '<span class="rl-imp-no">' + no + '</span>' +
@@ -255,6 +261,51 @@
      * open(opts) — opts: {key, title, metaHtml, noteHtml, emptyHtml, items(fn|array),
      *                     canRemind, onRemind('전역함수경로')}
      *   items 는 함수로 넘기면 재렌더마다 다시 읽는다(완료 처리 후 즉시 반영). */
+
+    /* 변경 이력 — 기한이 밀린 사실은 그 자리에 남아 있어야 관리 수단이 된다 */
+    function amendLogHtml(m) {
+        var logs = (m.history || []).filter(function (h) { return h.type === 'AMEND'; });
+        if (!logs.length) return '';
+        var last = logs[logs.length - 1];
+        return '<span class="rl-imp-amendlog" title="' + esc(logs.map(function (h) { return h.at + ' ' + h.memo; }).join('\n')) + '">' +
+            '변경 ' + logs.length + '회 · 최근 ' + esc(last.memo.split(' — 사유')[0]) + '</span>';
+    }
+    function amendOpen(id) {
+        var m = D().improvementOf(id); if (!m) return;
+        AMEND = id;
+        V().openModal('담당자 · 기한 변경',
+            '<p style="font-size:var(--fs-13);margin:0 0 4px;"><b>' +
+                esc((m.hazard && m.hazard.name) || m.hazard_risk_factor || '-') + '</b></p>' +
+            '<p class="file-hint">바꾼 내용과 사유가 이력에 남습니다. <b>사유 없이는 저장되지 않습니다.</b></p>' +
+            '<div class="rl-modal-row" style="margin-top:10px;">' +
+                '<label class="form-label" for="imp-am-owner">담당자</label>' +
+                '<div class="orgpick-field" id="imp-am-field"><div style="display:flex;gap:8px;align-items:center;">' +
+                    '<input type="text" class="form-input" id="imp-am-owner" readonly placeholder="조직도에서 선택"' +
+                        ' style="flex:1;background:var(--gray-50);" value="' + esc(m.assigned_to || '') + '">' +
+                    '<button type="button" class="btn btn-outline" onclick="ORGPICK.toggle(\'imp-am-field\',\'member\',\'IMPCARD.amendPick\')">조직도</button>' +
+                '</div></div></div>' +
+            '<div class="rl-modal-row"><label class="form-label" for="imp-am-due">기한</label>' +
+                '<input type="date" class="form-input" id="imp-am-due" value="' + esc(m.due || m.due_date || '') + '" style="max-width:200px;"></div>' +
+            '<div class="rl-modal-row"><label class="form-label" for="imp-am-why">변경 사유 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                '<textarea class="form-textarea" id="imp-am-why" rows="2" placeholder="예: 담당자 인사이동 · 자재 수급 지연으로 2주 연장"></textarea></div>',
+            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+            '<button type="button" class="btn btn-primary" onclick="IMPCARD.amendSave()">저장</button>');
+    }
+    function amendPick(label) { var el = document.getElementById('imp-am-owner'); if (el) el.value = label; }
+    function amendSave() {
+        if (!AMEND) return;
+        var g = function (id) { var e = document.getElementById(id); return e ? e.value : ''; };
+        var why = String(g('imp-am-why') || '').trim();
+        if (!why) { V().toast('변경 사유를 입력하세요.'); var w = document.getElementById('imp-am-why'); if (w) w.focus(); return; }
+        var by = (global.DYROLE && global.DYROLE.current && global.DYROLE.current().name) || '';
+        var r = D().amendImprovement(AMEND, { assigned_to: g('imp-am-owner').trim(), due: g('imp-am-due') }, why, by);
+        AMEND = null;
+        if (!r) { V().toast('변경하지 못했습니다.'); return; }
+        V().closeModal(); V().toast('담당자·기한 변경 · 이력에 남겼습니다');
+        if (CTX && CTX.onChange) { try { CTX.onChange(); } catch (e) {} }
+        render();
+    }
+
     function open(opts) {
         CTX = {
             key: opts.key || '', title: opts.title || '개선조치 상세',
@@ -329,8 +380,9 @@
             { variant: 'wide' });
     }
 
+    var AMEND = null;
     global.IMPCARD = {
-        open: open, filter: filter, shot: shot, render: render, photoItems: photoItems,
+        open: open, amendOpen: amendOpen, amendPick: amendPick, amendSave: amendSave, filter: filter, shot: shot, render: render, photoItems: photoItems,
         cfmToggle: cfmToggle, cfmCk: cfmCk, cfmDo: cfmDo,
         cfmReturnOpen: cfmReturnOpen, cfmReturnCancel: cfmReturnCancel, cfmDoReturn: cfmDoReturn,
         cfmCancel: cfmCancel
