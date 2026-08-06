@@ -117,6 +117,30 @@
             options: [{ k: 'add', label: '목록 넣기' }, { k: 'manual', label: '담당자가 직접 입력' }]
         },
         {
+            /* 우리가 개인정보보호법 원칙으로 좁혀 두고 확인받는 항목이다 —
+               담양군 개인정보 처리방침에 이미 기준이 있으면 그것이 우선이다.
+               부서별 완료율을 전 부서에 공개한 것은 법이 아니라 우리 판단이라 함께 묻는다. */
+            id: 'edu-privacy', kind: 'scope', menu: '안전보건교육',
+            title: '교육 이수 기록, 이 범위가 맞습니까?',
+            now: '개인별 시간은 본인·소속 부서·재난안전과·군수만 봅니다. 부서별 완료율은 전 부서가 봅니다.',
+            options: [
+                { k: 'ok', label: '이대로' },
+                { k: 'noboss', label: '부서장은 빼기' },
+                { k: 'norate', label: '부서별 완료율도 우리 부서만' },
+                { k: 'policy', label: '군 개인정보 처리방침을 따름 (자료 주심)' }
+            ]
+        },
+        {
+            id: 'hr-sync', kind: 'integration', menu: '안전보건교육',
+            title: '근로자 명단을 인사시스템에서 받아올 수 있나요?',
+            now: '지금은 엑셀 업로드와 수기 등록만 있습니다.',
+            options: [
+                { k: 'api', label: '연동 가능' },
+                { k: 'excel', label: '엑셀만' },
+                { k: 'tbd', label: '실 개발 때 협의' }
+            ]
+        },
+        {
             id: 'doc-retain', kind: 'data', menu: '업무문서',
             title: '문서 보존연한 기준과 문서대장 5년치를 주실 수 있나요?',
             /* 등록 폼에 이미 보존연한 select 가 있다 — '표시하지 않습니다'는 거짓이었다 */
@@ -139,6 +163,7 @@
            'safety-policy' 라고 적으면 어디에도 도달하지 못한다 — 실제로 냈던 결함. */
         'sbm-comply': ['dept-list'], 'sbm-policy': ['dept-list'],
         'edu-etc': ['edu-annex5'], 'edu-sup-etc': ['edu-annex5'],
+        'edu-status': ['edu-privacy'], 'edu-workers': ['edu-privacy', 'hr-sync'],
         'docs-archive': ['doc-retain'], 'docs-preset': ['doc-retain'], 'docs-exec': ['doc-retain']
     };
 
