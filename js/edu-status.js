@@ -24,6 +24,17 @@
      * ※ 모집단 필터는 요약 완료율에도 적용된다 — '관리감독자만 본 부서별 완료율'이 성립해야 하므로
      *   DYEDU.deptSummary(date, filterFn) 에 같은 조건을 넘겨 다시 집계한다. */
 
+    /* 개인 이수이력 열람 범위 (docs/planning/확정-미결사항-위험성평가-교육-v1.md §5)
+       개인정보보호법의 목적 내 최소 이용 — 교육 이수 기록은 산안법 §29 이행 증빙이
+       목적이므로 그 목적에 필요한 범위로 좁힌다.
+         본인·소속 부서 = 자기 부서원 / 재난안전과·군수 = 전 부서
+       **부서별 집계(완료율)는 그대로 공개한다** — 개인이 식별되지 않고,
+       총괄 책임자가 부서 간 비교를 못 하면 이행 관리가 성립하지 않는다.
+       종전에는 누구로 접속해도 전 직원의 개인별 이수시간이 보였다. */
+    function canSeePerson(deptId) {
+        var R = global.DYROLE;
+        return !R || !R.inScope || R.inScope(deptId);
+    }
     /* 모집단 판정 — 요약·상세가 반드시 같은 사람 집합을 본다 (단일 출처) */
     function inPopulation(w) {
         if (state.fCat && w.category !== state.fCat) return false;
@@ -129,10 +140,19 @@
         '</div>';
     }
 
-    function viewDept(deptId) { state.view = 'detail'; state.fDept = deptId; state.checked = {}; render(); }
+    /* 요약 표의 [상세]·딥링크로도 남의 부서 개인 명단을 열 수 없다 —
+       렌더에서만 지우면 URL·콘솔로 뚫린다(§12 와 같은 규칙). */
+    function viewDept(deptId) {
+        if (!canSeePerson(deptId)) {
+            V().toast(E().deptName(deptId) + ' 부서원의 개인 이수이력은 열람할 수 없습니다.');
+            return;
+        }
+        state.view = 'detail'; state.fDept = deptId; state.checked = {}; render();
+    }
 
     function renderDetail() {
         var all = E().workers().filter(function (w) {
+            if (!canSeePerson(w.deptId)) return false;     /* 개인 열람 범위 (§5) */
             if (state.fDept && w.deptId !== state.fDept) return false;
             if (!inPopulation(w)) return false;
             return EDUFILTER.match(state.fQ, [w.name, E().deptName(w.deptId), E().catLabel(w.category), E().empLabel(w.empType)]);
