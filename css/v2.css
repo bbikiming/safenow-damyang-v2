@@ -3150,7 +3150,10 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 }
 .rl-ro-file { font-size: var(--fs-12); }
 .rl-ro-none { font-size: var(--fs-12); color: var(--status-danger-fg); font-weight: var(--fw-bold); }
-.rl-ro-table { min-width: 760px; }
+/* 7열이라 640px 로는 눌린다. 형제 규칙 `.rl-table-scroll > .rl-dept-table`(0,2,0)이
+   rsk-list.html 인라인 style 에 있어 나중에 오므로, 같은 특이성으로는 진다 —
+   `table` 을 붙여 (0,2,1) 로 올린다. */
+.rl-table-scroll > table.rl-ro-table { min-width: 760px; }
 .rl-ro-table th, .rl-ro-table td { white-space: nowrap; }
 .rl-ro-table td:first-child, .rl-ro-table th:first-child { white-space: normal; word-break: keep-all; }
 

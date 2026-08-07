@@ -655,7 +655,11 @@
                     : '대상 부서가 없습니다.') +
             '</div></td></tr>';
         }
-        return '<div class="rl-table-scroll"><table class="rl-table rl-ro-table"><thead><tr>' +
+        /* 표 외형은 이 화면이 이미 쓰는 .rl-dept-table 을 그대로 받는다(rsk-list.html 인라인 style).
+           종전에는 여기만 `.rl-table` 이라는 **어디에도 정의가 없는 클래스**를 써서,
+           조회 전용 화면(부서 담당자·사업소장·군수)에서만 테두리·헤더 배경·셀 여백이
+           통째로 빠져 글자가 맞붙어 보였다. .rl-ro-table 은 폭·줄바꿈만 얹는 modifier 다. */
+        return '<div class="rl-table-scroll"><table class="rl-dept-table rl-ro-table"><thead><tr>' +
             '<th style="min-width:120px;">부서</th><th style="width:110px;">점검일</th>' +
             '<th style="min-width:180px;">설문조사표 제출</th><th style="width:96px;">개선조치</th>' +
             '<th style="width:110px;">조치기한</th><th style="width:88px;">상태</th>' +
