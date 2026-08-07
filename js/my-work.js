@@ -623,7 +623,15 @@
                 ' <button type="button" class="btn btn-primary btn-sm" onclick="MYWORK.complete(\'' + it.impId + '\')">완료 처리</button>';
         }
         if (it.impId && it.status !== 'DONE') {
-            return '<button type="button" class="btn btn-primary btn-sm" data-tour="mw-improve" onclick="MYWORK.complete(\'' + it.impId + '\')">' +
+            /* **담당자는 그 부서가 정한다**(발주처 2026-08-06) — 재난안전과는 부서까지만
+               정해 내려보내고, 누가 할지는 부서가 안다. 미지정이면 지정부터 권한다. */
+            var m0 = D().improvementOf(it.impId);
+            var ownerBtn = (m0 && global.IMPCARD && IMPCARD.amendOpen)
+                ? '<button type="button" class="btn btn-outline btn-sm" onclick="IMPCARD.amendOpen(\'' + it.impId + '\')">' +
+                  (m0.assigned_to ? '담당자 변경' : '담당자 지정') + '</button> '
+                : '';
+            return ownerBtn +
+                '<button type="button" class="btn btn-primary btn-sm" data-tour="mw-improve" onclick="MYWORK.complete(\'' + it.impId + '\')">' +
                 (it.returned ? '재제출' : '완료 처리') + '</button>';
         }
         if (it.impId) {

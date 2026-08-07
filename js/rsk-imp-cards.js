@@ -99,10 +99,14 @@
         if (m.hazard && m.hazard.category) meta.push('<span>분류 <b>' + esc(m.hazard.category) + '</b></span>');
         meta.push('<span>담당자 <b>' + (m.assigned_to ? esc(m.assigned_to) : '미지정') + '</b></span>');
         meta.push('<span>기한 <b class="' + (overdue ? 'rl-overdue' : '') + '">' + esc(m.due || m.due_date || '-') + '</b></span>');
-        /* 담당자·기한 변경 — 완료 확인과 같은 주체(주관부서 담당자)만.
-           완료된 건은 바꾸지 않는다(끝난 일의 기한을 미루는 건 기록 조작이다). */
-        if (CTX.canConfirm && m.status !== 'DONE') {
-            meta.push('<button type="button" class="rl-imp-amend" onclick="IMPCARD.amendOpen(\'' + esc(m.id) + '\')">변경</button>');
+        /* 담당자·기한 변경 — **권한이 두 갈래다** (발주처 2026-08-06)
+             담당자 = 그 부서가 정한다. 재난안전과가 남의 부서 누가 할지 지정하는 것은
+                     월권이고, 실제로 누가 적임인지도 그 부서가 안다.
+             기한   = 주관부서가 정한다. 부서가 스스로 미루면 관리가 무너진다.
+           완료된 건은 어느 쪽도 바꾸지 않는다(끝난 일을 고치는 건 기록 조작이다). */
+        if (amendKind(m) && m.status !== 'DONE') {
+            meta.push('<button type="button" class="rl-imp-amend" onclick="IMPCARD.amendOpen(\'' + esc(m.id) + '\')">' +
+                (amendKind(m) === 'owner' ? '담당자 지정' : '변경') + '</button>');
         }
         if (amendLogHtml(m)) meta.push(amendLogHtml(m));
         return '<article class="rl-imp-card' + (overdue ? ' is-overdue' : '') + '">' +
@@ -262,6 +266,16 @@
      *                     canRemind, onRemind('전역함수경로')}
      *   items 는 함수로 넘기면 재렌더마다 다시 읽는다(완료 처리 후 즉시 반영). */
 
+    /* '' 권한 없음 | 'owner' 담당자만(그 부서) | 'both' 담당자+기한(주관부서) */
+    function amendKind(m) {
+        var R = global.DYROLE;
+        if (!R || !R.current) return 'both';
+        var p = R.current();
+        if (!p || p.tier !== 'staff') return '';          /* 관리·감독은 조회 */
+        if (p.deptId === R.OWNER_DEPT) return 'both';     /* 재난안전과 담당자 */
+        return (p.deptId && p.deptId === m.dept_id) ? 'owner' : '';
+    }
+
     /* 변경 이력 — 기한이 밀린 사실은 그 자리에 남아 있어야 관리 수단이 된다 */
     function amendLogHtml(m) {
         var logs = (m.history || []).filter(function (h) { return h.type === 'AMEND'; });
@@ -272,11 +286,17 @@
     }
     function amendOpen(id) {
         var m = D().improvementOf(id); if (!m) return;
+        var kind = amendKind(m);
+        if (!kind) { V().toast('이 개선조치를 변경할 권한이 없습니다.'); return; }
         AMEND = id;
-        V().openModal('담당자 · 기한 변경',
+        V().openModal(kind === 'both' ? '담당자 · 기한 변경' : '담당자 지정',
             '<p style="font-size:var(--fs-13);margin:0 0 4px;"><b>' +
                 esc((m.hazard && m.hazard.name) || m.hazard_risk_factor || '-') + '</b></p>' +
-            '<p class="file-hint">바꾼 내용과 사유가 이력에 남습니다. <b>사유 없이는 저장되지 않습니다.</b></p>' +
+            '<p class="file-hint">' +
+                (kind === 'both'
+                    ? '바꾼 내용과 사유가 이력에 남습니다.'
+                    : '<b>이 부서에서 누가 조치할지 정합니다.</b> 바꾼 내용과 사유가 이력에 남습니다.') +
+                ' <b>사유 없이는 저장되지 않습니다.</b></p>' +
             '<div class="rl-modal-row" style="margin-top:10px;">' +
                 '<label class="form-label" for="imp-am-owner">담당자</label>' +
                 '<div class="orgpick-field" id="imp-am-field"><div style="display:flex;gap:8px;align-items:center;">' +
@@ -284,8 +304,13 @@
                         ' style="flex:1;background:var(--gray-50);" value="' + esc(m.assigned_to || '') + '">' +
                     '<button type="button" class="btn btn-outline" onclick="ORGPICK.toggle(\'imp-am-field\',\'member\',\'IMPCARD.amendPick\')">조직도</button>' +
                 '</div></div></div>' +
-            '<div class="rl-modal-row"><label class="form-label" for="imp-am-due">기한</label>' +
-                '<input type="date" class="form-input" id="imp-am-due" value="' + esc(m.due || m.due_date || '') + '" style="max-width:200px;"></div>' +
+            (kind === 'both'
+                ? '<div class="rl-modal-row"><label class="form-label" for="imp-am-due">기한</label>' +
+                    '<input type="date" class="form-input" id="imp-am-due" value="' + esc(m.due || m.due_date || '') + '" style="max-width:200px;"></div>'
+                /* 부서는 기한을 못 바꾼다 — 왜 없는지 밝히지 않으면 '기능이 빠졌다'로 읽힌다 */
+                : '<div class="rl-modal-row"><label class="form-label">기한</label>' +
+                    '<div><b>' + esc(m.due || m.due_date || '-') + '</b>' +
+                    '<p class="file-hint">기한 변경은 주관부서(재난안전과)에 요청하세요.</p></div></div>') +
             '<div class="rl-modal-row"><label class="form-label" for="imp-am-why">변경 사유 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 '<textarea class="form-textarea" id="imp-am-why" rows="2" placeholder="예: 담당자 인사이동 · 자재 수급 지연으로 2주 연장"></textarea></div>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
@@ -298,12 +323,21 @@
         var why = String(g('imp-am-why') || '').trim();
         if (!why) { V().toast('변경 사유를 입력하세요.'); var w = document.getElementById('imp-am-why'); if (w) w.focus(); return; }
         var by = (global.DYROLE && global.DYROLE.current && global.DYROLE.current().name) || '';
-        var r = D().amendImprovement(AMEND, { assigned_to: g('imp-am-owner').trim(), due: g('imp-am-due') }, why, by);
+        var mm = D().improvementOf(AMEND);
+        var patch = { assigned_to: g('imp-am-owner').trim() };
+        /* 부서 담당자가 보낸 요청에 기한이 섞이지 않게 — 화면에 칸이 없어도 막는다 */
+        if (amendKind(mm) === 'both') patch.due = g('imp-am-due');
+        var r = D().amendImprovement(AMEND, patch, why, by);
         AMEND = null;
         if (!r) { V().toast('변경하지 못했습니다.'); return; }
-        V().closeModal(); V().toast('담당자·기한 변경 · 이력에 남겼습니다');
+        V().closeModal();
         if (CTX && CTX.onChange) { try { CTX.onChange(); } catch (e) {} }
-        render();
+        /* 카드 화면이 열려 있지 않은 곳(내 할일 목록)에서도 불린다 — 그때는 그 화면이
+           스스로 다시 그린다. CTX 없이 render() 를 부르면 엉뚱한 것을 그린다. */
+        if (CTX) render();
+        else if (global.MYWORK && global.MYWORK.sync) { try { global.MYWORK.sync(); } catch (e) {} }
+        /* 토스트는 **다시 그린 뒤** 띄운다 — sync() 가 제 안내로 덮어쓴다 */
+        V().toast(patch.due !== undefined ? '담당자·기한 변경 · 이력에 남겼습니다' : '담당자 지정 · 이력에 남겼습니다');
     }
 
     function open(opts) {

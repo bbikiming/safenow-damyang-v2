@@ -983,7 +983,11 @@
         return r.owner
             ? '<button type="button" class="rl-rv-owner is-set" title="' + esc(r.owner) + '" onclick="RSKLIST.openRowOwner(\'' + deptId + '\',' + i + ')">' +
                   esc(shortOwner(r.owner)) + '</button>'
-            : '<button type="button" class="rl-rv-owner" onclick="RSKLIST.openRowOwner(\'' + deptId + '\',' + i + ')">＋ 담당자 지정</button>';
+            /* 비워 두는 것이 기본이다 — **담당자는 그 부서가 정한다**(발주처 2026-08-06).
+               재난안전과는 부서까지 정해 내려보내고, 누가 할지는 부서가 안다.
+               다만 이미 아는 경우 미리 적어 줄 수 있어 지정 자체를 막지는 않는다. */
+            : '<button type="button" class="rl-rv-owner" title="비워 두면 해당 부서가 지정합니다"' +
+              ' onclick="RSKLIST.openRowOwner(\'' + deptId + '\',' + i + ')">부서에서 지정</button>';
     }
     /* 셀 안에서는 전·후 대표 1장씩을 썸네일로 보여준다 — 개수만으로는 무엇을 올렸는지
        알 수 없어 매번 열어봐야 한다. 자세히 보기는 관리 모달의 미리보기가 맡는다. */
@@ -1132,7 +1136,9 @@
         V().openModal('개선조치 담당자 지정',
             '<p style="font-size:var(--fs-13);margin:0 0 4px;"><b>' + esc(D().deptName(deptId)) + '</b> · ' +
                 esc(r.name || '(유해위험요인 미입력)') + '</p>' +
-            '<p class="file-hint">누가 조치할지 조직도에서 고릅니다. 전달 시 이 사람이 개선조치 담당자가 됩니다.</p>' +
+            '<p class="file-hint"><b>담당자는 원칙적으로 해당 부서가 정합니다.</b> ' +
+                '비워 두면 전달 후 그 부서가 내 할일에서 지정합니다 — ' +
+                '이미 아는 경우에만 여기서 미리 적어 주세요.</p>' +
             '<div class="rl-modal-row" style="margin-top:10px;">' +
                 '<label class="form-label" for="rl-owner-name">담당자</label>' +
                 '<div class="orgpick-field" id="rl-owner-field"><div style="display:flex;gap:8px;align-items:center;">' +

@@ -790,7 +790,10 @@
                     hazard: { name: r.name.trim(), category: r.category || '', cause: r.cause || '', basis: r.basis || '' },
                     description: r.action.trim(), action: r.action.trim(),
                     due: deptDue, due_date: deptDue,
-                    assigned_to: r.owner || (deptNm + ' 담당자'),
+                    /* 미지정은 **비워서 내려보낸다** — 담당자는 그 부서가 정한다
+                       (발주처 2026-08-06). '○○과 담당자' 라는 총칭을 넣으면 부서가
+                       정한 것처럼 보여, 정작 누가 할지 정하는 단계가 사라진다. */
+                    assigned_to: r.owner || '',
                     /* 사진이 없으면 false 다 — 종전 기본값 true 는 올린 적 없는 사진을
                        '있음'으로 기록해, 상세에서 '미리보기 없음'으로 둔갑했다. */
                     before_photo: before.length ? before.join(', ') : false,
