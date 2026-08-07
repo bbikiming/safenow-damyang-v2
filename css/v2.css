@@ -2897,6 +2897,9 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .roc-hz-del:focus-visible { outline: 2px solid var(--main-dark); outline-offset: 2px; }
 /* 라벨 | 입력 2열 — 좁아지면 세로로 쌓인다 */
 /* 재해 사유(고시 §15② 5호) 전용 안내 — 다른 사유엔 없는 요건이라 눈에 띄게 둔다 */
+/* 개선조치 카드에서 바로 완료 처리 (위험성평가·수시 화면) */
+.rl-imp-doact { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+.rl-imp-doact-note { font-size: var(--fs-12); color: var(--text-gray); }
 /* 개선조치 담당자·기한 변경 (확정 기록 §8) — 변경 사실이 카드에 남는다 */
 .rl-imp-amend {
   padding: 2px 9px; border: 1px solid var(--card-line); border-radius: var(--radius-full);

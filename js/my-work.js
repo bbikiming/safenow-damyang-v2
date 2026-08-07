@@ -1132,6 +1132,39 @@
         complete(state.cmplId);
         V().toast('개선 후 사진 ' + files.length + '건 첨부');
     }
+    /* 개선 전 사진 — '후' 와 같은 방식. 다만 **선택**이라 없어도 완료된다.
+       확인 화면(IMPCARD)이 전·후 대조로 증빙을 보는데 '전' 을 올릴 자리가 없어
+       늘 '개선 전 없음' 이 떴다 — 입력 항목과 보여주는 이미지가 어긋나 있었다. */
+    function onPickBefore(files) {
+        captureCmpl();
+        state.cmplBefore = (state.cmplBefore || []).concat(files).slice(0, V().FILE_LIMITS.maxCount);
+        complete(state.cmplId);
+        V().toast('개선 전 사진 ' + files.length + '건 첨부');
+    }
+    function delBefore(n) {
+        captureCmpl();
+        (state.cmplBefore || []).splice(n, 1);
+        complete(state.cmplId);
+    }
+    function beforeShotsHtml() {
+        var arr = state.cmplBefore || [];
+        if (!arr.length) return '';
+        return '<div class="mw-cmpl-shots">' + arr.map(function (f, n) {
+            var src = f.thumb || f.url;
+            return '<span class="mw-cmpl-shot">' +
+                (src ? '<img src="' + esc(src) + '" alt="">' : '<span class="mw-cmpl-shot-x">파일</span>') +
+                '<button type="button" class="mw-cmpl-shot-del" aria-label="' + esc(f.name) + ' 삭제"' +
+                ' onclick="MYWORK.delBefore(' + n + ')">×</button></span>';
+        }).join('') + '</div>';
+    }
+    /* 시연용 개선 전 사진 — '후' 와 같은 이유(무대에서 OS 대화상자를 열지 않는다) */
+    function pickBeforeDemo() {
+        captureCmpl();
+        var thumb = D().demoShot ? D().demoShot('before') : '';
+        var m = D().improvementOf(state.cmplId) || {};
+        var nm = ((m.hazard && m.hazard.name) || '개선조치').replace(/\s+/g, '_').slice(0, 20);
+        onPickBefore([{ name: nm + '_개선전.jpg', size: 184320, type: 'image/jpeg', w: 1600, h: 1200, thumb: thumb }]);
+    }
     function delAfter(n) {
         captureCmpl();
         (state.cmplPhotos || []).splice(n, 1);
@@ -1161,6 +1194,15 @@
         }).join('') + '</div>';
     }
 
+    /* 다른 화면(위험성평가·수시 개선조치 카드)에서 부르는 진입점.
+       canAct() 는 이 화면의 부서 필터(state.deptId)를 보는데, 다른 화면에서는 그
+       필터가 없다 — 그 개선조치의 부서로 맞춰 주고 나서 판정하게 한다.
+       my-work 안에서는 이미 같은 값이라 부작용이 없다. */
+    function completeFrom(id) {
+        var m = D().improvementOf(id); if (!m) return;
+        if (!state.mount && m.dept_id) state.deptId = m.dept_id;
+        complete(id);
+    }
     function complete(id) {
         if (!canAct()) { toast('이 부서의 담당자만 완료 처리할 수 있습니다.'); return; }
         var m = D().improvementOf(id); if (!m) return;
@@ -1173,6 +1215,14 @@
                 '<textarea class="form-textarea" id="mw-cmpl-desc" rows="3" placeholder="실제 조치한 내용을 입력하세요">' + esc(state.cmplDesc || '') + '</textarea>' +
                 '<label style="font-size:var(--fs-12);font-weight:700;color:var(--text-gray);display:block;margin:14px 0 5px;">완료일 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 '<input type="date" class="form-input" id="mw-cmpl-date" value="' + esc(state.cmplDate || D().today()) + '" style="max-width:180px;">' +
+                /* 확인 화면(IMPCARD)은 개선 전·후 대조로 증빙을 본다 — '전' 칸이 없어
+                   확인 단계에서 늘 '개선 전 없음' 이 떴다. '전' 은 사후 발견 건에
+                   없을 수 있어 **선택**이다(확정 기록 §7). */
+                '<label style="font-size:var(--fs-12);font-weight:700;color:var(--text-gray);display:block;margin:14px 0 5px;">개선 전 사진 <span style="font-weight:400;">(선택)</span></label>' +
+                beforeShotsHtml() +
+                V().uploadDrop('<b>개선 전 사진</b> <span style="font-size:var(--fs-12);color:var(--text-gray);">클릭 또는 끌어놓기</span>',
+                    null, { pick: 'MYWORK.onPickBefore', multiple: true, style: 'padding:12px;' }) +
+                '<p class="file-hint">조치 전 상태를 남기면 확인 단계에서 <b>전·후 대조</b>로 보입니다. 사후에 발견한 건이면 비워 두세요.</p>' +
                 '<label style="font-size:var(--fs-12);font-weight:700;color:var(--text-gray);display:block;margin:14px 0 5px;">개선 후 사진 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 afterShotsHtml() +
                 V().uploadDrop('<b>개선 후 사진</b> <span style="font-size:var(--fs-12);color:var(--text-gray);">클릭 또는 끌어놓기</span>',
@@ -1191,15 +1241,20 @@
             completedDate: el('mw-cmpl-date') && el('mw-cmpl-date').value,
             afterPhoto: state.cmplPhoto,
             afterPhotos: state.cmplPhotos || [],
+            beforePhotos: state.cmplBefore || [],   /* 선택 — 확인 단계의 전·후 대조용 */
             by: (el('mw-cmpl-sign') && el('mw-cmpl-sign').value || '').trim(),
             signedBy: (el('mw-cmpl-sign') && el('mw-cmpl-sign').value || '').trim()
         };
         var err = D().completionError(payload);
         if (err) { toast(err); return; }
         D().completeImprovement(id, payload);
-        state.cmplPhoto = ''; state.cmplPhotos = []; state.cmplDesc = ''; state.cmplSign = '';
+        state.cmplPhoto = ''; state.cmplPhotos = []; state.cmplBefore = []; state.cmplDesc = ''; state.cmplSign = '';
         state.cmplDate = ''; state.cmplId = null;
-        V().closeModal(); toast('완료 처리 · 전자서명 기록 · 평가 상세에 반영'); render();
+        V().closeModal();
+        render();
+        /* 개선조치 카드 화면에서 처리했으면 그 카드도 다시 그린다 */
+        if (!state.mount && global.IMPCARD && global.IMPCARD.render) { try { global.IMPCARD.render(); } catch (e) {} }
+        toast('완료 처리 · 전자서명 기록 · 평가 상세에 반영');
     }
 
     /* ===== 정기평가 — 유해위험요인 설문조사표 작성본 제출 =====
@@ -1288,6 +1343,7 @@
 
     global.MYWORK = {
         onPickAfter: onPickAfter, delAfter: delAfter, pickAfterDemo: pickAfterDemo,
+        onPickBefore: onPickBefore, delBefore: delBefore, pickBeforeDemo: pickBeforeDemo,
         openReport: openReport, onPickReport: onPickReport, delReport: delReport, doReport: doReport, dlForm: dlForm,
         pickReportDemo: pickReportDemo,
         openDone: openDone, toggleDoneMore: toggleDoneMore,
@@ -1297,6 +1353,6 @@
         go: go, cardAttach: cardAttach,
         openAttach: openAttach, pickFile: pickFile, removeFile: removeFile, submitAttach: submitAttach,
         toggleRespond: toggleRespond, setRespReason: setRespReason, setRespDue: setRespDue, submitRespond: submitRespond,
-        complete: complete, doComplete: doComplete
+        complete: complete, completeFrom: completeFrom, doComplete: doComplete
     };
 })(window);

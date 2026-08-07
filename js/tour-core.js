@@ -94,7 +94,9 @@
         function active() { return stateIdx() >= 0; }
         function onStepPage(s) { return pageFile() === s.page; }
         function safeCall(fn, fallback) { try { return fn(); } catch (e) { return fallback; } }
-        function safeDone(s) { return !!safeCall(s.done, false); }
+        /* s 가 없을 수 있다 — 커서가 범위를 벗어난 상태(다른 탭에서 초기화했거나
+           옛 세션 값)에서 STEPS[i] 가 undefined 로 들어온다. */
+        function safeDone(s) { return !!(s && safeCall(s.done, false)); }
         /* note() 는 그 단계의 실수치를 보여준다. 다만 **조회 범위 밖(§12) 데이터는
            내보내지 않는다** — 화면에서는 안 보이는 남의 부서 건을 패널이 문서번호까지
            읊으면 그게 곧 범위 위반이다. (실제로 공공시설사업소장에게 환경과
@@ -427,7 +429,9 @@
                 var i = stateIdx();
                 var ord = stepOrder(), ps = ord.indexOf(i);
                 /* 모달이 떠 있으면 사용자가 아직 입력 중이다 — 밀지 않는다 */
-                if (!document.getElementById('v2-modal') && safeDone(STEPS[i]) && ps >= 0 && ps + 1 < ord.length) {
+                /* STEPS[i] 가 없을 수 있다 — 커서가 범위를 벗어난 상태(다른 탭에서
+                   초기화했거나 옛 세션 값)에서 safeDone(undefined) 이 죽는다. */
+                if (!document.getElementById('v2-modal') && STEPS[i] && safeDone(STEPS[i]) && ps >= 0 && ps + 1 < ord.length) {
                     /* 저장 토스트가 보이도록 잠깐 두고 넘어간다 */
                     var nxt = ord[ps + 1];
                     setTimeout(function () { if (active() && stateIdx() === i) go(nxt); }, 700);

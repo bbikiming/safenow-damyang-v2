@@ -935,6 +935,12 @@
         m.action_content = o.action || m.action_content;
         m.after_photo = o.afterPhoto;
         if (o.afterPhotos && o.afterPhotos.length) m.after_photos = o.afterPhotos.slice();
+        /* 개선 전 사진은 **선택**이라 없으면 기존 값을 지우지 않는다 —
+           검수 단계에서 주관부서가 미리 붙여 둔 '전' 사진을 덮어쓰면 안 된다. */
+        if (o.beforePhotos && o.beforePhotos.length) {
+            m.before_photos = o.beforePhotos.slice();
+            m.before_photo = o.beforePhotos[0].name || true;
+        }
         m.completed_date = o.completedDate || today();
         /* 전자서명 — 체크박스가 아니라 '누가 언제 확인했는지'가 남아야 증빙이 된다 */
         m.signature = { by: o.signedBy || who, at: m.completed_date };

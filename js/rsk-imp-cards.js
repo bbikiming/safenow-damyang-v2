@@ -147,7 +147,21 @@
         try { return D().confirmOf(m); } catch (e) { return { state: 'WAIT', round: 1 }; }
     }
     function confirmBar(m) {
-        if (m.status !== 'DONE') return '';
+        /* 미완료 건 — **그 부서 담당자면 여기서 바로 완료 처리한다.**
+           종전에는 완료 등록 경로가 '내 할일' 하나뿐이라, 위험성평가 화면에서
+           개선조치를 보다가 처리하려면 화면을 옮겨야 했다(발주처 지적).
+           MYWORK 이 있는 화면(내 할일)에서는 그 화면의 버튼이 이미 하므로 중복을 피한다. */
+        if (m.status !== 'DONE') {
+            if (amendKind(m) === 'owner' && global.MYWORK && global.MYWORK.complete
+                && !/my-work\.html$/.test(location.pathname)) {
+                return '<div class="rl-imp-doact">' +
+                    '<button type="button" class="btn btn-primary btn-sm"' +
+                    ' onclick="MYWORK.completeFrom(\'' + esc(m.id) + '\')">완료 처리</button>' +
+                    '<span class="rl-imp-doact-note">이 부서 담당자가 조치 결과를 등록합니다.</span>' +
+                '</div>';
+            }
+            return '';
+        }
         var st = cfmState(m); if (!st) return '';
         var c = cfmInfo(m);
         var locked = global.DYRSKDOC && m.assessment_id ? DYRSKDOC.lockOf(m.assessment_id) : null;
