@@ -208,7 +208,12 @@
         var dp = (a.depts || []).filter(function (x) { return x.deptId === mine; })[0];
         if (!dp) return '';
         var ms = D().improvementsFor(a.id, mine);
-        var doneN = ms.filter(function (m) { return m.status === 'DONE'; }).length;
+        /* 반려된 건은 status 가 DONE 인 채로 남는다(§4-3 — 되돌리면 평가가 잠긴다).
+           그래서 status 만 세면 **반려 건이 '완료'로 잡혀** 부서 담당자는
+           다시 할 일이 있는 줄 모른다. 담당자 관점의 '할 일'은 needsAction 단일 판정이다. */
+        var doneN = ms.filter(function (m) { return !D().needsAction(m); }).length;
+        var cfm = D().confirmCount(a.id, mine);
+        var returnedN = cfm.returned;
         var who = global.DYROLE.current();
         /* 끝난 평가에 '지금 제출하기'를 띄우면 없는 할 일을 만들어낸다 — 조회로만 남긴다 */
         var closed = a.status === 'COMPLETED';
@@ -219,7 +224,10 @@
         /* 주관부서 소속(재난안전과장)에게 2단계 주체를 그냥 '재난안전과'라고 쓰면
            본인 부서가 남의 부서처럼 읽힌다 — 누가 하는지까지 붙인다. */
         var ownerLabel = (mine === OWNER_DEPT) ? '재난안전과 담당자' : '재난안전과';
-        /* 3단계 — ① 설문조사표 제출(부서) ② 검수·전달(재난안전과) ③ 개선조치 완료(부서) */
+        /* 4단계 — ① 설문조사표 제출(부서) ② 검수·전달(재난안전과)
+                    ③ 개선조치 완료(부서) ④ 완료 확인(재난안전과)
+           ④ 를 빼면 부서 담당자는 완료 처리한 순간 카드가 전부 ✓ 로 끝나 '다 했다'로 읽는다.
+           실제로는 주관부서 확인이 남아 있고, **반려되면 다시 해야 한다**. */
         var steps = [
             {
                 lab: '설문조사표 작성·제출',
@@ -244,8 +252,11 @@
                 lab: '개선조치 완료',
                 mine: true,
                 done: !!ms.length && doneN === ms.length,
-                note: ms.length ? doneN + ' / ' + ms.length + '건 완료' : '전달 대기',
-                act: (!closed && ms.length && doneN < ms.length)
+                note: !ms.length ? '전달 대기'
+                    : (returnedN
+                        ? doneN + ' / ' + ms.length + '건 완료 · 반려 ' + returnedN + '건 재조치 필요'
+                        : doneN + ' / ' + ms.length + '건 완료'),
+                act: ((!closed || returnedN) && ms.length && doneN < ms.length)
                     ? (isStaff
                         ? '<a class="btn btn-primary btn-sm" href="my-work.html?dept=' + esc(mine) +
                           '&cat=improve">내 할일에서 마무리 →</a>'
@@ -253,9 +264,26 @@
                         : '<button type="button" class="btn btn-outline btn-sm" onclick="RSKLIST.remindDept(\'' +
                           esc(mine) + '\')">기한초과 재촉</button>')
                     : ''
+            },
+            {
+                /* 용역 보고서가 지적 → 재난안전과가 부서 지정·전달 → 부서가 조치 →
+                   **재난안전과가 확인**. 마지막 단계가 있어야 흐름이 닫힌다. */
+                lab: '완료 확인',
+                mine: false,
+                done: !!ms.length && cfm.ok === ms.length,
+                note: !ms.length ? '전달 대기'
+                    : (cfm.returned
+                        ? '반려 ' + cfm.returned + '건 — 사유를 확인해 다시 제출하세요'
+                        : (cfm.ok === ms.length && ms.length
+                            ? '확인 완료 ' + cfm.ok + ' / ' + ms.length + '건'
+                            : '확인 ' + cfm.ok + ' / ' + ms.length + '건 · ' + ownerLabel + '가 증빙을 열어 봅니다')),
+                act: ''
             }
         ];
-        var cur = closed ? -1 : steps.findIndex(function (s) { return !s.done; });
+        /* 반려 건이 있으면 담당자에게는 아직 할 일이 남은 것이다 —
+           평가가 COMPLETED 라고 커서를 지우면 '내 할일에서 마무리' 버튼이 사라져
+           재제출 수단을 잃는다(§4-3 needsAction 과 같은 취지). */
+        var cur = (closed && !returnedN) ? -1 : steps.findIndex(function (s) { return !s.done; });
         var items = steps.map(function (s, i) {
             var cls = s.done ? 'is-done' : (i === cur ? 'is-now' : '');
             return '<li class="rl-my-step ' + cls + (s.mine ? ' is-mine' : '') + '">' +
@@ -271,7 +299,14 @@
         return '<section class="rl-my card" aria-label="' + (isStaff ? '내 부서' : '소속 부서') + ' 진행 상황">' +
             '<div class="rl-my-head"><b>' + esc(D().deptName(mine)) + '</b> — ' +
                 (isStaff ? '내 부서 진행 상황' : '소속 부서 진행 상황 (관리감독)') +
-                (closed ? '<span class="chip-status success chip-sm">평가 완료</span>' : '') +
+                /* 평가 전체가 COMPLETED 여도 이 부서에 반려 건이 남아 있을 수 있다 —
+                   반려는 status 를 되돌리지 않기 때문이다(§4-3). 그때 '평가 완료' 만 보이면
+                   아래 3·4단계의 '재조치 필요' 와 정면으로 어긋나 읽힌다. */
+                (closed
+                    ? (returnedN
+                        ? '<span class="chip-status danger chip-sm">반려 ' + returnedN + '건 — 재조치 필요</span>'
+                        : '<span class="chip-status success chip-sm">평가 완료</span>')
+                    : '') +
                 '<span class="rl-my-me">' + esc(who.name) + ' ' + esc(who.role) + '</span></div>' +
             '<ol class="rl-my-steps">' + items + '</ol>' +
         '</section>';
