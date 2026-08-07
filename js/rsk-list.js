@@ -394,9 +394,13 @@
     function resetDemo() {
         if (!canManage()) { denyToast(); return; }
         V().openModal('시연 데이터 초기화',
-            '<p style="font-size:13px;">위험성평가 세션 데이터를 초기화합니다.<br>' +
-            '2026년 생성/업로드/전달·개선조치 진행 내역이 모두 사라지고 <b>초기 시연 상태</b>(2026 미등록 · 2025 완료)로 복귀합니다.</p>' +
-            '<p style="font-size:12px;color:var(--text-gray);margin-top:8px;">2025년 참고 데이터는 유지됩니다.</p>',
+            '<p style="font-size:var(--fs-13);line-height:1.6;">위험성평가 세션 데이터를 초기 시연 상태로 되돌립니다.</p>' +
+            '<p style="font-size:var(--fs-13);line-height:1.6;margin-top:8px;">' +
+                /* 한 저장소를 쓰므로 수시평가도 함께 지워진다 — 밝히지 않으면 놀란다 */
+                '<b>정기평가뿐 아니라 수시 위험성평가·개선조치도 함께</b> 초기화됩니다. ' +
+                '2026년 생성·업로드·전달·조치 진행 내역이 모두 사라지고 ' +
+                '<b>초기 시연 상태</b>(2026 미등록 · 2025 완료)로 복귀합니다.</p>' +
+            '<p style="font-size:var(--fs-12);color:var(--text-gray);margin-top:8px;">2025년 참고 데이터는 유지됩니다. 진행 중인 시연 가이드도 함께 종료됩니다.</p>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="RSKLIST.doResetDemo()">초기화</button>');
     }
