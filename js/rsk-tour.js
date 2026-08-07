@@ -142,6 +142,9 @@
             actionLabel: '설문조사표 제출 열기',
             action: function () {
                 var a = A(); if (!a) { toast('먼저 1단계에서 정기평가를 생성하세요.'); return; }
+                /* MYWORK 은 내 할일 화면에만 있다 — 이동이 끝나기 전에 눌리면
+                   여기서 터진다(시연 중 빠르게 누르면 실제로 난다). 없으면 먼저 옮긴다. */
+                if (!global.MYWORK || !global.MYWORK.openReport) { location.href = this.href(); return; }
                 global.MYWORK.openReport(a.id, demoDept());
             },
             done: function () { var d = dp(); return !!(d && d.reportFile); },

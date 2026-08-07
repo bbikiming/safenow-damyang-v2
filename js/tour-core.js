@@ -136,6 +136,13 @@
             return 'read';                                   /* 이 흐름에 등장하지 않는 담당자 */
         }
         function viewMode() {
+            /* 조작 권한이 없는 계층에게는 저장된 관점이 무의미하다 — 'all'·'mine' 은
+               직접 수행하는 사람의 관점이기 때문이다. 저장값을 그대로 두면
+               발표자가 전체 흐름을 돌린 뒤(go() 가 VKEY='all' 을 고정) 권한 전환을
+               보여줄 때 **군수·과장 화면에 "박안전 관점으로 전환" 버튼이 뜬다** —
+               조회 전용이라고 해 놓고 전환을 권하는 모순이다(§4-3). */
+            var cp = R() && R().current ? R().current() : null;
+            if (cp && cp.tier !== 'staff') return 'read';
             var v = null;
             try { v = sessionStorage.getItem(VKEY); } catch (e) {}
             if (v === 'all' || v === 'mine' || v === 'read') {
@@ -513,7 +520,17 @@
         function prev() { step(-1); }
         function action() {
             var s = STEPS[stateIdx()];
-            if (s && typeof s.action === 'function') s.action();
+            if (!s || typeof s.action !== 'function') return;
+            /* 그 단계의 화면이 아니면 먼저 옮긴다 — 단계 action 은 화면 모듈
+               (RSKLIST·MYWORK·RSKOCC…)의 전역을 부르는데, 이동이 끝나기 전에 눌리면
+               그 전역이 아직 없어 TypeError 로 죽는다. 시연 중 빠르게 누르면 실제로 난다. */
+            if (!onStepPage(s)) { location.href = s.href(); return; }
+            try { s.action(); }
+            catch (e) {
+                /* 죽은 채로 두면 발표자는 '버튼이 안 먹는다'로만 본다 — 왜인지 말해 준다 */
+                V().toast('이 단계는 ' + pageLabel(s.page) + ' 화면에서 실행합니다.');
+                if (global.console) console.warn('[DYTOUR] action 실패', e);
+            }
         }
         function stop() {
             clearIdx();
