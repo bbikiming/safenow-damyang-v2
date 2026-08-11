@@ -33,6 +33,50 @@
 
     /* kind — scope 공개 범위 / data 자료 필요 / integration 연동 */
     var ITEMS = [
+        /* ── 업무 자동발행 (2026-08-10 신설) ──────────────────────────────
+           now 는 **구현 후 실제 상태**를 쓴다 — 화면이 이미 하고 있는 걸
+           '안 합니다'라고 쓰면 시연 중 그 자리에서 들킨다. */
+        {
+            id: 'work-assign-who', kind: 'scope', menu: '업무 관리',
+            title: '업무 담당자, 누가 정하나요?',
+            now: '지금은 그 부서의 과장·소장과 그 부서 담당자가 정할 수 있습니다. 재난안전과는 부서까지만 정해 내려보냅니다.',
+            options: [
+                { k: 'lead', label: '과장·소장만' },
+                { k: 'both', label: '과장·소장과 부서 담당자 모두(지금)' },
+                { k: 'team', label: '팀장이 정함' },
+                { k: 'self', label: '담당자가 스스로만 가져감' }
+            ]
+        },
+        {
+            id: 'work-org-source', kind: 'integration', menu: '업무 관리',
+            title: '담당자 배정할 때 쓰는 조직도, 어디 것을 가져올까요?',
+            now: '지금은 시스템에 등록된 11개 부서 명단으로 고릅니다. 연계 관리 화면에는 조직도가 행정포털(SSO) 소관으로 잡혀 있습니다.',
+            options: [
+                { k: 'portal', label: '행정포털 조직도(지금 설계)' },
+                { k: 'onnara', label: '온나라 조직도' },
+                { k: 'hr', label: '인사시스템 조직도' }
+            ]
+        },
+        {
+            id: 'work-due', kind: 'data', menu: '업무 관리',
+            title: '제출 기한, 언제까지로 할까요?',
+            now: '지금은 이행점검·산안위는 회차 말일, 나머지는 지난 5년 실제 소요일의 상위 25% 지점입니다. 공문에 적힌 기한은 자료에 없습니다.',
+            options: [
+                { k: 'keep', label: '지금대로' },
+                { k: 'period', label: '전부 분기·반기 말일로' },
+                { k: 'manual', label: '실제 공문 기한을 사람이 입력' }
+            ]
+        },
+        {
+            id: 'work-auto-fire', kind: 'scope', menu: '업무 관리',
+            title: '정해진 날이 되면 바로 각 부서에 내보낼까요?',
+            now: '지금은 8종만 발행일이 실측으로 안정돼 자동 대상이고, 나머지 18종은 담당자가 확인하고 내보냅니다.',
+            options: [
+                { k: 'keep', label: '지금대로 8종만 자동' },
+                { k: 'manual', label: '전부 확인 후 발행' },
+                { k: 'all', label: '전부 자동' }
+            ]
+        },
         {
             id: 'facil-scope', kind: 'scope', menu: '시설물 안전관리',
             title: '시설물 목록, 누가 보나요?',
@@ -162,6 +206,11 @@
         /* 경영방침은 menu.html?m=policy → 'sbm-policy' 로 환원된다(DYLAW.MENU_ALIAS).
            'safety-policy' 라고 적으면 어디에도 도달하지 못한다 — 실제로 냈던 결함. */
         'sbm-comply': ['dept-list'], 'sbm-policy': ['dept-list'],
+        /* 배정 질문은 배정하는 화면(work-dept)과 담당자 화면(my-work)에도 붙인다 —
+           정의만 하고 매핑을 빠뜨리면 그 화면에서만 조용히 안 뜬다. */
+        'work-admin': ['work-auto-fire', 'work-due', 'dept-list', 'onnara'],
+        'work-dept': ['work-assign-who', 'work-org-source', 'work-due'],
+        'my-work': ['work-assign-who'],
         'edu-etc': ['edu-annex5'], 'edu-sup-etc': ['edu-annex5'],
         'edu-status': ['edu-privacy'], 'edu-workers': ['edu-privacy', 'hr-sync'],
         'docs-archive': ['doc-retain'], 'docs-preset': ['doc-retain'], 'docs-exec': ['doc-retain']

@@ -169,6 +169,30 @@
                 { title: '전기설비 점검표 6월분', by: '민설비 주무관', when: '어제 17:10' },
             ],
         },
+        /* 물순환사업소 — 페르소나 'watlead'(오순환 소장) 신설의 **필수 동반 시드**.
+         * superView() 는 SUPER_SEED[p.deptId] || SUPER_SEED.safety 로 폴백하므로
+         * 이 키가 없으면 물순환사업소장 첫 화면에 **재난안전과 업무 3건과 담당자
+         * 실명(박안전·김안전·박담당)** 이 그려진다 — 조회 범위 위반이다(§12).
+         * 기한 경과 건수(4)는 DEPT_RATES.water.overdue 와 반드시 같아야 한다(§4-3). */
+        water: {
+            eduRate: 61, rsk: { total: 8, done: 4, delay: 2 }, imp: { open: 6, delay: 4 },
+            funnel: { t: 8, a: 4, i: 8, d: 3 }, aging: [3, 2, 1],
+            hazards: [['질식(밀폐공간)', 5], ['추락', 3], ['감전', 3], ['화학물질 누출', 2], ['온열질환', 1]],
+            eduHours: { need: 84, done: 51 },
+            /* 기한 지난 건 **4개** = DEPT_RATES.water.overdue. st 는 dueSt() 가 파생한다 */
+            tasks: [
+                { title: '정수장 밀폐공간 작업 개선조치 완료 보고', due: '2026-05-28', owner: '하정수', href: 'rsk-imp.html' },
+                { title: '하수처리시설 유해위험요인 조치결과 제출', due: '2026-06-05', owner: '오수질', href: 'rsk-imp.html' },
+                { title: '상반기 중대산업재해 이행점검 증빙 보완', due: '2026-06-30', owner: '하정수', href: 'menu.html?m=comply' },
+                { title: '2분기 현업근로자 교육 미이수자 보강', due: '2026-07-10', owner: '서담당', href: 'edu-status.html' },
+                { title: '하반기 관리감독자 지정서 제출', due: '2026-07-17', owner: '서담당', href: 'menu.html?m=org' },
+                { title: '2분기 안전보건교육 실시 결과 제출', due: '2026-07-29', owner: '하정수', href: 'edu-status.html' },
+            ],
+            confirms: [
+                { title: '정수장 배관 교체 개선조치 사진', by: '하정수 주무관', when: '오늘 08:50' },
+                { title: '수질관리팀 밀폐공간 작업 허가서', by: '오수질 주무관', when: '어제 15:20' },
+            ],
+        },
         town_damyang: {
             eduRate: 82, rsk: { total: 6, done: 4, delay: 1 }, imp: { open: 3, delay: 1 },
             funnel: { t: 6, a: 4, i: 4, d: 1 }, aging: [2, 1, 0],

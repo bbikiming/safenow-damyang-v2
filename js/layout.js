@@ -87,6 +87,20 @@
         /* 업무를 '배정받는' 쪽 관점 — 주관부서 실무자(박안전)와 성격이 다르다.
            이 사람들은 자기 부서 일만 보고, 위험성평가를 직접 실시해 개선조치를 끝낸다.
            uid·deptId 는 DYV2.ORG 값과 동일해야 한다(CLAUDE.md §3). */
+        /* 배정하는 쪽 관점 — 부서장. ORG 에 u_wat1(오순환)이 이미 있는데 페르소나만
+           없어서 '과장이 팀원에게 배정' 장면이 시연되지 않았다.
+           ※ dashboard.js SUPER_SEED.water 신설이 **필수 동반**이다 — 없으면
+             superView() 가 SUPER_SEED.safety 로 폴백해 물순환사업소장 첫 화면에
+             재난안전과 업무와 담당자 실명이 뜬다(조회 범위 위반). */
+        { id: 'watlead', tier: 'super', uid: 'u_wat1', name: '오순환', role: '물순환사업소장',
+          org: '물순환사업소', deptId: 'water', deptName: '물순환사업소',
+          desc: '사업소장 — 부서 업무 배정·감독' },
+        /* 팀장 — 자기 **팀 안에서만** 배정한다(assignKind → 'team').
+           과장·소장은 부서 전체, 팀장은 자기 팀. 조회 범위는 둘 다 소속 부서다. */
+        { id: 'watteam', tier: 'super', uid: 'u_wat5', name: '문정수', role: '정수팀장',
+          org: '물순환사업소 · 정수팀', deptId: 'water', deptName: '물순환사업소',
+          teamLead: true, team: '정수팀',
+          desc: '팀장 — 정수팀 업무 배정·감독' },
         { id: 'wat',    tier: 'staff', uid: 'u_wat3',  name: '하정수', role: '주무관',
           org: '물순환사업소 · 정수팀', deptId: 'water', deptName: '물순환사업소',
           desc: '배정 부서 담당자 — 물순환사업소 실무' },
@@ -157,6 +171,102 @@
         else why = '<b>' + esc(p.deptName || '') + '</b> 소관 건만 처리할 수 있습니다 — ' + esc(what) + '은(는) 그 부서 담당자가 수행합니다.';
         return '<div class="dy-readonly" role="note"><b>조회 전용</b> — ' + why + '</div>';
     }
+    /* =========================================================================
+     * 배정 권한 (DYROLE.assignKind) — '누가 할지 **정할** 수 있는가'
+     * -------------------------------------------------------------------------
+     * 조회(scope)·조작(canAct)과 **다른 세 번째 축**이다. canAct 가 막는 것은
+     * "담당자 이름으로 대신 등록·서명하는 것 = 문서 위조"이고, 배정은 저작이
+     * 아니라 **지휘**다. 기록에 남는 이름은 배정한 본인이므로 그 근거가 걸리지
+     * 않는다. 같은 선례가 이미 있다 — rsk-list 는 감독 관점에 '기한초과 재촉'을
+     * 주며 "감독자의 행동은 대신 처리가 아니라 재촉(산안법 §16 지휘·감독)"이라
+     * 적었다. 거꾸로 배정을 막으면 ROLE_TIERS.super.law 에 적힌 법정 직무를
+     * 시스템이 뺏는다.
+     *
+     *   'dept' — 그 부서 super(과장·소장·읍면장) **및** 그 부서 staff
+     *   'team' — 팀장 (팀 편제 미확보로 1단계 미사용 — 자리만 확보)
+     *   ''     — 군수(head) · 다른 부서 사람 · **주관부서가 남의 부서를 볼 때**
+     *
+     * 주관부서(재난안전과)는 남의 부서에 배정하지 못한다 — commit e9a3244 가
+     * 이미 월권으로 지적했다("재난안전과는 부서까지 정해 내려보내고, 담당자는
+     * 그 부서가 정한다"). 군수도 배정하지 않는다(지휘계통을 건너뛴다).
+     * 그 부서 staff 를 포함하는 이유는 IMPCARD.amendKind 가 이미 그렇게 하기
+     * 때문이다 — 빼면 같은 제품에 '담당자 지정' 규칙이 두 벌 생긴다.
+     * ========================================================================= */
+    function roleAssignKind(deptId) {
+        const p = rolePersona();
+        if (!p) return 'dept';                       /* 롤 스위처 없는 환경 */
+        if (p.tier === 'head') return '';            /* 군수는 지휘계통을 건너뛰지 않는다 */
+        if (!deptId || !p.deptId) return '';
+        if (deptId !== p.deptId) return '';          /* 남의 부서는 주관부서라도 불가 */
+        /* **배정은 중간 관리자가 한다** (발주처 확정 2026-08-11) — 과장·소장·읍면장.
+         * 담당자(staff)는 남에게 배정하지 못하고 **자기가 맡는 것(claim)만** 할 수
+         * 있다. 부서장이 부재해도 일이 멈추지 않게 하는 안전판이고, 이건 '남을
+         * 지정하는 행위'가 아니라 '내가 하겠다'는 표시라 지휘계통을 건너뛰지 않는다.
+         * 판정은 canClaim() 이 따로 한다. */
+        if (p.tier !== 'super') return '';
+        if (p.teamLead) return 'team';
+        return 'dept';
+    }
+    /* 대상 부서 조정 (DYROLE.canScopeDept) — 주관부서(재난안전과) **담당자**만.
+     * 자동 발행이 대상 부서까지 정해서 내보내지만 그 파생이 늘 맞지는 않는다
+     * (회계과는 2026년 폐지 · 작업환경측정은 속성 8곳 vs 실제 4곳). 그래서
+     * 재난안전과가 **조직도에서 부서를 빼거나 더한다**. 담당자를 지정하는 것이
+     * 아니라 **어느 부서 소관인지**만 정한다 — commit e9a3244 의 경계 그대로다. */
+    function roleCanScopeDept() {
+        const p = rolePersona();
+        if (!p) return true;
+        return p.tier === 'staff' && p.deptId === OWNER_DEPT;
+    }
+
+    /* 자임 — 그 부서 담당자가 본인을 담당자로 세운다(남에게 배정하는 것이 아니다) */
+    function roleCanClaim(deptId) {
+        const p = rolePersona();
+        if (!p) return true;
+        return p.tier === 'staff' && !!deptId && deptId === p.deptId;
+    }
+    /* 배정 후보 — 그 부서 구성원. 범위 밖이면 **빈 배열**(이름조차 넘기지 않는다) */
+    function roleAssignCandidates(deptId) {
+        if (!deptId || !roleInScope(deptId)) return [];
+        /* 배정 권한이 없으면 후보 명단 자체를 주지 않는다 — 조회 범위가 'all' 인
+           주관부서 담당자도 남의 부서 **사람 이름**을 받을 이유가 없다.
+           범위(scope)와 권한(assignKind)은 다른 축이고, 후보는 권한 쪽 개념이다. */
+        if (roleAssignKind(deptId) === '') return [];
+        const ms = (window.DYV2 && window.DYV2.orgMembers) ? window.DYV2.orgMembers(deptId) : [];
+        const p = rolePersona();
+        /* 팀장은 **자기 팀 사람만** 고를 수 있다. 부서 전체를 보여주면 남의 팀
+           팀원에게 배정할 수 있게 되어 지휘계통이 깨진다. */
+        if (p && p.teamLead && p.team) return ms.filter(m => m.team === p.team);
+        return ms;
+    }
+    /* 배정 후보를 좁힐 팀 이름 — ORGPICK 이 트리를 그릴 때 쓴다('' 면 부서 전체) */
+    function roleAssignTeam() {
+        const p = rolePersona();
+        return (p && p.teamLead && p.team) ? p.team : '';
+    }
+    /* 배정 책임자 — 미배정 업무의 책임을 지목한다. 정규식(과장|팀장|소장)으로
+       뽑지 않는다: adm-perm.js 의 그 정규식은 기획예산실장·담양읍장을 놓친다.
+       ORG 의 lead:true 만 본다. 없으면 null → 화면이 '부서장 미등록'을 드러낸다. */
+    function roleLeadOf(deptId) {
+        const ms = (window.DYV2 && window.DYV2.orgMembers) ? window.DYV2.orgMembers(deptId) : [];
+        return ms.filter(m => m.lead)[0] || null;
+    }
+    /* 이력·재촉의 발신자 — 'by: 재난안전과' 하드코딩이면 담양읍장이 눌러도
+       재난안전과가 보낸 것으로 남는다(실제 고친 결함). */
+    function roleActorLabel() {
+        const p = rolePersona();
+        if (!p) return '시스템';
+        return (p.deptName ? p.deptName + ' ' : '') + p.name;
+    }
+    /* 재촉 권한 — 주관부서 담당자(전 부서) + 그 부서 관리·감독. 조회 전용이어도
+       재촉은 할 수 있다(감독자의 행동은 대신 처리가 아니라 재촉이다). */
+    function roleCanRemind(deptId) {
+        const p = rolePersona();
+        if (!p) return true;
+        if (p.tier === 'head') return false;
+        if (p.deptId === OWNER_DEPT) return true;
+        return !!deptId && deptId === p.deptId;
+    }
+
     /* 실제로 가릴 GNB 그룹 — 계층 기본값에 페르소나 예외(sysAdmin)를 얹는다 */
     function roleHidden(p) {
         p = p || rolePersona();
@@ -362,6 +472,19 @@
         { id: 'dashboard', label: '대시보드', icon: 'grid', items: [
             { id: 'index',   label: '통합 현황', icon: 'grid',  href: 'index.html',   screen: 'SFR-020' },
             { id: 'my-work', label: '내 할일',   icon: 'check', href: 'my-work.html', screen: 'MYW01-V' },  // v1.1 §6.2 전 업무 통합 내 할일
+        ]},
+
+        // GNB. 업무 관리 (WORK) — 부서별 반복 업무 자동발행 · 배정 · 회수
+        //   근거: docs/planning/기획-업무자동발행-v1.md (담양군 5개 부서 5개년 문서 430,089행 실측)
+        //   위치 — 대시보드 **바로 뒤**. '내 할일'(수신측)과 '업무 관리'(발행측)는
+        //   같은 데이터의 양면이라 인접해야 관계가 읽힌다. 도메인 그룹(위험성평가·
+        //   교육) 사이에 끼우면 '또 하나의 도메인'으로 오독된다 — 업무 관리는
+        //   도메인 **위를 가로지르는 축**이다.
+        //   ※ docs 그룹에 넣지 않는다 — 군수의 hideNav:['docs','admin'] 때문에
+        //     상위 권한용 메뉴를 최상위 권한이 못 보게 된다.
+        { id: 'work', label: '업무 관리', icon: 'check', items: [
+            { id: 'work-admin', label: '업무 발행 관리', icon: 'list',  href: 'work-admin.html', screen: 'WRK01-L' },
+            { id: 'work-dept',  label: '부서 업무함',   icon: 'users', href: 'work-dept.html',  screen: 'WRK02-L' },
         ]},
 
         // GNB 2. 기본정보 (SFR-002·016)
@@ -1115,6 +1238,15 @@
         scope: roleScope,
         inScope: roleInScope,
         canAct: roleCanAct,
+        /* 배정 축 — 조회·조작과 다른 세 번째 축 (CLAUDE.md §14-7) */
+        assignKind: roleAssignKind,
+        canClaim: roleCanClaim,
+        canScopeDept: roleCanScopeDept,
+        assignCandidates: roleAssignCandidates,
+        assignTeam: roleAssignTeam,
+        leadOf: roleLeadOf,
+        actorLabel: roleActorLabel,
+        canRemind: roleCanRemind,
         readOnlyNote: roleReadOnlyNote,
         set: roleSet,
         open: roleOpen,

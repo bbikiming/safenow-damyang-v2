@@ -638,7 +638,8 @@
              *   참석자4 "과 쭈르륵 사업소 쭈르륵 해가지고 돼 있는지 안 돼 있는지 체크리스트"
              * 부서 축 표는 의무 이행점검과 같은 엔진(DEPTCHK)을 쓴다 — 회의 결론이
              * "경영방침 원본은 계획에서, 게시 여부는 이행점검에서 확인"이라 축이 같기 때문이다. */
-            const BOARD_KEY = 'policy-post';
+            /* 회차 축 — 게시 확인은 연 단위다(dept-check.js v3 주석 참고) */
+            const BOARD_KEY = 'policy-post|' + DYV2.today().slice(0, 4);
             const boardOpts = () => ({
                 ns: 'PG.POLCHK', title: '경영방침 게시 확인',
                 labels: { DONE: '게시', TODO: '미게시', NA: '해당없음' }, statusLabel: '게시 여부', rateLabel: '게시율',
@@ -1735,6 +1736,17 @@
             window.COMPLY_STATE = window.COMPLY_STATE || { axis: 'industrial' };
             const S = window.COMPLY_STATE;
             S.axis = S.axis || 'industrial';
+            /* 회차 축 — 이행점검은 **반기**다. key 에 회차가 없으면 상·하반기가
+               한 행을 공유해 5월에 찍은 이행이 11월 업무를 완료로 만든다.
+               기본값은 오늘이 속한 반기(DYV2.today() 파생 — 시드에 박지 않는다). */
+            const _t = DYV2.today();
+            S.period = S.period || (_t.slice(0, 4) + (+_t.slice(5, 7) <= 6 ? '-H1' : '-H2'));
+            PG.cmpPeriod = (v) => { S.period = v; render(); };
+            const periodOpts = [];
+            [+_t.slice(0, 4), +_t.slice(0, 4) - 1].forEach(y => {
+                periodOpts.push({ v: y + '-H2', label: y + '년 하반기' });
+                periodOpts.push({ v: y + '-H1', label: y + '년 상반기' });
+            });
             const AXES = {
                 industrial: { key: 'comply-industrial', label: '중대산업재해 이행점검',
                               note: '종사자 안전·보건 확보의무(중처법 §4·§5) 이행 여부를 부서·사업장 단위로 점검합니다.' },
@@ -1742,6 +1754,7 @@
                               note: '공중이용시설·원료제조물 이용자 안전 확보의무(중처법 §9 · 시행령 §10·§11) 이행 여부를 점검합니다.' },
             };
             const axis = AXES[S.axis];
+            const cmpKey = axis.key + '|' + S.period;
             PG.cmpAxis = (a) => { S.axis = a; render(); };
             /* DEPTCHK 위임 래퍼 — 표의 버튼이 부르는 전역 진입점 */
             const cmpOpts = () => ({
@@ -1750,19 +1763,25 @@
                 evidenceLabel: '증빙 사진·문서', onChange: render,
             });
             PG.CMPCHK = {
-                open: (id) => DEPTCHK.open(axis.key, id, cmpOpts()),
+                open: (id) => DEPTCHK.open(cmpKey, id, cmpOpts()),
                 setStatus: (v) => DEPTCHK.setStatus(v),
                 addPhoto: (files) => DEPTCHK.addPhoto(files),
                 mDelPhoto: (i) => DEPTCHK.mDelPhoto(i),
                 save: () => DEPTCHK.save(),
-                delPhoto: (id, i) => { DEPTCHK.delPhoto(axis.key, id, i); render(); },
-                remind: (id) => DEPTCHK.remind(axis.key, id),
+                delPhoto: (id, i) => { DEPTCHK.delPhoto(cmpKey, id, i); render(); },
+                remind: (id) => DEPTCHK.remind(cmpKey, id),
             };
             const axisTabs =
                 '<div class="tabs" style="margin-bottom:12px;">' +
                     Object.keys(AXES).map(k =>
                         '<button type="button" class="tab' + (S.axis === k ? ' is-active' : '') +
                         '" onclick="PG.cmpAxis(\'' + k + '\')">' + AXES[k].label + '</button>').join('') +
+                '</div>' +
+                '<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">' +
+                    '<span style="font-size:var(--fs-12); font-weight:700; color:var(--text-gray);">점검 회차</span>' +
+                    '<select class="form-select" style="width:auto; min-width:150px;" onchange="PG.cmpPeriod(this.value)">' +
+                    periodOpts.map(o => '<option value="' + o.v + '"' + (S.period === o.v ? ' selected' : '') + '>' + o.label + '</option>').join('') +
+                    '</select>' +
                 '</div>';
 
             return sectionCard('부서별 이행 현황 (전수 점검)',
@@ -1770,7 +1789,7 @@
                 '<p style="font-size:var(--fs-12); color:var(--text-gray); margin-bottom:10px;">' + axis.note +
                 ' 이행으로 등록하려면 <b>증빙</b>이 있어야 하고, <b>해당없음</b>은 사유를 적어야 합니다 — ' +
                 '사유 없는 해당없음은 미이행과 함께 관리 대상으로 남습니다.</p>' +
-                DEPTCHK.render(Object.assign({ key: axis.key }, cmpOpts())),
+                DEPTCHK.render(Object.assign({ key: cmpKey }, cmpOpts())),
                 '') +
             sectionCard('안전보건관리체계 점검 (반기) ' + docStChip('EDOC-의무이행점검-2026H1'),
                 '<p style="font-size:12px; color:var(--text-gray);">중처법 시행령 <b>§4</b>(안전보건관리체계 구축·이행) 항목별 이행 여부를 점검합니다. 각 항목에는 해당 메뉴의 실데이터가 근거로 연결되며, <b>X(미이행) 항목은 확정 시 개선조치로 자동 등록</b>됩니다.</p>' +

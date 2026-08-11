@@ -63,13 +63,13 @@
         id: 'gov', name: '담양군청', type: 'root', members: [], children: [
             { id: 'n_mayor', name: '군수', type: 'post', members: [{ uid: 'u_mayor', name: '김담양', role: '군수' }], children: [
                 { id: 'n_vice', name: '부군수', type: 'post', members: [{ uid: 'u_vice', name: '이부군', role: '부군수' }], children: [
-                    { id: 'plan', name: '기획예산실', type: 'dept', members: [
-                        { uid: 'u_plan1', name: '서기획', role: '기획예산실장' },
+                    { id: 'plan', name: '기획예산실', type: 'dept', attrs: {}, members: [
+                        { uid: 'u_plan1', name: '서기획', role: '기획예산실장', lead: true },
                         { uid: 'u_plan2', name: '한열람', role: '예산 담당 주무관' },
                     ], children: [] },
                     { id: 'bureau_adm', name: '행정복지국', type: 'bureau', members: [{ uid: 'u_badm', name: '박행정', role: '행정복지국장' }], children: [
-                        { id: 'safety', name: '재난안전과', type: 'dept', members: [
-                            { uid: 'u_safe1', name: '홍길동', role: '재난안전과장' },
+                        { id: 'safety', name: '재난안전과', type: 'dept', attrs: {}, members: [
+                            { uid: 'u_safe1', name: '홍길동', role: '재난안전과장', lead: true },
                             { uid: 'u_safe2', name: '박담당', role: '안전관리담당' },
                         ], children: [
                             { id: 'jjt', name: '중대재해팀', type: 'team', members: [
@@ -78,27 +78,28 @@
                                 { uid: 'u_jjt3', name: '김안전', role: '안전관리자' },
                             ], children: [] },
                         ] },
-                        { id: 'acct', name: '회계과', type: 'dept', members: [
-                            { uid: 'u_acct1', name: '조회계', role: '회계과장' },
+                        { id: 'acct', name: '회계과', type: 'dept', attrs: {}, members: [
+                            { uid: 'u_acct1', name: '조회계', role: '회계과장', lead: true },
                             { uid: 'u_acct2', name: '최회계', role: '계약·도급 담당 주무관' },
                         ], children: [] },
-                        { id: 'env', name: '환경과', type: 'dept', members: [
-                            { uid: 'u_env1', name: '차환경', role: '환경과장' },
+                        { id: 'env', name: '환경과', type: 'dept', attrs: { fieldWorker: true, publicFacility: true, chemical: true, hazard: true, riskSite: true }, members: [
+                            { uid: 'u_env1', name: '차환경', role: '환경과장', lead: true },
                             { uid: 'u_env2', name: '정환경', role: '유해·위험요인 담당 주무관' },
                             { uid: 'u_env3', name: '최보건', role: '보건관리자' },
+                            { uid: 'u_env6', name: '조환경', role: '환경지도팀장', team: '환경지도팀', teamLead: true },
                             { uid: 'u_env4', name: '김지도', role: '주무관', team: '환경지도팀' },
                             { uid: 'u_env5', name: '정수빈', role: '주무관', team: '자원순환팀' },
                         ], children: [] },
-                        { id: 'culture', name: '문화체육과', type: 'dept', members: [
+                        { id: 'culture', name: '문화체육과', type: 'dept', attrs: { fieldWorker: true, publicFacility: true, chemical: true, riskSite: true }, members: [
                             { uid: 'u_cul1', name: '한지훈', role: '주무관', team: '체육시설팀' },
                             { uid: 'u_cul2', name: '오세영', role: '주무관', team: '문화시설팀' },
                         ], children: [] },
-                        { id: 'finance', name: '재무과', type: 'dept', members: [
+                        { id: 'finance', name: '재무과', type: 'dept', attrs: { fieldWorker: true, publicFacility: true, chemical: true, riskSite: true }, members: [
                             { uid: 'u_fin1', name: '최재무', role: '주무관', team: '회계팀' },
                             { uid: 'u_fin2', name: '강세무', role: '주무관', team: '세정팀' },
                         ], children: [] },
-                        { id: 'health', name: '보건소', type: 'dept', members: [
-                            { uid: 'u_hlth1', name: '강보건', role: '보건소장' },
+                        { id: 'health', name: '보건소', type: 'dept', attrs: { fieldWorker: true, chemical: true, hazard: true }, members: [
+                            { uid: 'u_hlth1', name: '강보건', role: '보건소장', lead: true },
                             { uid: 'u_hlth2', name: '이보건', role: '보건행정 주무관' },
                             { uid: 'u_hlth3', name: '윤담당', role: '보건담당' },
                             { uid: 'u_hlth4', name: '백지영', role: '주무관', team: '보건행정과' },
@@ -106,28 +107,35 @@
                         ], children: [] },
                     ] },
                     { id: 'bureau_ind', name: '산업건설국', type: 'bureau', members: [{ uid: 'u_bind', name: '정산업', role: '산업건설국장' }], children: [
-                        { id: 'construct', name: '건설과', type: 'dept', members: [
-                            { uid: 'u_con1', name: '이건설', role: '건설과장' },
+                        { id: 'construct', name: '건설과', type: 'dept', attrs: { fieldWorker: true, publicFacility: true, chemical: true, hazard: true }, members: [
+                            { uid: 'u_con1', name: '이건설', role: '건설과장', lead: true },
                             { uid: 'u_con2', name: '박현장', role: '현장안전 담당 주무관' },
+                            { uid: 'u_con6', name: '정안전', role: '안전관리팀장', team: '안전관리팀', teamLead: true },
                             { uid: 'u_con3', name: '김도현', role: '주무관', team: '안전관리팀' },
                             { uid: 'u_con4', name: '박서준', role: '주무관', team: '시설관리팀' },
                             { uid: 'u_con5', name: '이준호', role: '주무관', team: '도로관리팀' },
                         ], children: [] },
-                        { id: 'facility', name: '공공시설사업소', type: 'office', members: [
-                            { uid: 'u_fac1', name: '임시설', role: '공공시설사업소장' },
+                        { id: 'facility', name: '공공시설사업소', type: 'office', attrs: { fieldWorker: true, publicFacility: true, chemical: true, hazard: true, riskSite: true }, members: [
+                            { uid: 'u_fac1', name: '임시설', role: '공공시설사업소장', lead: true },
                             { uid: 'u_fac2', name: '한담당', role: '시설안전 담당' },
                             { uid: 'u_fac3', name: '한운영', role: '주무관', team: '시설운영팀' },
                             { uid: 'u_fac4', name: '민설비', role: '주무관', team: '환경시설팀' },
                         ], children: [] },
-                        { id: 'water', name: '물순환사업소', type: 'office', members: [
-                            { uid: 'u_wat1', name: '오순환', role: '물순환사업소장' },
+                        { id: 'water', name: '물순환사업소', type: 'office', attrs: { fieldWorker: true, publicFacility: true, chemical: true, hazard: true, riskSite: true }, members: [
+                            { uid: 'u_wat1', name: '오순환', role: '물순환사업소장', lead: true },
                             { uid: 'u_wat2', name: '서담당', role: '시설 담당' },
+                            /* 팀장 — **시연용 시드**다(2026-08-11). 담양군 실제 팀 편제 자료를
+                               받으면 통째로 교체한다. teamLead:true 인 사람만 그 팀 배정 권한을
+                               갖는다(DYROLE.assignKind → 'team'). */
+                            { uid: 'u_wat5', name: '문정수', role: '정수팀장', team: '정수팀', teamLead: true },
                             { uid: 'u_wat3', name: '하정수', role: '주무관', team: '정수팀' },
+                            { uid: 'u_wat6', name: '서한별', role: '주무관', team: '정수팀' },
+                            { uid: 'u_wat7', name: '남수질', role: '수질관리팀장', team: '수질관리팀', teamLead: true },
                             { uid: 'u_wat4', name: '오수질', role: '주무관', team: '수질관리팀' },
                         ], children: [] },
                     ] },
-                    { id: 'town_damyang', name: '담양읍', type: 'town', members: [
-                        { uid: 'u_twn1', name: '노읍장', role: '담양읍장' },
+                    { id: 'town_damyang', name: '담양읍', type: 'town', attrs: { fieldWorker: true, chemical: true, riskSite: true }, members: [
+                        { uid: 'u_twn1', name: '노읍장', role: '담양읍장', lead: true },
                         { uid: 'u_twn2', name: '배주민', role: '주민복지 담당' },
                     ], children: [] },
                 ] },
@@ -171,6 +179,47 @@
         orgWalk(n => { if (isDeptLike(n)) out.push({ id: n.id, name: n.name, count: orgCount(n.id) }); });
         return out;
     }
+    /* =========================================================================
+     * uid 를 살린 구성원 파생 — orgFlat() 은 EDOC 호환을 위해 uid·team 을 버린다.
+     * 업무 배정(assign.to)은 이름이 아니라 **uid** 로 저장해야 동명이인·개명에
+     * 견딘다. ORG 원본은 건드리지 않는 순수 파생이다(CLAUDE.md §3).
+     *   orgMembers(deptId)  → [{uid, name, role, team, deptId, deptName, lead}]
+     *   팀 노드(children.type==='team') 구성원은 team 이름을 달고 함께 나온다.
+     * ========================================================================= */
+    function orgMembers(deptId) {
+        const n = orgNode(deptId);
+        if (!n) return [];
+        const out = [];
+        (function collect(nd, teamName) {
+            (nd.members || []).forEach(m => out.push({
+                uid: m.uid, name: m.name, role: m.role,
+                team: m.team || teamName || '', deptId: n.id, deptName: n.name,
+                lead: !!m.lead, teamLead: !!m.teamLead,
+            }));
+            (nd.children || []).forEach(c => { if (c.type === 'team') collect(c, c.name); });
+        })(n, '');
+        return out;
+    }
+    /* 팀 투영 — 노드형(type:'team')과 문자열형(members[].team)을 한 형태로 합친다.
+       담양군 실제 팀 편제 미확보 상태라 source 로 근거를 밝힌다(지어내지 않는다). */
+    function orgTeams(deptId) {
+        const ms = orgMembers(deptId);
+        const map = new Map();
+        ms.forEach(m => {
+            const key = m.team || '';
+            if (!map.has(key)) map.set(key, { name: key, source: key ? 'label' : '', members: [] });
+            map.get(key).members.push(m);
+        });
+        const n = orgNode(deptId);
+        (n && n.children || []).forEach(c => {
+            if (c.type === 'team' && map.has(c.name)) map.get(c.name).source = 'node';
+        });
+        return Array.from(map.values()).filter(t => t.name);
+    }
+    /* 부서 속성 — 자동발행 대상 부서 산정의 단일 출처. 없으면 빈 객체(속성 미확인) */
+    function orgAttrs(deptId) { const n = orgNode(deptId); return (n && n.attrs) || {}; }
+    function orgHasAttr(deptId, attr) { return !!orgAttrs(deptId)[attr]; }
+
     /* EDOC 호환 평면 투영: [{dept, members:[[role,name],...]}]
      *   부서형 노드(dept·office·town) 단위 그룹핑, 팀 노드 구성원은 소속 과에 합산.
      *   기본적으로 지휘부(post·bureau 직속: 군수·부군수·국장)는 제외. */
@@ -242,6 +291,11 @@
         '재검토 요청': 'warning', '의무 근거': 'neutral', '주기·기준 근거': 'info',
         '산업재해 축': 'neutral', '시민재해 축': 'info', '정상': 'success',
         '일치': 'success', '불일치': 'danger',
+        /* 업무 자동발행 (work-*) — 배정 축은 '아직 안 한 것'과 '아무도 안 맡은 것'을
+         * 구분해야 부서장이 놓치지 않는다. '접수'(info)는 원자료 문서구분 어휘로
+         * 예약돼 있어 재사용하지 않고 '제출'을 따로 둔다. */
+        '미배정': 'warning', '미배정 지연': 'danger', '미제출': 'danger',
+        '제출': 'info', '반송': 'warning', '후보': 'purple', '종결': 'success', '취소': 'neutral',
     };
     /* 매핑에 없는 라벨은 neutral 로 수렴(색을 임의로 만들지 않는다). */
     function toneOf(label) { return STATUS_TONE[String(label || '').trim()] || 'neutral'; }
@@ -514,6 +568,48 @@
         );
     }
 
+    /* =========================================================================
+     * 접을 수 있는 화면 안내 (DYV2.notice) — 첫 방문엔 필요하고 매일은 소음이다.
+     * -------------------------------------------------------------------------
+     * 실측(2026-08-11): 안내 문구가 화면 글자수의 15~26% 를 차지하고 있었다.
+     * 내 할일은 803자 중 206자가 안내였다. 처음 한 번은 읽어야 하지만 매일
+     * 여는 사람에게는 **첫 데이터까지의 거리**만 늘린다.
+     *   · 기본은 펼침 — 처음 오는 사람이 못 읽고 지나치면 안 된다.
+     *   · 닫으면 localStorage 에 기억한다(화면별 id).
+     *   · 접힌 상태에서도 **첫 문장은 남긴다** — 통째로 사라지면 무슨 화면인지
+     *     모르게 된다. 여는 버튼만 남기는 것과 다르다.
+     * ========================================================================= */
+    const NOTICE_KEY = 'dy-notice-closed-v1';
+    function noticeClosed() {
+        try { return JSON.parse(localStorage.getItem(NOTICE_KEY) || '{}'); } catch (e) { return {}; }
+    }
+    function noticeToggle(id) {
+        const m = noticeClosed();
+        m[id] = !m[id];
+        try { localStorage.setItem(NOTICE_KEY, JSON.stringify(m)); } catch (e) {}
+        const el = document.getElementById('dyn-' + id);
+        if (el) el.classList.toggle('is-folded', !!m[id]);
+        const btn = el && el.querySelector('.dy-notice-btn');
+        if (btn) {
+            btn.setAttribute('aria-expanded', m[id] ? 'false' : 'true');
+            btn.textContent = m[id] ? '자세히 ▾' : '접기 ▴';
+        }
+    }
+    /* lead: 접혔을 때도 남는 한 줄 · rest: 접히는 본문 */
+    function notice(id, lead, rest) {
+        const folded = !!noticeClosed()[id];
+        return '<div class="check-notice dy-notice' + (folded ? ' is-folded' : '') + '" id="dyn-' + esc(id) + '">' +
+            /* lead 는 텍스트 노드로 시작할 수 있다 — span 으로 감싸야 flex 가 먹는다
+               (안 감싸면 첫 <b> 만 flex 아이템이 되어 뒷말이 버튼 쪽으로 밀린다) */
+            '<div class="dy-notice-lead"><span class="dy-notice-text">' + lead + '</span>' +
+                (rest ? '<button type="button" class="dy-notice-btn" aria-expanded="' + (folded ? 'false' : 'true') +
+                    '" aria-controls="dyn-' + esc(id) + '-body" onclick="DYV2.noticeToggle(\'' + esc(id) + '\')">' +
+                    (folded ? '자세히 ▾' : '접기 ▴') + '</button>' : '') +
+            '</div>' +
+            (rest ? '<div class="dy-notice-body" id="dyn-' + esc(id) + '-body">' + rest + '</div>' : '') +
+        '</div>';
+    }
+
     window.DYV2 = {
         MENUS, byMenu, complianceRate, dueCount,
         esc, statusChip, workTypeChip, processTypeChip, pdcaChip, lawChip,
@@ -524,6 +620,9 @@
         TODAY: DEMO_TODAY, today, daysTo, realToday,
         acceptFiles, dropFiles, dropOver, isImageFile,
         BP, below, STATUS_TONE, toneOf,
+        notice, noticeToggle,
         ORG, orgFlat, orgNode, orgCount, orgTotal, orgWalk, deptNames, orgDepts, deptIdOf,
+        /* 업무 배정용 파생 — uid 를 살린다(orgFlat 은 EDOC 호환으로 uid 를 버린다) */
+        orgMembers, orgTeams, orgAttrs, orgHasAttr,
     };
 })();

@@ -46,7 +46,13 @@
             : '해당 부서 담당자와 주관부서(재난안전과)만 등록할 수 있습니다.');
     }
 
-    var SKEY = 'dy-deptcheck-v2';
+    /* v3 — key 에 **회차 축**이 들어갔다(2026-08-10).
+ * 종전 rowKey(key, deptId) 에는 회차가 없어 상·하반기가 한 행을 공유했다.
+ * 5월에 이행을 찍으면 11월 하반기 업무가 발행 즉시 완료로 파생되고 이듬해도
+ * 영구 완료였다. 회차는 **호출자가 key 에 실어 보낸다**(이 모듈은 무수정).
+ *   예) 'comply-industrial|2026-H1' · 'policy-post|2026'
+ * 업무 자동발행(DYWORK.deptDone)이 이 key 로 완료를 파생한다. */
+var SKEY = 'dy-deptcheck-v3';
 
     /* 회의에서 확인된 전체 대상 수(과 + 사업소). 실제 명단은 발주처 제공 대기. */
     var EXPECTED_DEPTS = 39;
@@ -71,7 +77,7 @@
     function ph(n) { return { name: n, size: 164000, type: 'image/jpeg', w: 1600, h: 1200, thumb: SEED_THUMB }; }
     var SEED = {
         /* 경영방침 게시 — 게시 4 · 미게시 5 · 해당없음(사유O) 1 · 해당없음(사유X) 1 */
-        'policy-post': {
+        'policy-post|2026': {
             safety:   { status: 'DONE', place: '군청 본관 1층 게시판', date: '2026-03-04', photos: [ph('재난안전과_게시_1.jpg')] },
             env:      { status: 'DONE', place: '환경과 사무실 입구', date: '2026-03-05', photos: [ph('환경과_게시_1.jpg')] },
             water:    { status: 'DONE', place: '물순환사업소 정문 게시판', date: '2026-03-06', photos: [ph('물순환_게시_1.jpg'), ph('물순환_게시_2.jpg')] },
@@ -81,7 +87,7 @@
             culture:  { status: 'NA', naReason: '', date: '' }
         },
         /* 중대산업재해 이행점검 — 이행 5 · 미이행 5 · 해당없음 1 */
-        'comply-industrial': {
+        'comply-industrial|2026-H1': {
             safety:    { status: 'DONE', place: '재난안전과 안전보건 캐비닛', date: '2026-06-28', photos: [ph('재난안전과_점검표.jpg')] },
             water:     { status: 'DONE', place: '물순환사업소 사무실', date: '2026-06-29', photos: [ph('물순환_점검표.jpg')] },
             env:       { status: 'DONE', place: '환경과 사무실', date: '2026-06-30', photos: [ph('환경과_점검표.jpg')] },
@@ -90,7 +96,7 @@
             plan:      { status: 'NA', naReason: '기획예산실은 현장 작업이 없어 안전조치 점검 대상에서 제외 — 예산 편성 항목만 해당', date: '2026-06-25' }
         },
         /* 중대시민재해 이행점검 — 이행 3 · 미이행 7 · 해당없음(사유X) 1 */
-        'comply-citizen': {
+        'comply-citizen|2026-H1': {
             facility:  { status: 'DONE', place: '공공시설사업소 시설관리팀', date: '2026-06-27', photos: [ph('공중이용시설_점검.jpg')] },
             culture:   { status: 'DONE', place: '문화체육과 체육시설팀', date: '2026-06-29', photos: [ph('체육시설_점검.jpg')] },
             water:     { status: 'DONE', place: '물순환사업소 수질관리팀', date: '2026-06-30', photos: [ph('수질_점검.jpg')] },
