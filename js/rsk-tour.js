@@ -73,6 +73,13 @@
     /* 받침에 맞는 조사 (DYTOUR 가 노출) */
     function jo(w, a, b) { return global.DYTOUR ? global.DYTOUR.josa(w, a, b) : a; }
 
+    /* 시연 대상 개선조치 — 그 부서의 미완료 건 중 첫 건. id 를 저장하지 않는 이유는
+       진행 판정과 같다(초기화·재시연 때 옛 id 를 가리킨 채 멈춘다). */
+    function openImp() {
+        var ms = imps().filter(function (m) { return m.status !== 'DONE'; });
+        return ms[0] || imps()[0] || null;
+    }
+
     var STEPS = [
         {
             key: 'create', label: '생성', page: 'rsk-list.html',
@@ -121,18 +128,20 @@
             }
         },
         {
-            key: 'submit', label: '부서제출', page: 'my-work.html',
+            /* 2026-08-11 — 제출을 위험성평가 화면 안으로 옮겼다('내 할일' 의존 제거).
+               투어도 같은 자리를 가리켜야 한다. */
+            key: 'submit', label: '부서제출', page: 'rsk-list.html',
             persona: deptPersona, scopeDept: demoDept,
-            href: function () { return 'my-work.html?dept=' + demoDept() + '&cat=risk'; },
-            selector: '[data-tour="mw-rskreport"]',
+            href: function () { return 'rsk-list.html'; },
+            selector: '[data-tour="rsk-submit"]',
             title: '부서가 설문조사표를 작성해 제출',
-            where: '<b>내 할일</b> 목록의 위험성평가 카드에 있는 <b>[작성본 제출]</b>',
+            where: '<b>내 부서 진행 상황</b> 1단계의 <b>[지금 제출하기]</b>',
             clickPath: [
-                '카드의 [작성본 제출] — 제출 모달이 열립니다',
-                '[양식 받기]로 서식을 내려받고, 작성본을 올린 뒤 [제출]'
+                '1단계의 [지금 제출하기] — 제출 모달이 열립니다',
+                '배포된 양식을 내려받고, 작성본을 올린 뒤 [첨부]'
             ],
             desc: '점검일에 맞춰 부서가 작성본을 올립니다. 여기서부터 부서 담당자 관점입니다.',
-            script: '부서는 공문을 기다리지 않고 내 할일에서 바로 처리합니다. 제출 시각과 제출자가 그대로 이력에 남습니다.',
+            script: '부서는 공문을 기다리지 않고 이 화면에서 바로 제출합니다. 제출 시각과 제출자가 그대로 이력에 남습니다.',
             /* 이 모달은 형제 단계(2·4)와 달리 파일명 입력이 아니라 **실제 파일 입력**이라
                "파일명을 그대로 두고 [제출]" 이 거짓이었다 — 그대로 누르면 막힌다.
                무대에서 OS 파일 대화상자를 여는 건 느리고 발표자 개인 파일이 노출되므로
@@ -196,7 +205,7 @@
                 '기한을 넣고 [일괄 적용] (부서별로 다르면 각 행에서 수정)',
                 '[전달 실행] — 이 순간 개선조치가 부서 할 일로 배분됩니다'
             ],
-            desc: '전달하는 순간 부서별 개선조치가 만들어지고 담당자의 내 할일에 꽂힙니다.',
+            desc: '전달하는 순간 부서별 개선조치가 만들어지고 담당자의 개선조치 목록에 꽂힙니다.',
             script: '공문으로 “조치하세요” 하고 끝나던 걸, 기한이 붙은 할 일로 각 부서에 배분합니다.',
             modalGuide: '<b>일괄 적용</b>으로 한 번에 기한을 넣고 <b>[전달 실행]</b>을 누르세요.',
             actionLabel: '조치기한 설정 열기',
@@ -212,14 +221,16 @@
             }
         },
         {
-            key: 'complete', label: '조치완료', page: 'my-work.html',
+            /* 상세 화면에서 완료 처리가 이뤄지므로 그 건으로 바로 데려간다 —
+               목록에 세워 두면 어느 행을 눌러야 하는지 투어가 말해 주지 못한다. */
+            key: 'complete', label: '조치완료', page: 'rsk-imp-detail.html',
             persona: deptPersona, scopeDept: demoDept,
-            href: function () { return 'my-work.html?dept=' + demoDept() + '&cat=improve'; },
-            selector: '[data-tour="mw-improve"]',
+            href: function () { var m = openImp(); return m ? 'rsk-imp-detail.html?id=' + m.id : 'rsk-imp.html'; },
+            selector: '[data-tour="imp-complete"]',
             title: '부서가 개선조치를 완료',
-            where: '<b>내 할일</b>의 개선조치 카드에서 <b>[완료 처리]</b>',
+            where: '<b>개선조치</b> 목록에서 그 건을 열어 <b>[완료 처리]</b>',
             clickPath: [
-                '개선조치 카드의 [완료 처리]',
+                '목록에서 조치할 건을 선택 — 상세가 열립니다',
                 '조치 내용·완료일을 적고 개선 후 사진을 올립니다',
                 '담당자 전자서명까지 채워야 [완료 처리]가 저장됩니다'
             ],
@@ -228,9 +239,9 @@
             modalGuide: '조치 내용을 적고 사진을 올리세요 — <b>사진과 서명이 모두 있어야</b> 저장됩니다.',
             /* 무대에서 OS 파일 대화상자를 열지 않기 위한 시연 수단이다(3단계와 같은 이유).
                실제 파일 입력란은 그대로 두므로 증빙 요건을 낮추는 것이 아니다. */
-            modalAction: { label: '시연용 사진 넣기', fn: 'MYWORK.pickAfterDemo()' },
-            actionLabel: '내 할일에서 개선조치 보기',
-            action: function () { location.href = 'my-work.html?dept=' + demoDept() + '&cat=improve'; },
+            modalAction: { label: '시연용 사진 넣기', fn: 'RSKIMPD.pickAfterDemo()' },
+            actionLabel: '개선조치 열기',
+            action: function () { var m = openImp(); location.href = m ? 'rsk-imp-detail.html?id=' + m.id : 'rsk-imp.html'; },
             done: function () {
                 var ms = imps();
                 return ms.length > 0 && ms.every(function (m) { return m.status === 'DONE'; });
@@ -316,7 +327,7 @@
     ];
 
     var T = global.DYTOUR.define({
-        key: 'rsk', ns: 'RSKTOUR', skey: 'dy-tour-rsk-v1', steps: STEPS, ownerPersona: 'staff', pageLabels: { 'rsk-list.html': '정기 위험성평가', 'my-work.html': '내 할일' },
+        key: 'rsk', ns: 'RSKTOUR', skey: 'dy-tour-rsk-v1', steps: STEPS, ownerPersona: 'staff', pageLabels: { 'rsk-list.html': '정기 위험성평가', 'rsk-imp.html': '개선조치', 'rsk-imp-detail.html': '개선조치 상세' },
         kicker: function () { return year() + ' 정기 위험성평가'; },
         flowTitle: function () { return year() + '년 정기 위험성평가 — 전체 흐름 ' + STEPS.length + '단계'; },
         flowNote: function () {

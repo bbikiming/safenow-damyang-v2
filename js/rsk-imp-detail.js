@@ -106,7 +106,7 @@
                 '<input type="text" class="form-input" id="id-sign" value="' + esc(state.sign || signerDefault()) + '" placeholder="확인자 이름" style="max-width:220px;">' +
                 '<p class="file-hint">이름을 입력하면 완료일자와 함께 전자서명으로 기록됩니다.</p></div>' +
             '<div class="id-foot">' + (canAct(m)
-                ? '<button type="button" class="btn btn-primary" onclick="RSKIMPD.complete()">' +
+                ? '<button type="button" class="btn btn-primary" data-tour="imp-complete" onclick="RSKIMPD.complete()">' +
                   (D().confirmState && D().confirmState(m) === 'RETURNED' ? '재제출' : '완료 처리') + '</button>'
                 : '<span class="mw-readonly" style="margin:0;">' +
                   '<span><b>조회 전용</b> — 완료 처리·전자서명은 <b>담당 부서 본인</b>이 수행합니다.</span></span>') +
@@ -132,6 +132,16 @@
         toast('개선 후 사진 첨부');
     }
     function clearPhoto() { capture(); state.photo = ''; state.photoFile = null; render(); }
+    /* 시연용 사진 — 무대에서 OS 파일 대화상자를 여는 건 느리고 위험하다(발표자의 개인
+       파일 목록이 그대로 노출된다). 시드가 이미 쓰는 썸네일을 그대로 넣어 증빙 화면까지
+       보여준다. 시연 투어 6단계의 [시연용 사진 넣기] 가 부른다 — 실제 입력란은 그대로
+       남으므로 증빙 요건을 낮추는 것이 아니다(my-work pickAfterDemo 와 같은 원칙). */
+    function pickAfterDemo() {
+        var m = D().improvementOf(state.id) || {};
+        var thumb = D().demoShot ? D().demoShot('after') : '';
+        var nm = ((m.hazard && m.hazard.name) || '개선조치').replace(/\s+/g, '_').slice(0, 20);
+        onPickPhoto([{ name: nm + '_개선후.jpg', size: 184320, type: 'image/jpeg', w: 1600, h: 1200, thumb: thumb }]);
+    }
 
     /* 완료 처리는 **그 부서 담당자 본인**만 — 군수·과장이 담당자 이름으로 서명하면 문서 위조다 */
     function canAct(m) {
@@ -168,5 +178,5 @@
         render();
     }
 
-    global.RSKIMPD = { init: init, complete: complete, onPickPhoto: onPickPhoto, clearPhoto: clearPhoto };
+    global.RSKIMPD = { init: init, complete: complete, onPickPhoto: onPickPhoto, clearPhoto: clearPhoto, pickAfterDemo: pickAfterDemo };
 })(window);

@@ -120,7 +120,7 @@
     }
 
     /* 개선조치 진행 — 수시평가를 '등록하고 끝'으로 두지 않기 위해 진행률을 같은 줄에 낸다.
-       조치를 마무리하는 자리는 담당자의 [내 할일]이므로 그리로 바로 보낸다. */
+       조치를 마무리하는 자리는 개선조치(SCR-IMP-001·002)이므로 그리로 바로 보낸다. */
     function impCell(o) {
         var c = D().occImpCount(o.id);
         if (!c.total) return '<span class="roc-imp-none">감소대책 없음</span>';
@@ -138,8 +138,8 @@
                    정기평가 부서 상세와 같은 화면(IMPCARD)을 쓴다 (CLAUDE.md §7). */
                 '<button type="button" class="btn btn-outline btn-sm" data-tour="occ-imp" onclick="RSKOCC.openImp(\'' + o.id + '\')">조치 상세</button>' +
                 (c.done < c.total
-                    ? '<a class="btn btn-primary btn-sm" href="my-work.html?dept=' + esc(o.deptId) +
-                          '&cat=improve">내 할일에서 마무리 →</a>'
+                    ? '<a class="btn btn-primary btn-sm" href="rsk-imp.html?status=IN_PROGRESS">' +
+                          '개선조치에서 마무리 →</a>'
                     : '') +
             '</div>' +
         '</div>';
@@ -161,7 +161,7 @@
                     ? '<span>안전관리자 검토 <b>' + esc(o.reviewer || '안전관리자') + ' · ' + esc(o.reviewedAt || '-') + '</b></span>'
                     : '<span>안전관리자 검토 <b>미완료</b></span>'),
             noteHtml: '수시평가는 실시로 끝나지 않습니다 — <b>위험성 감소대책을 실행</b>해야 완결됩니다. ' +
-                '부서 담당자는 <b>내 할일(my-work)</b>에서 완료 처리합니다.',
+                '부서 담당자는 <b>개선조치</b>에서 완료 처리합니다.',
             emptyHtml: '이 수시평가에는 등록된 감소대책이 없습니다.',
             items: function () { return D().occImprovements(occId); },
             canRemind: false
@@ -387,11 +387,11 @@
                 V().fileHint() +
             '</div>' +
             /* 수시평가는 '실시했다'로 끝나지 않는다 — 감소대책을 수립·실행해야 완결된다.
-             * 여기 적은 행이 그대로 개선조치가 되어 담당자의 [내 할일]에 뜬다. */
+             * 여기 적은 행이 그대로 개선조치가 되어 담당자의 [개선조치] 목록에 뜬다. */
             '<div class="roc-modal-row roc-hz-sec">' +
                 '<label class="form-label">실시 결과 — 유해위험요인과 감소대책 <span class="roc-req">*</span></label>' +
                 '<p class="file-hint" style="margin-top:0;">여기 적은 행이 <b>개선조치</b>가 되어 담당자의 ' +
-                    '<b>내 할일</b>에 뜹니다. 조치를 끝내고 <b>개선 후 사진</b>을 올리면 완료됩니다.</p>' +
+                    '<b>개선조치</b> 목록에 뜹니다. 조치를 끝내고 <b>개선 후 사진</b>을 올리면 완료됩니다.</p>' +
                 '<div id="roc-hz-list">' + F.hazards.map(hazRowHtml).join('') + '</div>' +
                 '<button type="button" class="btn btn-outline btn-sm" onclick="RSKOCC.hzAdd()">＋ 요인 추가</button>' +
             '</div>' +
@@ -514,7 +514,7 @@
             hazards: F.hazards, due: F.due
         });
         V().closeModal();
-        toast('수시평가 등록 · 개선조치 ' + hz.length + '건 생성 — [내 할일]에서 조치를 마무리하세요');
+        toast('수시평가 등록 · 개선조치 ' + hz.length + '건 생성 — [개선조치]에서 조치를 마무리하세요');
         render();
     }
 
