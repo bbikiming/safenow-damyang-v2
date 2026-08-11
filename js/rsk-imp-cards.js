@@ -96,9 +96,16 @@
         var sig = m.signature || {};
         var basis = m.hazard && m.hazard.basis;
         var meta = [];
+        /* 시설물 — 조치하러 갈 대상을 담당자가 알아야 개선 전·후 사진을 찍으러 간다.
+           미지정은 줄을 만들지 않는다(시설물에 붙지 않는 요인이 정상적으로 있다). */
+        var facil = D().facilLabel ? D().facilLabel(m) : '';
+        if (facil) meta.push('<span>시설물 <b>' + esc(facil) + '</b></span>');
         if (m.hazard && m.hazard.category) meta.push('<span>분류 <b>' + esc(m.hazard.category) + '</b></span>');
         meta.push('<span>담당자 <b>' + (m.assigned_to ? esc(m.assigned_to) : '미지정') + '</b></span>');
-        meta.push('<span>기한 <b class="' + (overdue ? 'rl-overdue' : '') + '">' + esc(m.due || m.due_date || '-') + '</b></span>');
+        /* 기한이 없는 건은 '-' 로 뭉개지 않는다 — 수시평가는 조치기한이 선택이라 실제로 생긴다.
+           '-' 는 값이 비었다는 뜻으로도 읽혀 확인이 필요한 상태라는 사실이 묻힌다. */
+        var dueTxt = m.due || m.due_date;
+        meta.push('<span>기한 <b class="' + (overdue ? 'rl-overdue' : '') + '">' + (dueTxt ? esc(dueTxt) : '미지정') + '</b></span>');
         /* 담당자·기한 변경 — **권한이 두 갈래다** (발주처 2026-08-06)
              담당자 = 그 부서가 정한다. 재난안전과가 남의 부서 누가 할지 지정하는 것은
                      월권이고, 실제로 누가 적임인지도 그 부서가 안다.

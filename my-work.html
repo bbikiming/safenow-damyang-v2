@@ -19,7 +19,7 @@
         .mw-deptlabel { font-size: var(--fs-12); font-weight: 700; color: var(--text-gray); }
 
         /* KPI 칩 */
-        .mw-kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 12px; }
+        .mw-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
         .mw-kpi { background: var(--surface); border: 1px solid var(--card-line); border-left: 4px solid var(--gray-200); border-radius: var(--radius-card); padding: 12px 16px; display: flex; flex-direction: column; gap: 4px; }
         .mw-kpi-num { font-size: var(--fs-22); font-weight: 800; color: var(--text-black); line-height: 1; }
         .mw-kpi-label { font-size: var(--fs-12); color: var(--text-gray); font-weight: 700; }
@@ -68,6 +68,8 @@
         .mw-dday.over  { background: var(--status-danger-bg);  color: var(--status-danger-fg); }
         .mw-dday.soon  { background: var(--status-warning-bg); color: var(--status-warning-fg); }
         .mw-dday.done  { background: var(--status-success-bg); color: var(--status-success-fg); }
+        /* 기한 미지정 — 초과(빨강)와 구분하되 빈칸으로 두지 않는다. 확인이 필요한 상태다 */
+        .mw-dday.nodue { background: var(--status-info-bg); color: var(--status-info-fg); font-weight: var(--fw-medium); }
 
         /* KPI 칩 = 클릭 필터 (버튼화) */
         .mw-kpi { cursor: pointer; text-align: left; font-family: inherit; transition: box-shadow .12s ease, transform .12s ease; }
@@ -135,12 +137,9 @@
       data-page-title="내 할일"
       data-page-subtitle="전 업무 통합 할일 — 결재·위험·개선·점검·의견·이행·도급·평가 (MYW01-V)">
     <main>
-        <div class="check-notice">
-            부서 담당자 관점에서 처리할 <b>전 업무</b>를 통합해서 보여줍니다.
-            상단 알림에서 넘어오면 여기서 <b>카드를 눌러 바로 처리</b>할 수 있습니다 —
-            첨부형은 <b>팝업에서 파일 첨부</b>, 메뉴 진행형은 처리 화면으로 이동합니다.
-            완료한 업무는 <b>완료한 업무</b> 탭에 모이고, 첨부형은 <b>첨부 재등록</b>으로 나중에 파일을 교체할 수 있습니다.
-        </div>
+        <!-- 화면 안내 — 접기 가능(DYV2.notice). 실측상 이 문구가 화면 글자수의 26% 를
+             차지해 첫 데이터까지의 거리를 늘렸다. 첫 방문엔 펼침, 닫으면 기억한다. -->
+        <div id="mw-notice"></div>
         <div id="mw-root"></div>
     </main>
 
@@ -149,17 +148,28 @@
     <script src="./js/policy-open.js"></script><!-- 발주처 확정 필요 항목 (DYPOLICY) -->
     <script src="./js/common.js"></script>
     <script src="./js/rsk-kosha.js"></script>
+    <script src="./js/facil-data.js"></script><!-- FMS 시설물 대장 시드 -->
+    <script src="./js/facil.js"></script><!-- 개선조치 시설물 표시 -->
     <script src="./js/rsk-data.js"></script>
     <script src="./js/edu-data.js"></script>
     <script src="./js/rsk-imp-cards.js"></script>
     <script src="./js/rsk-doc.js"></script><!-- 상신 후 잠금 판정(DYRSKDOC.lockOf) --><!-- 완료 상세(개선조치 카드) 공용 -->
     <script src="./js/sets-data-v2.js"></script><!-- 발행된 업무 탭 (DY_DOCS_V2·DY_MENUS_V2) -->
+    <script src="./js/dept-check.js"></script><!-- 이행점검 완료 파생 원본 (DYWORK.doneProbe) -->
+    <script src="./js/work-catalog.js"></script><!-- 업무 카탈로그 (DYWORKT) -->
+    <script src="./js/work-data.js"></script><!-- 발행 엔진 (DYWORK) -->
+    <script src="./js/work-assign.js"></script><!-- 배정 패널 (WKASSIGN, work-dept 와 공유) -->
     <script src="./js/my-work.js"></script>
     <script src="./js/tour-core.js"></script><!-- 시연 투어 공용 엔진 (DYTOUR) -->
     <script src="./js/rsk-tour.js"></script><!-- 정기 · 수시 투어 — 진행 중일 때만 패널이 뜬다 -->
     <script src="./js/occ-tour.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            var n = document.getElementById('mw-notice');
+            if (n) n.outerHTML = DYV2.notice('my-work',
+                '부서 담당자 관점에서 <b>처리할 전 업무</b>를 통합해서 보여줍니다',
+                '정해진 날짜에 자동으로 도착한 업무는 <b>[마감 할일]</b> 맨 위 도착 칸에 뜹니다 — 담당자가 정해져야 진행됩니다. ' +
+                '카드를 눌러 바로 처리할 수 있고(첨부형은 팝업, 메뉴형은 처리 화면), 기한이 없는 담당 문서는 <b>[담당 문서]</b> 탭에 있습니다.');
             window.MYWORK.init('mw-root');
             window.RSKTOUR.boot();   /* 바 없음 — 가이드 진행 중일 때만 패널 */
             window.OCCTOUR.boot();

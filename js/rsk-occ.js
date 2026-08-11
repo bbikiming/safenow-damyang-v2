@@ -278,7 +278,10 @@
         };
         renderRegister();
     }
-    function newHazard() { return { name: '', cause: '', action: '', owner: '', beforePhotos: [] }; }
+    /* 시설물(facilNo·facilNm)은 선택 항목이다 — 수시평가 사유 6종 중 '건설물의 설치·이전·변경·해체'와
+     * '기계·설비 등의 정비 또는 보수'는 애초에 시설물이 원인이라 정기평가보다 오히려 결합도가 높다.
+     * 잇는 키는 이름이 아니라 시설물번호다(동명 시설물·개명 대비). 정기 검수 행과 같은 규칙. */
+    function newHazard() { return { name: '', cause: '', action: '', owner: '', facilNo: '', facilNm: '', beforePhotos: [] }; }
 
     /* 재해 발생(고시 §15② 5호)만 추가 필수 항목을 둔다 (docs/planning/확정-미결사항… §2)
        5호에는 다른 사유에 없는 단서가 붙어 있다 —
@@ -315,6 +318,15 @@
                 '<button type="button" class="roc-hz-del" onclick="RSKOCC.hzDel(' + i + ')"' +
                 ' aria-label="' + (i + 1) + '번 행 삭제">× 행 삭제</button></div>' +
             '<div class="roc-hz-grid">' +
+                '<label class="form-label">시설물</label>' +
+                '<div class="orgpick-field" id="roc-hz-ff' + i + '">' +
+                    '<div style="display:flex;gap:8px;">' +
+                        '<input type="text" class="form-input" id="roc-hz-fn' + i + '" readonly' +
+                            ' placeholder="해당 없음 — 시설물에 해당하는 요인만 지정" style="flex:1;" value="' + esc(h.facilNm || '') + '">' +
+                        (h.facilNo
+                            ? '<button type="button" class="btn btn-outline" onclick="RSKOCC.hzClearFacil(' + i + ')">해제</button>'
+                            : '<button type="button" class="btn btn-outline" onclick="RSKOCC.hzPickFacil(' + i + ')">시설물 대장</button>') +
+                    '</div></div>' +
                 '<label class="form-label" for="roc-hz-n' + i + '">유해위험요인 <span class="roc-req">*</span></label>' +
                 '<input type="text" class="form-input" id="roc-hz-n' + i + '" value="' + esc(h.name) + '"' +
                     ' placeholder="예: 정수장 개구부 추락 위험">' +
@@ -423,6 +435,22 @@
         if (F.hazards.length >= 10) { toast('한 번에 최대 10건까지 등록합니다.'); return; }
         F.hazards.push(newHazard()); renderRegister();
     }
+    /* 시설물 지정 — 정기 검수 행과 같은 GUI(DYFACIL 인라인 대장). 새 창을 겹치지 않는다. */
+    function hzPickFacil(i) {
+        if (!global.DYFACIL) { toast('시설물 대장을 불러오지 못했습니다.'); return; }
+        DYFACIL.toggle('roc-hz-ff' + i, 'RSKOCC.hzSetFacil' + i);
+    }
+    function hzSetFacil(i, no, nm) {
+        var h = F.hazards[i]; if (!h) return;
+        h.facilNo = no; h.facilNm = nm || (global.DYFACIL ? DYFACIL.label(no) : '');
+        renderRegister();
+        toast('시설물 지정: ' + (h.facilNm || no));
+    }
+    function hzClearFacil(i) {
+        var h = F.hazards[i]; if (!h) return;
+        h.facilNo = ''; h.facilNm = '';
+        renderRegister(); toast('시설물 지정 해제');
+    }
     function hzDel(i) {
         captureRegister();
         if (F.hazards.length <= 1) { toast('최소 1건은 있어야 합니다 — 내용을 지워서 비워 두세요.'); return; }
@@ -450,6 +478,11 @@
                 captureRegister();
                 var h = F.hazards[n]; if (!h) return;
                 h.owner = v; renderRegister();
+            };
+            /* 시설물 선택 콜백 — DYFACIL.toggle 이 (시설물번호, 시설물명) 으로 부른다 */
+            global.RSKOCC['hzSetFacil' + n] = function (no, nm) {
+                captureRegister();
+                hzSetFacil(n, no, nm);
             };
         })(i);
     }
@@ -580,6 +613,8 @@
         openRegister: openRegister, pickDept: pickDept, regAddFile: regAddFile, regDelFile: regDelFile, doRegister: doRegister,
         /* 실시 결과 행 (유해위험요인 → 개선조치) */
         hzAdd: hzAdd, hzDel: hzDel, hzPickOwner: hzPickOwner, hzDelPhoto: hzDelPhoto,
+        /* 행 시설물 — FMS 시설물 대장(SCR-FAC-001) 연계. 선택 항목이다 */
+        hzPickFacil: hzPickFacil, hzClearFacil: hzClearFacil,
         openImp: openImp,
         /* 안전관리자 검토 — 서명 파일 등록이 곧 검토 완료 */
         openReviewFile: openReviewFile, onPickReview: onPickReview, doReviewFile: doReviewFile, clearReviewFile: clearReviewFile,

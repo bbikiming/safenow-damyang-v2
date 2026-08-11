@@ -176,12 +176,22 @@
      * 이름으로 보여준다. 계열·위계 라벨은 표시용이며 데이터는 LAWS 그대로다. */
     var LAW_TIER = {
         csa: '법률', cse: '시행령',
-        osh: '법률', oshe: '시행령', oshr: '시행규칙', oshs: '현장 수칙', rae: '고시'
+        osh: '법률', oshe: '시행령', oshr: '시행규칙', oshs: '현장 수칙', rae: '고시',
+        fsa: '법률', fsae: '시행령'
     };
     var FAMILY_VIEW = [
         { label: '중대재해처벌법 계열', hint: '경영책임자(군수)의 예방 체계 의무', laws: ['csa', 'cse'] },
-        { label: '산업안전보건법 계열', hint: '교육·평가·측정·검진과 현장 안전 수칙', laws: ['osh', 'oshe', 'oshr', 'oshs', 'rae'] }
+        { label: '산업안전보건법 계열', hint: '교육·평가·측정·검진과 현장 안전 수칙', laws: ['osh', 'oshe', 'oshr', 'oshs', 'rae'] },
+        { label: '시설물안전법 계열', hint: '시설물 종별·안전점검·안전등급·보수보강', laws: ['fsa', 'fsae'] }
     ];
+    /* 계열에 넣지 않은 법령이 생기면 좌측 트리에서 조용히 사라진다 — 총 조문 수는
+     * 늘어나는데 목록에는 안 보여 "수집했는데 없어졌다"로 읽힌다. 실제로 시설물안전법을
+     * 수록했을 때 그렇게 됐다. 새 법령을 추가하면 위 두 표에 반드시 함께 넣는다. */
+    function unfiledLaws() {
+        var filed = {};
+        FAMILY_VIEW.forEach(function (f) { f.laws.forEach(function (k) { filed[k] = true; }); });
+        return Object.keys(L().LAWS || {}).filter(function (k) { return !filed[k]; });
+    }
 
     function lawSection() {
         var laws = L().LAWS, arts = L().ARTICLES;
@@ -232,9 +242,18 @@
             '</div>';
         }).join('');
 
+        /* 계열에 못 들어간 법령이 있으면 목록에서 사라진 채 총계만 늘어난다 — 숨기지 않고 알린다 */
+        var unfiled = unfiledLaws().filter(function (k) { return (byLaw[k] || []).length; });
+        var unfiledNote = unfiled.length
+            ? '<div class="adml-empty-note">계열에 분류되지 않은 법령 <b>' + unfiled.length + '건</b>이 있어 아래 목록에 보이지 않습니다 — ' +
+              esc(unfiled.map(function (k) { return (laws[k] || {}).short || k; }).join(', ')) +
+              '. 계열 구조에 추가해야 조문을 열어볼 수 있습니다.</div>'
+            : '';
+
         return '<div class="adml-sec">' +
             '<div class="adml-sec-head">법령·조문 <span class="adml-count">' +
                 (state.q ? total + ' / ' + Object.keys(arts).length : Object.keys(arts).length) + '</span></div>' +
+            unfiledNote +
             (total || !state.q ? body :
               '<div class="adml-empty-note">검색 결과가 없습니다 — <b>' + esc(state.q) + '</b>' +
               '<br>조문 번호(§43)뿐 아니라 <b>일상어</b>(교육 시간 · 건강검진 · 지게차)로도 찾을 수 있습니다.' +

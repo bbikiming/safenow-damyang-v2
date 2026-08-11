@@ -85,11 +85,15 @@
             var t = KO().targetOf(m.target_id);
             var scope = m.dept_id ? D().deptName(m.dept_id) : (t ? t.name : '-');
             var hazardName = (m.hazard && m.hazard.name) || m.hazard_risk_factor || '';
+            /* 시설물 — 위험성평가 검수에서 지정한 대상. 미지정은 표시하지 않는다
+               (작업행동·화학물질처럼 시설물에 붙지 않는 요인이 정상적으로 존재한다). */
+            var facil = D().facilLabel ? D().facilLabel(m) : '';
             var titleCell = esc(m.description) +
                 (hazardName ? '<div class="ri-hrf">' + esc(hazardName) +
                     (m.hazard && m.hazard.category ? ' <span class="chip-mini wt" style="margin-left:4px;">' + esc(m.hazard.category) + '</span>' : '') +
                     ' ' + basisHtml(m.hazard) +
-                '</div>' : '');
+                '</div>' : '') +
+                (facil ? '<div class="ri-hrf"><span class="chip-mini wt-elec">시설물</span> ' + esc(facil) + '</div>' : '');
             var owner = m.assigned_to ? esc(m.assigned_to)
                 : (canEdit()
                     ? '<a href="#" onclick="RSKIMP.assign(\'' + m.id + '\');return false;" style="color:var(--main-dark);">지정</a>'
@@ -100,7 +104,7 @@
                 '<td>' + esc(scope) + '</td>' +
                 '<td>' + titleCell + '</td>' +
                 '<td onclick="event.stopPropagation()">' + owner + '</td>' +
-                '<td class="ri-due ' + dueClass(due, m.status) + '">' + esc(due || '-') + '</td>' +
+                '<td class="ri-due ' + dueClass(due, m.status) + '">' + (due ? esc(due) : '<span style="color:var(--status-info-fg);">미지정</span>') + '</td>' +
                 '<td>' + stChip(m.status) + '</td></tr>';
         }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text-gray);padding:24px;">조건에 맞는 개선조치가 없습니다.</td></tr>';
 

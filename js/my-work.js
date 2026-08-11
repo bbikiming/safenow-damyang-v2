@@ -59,10 +59,13 @@
         if (d <= 7) return 'week';
         return 'plan';
     }
+    /* 기한이 없는 건은 빈 배지로 두지 않는다 — 수시평가는 조치기한이 선택 항목이라
+     * 기한 없는 개선조치가 실제로 만들어진다. 빈칸으로 두면 담당자는 언제까지인지 모르고,
+     * 기한 초과 집계에서도 조용히 빠져 관리 대상에서 사라진다. 없다는 사실을 드러낸다. */
     function dDayText(dueIso, status) {
         if (status === 'DONE') return '완료';
         var d = daysBetween(dueIso);
-        if (d == null) return '';
+        if (d == null) return '기한 미지정';
         if (d < 0) return 'D+' + Math.abs(d);
         if (d === 0) return 'D-day';
         return 'D-' + d;
@@ -140,6 +143,7 @@
         fStatus: '', fCat: '', sort: 'due',
         openInline: {},                 /* {impId: {reason, due}} 재촉 응답 */
         attachCtx: null,                /* {id, kind:'seed'|'pub', redo} 열려있는 첨부 팝업 */
+        wkMap: {},                      /* {itemId: {issueId, deptId, slots}} 자동발행 업무 역참조 */
         attachFiles: {},                /* {itemId: [파일명,...]} 선택된 모의 파일 */
         doneSeeds: {},                  /* {seedId: {at, files}} 첨부로 완료한 시드 */
         pubFiles: {},                   /* {docId: [파일명,...]} 발행 업무 첨부 완료본 (재등록용) */
@@ -188,6 +192,51 @@
                 });
             });
         } catch (e) {}
+        /* ── 업무 자동발행 (DYWORK) — 내게 배정된 건만 '마감 할일'에 든다 ──
+         * 탭 경계(MUST): 배정된 인스턴스만 마감 할일, 미배정은 'arrived' 그룹.
+         * 두 탭이 같은 건을 동시에 그리는 것을 이 규칙이 막는다. */
+        try {
+            var WK = global.DYWORK;
+            if (WK) {
+                var me = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
+                WK.deptTasks(state.deptId).forEach(function (t) {
+                    if (t.issue.status === WK.IST.CANCELED) return;
+                    var mine = me && t.assign.to === me.uid;
+                    var unassigned = t.unassigned && !t.done;
+                    /* 남이 배정받은 건은 내 할일이 아니다 */
+                    if (!mine && !unassigned) return;
+                    state.wkMap['WK-' + t.id] = { issueId: t.issueId, deptId: t.deptId,
+                        slots: (t.tpl && t.tpl.slots) || [] };
+                    if (t.done && !mine) return;
+                    var tpl = t.tpl || {};
+                    var returned = t.confirm && t.confirm.state === 'RETURNED';
+                    out.push({
+                        id: 'WK-' + t.id,
+                        cat: tpl.cat || 'comply',
+                        title: t.name + ' — ' + t.periodLabel,
+                        sub: t.issue.issuedBy + ' ' + t.issue.issuedAt + ' 발행' +
+                             ((tpl.slots || []).length
+                                 ? ' · ' + tpl.slots.map(function (x) { return x.key; }).join('+') + ' 필요'
+                                 : (tpl.destLabel ? ' · ' + tpl.destLabel + ' 화면에서 처리' : '')) +
+                             (returned ? ' · 반려: ' + t.confirm.reason : ''),
+                        due: t.due,
+                        status: t.done ? 'DONE' : 'IN_PROGRESS',
+                        dept: t.deptId, dept_label: t.deptName,
+                        href: tpl.href || '',
+                        destLabel: tpl.destLabel || '',
+                        atype: unassigned ? 'wkassign' : (tpl.profile === 'menu' ? 'menu' : 'attach'),
+                        action: tpl.profile === 'menu' ? '처리하러 가기' : '',
+                        wk: { issueId: t.issueId, deptId: t.deptId, unassigned: unassigned, done: t.done },
+                        origin: '발행',
+                        wkSlots: (tpl.slots || []).map(function (x) { return x.key; }),
+                        remind: (t.reminds || []).length > 0,
+                        doneDate: t.submittedAt || '',
+                        doneText: (t.files || []).length ? '첨부 ' + t.files.length + '건' : ''
+                    });
+                });
+            }
+        } catch (e) {}
+
         /* 위험성평가 실데이터 — 전달받은 개선조치 (카테고리 '개선') */
         try {
             D().improvements().filter(function (m) { return m.dept_id === state.deptId; }).forEach(function (m) {
@@ -208,6 +257,9 @@
                     returned: returned, returnReason: cf.reason || '', returnBy: cf.by || '', returnAt: cf.at || '',
                     round: cf.round || 1,
                     basis: (m.hazard && m.hazard.basis) || '',
+                    /* 시설물 — 어디를 조치하러 가는지. 개선 전·후 사진을 찍을 대상이라
+                       담당자 화면에서 가장 먼저 필요한 정보다(미지정이면 빈 값). */
+                    facil: D().facilLabel ? D().facilLabel(m) : '',
                     dept: m.dept_id, dept_label: D().deptName(m.dept_id),
                     href: 'rsk-list.html' + (m.assessment_id ? '?year=' + (m.assessment_id.match(/RA-(\d{4})/) || [])[1] : ''),
                     atype: 'inline',
@@ -326,6 +378,7 @@
         var arr = items.filter(function (it) {
             if (state.fStatus) {
                 var d = daysBetween(it.due);
+                if (state.fStatus === 'arrived' && !(it.wk && it.wk.unassigned && it.status !== 'DONE')) return false;
                 if (state.fStatus === 'overdue' && !(d != null && d < 0 && it.status !== 'DONE')) return false;
                 if (state.fStatus === 'today' && !(d === 0 && it.status !== 'DONE')) return false;
                 if (state.fStatus === 'week' && !(d != null && d >= 0 && d <= 7 && it.status !== 'DONE')) return false;
@@ -351,6 +404,8 @@
 
     /* ================= 그룹 — DONE 은 '완료한 업무' 탭으로 분리 ================= */
     var GROUPS = [
+        /* 기한보다 배정이 먼저다 — 담당자가 없으면 지연이든 아니든 아무도 손대지 않는다 */
+        { key: 'arrived', label: '우리 부서에 도착 · 담당자 미정', tone: 'warning' },
         { key: 'overdue', label: '지연',   tone: 'danger'  },
         { key: 'week',    label: '이번주', tone: 'warning' },
         { key: 'plan',    label: '예정',   tone: 'success' },
@@ -419,30 +474,21 @@
 
         var deptOpts = depts.map(function (d) { return '<option value="' + d.id + '"' + (d.id === state.deptId ? ' selected' : '') + '>' + esc(d.name) + '</option>'; }).join('');
 
-        var head =
-            '<div class="mw-head">' +
-                '<div class="mw-head-left">' +
-                    '<h2 class="mw-title">내 할일</h2>' +
-                    '<span class="mw-synced">최종 동기화 <b>' + esc(state.syncedAt) + '</b></span>' +
-                    '<button type="button" class="btn btn-outline btn-sm" onclick="MYWORK.sync()">' + ICO.sync + ' 동기화</button>' +
-                '</div>' +
-                '<div class="mw-head-right">' +
-                    /* 고를 수 있는 부서가 하나뿐이면 select 를 띄우지 않는다 —
-                       선택지가 1개인 드롭다운은 '더 있는데 안 나온다'로 읽힌다 */
-                    (depts.length > 1
-                        ? '<label class="mw-deptlabel" for="mw-dept-sel">부서 (관점 전환)</label>' +
-                          '<select id="mw-dept-sel" class="form-select" onchange="MYWORK.setDept(this.value)">' + deptOpts + '</select>'
-                        : '<span class="mw-deptlabel">부서</span>' +
-                          '<b class="mw-deptfixed">' + esc((depts[0] && depts[0].name) || '') + '</b>') +
-                '</div>' +
-            '</div>';
+        /* 헤더 바 제거(2026-08-11) — 제목이 페이지 제목과 **같은 문자열**이라 60px 를
+         * 정보 0 으로 썼다. 동기화·부서는 페이지 제목 줄로 올린다(work-admin 과 같은 패턴).
+         * 부서명은 제목에 붙여 "누구 관점인지"를 한 줄에서 읽게 한다. */
+        var head = '';
+        injectHeadActions(depts, deptOpts);
 
+        var arrivedN = items.filter(function (i) { return i.wk && i.wk.unassigned && i.status !== 'DONE'; }).length;
+        /* KPI 4칩 — 실측(2026-08-11) 당시 6칩 중 4개가 0이었고 카드는 3장뿐이었다.
+         * '오늘 마감'은 '이번주'에 포함되는 부분집합이고, '결재 대기'는 담당자
+         * 처리 축이 아니라 결재 도메인이다. 축이 겹치거나 남의 도메인인 칩을 뺀다. */
         var kpi =
             '<div class="mw-kpis">' +
+                kpiChip('warning', '배정 대기', arrivedN, 'arrived') +
                 kpiChip('danger',  '지연',      k.overdue, 'overdue') +
-                kpiChip('warning', '오늘 마감', k.today,   'today') +
                 kpiChip('info',    '이번주',    k.week,    'week') +
-                kpiChip('purple',  '결재 대기', k.approval, 'approval') +
                 kpiChip('neutral', '전체',      k.total,   '') +
             '</div>';
 
@@ -451,7 +497,7 @@
         var tabs =
             '<div class="tabs mw-tabs">' +
                 '<button type="button" class="tab' + (state.view === 'due' ? ' active' : '') + '" onclick="MYWORK.setView(\'due\')">마감 할일 <span class="mw-tab-n">' + items.filter(function (i) { return i.status !== 'DONE'; }).length + '</span></button>' +
-                '<button type="button" class="tab' + (state.view === 'pub' ? ' active' : '') + '" onclick="MYWORK.setView(\'pub\')">발행된 업무 <span class="mw-tab-n">' + pubOpenN + '</span></button>' +
+                '<button type="button" class="tab' + (state.view === 'pub' ? ' active' : '') + '" onclick="MYWORK.setView(\'pub\')">담당 문서 <span class="mw-tab-n">' + pubOpenN + '</span></button>' +
                 '<button type="button" class="tab' + (state.view === 'done' ? ' active' : '') + '" onclick="MYWORK.setView(\'done\')">완료한 업무 <span class="mw-tab-n">' + doneN + '</span></button>' +
             '</div>';
 
@@ -471,14 +517,9 @@
             Object.keys(CATS).map(function (k2) { return '<option value="' + k2 + '"' + (state.fCat === k2 ? ' selected' : '') + '>' + esc(CATS[k2].label) + '</option>'; }).join('');
         var filters =
             '<div class="mw-filters">' +
-                '<select class="form-select" aria-label="상태 필터" onchange="MYWORK.setStatus(this.value)">' +
-                    '<option value="">상태 전체</option>' +
-                    '<option value="overdue"'  + (state.fStatus === 'overdue'  ? ' selected' : '') + '>지연</option>' +
-                    '<option value="today"'    + (state.fStatus === 'today'    ? ' selected' : '') + '>오늘 마감</option>' +
-                    '<option value="week"'     + (state.fStatus === 'week'     ? ' selected' : '') + '>이번주</option>' +
-                    '<option value="progress"' + (state.fStatus === 'progress' ? ' selected' : '') + '>진행</option>' +
-                    '<option value="plan"'     + (state.fStatus === 'plan'     ? ' selected' : '') + '>예정</option>' +
-                '</select>' +
+                /* 상태 셀렉트 제거(2026-08-11) — KPI 칩과 **같은 축을 두 번** 물었다.
+                   칩이 이미 클릭 필터이므로 셀렉트는 중복이고, 두 컨트롤이 서로
+                   다른 값을 가리키면 어느 쪽이 적용된 건지 알 수 없다. */
                 '<select class="form-select" aria-label="카테고리 필터" onchange="MYWORK.setCat(this.value)">' + catOpts + '</select>' +
                 '<select class="form-select" aria-label="정렬" onchange="MYWORK.setSort(this.value)">' +
                     '<option value="due"'      + (state.sort === 'due'      ? ' selected' : '') + '>마감 임박순</option>' +
@@ -494,7 +535,10 @@
         var groupHtml = '';
         var grouped = {};
         GROUPS.forEach(function (g) { grouped[g.key] = []; });
-        view.forEach(function (it) { (grouped[bucket(it.due, it.status)] || grouped.other).push(it); });
+        view.forEach(function (it) {
+            var key = (it.wk && it.wk.unassigned && it.status !== 'DONE') ? 'arrived' : bucket(it.due, it.status);
+            (grouped[key] || grouped.other).push(it);
+        });
 
         GROUPS.forEach(function (g) {
             var list = grouped[g.key];
@@ -527,14 +571,38 @@
     }
 
     /* ---- 마감 할일 아이템 ---- */
+    /* 액션을 페이지 제목 줄로 — 별도 헤더 바를 없앤다 */
+    function injectHeadActions(depts, deptOpts) {
+        var host = document.querySelector('.dy-page-title');
+        if (!host) return;
+        var t = host.querySelector('h1');
+        var dname = (depts[0] && depts[0].name) || '';
+        (depts || []).forEach(function (d) { if (d.id === state.deptId) dname = d.name; });
+        if (t) t.textContent = '내 할일' + (dname ? ' — ' + dname : '');
+        var old = host.querySelector('.page-head-action');
+        if (old) old.remove();
+        var wrap = document.createElement('div');
+        wrap.className = 'page-head-action mw-headact';
+        wrap.innerHTML =
+            '<span class="mw-synced">동기화 <b>' + esc(state.syncedAt) + '</b></span>' +
+            /* 고를 수 있는 부서가 하나뿐이면 select 를 띄우지 않는다 —
+               선택지가 1개인 드롭다운은 '더 있는데 안 나온다'로 읽힌다 */
+            (depts.length > 1
+                ? '<select class="form-select" aria-label="부서 관점 전환" onchange="MYWORK.setDept(this.value)">' + deptOpts + '</select>'
+                : '') +
+            '<button type="button" class="btn btn-outline btn-sm" onclick="MYWORK.sync()">' + ICO.sync + ' 동기화</button>';
+        host.appendChild(wrap);
+    }
+
     function itemHtml(it) {
         var meta = CATS[it.cat] || { label: it.cat, color: 'var(--text-gray)', bg: 'var(--gray-200)' };
         var dTxt = dDayText(it.due, it.status);
         var dCls = 'mw-dday';
         var dNum = daysBetween(it.due);
         if (it.status === 'DONE') dCls += ' done';
-        else if (dNum != null && dNum < 0) dCls += ' over';
-        else if (dNum != null && dNum <= 3) dCls += ' soon';
+        else if (dNum == null) dCls += ' nodue';          /* 기한 미지정 — 초과와 구분한다 */
+        else if (dNum < 0) dCls += ' over';
+        else if (dNum <= 3) dCls += ' soon';
 
         var actionBtn = actionButtons(it);
         var subLine = it.sub ? '<div class="mw-item-sub">' + esc(it.sub) + '</div>' : '';
@@ -548,7 +616,8 @@
             '</div>';
         }
         var remindTag = it.remind ? '<span class="mw-remind-tag">' + ICO.bell + ' 재촉</span> ' : '';
-        var catBadge = '<span class="mw-cat" style="color:' + meta.color + ';background:' + meta.bg + ';">' + esc(meta.label) + '</span>';
+        var catBadge = '<span class="mw-cat" style="color:' + meta.color + ';background:' + meta.bg + ';">' + esc(meta.label) + '</span>' +
+            (it.origin ? ' <span class="chip-status info chip-sm">' + esc(it.origin) + '</span>' : '');
         var destChip = (it.atype === 'menu' && it.destLabel)
             ? '<span class="mw-dest">' + ICO.arrow + ' ' + esc(it.destLabel) + '에서 진행</span>' : '';
 
@@ -563,6 +632,8 @@
                         '<span class="' + dCls + '">' + esc(dTxt) + '</span>' +
                         (it.due ? '<span class="mw-item-due">' + esc(it.due) + '</span>' : '') +
                         (it.dept_label ? '<span class="mw-item-dept">' + esc(it.dept_label) + '</span>' : '') +
+                        /* 시설물 — 조치하러 갈 곳. 부서·기한 옆에 둔다(미지정이면 표시 안 함) */
+                        (it.facil ? '<span class="mw-item-dept">시설물 ' + esc(it.facil) + '</span>' : '') +
                         destChip +
                     '</div>' +
                 '</div>' +
@@ -606,6 +677,24 @@
     }
 
     function actionButtons(it) {
+        /* ── 자동발행 업무 ─────────────────────────────────────────────
+         * 배정은 조작(canAct)이 아니라 **지휘**(DYROLE.assignKind)라 축이 다르다.
+         * 그래서 canAct 가드보다 앞에서 판정한다 — 부서장은 조회 전용이지만
+         * 배정은 할 수 있다(§14-7). */
+        if (it.wk && it.wk.unassigned && it.status !== 'DONE') {
+            var A = global.WKASSIGN;
+            var can = A && A.canAssign(it.wk.deptId);
+            var mineDept = global.DYROLE && global.DYROLE.canClaim && global.DYROLE.canClaim(it.wk.deptId);
+            if (!can && !mineDept) {
+                return '<span class="mw-item-sub">' + (A ? A.whoCanNote(it.wk.deptId) : '') + '</span>';
+            }
+            return (mineDept
+                    ? '<button type="button" class="btn btn-primary btn-sm" onclick="MYWORK.wkClaim(\'' + esc(it.wk.issueId) + '\',\'' + esc(it.wk.deptId) + '\')">내가 맡기</button> '
+                    : '') +
+                (can
+                    ? '<button type="button" class="btn btn-outline btn-sm" onclick="MYWORK.wkAssign(\'' + esc(it.wk.issueId) + '\',\'' + esc(it.wk.deptId) + '\')">담당자 지정</button>'
+                    : '');
+        }
         /* 처리 권한이 없으면 액션 대신 '보기' 만 — 눌러도 막힐 버튼을 띄우지 않는다
            (없는 권한을 시각적으로 약속하지 않는다) */
         if (!canAct()) {
@@ -1064,6 +1153,29 @@
         var ctx = state.attachCtx; if (!ctx) return;
         var files = state.attachFiles[ctx.id] || [];
         if (!files.length) { toast('첨부할 파일을 선택하세요.'); return; }
+        /* 자동발행 업무 — 발행 엔진에 제출로 기록한다. 화면 로컬 상태(doneSeeds)에만
+           남기면 주관부서의 회수 현황이 영원히 갱신되지 않는다. */
+        var wk = state.wkMap[ctx.id];
+        if (wk) {
+            var need = (wk.slots || []).filter(function (x) { return x.required; });
+            if (need.length && files.length < need.length) {
+                toast('필수 증빙 ' + need.length + '개가 필요합니다 — ' +
+                      need.map(function (x) { return x.key; }).join(' · '));
+                return;
+            }
+            var payload = files.map(function (f, i) {
+                return typeof f === 'string'
+                    ? { name: f, slot: (wk.slots[i] || {}).key || '' }
+                    : Object.assign({}, f, { slot: f.slot || (wk.slots[i] || {}).key || '' });
+            });
+            global.DYWORK.submit(wk.issueId, wk.deptId, payload, '');
+            delete state.attachFiles[ctx.id];
+            state.attachCtx = null;
+            V().closeModal();
+            toast('제출했습니다 — 재난안전과 접수 확인 대기로 넘어갑니다');
+            render();
+            return;
+        }
         if (ctx.kind === 'pub') {
             var d = (global.DY_DOCS_V2 || []).find(function (x) { return x.id === ctx.id; });
             if (d) { d.status = '완료'; d.updated = todayIso(); }
@@ -1341,7 +1453,18 @@
         render();
     }
 
+    /* 배정 — WKASSIGN 공유 패널을 연다. 여기서 배정 UI 를 다시 그리지 않는다. */
+    function wkAssign(issueId, deptId) {
+        if (!global.WKASSIGN) return;
+        global.WKASSIGN.open(issueId, deptId, render);
+    }
+    function wkClaim(issueId, deptId) {
+        if (!global.WKASSIGN) return;
+        global.WKASSIGN.claimAt(issueId, deptId, render);
+    }
+
     global.MYWORK = {
+        wkAssign: wkAssign, wkClaim: wkClaim,
         onPickAfter: onPickAfter, delAfter: delAfter, pickAfterDemo: pickAfterDemo,
         onPickBefore: onPickBefore, delBefore: delBefore, pickBeforeDemo: pickBeforeDemo,
         openReport: openReport, onPickReport: onPickReport, delReport: delReport, doReport: doReport, dlForm: dlForm,

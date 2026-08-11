@@ -30,12 +30,32 @@
         D: '미흡 — 긴급 보수·보강 필요, 사용제한 검토',
         E: '불량 — 심각 결함, 즉각 사용금지·개축',
     };
-    /* 중대결함 유형 (시설물안전법 시행령 제18조 11종 요약) */
-    const DEFECT_TYPES = [
-        '시설물 기초의 세굴', '교량 교각의 부등침하', '교량 받침의 파손',
-        '터널 지반의 부등침하', '댐의 파이핑·구조적 균열', '건축물 기둥·보·내력벽 내력 손실',
-        '하천시설 본체·수문 파손·누수·세굴', '철근콘크리트 염해·탄산화 내력 손실',
-        '절토·성토 사면 균열·이완', '옹벽의 균열·파손', '기타 국토교통부령 결함',
+    /* 중대한결함등 — 시설물안전법 시행령 제18조. **두 축이다**:
+     *   제1항 11호 = 구조안전에 중대한 영향(중대재해 산업 축)
+     *   제2항  4호 = 공중이 이용하는 부위의 결함(중대시민재해 축) — 난간·포장·환기구 덮개
+     * 종전 목록은 제5호(항만 계류시설)를 빠뜨리고 제10호(사면 균열 → 옹벽 균열·파손)를
+     * 둘로 쪼개 개수만 11개로 맞춰 놓았고, 제2항은 통째로 없었다. 담양군은 공중이용시설
+     * 관리자라 제2항이 오히려 핵심이다. 2026-08-11 조문 원문 대조로 바로잡음. */
+    const DEFECT_GROUPS = [
+        { label: '구조안전 (시행령 §18① 11호)', items: [
+            '시설물기초의 세굴',
+            '교량교각의 부등침하',
+            '교량받침의 파손',
+            '터널지반의 부등침하',
+            '항만 계류시설 중 강관 또는 철근콘크리트파일의 파손·부식',
+            '댐의 파이핑 및 구조적 균열',
+            '건축물의 기둥·보 또는 내력벽의 내력 손실',
+            '하천시설물의 본체, 교량 및 수문의 파손·누수·파이핑 또는 세굴',
+            '시설물의 철근콘크리트의 염해 또는 탄산화에 따른 내력 손실',
+            '절토사면 및 성토사면의 균열·이완 등에 따른 옹벽의 균열 또는 파손',
+            '그 밖에 국토교통부령으로 정하는 구조안전 결함',
+        ] },
+        { label: '공중이 이용하는 부위 (시행령 §18② 4호)', items: [
+            '시설물의 난간 등 추락방지시설의 파손',
+            '도로교량·도로터널의 포장 부분이나 신축 이음부의 파손',
+            '보행자 또는 차량이 이동하는 구간에 있는 환기구 등의 덮개 파손',
+            '그 밖에 국토교통부령으로 정하는 공중 이용 부위의 결함',
+        ] },
     ];
     const REPAIR_STATUS = ['계획', '착수', '완료'];
 
@@ -90,13 +110,25 @@
         const level = score >= 55 ? 'high' : score >= 30 ? 'mid' : 'low';
         return { level, score, have, label: { high: '높음', mid: '보통', low: '낮음' }[level] };
     }
-    /* 다음 점검 예정일 간이 산출 (안전등급 + 종별) — 법정주기 근사 (PRD §3 FAC02-D) */
+    /* 다음 정기안전점검 예정일 — 시설물안전법 시행령 별표3(안전점검 실시시기).
+     *   A·B·C 등급 = 반기 1회 이상        → 최근 점검 + 6개월
+     *   D·E   등급 = 1년 3회 이상          → 최근 점검 + 4개월
+     *   안전등급 미지정 = 반기 1회 이상    → 최근 점검 + 6개월 (별표3 비고 2)
+     * ※ D·E 는 법이 간격이 아니라 **시기**를 정한다 — 해빙기(2·3월)·우기(5·6월)·
+     *   동절기(11·12월) 전 각 1회(비고 3). 아래 값은 연 3회를 균등 간격으로 환산한
+     *   제안값이며, 실제 점검 시기는 그 세 창에 맞춰야 한다. 화면이 이 단서를 함께 낸다. */
     function suggestNext(last, grade) {
         if (!last) return '';
         const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(last); if (!m) return '';
         let y = +m[1], mo = +m[2] + ((grade === 'D' || grade === 'E') ? 4 : 6);
         y += Math.floor((mo - 1) / 12); mo = ((mo - 1) % 12) + 1;
         return y + '-' + String(mo).padStart(2, '0') + '-' + m[3];
+    }
+    /* 정기안전점검 주기 안내 문구 — 별표3 파생. 화면이 숫자만 던지지 않게 근거를 함께 낸다. */
+    function cycleNote(grade) {
+        return (grade === 'D' || grade === 'E')
+            ? '연 3회 이상 — 해빙기(2·3월)·우기(5·6월)·동절기(11·12월) 전 각 1회'
+            : (grade ? '반기 1회 이상' : '반기 1회 이상 (안전등급 지정 전)');
     }
     function counts() {
         const c = { total: DB.recs.length, cls2: 0, cls3: 0, aged: 0, noCoord: 0, noJur: 0, graded: 0 };
@@ -164,6 +196,42 @@
         return { added, updated };
     }
 
+    /* ── 이 시설물에 달린 개선조치 (위험성평가 → 개선조치 사슬의 역방향 조회) ──
+     * 검수 행에 붙인 시설물번호가 개선조치까지 승계되므로(js/rsk-data.js deliverFromReview),
+     * 시설물 쪽에서 "이 시설물에 무슨 조치를 했나"를 되짚을 수 있다. 이름이 아니라
+     * 시설물번호로 잇는 이유는 동명 시설물(삼지교 2건)·개명에 견디기 위해서다(PRD §4-3). */
+    function impsOf(no) {
+        const R = window.DYRSK;
+        if (!R || typeof R.improvements !== 'function') return null;   /* 위험성평가 모듈 미로드 */
+        return R.improvements().filter(m => m.hazard && m.hazard.facilNo === no);
+    }
+
+    /* ── 시설물 인라인 선택기 ──
+     * 조직도 선택기(ORGPICK)와 **같은 GUI**(.org-inline/.otr-*)를 쓰고 데이터만 대장이다.
+     * 별도 모달을 띄우지 않는다 — 모달 안에서 펼치는 인라인 패널(CLAUDE.md §1 단일 모달). */
+    const GBN_GROUPS = [['BR', '교량'], ['AR', '건축물'], ['RI', '하천'], ['WS', '상하수도'], ['ET', '기타']];
+    function facilTree(q) {
+        q = String(q || '').trim().toLowerCase();
+        const hit = r => !q || (r.facilNm + ' ' + r.facilNo + ' ' + addrOf(r)).toLowerCase().indexOf(q) >= 0;
+        const out = GBN_GROUPS.map(g => {
+            const list = DB.recs.filter(r => r.facilGbn === g[0] && hit(r));
+            if (!list.length) return '';
+            const open = q ? ' style="display:block;"' : '';
+            return '<div class="otr-dept">' +
+                '<button type="button" class="otr-deptbtn" onclick="DYFACIL._toggle(this)">' +
+                    '<span class="otr-arrow">' + (q ? '▾' : '▸') + '</span> ' + g[1] +
+                    ' <span class="otr-count">' + list.length + '건</span></button>' +
+                '<div class="otr-members"' + open + '>' +
+                list.map(r => '<button type="button" class="otr-member" onclick="DYFACIL._pick(this,\'' + r.facilNo + '\')">' +
+                    '<span class="otr-role">' + (CLASS_NM[r.facilClass] || '-') + '</span>' +
+                    '<span class="otr-name">' + esc(r.facilNm) +
+                        ' <span class="otr-count">' + esc(r.facilNo) + '</span></span></button>').join('') +
+                '</div></div>';
+        }).join('');
+        return '<div class="org-tree-root">담양군 시설물 대장 ' + DB.recs.length + '건</div>' +
+            (out || '<div style="padding:10px;color:var(--text-gray);font-size:var(--fs-12);">검색 결과 없음</div>');
+    }
+
     const DYFACIL = {
         list: (f) => {
             f = f || {};
@@ -182,7 +250,25 @@
             });
         },
         rec: recOf, ext: extOf, age: ageOf, addr: addrOf, risk: riskOf, counts,
-        saveExt, sendFms, suggestNext, diffAgainst, applyIncoming,
+        saveExt, sendFms, suggestNext, cycleNote, diffAgainst, applyIncoming, imps: impsOf,
+        /* 시설물 한 건의 표시 라벨 — 다른 도메인이 시설물번호만 갖고 이름을 얻을 때 */
+        label: (no) => { const r = recOf(no); return r ? r.facilNm : ''; },
+        /* 인라인 선택기 — 필드 래퍼 id 와 선택 시 부를 전역 함수 경로를 받는다.
+           onpick(시설물번호, 시설물명) 로 되돌려 준다. */
+        toggle: (fieldId, onpick) => {
+            const field = document.getElementById(fieldId); if (!field) return;
+            const cur = field.querySelector(':scope > .org-inline');
+            if (cur) { cur.remove(); return; }
+            const panel = document.createElement('div');
+            panel.className = 'org-inline';
+            panel.style.marginTop = '8px';
+            panel.setAttribute('data-onpick', onpick || '');
+            panel.innerHTML =
+                '<div class="org-inline-search"><input type="text" placeholder="시설명·시설물번호·소재지 검색" oninput="DYFACIL._filter(this)"></div>' +
+                '<div class="org-inline-body">' + facilTree('') + '</div>';
+            field.appendChild(panel);
+            panel.scrollIntoView({ block: 'nearest' });
+        },
         syncLog: () => DB.syncLog, settings: () => DB.settings,
         saveSettings: (patch) => { Object.assign(DB.settings, patch); save(); },
         seedRecs: () => (window.DY_FACIL_SEED || { recs: [] }).recs,
@@ -234,8 +320,16 @@
                 if (age != null && age >= 30) flags.push('<span class="chip-mini wt-attach">노후 ' + age + '년</span>');
                 if (r.jur === '미상') flags.push('<span class="chip-mini wt-attach">소관확인</span>');
                 if (!e.lat) flags.push('<span class="chip-mini wt-attach">좌표없음</span>');
+                /* 이 시설물로 지정된 개선조치가 있으면 대장에서 바로 보인다 — 조치 실적이
+                   시설물에 쌓이는 것이 FMS 연계의 값이므로 상세를 열지 않아도 드러낸다. */
+                const im = impsOf(r.facilNo);
+                if (im && im.length) {
+                    const nd = im.filter(m => m.status === 'DONE').length;
+                    flags.push('<span class="chip-mini st-done">개선조치 ' + im.length + '건' + (nd ? ' · 완료 ' + nd : '') + '</span>');
+                }
                 return '<tr onclick="DYFACIL._detail(\'' + r.facilNo + '\')" style="cursor:pointer;">' +
-                    '<td><b>' + esc(r.facilNm) + '</b><div style="font-size:var(--fs-12); color:var(--text-gray);">' + esc(r.facilNo) + '</div></td>' +
+                    '<td><b>' + esc(r.facilNm) + '</b><div style="font-size:var(--fs-12); color:var(--text-gray);">' + esc(r.facilNo) + '</div>' +
+                        (flags.length ? '<div style="margin-top:4px; display:flex; flex-wrap:wrap; gap:4px;">' + flags.join('') + '</div>' : '') + '</td>' +
                     '<td>' + esc(r.gbnNm) + '<div style="font-size:var(--fs-12); color:var(--text-gray);">' + esc(r.kindNm) + '</div></td>' +
                     '<td>' + (CLASS_NM[r.facilClass] || '-') + '</td>' +
                     '<td style="font-size:12px;">' + esc(r.addrDong || '') + '</td>' +
@@ -291,9 +385,10 @@
             '<div class="fac-f2"><span class="fac-f-l">안전등급 (A~E)</span>' + sel('ex-grade', e.safetyGrade, ['A', 'B', 'C', 'D', 'E'].map(g => [g, g + ' — ' + GRADE_DESC[g].split(' — ')[1]]), '미평가') + '</div>' +
             '<div class="fac-f2"><span class="fac-f-l">소관부서</span>' + inp('ex-dept', e.deptNm, '예: 건설과') + '</div>' +
             '<div class="fac-f2"><span class="fac-f-l">최근 점검일</span>' + inp('ex-last', e.lastInspectYmd, 'YYYY-MM-DD', 'date') + '</div>' +
-            '<div class="fac-f2"><span class="fac-f-l">차기 점검예정일 ' + (nextSuggest ? '<span style="font-size:var(--fs-12); color:var(--primary);">(법정주기 제안 ' + nextSuggest + ')</span>' : '') + '</span>' + inp('ex-next', e.nextInspectYmd, 'YYYY-MM-DD', 'date') + '</div>' +
+            '<div class="fac-f2"><span class="fac-f-l">차기 정기안전점검 예정일 ' + (nextSuggest ? '<span style="font-size:var(--fs-12); color:var(--primary);">(제안 ' + nextSuggest + ')</span>' : '') + '</span>' + inp('ex-next', e.nextInspectYmd, 'YYYY-MM-DD', 'date') +
+                '<span class="fac-hint">' + esc(cycleNote(e.safetyGrade)) + '</span></div>' +
             '<div class="fac-f2"><span class="fac-f-l">중대결함 유무</span>' + sel('ex-defyn', e.defectYn, [['N', '없음'], ['Y', '있음']], '미확인') + '</div>' +
-            '<div class="fac-f2"><span class="fac-f-l">중대결함 유형</span>' + sel('ex-deftype', e.defectType, DEFECT_TYPES, '해당 없음') + '</div>' +
+            '<div class="fac-f2"><span class="fac-f-l">중대결함 유형</span>' + defectSel(e.defectType) + '</div>' +
             '<div class="fac-f2"><span class="fac-f-l">보수보강 진행</span>' + sel('ex-repair', e.repairStatus, REPAIR_STATUS, '해당 없음') + '</div>' +
             '<div class="fac-f2"><span class="fac-f-l">규모 (값 / 단위)</span><div style="display:flex; gap:6px;">' + inp('ex-size', e.sizeValue, '값') + inp('ex-unit', e.sizeUnit, '㎡·m·톤/일') + '</div></div>' +
             '<div class="fac-f2"><span class="fac-f-l">이용인원 (일평균)</span>' + inp('ex-users', e.dailyUsers, '명', 'number') + '</div>' +
@@ -301,7 +396,15 @@
             '<div class="fac-f2"><span class="fac-f-l">좌표 (위도 / 경도)</span><div style="display:flex; gap:6px;">' + inp('ex-lat', e.lat, '위도') + inp('ex-lng', e.lng, '경도') + '</div></div>' +
             '<div class="fac-f2"><span class="fac-f-l">인접 위험요소</span>' + inp('ex-adj', e.adjacentRisk, '예: 급경사지 인접') + '</div>' +
             '</div>' +
-            (e.defectYn === 'Y' && e.defectNotifyYmd ? '<p class="fac-note">중대결함 통보일 ' + esc(e.defectNotifyYmd) + ' → 보수·보강 착수기한 ' + plusYear(e.defectNotifyYmd, 2) + ' · 완료기한 ' + plusYear(e.defectNotifyYmd, 3) + ' (시설물안전법 제24조·시행령 제19조)</p>' : '');
+            /* 시행령 §19 — 착수기한은 **통보일 +2년**, 완료기한은 **착수일 +3년**이다.
+               종전에는 완료기한도 통보일 기준(+3년)으로 계산해 법정 기한보다 짧게 표시했다.
+               착수일은 담당자만 아는 값이라 시스템이 단정하지 않고 기준만 밝힌다. */
+            (e.defectYn === 'Y' && e.defectNotifyYmd
+                ? '<p class="fac-note">중대결함 통보일 ' + esc(e.defectNotifyYmd) +
+                  ' → 보수·보강 <b>착수기한 ' + plusYear(e.defectNotifyYmd, 2) + '</b>(통보일부터 2년 이내)' +
+                  ' · <b>완료기한은 착수일부터 3년 이내</b>(특별한 사유가 없는 경우)' +
+                  ' — 시설물안전법 제24조·시행령 제19조</p>'
+                : '');
 
         /* 3) 위험도 요약 */
         const riskBlock =
@@ -311,6 +414,49 @@
             (rk.level === 'na' ? '<span class="chip-mini wt-attach">핵심변수(안전등급/점검일) 부족 — 보완입력 후 착수</span>' : '') +
             '</div>';
 
+        /* 4) 이 시설물의 개선조치 내역 — 위험성평가 검수 행에 이 시설물을 지정하면 여기에 쌓인다.
+              FMS 로 되돌려 보낼 보수·보강 실적의 근거가 되는 자리다(PRD §5-2 향후 인터페이스). */
+        const imps = impsOf(no);
+        let impBlock = '';
+        if (imps === null) {
+            impBlock = '<div class="fac-sec-t" style="margin-top:18px;">개선조치 내역</div>' +
+                '<p class="fac-note">위험성평가 자료를 불러오지 못했습니다.</p>';
+        } else if (!imps.length) {
+            impBlock = '<div class="fac-sec-t" style="margin-top:18px;">개선조치 내역 <span class="chip-mini wt-attach">0건</span></div>' +
+                '<p class="fac-note">이 시설물로 지정된 개선조치가 아직 없습니다. ' +
+                '위험성평가 보고서 검수에서 유해위험요인 행에 이 시설물을 지정하면 여기에 쌓입니다.</p>';
+        } else {
+            const R = window.DYRSK;
+            const done = imps.filter(m => m.status === 'DONE').length;
+            const rows = imps.map(m => {
+                const over = m.status !== 'DONE' && R.isOverdue && R.isOverdue(m);
+                const st = m.status === 'DONE' ? ['success', '완료'] : over ? ['danger', '기한 초과'] : ['warning', '진행'];
+                const cf = m.confirm && m.confirm.state;
+                const cfChip = m.status === 'DONE'
+                    ? (cf === 'OK' ? '<span class="chip-mini st-done">확인 완료</span>'
+                        : cf === 'RETURNED' ? '<span class="chip-mini wt-attach">반려</span>'
+                        : '<span class="chip-mini wt">확인 대기</span>')
+                    : '';
+                const ph = (m.after_photos || []).length;
+                return '<tr>' +
+                    '<td><b>' + esc((m.hazard && m.hazard.name) || '-') + '</b>' +
+                        '<div style="font-size:var(--fs-12);color:var(--text-gray);">' + esc(m.action || m.description || '') + '</div></td>' +
+                    '<td style="font-size:var(--fs-12);">' + esc(R.deptName ? R.deptName(m.dept_id) : m.dept_id) + '</td>' +
+                    '<td style="font-size:var(--fs-12);">' + esc(m.due_date || m.due || '-') + '</td>' +
+                    '<td><span class="chip-status ' + st[0] + '">' + st[1] + '</span> ' + cfChip + '</td>' +
+                    '<td style="font-size:var(--fs-12);">' + (ph ? '개선 후 ' + ph + '장' : '—') + '</td>' +
+                    '<td class="col-action"><button type="button" class="btn btn-sm btn-outline" onclick="DYFACIL._toImp(\'' + esc(m.id) + '\')">보기</button></td>' +
+                '</tr>';
+            }).join('');
+            impBlock = '<div class="fac-sec-t" style="margin-top:18px;">개선조치 내역 ' +
+                    '<span class="chip-mini st-done">' + imps.length + '건 · 완료 ' + done + '</span></div>' +
+                '<div style="overflow-x:auto;"><table class="table-figma">' +
+                '<thead><tr><th>유해위험요인 / 조치</th><th style="white-space:nowrap;">부서</th>' +
+                '<th style="white-space:nowrap;">기한</th><th style="white-space:nowrap;">상태</th>' +
+                '<th style="white-space:nowrap;">증빙</th><th></th></tr></thead>' +
+                '<tbody>' + rows + '</tbody></table></div>';
+        }
+
         const foot =
             '<button class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
             '<button class="btn btn-outline" onclick="DYFACIL._send(\'' + no + '\', \'update\')">FMS 전송(수정)</button>' +
@@ -319,8 +465,17 @@
                 : '<button class="btn btn-primary" onclick="DYFACIL._saveExt(\'' + no + '\')">보완입력 저장</button>') +
             '<button class="btn btn-primary" onclick="DYFACIL._saveExt(\'' + no + '\')" style="' + (rk.level !== 'na' ? '' : 'display:none;') + '">보완입력 저장</button>';
 
-        V().openModal('시설물 상세 — ' + esc(r.facilNm), fmsBlock + extBlock + riskBlock, foot);
+        V().openModal('시설물 상세 — ' + esc(r.facilNm), fmsBlock + extBlock + riskBlock + impBlock, foot);
         /* 등급/최근점검 바뀌면 차기 제안 갱신은 저장 시 반영(단순화) */
+    }
+    /* 중대결함 유형 선택 — 시행령 §18 의 두 축을 그룹으로 나눠 보여준다.
+       구조안전(①)과 공중 이용 부위(②)는 통보 근거 조항이 달라 섞으면 안 된다. */
+    function defectSel(cur) {
+        const opts = DEFECT_GROUPS.map(g =>
+            '<optgroup label="' + esc(g.label) + '">' +
+            g.items.map(v => '<option value="' + esc(v) + '"' + (cur === v ? ' selected' : '') + '>' + esc(v) + '</option>').join('') +
+            '</optgroup>').join('');
+        return '<select class="select" id="ex-deftype" style="width:100%;"><option value="">해당 없음</option>' + opts + '</select>';
     }
     function plusYear(ymd, n) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd); return m ? (+m[1] + n) + '-' + m[2] + '-' + m[3] : '-'; }
 
@@ -498,6 +653,27 @@
         render();
     }
 
+    /* ── 인라인 선택기 내부 동작 ── */
+    DYFACIL._toggle = btn => {
+        const m = btn.nextElementSibling; if (!m) return;
+        const open = m.style.display === 'block';
+        m.style.display = open ? 'none' : 'block';
+        const ar = btn.querySelector('.otr-arrow'); if (ar) ar.textContent = open ? '▸' : '▾';
+    };
+    DYFACIL._filter = inp => {
+        const panel = inp.closest('.org-inline'); if (!panel) return;
+        const b = panel.querySelector('.org-inline-body');
+        if (b) b.innerHTML = facilTree(inp.value);
+    };
+    DYFACIL._pick = (btn, no) => {
+        const panel = btn.closest('.org-inline'); if (!panel) return;
+        const path = panel.getAttribute('data-onpick');
+        panel.remove();
+        const fn = String(path || '').split('.').reduce((o, k) => o && o[k], window);
+        const r = recOf(no);
+        if (typeof fn === 'function') fn(no, r ? r.facilNm : '');
+    };
+
     /* ── 공통 액션 (전 화면 공유) ── */
     DYFACIL._go = href => { window.location.href = href; };
     DYFACIL._detail = no => openDetail(no);
@@ -512,6 +688,7 @@
         const res = sendFms(no, kind);
         V().toast(res.msg);
     };
+    DYFACIL._toImp = id => { window.location.href = 'rsk-imp-detail.html?id=' + encodeURIComponent(id); };
     DYFACIL._toRisk = no => {
         const r = recOf(no); if (!r) return;
         /* 위험성평가 대상으로 FACIL_NO 관통 (PRD §5-4) */

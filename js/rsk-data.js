@@ -766,7 +766,10 @@
             }
             var deptDue = deptDues[deptId] || bulkDue;
             if (!deptDue) return;
-            dp.hazards = rows.map(function (r) { return { name: r.name.trim(), category: r.category || '', cause: r.cause || '', basis: r.basis || '', action: r.action.trim() }; });
+            /* 시설물(facilNo)은 검수 행에서 개선조치까지 그대로 승계한다 — 여기서 버리면
+             * 시설물 상세(FMS 대장)에서 "이 시설물에 무슨 조치를 했나"를 되짚을 수 없다.
+             * 이름(facilNm)은 표시용이고 잇는 키는 시설물번호다(동명 시설물·개명 대비). */
+            dp.hazards = rows.map(function (r) { return { name: r.name.trim(), category: r.category || '', cause: r.cause || '', basis: r.basis || '', action: r.action.trim(), facilNo: r.facilNo || '', facilNm: r.facilNm || '' }; });
             dp.dueDate = deptDue;
             dp.deliveredAt = today();
             dp.status = 'BEFORE';
@@ -787,7 +790,8 @@
                 addImprovement({
                     source_type: 'risk_assessment',
                     assessment_id: aid, dept_id: deptId,
-                    hazard: { name: r.name.trim(), category: r.category || '', cause: r.cause || '', basis: r.basis || '' },
+                    hazard: { name: r.name.trim(), category: r.category || '', cause: r.cause || '', basis: r.basis || '',
+                              facilNo: r.facilNo || '', facilNm: r.facilNm || '' },
                     description: r.action.trim(), action: r.action.trim(),
                     due: deptDue, due_date: deptDue,
                     /* 미지정은 **비워서 내려보낸다** — 담당자는 그 부서가 정한다
@@ -822,6 +826,14 @@
 
     /* ================= 개선조치 (부서·평가 링크) ================= */
     function improvements() { return load().improvements; }
+    /* 개선조치가 가리키는 시설물 표시 라벨 — 화면 4곳(개선조치 목록·상세·카드·내 할일)이
+     * 각자 hazard 를 파헤치지 않도록 한 곳에서 만든다. 이름이 비면 시설물번호로 떨어진다
+     * (이름은 표시용이고 잇는 키는 번호다). 지정하지 않은 건은 빈 문자열 — 미지정은
+     * 오류가 아니라 '시설물에 붙지 않는 요인'이라는 정상 상태다. */
+    function facilLabel(m) {
+        var h = m && m.hazard; if (!h) return '';
+        return (h.facilNm || h.facilNo || '').trim();
+    }
     function improvementOf(id) { var d = load(); for (var i = 0; i < d.improvements.length; i++) if (d.improvements[i].id === id) return d.improvements[i]; return null; }
     function improvementsFor(aid, deptId) {
         return improvements().filter(function (m) {
@@ -844,11 +856,15 @@
             dept_id: o.dept_id || '',
             occ_id: o.occ_id || '',
             target_id: o.target_id || '', process_id: o.process_id || '',
-            /* basis(법령 근거 조문 키)는 여기서 유실되면 화면에 근거를 못 그린다 — 반드시 보존 */
+            /* basis(법령 근거 조문 키)는 여기서 유실되면 화면에 근거를 못 그린다 — 반드시 보존.
+             * facilNo(FMS 시설물번호)도 같다 — 여기서 떨어뜨리면 검수 행에서 지정한 시설물이
+             * 개선조치까지 못 오고, 시설물 대장에서 "이 시설물에 무슨 조치를 했나"가 영영 빈다.
+             * 이 객체는 화이트리스트라 필드를 늘릴 때 여기도 함께 늘려야 한다. */
             hazard: o.hazard ? {
                 name: o.hazard.name || '', category: o.hazard.category || '',
-                cause: o.hazard.cause || '', basis: o.hazard.basis || ''
-            } : { name: '', category: '', cause: '', basis: '' },
+                cause: o.hazard.cause || '', basis: o.hazard.basis || '',
+                facilNo: o.hazard.facilNo || '', facilNm: o.hazard.facilNm || ''
+            } : { name: '', category: '', cause: '', basis: '', facilNo: '', facilNm: '' },
             hazard_risk_factor: (o.hazard && o.hazard.name) || o.hazard_risk_factor || '',
             description: o.description || (o.hazard && o.hazard.action) || '',
             action: o.action || o.description || '',
@@ -1170,7 +1186,10 @@
             addImprovement({
                 source_type: 'occasional',
                 occ_id: it.id, dept_id: o.deptId,
-                hazard: { name: h.name.trim(), category: h.category || '', cause: h.cause || '', basis: '' },
+                /* 시설물은 정기 검수 행과 같이 개선조치까지 승계한다 — 여기서 떨어뜨리면
+                   수시평가로 만든 조치만 시설물 대장에서 되짚을 수 없게 된다. */
+                hazard: { name: h.name.trim(), category: h.category || '', cause: h.cause || '', basis: '',
+                          facilNo: h.facilNo || '', facilNm: h.facilNm || '' },
                 description: h.action.trim(), action: h.action.trim(),
                 due: h.due || o.due || '', due_date: h.due || o.due || '',
                 assigned_to: h.owner || (deptName(o.deptId) + ' 담당자'),
@@ -1331,6 +1350,7 @@
         deliverFromReview: deliverFromReview,
         /* 개선조치 */
         improvements: improvements, improvementOf: improvementOf, improvementsFor: improvementsFor,
+        facilLabel: facilLabel,
         addImprovement: addImprovement, saveImprovement: saveImprovement,
         completeImprovement: completeImprovement, amendImprovement: amendImprovement, completionError: completionError, markReassessed: markReassessed,
         pushImpHistory: pushImpHistory, isOverdue: isOverdue, nextImpId: nextImpId,

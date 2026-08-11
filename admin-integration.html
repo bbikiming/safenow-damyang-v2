@@ -18,7 +18,7 @@
             </div></div>
             <div class="card"><div class="card-body">
                 <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;"><span class="link-status-dot ok"></span><b style="font-size:14px;">FMS (시설물관리)</b></div>
-                <p style="font-size:12px; color:var(--text-gray);">공중이용시설 정보 일 1회 동기화<br>마지막 동기화: 06-11 06:00 · 47건</p>
+                <p style="font-size:12px; color:var(--text-gray);">시설물관리대장 기본현황 일 1회 수신<br>마지막 수신: <span data-fms-last>—</span> · <span data-fms-cnt>—</span>건</p>
             </div></div>
             <div class="card"><div class="card-body">
                 <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;"><span class="link-status-dot warn"></span><b style="font-size:14px;">e호조 (재정)</b></div>
@@ -40,7 +40,7 @@
                     <thead><tr><th>일시</th><th>시스템</th><th>작업</th><th>건수</th><th>결과</th></tr></thead>
                     <tbody>
                         <tr><td>06-11 09:02</td><td>온나라</td><td>결재 상태 조회</td><td>2</td><td><span class="chip-mini st-done">성공</span></td></tr>
-                        <tr><td>06-11 06:00</td><td>FMS</td><td>시설 정보 동기화</td><td>47</td><td><span class="chip-mini st-done">성공</span></td></tr>
+                        <tr><td data-fms-last>—</td><td>FMS</td><td>시설물관리대장 수신</td><td data-fms-cnt>—</td><td><span class="chip-mini st-done">성공</span></td></tr>
                         <tr><td>06-11 06:00</td><td>행정포털</td><td>조직도 동기화</td><td>612</td><td><span class="chip-mini st-done">성공</span></td></tr>
                         <tr><td>06-10 22:00</td><td>e호조</td><td>집행 정보 배치</td><td>18</td><td><span class="chip-mini st-todo">1건 실패</span></td></tr>
                     </tbody>
@@ -56,5 +56,21 @@
     <script src="./js/policy-open.js"></script><!-- 발주처 확정 필요 항목 (DYPOLICY) -->
     <script src="./js/data.js"></script>
     <script src="./js/common.js"></script>
+
+    <script src="./js/facil-data.js"></script><!-- FMS 시설물 대장 시드 -->
+    <script src="./js/facil.js"></script>
+    <script>
+        /* FMS 행의 건수·일시는 하드코딩하지 않는다 — 시설물 대장(SCR-FAC-001)과
+           연계 이력(SCR-FAC-004)에서 파생한다. 두 화면이 다른 숫자를 보이면
+           어느 쪽이 맞는지 알 수 없어 연계 상태 모니터로서 값을 잃는다. */
+        document.addEventListener('DOMContentLoaded', function () {
+            if (!window.DYFACIL) return;
+            var cnt = DYFACIL.list({}).length;
+            var log = (DYFACIL.syncLog() || []).filter(function (l) { return l.dir === 'IN'; })[0];
+            var last = log ? log.at : '수신 기록 없음';
+            document.querySelectorAll('[data-fms-cnt]').forEach(function (el) { el.textContent = cnt; });
+            document.querySelectorAll('[data-fms-last]').forEach(function (el) { el.textContent = last; });
+        });
+    </script>
 </body>
 </html>

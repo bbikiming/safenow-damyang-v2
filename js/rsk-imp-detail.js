@@ -43,6 +43,8 @@
                 '<div class="id-meta">' +
                     '<span>관리대상 <b>' + esc(t ? t.name : '-') + '</b></span>' +
                     (hasHz && m.hazard_risk_factor ? '<span>유해위험요인 <b>' + esc(m.hazard_risk_factor) + '</b></span>' : '') +
+                    /* 시설물 — 위험성평가 검수에서 지정한 대상(미지정이면 줄 자체를 내지 않는다) */
+                    (D().facilLabel && D().facilLabel(m) ? '<span>시설물 <b>' + esc(D().facilLabel(m)) + '</b></span>' : '') +
                     (hasHz && m.hazard && m.hazard.basis ? '<span>법령 근거 ' + basisHtml(m.hazard) + '</span>' : '') +
                     (m.occ_id ? '<span>수시평가 <b>' + esc(m.occ_id) + '</b></span>' : '') +
                     '<span>담당자 <b>' + esc(m.assigned_to || '미지정') + '</b></span>' +

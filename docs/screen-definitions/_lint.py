@@ -12,7 +12,7 @@
   - 7섹션 구조(순서 고정)
   - 코드 수준 내용 금지(함수·DOM·CSS·수식·내부 데이터·라인참조·보안/코드품질)
   - [확인필요]는 §7 미결사항에만(본문 산재 금지)
-  - §7 미결사항에 '기한' 컬럼 + 항목 행 존재
+  - §7 미결사항이 있으면 '기한' 컬럼 + 항목 행 존재, 없으면 '없음' 명시
 """
 import os, re, sys, glob
 
@@ -74,10 +74,12 @@ def check(content):
     sec7 = content.find("## 7. 미결사항")
     if sec7 >= 0:
         body7 = content[sec7:]
-        if '기한' not in body7:
-            viols.append(("MIGYEOL", "§7 미결사항 표에 '기한' 컬럼이 없음"))
-        if not re.search(r'\|\s*[A-Z]{2,}-\d+\s*\|', body7):
-            viols.append(("MIGYEOL", "§7 미결사항에 항목 행(예: TBD-001)이 없음"))
+        no_open_item = bool(re.search(r'(?:미결사항\s*)?없음\s*[.。]?', body7[:500]))
+        if not no_open_item:
+            if '기한' not in body7:
+                viols.append(("MIGYEOL", "§7 미결사항 표에 '기한' 컬럼이 없음"))
+            if not re.search(r'\|\s*[A-Z]{2,}-\d+\s*\|', body7):
+                viols.append(("MIGYEOL", "§7 미결사항에 항목 행(예: TBD-001)이 없음"))
         before7 = content[:sec7]
         n = before7.count('[확인필요]')
         if n:

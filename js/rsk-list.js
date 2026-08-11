@@ -904,10 +904,11 @@
             var body = '';
             if (open) {
                 var tbody = rows.map(function (r, i) { return reviewRow(a.id, deptId, i, r); }).join('');
-                if (!rows.length) tbody = '<tr><td colspan="8" style="text-align:center;color:var(--text-gray);padding:14px;">이 부서의 보고서를 열어 보고 [＋행 추가]로 조치할 내용을 적으세요.</td></tr>';
+                if (!rows.length) tbody = '<tr><td colspan="9" style="text-align:center;color:var(--text-gray);padding:14px;">이 부서의 보고서를 열어 보고 [＋행 추가]로 조치할 내용을 적으세요.</td></tr>';
                 body = '<div class="rl-rv-dept-body">' +
                     deptFilesBar(a, deptId) +
                     '<div class="rl-rv-scroll"><table class="rl-rv-table"><thead><tr>' +
+                        '<th style="width:132px;">시설물</th>' +
                         '<th style="min-width:150px;">유해위험요인</th><th style="width:104px;">분류</th>' +
                         '<th style="min-width:120px;">원인</th>' +
                         '<th style="min-width:180px;">개선조치</th>' +
@@ -956,6 +957,11 @@
     function reviewRow(aid, deptId, i, r) {
         var cats = ['', '기계적', '화학적', '작업특성', '전기', '고소작업', '보건', '기타'];
         return '<tr>' +
+            /* 시설물 — FMS 시설물 대장에서 고른다(SCR-FAC-001 연계). 담당자 셀과 같은 방식:
+               셀의 버튼 → 모달 안 인라인 대장(CLAUDE.md §1 단일 모달).
+               **선택 항목이다** — 작업 행동·화학물질·보건 요인은 시설물에 붙지 않는다.
+               저장은 이름이 아니라 시설물번호로 한다(동명 시설물·개명에 견디기 위해). */
+            '<td>' + facilCell(deptId, i, r) + '</td>' +
             '<td><input type="text" value="' + esc(r.name) + '" placeholder="유해위험요인" onchange="RSKLIST.reviewSet(\'' + deptId + '\',' + i + ',\'name\',this.value)"></td>' +
             '<td><select onchange="RSKLIST.reviewSet(\'' + deptId + '\',' + i + ',\'category\',this.value)">' +
                 cats.map(function (c) { return '<option value="' + c + '"' + (r.category === c ? ' selected' : '') + '>' + (c || '분류') + '</option>'; }).join('') +
@@ -992,6 +998,16 @@
                다만 이미 아는 경우 미리 적어 줄 수 있어 지정 자체를 막지는 않는다. */
             : '<button type="button" class="rl-rv-owner" title="비워 두면 해당 부서가 지정합니다"' +
               ' onclick="RSKLIST.openRowOwner(\'' + deptId + '\',' + i + ')">부서에서 지정</button>';
+    }
+    /* 시설물 셀 — 지정되면 시설물명, 아니면 '해당 없음'(빈 값이 기본이고 정상이다).
+       미지정을 경고색으로 띄우지 않는다 — 필수가 아닌 항목을 필수처럼 보이게 하면
+       담당자가 아무 시설물이나 골라 넣고, 그 순간 대장 연계가 거짓 기록이 된다. */
+    function facilCell(deptId, i, r) {
+        return r.facilNo
+            ? '<button type="button" class="rl-rv-owner is-set" title="' + esc((r.facilNm || '') + ' · ' + r.facilNo) + '"' +
+              ' onclick="RSKLIST.openRowFacil(\'' + deptId + '\',' + i + ')">' + esc(r.facilNm || r.facilNo) + '</button>'
+            : '<button type="button" class="rl-rv-owner" title="시설물에 해당하는 요인이면 대장에서 고르세요(선택)"' +
+              ' onclick="RSKLIST.openRowFacil(\'' + deptId + '\',' + i + ')">해당 없음</button>';
     }
     /* 셀 안에서는 전·후 대표 1장씩을 썸네일로 보여준다 — 개수만으로는 무엇을 올렸는지
        알 수 없어 매번 열어봐야 한다. 자세히 보기는 관리 모달의 미리보기가 맡는다. */
@@ -1170,6 +1186,55 @@
         if (!ROW) return;
         reviewSet(ROW.deptId, ROW.i, 'owner', '');
         V().closeModal(); toast('담당자 지정 해제'); render();
+    }
+
+    /* ===== 행 시설물 — FMS 시설물 대장(SCR-FAC-001)에서 고른다 =====
+     * 조직도 선택기와 같은 GUI 를 쓰되 데이터만 대장이다(DYFACIL.toggle).
+     * 이 값이 개선조치까지 승계되어(js/rsk-data.js) 시설물 상세에 조치 내역으로 쌓인다. */
+    function openRowFacil(deptId, i) {
+        if (!canManage()) { denyToast(); return; }
+        var r = rowOf(deptId, i); if (!r) return;
+        if (!global.DYFACIL) { toast('시설물 대장을 불러오지 못했습니다.'); return; }
+        ROW = { deptId: deptId, i: i };
+        V().openModal('유해위험요인 — 시설물 지정',
+            '<p style="font-size:var(--fs-13);margin:0 0 4px;"><b>' + esc(D().deptName(deptId)) + '</b> · ' +
+                esc(r.name || '(유해위험요인 미입력)') + '</p>' +
+            '<p class="file-hint"><b>시설물에 해당하는 요인만 지정합니다.</b> ' +
+                '작업 행동·화학물질·보건처럼 특정 시설물에 붙지 않는 요인은 <b>비워 두세요</b> — 비워 두는 것이 기본입니다. ' +
+                '지정하면 이 조치가 해당 시설물의 조치 내역으로 남고, 시설물 위험도에도 반영할 수 있습니다.</p>' +
+            '<div class="rl-modal-row" style="margin-top:10px;">' +
+                '<label class="form-label" for="rl-facil-name">시설물</label>' +
+                '<div class="orgpick-field" id="rl-facil-field"><div style="display:flex;gap:8px;align-items:center;">' +
+                    '<input type="text" class="form-input" id="rl-facil-name" readonly placeholder="시설물 대장에서 선택" ' +
+                        'style="flex:1;background:var(--gray-50);" value="' + esc(r.facilNm || '') + '">' +
+                    '<button type="button" class="btn btn-outline" onclick="DYFACIL.toggle(\'rl-facil-field\',\'RSKLIST.pickRowFacil\')">시설물 대장</button>' +
+                '</div>' +
+                '<input type="hidden" id="rl-facil-no" value="' + esc(r.facilNo || '') + '">' +
+                '</div>' +
+            '</div>',
+            (r.facilNo ? '<button type="button" class="btn btn-outline" style="margin-right:auto;" onclick="RSKLIST.clearRowFacil()">지정 해제</button>' : '') +
+            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+            '<button type="button" class="btn btn-primary" onclick="RSKLIST.saveRowFacil()">저장</button>');
+    }
+    function pickRowFacil(no, name) {
+        var el = document.getElementById('rl-facil-name'); if (el) el.value = name || no;
+        var hid = document.getElementById('rl-facil-no'); if (hid) hid.value = no;
+    }
+    function saveRowFacil() {
+        if (!ROW) return;
+        var hid = document.getElementById('rl-facil-no');
+        var no = (hid && hid.value || '').trim();
+        if (!no) { toast('시설물 대장에서 고르거나 [취소]로 닫으세요.'); return; }
+        var nm = global.DYFACIL && DYFACIL.label ? DYFACIL.label(no) : '';
+        reviewSet(ROW.deptId, ROW.i, 'facilNo', no);
+        reviewSet(ROW.deptId, ROW.i, 'facilNm', nm);
+        V().closeModal(); toast('시설물 지정: ' + (nm || no)); render();
+    }
+    function clearRowFacil() {
+        if (!ROW) return;
+        reviewSet(ROW.deptId, ROW.i, 'facilNo', '');
+        reviewSet(ROW.deptId, ROW.i, 'facilNm', '');
+        V().closeModal(); toast('시설물 지정 해제'); render();
     }
 
     /* ===== 행 증빙 사진 — 개선 전/후 =====
@@ -1574,6 +1639,8 @@
         reviewToggleDept: reviewToggleDept, reviewSet: reviewSet,
         /* 행 담당자 (ORGPICK member) */
         openRowOwner: openRowOwner, pickRowOwner: pickRowOwner, saveRowOwner: saveRowOwner, clearRowOwner: clearRowOwner,
+        /* 행 시설물 (FMS 시설물 대장) */
+        openRowFacil: openRowFacil, pickRowFacil: pickRowFacil, saveRowFacil: saveRowFacil, clearRowFacil: clearRowFacil,
         /* 행 개선 전·후 사진 */
         openRowPhotos: openRowPhotos, onPickBefore: onPickBefore, onPickAfter: onPickAfter, delRowPhoto: delRowPhoto,
         preview: preview, closePreview: closePreview,
