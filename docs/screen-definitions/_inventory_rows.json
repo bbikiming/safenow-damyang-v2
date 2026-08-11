@@ -36,7 +36,7 @@
     "existingSfr": "SFR-002",
     "defFile": "SCR-BASE-002_관리대상현황_공중이용시설.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/base-targets.html",
-    "unresolvedCount": 2
+    "unresolvedCount": 6
   },
   {
     "scrId": "SCR-BASE-003",
@@ -75,7 +75,7 @@
     "existingSfr": "SFR-002·016",
     "defFile": "SCR-FAC-001_시설물대장.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/fac-list.html",
-    "unresolvedCount": 9
+    "unresolvedCount": 8
   },
   {
     "scrId": "SCR-FAC-002",
@@ -88,7 +88,7 @@
     "existingSfr": "SFR-002·016",
     "defFile": "SCR-FAC-002_시설물상세보완입력.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/fac-list.html",
-    "unresolvedCount": 10
+    "unresolvedCount": 12
   },
   {
     "scrId": "SCR-FAC-003",
@@ -101,7 +101,7 @@
     "existingSfr": "SFR-002·007",
     "defFile": "SCR-FAC-003_시설물위험도.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/fac-risk.html",
-    "unresolvedCount": 8
+    "unresolvedCount": 6
   },
   {
     "scrId": "SCR-FAC-004",
@@ -127,7 +127,7 @@
     "existingSfr": "SFR-002",
     "defFile": "SCR-FAC-005_연계설정.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/fac-settings.html",
-    "unresolvedCount": 9
+    "unresolvedCount": 8
   },
   {
     "scrId": "SCR-SBM-001",
@@ -179,7 +179,7 @@
     "existingSfr": "SFR-007",
     "defFile": "SCR-PRC-001_작업공정관리.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/rsk-proc.html",
-    "unresolvedCount": 0
+    "unresolvedCount": 4
   },
   {
     "scrId": "SCR-RISK-001",
@@ -218,7 +218,7 @@
     "existingSfr": "SFR-007",
     "defFile": "SCR-RISK-003_위험성추정.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/rsk-exec.html",
-    "unresolvedCount": 0
+    "unresolvedCount": 3
   },
   {
     "scrId": "SCR-RISK-004",
@@ -322,7 +322,7 @@
     "existingSfr": "SFR-009 (EVL02-E)",
     "defFile": "SCR-EVL-001_인력평가.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/evl-eval.html",
-    "unresolvedCount": 8
+    "unresolvedCount": 9
   },
   {
     "scrId": "SCR-EVL-002",
@@ -335,7 +335,7 @@
     "existingSfr": "SFR-009 (EVL01-V)",
     "defFile": "SCR-EVL-001_인력평가.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/evl-list.html",
-    "unresolvedCount": 8
+    "unresolvedCount": 9
   },
   {
     "scrId": "SCR-EVL-003",
@@ -348,7 +348,7 @@
     "existingSfr": "SFR-009 (EVL03-S)",
     "defFile": "SCR-EVL-001_인력평가.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/evl-settings.html",
-    "unresolvedCount": 8
+    "unresolvedCount": 9
   },
   {
     "scrId": "SCR-EDU-001",
@@ -465,7 +465,7 @@
     "existingSfr": "없음",
     "defFile": "SCR-DOC-002_업무목록세트리스트.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/docs-preset.html",
-    "unresolvedCount": 8
+    "unresolvedCount": 9
   },
   {
     "scrId": "SCR-DOC-003",
@@ -530,7 +530,7 @@
     "existingSfr": "없음",
     "defFile": "SCR-DOC-007_업무등록마법사.md",
     "file": "docs-preset.html",
-    "unresolvedCount": 9
+    "unresolvedCount": 8
   },
   {
     "scrId": "SCR-RPT-001",
@@ -621,7 +621,7 @@
     "existingSfr": "SIR-001",
     "defFile": "SCR-ADMIN-004_연계관리.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/admin-integration.html",
-    "unresolvedCount": 4
+    "unresolvedCount": 7
   },
   {
     "scrId": "SCR-ADMIN-005",
@@ -634,7 +634,7 @@
     "existingSfr": "ADM01-S",
     "defFile": "SCR-ADMIN-005_메뉴관리.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/admin-menus.html",
-    "unresolvedCount": 6
+    "unresolvedCount": 8
   },
   {
     "scrId": "SCR-ADMIN-006",
@@ -647,7 +647,7 @@
     "existingSfr": "ADM02-S",
     "defFile": "SCR-ADMIN-006_권한관리.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/admin-roles.html",
-    "unresolvedCount": 6
+    "unresolvedCount": 9
   },
   {
     "scrId": "SCR-ADMIN-007",
@@ -738,7 +738,7 @@
     "existingSfr": "SFR-005 등(호출처별)",
     "defFile": "SCR-EDOC-005_F5점검표폼.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/js/edoc-templates.js",
-    "unresolvedCount": 8
+    "unresolvedCount": 10
   },
   {
     "scrId": "SCR-EDOC-006",
@@ -907,6 +907,6 @@
     "existingSfr": "없음(전 화면 공통)",
     "defFile": "SCR-COM-008_법령근거연계.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/js/law-map.js",
-    "unresolvedCount": 11
+    "unresolvedCount": 13
   }
 ]

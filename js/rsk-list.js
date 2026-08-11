@@ -38,6 +38,7 @@
     var state = {
         mount: null, year: 2026, tab: 'depts',
         reviewOpen: {}, /* 검수 화면 부서별 접힘 상태 { deptId: true } */
+        fromFacil: null, /* 시설물 위험도에서 넘어온 시설물 {no, name} — 첫 행 추가 때 한 번 쓴다 */
     };
     var W = null; /* 생성 마법사 상태 */
 
@@ -713,9 +714,10 @@
 
         /* 검수 중이면 검수 인라인 패널을 부서 테이블 대신 표시 */
         if (review.stage === 'REVIEW') {
-            return reportBlock + renderReviewPanel(a);
+            return reportBlock + fromFacilNote(a) + renderReviewPanel(a);
         }
 
+        var facilNote = fromFacilNote(a);
         var allDepts = a.depts || [];
         var anyDelivered = allDepts.some(function (dp) { return !!dp.deliveredAt; });
         /* 전달 이후에는 개선건 0건 부서(지적사항 없음)를 목록에서 제외.
@@ -744,7 +746,7 @@
                 excludedNote +
             '</div>';
 
-        return reportBlock + deptTable;
+        return reportBlock + facilNote + deptTable;
     }
 
     function deptRow(a, dp) {
@@ -885,6 +887,19 @@
         '</div>';
     }
 
+    /* 시설물에서 넘어왔는데 아직 행에 넣지 못한 상태를 알린다 —
+       조작 권한이 없거나 검수 단계가 아니면 넣을 자리가 없다. 그 이유를 밝힌다. */
+    function fromFacilNote(a) {
+        if (!state.fromFacil) return '';
+        var nm = esc(state.fromFacil.name || state.fromFacil.no);
+        var stage = (a && a.review && a.review.stage) || 'NONE';
+        var why = !canManage()
+            ? '조회 권한만 있어 검수 행을 만들 수 없습니다 — 주관부서 담당자에게 요청하세요.'
+            : (stage !== 'REVIEW'
+                ? '아직 보고서 검수 단계가 아닙니다. 통합 보고서를 첨부하면 이 시설물을 넣을 행을 만들 수 있습니다.'
+                : '부서 블록의 <b>[＋ 행 추가]</b> 를 누르면 새 행에 이 시설물이 채워집니다.');
+        return '<div class="rl-ro" role="note"><b>시설물 ' + nm + '</b> 에서 넘어왔습니다 — ' + why + '</div>';
+    }
     function renderReviewPanel(a) {
         var pd = (a.review && a.review.parsedDepts) || {};
         var totalRows = 0;
@@ -1138,6 +1153,18 @@
         if (!canManage()) { denyToast(); return; }
         var a = (D().assessments(state.year) || [])[0]; if (!a) return;
         D().reviewAdd(a.id, deptId);
+        /* 시설물 위험도에서 넘어왔으면 새 행에 그 시설물을 미리 채운다 —
+           담당자가 방금 고른 시설물을 다시 찾게 하지 않는다. 한 번만 쓰고 비운다. */
+        if (state.fromFacil) {
+            var rows = ((a.review && a.review.parsedDepts) || {})[deptId] || [];
+            var i = rows.length - 1;
+            if (i >= 0) {
+                D().reviewSet(a.id, deptId, i, 'facilNo', state.fromFacil.no);
+                D().reviewSet(a.id, deptId, i, 'facilNm', state.fromFacil.name);
+                toast('시설물 ' + (state.fromFacil.name || state.fromFacil.no) + ' 을(를) 새 행에 넣었습니다.');
+            }
+            state.fromFacil = null;
+        }
         state.reviewOpen[deptId] = true;
         render();
     }
@@ -1628,6 +1655,19 @@
         var q = new URLSearchParams(location.search);
         var yr = q.get('year');
         if (yr) state.year = +yr;
+        /* 시설물 위험도(SCR-FAC-003)에서 [평가 착수]로 넘어오면 시설물번호가 함께 온다.
+           종전에는 year 만 읽어 넘어온 시설물이 화면에서 그대로 사라졌다 —
+           버튼은 눌리는데 아무 일도 안 일어나는 상태였다.
+           평가 대상은 부서 단위이고 시설물은 **행 단위** 값이므로(SCR-FAC-002 §6),
+           평가를 자동 선택하지 않고 '이 시설물로 넘어왔다'를 유지했다가
+           [＋ 행 추가] 시 그 행에 미리 채운다. */
+        var fno = (q.get('facilNo') || '').trim();
+        if (fno) {
+            state.fromFacil = {
+                no: fno,
+                name: (q.get('name') || (global.DYFACIL ? DYFACIL.label(fno) : '') || '').trim()
+            };
+        }
         render();
     }
 

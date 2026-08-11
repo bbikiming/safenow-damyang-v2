@@ -508,7 +508,10 @@
             year: state.year, deptId: F.deptId, reason: F.reason,
             date: F.date, desc: F.desc, files: F.files,
             accident: F.accident, resumeDate: F.resumeDate,
-            hazards: hz, due: F.due
+            /* 원본에는 **적은 그대로** 남긴다 — 개선조치는 요인·대책이 모두 채워진
+               행에서만 생기지만(addOccasional 내부에서 다시 거른다), 부분 입력 행을
+               저장 단계에서 지워 버리면 담당자가 적어 둔 내용이 소리 없이 사라진다. */
+            hazards: F.hazards, due: F.due
         });
         V().closeModal();
         toast('수시평가 등록 · 개선조치 ' + hz.length + '건 생성 — [내 할일]에서 조치를 마무리하세요');
@@ -536,7 +539,12 @@
             '<div class="roc-modal-row" style="margin-top:10px;"><label class="form-label" for="roc-rv-name">파일명</label>' +
                 '<input type="text" class="form-input" id="roc-rv-name" value="' + esc(o.id + '_안전관리자검토_서명본.pdf') + '"></div>' +
             '<div class="roc-modal-row"><label class="form-label" for="roc-rv-by">안전관리자(검토자)</label>' +
-                '<input type="text" class="form-input" id="roc-rv-by" placeholder="예: ○○안전기술원 김○○" style="max-width:280px;"></div>',
+                '<input type="text" class="form-input" id="roc-rv-by" placeholder="예: ○○안전기술원 김○○" style="max-width:280px;"></div>' +
+            /* 검토일은 업로드일과 다르다 — 외부 용역이 검토를 마친 날을 적는다.
+               비워 두면 등록일로 기록되며 그 사실을 안내로 밝힌다. */
+            '<div class="roc-modal-row"><label class="form-label" for="roc-rv-at">검토일</label>' +
+                '<input type="date" class="form-input" id="roc-rv-at" value="' + esc(o.reviewedAt || '') + '" style="max-width:200px;">' +
+                '<span class="file-hint">안전관리자가 검토를 마친 날입니다. 비워 두면 오늘 등록일로 기록됩니다.</span></div>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="RSKOCC.doReviewFile(\'' + id + '\')">등록 · 검토완료</button>');
     }
@@ -557,6 +565,7 @@
         if (!canReview()) { toast('안전관리자 검토 서명은 주관부서(재난안전과) 담당자가 첨부합니다.'); return; }
         var nameEl = document.getElementById('roc-rv-name');
         var byEl = document.getElementById('roc-rv-by');
+        var atEl = document.getElementById('roc-rv-at');
         var name = ((nameEl && nameEl.value) || '').trim();
         if (!name) { toast('파일명을 입력하세요.'); if (nameEl) nameEl.focus(); return; }
         /* 이 단계가 남기는 것은 '누가 검토했는가'다 — 이름 없이 검토완료로 넘기면
@@ -564,7 +573,7 @@
            라는 총칭만 남는다. 파일명과 같은 강도로 막는다. */
         var by = ((byEl && byEl.value) || '').trim();
         if (!by) { toast('검토한 안전관리자 이름을 입력하세요.'); if (byEl) byEl.focus(); return; }
-        D().setOccReviewFile(id, name, by);
+        D().setOccReviewFile(id, name, by, ((atEl && atEl.value) || '').trim());
         V().closeModal(); toast('안전관리자 검토파일 등록 · 검토완료 처리'); render();
     }
     function clearReviewFile(id) {

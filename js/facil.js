@@ -58,6 +58,10 @@
         ] },
     ];
     const REPAIR_STATUS = ['계획', '착수', '완료'];
+    /* 위험도 산정에 쓰는 변수 종수 — 표시 분모의 단일 출처.
+       경과연수·종별·내진·안전등급·최근점검·중대결함·이용인원 7종.
+       하드코딩 8 이던 시절엔 어떤 시설물도 분모를 채울 수 없었다. */
+    const RISK_VARS = 7;
 
     /* ── 스토어 ── */
     function load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } }
@@ -104,7 +108,9 @@
         let coreMissing = true;
         if (e.safetyGrade) { have.push('안전등급'); coreMissing = false; score += { A: 0, B: 8, C: 18, D: 34, E: 45 }[e.safetyGrade] || 0; }
         if (e.lastInspectYmd) { have.push('최근점검'); coreMissing = false; const gap = THIS_YEAR - +(e.lastInspectYmd.slice(0, 4)); score += gap >= 2 ? 12 : gap >= 1 ? 5 : 0; }
-        if (e.defectYn === 'Y') { have.push('중대결함'); score += 40; }
+        /* 중대결함은 '있음'일 때만 세면 결함 없는 시설물이 영원히 분모를 못 채운다.
+           확인했다는 사실(있음/없음)이 곧 확보한 변수다 — 점수는 '있음'에만 더한다. */
+        if (e.defectYn) { have.push('중대결함'); if (e.defectYn === 'Y') score += 40; }
         if (e.dailyUsers) { have.push('이용인원'); score += e.dailyUsers >= 1000 ? 12 : e.dailyUsers >= 300 ? 7 : 3; }
         if (coreMissing) return { level: 'na', score: null, have, label: '산정불가' };
         const level = score >= 55 ? 'high' : score >= 30 ? 'mid' : 'low';
@@ -250,7 +256,7 @@
             });
         },
         rec: recOf, ext: extOf, age: ageOf, addr: addrOf, risk: riskOf, counts,
-        saveExt, sendFms, suggestNext, cycleNote, diffAgainst, applyIncoming, imps: impsOf,
+        saveExt, sendFms, suggestNext, cycleNote, diffAgainst, applyIncoming, imps: impsOf, RISK_VARS,
         /* 시설물 한 건의 표시 라벨 — 다른 도메인이 시설물번호만 갖고 이름을 얻을 때 */
         label: (no) => { const r = recOf(no); return r ? r.facilNm : ''; },
         /* 인라인 선택기 — 필드 래퍼 id 와 선택 시 부를 전역 함수 경로를 받는다.
@@ -507,7 +513,7 @@
                     '<td>' + (ageOf(s.r) != null ? ageOf(s.r) + '년' : '-') + '</td>' +
                     '<td>' + (s.e.dailyUsers ? Number(s.e.dailyUsers).toLocaleString() + '명' : '-') + '</td>' +
                     '<td>' + riskChip(s.rk) + '</td>' +
-                    '<td style="font-size:var(--fs-12);color:var(--text-gray);">' + s.rk.have.length + '/8</td>' +
+                    '<td style="font-size:var(--fs-12);color:var(--text-gray);">' + s.rk.have.length + '/' + DYFACIL.RISK_VARS + '</td>' +
                     '<td class="col-action">' + btn + '</td></tr>';
             }).join('');
             app.innerHTML =

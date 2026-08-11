@@ -54,7 +54,8 @@
     /* 프로그램 연결 가능 화면 */
     const LINK_TARGETS = [
         { v: 'risk', label: '위험성평가', href: 'rsk-list.html' },
-        { v: 'hazard', label: '유해·위험요인 관리', href: 'rsk-proc.html' },
+        /* 유해·위험요인 관리(rsk-proc.html)는 2026-07-21 재설계로 폐지된 화면이라 뺐다 —
+           업무문서에서 연결하면 폐지 흐름으로 다시 들어가게 된다. */
         { v: 'edu', label: '안전보건교육', href: 'edu.html' },
         { v: 'improve', label: '개선조치', href: 'rsk-imp.html' },
         { v: 'policy', label: '경영방침', href: 'menu.html?m=policy' },
@@ -71,7 +72,6 @@
         { menu: '기본정보', depths: [{ label: '평가대상 관리', href: 'base-targets.html' }, { label: '일괄 등록', href: 'base-bulk.html' }] },
         { menu: '안전보건관리체계', depths: [
             { label: '위험성평가', href: 'rsk-list.html' },
-            { label: '유해·위험요인 관리', href: 'rsk-proc.html' },
             { label: '경영방침', href: 'menu.html?m=policy' },
             { label: '조직', href: 'menu.html?m=org' },
             { label: '의견청취', href: 'menu.html?m=opinion' },

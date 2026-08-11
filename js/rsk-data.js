@@ -1167,7 +1167,19 @@
             /* 재해 발생(고시 §15② 5호) 전용 — 5호만 "작업을 재개하기 전에" 라는 단서가 붙어
                재개 예정일이 곧 법정 기한이 된다. 다른 사유에는 비어 있다. */
             accident: o.accident || '', resumeDate: o.resumeDate || '',
-            /* 부서 담당자가 이 자리에서 적은 유해위험요인 — 아래에서 개선조치로 바로 떨어진다 */
+            /* 부서 담당자가 이 자리에서 적은 유해위험요인.
+             * **원본을 평가 기록에 남긴다** — 종전에는 건수(hazardCount)만 남기고 행을
+             * 통째로 버렸다. 그러면 그 수시평가가 무엇을 평가했는지가 평가 기록에 없고,
+             * 개선조치를 회수하면 근거가 함께 사라진다(산안법 §36⑤ 기록·보존).
+             * 요인·대책이 한쪽만 적힌 행도 적은 그대로 남긴다 — 개선조치로만 안 넘어간다. */
+            hazards: (o.hazards || []).map(function (h) {
+                return {
+                    name: (h.name || '').trim(), cause: h.cause || '',
+                    action: (h.action || '').trim(), owner: h.owner || '',
+                    facilNo: h.facilNo || '', facilNm: h.facilNm || '',
+                    due: h.due || ''
+                };
+            }),
             hazardCount: 0,
             /* 안전관리자 검토 — 아래 setOccReviewFile 참고 */
             reviewFile: '', reviewer: '',
@@ -1192,7 +1204,10 @@
                           facilNo: h.facilNo || '', facilNm: h.facilNm || '' },
                 description: h.action.trim(), action: h.action.trim(),
                 due: h.due || o.due || '', due_date: h.due || o.due || '',
-                assigned_to: h.owner || (deptName(o.deptId) + ' 담당자'),
+                /* 미지정은 **비워서 내려보낸다** — 정기(§deliverFromReview)와 같은 규칙이다.
+                   '○○과 담당자' 총칭을 넣으면 그 부서가 정한 것처럼 보여, 정작 누가 할지
+                   정하는 단계가 사라진다(발주처 2026-08-06). */
+                assigned_to: h.owner || '',
                 before_photo: bp.length ? bp.map(function (f) { return f.name; }).join(', ') : false,
                 before_photos: bp, after_photos: [],
                 status: 'IN_PROGRESS', created: today(),
@@ -1224,12 +1239,15 @@
      * 그래서 **안전관리자가 서명한 파일을 담당자가 올리면 그 시점이 검토 완료**다
      *   (참석자2: "안전 관리자 검토로 하고 파일 첨부 버튼을 하고 파일이 첨부되면은 검토 완료").
      * 상태를 여러 단계로 쪼개지 않는다 — 회의에서 합의된 판정 규칙은 '파일 = 완료' 하나뿐이다. */
-    function setOccReviewFile(id, fileName, reviewer) {
+    /* reviewedAt 은 **안전관리자가 검토한 날**이지 우리가 파일을 올린 날이 아니다.
+     * 외부 용역이 검토를 마친 뒤 며칠 지나 첨부하는 것이 실제 업무라, 업로드일로
+     * 자동 기록하면 법정 기록으로서 날짜가 틀린다. 입력받되 비면 등록일로 떨어진다. */
+    function setOccReviewFile(id, fileName, reviewer, reviewedAt) {
         var it = occasionalOf(id); if (!it) return null;
         it.reviewFile = fileName || '';
         it.reviewer = fileName ? (reviewer || '') : '';
         if (fileName) {
-            it.status = 'REVIEWED'; it.reviewedAt = today();
+            it.status = 'REVIEWED'; it.reviewedAt = reviewedAt || today();
             it.history.push({ type: 'REVIEW', at: nowTs(), by: reviewer || '안전관리자',
                 memo: '안전관리자 검토파일 등록 · ' + fileName + ' → 검토 완료' });
         } else {
