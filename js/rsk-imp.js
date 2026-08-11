@@ -23,7 +23,7 @@
 
     /* ===== 조회 범위 · 조작 권한 =====
      * 개선조치 대장은 **주관부서(재난안전과)** 가 발행·배정한다. 배정받은 부서는
-     * 자기 몫을 '내 할일'에서 완료 처리할 뿐, 남의 부서 개선조치를 열람하거나
+     * 자기 몫을 이 목록에서 열어 완료 처리할 뿐, 남의 부서 개선조치를 열람하거나
      * 새로 등록하지 않는다. 종전에는 이 화면에 권한 판정이 전혀 없어서
      * 물순환사업소 주무관이 재난안전과 건까지 보고 [＋ 개선조치 등록]도 눌렀다.
      * 범위 판정은 DYROLE.scope() 단일 출처(layout.js). */
@@ -45,7 +45,7 @@
                 ? '주관부서 안에서도 발행·배정은 <b>담당자(주무관)</b>가 수행합니다.'
                 : '<b>' + esc(p.deptName || '') + '</b> 소관 개선조치만 표시됩니다 — ' +
                   '발행·배정은 주관부서(<b>재난안전과</b>) 담당자가 수행하고, ' +
-                  '내 몫의 완료 처리는 <a href="my-work.html?cat=improve">내 할일</a>에서 합니다.');
+                  '내 몫의 완료 처리는 목록에서 그 건을 열어 수행합니다.');
         return '<div class="rl-ro" role="note"><b>조회 전용</b> — ' + why + '</div>';
     }
 
@@ -85,11 +85,15 @@
             var t = KO().targetOf(m.target_id);
             var scope = m.dept_id ? D().deptName(m.dept_id) : (t ? t.name : '-');
             var hazardName = (m.hazard && m.hazard.name) || m.hazard_risk_factor || '';
+            /* 시설물 — 위험성평가 검수에서 지정한 대상. 미지정은 표시하지 않는다
+               (작업행동·화학물질처럼 시설물에 붙지 않는 요인이 정상적으로 존재한다). */
+            var facil = D().facilLabel ? D().facilLabel(m) : '';
             var titleCell = esc(m.description) +
                 (hazardName ? '<div class="ri-hrf">' + esc(hazardName) +
                     (m.hazard && m.hazard.category ? ' <span class="chip-mini wt" style="margin-left:4px;">' + esc(m.hazard.category) + '</span>' : '') +
                     ' ' + basisHtml(m.hazard) +
-                '</div>' : '');
+                '</div>' : '') +
+                (facil ? '<div class="ri-hrf"><span class="chip-mini wt-elec">시설물</span> ' + esc(facil) + '</div>' : '');
             var owner = m.assigned_to ? esc(m.assigned_to)
                 : (canEdit()
                     ? '<a href="#" onclick="RSKIMP.assign(\'' + m.id + '\');return false;" style="color:var(--main-dark);">지정</a>'
@@ -100,7 +104,7 @@
                 '<td>' + esc(scope) + '</td>' +
                 '<td>' + titleCell + '</td>' +
                 '<td onclick="event.stopPropagation()">' + owner + '</td>' +
-                '<td class="ri-due ' + dueClass(due, m.status) + '">' + esc(due || '-') + '</td>' +
+                '<td class="ri-due ' + dueClass(due, m.status) + '">' + (due ? esc(due) : '<span style="color:var(--status-info-fg);">미지정</span>') + '</td>' +
                 '<td>' + stChip(m.status) + '</td></tr>';
         }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text-gray);padding:24px;">조건에 맞는 개선조치가 없습니다.</td></tr>';
 

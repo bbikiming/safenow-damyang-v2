@@ -60,6 +60,19 @@
     /* 해당 여부 판단 기준 — 목록 상단 상시 노출 (2026-07-30 회의).
      * 법령 원문을 읽고 판단하게 하지 않고, 조문에 근거해 미리 만들어 둔 유형을 고르게 한다.
      * 근거 표기는 DYLAW 칩으로만 낸다(CLAUDE.md §10). */
+    /* 대상 작업 목록 — 조문(DYLAW 'oshr-t5') 파생. 39종이라 상시 노출하면 표가 밀리므로
+     * 접힌 인라인 펼침으로 둔다(§1 — 모달을 새로 띄우지 않는다). */
+    function worksList(info) {
+        var works = info && info.works;
+        if (!info || !info.worksSource || !works || !works.length) return '';
+        return '<details class="lawinfo-inline" style="margin-top:6px;">' +
+            '<summary>대상 작업 ' + works.length + '종 보기</summary>' +
+            '<ol style="margin:6px 0 0;padding-left:20px;">' +
+                works.map(function (w) { return '<li value="' + w.no + '">' + esc(w.name) + '</li>'; }).join('') +
+            '</ol>' +
+            '<p class="file-hint" style="margin:6px 0 0;">출처 — ' + esc(info.worksSource) + '</p>' +
+        '</details>';
+    }
     function criteriaHtml() {
         var types = E().ETC_TYPES;
         var rows = types.map(function (t) {
@@ -67,10 +80,16 @@
             var hrs = (info.hours || []).map(function (x) {
                 return esc(x.who) + ' <b>' + x.h + 'h</b>';
             }).join(' · ') || '-';
-            var pending = (info.worksSource && !(info.works || []).length)
-                ? ' <span class="chip-status chip-sm warning">대상 작업 목록 미등록</span>' : '';
-            return '<tr><td><b>' + esc(t) + '</b>' + pending + '</td>' +
-                '<td>' + esc(info.guide || '-') + '</td>' +
+            /* 대상 작업 목록이 있는 유형(특별교육)은 조문 파생 목록을 그 자리에서 펼친다.
+             * 목록이 없으면 지어내지 않고 미등록으로 드러낸다(CLAUDE.md 말미 원칙). */
+            var works = info.works || [];
+            var mark = info.worksSource
+                ? (works.length
+                    ? ' <span class="chip-status chip-sm info">대상 작업 ' + works.length + '종</span>'
+                    : ' <span class="chip-status chip-sm warning">대상 작업 목록 미등록</span>')
+                : '';
+            return '<tr><td><b>' + esc(t) + '</b>' + mark + '</td>' +
+                '<td>' + esc(info.guide || '-') + worksList(info) + '</td>' +
                 '<td>' + hrs + '</td></tr>';
         }).join('');
         var chip = window.DYLAW ? ' ' + DYLAW.basisChip('oshr-t4') : '';
@@ -149,13 +168,14 @@
             return '<li><b>' + esc(x.who) + '</b> — 최소 <b>' + x.h + '시간</b>' +
                 (x.note ? ' <span style="color:var(--text-gray);">(' + esc(x.note) + ')</span>' : '') + '</li>';
         }).join('');
-        /* 대상 작업 목록이 아직 확보되지 않은 유형은 채워 넣지 않고 미등록으로 드러낸다 */
+        /* 대상 작업 목록 — 조문 파생. 등록 폼에서 **고르게 하지는 않는다**(해당 여부는
+         * 등록자가 판단한다). 목록이 없는 유형은 지어내지 않고 미등록으로 드러낸다. */
         var works = '';
         if (info.worksSource) {
-            works = info.works && info.works.length
-                ? '<p style="margin:6px 0 0;">대상 작업 ' + info.works.length + '종</p>'
+            works = (info.works && info.works.length)
+                ? worksList(info)
                 : '<p style="margin:6px 0 0;color:var(--status-warning-fg);"><b>대상 작업 목록 미등록</b> — ' +
-                  esc(info.worksSource) + ' 수집 후 선택 목록으로 제공됩니다.</p>';
+                  esc(info.worksSource) + ' 수집 후 제공됩니다.</p>';
         }
         return '<div class="check-notice" style="margin-bottom:12px;">' +
             '<div style="font-weight:var(--fw-bold);">' + esc(label) + chip + '</div>' +

@@ -95,8 +95,44 @@
         return '<div class="org-tree-root">담양군청</div>' + (out || emptyRow());
     }
 
-    function body(mode, q) {
+    /* 담당자 선택(uid 반환) — memberTree 와 같은 GUI 지만 두 가지가 다르다.
+     *   ① rootId 로 **그 부서 하위만** 그린다 — 배정 후보에 남의 부서 사람이 뜨면
+     *      그 자체가 조회 범위 위반이다(CLAUDE.md §12).
+     *   ② 콜백이 (uid, name, role, team) 을 받는다 — 배정은 이름이 아니라 uid 로
+     *      저장해야 동명이인·개명에 견딘다.
+     * DYV2.orgMembers() 파생만 쓴다(§3). */
+    function memberUidTree(q, rootId, teamOnly) {
+        q = (q || '').trim();
+        var depts = rootId ? [{ id: rootId, name: (V().orgNode(rootId) || {}).name || rootId }]
+                           : V().orgDepts().map(function (d) { return { id: d.id, name: d.name }; });
+        var out = depts.map(function (d) {
+            var ms = V().orgMembers(d.id).filter(function (m) {
+                /* 팀장 관점 — 자기 팀 사람만 보인다(남의 팀에 배정하면 지휘계통이 깨진다) */
+                if (teamOnly && m.team !== teamOnly) return false;
+                return !q || (d.name + m.name + m.role + (m.team || '')).indexOf(q) !== -1;
+            });
+            if (!ms.length) return '';
+            var openStyle = (q || rootId) ? ' style="display:block;"' : '';
+            var arrow = (q || rootId) ? '▾' : '▸';
+            return '<div class="otr-dept" data-dept="' + esc(d.name) + '">' +
+                '<button type="button" class="otr-deptbtn" onclick="ORGPICK._toggle(this)"><span class="otr-arrow">' + arrow + '</span> ' +
+                    esc(d.name) + ' <span class="otr-count">' + ms.length + '명</span></button>' +
+                '<div class="otr-members"' + openStyle + '>' +
+                ms.map(function (m) {
+                    var sub = m.team ? m.team : m.role;
+                    return '<button type="button" class="otr-member" onclick="ORGPICK._pickUid(this,\'' + esc(m.uid) + '\')">' +
+                        '<span class="otr-role">' + esc(sub) + '</span><span class="otr-name">' + esc(m.name) +
+                        (m.lead ? ' <span class="otr-count">부서장</span>' : '') + '</span></button>';
+                }).join('') +
+                '</div></div>';
+        }).join('');
+        var head = rootId ? (depts[0].name + (teamOnly ? ' · ' + teamOnly : '')) : '담양군청';
+        return '<div class="org-tree-root">' + esc(head) + '</div>' + (out || emptyRow());
+    }
+
+    function body(mode, q, rootId, teamOnly) {
         if (mode === 'member') return memberTree(q);
+        if (mode === 'memberUid') return memberUidTree(q, rootId, teamOnly);
         if (mode === 'deptId') return deptIdTree(q);
         return deptTree(q);
     }
@@ -108,18 +144,22 @@
         var ar = btn.querySelector('.otr-arrow'); if (ar) ar.textContent = open ? '▸' : '▾';
     }
 
-    function toggle(fieldId, mode, onpick) {
+    function toggle(fieldId, mode, onpick, opts) {
+        opts = opts || {};
         var field = document.getElementById(fieldId); if (!field) return;
         var existing = field.querySelector(':scope > .org-inline');
         if (existing) { existing.remove(); return; }
+        var isMember = (mode === 'member' || mode === 'memberUid');
         var panel = document.createElement('div');
         panel.className = 'org-inline';
         panel.style.marginTop = '8px';
         panel.setAttribute('data-mode', mode || 'dept');
         panel.setAttribute('data-onpick', onpick || '');
+        if (opts.rootId) panel.setAttribute('data-root', opts.rootId);
+        if (opts.teamOnly) panel.setAttribute('data-team', opts.teamOnly);
         panel.innerHTML =
-            '<div class="org-inline-search"><input type="text" placeholder="' + (mode === 'member' ? '이름·부서 검색' : '부서 검색') + '" oninput="ORGPICK._filter(this)"></div>' +
-            '<div class="org-inline-body">' + body(mode || 'dept', '') + '</div>';
+            '<div class="org-inline-search"><input type="text" placeholder="' + (isMember ? '이름·팀 검색' : '부서 검색') + '" oninput="ORGPICK._filter(this)"></div>' +
+            '<div class="org-inline-body">' + body(mode || 'dept', '', opts.rootId || '', opts.teamOnly || '') + '</div>';
         field.appendChild(panel);
         panel.scrollIntoView({ block: 'nearest' });
     }
@@ -190,7 +230,8 @@
     function _filter(inp) {
         var panel = inp.closest('.org-inline'); if (!panel) return;
         var b = panel.querySelector('.org-inline-body');
-        if (b) b.innerHTML = body(panel.getAttribute('data-mode'), inp.value);
+        if (b) b.innerHTML = body(panel.getAttribute('data-mode'), inp.value,
+            panel.getAttribute('data-root') || '', panel.getAttribute('data-team') || '');
     }
     function _pick(btn, value) {
         var panel = btn.closest('.org-inline'); if (!panel) return;
@@ -207,10 +248,27 @@
         if (typeof fn === 'function') fn(id, name);
     }
 
+    /* uid 선택 — 콜백에 (uid, name, role, team) 을 넘긴다 */
+    function _pickUid(btn, uid) {
+        var panel = btn.closest('.org-inline'); if (!panel) return;
+        var onpick = panel.getAttribute('data-onpick');
+        var root = panel.getAttribute('data-root') || '';
+        panel.remove();
+        var fn = resolve(onpick);
+        if (typeof fn !== 'function') return;
+        var m = null;
+        (root ? [root] : V().orgDepts().map(function (d) { return d.id; })).some(function (did) {
+            var hit = V().orgMembers(did).filter(function (x) { return x.uid === uid; })[0];
+            if (hit) { m = hit; return true; }
+            return false;
+        });
+        if (m) fn(m.uid, m.name, m.role, m.team || '');
+    }
+
     global.ORGPICK = {
         toggle: toggle, deptsPanel: deptsPanel, refreshDepts: refreshDepts,
-        _filter: _filter, _pick: _pick, _pickId: _pickId, _toggle: _toggle,
+        _filter: _filter, _pick: _pick, _pickId: _pickId, _pickUid: _pickUid, _toggle: _toggle,
         _deptsFilter: _deptsFilter, _deptsCheck: _deptsCheck,
-        deptTree: deptTree, deptIdTree: deptIdTree, deptsTree: deptsTree, memberTree: memberTree,
+        deptTree: deptTree, deptIdTree: deptIdTree, deptsTree: deptsTree, memberTree: memberTree, memberUidTree: memberUidTree,
     };
 })(window);

@@ -36,7 +36,7 @@
     "existingSfr": "SFR-002",
     "defFile": "SCR-BASE-002_관리대상현황_공중이용시설.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/base-targets.html",
-    "unresolvedCount": 2
+    "unresolvedCount": 6
   },
   {
     "scrId": "SCR-BASE-003",
@@ -63,6 +63,71 @@
     "defFile": "SCR-BASE-004_데이터일괄등록.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/base-bulk.html",
     "unresolvedCount": 4
+  },
+  {
+    "scrId": "SCR-FAC-001",
+    "daemenu": "시설물 안전관리",
+    "jungmenu": "시설물 대장",
+    "name": "시설물 대장",
+    "type": "목록",
+    "route": "fac-list.html",
+    "components": "layout.js, common.js, facil-data.js, facil.js",
+    "existingSfr": "SFR-002·016",
+    "defFile": "SCR-FAC-001_시설물대장.md",
+    "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/fac-list.html",
+    "unresolvedCount": 8
+  },
+  {
+    "scrId": "SCR-FAC-002",
+    "daemenu": "시설물 안전관리",
+    "jungmenu": "시설물 대장",
+    "name": "시설물 상세 · 보완입력",
+    "type": "상세·등록·수정(팝업)",
+    "route": "fac-list.html · fac-risk.html (행 클릭 → 상세 팝업)",
+    "components": "layout.js, common.js, facil-data.js, facil.js",
+    "existingSfr": "SFR-002·016",
+    "defFile": "SCR-FAC-002_시설물상세보완입력.md",
+    "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/fac-list.html",
+    "unresolvedCount": 12
+  },
+  {
+    "scrId": "SCR-FAC-003",
+    "daemenu": "시설물 안전관리",
+    "jungmenu": "시설물 위험도",
+    "name": "시설물 위험도",
+    "type": "목록",
+    "route": "fac-risk.html",
+    "components": "layout.js, common.js, facil-data.js, facil.js",
+    "existingSfr": "SFR-002·007",
+    "defFile": "SCR-FAC-003_시설물위험도.md",
+    "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/fac-risk.html",
+    "unresolvedCount": 6
+  },
+  {
+    "scrId": "SCR-FAC-004",
+    "daemenu": "시설물 안전관리",
+    "jungmenu": "FMS 연계",
+    "name": "FMS 연계",
+    "type": "기타",
+    "route": "fac-sync.html",
+    "components": "layout.js, common.js, facil-data.js, facil.js",
+    "existingSfr": "SFR-002·016",
+    "defFile": "SCR-FAC-004_FMS연계.md",
+    "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/fac-sync.html",
+    "unresolvedCount": 10
+  },
+  {
+    "scrId": "SCR-FAC-005",
+    "daemenu": "시설물 안전관리",
+    "jungmenu": "연계 설정",
+    "name": "연계 설정",
+    "type": "설정",
+    "route": "fac-settings.html",
+    "components": "layout.js, common.js, facil-data.js, facil.js",
+    "existingSfr": "SFR-002",
+    "defFile": "SCR-FAC-005_연계설정.md",
+    "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/fac-settings.html",
+    "unresolvedCount": 8
   },
   {
     "scrId": "SCR-SBM-001",
@@ -114,7 +179,7 @@
     "existingSfr": "SFR-007",
     "defFile": "SCR-PRC-001_작업공정관리.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/rsk-proc.html",
-    "unresolvedCount": 0
+    "unresolvedCount": 4
   },
   {
     "scrId": "SCR-RISK-001",
@@ -127,7 +192,7 @@
     "existingSfr": "SFR-007",
     "defFile": "SCR-RISK-001_정기위험성평가.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/rsk-list.html",
-    "unresolvedCount": 4
+    "unresolvedCount": 0
   },
   {
     "scrId": "SCR-RISK-002",
@@ -140,7 +205,7 @@
     "existingSfr": "SFR-007",
     "defFile": "SCR-RISK-002_위험성평가상세.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/rsk-detail.html",
-    "unresolvedCount": 1
+    "unresolvedCount": 0
   },
   {
     "scrId": "SCR-RISK-003",
@@ -153,7 +218,7 @@
     "existingSfr": "SFR-007",
     "defFile": "SCR-RISK-003_위험성추정.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/rsk-exec.html",
-    "unresolvedCount": 0
+    "unresolvedCount": 3
   },
   {
     "scrId": "SCR-RISK-004",
@@ -166,11 +231,11 @@
     "existingSfr": "SFR-007",
     "defFile": "SCR-RISK-004_수시위험성평가.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/rsk-occ.html",
-    "unresolvedCount": 3
+    "unresolvedCount": 0
   },
   {
     "scrId": "SCR-IMP-001",
-    "daemenu": "위험성평가",
+    "daemenu": "업무 연계(메뉴 미노출)",
     "jungmenu": "개선조치",
     "name": "개선조치 목록",
     "type": "목록",
@@ -183,7 +248,7 @@
   },
   {
     "scrId": "SCR-IMP-002",
-    "daemenu": "위험성평가",
+    "daemenu": "업무 연계(메뉴 미노출)",
     "jungmenu": "개선조치",
     "name": "개선조치 상세·조치",
     "type": "상세",
@@ -257,7 +322,7 @@
     "existingSfr": "SFR-009 (EVL02-E)",
     "defFile": "SCR-EVL-001_인력평가.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/evl-eval.html",
-    "unresolvedCount": 8
+    "unresolvedCount": 9
   },
   {
     "scrId": "SCR-EVL-002",
@@ -270,7 +335,7 @@
     "existingSfr": "SFR-009 (EVL01-V)",
     "defFile": "SCR-EVL-001_인력평가.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/evl-list.html",
-    "unresolvedCount": 8
+    "unresolvedCount": 9
   },
   {
     "scrId": "SCR-EVL-003",
@@ -283,7 +348,7 @@
     "existingSfr": "SFR-009 (EVL03-S)",
     "defFile": "SCR-EVL-001_인력평가.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/evl-settings.html",
-    "unresolvedCount": 8
+    "unresolvedCount": 9
   },
   {
     "scrId": "SCR-EDU-001",
@@ -296,7 +361,7 @@
     "existingSfr": "SFR-004·010",
     "defFile": "SCR-EDU-001_정기교육.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/edu-reg.html",
-    "unresolvedCount": 3
+    "unresolvedCount": 0
   },
   {
     "scrId": "SCR-EDU-002",
@@ -309,7 +374,7 @@
     "existingSfr": "SFR-004",
     "defFile": "SCR-EDU-002_채용시교육.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/edu-hire.html",
-    "unresolvedCount": 3
+    "unresolvedCount": 0
   },
   {
     "scrId": "SCR-EDU-003",
@@ -322,7 +387,7 @@
     "existingSfr": "SFR-004",
     "defFile": "SCR-EDU-003_기타교육.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/edu-etc.html",
-    "unresolvedCount": 3
+    "unresolvedCount": 0
   },
   {
     "scrId": "SCR-EDU-004",
@@ -335,7 +400,7 @@
     "existingSfr": "SFR-004·010",
     "defFile": "SCR-EDU-004_정기교육상세.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/edu-reg-detail.html",
-    "unresolvedCount": 3
+    "unresolvedCount": 0
   },
   {
     "scrId": "SCR-EDU-005",
@@ -348,7 +413,7 @@
     "existingSfr": "SFR-004·010",
     "defFile": "SCR-EDU-005_이수현황.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/edu-status.html",
-    "unresolvedCount": 3
+    "unresolvedCount": 0
   },
   {
     "scrId": "SCR-EDU-006",
@@ -361,20 +426,20 @@
     "existingSfr": "SFR-004",
     "defFile": "SCR-EDU-006_근로자명단관리.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/edu-workers.html",
-    "unresolvedCount": 3
+    "unresolvedCount": 0
   },
   {
     "scrId": "SCR-EDU-007",
     "daemenu": "안전보건교육",
     "jungmenu": "결재 이력",
-    "name": "결재 이력 (온나라 상신 통합 조회)",
+    "name": "결재 이력 (신규 상신 차단·저장 이력 조회)",
     "type": "목록",
     "route": "edu-approval.html",
     "components": "layout.js, edu-apv-log.js, edu-approval.js, edu-data.js, edu-filter.js, edu-tour.js",
     "existingSfr": "SFR-004",
     "defFile": "SCR-EDU-007_결재이력.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/edu-approval.html",
-    "unresolvedCount": 3
+    "unresolvedCount": 0
   },
   {
     "scrId": "SCR-DOC-001",
@@ -400,7 +465,7 @@
     "existingSfr": "없음",
     "defFile": "SCR-DOC-002_업무목록세트리스트.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/docs-preset.html",
-    "unresolvedCount": 8
+    "unresolvedCount": 9
   },
   {
     "scrId": "SCR-DOC-003",
@@ -465,7 +530,7 @@
     "existingSfr": "없음",
     "defFile": "SCR-DOC-007_업무등록마법사.md",
     "file": "docs-preset.html",
-    "unresolvedCount": 9
+    "unresolvedCount": 8
   },
   {
     "scrId": "SCR-RPT-001",
@@ -556,7 +621,7 @@
     "existingSfr": "SIR-001",
     "defFile": "SCR-ADMIN-004_연계관리.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/admin-integration.html",
-    "unresolvedCount": 4
+    "unresolvedCount": 7
   },
   {
     "scrId": "SCR-ADMIN-005",
@@ -569,7 +634,7 @@
     "existingSfr": "ADM01-S",
     "defFile": "SCR-ADMIN-005_메뉴관리.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/admin-menus.html",
-    "unresolvedCount": 6
+    "unresolvedCount": 8
   },
   {
     "scrId": "SCR-ADMIN-006",
@@ -582,7 +647,7 @@
     "existingSfr": "ADM02-S",
     "defFile": "SCR-ADMIN-006_권한관리.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/admin-roles.html",
-    "unresolvedCount": 6
+    "unresolvedCount": 9
   },
   {
     "scrId": "SCR-ADMIN-007",
@@ -673,7 +738,7 @@
     "existingSfr": "SFR-005 등(호출처별)",
     "defFile": "SCR-EDOC-005_F5점검표폼.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/js/edoc-templates.js",
-    "unresolvedCount": 8
+    "unresolvedCount": 10
   },
   {
     "scrId": "SCR-EDOC-006",
@@ -842,6 +907,6 @@
     "existingSfr": "없음(전 화면 공통)",
     "defFile": "SCR-COM-008_법령근거연계.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/js/law-map.js",
-    "unresolvedCount": 11
+    "unresolvedCount": 13
   }
 ]

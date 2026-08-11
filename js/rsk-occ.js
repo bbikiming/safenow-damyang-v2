@@ -120,7 +120,7 @@
     }
 
     /* 개선조치 진행 — 수시평가를 '등록하고 끝'으로 두지 않기 위해 진행률을 같은 줄에 낸다.
-       조치를 마무리하는 자리는 담당자의 [내 할일]이므로 그리로 바로 보낸다. */
+       조치를 마무리하는 자리는 개선조치(SCR-IMP-001·002)이므로 그리로 바로 보낸다. */
     function impCell(o) {
         var c = D().occImpCount(o.id);
         if (!c.total) return '<span class="roc-imp-none">감소대책 없음</span>';
@@ -138,8 +138,8 @@
                    정기평가 부서 상세와 같은 화면(IMPCARD)을 쓴다 (CLAUDE.md §7). */
                 '<button type="button" class="btn btn-outline btn-sm" data-tour="occ-imp" onclick="RSKOCC.openImp(\'' + o.id + '\')">조치 상세</button>' +
                 (c.done < c.total
-                    ? '<a class="btn btn-primary btn-sm" href="my-work.html?dept=' + esc(o.deptId) +
-                          '&cat=improve">내 할일에서 마무리 →</a>'
+                    ? '<a class="btn btn-primary btn-sm" href="rsk-imp.html?status=IN_PROGRESS">' +
+                          '개선조치에서 마무리 →</a>'
                     : '') +
             '</div>' +
         '</div>';
@@ -161,7 +161,7 @@
                     ? '<span>안전관리자 검토 <b>' + esc(o.reviewer || '안전관리자') + ' · ' + esc(o.reviewedAt || '-') + '</b></span>'
                     : '<span>안전관리자 검토 <b>미완료</b></span>'),
             noteHtml: '수시평가는 실시로 끝나지 않습니다 — <b>위험성 감소대책을 실행</b>해야 완결됩니다. ' +
-                '부서 담당자는 <b>내 할일(my-work)</b>에서 완료 처리합니다.',
+                '부서 담당자는 <b>개선조치</b>에서 완료 처리합니다.',
             emptyHtml: '이 수시평가에는 등록된 감소대책이 없습니다.',
             items: function () { return D().occImprovements(occId); },
             canRemind: false
@@ -278,7 +278,10 @@
         };
         renderRegister();
     }
-    function newHazard() { return { name: '', cause: '', action: '', owner: '', beforePhotos: [] }; }
+    /* 시설물(facilNo·facilNm)은 선택 항목이다 — 수시평가 사유 6종 중 '건설물의 설치·이전·변경·해체'와
+     * '기계·설비 등의 정비 또는 보수'는 애초에 시설물이 원인이라 정기평가보다 오히려 결합도가 높다.
+     * 잇는 키는 이름이 아니라 시설물번호다(동명 시설물·개명 대비). 정기 검수 행과 같은 규칙. */
+    function newHazard() { return { name: '', cause: '', action: '', owner: '', facilNo: '', facilNm: '', beforePhotos: [] }; }
 
     /* 재해 발생(고시 §15② 5호)만 추가 필수 항목을 둔다 (docs/planning/확정-미결사항… §2)
        5호에는 다른 사유에 없는 단서가 붙어 있다 —
@@ -315,6 +318,15 @@
                 '<button type="button" class="roc-hz-del" onclick="RSKOCC.hzDel(' + i + ')"' +
                 ' aria-label="' + (i + 1) + '번 행 삭제">× 행 삭제</button></div>' +
             '<div class="roc-hz-grid">' +
+                '<label class="form-label">시설물</label>' +
+                '<div class="orgpick-field" id="roc-hz-ff' + i + '">' +
+                    '<div style="display:flex;gap:8px;">' +
+                        '<input type="text" class="form-input" id="roc-hz-fn' + i + '" readonly' +
+                            ' placeholder="해당 없음 — 시설물에 해당하는 요인만 지정" style="flex:1;" value="' + esc(h.facilNm || '') + '">' +
+                        (h.facilNo
+                            ? '<button type="button" class="btn btn-outline" onclick="RSKOCC.hzClearFacil(' + i + ')">해제</button>'
+                            : '<button type="button" class="btn btn-outline" onclick="RSKOCC.hzPickFacil(' + i + ')">시설물 대장</button>') +
+                    '</div></div>' +
                 '<label class="form-label" for="roc-hz-n' + i + '">유해위험요인 <span class="roc-req">*</span></label>' +
                 '<input type="text" class="form-input" id="roc-hz-n' + i + '" value="' + esc(h.name) + '"' +
                     ' placeholder="예: 정수장 개구부 추락 위험">' +
@@ -375,11 +387,11 @@
                 V().fileHint() +
             '</div>' +
             /* 수시평가는 '실시했다'로 끝나지 않는다 — 감소대책을 수립·실행해야 완결된다.
-             * 여기 적은 행이 그대로 개선조치가 되어 담당자의 [내 할일]에 뜬다. */
+             * 여기 적은 행이 그대로 개선조치가 되어 담당자의 [개선조치] 목록에 뜬다. */
             '<div class="roc-modal-row roc-hz-sec">' +
                 '<label class="form-label">실시 결과 — 유해위험요인과 감소대책 <span class="roc-req">*</span></label>' +
                 '<p class="file-hint" style="margin-top:0;">여기 적은 행이 <b>개선조치</b>가 되어 담당자의 ' +
-                    '<b>내 할일</b>에 뜹니다. 조치를 끝내고 <b>개선 후 사진</b>을 올리면 완료됩니다.</p>' +
+                    '<b>개선조치</b> 목록에 뜹니다. 조치를 끝내고 <b>개선 후 사진</b>을 올리면 완료됩니다.</p>' +
                 '<div id="roc-hz-list">' + F.hazards.map(hazRowHtml).join('') + '</div>' +
                 '<button type="button" class="btn btn-outline btn-sm" onclick="RSKOCC.hzAdd()">＋ 요인 추가</button>' +
             '</div>' +
@@ -423,6 +435,22 @@
         if (F.hazards.length >= 10) { toast('한 번에 최대 10건까지 등록합니다.'); return; }
         F.hazards.push(newHazard()); renderRegister();
     }
+    /* 시설물 지정 — 정기 검수 행과 같은 GUI(DYFACIL 인라인 대장). 새 창을 겹치지 않는다. */
+    function hzPickFacil(i) {
+        if (!global.DYFACIL) { toast('시설물 대장을 불러오지 못했습니다.'); return; }
+        DYFACIL.toggle('roc-hz-ff' + i, 'RSKOCC.hzSetFacil' + i);
+    }
+    function hzSetFacil(i, no, nm) {
+        var h = F.hazards[i]; if (!h) return;
+        h.facilNo = no; h.facilNm = nm || (global.DYFACIL ? DYFACIL.label(no) : '');
+        renderRegister();
+        toast('시설물 지정: ' + (h.facilNm || no));
+    }
+    function hzClearFacil(i) {
+        var h = F.hazards[i]; if (!h) return;
+        h.facilNo = ''; h.facilNm = '';
+        renderRegister(); toast('시설물 지정 해제');
+    }
     function hzDel(i) {
         captureRegister();
         if (F.hazards.length <= 1) { toast('최소 1건은 있어야 합니다 — 내용을 지워서 비워 두세요.'); return; }
@@ -451,6 +479,11 @@
                 var h = F.hazards[n]; if (!h) return;
                 h.owner = v; renderRegister();
             };
+            /* 시설물 선택 콜백 — DYFACIL.toggle 이 (시설물번호, 시설물명) 으로 부른다 */
+            global.RSKOCC['hzSetFacil' + n] = function (no, nm) {
+                captureRegister();
+                hzSetFacil(n, no, nm);
+            };
         })(i);
     }
     function doRegister() {
@@ -475,10 +508,13 @@
             year: state.year, deptId: F.deptId, reason: F.reason,
             date: F.date, desc: F.desc, files: F.files,
             accident: F.accident, resumeDate: F.resumeDate,
-            hazards: hz, due: F.due
+            /* 원본에는 **적은 그대로** 남긴다 — 개선조치는 요인·대책이 모두 채워진
+               행에서만 생기지만(addOccasional 내부에서 다시 거른다), 부분 입력 행을
+               저장 단계에서 지워 버리면 담당자가 적어 둔 내용이 소리 없이 사라진다. */
+            hazards: F.hazards, due: F.due
         });
         V().closeModal();
-        toast('수시평가 등록 · 개선조치 ' + hz.length + '건 생성 — [내 할일]에서 조치를 마무리하세요');
+        toast('수시평가 등록 · 개선조치 ' + hz.length + '건 생성 — [개선조치]에서 조치를 마무리하세요');
         render();
     }
 
@@ -503,7 +539,12 @@
             '<div class="roc-modal-row" style="margin-top:10px;"><label class="form-label" for="roc-rv-name">파일명</label>' +
                 '<input type="text" class="form-input" id="roc-rv-name" value="' + esc(o.id + '_안전관리자검토_서명본.pdf') + '"></div>' +
             '<div class="roc-modal-row"><label class="form-label" for="roc-rv-by">안전관리자(검토자)</label>' +
-                '<input type="text" class="form-input" id="roc-rv-by" placeholder="예: ○○안전기술원 김○○" style="max-width:280px;"></div>',
+                '<input type="text" class="form-input" id="roc-rv-by" placeholder="예: ○○안전기술원 김○○" style="max-width:280px;"></div>' +
+            /* 검토일은 업로드일과 다르다 — 외부 용역이 검토를 마친 날을 적는다.
+               비워 두면 등록일로 기록되며 그 사실을 안내로 밝힌다. */
+            '<div class="roc-modal-row"><label class="form-label" for="roc-rv-at">검토일</label>' +
+                '<input type="date" class="form-input" id="roc-rv-at" value="' + esc(o.reviewedAt || '') + '" style="max-width:200px;">' +
+                '<span class="file-hint">안전관리자가 검토를 마친 날입니다. 비워 두면 오늘 등록일로 기록됩니다.</span></div>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="RSKOCC.doReviewFile(\'' + id + '\')">등록 · 검토완료</button>');
     }
@@ -524,6 +565,7 @@
         if (!canReview()) { toast('안전관리자 검토 서명은 주관부서(재난안전과) 담당자가 첨부합니다.'); return; }
         var nameEl = document.getElementById('roc-rv-name');
         var byEl = document.getElementById('roc-rv-by');
+        var atEl = document.getElementById('roc-rv-at');
         var name = ((nameEl && nameEl.value) || '').trim();
         if (!name) { toast('파일명을 입력하세요.'); if (nameEl) nameEl.focus(); return; }
         /* 이 단계가 남기는 것은 '누가 검토했는가'다 — 이름 없이 검토완료로 넘기면
@@ -531,7 +573,7 @@
            라는 총칭만 남는다. 파일명과 같은 강도로 막는다. */
         var by = ((byEl && byEl.value) || '').trim();
         if (!by) { toast('검토한 안전관리자 이름을 입력하세요.'); if (byEl) byEl.focus(); return; }
-        D().setOccReviewFile(id, name, by);
+        D().setOccReviewFile(id, name, by, ((atEl && atEl.value) || '').trim());
         V().closeModal(); toast('안전관리자 검토파일 등록 · 검토완료 처리'); render();
     }
     function clearReviewFile(id) {
@@ -580,6 +622,8 @@
         openRegister: openRegister, pickDept: pickDept, regAddFile: regAddFile, regDelFile: regDelFile, doRegister: doRegister,
         /* 실시 결과 행 (유해위험요인 → 개선조치) */
         hzAdd: hzAdd, hzDel: hzDel, hzPickOwner: hzPickOwner, hzDelPhoto: hzDelPhoto,
+        /* 행 시설물 — FMS 시설물 대장(SCR-FAC-001) 연계. 선택 항목이다 */
+        hzPickFacil: hzPickFacil, hzClearFacil: hzClearFacil,
         openImp: openImp,
         /* 안전관리자 검토 — 서명 파일 등록이 곧 검토 완료 */
         openReviewFile: openReviewFile, onPickReview: onPickReview, doReviewFile: doReviewFile, clearReviewFile: clearReviewFile,
