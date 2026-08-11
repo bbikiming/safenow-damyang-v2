@@ -96,6 +96,25 @@
     function extOf(no) { return DB.ext[no] || {}; }
     function ageOf(r) { const y = (r.cplYmd || '').slice(0, 4); return /^\d{4}$/.test(y) ? (THIS_YEAR - +y) : null; }
     function addrOf(r) { return [r.addrSido, r.addrGugun, r.addrDong, r.addrDetail].filter(x => x && x.trim()).join(' '); }
+    /* 법정 점검주기 초과 개월 수 — 시행령 별표3. 등급별 주기(개월)를 기준으로 잰다.
+       반환이 null 이면 판정 불가(점검일 없음). 양수면 초과 개월. */
+    function cycleMonths(grade) { return (grade === 'D' || grade === 'E') ? 4 : 6; }
+    function overdueMonths(last, grade) {
+        if (!last) return null;
+        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(last); if (!m) return null;
+        const t = (window.DYV2 && DYV2.today && DYV2.today()) || '';
+        const tm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t); if (!tm) return null;
+        const months = (+tm[1] - +m[1]) * 12 + (+tm[2] - +m[2]);
+        return months - cycleMonths(grade);
+    }
+    /* 점수 — 주기 안이면 0, 한 주기까지 넘겼으면 8, 그 이상이면 16.
+       계단으로 두는 이유: 개월 수에 비례시키면 오래 방치된 한 건이 다른
+       모든 변수를 압도해 순위가 그 한 축으로만 정해진다. */
+    function overdueScore(last, grade) {
+        const od = overdueMonths(last, grade);
+        if (od == null || od <= 0) return 0;
+        return od <= cycleMonths(grade) ? 8 : 16;
+    }
     /* 위험도: 확보된 변수만으로 점수. 핵심변수(안전등급 or 점검일) 없으면 '산정불가' — 0 처리 금지(PRD §8). */
     function riskOf(no) {
         const r = recOf(no), e = extOf(no);
@@ -107,7 +126,14 @@
         if (r.eqDsnAppYn) { have.push('내진'); score += r.eqDsnAppYn === 'Y' ? 0 : 6; }
         let coreMissing = true;
         if (e.safetyGrade) { have.push('안전등급'); coreMissing = false; score += { A: 0, B: 8, C: 18, D: 34, E: 45 }[e.safetyGrade] || 0; }
-        if (e.lastInspectYmd) { have.push('최근점검'); coreMissing = false; const gap = THIS_YEAR - +(e.lastInspectYmd.slice(0, 4)); score += gap >= 2 ? 12 : gap >= 1 ? 5 : 0; }
+        /* 최근점검은 '몇 해 지났나'가 아니라 **법정 주기를 넘겼나**로 본다.
+           A·B·C 는 반기 1회, D·E 는 연 3회(시행령 별표3)라 같은 1년 경과라도
+           의미가 다르다 — 연수로만 재면 D·E 시설의 지연이 과소평가된다.
+           경과 연수 기준은 별표3 수집 전의 임시식이었다(2026-08-11 정정). */
+        if (e.lastInspectYmd) {
+            have.push('최근점검'); coreMissing = false;
+            score += overdueScore(e.lastInspectYmd, e.safetyGrade);
+        }
         /* 중대결함은 '있음'일 때만 세면 결함 없는 시설물이 영원히 분모를 못 채운다.
            확인했다는 사실(있음/없음)이 곧 확보한 변수다 — 점수는 '있음'에만 더한다. */
         if (e.defectYn) { have.push('중대결함'); if (e.defectYn === 'Y') score += 40; }
@@ -256,7 +282,7 @@
             });
         },
         rec: recOf, ext: extOf, age: ageOf, addr: addrOf, risk: riskOf, counts,
-        saveExt, sendFms, suggestNext, cycleNote, diffAgainst, applyIncoming, imps: impsOf, RISK_VARS,
+        saveExt, sendFms, suggestNext, cycleNote, overdueMonths, diffAgainst, applyIncoming, imps: impsOf, RISK_VARS,
         /* 시설물 한 건의 표시 라벨 — 다른 도메인이 시설물번호만 갖고 이름을 얻을 때 */
         label: (no) => { const r = recOf(no); return r ? r.facilNm : ''; },
         /* 인라인 선택기 — 필드 래퍼 id 와 선택 시 부를 전역 함수 경로를 받는다.
@@ -497,38 +523,78 @@
 
     /* ─────────── FAC03-V 위험도 ─────────── */
     function mountRisk(app) {
+        /* 조회 조건은 대장(fac-list)과 같은 축을 쓴다 — 두 화면이 다른 축으로 걸리면
+           "대장에서 본 그 시설물"을 위험도에서 못 찾는다. */
+        const RF = { gbn: '', cls: '', jur: '' };
         function render() {
-            const scored = DB.recs.map(r => ({ r, rk: riskOf(r.facilNo), e: extOf(r.facilNo) }));
+            let recs = DB.recs.filter(r =>
+                (!RF.gbn || r.facilGbn === RF.gbn) &&
+                (!RF.cls || r.facilClass === RF.cls) &&
+                (!RF.jur || r.jur === RF.jur));
+            const scored = recs.map(r => ({ r, rk: riskOf(r.facilNo), e: extOf(r.facilNo) }));
             const rank = { high: 0, mid: 1, low: 2, na: 3 };
-            scored.sort((a, b) => (rank[a.rk.level] - rank[b.rk.level]) || ((b.rk.score || 0) - (a.rk.score || 0)));
+            /* 동점이면 준공이 오래된 순 — 같은 점수라면 오래된 시설을 먼저 본다.
+               정렬 기준을 사용자가 바꾸게 하지 않는다. 이 화면의 목적이 '어디부터
+               볼지' 하나여서, 정렬을 바꾸는 순간 그 목적이 흐려진다(대장에서는 가능). */
+            scored.sort((a, b) => (rank[a.rk.level] - rank[b.rk.level]) ||
+                ((b.rk.score || 0) - (a.rk.score || 0)) ||
+                ((ageOf(b.r) || 0) - (ageOf(a.r) || 0)));
             const nHigh = scored.filter(s => s.rk.level === 'high').length;
             const nNa = scored.filter(s => s.rk.level === 'na').length;
             const card = (t, v, f) => '<div class="kpi-card"><div class="kpi-card-label"><span class="kpi-card-title">' + t + '</span></div><div class="kpi-card-value"><span style="font-size:24px;">' + v + '</span></div><div class="kpi-card-foot">' + f + '</div></div>';
             const rowsH = scored.map(s => {
+                /* 이미 평가에서 다뤄진 시설물도 랭킹에서 빼지 않는다 — 빼면 "왜 사라졌지"가
+                   되고, 한 번 다뤘다고 위험이 없어지는 것도 아니다. 대신 표시로 구분한다. */
+                const nImp = (impsOf(s.r.facilNo) || []).length;
                 const btn = s.rk.level === 'na'
                     ? '<button class="btn btn-sm btn-outline" onclick="DYFACIL._detail(\'' + s.r.facilNo + '\')">보완입력</button>'
-                    : '<button class="btn btn-sm btn-primary" onclick="DYFACIL._toRisk(\'' + s.r.facilNo + '\')">평가 착수</button>';
+                    : '<button class="btn btn-sm ' + (nImp ? 'btn-outline' : 'btn-primary') + '" onclick="DYFACIL._toRisk(\'' + s.r.facilNo + '\')">' +
+                      (nImp ? '평가 보기' : '평가 착수') + '</button>';
+                /* 점검 — 법정 주기 초과 여부. 위험도 점수에 이미 반영돼 있으므로
+                   여기서는 왜 점수가 그런지 설명하는 자리다(별표3). */
+                const od = overdueMonths(s.e.lastInspectYmd, s.e.safetyGrade);
+                const insp = !s.e.lastInspectYmd
+                    ? '<span style="color:var(--text-gray);">미확보</span>'
+                    : esc(s.e.lastInspectYmd) +
+                      (od != null && od > 0
+                        ? '<div><span class="chip-status chip-sm danger">주기 ' + od + '개월 초과</span></div>'
+                        : '<div style="font-size:var(--fs-12);color:var(--text-gray);">' + esc(cycleNote(s.e.safetyGrade)) + '</div>');
                 return '<tr><td><b>' + esc(s.r.facilNm) + '</b><div style="font-size:var(--fs-12);color:var(--text-gray);">' + esc(s.r.gbnNm) + ' · ' + (CLASS_NM[s.r.facilClass] || '') + '</div></td>' +
                     '<td>' + gradeChip(s.e.safetyGrade) + '</td>' +
+                    '<td>' + insp + '</td>' +
                     '<td>' + (ageOf(s.r) != null ? ageOf(s.r) + '년' : '-') + '</td>' +
                     '<td>' + (s.e.dailyUsers ? Number(s.e.dailyUsers).toLocaleString() + '명' : '-') + '</td>' +
-                    '<td>' + riskChip(s.rk) + '</td>' +
+                    '<td>' + riskChip(s.rk) +
+                        (nImp ? '<div><span class="chip-status chip-sm info">개선조치 ' + nImp + '건</span></div>' : '') + '</td>' +
                     '<td style="font-size:var(--fs-12);color:var(--text-gray);">' + s.rk.have.length + '/' + DYFACIL.RISK_VARS + '</td>' +
                     '<td class="col-action">' + btn + '</td></tr>';
             }).join('');
+            const sel = (id, val, opts) => '<select class="form-select" onchange="DYFACIL._rf(\'' + id + '\',this.value)">' +
+                opts.map(o => '<option value="' + o[0] + '"' + (val === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>').join('') + '</select>';
+            const filterBar =
+                '<div class="ri-toolbar"><div class="ri-filters">' +
+                    sel('gbn', RF.gbn, [['', '구분 전체']].concat(GBN_GROUPS.map(g => [g[0], g[1]]))) +
+                    sel('cls', RF.cls, [['', '종별 전체'], ['1', '1종'], ['2', '2종'], ['3', '3종']]) +
+                    sel('jur', RF.jur, [['', '소관 전체']].concat(
+                        Array.from(new Set(DB.recs.map(r => r.jur).filter(Boolean))).sort().map(j => [j, j]))) +
+                '</div><span style="color:var(--text-gray);font-size:var(--fs-12);">' + scored.length + ' / ' + DB.recs.length + '건</span></div>';
             app.innerHTML =
                 '<div class="board-grid cols-3" style="margin-bottom:16px;">' +
                 card('위험도 높음', nHigh + '건', '우선 평가 대상') +
                 card('산정 불가', nNa + '건', '핵심변수 미확보 — 보완입력 필요') +
                 card('평가 가능', (DB.recs.length - nNa) + '건', '안전등급·점검일 확보분') +
                 '</div>' +
-                '<div class="card"><div class="card-body" style="font-size:12px; color:var(--text-gray);">위험도는 확보된 변수만으로 산정합니다. 없는 값은 0으로 처리하지 않고 <b>산정불가</b>로 분류해 과소평가를 방지합니다. (PRD §8)</div></div>' +
+                '<div class="card"><div class="card-body" style="font-size:12px; color:var(--text-gray);">위험도는 확보된 변수만으로 산정합니다. 없는 값은 0으로 처리하지 않고 <b>산정불가</b>로 분류해 과소평가를 방지합니다. 점검 주기 초과는 안전등급별 법정 주기(반기 1회 · D·E는 연 3회)를 기준으로 판정합니다.</div></div>' +
                 '<div class="card" style="margin-top:12px;"><div class="card-body" style="overflow-x:auto; padding:0;">' +
-                '<table class="table-figma"><thead><tr><th>시설물</th><th>안전등급</th><th>경과</th><th>이용인원</th><th>위험도</th><th>변수</th><th>관리</th></tr></thead><tbody>' + rowsH + '</tbody></table>' +
+                filterBar +
+                '<table class="table-figma"><thead><tr><th>시설물</th><th>안전등급</th><th>최근 점검</th><th>경과</th><th>이용인원</th><th>위험도</th><th>변수</th><th>관리</th></tr></thead><tbody>' +
+                (rowsH || '<tr><td colspan="8" style="text-align:center;color:var(--text-gray);padding:24px;">조건에 맞는 시설물이 없습니다.</td></tr>') +
+                '</tbody></table>' +
                 '</div></div>';
         }
         render();
         DYFACIL._reRisk = render;
+        DYFACIL._rf = (k, v) => { RF[k] = v; render(); };
     }
 
     /* ─────────── FAC04-S FMS 연계 ─────────── */
