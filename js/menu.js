@@ -382,7 +382,21 @@
             const apprChip = a => '<span class="chip-status ' + apprColor(a) + '">' + (a || '미상신') + '</span>';
             const checkChip = v => { const i = POL.lastInspection(v); return i ? '<span class="chip-status success">점검완료 · ' + i.date + '</span>' : '<span class="chip-status neutral">미점검</span>'; };
             const typeChip = t => '<span class="chip-mini ' + (t === '제정' ? 'wt-elec' : t === '개정' ? 'wt' : 'st-done') + '">' + t + '</span>';
-            const stateChip = v => POL.isActive(v) ? '<span class="chip-status success">현행</span>' : '<span class="chip-status neutral">이력</span>';
+            /* 현행이 아닌 버전은 둘로 갈린다 — **아직 결재를 못 받은 신규본**과 **지나간 이력**이다.
+               둘을 다 '이력'이라고 부르면 방금 만든 방침이 과거 것으로 읽혀, 담당자가 상신해야
+               한다는 사실을 놓친다. 판정 기준은 현행본의 시행일이다. */
+            const isPending = v => {
+                if (!v) return false;
+                const a = POL.active && POL.active();
+                if (a && a.ver === v.ver) return false;
+                /* **결재 상태로 판정한다** — 시행일로 재면 승인완료된 옛 버전까지 대기로 잡힌다
+                   (실제로 그 오류를 냈다). 승인을 받은 적 없는 것만 '결재 대기'다. */
+                return v.appr !== '승인완료';
+            };
+            const stateChip = v => {
+                const lb = POL.isActive(v) ? '현행' : (isPending(v) ? '결재 대기' : '이력');
+                return '<span class="chip-status ' + V.toneOf(lb) + '">' + lb + '</span>';
+            };
             const resultChip = r => '<span class="chip-status ' + (r === '적합' ? 'success' : r === '부적합' ? 'danger' : 'warning') + '">' + r + '</span>';
 
             /* ===== 라우터 ===== */
@@ -679,7 +693,9 @@
                 const pdfPanel = '<div class="pol-pdf-wrap"><div class="pol-pdf-tools"><span style="font-size:12px; font-weight:700; color:var(--text-gray);">PDF 미리보기</span><span style="display:flex; gap:6px;"><button class="btn btn-sm btn-outline" onclick="PG.polPdfFull(\'' + v.ver + '\')">전체화면</button><button class="btn btn-sm btn-primary" onclick="PG.polPdfDownload()">PDF 다운로드</button></span></div>' + pdfPaper(v) + '</div>';
                 const checkSec = sectionCard('반기 이행 점검 ' + (editable ? '' : '이력 (열람 전용)'),
                     (v.inspections && v.inspections.length ? '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>회차</th><th>점검일</th><th>점검자</th><th>결과</th><th></th></tr></thead><tbody>' + v.inspections.map((i, idx) => '<tr><td>' + i.half + '</td><td>' + i.date + '</td><td>' + (i.inspector || '-') + '</td><td>' + resultChip(i.result) + '</td><td><button class="btn btn-sm btn-outline" onclick="PG.checkSheet(\'' + v.ver + '\',' + idx + ')">점검표 보기</button></td></tr>').join('') + '</tbody></table></div>' : '<p style="color:var(--text-gray); font-size:13px;">점검 이력이 없습니다.</p>') +
-                    (editable ? '' : '<p class="lock-note">이전 버전입니다. 점검 이력 열람만 가능하며 신규 점검 작성·수정은 현행본에서만 할 수 있습니다.</p>'),
+                    (editable ? '' : (isPending(cur)
+                        ? '<p class="lock-note">아직 <b>결재를 받지 않은 방침</b>입니다. 점검·게시는 결재가 승인완료된 현행본에서만 합니다 — 먼저 상신하세요.</p>'
+                        : '<p class="lock-note">지나간 버전입니다. 점검 이력 열람만 가능하며 신규 점검 작성·수정은 현행본에서만 할 수 있습니다.</p>')),
                     editable ? '<button class="btn btn-sm btn-outline" onclick="PG.polChkBasis(\'' + v.ver + '\')">점검표 근거 설정</button><button class="btn btn-sm btn-primary" onclick="PG.polCheckWrite(\'' + v.ver + '\')">이행점검 작성</button>' : '');
                 /* 게시 여부는 **부서 전수 체크리스트([게시 현황] 탭)** 가 단일 출처다(2026-07-30 회의).
                    버전별 게시 카드를 여기 남겨 두면 같은 화면에서 '게시율 0%'와 '게시완료 2건'이
