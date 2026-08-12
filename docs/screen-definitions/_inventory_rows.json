@@ -908,5 +908,44 @@
     "defFile": "SCR-COM-008_법령근거연계.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/js/law-map.js",
     "unresolvedCount": 13
+  },
+  {
+    "scrId": "SCR-MYW-001",
+    "daemenu": "대시보드",
+    "jungmenu": "내 할일",
+    "name": "내 할일 (부서 담당자 통합)",
+    "type": "목록",
+    "route": "my-work.html",
+    "components": "my-work.js, common.js, rsk-data.js, edu-data.js, work-data.js",
+    "existingSfr": "MYW01-V",
+    "defFile": "",
+    "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/my-work.html",
+    "unresolvedCount": 0
+  },
+  {
+    "scrId": "SCR-WRK-001",
+    "daemenu": "업무 관리",
+    "jungmenu": "업무 발행 관리",
+    "name": "업무 발행 관리",
+    "type": "목록·설정",
+    "route": "work-admin.html",
+    "components": "work-admin.js, work-data.js, work-catalog.js, work-assign.js",
+    "existingSfr": "WRK01-L",
+    "defFile": "",
+    "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/work-admin.html",
+    "unresolvedCount": 0
+  },
+  {
+    "scrId": "SCR-WRK-002",
+    "daemenu": "업무 관리",
+    "jungmenu": "부서 업무함",
+    "name": "부서 업무함",
+    "type": "목록",
+    "route": "work-dept.html",
+    "components": "work-dept.js, work-data.js, work-assign.js",
+    "existingSfr": "WRK02-L",
+    "defFile": "",
+    "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/work-dept.html",
+    "unresolvedCount": 0
   }
 ]

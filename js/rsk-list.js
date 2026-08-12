@@ -1092,15 +1092,28 @@
             : '<button type="button" class="rl-rv-owner" title="비워 두면 해당 부서가 지정합니다"' +
               ' onclick="RSKLIST.openRowOwner(\'' + deptId + '\',' + i + ')">부서에서 지정</button>';
     }
-    /* 시설물 셀 — 지정되면 시설물명, 아니면 '해당 없음'(빈 값이 기본이고 정상이다).
-       미지정을 경고색으로 띄우지 않는다 — 필수가 아닌 항목을 필수처럼 보이게 하면
-       담당자가 아무 시설물이나 골라 넣고, 그 순간 대장 연계가 거짓 기록이 된다. */
+    /* 시설물 셀 — **세 상태**다 (2026-08-12 분리).
+     *   지정됨      facilNo 있음        → 시설물명
+     *   해당 없음   facilNa === true    → 확인한 결과 시설물에 붙지 않는 요인
+     *   미지정      둘 다 아님(기본)    → 아직 판단하지 않음
+     * 종전에는 빈 값을 곧바로 '해당 없음'으로 읽어, **판단하지 않은 것과 확인해서
+     * 없는 것이 구분되지 않았다**. 이 프로젝트는 다른 축에서 이미 그 둘을 나누고
+     * 있다(원료·제조물 0건을 '해당 없음'으로 단정하지 않음 · 이행점검의 해당없음
+     * 사유 강제). 같은 원칙을 여기에도 적용한다.
+     * 미지정을 경고색으로 띄우지는 않는다 — 필수가 아닌 항목을 필수처럼 보이게 하면
+     * 담당자가 아무 시설물이나 골라 넣고, 그 순간 대장 연계가 거짓 기록이 된다. */
     function facilCell(deptId, i, r) {
-        return r.facilNo
-            ? '<button type="button" class="rl-rv-owner is-set" title="' + esc((r.facilNm || '') + ' · ' + r.facilNo) + '"' +
-              ' onclick="RSKLIST.openRowFacil(\'' + deptId + '\',' + i + ')">' + esc(r.facilNm || r.facilNo) + '</button>'
-            : '<button type="button" class="rl-rv-owner" title="시설물에 해당하는 요인이면 대장에서 고르세요(선택)"' +
-              ' onclick="RSKLIST.openRowFacil(\'' + deptId + '\',' + i + ')">해당 없음</button>';
+        var call = ' onclick="RSKLIST.openRowFacil(\'' + deptId + '\',' + i + ')"';
+        if (r.facilNo) {
+            return '<button type="button" class="rl-rv-owner is-set" title="' + esc((r.facilNm || '') + ' · ' + r.facilNo) + '"' +
+                call + '>' + esc(r.facilNm || r.facilNo) + '</button>';
+        }
+        if (r.facilNa) {
+            return '<button type="button" class="rl-rv-owner is-na" title="확인 결과 시설물에 해당하지 않는 요인입니다"' +
+                call + '>해당 없음</button>';
+        }
+        return '<button type="button" class="rl-rv-owner" title="시설물에 해당하는 요인이면 대장에서 고르세요 — 해당하지 않으면 [해당 없음]으로 표시하세요"' +
+            call + '>미지정</button>';
     }
     /* 셀 안에서는 전·후 대표 1장씩을 썸네일로 보여준다 — 개수만으로는 무엇을 올렸는지
        알 수 없어 매번 열어봐야 한다. 자세히 보기는 관리 모달의 미리보기가 맡는다. */
@@ -1305,8 +1318,10 @@
             '<p style="font-size:var(--fs-13);margin:0 0 4px;"><b>' + esc(D().deptName(deptId)) + '</b> · ' +
                 esc(r.name || '(유해위험요인 미입력)') + '</p>' +
             '<p class="file-hint"><b>시설물에 해당하는 요인만 지정합니다.</b> ' +
-                '작업 행동·화학물질·보건처럼 특정 시설물에 붙지 않는 요인은 <b>비워 두세요</b> — 비워 두는 것이 기본입니다. ' +
+                '작업 행동·화학물질·보건처럼 특정 시설물에 붙지 않는 요인은 <b>[해당 없음]</b>으로 표시하세요. ' +
                 '지정하면 이 조치가 해당 시설물의 조치 내역으로 남고, 시설물 위험도에도 반영할 수 있습니다.</p>' +
+            '<p class="file-hint" style="margin-top:4px;">아직 판단하지 않았으면 그대로 두세요 — <b>미지정</b>으로 남고 어떤 단계도 막지 않습니다. ' +
+                '다만 <b>미지정과 해당 없음은 다릅니다</b>: 앞은 아직 안 본 것이고 뒤는 확인해서 없는 것입니다.</p>' +
             '<div class="rl-modal-row" style="margin-top:10px;">' +
                 '<label class="form-label" for="rl-facil-name">시설물</label>' +
                 '<div class="orgpick-field" id="rl-facil-field"><div style="display:flex;gap:8px;align-items:center;">' +
@@ -1317,7 +1332,10 @@
                 '<input type="hidden" id="rl-facil-no" value="' + esc(r.facilNo || '') + '">' +
                 '</div>' +
             '</div>',
-            (r.facilNo ? '<button type="button" class="btn btn-outline" style="margin-right:auto;" onclick="RSKLIST.clearRowFacil()">지정 해제</button>' : '') +
+            (r.facilNo || r.facilNa
+                ? '<button type="button" class="btn btn-outline" style="margin-right:auto;" onclick="RSKLIST.clearRowFacil()">미지정으로 되돌리기</button>'
+                : '') +
+            '<button type="button" class="btn btn-outline" onclick="RSKLIST.markRowFacilNa()">해당 없음</button>' +
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="RSKLIST.saveRowFacil()">저장</button>');
     }
@@ -1333,13 +1351,24 @@
         var nm = global.DYFACIL && DYFACIL.label ? DYFACIL.label(no) : '';
         reviewSet(ROW.deptId, ROW.i, 'facilNo', no);
         reviewSet(ROW.deptId, ROW.i, 'facilNm', nm);
+        reviewSet(ROW.deptId, ROW.i, 'facilNa', false);   /* 지정하면 '해당 없음'은 자동 해제 */
         V().closeModal(); toast('시설물 지정: ' + (nm || no)); render();
+    }
+    /* '해당 없음' — 확인한 결과 시설물에 붙지 않는 요인임을 **적극적으로** 표시한다.
+       미지정(아직 안 봄)과 구분하기 위한 별도 상태다. */
+    function markRowFacilNa() {
+        if (!ROW) return;
+        reviewSet(ROW.deptId, ROW.i, 'facilNo', '');
+        reviewSet(ROW.deptId, ROW.i, 'facilNm', '');
+        reviewSet(ROW.deptId, ROW.i, 'facilNa', true);
+        V().closeModal(); toast('시설물 해당 없음으로 표시했습니다.'); render();
     }
     function clearRowFacil() {
         if (!ROW) return;
         reviewSet(ROW.deptId, ROW.i, 'facilNo', '');
         reviewSet(ROW.deptId, ROW.i, 'facilNm', '');
-        V().closeModal(); toast('시설물 지정 해제'); render();
+        reviewSet(ROW.deptId, ROW.i, 'facilNa', false);
+        V().closeModal(); toast('미지정으로 되돌렸습니다.'); render();
     }
 
     /* ===== 행 증빙 사진 — 개선 전/후 =====
@@ -1758,7 +1787,7 @@
         /* 행 담당자 (ORGPICK member) */
         openRowOwner: openRowOwner, pickRowOwner: pickRowOwner, saveRowOwner: saveRowOwner, clearRowOwner: clearRowOwner,
         /* 행 시설물 (FMS 시설물 대장) */
-        openRowFacil: openRowFacil, pickRowFacil: pickRowFacil, saveRowFacil: saveRowFacil, clearRowFacil: clearRowFacil,
+        openRowFacil: openRowFacil, pickRowFacil: pickRowFacil, saveRowFacil: saveRowFacil, clearRowFacil: clearRowFacil, markRowFacilNa: markRowFacilNa,
         /* 행 개선 전·후 사진 */
         openRowPhotos: openRowPhotos, onPickBefore: onPickBefore, onPickAfter: onPickAfter, delRowPhoto: delRowPhoto,
         preview: preview, closePreview: closePreview,

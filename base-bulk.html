@@ -26,14 +26,14 @@
             <div class="card-body">
                 <div class="upload-drop" role="button" tabindex="0" onclick="showResult()" onkeydown="DYV2.dropKey(event)">
                     엑셀 파일을 끌어다 놓거나 클릭하여 업로드<br>
-                    <span style="font-size:12px;">.xlsx · 최대 10MB · 업로드 즉시 유효성 체크가 실행됩니다</span>
+                    <span style="font-size:12px;">.xlsx · 최대 10MB · <b>프로토타입 — 파일 내용을 읽지 않고 예시 결과를 보여줍니다</b></span>
                 </div>
             </div>
         </div>
 
         <div class="card" id="bulk-result" style="display:none;">
             <div class="card-header">
-                <span class="card-title">3. 유효성 체크 결과 — 공중이용시설 서식.xlsx (47행)</span>
+                <span class="card-title">3. 유효성 체크 결과 <span class="chip-status chip-sm warning">예시 결과 — 실제 파일 미해석</span> — 공중이용시설 서식.xlsx (47행)</span>
                 <button class="btn btn-primary btn-sm" onclick="DYV2.toast('정상 44행 반영 완료 (프로토타입)')">정상 행 반영 (44)</button>
             </div>
             <div class="card-body">

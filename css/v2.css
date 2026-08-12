@@ -2647,6 +2647,9 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
   background: var(--surface); color: var(--text-gray); font-size: var(--fs-12); cursor: pointer;
 }
 .rl-rv-owner.is-set { border-style: solid; color: var(--text-black); font-weight: var(--fw-bold); }
+/* 해당 없음 — 확인해서 없는 것. 미지정(아직 안 봄)과 눈으로 구분돼야 한다.
+   경고색을 쓰지 않는다: 정상적으로 도달하는 상태이지 고쳐야 할 상태가 아니다. */
+.rl-rv-owner.is-na { border-style: solid; color: var(--text-gray); }
 .rl-rv-owner:hover { border-color: var(--main-dark); }
 .rl-rv-owner:focus-visible { outline: 2px solid var(--main-dark); outline-offset: 2px; }
 .rl-rv-photos {

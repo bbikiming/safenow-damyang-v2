@@ -220,7 +220,7 @@
         const hero =
             '<div class="dsh-hero">' +
               '<div class="dsh-hero-main">' +
-                '<div class="dsh-hero-label">담양군 전체 안전관리 이행률</div>' +
+                '<div class="dsh-hero-label">담양군 전체 안전관리 이행률 <span class="dsh-seed-note">시연 시드</span></div>' +
                 '<div class="dsh-hero-num">72<em>%</em></div>' +
                 '<div class="progress"><div class="progress-bar" style="width:72%"></div></div>' +
                 sparkline([58, 60, 61, 63, 64, 66, 68, 67, 69, 70, 68, 72], '최근 12개월 추이') +
@@ -261,6 +261,7 @@
         const deptCard =
             '<div class="card">' +
               '<div class="card-header"><span class="card-title">부서별 안전관리 이행 현황</span>' +
+                '<span class="dsh-seed-note">이행률·기한 초과는 시연 시드</span>' +
                 '<a class="btn btn-sm btn-secondary" href="stats.html">현황 통계</a></div>' +
               '<div class="card-body"><div style="overflow-x:auto;"><table class="table-figma">' +
                 '<thead><tr><th>부서</th><th>이행률</th><th style="text-align:center;">기한 초과</th><th>상태</th></tr></thead>' +
