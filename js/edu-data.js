@@ -13,7 +13,7 @@
 
     /* r5 — 2026-07-30 회의: 기타교육 분류를 법정 3유형으로 재정의(구 5종 폐지) ·
      * 첨부 슬롯(file.slot) 도입. 구 etcType 이 남으면 필터·표시가 어긋나므로 버전 범프. */
-    var SKEY = 'damyangEduV1r6';   /* r6 — 기타교육 시드 4건(법정 3유형 + 관리감독자) · 법정 최소 미달 판정 */
+    var SKEY = 'damyangEduV1r7';   /* r7 — 관리감독자 지정일 기준 연간 사이클 · 미등록 판정 분리 */
     /* 오늘 기준 — DYV2.today() 단일 출처. TODAY 는 하위호환 게터(DYEDU.TODAY)로 유지. */
     function today() { return (global.DYV2 && global.DYV2.today) ? global.DYV2.today() : realToday(); }
     function realToday() {
@@ -25,7 +25,7 @@
 
     /* ================= 계산 함수 (설계서 §2) ================= */
 
-    /* 사이클: 채용일 기준 6개월(관리감독자 12개월) 단위. */
+    /* 사이클: 현업은 채용일 기준 6개월, 관리감독자는 지정일 기준 12개월. */
     function fmtDate(d) {
         var y = d.getFullYear(), m = d.getMonth() + 1, dd = d.getDate();
         return y + '-' + (m < 10 ? '0' : '') + m + '-' + (dd < 10 ? '0' : '') + dd;
@@ -34,7 +34,10 @@
         return new Date(d.getFullYear(), d.getMonth() + months, d.getDate());
     }
     function cycleOf(worker, dateISO) {
-        var hire = new Date(worker.hireDate);
+        var anchorISO = worker.category === 'SUPERVISOR' ? worker.designatedAt : worker.hireDate;
+        if (!anchorISO) return { valid: false, reason: worker.category === 'SUPERVISOR' ? '지정일 미등록' : '채용일 미등록', start: '', end: '', index: 0, months: 0, daysToEnd: null };
+        var hire = new Date(anchorISO);
+        if (isNaN(hire.getTime())) return { valid: false, reason: '기준일 오류', start: '', end: '', index: 0, months: 0, daysToEnd: null };
         var today = new Date(dateISO || todayIso());
         var cycleMonths = worker.category === 'SUPERVISOR' ? 12 : 6;
         var months = (today.getFullYear() - hire.getFullYear()) * 12 + (today.getMonth() - hire.getMonth());
@@ -45,7 +48,7 @@
         var endExclusive = addMonths(hire, (cycleIndex + 1) * cycleMonths);
         var end = new Date(endExclusive.getTime() - 86400000);
         var dToEnd = Math.round((end - today) / 86400000);
-        return { start: fmtDate(start), end: fmtDate(end), index: cycleIndex, months: cycleMonths, daysToEnd: dToEnd };
+        return { valid: true, reason: '', start: fmtDate(start), end: fmtDate(end), index: cycleIndex, months: cycleMonths, daysToEnd: dToEnd };
     }
     /* 정기교육 필요시간/사이클 */
     function requiredHours(worker /*, dateISO */) {
@@ -70,6 +73,7 @@
     function acknowledgedRegHours(workerId, dateISO) {
         var w = workerOf(workerId); if (!w) return 0;
         var c = cycleOf(w, dateISO);
+        if (!c.valid) return 0;
         var rec = records().filter(function (r) {
             return r.workerId === workerId && r.kind === 'REG'
                 && r.date >= c.start && r.date <= c.end;
@@ -108,7 +112,7 @@
                 out.push({
                     id: 'w_' + m.uid, name: m.name, deptId: deptId, deptName: deptName,
                     category: isSup ? 'SUPERVISOR' : 'OFFICE',
-                    empType: 'CIVIL', hireDate: '2020-03-02', contractMonths: 0,
+                    empType: 'CIVIL', hireDate: '2020-03-02', designatedAt: '', contractMonths: 0,
                     active: true, source: 'HR', role: m.role || ''
                 });
             });
@@ -391,6 +395,7 @@
             category: o.category || 'FIELD',
             empType: o.empType || 'CONTRACT',
             hireDate: o.hireDate,
+            designatedAt: o.designatedAt || '',
             contractMonths: o.contractMonths || 0,
             active: true, source: o.source || 'MANUAL', role: o.role || ''
         };
@@ -426,6 +431,8 @@
             date: o.date, time: o.time || '', endTime: o.endTime || '', hours: o.hours || 0,
             sessions: (o.sessions || []).map(function (s) { return { date: s.date, start: s.start, end: s.end }; }),
             instructor: o.instructor || '', place: o.place || '', desc: o.desc || '',
+            specialWorkNos: (o.specialWorkNos || []).slice(),
+            specialWorkOtherReason: o.specialWorkOtherReason || '',
             files: o.files || [], photos: o.photos || [], status: o.status || 'OPEN',
             createdBy: o.createdBy || '', history: o.history || []
         };
@@ -744,24 +751,36 @@
         var hs = hireStatus(worker.id);
         return {
             worker: worker, cycle: c, need: need, done: done,
-            short: Math.max(0, need - done),
-            complete: done >= need,
+            short: c.valid ? Math.max(0, need - done) : 0,
+            complete: c.valid && done >= need,
+            assessable: !!c.valid,
             hire: hs
         };
     }
     /* 부서별 완료율 — filterFn 을 주면 그 모집단(구분·고용형태·채용연도…)만으로 다시 집계한다.
      * 예: 관리감독자만 본 부서별 완료율. 화면에서 자체 집계하지 않고 이 창구를 쓴다. */
-    function deptSummary(dateISO, filterFn) {
+    /* opts.keepEmpty — 필터로 인원이 0명이 된 부서도 행으로 남긴다.
+     * 기본값(끔)을 유지하는 이유는 소비처가 넷이고(대시보드·업무발행·결재문서·이수현황)
+     * 없던 행이 생기면 그쪽 집계가 조용히 달라지기 때문이다. 이수현황 요약만 켠다 —
+     * 거기서는 부서가 표에서 사라지면 "대상이 없어서"인지 "빠뜨렸는지" 구분되지 않는다. */
+    function deptSummary(dateISO, filterFn, opts) {
         var byDept = {};
+        if (opts && opts.keepEmpty) {
+            workers().forEach(function (w) {
+                byDept[w.deptId] = byDept[w.deptId] ||
+                    { deptId: w.deptId, name: deptName(w.deptId), total: 0, assessable: 0, unassessable: 0, done: 0 };
+            });
+        }
         workers().filter(function (w) { return filterFn ? filterFn(w) : true; }).forEach(function (w) {
-            var d = byDept[w.deptId] = byDept[w.deptId] || { deptId: w.deptId, name: deptName(w.deptId), total: 0, done: 0 };
+            var d = byDept[w.deptId] = byDept[w.deptId] || { deptId: w.deptId, name: deptName(w.deptId), total: 0, assessable: 0, unassessable: 0, done: 0 };
             d.total++;
             var s = statusRow(w, dateISO);
-            if (s.complete) d.done++;
+            if (!s.assessable) d.unassessable++;
+            else { d.assessable++; if (s.complete) d.done++; }
         });
         return Object.keys(byDept).map(function (k) {
             var r = byDept[k];
-            r.pct = r.total ? Math.round(r.done / r.total * 100) : 0;
+            r.pct = r.assessable ? Math.round(r.done / r.assessable * 100) : null;
             return r;
         }).sort(function (a, b) { return a.name.localeCompare(b.name); });
     }

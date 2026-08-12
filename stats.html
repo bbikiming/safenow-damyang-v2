@@ -13,23 +13,23 @@
     <main>
         <div class="v2-toolbar">
             <div class="form-group"><span class="form-label-inline">연도</span>
-                <select class="select"><option>2026년</option><option>2025년</option></select>
+                <select class="select" id="st-year"><option value="">전체</option><option value="2026" selected>2026년</option><option value="2025">2025년</option></select>
             </div>
             <div class="form-group"><span class="form-label-inline">기간</span>
-                <select class="select"><option>상반기</option><option>하반기</option><option>전체</option></select>
+                <select class="select" id="st-period"><option value="">전체</option><option value="H1">상반기</option><option value="H2">하반기</option></select>
             </div>
             <div class="form-group"><span class="form-label-inline">대메뉴</span>
                 <select class="select" id="st-menu"><option value="">전체</option></select>
             </div>
             <span class="spacer"></span>
-            <button class="btn btn-secondary" onclick="DYV2.toast('엑셀 다운로드 (프로토타입)')">엑셀 다운로드</button>
+            <button class="btn btn-secondary" id="st-download">엑셀 다운로드</button>
         </div>
 
         <div id="st-summary" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:16px;"></div>
 
         <div class="dsh-grid">
             <div class="card">
-                <div class="card-header"><span class="card-title">대메뉴별 문서 분포 (실측 424건)</span></div>
+                <div class="card-header"><span class="card-title" id="st-dist-title">대메뉴별 문서 분포</span></div>
                 <div class="card-body" id="st-dist"></div>
             </div>
             <div class="card">
@@ -53,59 +53,88 @@
 
     <script src="./js/layout.js"></script>
     <script src="./js/law-map.js"></script>
-    <script src="./js/policy-open.js"></script><!-- 발주처 확정 필요 항목 (DYPOLICY) -->
+    <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
     <script src="./js/data.js"></script>
     <script src="./js/common.js"></script>
+    <script src="./js/sets-data-v2.js"></script>
     <script>
         (function () {
             const V = DYV2;
-            const ALL = V.docs();
+            const ALL = window.DY_DOCS_V2 || [];
+            const MENUS = window.DY_MENUS_V2 || {};
             const sel = document.getElementById('st-menu');
-            Object.keys(V.MENUS).forEach(k => {
-                const o = document.createElement('option'); o.value = k; o.textContent = V.MENUS[k].label; sel.appendChild(o);
+            Object.keys(MENUS).forEach(k => {
+                const o = document.createElement('option'); o.value = k; o.textContent = MENUS[k].label; sel.appendChild(o);
             });
 
-            document.getElementById('st-summary').innerHTML =
-                '<div class="statbox neutral"><div class="statbox-num">' + ALL.length + '</div><div class="statbox-label">전체 문서</div></div>' +
-                '<div class="statbox info"><div class="statbox-num">' + ALL.filter(d => d.law === '중처법').length + '</div><div class="statbox-label">중처법</div></div>' +
-                '<div class="statbox success"><div class="statbox-num">' + ALL.filter(d => d.law === '산안법').length + '</div><div class="statbox-label">산안법</div></div>' +
-                '<div class="statbox warning"><div class="statbox-num">' + ALL.filter(d => d.daemenu === '확인필요').length + '</div><div class="statbox-label">확인필요</div></div>';
-
-            /* 대메뉴별 분포 가로 막대 */
-            const counts = Object.keys(V.MENUS).map(k => [V.MENUS[k].label, V.byMenu(k).length, k]);
-            counts.push(['확인필요 (미배치)', ALL.filter(d => d.daemenu === '확인필요').length, '']);
-            const max = Math.max(...counts.map(c => c[1]));
-            document.getElementById('st-dist').innerHTML = counts.sort((a, b) => b[1] - a[1]).map(([label, n, key]) =>
-                '<div class="dsh-rate-row">' +
-                '<span class="rate-label">' + label + '</span>' +
-                '<div class="progress"><div class="progress-bar ' + (key ? 'green' : 'warning') + '" style="width:' + Math.round(n / max * 100) + '%"></div></div>' +
-                '<span class="rate-num">' + n + '</span></div>'
-            ).join('');
-
-            /* 처리유형 / 업무구분 분포 */
-            function dist(field, pairs) {
+            function basisGroup(d) {
+                const b = d.legalBasis || '';
+                const c = b.indexOf('중처') >= 0;
+                const o = b.indexOf('산안') >= 0;
+                if (c && o) return '복합근거';
+                if (c) return '중처법';
+                if (o) return '산안법';
+                return '기타근거';
+            }
+            function filtered() {
+                const year = document.getElementById('st-year').value;
+                const period = document.getElementById('st-period').value;
+                const menu = sel.value;
+                return ALL.filter(d => {
+                    const date = d.updated || '';
+                    const month = Number(date.slice(5, 7));
+                    return (!year || date.slice(0, 4) === year) &&
+                        (!period || (period === 'H1' ? month <= 6 : month >= 7)) &&
+                        (!menu || d.menuKey === menu);
+                });
+            }
+            function dist(list, field, pairs) {
                 return pairs.map(([label, cls]) => {
-                    const n = ALL.filter(d => d[field] === label).length;
+                    const n = list.filter(d => d[field] === label).length;
                     return '<div class="dsh-rate-row"><span class="rate-label">' + label + '</span>' +
-                        '<div class="progress"><div class="progress-bar ' + cls + '" style="width:' + Math.round(n / ALL.length * 100) + '%"></div></div>' +
+                        '<div class="progress"><div class="progress-bar ' + cls + '" style="width:' + (list.length ? Math.round(n / list.length * 100) : 0) + '%"></div></div>' +
                         '<span class="rate-num">' + n + '</span></div>';
                 }).join('');
             }
-            document.getElementById('st-types').innerHTML =
-                '<p style="font-size:12px; font-weight:700; color:var(--text-gray); margin-bottom:4px;">처리유형</p>' +
-                dist('processType', [['프로그램', 'green'], ['전자문서', 'info'], ['첨부파일', 'warning']]) +
-                '<p style="font-size:12px; font-weight:700; color:var(--text-gray); margin:12px 0 4px;">업무구분</p>' +
-                dist('workType', [['프로그램', 'green'], ['이행', 'info'], ['첨부', 'warning']]);
 
-            /* 이행 현황표 */
-            document.getElementById('st-table').innerHTML = Object.keys(V.MENUS).map(k => {
-                const docs = V.byMenu(k).filter(d => d.workType !== '첨부');
-                const c = s => docs.filter(d => d.status === s).length;
-                const rate = V.complianceRate(k);
-                return '<tr><td style="font-weight:600;"><a href="' + V.MENUS[k].href + '" style="color:var(--main-dark);">' + V.MENUS[k].label + '</a></td>' +
-                    '<td>' + docs.length + '</td><td>' + c('완료') + '</td><td>' + c('진행') + '</td><td>' + c('미시행') + '</td>' +
-                    '<td><b style="color:var(--main-dark);">' + rate + '%</b></td></tr>';
-            }).join('');
+            function render() {
+                const list = filtered();
+                const groups = ['중처법', '산안법', '복합근거', '기타근거'];
+                document.getElementById('st-summary').innerHTML =
+                    '<div class="statbox neutral"><div class="statbox-num">' + list.length + '</div><div class="statbox-label">조회 문서 전체</div></div>' +
+                    groups.map((g, i) => '<div class="statbox ' + (i === 1 ? 'success' : i === 3 ? 'warning' : 'info') + '"><div class="statbox-num">' + list.filter(d => basisGroup(d) === g).length + '</div><div class="statbox-label">' + g + '</div></div>').join('');
+
+                const counts = Object.keys(MENUS).map(k => [MENUS[k].label, list.filter(d => d.menuKey === k).length, k]);
+                const max = Math.max(1, ...counts.map(c => c[1]));
+                document.getElementById('st-dist-title').textContent = '대메뉴별 문서 분포 (' + list.length + '건)';
+                document.getElementById('st-dist').innerHTML = counts.sort((a, b) => b[1] - a[1]).map(([label, n, key]) =>
+                    '<div class="dsh-rate-row">' +
+                    '<span class="rate-label">' + label + '</span>' +
+                    '<div class="progress"><div class="progress-bar green" style="width:' + Math.round(n / max * 100) + '%"></div></div>' +
+                    '<span class="rate-num">' + n + '</span></div>'
+                ).join('');
+
+                document.getElementById('st-types').innerHTML =
+                    '<p style="font-size:12px; font-weight:700; color:var(--text-gray); margin-bottom:4px;">처리유형</p>' +
+                    dist(list, 'processType', [['프로그램', 'green'], ['전자문서', 'info'], ['첨부파일', 'warning']]) +
+                    '<p style="font-size:12px; font-weight:700; color:var(--text-gray); margin:12px 0 4px;">PDCA 단계</p>' +
+                    dist(list, 'pdca', [['P', 'info'], ['D', 'green'], ['C', 'warning'], ['A', 'green']]);
+
+                document.getElementById('st-table').innerHTML = Object.keys(MENUS).map(k => {
+                    const docs = list.filter(d => d.menuKey === k);
+                    const c = s => docs.filter(d => d.status === s).length;
+                    const rate = docs.length ? Math.round(c('완료') / docs.length * 100) : null;
+                    return '<tr><td style="font-weight:600;"><a href="docs-preset.html?ver=v2&menu=' + k + '" style="color:var(--main-dark);">' + MENUS[k].label + '</a></td>' +
+                        '<td>' + docs.length + '</td><td>' + c('완료') + '</td><td>' + c('진행') + '</td><td>' + c('미시행') + '</td>' +
+                        '<td><b style="color:var(--main-dark);">' + (rate == null ? '대상 없음' : rate + '%') + '</b></td></tr>';
+                }).join('');
+            }
+
+            ['st-year', 'st-period', 'st-menu'].forEach(id => document.getElementById(id).addEventListener('change', render));
+            document.getElementById('st-download').addEventListener('click', () => {
+                V.toast('현재 조회 조건 ' + filtered().length + '건을 엑셀로 내려받습니다 (프로토타입)');
+            });
+            render();
         })();
     </script>
 </body>

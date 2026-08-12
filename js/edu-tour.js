@@ -173,12 +173,45 @@
                 var n = recCount();
                 return n ? '이수기록 ' + n + '건 반영됨' : (c.status === 'DONE' ? '반영 대기' : '종료 처리 후');
             }
+        },
+        /* ── 5단계 · 공문 기안 → 상신 ─────────────────────────────────────────
+         * **아직 구현되지 않은 단계다.** 기획만 끝났고(기획-안전보건교육-온나라결재상신 v1.2 ·
+         * SCR-EDU-001 §4-6 · SCR-EDU-004 §4-5) 화면은 없다.
+         *
+         * 그런데도 흐름 보드에 넣는 이유는, 빼 두면 **교육 업무가 이수현황에서 끝나는 것처럼**
+         * 보이기 때문이다. 실제 업무는 거기서 끝나지 않는다 — 실시 결과를 공문으로 올려야 끝난다.
+         * "미구현 갭은 그럴듯하게 채우지 말고 화면에 드러낸다"(CLAUDE.md)를 따라, 단계는 두되
+         * **없다는 사실과 왜 없는지를 그 자리에서 말한다**. done() 은 영영 false 이고
+         * action 은 두지 않는다 — 누를 것이 없는데 버튼을 내면 그게 거짓말이다. */
+        {
+            key: 'doc', label: '공문', page: 'edu-reg.html',
+            persona: ownerP, href: function () { return 'edu-reg.html'; },
+            selector: '[data-tour="edu-doc"]',
+            planned: true,
+            title: '실시 결과를 공문으로 기안 → 온나라 상신',
+            where: '교육 카드의 <b>[공문 기안]</b> <span class="chip-status chip-sm warning">기획 완료 · 화면 미구현</span>',
+            clickPath: [
+                '종료 처리된 교육에서 [공문 기안] → 공문 본문을 직접 씁니다',
+                '붙임은 이미 올려 둔 파일에서 고릅니다 — 교육일지·교육사진·부서별 서명파일',
+                '이수자 명단은 별지로 붙습니다',
+                '[문서 미리보기 →] → [온나라로 결재 상신] → 상신 확인'
+            ],
+            desc: '교육을 끝냈다고 업무가 끝나는 것이 아니라, 실시 결과를 공문으로 올려야 끝납니다. ' +
+                  '본문은 담당자가 직접 쓰고 시스템은 붙임을 엮어 건넵니다. ' +
+                  '이 단계는 아직 화면이 없습니다 — 기획만 끝났습니다.',
+            script: '지금은 여기서 멈춥니다. 결재 상신을 먼저 붙였다가 “공문 작성 단계 없이 결재만 올라간다”는 지적을 받아 껐고, ' +
+                    '공문 작성 화면을 만든 뒤에 다시 엽니다.',
+            note: function () {
+                var on = global.EDUAPV && global.EDUAPV.submitEnabled && global.EDUAPV.submitEnabled();
+                return on ? '상신 열림' : '화면 미구현 — 기획 완료';
+            },
+            done: function () { return false; }
         }
     ];
 
     var T = global.DYTOUR.define({
         key: 'edu', ns: 'EDUTOUR', skey: 'dy-edu-tour-v1', steps: STEPS, ownerPersona: 'staff', pageLabels: { 'edu-reg.html': '정기교육', 'edu-reg-detail.html': '정기교육 상세', 'edu-status.html': '이수현황' },
-        stepsClass: 'is-grid4',        /* 4단계 고정 — 종전 4열 그리드 유지 */
+        stepsClass: '',                /* 5단계가 되어 4열 고정을 푼다(위험성평가와 같은 유연 배치) */
         resetLabel: '시연 초기화',
         kicker: function () { return '안전보건교육 시연'; },
         flowTitle: function () { return '안전보건교육 핵심 업무 — 전체 흐름 ' + STEPS.length + '단계'; },

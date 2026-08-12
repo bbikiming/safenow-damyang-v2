@@ -16,7 +16,10 @@
     const RUI = { sel: null, draft: null, dirty: false };
 
     function cloneRole(r) { return JSON.parse(JSON.stringify(r)); }
-    function blankRole() { return { id: null, name: '', desc: '', protected: false, fullAccess: false, autoAll: false, members: [] }; }
+    function blankRole() { return { id: null, name: '', desc: '', protected: false, fullAccess: false, autoAll: false, dataScope: 'SELF', members: [] }; }
+    const SCOPE_LABEL = {
+        SELF: '본인·배정업무', DEPT: '소속 부서', JURISDICTION: '소관 조직', ALL: '전체',
+    };
 
     /* ── 좌측 등급 목록 ── */
     function renderList() {
@@ -77,6 +80,10 @@
                 '<input type="text" id="admr-name" value="' + esc(d.name) + '"' + (locked ? ' readonly' : '') + ' placeholder="예: 안전관리자" oninput="DYADROLE.field(\'name\',this.value)">' +
                 '<label class="admr-fl">설명</label>' +
                 '<textarea id="admr-desc" rows="2"' + (locked ? ' readonly' : '') + ' placeholder="등급의 용도를 설명하세요" oninput="DYADROLE.field(\'desc\',this.value)">' + esc(d.desc) + '</textarea>' +
+                '<label class="admr-fl">기본 데이터 열람 범위 <span style="color:var(--status-danger-fg);">*</span></label>' +
+                '<div><select id="admr-scope"' + (locked ? ' disabled' : '') + ' onchange="DYADROLE.field(\'dataScope\',this.value)">' +
+                    Object.keys(SCOPE_LABEL).map(k => '<option value="' + k + '"' + ((d.dataScope || 'SELF') === k ? ' selected' : '') + '>' + SCOPE_LABEL[k] + '</option>').join('') +
+                '</select><div class="admr-mc">메뉴 접근과 별개로 목록·통계에서 볼 수 있는 기본 자료 범위입니다.</div></div>' +
             '</div>' +
             '<div class="admr-attrs">' +
                 '<label class="admr-attr' + (locked ? ' is-lock' : '') + '"><input type="checkbox"' + (d.fullAccess ? ' checked' : '') + (locked ? ' disabled' : '') + ' onchange="DYADROLE.attr(\'fullAccess\',this.checked)"> 전체 권한</label>' +
@@ -151,7 +158,11 @@
 
     /* ── 상호작용 ── */
     function field(k, v) { RUI.draft[k] = v; RUI.dirty = true; /* 입력 중 재렌더 안 함(포커스 유지) */ }
-    function attr(k, checked) { RUI.draft[k] = checked; RUI.dirty = true; renderPanel(); }
+    function attr(k, checked) {
+        RUI.draft[k] = checked;
+        if (k === 'fullAccess' && checked) RUI.draft.dataScope = 'ALL';
+        RUI.dirty = true; renderPanel();
+    }
     function pickMembers() {
         const existing = RUI.draft.members.map(m => ({ kind: m.kind, id: m.id }));
         const gradeName = (RUI.draft.name || '').trim() || (RUI.sel === '__new__' ? '새 등급' : '등급');
@@ -198,10 +209,11 @@
         const d = RUI.draft;
         const name = String(d.name || '').trim();
         if (!name) { V().toast('등급명을 입력하세요.'); return; }
+        if (!SCOPE_LABEL[d.dataScope]) { V().toast('기본 데이터 열람 범위를 선택하세요.'); return; }
         const dup = A.roles().some(r => r.name === name && r.id !== d.id);
         if (dup) { V().toast('이미 같은 이름의 등급이 있습니다.'); return; }
         if (RUI.sel === '__new__') {
-            const res = A.addRole({ name: name, desc: d.desc, fullAccess: d.fullAccess, autoAll: d.autoAll, members: d.members });
+            const res = A.addRole({ name: name, desc: d.desc, fullAccess: d.fullAccess, autoAll: d.autoAll, dataScope: d.dataScope, members: d.members });
             if (!res.ok) { V().toast(res.msg); return; }
             RUI.sel = res.id; RUI.draft = cloneRole(A.roleById(res.id)); RUI.dirty = false;
             renderList(); renderPanel(); V().toast('등급이 추가되었습니다.');

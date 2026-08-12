@@ -103,6 +103,12 @@
             '교육시간은 산업안전보건법 시행규칙 별표4 기준입니다.</p>' +
         '</details>';
     }
+    /* 결재가 올라간 뒤에는 잠근다 — 판정은 EDUAPV.lockOf 한 곳에서만(CLAUDE.md §4).
+     * "공문을 여기다 첨부하면은 문서들에 대한 기록이 남잖아요. 그러면 더 이상 수정이
+     *  안 돼요. 이건 문서 위조예요."(2026-07-30 회의) */
+    function lockOf(courseId) {
+        return global.EDUAPV && global.EDUAPV.lockOf ? global.EDUAPV.lockOf('course', courseId) : null;
+    }
     function cardHtml(c) {
         var stChip = c.status === 'DONE'
             ? '<span class="chip-status chip-sm ' + V().toneOf('완료') + '">완료</span>'
@@ -118,13 +124,20 @@
         var short = E().etcShortfall ? E().etcShortfall(c) : [];
         var shortChip = short.length
             ? '<span class="chip-status chip-sm danger" style="margin-left:6px;">법정 최소 미달 ' + short.length + '명</span>' : '';
+        var lock = lockOf(c.id);
+        var workCount = (c.specialWorkNos || []).length + (c.specialWorkOtherReason ? 1 : 0);
+        var workChip = c.etcType === '특별교육'
+            ? '<span class="chip-status chip-sm info" style="margin-left:6px;">대상 작업 ' + workCount + '건</span>' : '';
         return '<div class="edu-course-card">' +
             '<div class="edu-course-head">' +
-                '<div class="edu-course-title">' + typeBadge + deptChip + esc(c.desc) + ' ' + stChip + shortChip + '</div>' +
+                '<div class="edu-course-title">' + typeBadge + deptChip + esc(c.desc) + ' ' + stChip + shortChip + workChip + '</div>' +
                 '<div class="edu-course-actions">' + apv +
                     '<button type="button" class="btn btn-outline btn-sm" onclick="EDUE.viewDetail(\'' + c.id + '\')">상세</button>' +
-                    '<button type="button" class="btn btn-outline btn-sm" onclick="EDUE.openEdit(\'' + c.id + '\')">수정</button>' +
-                    '<button type="button" class="btn btn-outline btn-sm" style="border-color:var(--status-danger-border);color:var(--status-danger-fg);" onclick="EDUE.confirmRemove(\'' + c.id + '\')">삭제</button>' +
+                    (lock
+                        ? '<button type="button" class="btn btn-outline btn-sm" disabled title="결재 ' + esc(lock) +
+                          ' — 공문 기록이 남아 수정·삭제할 수 없습니다">🔒 ' + esc(lock) + '</button>'
+                        : '<button type="button" class="btn btn-outline btn-sm" onclick="EDUE.openEdit(\'' + c.id + '\')">수정</button>' +
+                    '<button type="button" class="btn btn-outline btn-sm" style="border-color:var(--status-danger-border);color:var(--status-danger-fg);" onclick="EDUE.confirmRemove(\'' + c.id + '\')">삭제</button>') +
                 '</div>' +
             '</div>' +
             '<div class="edu-course-meta">' +
@@ -147,20 +160,25 @@
             edit: null,
             etcType: E().ETC_TYPES[0], deptId: depts[0].id,
             date: E().today(), time: '10:00', hours: 2, instructor: '', place: '', desc: '',
-            files: [], workerIds: {}
+            files: [], workerIds: {}, specialWorkNos: {}, specialWorkOtherReason: ''
         };
         renderCreate();
     }
     /* 수정 — 대상자는 이미 이수기록이 붙어 있어 여기서 바꾸지 않는다(삭제 후 재등록 경로) */
     function openEdit(courseId) {
         var c = E().courseOf(courseId); if (!c) return;
+        /* **버튼을 감추는 것만으로는 부족하다** — 전역 호출로 뚫린다(CLAUDE.md §12·§4).
+           판정은 EDUAPV.lockOf 한 곳이고 여기서는 그 결과만 쓴다. */
+        var lock = lockOf(courseId);
+        if (lock) { toast('결재 ' + lock + ' 상태라 수정할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
         F = {
             edit: courseId,
             etcType: c.etcType || E().ETC_TYPES[0], deptId: c.deptId || E().deptCandidates()[0].id,
             date: c.date, time: c.time || '', hours: c.hours,
             instructor: c.instructor || '', place: c.place || '', desc: c.desc || '',
-            files: (c.files || []).slice(), workerIds: {}
+            files: (c.files || []).slice(), workerIds: {}, specialWorkNos: {}, specialWorkOtherReason: c.specialWorkOtherReason || ''
         };
+        (c.specialWorkNos || []).forEach(function (no) { F.specialWorkNos[String(no)] = true; });
         renderCreate();
     }
     /* 선택한 교육 분류의 법정 최소 교육시간 + 대상 작업 안내.
@@ -191,6 +209,26 @@
             '<ul style="margin:2px 0 0;padding-left:18px;">' + rows + '</ul>' + works +
         '</div>';
     }
+    function specialWorksPickerHtml() {
+        if (!F || F.etcType !== '특별교육') return '';
+        var info = E().etcTypeInfo('특별교육') || {}, works = info.works || [];
+        var selected = Object.keys(F.specialWorkNos || {}).filter(function (k) { return F.specialWorkNos[k]; }).length;
+        var rows = works.map(function (w) {
+            var ck = F.specialWorkNos[String(w.no)] ? ' checked' : '';
+            return '<label class="edu-tg-member"><input type="checkbox"' + ck +
+                ' onchange="EDUE.toggleSpecialWork(\'' + w.no + '\',this.checked)">' +
+                '<span><b>' + w.no + '호</b> ' + esc(w.name) + '</span></label>';
+        }).join('');
+        return '<div class="edu-modal-row"><label class="form-label">특별교육 대상 작업 <span style="color:var(--status-danger-fg)">*</span> ' +
+            '<span style="color:var(--text-gray);font-weight:var(--fw-regular);">(복수 선택 · ' + selected + '건)</span></label>' +
+            '<details class="lawinfo-inline" open><summary>별표5 대상 작업에서 선택</summary>' +
+            '<div class="edu-tg-body" style="max-height:220px;margin-top:8px;">' + rows + '</div></details>' +
+            '<label class="edu-tg-member" style="margin-top:8px;"><input type="checkbox"' + (F.specialWorkOtherReason ? ' checked' : '') +
+                ' onchange="EDUE.toggleSpecialOther(this.checked)"><span>기타 — 목록에 없어 법령 매핑이 필요한 작업</span></label>' +
+            '<input type="text" class="form-input" id="ee-special-other" value="' + esc(F.specialWorkOtherReason || '') + '" ' +
+                'placeholder="기타 작업 내용과 매핑 필요 사유" style="margin-top:6px;"' + (F.specialWorkOtherReason ? '' : ' disabled') + '>' +
+            '<p class="file-hint">선택한 작업 번호·명칭을 교육 기록에 보존합니다. 기타는 등록을 막지 않되 법령 매핑 대기로 남깁니다.</p></div>';
+    }
     function renderCreate() {
         var typeOpts = E().ETC_TYPES.map(function (t) { return '<option value="' + esc(t) + '"' + (t === F.etcType ? ' selected' : '') + '>' + esc(t) + '</option>'; }).join('');
         var ws = pickWorkers(F.deptId);
@@ -214,7 +252,7 @@
                         '<button type="button" class="btn btn-sm btn-outline" onclick="ORGPICK.toggle(\'ee-deptfield\',\'deptId\',\'EDUE.pickDept\')">조직도</button>' +
                     '</div></div></div>' +
             '</div>' +
-            typeGuideHtml(F.etcType) +
+            typeGuideHtml(F.etcType) + specialWorksPickerHtml() +
             '<div class="edu-modal-row-2">' +
                 '<div><label class="form-label" for="ee-date">일자 <span style="color:var(--status-danger-fg)">*</span></label>' +
                     '<input type="date" class="form-input" id="ee-date" value="' + esc(F.date) + '"></div>' +
@@ -252,19 +290,27 @@
         if (el('ee-inst')) F.instructor = el('ee-inst').value.trim();
         if (el('ee-place')) F.place = el('ee-place').value.trim();
         if (el('ee-desc')) F.desc = el('ee-desc').value.trim();
+        if (el('ee-special-other') && !el('ee-special-other').disabled) F.specialWorkOtherReason = el('ee-special-other').value.trim();
     }
     function pickType(v) { captureCreate(); F.etcType = v; renderCreate(); }
     function pickDept(id, name) { captureCreate(); F.deptId = id; F.workerIds = {}; renderCreate(); }
     function toggleTarget(id, on) { captureCreate(); if (on) F.workerIds[id] = true; else delete F.workerIds[id]; renderCreate(); }
+    function toggleSpecialWork(no, on) { captureCreate(); if (on) F.specialWorkNos[String(no)] = true; else delete F.specialWorkNos[String(no)]; renderCreate(); }
+    function toggleSpecialOther(on) { captureCreate(); F.specialWorkOtherReason = on ? (F.specialWorkOtherReason || '내용 입력 필요') : ''; renderCreate(); }
     function addFile(slot) { captureCreate(); EDUFORM.addFile(F, slot); renderCreate(); }
     function delFile(i) { captureCreate(); EDUFORM.delFile(F, i); renderCreate(); }
     function doCreate() {
         captureCreate();
         if (!F.date || !F.time || !F.hours || !F.desc) { toast('일자·시각·시간·내용을 모두 입력하세요.'); return; }
+        var specialNos = Object.keys(F.specialWorkNos || {}).filter(function (k) { return F.specialWorkNos[k]; });
+        if (F.etcType === '특별교육' && !specialNos.length && !F.specialWorkOtherReason) { toast('특별교육 대상 작업을 1건 이상 선택하세요.'); return; }
+        if (F.etcType === '특별교육' && F.specialWorkOtherReason === '내용 입력 필요') { toast('기타 대상 작업 내용을 입력하세요.'); return; }
         if (F.edit) {
             E().updateCourse(F.edit, {
                 etcType: F.etcType, deptId: F.deptId, date: F.date, time: F.time, hours: F.hours,
-                instructor: F.instructor, place: F.place, desc: F.desc, files: F.files
+                instructor: F.instructor, place: F.place, desc: F.desc, files: F.files,
+                specialWorkNos: F.etcType === '특별교육' ? specialNos : [],
+                specialWorkOtherReason: F.etcType === '특별교육' ? F.specialWorkOtherReason : ''
             });
             E().pushCourseHistory(F.edit, { type: 'STATUS', by: E().deptName(F.deptId), memo: '기타 교육 정보 수정' });
             V().closeModal();
@@ -277,7 +323,9 @@
         var c = E().addCourse({
             kind: courseKind(), etcType: F.etcType, deptId: F.deptId,
             date: F.date, time: F.time, hours: F.hours, instructor: F.instructor, place: F.place, desc: F.desc,
-            files: F.files, status: 'DONE', createdBy: E().deptName(F.deptId)
+            files: F.files, specialWorkNos: F.etcType === '특별교육' ? specialNos : [],
+            specialWorkOtherReason: F.etcType === '특별교육' ? F.specialWorkOtherReason : '',
+            status: 'DONE', createdBy: E().deptName(F.deptId)
         });
         E().addEnroll({ courseId: c.id, deptId: F.deptId, workerIds: ids, at: F.date });
         E().recordCourseCompletion(c.id, ids, F.hours, F.date);
@@ -313,6 +361,11 @@
            없으면 '검사했고 이상 없음'으로 읽힌다. */
         var short = E().etcShortfall(c);
         var info = E().etcTypeInfo(c.etcType) || {};
+        var selectedWorks = (info.works || []).filter(function (w) { return (c.specialWorkNos || []).map(String).indexOf(String(w.no)) >= 0; });
+        var worksBlock = c.etcType === '특별교육'
+            ? '<div style="margin-top:10px;"><b>대상 작업:</b> ' +
+                (selectedWorks.length ? selectedWorks.map(function (w) { return w.no + '호 ' + esc(w.name); }).join('<br>') : '') +
+                (c.specialWorkOtherReason ? (selectedWorks.length ? '<br>' : '') + '기타 — ' + esc(c.specialWorkOtherReason) : '') + '</div>' : '';
         var lawBlock = short.length
             ? '<div class="check-notice" style="margin-top:10px;border-color:var(--status-danger-border);">' +
                 '<b>법정 최소 교육시간 미달 ' + short.length + '명</b> — 실시 ' + c.hours + 'h · 최소 ' + short[0].need + 'h<br>' +
@@ -330,7 +383,7 @@
                     (c.deptId ? esc(E().deptName(c.deptId)) + ' · ' : '') +
                     '일정 ' + esc(E().courseDateTime(c)) + ' · ' + c.hours + 'h · 강사 ' + esc(c.instructor || '-') + ' · 장소 ' + esc(c.place || '-') +
                 '</div>' +
-                '<div style="margin-top:10px;"><b>대상자:</b> ' + esc(names || '없음') + '</div>' +
+                '<div style="margin-top:10px;"><b>대상자:</b> ' + esc(names || '없음') + '</div>' + worksBlock +
             '</div>' + lawBlock +
             (hist ? '<label class="form-label" style="margin-top:12px;">이력</label><div>' + hist + '</div>' : ''),
             '<button type="button" class="btn btn-primary" onclick="DYV2.closeModal()">닫기</button>');
@@ -339,6 +392,10 @@
     /* =============== 삭제 =============== */
     function confirmRemove(courseId) {
         var c = E().courseOf(courseId); if (!c) return;
+        /* **버튼을 감추는 것만으로는 부족하다** — 전역 호출로 뚫린다(CLAUDE.md §12·§4).
+           판정은 EDUAPV.lockOf 한 곳이고 여기서는 그 결과만 쓴다. */
+        var lock = lockOf(courseId);
+        if (lock) { toast('결재 ' + lock + ' 상태라 삭제할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
         var cnt = E().enrolls(courseId).reduce(function (n, e) { return n + (e.workerIds || []).length; }, 0);
         V().openModal('기타 교육 삭제',
             '<p style="font-size:var(--fs-13);"><b>' + esc(c.etcType || '기타 교육') + '</b> · ' + esc(c.desc) + '<br>' +
@@ -366,6 +423,7 @@
     global.EDUE = {
         init: init, setF: setF, resetF: resetF,
         openCreate: openCreate, openEdit: openEdit, pickType: pickType, pickDept: pickDept, toggleTarget: toggleTarget, doCreate: doCreate,
+        toggleSpecialWork: toggleSpecialWork, toggleSpecialOther: toggleSpecialOther,
         addFile: addFile, delFile: delFile,
         confirmRemove: confirmRemove, doRemove: doRemove,
         viewDetail: viewDetail

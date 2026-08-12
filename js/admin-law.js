@@ -63,7 +63,7 @@
             '<span class="admp-topbar-hint">' +
                 '법제처 스냅샷 <b>' + esc(S.fetchedAt) + '</b> · 법령 <b>' + laws + '종</b> · 조문 <b>' + arts + '건</b>' +
                 '<br>조문 원문은 이 화면에서 <b>고칠 수 없습니다</b> — 법령 갱신(재수집)으로만 바뀝니다. ' +
-                '수록 목록은 완결된 것이 아니며, <b>관계 법령 목록은 발주처 확정 대기</b>입니다.' +
+                '수록 목록은 완결된 것이 아니며, <b>담양군 적용 관계 법령 목록은 외부 자료 대기</b>입니다.' +
             '</span>' +
             '<span style="flex:1;"></span>' +
             (f ? '<button type="button" class="btn btn-sm btn-outline" onclick="DYADMLAW.sel(\'health\',\'\')">' +
@@ -607,7 +607,7 @@
                 '<li>화면에서 남긴 조문 운영 판단·표기 분류 변경</li>' +
             '</ul>' +
             '<p style="font-size:12px;color:var(--text-gray);margin-top:10px;">빈 상태가 아니라 <b>2026-07-30 전수 검토 시드</b>로 되돌아갑니다 — ' +
-            '검증 기록 74건·판정 사유·표기 분류가 초기값입니다. 조문 원문·매핑은 영향받지 않습니다.</p>',
+            '검증 기록 84건·판정 사유·표기 분류가 초기값입니다. 조문 원문·매핑은 영향받지 않습니다.</p>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="DYADMLAW.doReset()">초기화</button>');
     }

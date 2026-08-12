@@ -3,7 +3,7 @@
  * 대메뉴: 예산관리 > 예산 기준 설정
  *   섹션 A (R1): 예산편성 및 관리 원칙·준수사항 수립 — 원칙 문서 등록·개정 이력 관리
  *   섹션 B (R3): 시설·장비·안전장구류 등 예방관련 예산 항목 설정 — depth 무제한 트리
- *   섹션 C (REQ-A, 3차): 점검 대상 관리 — 조직도(기관)·대상 관리(시설) 연계 선택 팝업
+ *   섹션 C: 점검 대상 관리 — 조직도(기관)·시설물 대장(시설) 연계 선택 팝업
  * 데이터 레이어: window.DYBGT (js/bgt.js, 병렬 작업) — items/policies/targets CRUD 전담.
  * 전역 네임스페이스: DYBGTSET (onclick 핸들러 노출용)
  * ========================================================================= */
@@ -42,10 +42,6 @@
                 '<td>' + esc(p.title) + '</td>' +
                 '<td>' + esc(p.effective || '-') + '</td>' +
                 '<td>' + esc(p.updated || '-') + '</td>' +
-                '<td>' +
-                    '<button class="btn btn-sm btn-outline" onclick="DYBGTSET.openPolicyModal(\'' + esc(p.id) + '\')">수정</button> ' +
-                    '<button class="btn btn-sm btn-outline" onclick="DYBGTSET.removePolicy(\'' + esc(p.id) + '\')">삭제</button>' +
-                '</td>' +
             '</tr>').join('');
 
         return (
@@ -62,12 +58,12 @@
                     (history.length
                         ? '<div style="margin-top:18px;"><div style="font-size:13px; font-weight:700; color:var(--main-dark2); margin-bottom:8px;">개정 이력</div>' +
                           '<div style="overflow-x:auto;"><table class="table-figma">' +
-                              '<thead><tr><th>제목</th><th>시행일</th><th>등록(수정)일</th><th>관리</th></tr></thead>' +
+                              '<thead><tr><th>제목</th><th>시행일</th><th>등록일</th></tr></thead>' +
                               '<tbody>' + histRows + '</tbody>' +
                           '</table></div></div>'
                         : '') +
                     (!cur
-                        ? '<div style="margin-top:14px;"><table class="table-figma"><thead><tr><th>제목</th><th>시행일</th><th>등록(수정)일</th><th>관리</th></tr></thead><tbody><tr><td colspan="4" style="text-align:center; color:var(--text-gray);">이력 없음</td></tr></tbody></table></div>'
+                        ? '<div style="margin-top:14px;"><table class="table-figma"><thead><tr><th>제목</th><th>시행일</th><th>등록일</th></tr></thead><tbody><tr><td colspan="3" style="text-align:center; color:var(--text-gray);">이력 없음</td></tr></tbody></table></div>'
                         : '') +
                 '</div>' +
             '</div>'
@@ -292,8 +288,8 @@
         renderAll();
     }
 
-    /* REQ-A(3차): 점검 대상 — 조직도·대상 관리 연계 선택 */
-    /* ── 섹션 C: 점검 대상 관리 — 기관(조직도)·시설(대상 관리) 연계 선택 팝업 ──
+    /* 점검 대상 — 조직도·시설물 대장 연계 선택 */
+    /* ── 섹션 C: 점검 대상 관리 — 기관(조직도)·시설(시설물 대장) 연계 선택 팝업 ──
      * 데이터 계약(js/bgt.js, 병렬 작업):
      *   listSources(type) → 기관 [{name, meta:'구성원 N명'}] / 시설 [{name, cls, grade}]
      *   addTargetsFromSource(type, names[]) → { ok, added, skipped }
@@ -309,7 +305,7 @@
                 '<div class="card-body">' +
                     '<div class="bgt-note">' +
                         '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
-                        '<span>점검 대상은 조직도(기관)와 대상 관리(시설물)에서 선택해 추가합니다. 시설물 현황은 대상 관리 메뉴에서 FMS 연계로 자동 현행화되며, 점검표에서 사용 중인 대상은 삭제할 수 없습니다.</span>' +
+                        '<span>점검 대상은 조직도(기관)와 시설물 대장(시설)에서 선택해 추가합니다. FMS 실데이터가 없으면 시설물 대장의 시연자료임을 표시하며, 점검표에서 사용 중인 대상은 삭제할 수 없습니다.</span>' +
                     '</div>' +
                     '<div class="bgt-target-grid">' +
                         renderTargetBlock('기관') +
@@ -323,12 +319,12 @@
     function renderTargetBlock(type) {
         const list = window.DYBGT.listTargets(type);
         const isFac = type === '시설';
-        const headerLabel = isFac ? '대상 관리(FMS) 연계' : '조직도 연계';
+        const headerLabel = isFac ? '시설물 대장 연계' : '조직도 연계';
         const addLabel = isFac ? '+ 시설 추가' : '+ 기관 추가';
 
         const rows = list.length
             ? list.map(t => renderTargetRow(type, t)).join('')
-            : '<div class="v2-empty" style="padding:16px;">[+ 추가]로 ' + (isFac ? '대상 관리' : '조직도') + '에서 선택하세요.</div>';
+            : '<div class="v2-empty" style="padding:16px;">[+ 추가]로 ' + (isFac ? '시설물 대장' : '조직도') + '에서 선택하세요.</div>';
 
         return (
             '<div class="bgt-target-block">' +
@@ -348,7 +344,7 @@
     function renderTargetRow(type, t) {
         const isFac = type === '시설';
         /* targetUsed는 id가 아닌 이름(name)으로 점검표 target 필드와 매칭한다 (js/bgt.js 데이터 계약) */
-        const used = window.DYBGT.targetUsed ? window.DYBGT.targetUsed(t.name) : false;
+        const used = window.DYBGT.targetUsed ? window.DYBGT.targetUsed(t.name, t.id) : false;
         return (
             '<div class="bgt-target-row">' +
                 '<span class="bgt-target-name">' + esc(t.name) + '</span>' +
@@ -381,7 +377,7 @@
             return;
         }
         pickerChecked = new Set();
-        const title = type === '시설' ? '시설물 선택 — 대상 관리 연계' : '기관 선택 — 조직도';
+        const title = type === '시설' ? '시설물 선택 — 시설물 대장 연계' : '기관 선택 — 조직도';
         const bodyHtml =
             '<div class="org-inline" id="bgt-picker-panel" data-type="' + esc(type) + '">' +
                 '<div class="org-inline-search"><input type="text" placeholder="이름 검색" oninput="DYBGTSET.filterPicker(this)"></div>' +

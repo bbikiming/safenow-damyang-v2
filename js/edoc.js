@@ -25,6 +25,19 @@
 
     const now = () => new Date().toISOString().slice(0, 16).replace('T', ' ');
     const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const clone = v => JSON.parse(JSON.stringify(v || []));
+
+    /* 양식 마스터는 새 문서에만 적용한다. 기존 문서는 생성 당시 항목 스냅숏으로 연다. */
+    function freezeChecklist(idPrefix, checklist) {
+        const all = S.docs();
+        let changed = false;
+        Object.keys(all).forEach(id => {
+            if (id.indexOf(idPrefix) !== 0 || all[id].checklistSnapshot) return;
+            all[id].checklistSnapshot = clone(checklist);
+            changed = true;
+        });
+        if (changed) save('dy-edoc-v1', all);
+    }
 
     /* ── 알림 발송 시뮬레이션 (COM-008) ── */
     function notify(msg, channel) {
@@ -204,19 +217,23 @@
     function openForm(opts) {
         const formDef = T.FORMS[opts.form];
         const id = opts.id || ('EDOC-' + opts.title);
-        const saved = S.docs()[id] || { status: '작성중', fields: opts.fields || {}, history: [] };
+        const stored = S.docs()[id];
+        const saved = stored || { status: '작성중', fields: opts.fields || {}, history: [] };
+        if (!saved.checklistSnapshot && opts.ctx && opts.ctx.checklist) saved.checklistSnapshot = clone(opts.ctx.checklist);
+        const renderCtx = Object.assign({}, opts.ctx || {});
+        if (saved.checklistSnapshot) renderCtx.checklist = saved.checklistSnapshot;
 
         const fixed = saved.status === '확정';
         const body =
             '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:14px;">' +
                 '<span class="chip-mini pdca">' + formDef.name + '</span>' + (ST_CHIP[saved.status] || '') +
-                (opts.ctx && opts.ctx.menuLabel ? '<span class="chip-mini wt">' + esc(opts.ctx.menuLabel) + '</span>' : '') +
+                (renderCtx.menuLabel ? '<span class="chip-mini wt">' + esc(renderCtx.menuLabel) + '</span>' : '') +
             '</div>' +
             (opts.source ?
                 '<div class="edoc-linkcard">연동 정보 — ' + opts.source + '</div>' : '') +
             '<div class="preset-form-grid" id="edoc-form">' +
                 formDef.fields.map(f =>
-                    '<span class="k">' + esc(f.label) + '</span>' + fieldHtml(f, saved.fields[f.k], opts.ctx)
+                    '<span class="k">' + esc(f.label) + '</span>' + fieldHtml(f, saved.fields[f.k], renderCtx)
                 ).join('') +
             '</div>' +
             (saved.history.length ?
@@ -269,7 +286,7 @@
             /* 점검표 X 항목 → 개선조치 자동 생성 (내부 데이터 연계 114건의 핵심 패턴) */
             let createdImps = 0;
             formDef.fields.filter(f => f.type === 'checklist').forEach(f => {
-                const items = (opts.ctx && opts.ctx.checklist) || T.CHECKLIST_PRESETS.default;
+                const items = renderCtx.checklist || T.CHECKLIST_PRESETS.default;
                 Object.entries(saved.fields[f.k] || {}).forEach(([i, r]) => {
                     if (r.v === 'X') {
                         addImprovement({ title: (items[i] && typeof items[i] === 'object' ? items[i].item : items[i]) + (r.note ? ' — ' + r.note : ''), sourceMenu: (opts.ctx && opts.ctx.menuLabel) || '점검', sourceDoc: opts.title, due: '2026-07-31' });
@@ -305,7 +322,11 @@
     function renderInline(container, opts) {
         const formDef = T.FORMS[opts.form];
         const id = opts.id || ('EDOC-' + opts.title);
-        const saved = S.docs()[id] || { status: '작성중', fields: opts.fields || {}, history: [] };
+        const stored = S.docs()[id];
+        const saved = stored || { status: '작성중', fields: opts.fields || {}, history: [] };
+        if (!saved.checklistSnapshot && opts.ctx && opts.ctx.checklist) saved.checklistSnapshot = clone(opts.ctx.checklist);
+        const renderCtx = Object.assign({}, opts.ctx || {});
+        if (saved.checklistSnapshot) renderCtx.checklist = saved.checklistSnapshot;
         const fixed = saved.status === '확정';
 
         const foot = fixed
@@ -318,11 +339,11 @@
         container.innerHTML =
             '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:14px;">' +
                 '<span class="chip-mini pdca">' + formDef.name + '</span>' + (ST_CHIP[saved.status] || '') +
-                (opts.ctx && opts.ctx.menuLabel ? '<span class="chip-mini wt">' + esc(opts.ctx.menuLabel) + '</span>' : '') +
+                (renderCtx.menuLabel ? '<span class="chip-mini wt">' + esc(renderCtx.menuLabel) + '</span>' : '') +
             '</div>' +
             (opts.source ? '<div class="edoc-linkcard">연동 정보 — ' + opts.source + '</div>' : '') +
             '<div class="preset-form-grid edoc-form-grid">' +
-                formDef.fields.map(f => '<span class="k">' + esc(f.label) + '</span>' + fieldHtml(f, saved.fields[f.k], opts.ctx)).join('') +
+                formDef.fields.map(f => '<span class="k">' + esc(f.label) + '</span>' + fieldHtml(f, saved.fields[f.k], renderCtx)).join('') +
             '</div>' +
             (saved.history.length
                 ? '<div class="edoc-history"><p class="edoc-history-title">처리 이력</p>' +
@@ -352,7 +373,7 @@
             persist('확정', '확정 · 온나라 결재 상신');
             let created = 0;
             formDef.fields.filter(f => f.type === 'checklist').forEach(f => {
-                const items = (opts.ctx && opts.ctx.checklist) || T.CHECKLIST_PRESETS.default;
+                const items = renderCtx.checklist || T.CHECKLIST_PRESETS.default;
                 Object.entries(saved.fields[f.k] || {}).forEach(([i, r]) => {
                     if (r.v === 'X') { addImprovement({ title: (items[i] && typeof items[i] === 'object' ? items[i].item : items[i]) + (r.note ? ' — ' + r.note : ''), sourceMenu: (opts.ctx && opts.ctx.menuLabel) || '점검', sourceDoc: opts.title, due: '2026-07-31' }); created++; }
                 });
@@ -471,5 +492,5 @@
     function lawInfo() {}
     function closeLawInfo() { lawTipHide(); }
 
-    window.EDOC = { openForm, openForDoc, renderInline, formFor, onnaraPopup, notify, addImprovement, advanceImprovement, IMP_FLOW, improvements: () => S.imps(), saveImps: l => S.saveImps(l), statusOf, ntfs: () => S.ntfs(), STCHIP: ST_CHIP, ORG_TREE, openOrgTree, pickOrgMember, _orgToggle: orgToggle, _orgFilter: orgFilter, lawTag, lawTipShow, lawTipHide, lawInfo, closeLawInfo };
+    window.EDOC = { openForm, openForDoc, renderInline, formFor, onnaraPopup, notify, addImprovement, advanceImprovement, IMP_FLOW, improvements: () => S.imps(), saveImps: l => S.saveImps(l), statusOf, ntfs: () => S.ntfs(), freezeChecklist, STCHIP: ST_CHIP, ORG_TREE, openOrgTree, pickOrgMember, _orgToggle: orgToggle, _orgFilter: orgFilter, lawTag, lawTipShow, lawTipHide, lawInfo, closeLawInfo };
 })();

@@ -198,7 +198,7 @@
         if (p.tier === 'head') return '';            /* 군수는 지휘계통을 건너뛰지 않는다 */
         if (!deptId || !p.deptId) return '';
         if (deptId !== p.deptId) return '';          /* 남의 부서는 주관부서라도 불가 */
-        /* **배정은 중간 관리자가 한다** (발주처 확정 2026-08-11) — 과장·소장·읍면장.
+        /* **배정은 중간 관리자가 한다** (화면정의서 정책 확정) — 과장·소장·읍면장.
          * 담당자(staff)는 남에게 배정하지 못하고 **자기가 맡는 것(claim)만** 할 수
          * 있다. 부서장이 부재해도 일이 멈추지 않게 하는 안전판이고, 이건 '남을
          * 지정하는 행위'가 아니라 '내가 하겠다'는 표시라 지휘계통을 건너뛰지 않는다.
@@ -341,7 +341,7 @@
           title: '의무이행 점검표 반기 마감 기한 초과 (D+8)', href: 'menu.html?m=comply',
           work: 'my-work.html?cat=comply', basis: 'cse-5' },
         { id: 'n4', cat: 'inspection', catLabel: '점검',       time: '어제 18:00',
-          title: '기준문서함 2차 검토 대상 16건 분류 확인 요청', href: 'docs-archive.html',
+          title: '기준문서함 안전점검 계열 16건 분류 확인 요청', href: 'docs-archive.html',
           work: 'my-work.html?cat=inspection', basis: 'cse-5' },
         { id: 'n5', cat: 'risk',       catLabel: '위험성평가', time: '어제 14:30',
           title: '물순환사업소 개선조치 기한초과 재촉', href: 'my-work.html?dept=water&cat=improve',
@@ -522,7 +522,8 @@
         // GNB 4. 안전보건관리체계 — 2026-07-30 회의로 **2카테고리**로 재편.
         //    발주처: "안전 보건 관리 체계는 두 카테고리로 해주세요. 첫 번째 중대 산업 시민 재해 계획 …
         //             두 번째 … 중대 산업 시민재해 의무 이행 점검 이 두 개만 만들어 주시면 돼요."
-        //    ※ 하위 점검항목·계획 서식은 발주처가 양식을 주기로 해 아직 확정 전이다 — 트리를 더 쪼개지 말 것.
+        //    ※ 하위 점검항목·계획 서식은 화면 정의서와 전자문서 양식 정의서가 계약한다.
+        //       메뉴는 업무 단계가 아니라 사용 목적 기준의 2카테고리를 유지한다 — 트리를 더 쪼개지 말 것.
         //    ※ 작업환경측정·특수건강검진은 같은 회의에서 **대메뉴로 분리**되어 아래로 빠졌다.
         //    ※ 도급관리는 재무과 계약자료 회신·컨설팅 자문 대기 중이라 직속으로 남긴다(삭제 아님).
         { id: 'sbm', label: '안전보건관리체계', icon: 'shield', items: [
@@ -557,8 +558,8 @@
         //          개발측 "일단 이 두 개만 대메뉴를 빼는 걸로 할게요" → 발주처 "예. 일단 빼주시고").
         //   ※ page id 는 sbm-* 를 그대로 둔다 — DYLAW.MAP(law-map.js)·역참조 표가 이 키에 묶여 있고
         //     law-map.js 는 법제처 스냅샷 생성물이라 손으로 키를 고칠 수 없다(CLAUDE.md §10).
-        //   ※ 두 화면의 **내용은 이번 회차 수정 대상이 아니다** — 발주처가 작업환경측정은 "따로 이거는
-        //     안 건들게요", 건강검진은 "아예 안 봤어요"라고 명시했다. 메뉴 위치만 옮긴다.
+        //   ※ 2026-08-12 화면 계약 확정 — 작업환경측정·건강검진은 독립 대메뉴이며,
+        //      사업장/대상 판정·실시·결과문서·개선/사후관리 상태를 각각 분리해 관리한다.
         { id: 'workenv', label: '작업환경측정', icon: 'gauge', items: [
             { id: 'sbm-workenv', label: '작업환경측정', icon: 'gauge', href: 'work-env.html', screen: 'WEM01-L' },
         ]},
@@ -588,7 +589,7 @@
         ]},
 
         // GNB 5. 업무문서 — 공통 메커니즘 2종 (기준문서함 + 프리셋 등록폼)
-        //    ※ (2차 검토) 안전점검: v2에서 메뉴를 만들지 않음 — 점검 계열 문서는 기준문서함 "2차 검토 대상" 뱃지
+        //    ※ 안전점검: 별도 대메뉴를 만들지 않음 — 점검 계열 문서는 기준문서함 "안전점검 계열" 뱃지
         { id: 'docs', label: '업무문서', icon: 'file', items: [
             { id: 'docs-archive', label: '기준문서함',          icon: 'file', href: 'docs-archive.html' },
             { id: 'docs-preset',  label: '업무 목록',           icon: 'list', href: 'docs-preset.html' },
@@ -645,7 +646,7 @@
                         title="담양군 주무관님 검토 전 시연본입니다 — 눌러서 상세 보기">검토 전<span> 시연본</span></button>` : ''}
                     ${PRE_REVIEW ? `<button type="button" class="dy-prereview is-policy" id="dy-policy-chip"
                         onclick="window.DYPOLICY && window.DYPOLICY.open()"
-                        title="발주처 확정 필요 항목">정책 확인 <span class="dy-policy-n">·</span></button>` : ''}
+                        title="외부 자료·연계 준비사항">자료 준비 <span class="dy-policy-n">·</span></button>` : ''}
                 </div>
                 <div class="dy-header-actions" style="display:flex; align-items:center; gap:6px;">
                     <div class="dy-ntf-wrap" id="dy-ntf-wrap" style="position:relative;">
@@ -904,7 +905,7 @@
             wireNotification();
             wireRoleSwitcher();
             wireGnbOverflow();
-            /* 발주처 확정 필요 항목 — 헤더 칩 카운트 동기화 (DYPOLICY / js/policy-open.js).
+            /* 외부 자료·연계 준비사항 — 헤더 칩 카운트 동기화 (DYPOLICY / js/policy-open.js).
                칩이 DOM 에 붙은 **뒤** 불러야 한다. 이 화면 관련 항목이 있으면 칩이 강조된다. */
             if (window.DYPOLICY) window.DYPOLICY.syncChip();
 
@@ -1177,7 +1178,7 @@
         return html;
     }
 
-    /* 검토 전 칩 클릭 — 무엇이 검토 대기이고 무엇이 발주처 확정 대기인지 밝힌다.
+    /* 검토 전 칩 클릭 — 무엇이 내부 검토 전이고 무엇이 외부 자료 대기인지 밝힌다.
        칩만 띄우고 설명이 없으면 "왜 검토 전인지"를 아무도 알 수 없다.
        모달은 공용 헬퍼만 쓴다 (CLAUDE.md §1). */
     function preReviewInfo() {
@@ -1185,22 +1186,21 @@
         if (!V || !V.openModal) return;
         V.openModal('검토 전 시연본입니다',   /* 셸 크롬 — 투어 안내 주입 대상 아님({chrome:true}) */
             '<div class="dy-prereview-doc">' +
-              '<p><b>이 화면은 담양군 주무관님 검토를 받기 전 상태입니다.</b> 확정 사양이 아니며, ' +
-                '검토 결과에 따라 화면·용어·플로우가 바뀔 수 있습니다. ' +
-                '확정 사양으로 인용하거나 개발 착수 근거로 삼지 마세요.</p>' +
+              '<p><b>이 화면은 담양군 주무관님 최종 검토 전 상태입니다.</b> 자체 기획으로 결정 가능한 기능·UX는 화면 정의서에서 확정해 개발할 수 있습니다. ' +
+                '외부 자료가 들어오면 실제 기관정보·명단·연계값만 교체합니다.</p>' +
               '<h4>검토 대기 중인 변경</h4>' +
               '<ul>' +
                 '<li>2026-07-30 회의 반영 — 안전보건교육 첨부·탭 구성, 이행관리 → <b>이행점검</b> 개칭과 부서 전수 체크리스트, 경영방침 게시 현황</li>' +
                 '<li>개선조치 완료 확인 → <b>공문 기안</b> → 온나라 이관 (신설)</li>' +
-                '<li>권한 계층별 조작 권한·조회 범위 정비</li>' +
+                '<li>권한 계층별 초기 조작 권한·조회 범위 확정 — 운영 변경은 시스템 관리에서 처리</li>' +
               '</ul>' +
-              '<h4>발주처 확정이 필요해 비워 둔 항목</h4>' +
-              '<p class="dy-prereview-note">아래는 화면에서 <b>“미등록”</b>으로 드러나 있습니다 — 임의로 채우지 않았습니다.</p>' +
+              '<h4>담양군·외부기관 자료가 필요한 항목</h4>' +
+              '<p class="dy-prereview-note">아래는 화면에서 <b>“미등록”</b>으로 드러나며, 미수신 대체 동작도 정의돼 있습니다.</p>' +
               '<ul>' +
                 '<li>공문 기관정보 — 처리과 기호·주소·전화·팩스·전자우편·공개구분·관인</li>' +
                 '<li>부서 명단 — 현재 11개 등록 / 회의에서 확인된 대상 39개</li>' +
-                '<li>문서대장 5년치 · 산업안전보건법 시행규칙 별표5 · 시행규칙 §37</li>' +
-                '<li>온나라 실연동 방식 (현재는 시연용 시뮬레이션)</li>' +
+                '<li>문서대장 5년치 · 담양군 적용 관계 법령 목록 · 기록관리 기준</li>' +
+                '<li>온나라·FMS·행정포털·인사 실연계 규격</li>' +
               '</ul>' +
               '<p class="dy-prereview-note">시연 기준일은 <b>2026-07-16</b>으로 고정되어 있습니다.</p>' +
             '</div>',

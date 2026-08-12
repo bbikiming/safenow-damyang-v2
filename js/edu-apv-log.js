@@ -31,8 +31,23 @@
        나중에 켜도 이 화면만 꺼진 채로 남는다). EDUAPV 가 같은 이유로 함수로 내보낸다. */
     function apvOn() { return !!(global.EDUAPV && global.EDUAPV.submitEnabled && global.EDUAPV.submitEnabled()); }
 
+    /* 차단 안내 — 꺼져 있을 때만 그린다. 정적 HTML 에 박아 두면 되살려도 남는다. */
+    function renderBlocked() {
+        var el = global.document.getElementById('eal-blocked');
+        if (!el) return;
+        el.innerHTML = apvOn() ? '' :
+            '<div class="check-notice" style="border-color:var(--status-warning-border); background:var(--status-warning-bg);">' +
+                '<b>현재 신규 상신은 막혀 있습니다.</b> 2026-07-30 회의에서 교육 화면의 <b>[결재 상신]</b> 버튼을 제거하기로 했습니다 — ' +
+                '기능이 틀린 게 아니라 <b>공문 작성 단계 없이 결재만 올라가는 순서</b>가 틀렸기 때문입니다 ' +
+                '(&ldquo;왜 갑자기 뜬금없이 결재 상신이 있지&rdquo;). ' +
+                '결재 전에 <b>공문 작성 화면</b>이 먼저 뜨도록 만든 뒤 그 흐름에 다시 연결합니다. ' +
+                '이 화면은 그때까지 <b>기존 이력 조회 전용</b>으로 유지합니다.' +
+            '</div>';
+    }
+
     function render() {
         if (!state.mount) return;
+        renderBlocked();
         var list = all();
         var rows = filtered(list);
         var cnt = function (st) { return list.filter(function (s) { return s.status === st; }).length; };

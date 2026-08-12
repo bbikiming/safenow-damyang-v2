@@ -13,11 +13,29 @@
     <main>
         <div class="dsh-grid">
             <div class="card">
+                <div class="card-header"><span class="card-title">보고서 조건</span></div>
+                <div class="card-body">
+                    <div class="form-grid" style="grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px;">
+                        <div class="form-group"><label class="form-label" for="report-kind">보고서 종류 <span class="req">*</span></label>
+                            <select class="form-select" id="report-kind" onchange="updateReportPreview()">
+                                <option value="총괄보고서">총괄보고서</option><option value="의무이행 점검 결과 보고서">의무이행 점검 결과 보고서</option>
+                                <option value="위험성평가 결과 보고서">위험성평가 결과 보고서</option><option value="안전보건교육 실적 보고서">안전보건교육 실적 보고서</option>
+                                <option value="개선조치 현황 보고서">개선조치 현황 보고서</option><option value="이행사실 확인서">이행사실 확인서(제증명)</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label class="form-label" for="report-from">시작일 <span class="req">*</span></label><input class="form-input" id="report-from" type="date" value="2026-01-01" onchange="updateReportPreview()"></div>
+                        <div class="form-group"><label class="form-label" for="report-to">종료일 <span class="req">*</span></label><input class="form-input" id="report-to" type="date" value="2026-06-30" onchange="updateReportPreview()"></div>
+                    </div>
+                    <p id="report-condition-error" style="display:none; color:var(--danger); font-size:var(--fs-12); margin-top:8px;">시작일은 종료일보다 늦을 수 없고 미래일을 선택할 수 없습니다.</p>
+                    <p style="font-size:var(--fs-12); color:var(--text-gray); margin-top:8px;">수치는 선택 기간의 확정 업무자료에서 자동 산출되며 이 화면에서 수정할 수 없습니다.</p>
+                </div>
+            </div>
+            <div class="card">
                 <div class="card-header">
-                    <span class="card-title">총괄보고서 미리보기 — 2026년 상반기</span>
+                    <span class="card-title" id="report-preview-title">총괄보고서 미리보기 — 2026-01-01 ~ 2026-06-30</span>
                     <div style="display:flex; gap:8px;">
-                        <button class="btn btn-secondary btn-sm" onclick="DYV2.toast('PDF 출력 (프로토타입)')">PDF 출력</button>
-                        <button class="btn btn-primary btn-sm" onclick="DYV2.toast('온나라 결재 상신 (프로토타입)')">온나라 결재</button>
+                        <button class="btn btn-secondary btn-sm" onclick="reportAction('PDF 출력')">PDF 출력</button>
+                        <button class="btn btn-primary btn-sm" onclick="reportAction('온나라 결재')">온나라 결재</button>
                     </div>
                 </div>
                 <div class="card-body">
@@ -26,7 +44,7 @@
                         <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none;">
                             <span style="font-size:var(--fs-38); font-weight:700; color:var(--brand-100); transform:rotate(-24deg); white-space:nowrap;">담양군 대외주의 · WATERMARK</span>
                         </div>
-                        <p style="text-align:center; font-size:var(--fs-18); font-weight:700; margin-bottom:6px;">2026년 상반기 중대재해예방 추진실적 총괄보고서</p>
+                        <p id="report-document-heading" style="text-align:center; font-size:var(--fs-18); font-weight:700; margin-bottom:6px;">2026-01-01 ~ 2026-06-30 중대재해예방 총괄보고서</p>
                         <p style="text-align:center; font-size:var(--fs-12); color:var(--text-gray); margin-bottom:26px;">담양군 재난안전과 중대재해팀 · 출력일 2026-06-11</p>
                         <table class="table-figma" style="margin-bottom:20px;">
                             <thead><tr><th>구분</th><th>내용</th></tr></thead>
@@ -38,7 +56,7 @@
                                 <tr><td style="font-weight:600;">개선조치</td><td>전 메뉴 A(조치) 문서 집계 — 조치 완료율 자동 산출</td></tr>
                             </tbody>
                         </table>
-                        <p style="font-size:var(--fs-12); color:var(--text-gray);">※ 본 보고서는 각 대메뉴 이행 데이터에서 자동 생성됩니다. (프로토타입 — 양식·항목은 협의 후 확정)</p>
+                        <p style="font-size:var(--fs-12); color:var(--text-gray);">※ 본 보고서는 선택 기간의 각 업무 이행 데이터에서 자동 생성됩니다. 현재 수치는 시연 자료이며 실데이터와 구분합니다.</p>
                     </div>
                 </div>
             </div>
@@ -64,8 +82,29 @@
 
     <script src="./js/layout.js"></script>
     <script src="./js/law-map.js"></script>
-    <script src="./js/policy-open.js"></script><!-- 발주처 확정 필요 항목 (DYPOLICY) -->
+    <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
     <script src="./js/data.js"></script>
     <script src="./js/common.js"></script>
+    <script>
+        function reportCondition() {
+            const kind = document.getElementById('report-kind').value;
+            const from = document.getElementById('report-from').value;
+            const to = document.getElementById('report-to').value;
+            const valid = !!from && !!to && from <= to && to <= '2026-08-12';
+            document.getElementById('report-condition-error').style.display = valid ? 'none' : 'block';
+            return { kind, from, to, valid };
+        }
+        function updateReportPreview() {
+            const c = reportCondition();
+            if (!c.valid) return;
+            document.getElementById('report-preview-title').textContent = c.kind + ' 미리보기 — ' + c.from + ' ~ ' + c.to;
+            document.getElementById('report-document-heading').textContent = c.from + ' ~ ' + c.to + ' 중대재해예방 ' + c.kind;
+        }
+        function reportAction(action) {
+            const c = reportCondition();
+            if (!c.valid) { DYV2.toast('보고서 기간을 확인하세요.'); return; }
+            DYV2.toast(action + ' — 프로토타입에서는 파일·결재를 생성하지 않습니다.');
+        }
+    </script>
 </body>
 </html>

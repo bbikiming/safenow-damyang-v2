@@ -155,7 +155,7 @@
     }
 
     /* =========================================================================
-     * 자동 발행 (DYWORK.autoIssue) — 발주처 확정(2026-08-11)
+     * 자동 발행 (DYWORK.autoIssue) — 화면정의서 정책 확정(2026-08-12)
      * -------------------------------------------------------------------------
      * **주기가 있는 업무는 기간에 맞춰 스스로 나간다.** 사람이 [발행] 을 누르지
      * 않는다. 실 개발에서는 배치 스케줄러가 이 함수를 부르고, 프로토타입에서는
@@ -301,7 +301,8 @@
             /* 발행 시점 스냅샷 — 조직 개편이 과거 배치를 흔들면 안 된다 */
             depts: (opts.depts && opts.depts.length ? opts.depts : targetDepts(tpl, periodKey)).slice(),
             history: [{ type: 'CREATE', at: opts.issuedAt || today(), by: opts.issuedBy || actor(),
-                        memo: (opts.origin === 'SCHEDULED' ? '정기 자동발행' : '발생시 수동 생성') +
+                        memo: (opts.origin === 'SCHEDULED' ? '정기 자동발행' :
+                              (opts.originRef === 'MANUAL_REVIEW' ? '담당자 확인 발행' : '발생시 수동 생성')) +
                               ' · 대상 ' + (opts.depts || targetDepts(tpl, periodKey)).length + '개 부서' +
                               (opts.memo ? ' · ' + opts.memo : '') }],
         };

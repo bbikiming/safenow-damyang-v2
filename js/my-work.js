@@ -103,7 +103,7 @@
               due: '2026-07-22', dept: 'plan', dept_label: '기획예산실',
               atype: 'menu', href: 'bgt-main.html', action: '결재하러 가기', destLabel: '예산 총괄표' },
             /* 점검 */
-            { id: 'I-01', cat: 'inspection', title: '기준문서함 2차 검토 대상 16건 분류 확인',
+            { id: 'I-01', cat: 'inspection', title: '기준문서함 안전점검 계열 16건 분류 확인',
               due: '2026-07-19', dept: 'safety', dept_label: '재난안전과',
               atype: 'menu', href: 'docs-archive.html', action: '분류하러 가기', destLabel: '기준문서함' },
             { id: 'I-02', cat: 'inspection', title: '공중이용시설 안전점검 결과 정리 (담양읍 문화의전당)',

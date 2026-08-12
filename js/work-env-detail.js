@@ -44,7 +44,7 @@
                 '<dt>담당자</dt><dd>' + esc(r.owner) + '</dd>' +
                 '<dt>대상 근거</dt><dd>' + esc(r.targetBasis || '현업 종사자 · 유해인자 노출') + '</dd>' +
                 '<dt>결과 보존연한</dt><dd><b>' + S().retentionOf(r) + '년</b>' +
-                    (r.carcinogen ? ' <span style="color:var(--status-warning-fg)">(발암성·특별관리물질)</span>' : '') + '</dd>' +
+                    (r.carcinogen ? ' <span style="color:var(--status-warning-fg)">(고시 대상 물질)</span>' : '') + '</dd>' +
             '</dl></div>';
 
         /* 결과보고서 */
@@ -194,6 +194,8 @@
     /* ── 완료 처리 ── */
     /* 측정 미실시 → 결과 입력 모달(실시일=오늘·결과=적정 기본으로 최소 입력) */
     function complete() {
+        var r = S().workEnvOf(state.id);
+        if (!r.report) { toast('결과보고서를 먼저 등록하세요.'); return; }
         V().openModal('측정 완료 처리',
             '<div style="margin-bottom:12px;"><label class="form-label" for="wd-c-date">측정 실시일</label>' +
                 '<input type="date" class="form-input" id="wd-c-date" value="' + esc(S().TODAY) + '"></div>' +
@@ -215,19 +217,40 @@
     }
     function saveComplete() {
         var result = document.getElementById('wd-c-result').value;
-        var opts = { doneDate: document.getElementById('wd-c-date').value, result: result };
+        var doneDate = document.getElementById('wd-c-date').value;
+        if (!doneDate) { toast('측정 실시일을 선택하세요.'); return; }
+        if (doneDate > S().TODAY) { toast('측정 실시일은 오늘 이후일 수 없습니다.'); return; }
+        var opts = { doneDate: doneDate, result: result };
         if (result === '개선 필요') {
             opts.improveReq = (document.getElementById('wd-c-req').value || '').trim();
             opts.improveDue = document.getElementById('wd-c-due').value;
+            if (!opts.improveReq) { toast('개선 요구사항을 입력하세요.'); return; }
+            if (!opts.improveDue || opts.improveDue <= doneDate) { toast('개선조치 기한은 측정 실시일 이후로 선택하세요.'); return; }
+            var legalDue = S().addDays(doneDate, 60);
+            if (opts.improveDue > legalDue) { toast('개선조치 기한은 법정 제출기한(' + legalDue + ') 이내로 선택하세요.'); return; }
         }
         S().completeWorkEnv(state.id, opts);
         V().closeModal(); render();
         toast(result === '적정' ? '측정 완료 · 결과 「적정」' : '측정 완료 · 「개선 필요」 등록');
     }
-    /* 개선조치 완료 — 캡처할 입력이 없어 원클릭 처리(확인 모달 생략). 조치 후 증빙은 [증빙 등록]으로 별도 첨부 */
     function improveDone() {
-        S().completeWorkEnv(state.id, {});
-        render(); toast('개선조치 완료 처리되었습니다.');
+        V().openModal('개선조치 완료',
+            '<div style="margin-bottom:12px;"><label class="form-label" for="wd-i-date">개선 완료일 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                '<input type="date" class="form-input" id="wd-i-date" value="' + esc(S().TODAY) + '"></div>' +
+            '<div style="margin-bottom:12px;"><label class="form-label" for="wd-i-result">개선 결과 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                '<textarea class="form-textarea" id="wd-i-result" rows="3" placeholder="실제 조치 내용과 확인 결과"></textarea></div>' +
+            '<label class="form-label">조치 후 증빙 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                V().uploadDrop('조치 후 사진·증빙을 등록하세요', null, { hint: true }),
+            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+            '<button type="button" class="btn btn-primary" onclick="WENVD.saveImproveDone()">완료 처리</button>');
+    }
+    function saveImproveDone() {
+        var date = document.getElementById('wd-i-date').value;
+        var result = (document.getElementById('wd-i-result').value || '').trim();
+        if (!date || date > S().TODAY) { toast('개선 완료일을 확인하세요.'); return; }
+        if (!result) { toast('개선 결과를 입력하세요.'); return; }
+        S().completeWorkEnv(state.id, { improveDoneAt: date, improveResult: result });
+        V().closeModal(); render(); toast('개선조치 완료와 조치 후 증빙이 기록되었습니다.');
     }
 
     function init(mountId) {
@@ -239,5 +262,6 @@
 
     global.WENVD = { init: init, evidence: evidence, saveEvidence: saveEvidence, reason: reason, saveReason: saveReason,
         resetDue: resetDue, saveDue: saveDue, notify: notify, pickRecipient: pickRecipient, sendNotify: sendNotify,
-        complete: complete, toggleImprove: toggleImprove, saveComplete: saveComplete, improveDone: improveDone };
+        complete: complete, toggleImprove: toggleImprove, saveComplete: saveComplete,
+        improveDone: improveDone, saveImproveDone: saveImproveDone };
 })(window);

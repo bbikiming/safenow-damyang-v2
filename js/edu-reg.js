@@ -146,8 +146,22 @@
         '</div>';
     }
 
+    /* 결재가 올라간 뒤에는 잠근다 — 판정은 EDUAPV.lockOf 한 곳에서만 한다(CLAUDE.md §4).
+     * 근거: "공문을 여기다 첨부하면은 문서들에 대한 기록이 남잖아요. 그러면 더 이상 수정이
+     * 안 돼요. 이건 문서 위조예요."(2026-07-30 회의)
+     * 상신이 꺼져 있는 동안은 항상 null 이라 아무 것도 잠기지 않는다 — 되살리는 순간부터
+     * 동작한다. 채용시교육(edu-hire.js)이 같은 패턴의 정본이다. */
+    function lockOf(courseId) {
+        return global.EDUAPV && global.EDUAPV.lockOf ? global.EDUAPV.lockOf('course', courseId) : null;
+    }
+    function lockBtn(lock) {
+        return '<button type="button" class="btn btn-outline btn-sm" disabled title="결재 ' + esc(lock) +
+            ' — 공문 기록이 남아 수정·삭제할 수 없습니다">🔒 ' + esc(lock) + '</button>';
+    }
     /* 카드 공통 [수정]·[삭제] — 등록만 있고 회수 수단이 없으면 시연을 반복할수록 데이터가 쌓인다 */
     function editDeleteBtns(id) {
+        var lock = lockOf(id);
+        if (lock) return lockBtn(lock);
         return '<button type="button" class="btn btn-outline btn-sm" onclick="EDUR.openEdit(\'' + id + '\')">수정</button> ' +
             '<button type="button" class="btn btn-outline btn-sm" style="border-color:var(--status-danger-border);color:var(--status-danger-fg);" onclick="EDUR.confirmRemove(\'' + id + '\')">삭제</button>';
     }
@@ -180,6 +194,10 @@
      *  대상자 변경은 신청 취소 → 재신청 경로로만 처리한다). */
     function openEdit(courseId) {
         var c = E().courseOf(courseId); if (!c) return;
+        /* **버튼을 감추는 것만으로는 부족하다** — 전역 호출로 뚫린다(CLAUDE.md §12·§4).
+           판정은 EDUAPV.lockOf 한 곳이고 여기서는 그 결과만 쓴다. */
+        var lock = lockOf(courseId);
+        if (lock) { toast('결재 ' + lock + ' 상태라 수정할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
         /* 회차가 없는 구 데이터는 대표값(date·time)에서 1회차를 파생해 그대로 편집한다 */
         var ss = E().courseSessions(c).map(function (s) { return { date: s.date, start: s.start || '', end: s.end || '' }; });
         if (!ss.length) ss = [{ date: c.date || E().today(), start: c.time || '', end: '' }];
@@ -377,36 +395,15 @@
         tourEvt('applied');
     }
 
-    /* =============== 교육 종료 처리 =============== */
-    function closeCourse(courseId) {
-        var c = E().courseOf(courseId); if (!c) return;
-        var enrolls = E().enrolls(courseId);
-        var totalCnt = enrolls.reduce(function (n, e) { return n + (e.workerIds || []).length; }, 0);
-        V().openModal('교육 종료 처리',
-            '<p style="font-size:var(--fs-13);"><b>' + esc(c.desc) + '</b><br>신청 <b>' + enrolls.length + '개 부서 · ' + totalCnt + '명</b>에게 교육시간 ' + c.hours + 'h 를 카운트합니다.</p>' +
-            '<p style="font-size:var(--fs-12);color:var(--text-gray);margin-top:6px;">종료 후에는 되돌릴 수 없습니다.</p>',
-            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-            '<button type="button" class="btn btn-primary" onclick="EDUR.doClose(\'' + courseId + '\')">종료 처리</button>');
-    }
-    function doClose(courseId) {
-        var c = E().courseOf(courseId); if (!c) return;
-        var enrolls = E().enrolls(courseId);
-        var total = 0;
-        enrolls.forEach(function (e) {
-            E().recordCourseCompletion(courseId, e.workerIds, c.hours, c.date);
-            total += (e.workerIds || []).length;
-        });
-        E().updateCourse(courseId, { status: 'DONE' });
-        E().pushCourseHistory(courseId, { type: 'STATUS', by: '재난안전과', memo: '교육 종료 처리 · 신청자 ' + total + '명 카운트' });
-        V().closeModal();
-        toast('교육 종료 · ' + total + '명 카운트 완료');
-        render();
-        tourEvt('closed');
-    }
-
-    /* =============== 삭제 =============== */
+    /* 교육 종료 처리는 **상세 화면 전용**이다(EDURD.closeCourse · SCR-EDU-004 §4-4).
+     * 목록에도 두면 되돌릴 수 없는 조작의 진입점이 둘이 되고, 종료 확인창에 필요한
+     * 신청 부서·인원을 목록에서 다시 집계해야 한다. 여기 있던 미사용 사본은 제거했다. */
     function confirmRemove(courseId) {
         var c = E().courseOf(courseId); if (!c) return;
+        /* **버튼을 감추는 것만으로는 부족하다** — 전역 호출로 뚫린다(CLAUDE.md §12·§4).
+           판정은 EDUAPV.lockOf 한 곳이고 여기서는 그 결과만 쓴다. */
+        var lock = lockOf(courseId);
+        if (lock) { toast('결재 ' + lock + ' 상태라 삭제할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
         var enrolls = E().enrolls(courseId);
         var cnt = enrolls.reduce(function (n, e) { return n + (e.workerIds || []).length; }, 0);
         var counted = c.status === 'DONE' && cnt;
@@ -482,6 +479,6 @@
         confirmRemove: confirmRemove, doRemove: doRemove,
         openApply: openApply, applyPickDept: applyPickDept, applyToggle: applyToggle,
         applyAttachSign: applyAttachSign, applyClearSign: applyClearSign, doApply: doApply,
-        closeCourse: closeCourse, doClose: doClose, viewDetail: viewDetail
+        viewDetail: viewDetail
     };
 })(window);

@@ -31,6 +31,12 @@
        **부서별 집계(완료율)는 그대로 공개한다** — 개인이 식별되지 않고,
        총괄 책임자가 부서 간 비교를 못 하면 이행 관리가 성립하지 않는다.
        종전에는 누구로 접속해도 전 직원의 개인별 이수시간이 보였다. */
+    /* 독촉 발신자 — 하드코딩하면 담양읍장이 눌러도 재난안전과가 보낸 것으로 남는다
+       (위험성평가 remindBy() 와 같은 근거). */
+    function actorLabel() {
+        var R = global.DYROLE;
+        return (R && R.actorLabel) ? R.actorLabel() : '재난안전과';
+    }
     function canSeePerson(deptId) {
         var R = global.DYROLE;
         return !R || !R.inScope || R.inScope(deptId);
@@ -94,31 +100,35 @@
 
     function renderSummary() {
         /* 완료율은 선택된 모집단(구분·고용형태·채용연도) 기준으로 다시 계산한다 */
-        var all = E().deptSummary(E().TODAY, inPopulation);
+        var all = E().deptSummary(E().TODAY, inPopulation, { keepEmpty: true });
         var arr = all.filter(function (d) {
             if (state.fPct === '100' && d.pct !== 100) return false;
-            if (state.fPct === 'mid' && !(d.pct >= 70 && d.pct < 100)) return false;
-            if (state.fPct === 'low' && d.pct >= 70) return false;
+            if (state.fPct === 'mid' && !(d.pct !== null && d.pct >= 70 && d.pct < 100)) return false;
+            if (state.fPct === 'low' && !(d.pct !== null && d.pct < 70)) return false;
+            if (state.fPct === 'unknown' && d.unassessable < 1) return false;
             return EDUFILTER.match(state.fQ, [d.name]);
         });
         var bar = EDUFILTER.bar([
             { type: 'search', id: 'es-q', value: state.fQ, placeholder: '부서명 검색', on: "EDUS.setF('Q', this.value)" }
         ].concat(populationFields()).concat([
             { type: 'select', id: 'es-pct', value: state.fPct, label: '완료율',
-              options: [['', '완료율 전체'], ['100', '100% 완료'], ['mid', '70% 이상'], ['low', '70% 미만']],
+              options: [['', '완료율 전체'], ['100', '100% 완료'], ['mid', '70% 이상'], ['low', '70% 미만'], ['unknown', '기준일 미등록 있음']],
               on: "EDUS.setF('Pct', this.value)" }
         ]), {
             count: arr.length, unit: '개 부서', reset: 'EDUS.resetF()',
             actions: '<button type="button" class="btn btn-outline btn-sm" onclick="EDUS.openReminders()">📜 독촉 이력</button>'
         });
         var rows = arr.length ? arr.map(function (d) {
-            var barCls = d.pct === 100 ? 'green' : (d.pct >= 70 ? 'warning' : 'danger');
+            var barCls = d.pct === null ? 'neutral' : (d.pct === 100 ? 'green' : (d.pct >= 70 ? 'warning' : 'danger'));
+            /* 대상 0명은 완료율을 계산하지 않는다 — 0%로 내면 아무 대상도 없는 부서가
+               최하위로 올라와 실제로 미달인 부서를 가린다(정의서 §3). */
+            var pctText = d.total === 0 ? '대상 없음' : (d.pct === null ? '판정 불가' : d.pct + '%');
             return '<tr>' +
                 '<td class="edu-name">' + esc(d.name) + '</td>' +
-                '<td>' + d.total + '명</td>' +
+                '<td>' + d.total + '명' + (d.unassessable ? '<br><span class="edu-short">기준일 미등록 ' + d.unassessable + '명</span>' : '') + '</td>' +
                 '<td>' + d.done + '명</td>' +
-                '<td><div class="progress edu-gauge"><div class="progress-bar ' + barCls + '" style="width:' + d.pct + '%"></div></div>' +
-                    '<span class="edu-bar-txt">' + d.pct + '%</span></td>' +
+                '<td><div class="progress edu-gauge"><div class="progress-bar ' + barCls + '" style="width:' + (d.pct || 0) + '%"></div></div>' +
+                    '<span class="edu-bar-txt">' + pctText + '</span></td>' +
                 '<td><button type="button" class="btn btn-outline btn-sm" onclick="EDUS.viewDept(\'' + d.deptId + '\')">상세</button></td>' +
             '</tr>';
         }).join('') : '<tr><td colspan="5"><div class="v2-empty">' +
@@ -129,10 +139,11 @@
          * 라벨(모집단)과 수치의 범위가 일치한다. 좁혀진 부서 수는 필터 바의 결과 건수가 담당한다. */
         var popTotal = all.reduce(function (n, d) { return n + d.total; }, 0);
         var popDone = all.reduce(function (n, d) { return n + d.done; }, 0);
+        var popUnknown = all.reduce(function (n, d) { return n + d.unassessable; }, 0);
         return bar +
             '<div class="edu-card" data-tour="status-summary"><div class="edu-card-title">부서별 이수 현황 ' +
                 '<span style="font-size:var(--fs-12);color:var(--text-gray);font-weight:var(--fw-regular);">(기준일 ' + E().TODAY + ')</span>' +
-                '<span class="edu-pop-note">집계 대상 <b>' + esc(populationLabel()) + '</b> · ' + popTotal + '명 중 완료 ' + popDone + '명</span>' +
+                '<span class="edu-pop-note">집계 대상 <b>' + esc(populationLabel()) + '</b> · ' + popTotal + '명 중 완료 ' + popDone + '명' + (popUnknown ? ' · 기준일 미등록 ' + popUnknown + '명' : '') + '</span>' +
             '</div>' +
             '<div class="edu-scroll"><table class="table-figma table-compact"><thead><tr>' +
                 '<th>부서</th><th>대상 인원</th><th>완료 인원</th><th>완료율</th><th></th>' +
@@ -159,13 +170,15 @@
         }).map(function (w) { return E().statusRow(w, E().TODAY); });
         var list = all.filter(function (r) {
             if (state.fStatus === 'done') return r.complete;
-            if (state.fStatus === 'short') return !r.complete;
-            if (state.fStatus === 'over') return !r.complete && r.cycle.daysToEnd < 0;
-            if (state.fStatus === 'soon') return !r.complete && r.cycle.daysToEnd >= 0 && r.cycle.daysToEnd <= 30;
+            if (state.fStatus === 'short') return r.assessable && !r.complete;
+            if (state.fStatus === 'unknown') return !r.assessable;
+            if (state.fStatus === 'over') return r.assessable && !r.complete && r.cycle.daysToEnd < 0;
+            if (state.fStatus === 'soon') return r.assessable && !r.complete && r.cycle.daysToEnd >= 0 && r.cycle.daysToEnd <= 30;
             return true;
         });
         list.sort(function (a, b) {
             /* 미달자 먼저, 그다음 D-day 임박순 */
+            if (a.assessable !== b.assessable) return a.assessable ? 1 : -1;
             if (a.complete !== b.complete) return a.complete ? 1 : -1;
             return (a.cycle.daysToEnd || 0) - (b.cycle.daysToEnd || 0);
         });
@@ -174,10 +187,10 @@
             var w = r.worker;
             var cyc = r.cycle;
             /* D-day 배지 tone — 완료 success · 기한초과 danger · 30일 이내 warning · 그 외 neutral */
-            var dTone = r.complete ? V().toneOf('완료') : (cyc.daysToEnd < 0 ? V().toneOf('기한초과') : (cyc.daysToEnd <= 30 ? V().toneOf('지연') : 'neutral'));
-            var dTxt = r.complete ? '완료' : (cyc.daysToEnd < 0 ? '기한초과 D+' + Math.abs(cyc.daysToEnd) : 'D-' + cyc.daysToEnd);
+            var dTone = !r.assessable ? 'warning' : (r.complete ? V().toneOf('완료') : (cyc.daysToEnd < 0 ? V().toneOf('기한초과') : (cyc.daysToEnd <= 30 ? V().toneOf('지연') : 'neutral')));
+            var dTxt = !r.assessable ? cyc.reason : (r.complete ? '완료' : (cyc.daysToEnd < 0 ? '기한초과 D+' + Math.abs(cyc.daysToEnd) : 'D-' + cyc.daysToEnd));
             var ck = state.checked[w.id] ? ' checked' : '';
-            var canRemind = !r.complete;
+            var canRemind = r.assessable && !r.complete;
             var ckEl = canRemind
                 ? '<input type="checkbox"' + ck + ' onchange="EDUS.toggleCheck(\'' + w.id + '\', this.checked)" aria-label="' + esc(w.name) + ' 선택">'
                 : '';
@@ -189,14 +202,14 @@
                 '<td>' + esc(E().catLabel(w.category)) + '</td>' +
                 '<td>' + esc(empLabel) + '</td>' +
                 '<td>' + esc(w.hireDate) + '</td>' +
-                '<td>' + esc(cyc.start) + '<br><span style="font-size:var(--fs-12);color:var(--text-gray);">~ ' + esc(cyc.end) + '</span></td>' +
+                '<td>' + (r.assessable ? esc(cyc.start) + '<br><span style="font-size:var(--fs-12);color:var(--text-gray);">~ ' + esc(cyc.end) + '</span>' : '<span class="edu-short">' + esc(cyc.reason) + '</span>') + '</td>' +
                 '<td><span class="chip-status chip-sm ' + dTone + '">' + dTxt + '</span></td>' +
-                '<td>' + r.need + 'h</td>' +
-                '<td>' + r.done + 'h</td>' +
-                '<td>' + (r.short ? '<span class="edu-short">' + r.short + 'h</span>' : '0h') + '</td>' +
-                '<td>' + (r.complete
+                '<td>' + (r.assessable ? r.need + 'h' : '-') + '</td>' +
+                '<td>' + (r.assessable ? r.done + 'h' : '-') + '</td>' +
+                '<td>' + (r.assessable ? (r.short ? '<span class="edu-short">' + r.short + 'h</span>' : '0h') : '-') + '</td>' +
+                '<td>' + (!r.assessable ? '<span class="chip-status chip-sm warning">판정 불가</span>' : (r.complete
                     ? '<span class="chip-status chip-sm ' + V().toneOf('완료') + '">완료</span>'
-                    : '<span class="chip-status chip-sm ' + V().toneOf('미이수') + '">미이수</span>') + '</td>' +
+                    : '<span class="chip-status chip-sm ' + V().toneOf('미이수') + '">미이수</span>')) + '</td>' +
                 apvCell(w) +
             '</tr>';
         }).join('') : '<tr><td colspan="' + (apvOn() ? 13 : 12) + '"><div class="v2-empty">조건에 맞는 대상자가 없습니다.</div></td></tr>';
@@ -204,14 +217,18 @@
         var bar = EDUFILTER.bar([
             { type: 'search', id: 'es-q', value: state.fQ, placeholder: '이름·부서·구분 검색', on: "EDUS.setF('Q', this.value)" },
             { type: 'select', id: 'es-dept', value: state.fDept, label: '부서',
-              options: [['', '부서 전체']].concat(E().deptCandidates().map(function (d) { return [d.id, d.name]; })),
+              /* 필터도 조회 범위를 따른다 — 목록에서 지워 놓고 드롭다운에 남기면
+                 "있는데 안 보여준다"로 읽힌다(CLAUDE.md §12). */
+              options: [['', '부서 전체']].concat(E().deptCandidates()
+                  .filter(function (d) { return canSeePerson(d.id); })
+                  .map(function (d) { return [d.id, d.name]; })),
               on: "EDUS.setF('Dept', this.value)" }
         ].concat(populationFields()).concat([
             { type: 'select', id: 'es-src', value: state.fSrc, label: '명단 출처',
               options: [['', '출처 전체']].concat(Object.keys(E().SRC_LABEL).map(function (k) { return [k, E().SRC_LABEL[k]]; })),
               on: "EDUS.setF('Src', this.value)" },
             { type: 'select', id: 'es-status', value: state.fStatus, label: '이수 상태',
-              options: [['', '이수 상태 전체'], ['short', '미이수(미달)'], ['over', '기한초과'], ['soon', '마감 임박 (D-30)'], ['done', '완료']],
+              options: [['', '이수 상태 전체'], ['short', '미이수(미달)'], ['unknown', '기준일 미등록'], ['over', '기한초과'], ['soon', '마감 임박 (D-30)'], ['done', '완료']],
               on: "EDUS.setF('Status', this.value)" }
         ]), {
             count: list.length, unit: '명', reset: 'EDUS.resetF()',
@@ -276,7 +293,7 @@
             (byDept[w.deptId] = byDept[w.deptId] || []).push(wid);
         });
         Object.keys(byDept).forEach(function (dId) {
-            E().addReminder({ by: '재난안전과', deptId: dId, workerIds: byDept[dId], memo: memo || '미이수 안전보건교육 이수 요청' });
+            E().addReminder({ by: actorLabel(), deptId: dId, workerIds: byDept[dId], memo: memo || '미이수 안전보건교육 이수 요청' });
         });
         V().closeModal();
         toast(Object.keys(byDept).length + '개 부서, ' + ids.length + '명 독촉 발송 완료');

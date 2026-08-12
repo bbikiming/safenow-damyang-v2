@@ -364,30 +364,52 @@
                     '<button type="button" class="btn btn-outline" onclick="ORGPICK.toggle(\'he-n-deptfield\',\'dept\',\'HEX.pickDept\')">조직도</button>' +
                 '</div></div></div>' +
             '<div class="ri-modal-row" style="margin-bottom:12px;"><label class="form-label" for="he-n-type">검진 유형</label>' +
-                '<select class="form-select" id="he-n-type"><option>일반건강검진</option><option>특수건강진단</option></select></div>' +
+                '<select class="form-select" id="he-n-type" onchange="HEX.onTypeChange()"><option>일반건강검진</option><option>특수건강진단</option></select></div>' +
+            '<div class="ri-modal-row" id="he-n-basis-row" style="margin-bottom:12px;"><label class="form-label" for="he-n-basis">대상 근거</label>' +
+                '<input type="text" class="form-input" id="he-n-basis" placeholder="일반: 사무직/그 밖의 근로자 · 특수: 유해인자·배치업무"></div>' +
             '<div class="ri-modal-row" style="margin-bottom:12px;"><label class="form-label" for="he-n-agency">위탁 검진기관 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 '<input type="text" class="form-input" id="he-n-agency" placeholder="예: 담양군보건소 / (주)녹십자헬스케어"></div>' +
             '<div class="ri-modal-row" style="margin-bottom:12px;"><label class="form-label" for="he-n-target">대상자 수</label>' +
                 '<input type="number" class="form-input" id="he-n-target" value="10" min="1"></div>' +
             '<div class="ri-modal-row" style="margin-bottom:12px;"><label class="form-label" for="he-n-planned">검진 예정일</label>' +
                 '<input type="date" class="form-input" id="he-n-planned" value="2026-09-15"></div>' +
-            '<div class="ri-modal-row"><label><input type="checkbox" id="he-n-carc"> 발암성·특별관리물질 취급 (결과 30년 보존)</label></div>',
+            '<div class="ri-modal-row"><label><input type="checkbox" id="he-n-carc"> 고용노동부 고시 30년 보존 대상 물질 취급 기록</label></div>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="HEX.saveNew()">등록</button>');
+    }
+    function onTypeChange() {
+        var type = document.getElementById('he-n-type');
+        var basis = document.getElementById('he-n-basis');
+        if (!type || !basis) return;
+        basis.placeholder = type.value === '특수건강진단'
+            ? '필수: 대상 유해인자와 배치업무'
+            : '예: 사무직 / 그 밖의 근로자';
     }
     function pickDept(name) { var inp = document.getElementById('he-n-deptname'); if (inp) inp.value = name; }
     function saveNew() {
         if (!canAct()) { V().toast('검진 계획 등록은(는) 해당 부서 담당자가 수행합니다.'); return; }
         var dept = (document.getElementById('he-n-deptname').value || '').trim();
         var agency = (document.getElementById('he-n-agency').value || '').trim();
+        var type = document.getElementById('he-n-type').value;
+        var targetBasis = (document.getElementById('he-n-basis').value || '').trim();
+        var targetCount = Number(document.getElementById('he-n-target').value);
+        var planned = document.getElementById('he-n-planned').value;
         if (!dept) { V().toast('대상 부서를 선택하세요.'); return; }
         if (!agency) { V().toast('검진기관을 입력하세요.'); return; }
+        if (!Number.isInteger(targetCount) || targetCount < 1) { V().toast('대상자 수를 1명 이상 입력하세요.'); return; }
+        if (!planned) { V().toast('검진 예정일을 선택하세요.'); return; }
+        if (type === '특수건강진단' && !targetBasis) { V().toast('특수건강진단 대상 유해인자와 배치업무를 입력하세요.'); return; }
+        var dup = S().health().filter(function (r) {
+            return r.year === String(planned).slice(0, 4) && r.dept === dept && r.type === type && r.planned === planned;
+        })[0];
+        if (dup) { V().toast('같은 부서·검진유형·예정일의 계획이 이미 있습니다.'); return; }
         S().addHealth({
             dept: dept,
-            type: document.getElementById('he-n-type').value,
+            type: type,
             agency: agency,
-            targetCount: Number(document.getElementById('he-n-target').value) || 0,
-            planned: document.getElementById('he-n-planned').value,
+            targetCount: targetCount,
+            targetBasis: targetBasis,
+            planned: planned,
             carcinogen: !!document.getElementById('he-n-carc').checked
         });
         V().closeModal(); render(); V().toast('검진 계획이 등록되었습니다.');
@@ -405,5 +427,5 @@
     global.HEX = { init: init, setView: setView, setPersp: setPersp, setPerspDept: setPerspDept,
         setYear: setYear, setType: setType, setDept: setDept, setTile: setTile,
         detail: detail, attach: attach, saveAttach: saveAttach, deptUpload: deptUpload, saveDeptUpload: saveDeptUpload,
-        openNew: openNew, saveNew: saveNew, pickDept: pickDept };
+        openNew: openNew, saveNew: saveNew, onTypeChange: onTypeChange, pickDept: pickDept };
 })(window);

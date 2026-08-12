@@ -114,19 +114,19 @@
 
         const roles = [
             { id: 'sys', name: '시스템 관리자', desc: '메뉴·권한·프리셋·연계 등 시스템 관리 전체를 운영하는 관리자 등급.',
-              protected: true, fullAccess: true, autoAll: false, members: [{ kind: 'user', id: uidOf('박안전') }] },
+              protected: true, fullAccess: true, autoAll: false, dataScope: 'ALL', members: [{ kind: 'user', id: uidOf('박안전') }] },
             { id: 'mayor', name: '군수', desc: '중대재해처벌법상 경영책임자 — 전 업무 메뉴 열람.',
-              protected: false, fullAccess: false, autoAll: false, members: [{ kind: 'user', id: uidOf('김담양') }] },
+              protected: false, fullAccess: false, autoAll: false, dataScope: 'ALL', members: [{ kind: 'user', id: uidOf('김담양') }] },
             { id: 'exec', name: '부군수·국장', desc: '부군수 및 국장 — 전 업무 메뉴 열람.',
-              protected: false, fullAccess: false, autoAll: false, members: [
+              protected: false, fullAccess: false, autoAll: false, dataScope: 'JURISDICTION', members: [
                   { kind: 'user', id: uidOf('이부군') }, { kind: 'user', id: uidOf('박행정') }, { kind: 'user', id: uidOf('정산업') },
               ] },
             { id: 'manager', name: '과장·팀장', desc: '과장·팀장·소장 등 관리감독자 — 전 업무 메뉴 열람.',
-              protected: false, fullAccess: false, autoAll: false, members: managerMembers },
+              protected: false, fullAccess: false, autoAll: false, dataScope: 'DEPT', members: managerMembers },
             { id: 'team', name: '전담부서(중대재해 총괄)', desc: '재난안전과 중대재해팀 — 전 업무 메뉴 등록·수정 총괄.',
-              protected: false, fullAccess: false, autoAll: false, members: [{ kind: 'dept', id: 'jjt', includeSub: true }] },
+              protected: false, fullAccess: false, autoAll: false, dataScope: 'ALL', members: [{ kind: 'dept', id: 'jjt', includeSub: true }] },
             { id: 'staff', name: '일반 공무원', desc: 'SSO 로그인 전 직원 — 대시보드·통계 등 열람 + 의견청취 등록.',
-              protected: false, fullAccess: false, autoAll: true, members: [] },
+              protected: false, fullAccess: false, autoAll: true, dataScope: 'SELF', members: [] },
         ];
 
         /* ── 메뉴 권한 프리셋 ──
@@ -152,12 +152,16 @@
     let _data = load();
     if (!_data || !_data.roles || !_data.menuPerms || !_data.menuUsage) { _data = seed(); }
     else {
+        /* 구버전 저장값 보강 — 화면마다 범위를 다시 묻지 않도록 등급 기본값을 한 번 이관한다. */
+        const scopeById = { sys: 'ALL', mayor: 'ALL', exec: 'JURISDICTION', manager: 'DEPT', team: 'ALL', staff: 'SELF' };
+        _data.roles.forEach(r => { if (!r.dataScope) r.dataScope = scopeById[r.id] || 'SELF'; });
         /* 시드 병합: NAV에 있는데 스토어에 없는 메뉴 키 보강 (신규 메뉴 대비).
          * 최초 시드와 같은 defaultPerms 를 써야 신규 메뉴가 '권한 미설정'으로 보이지 않는다. */
         middleMenus().forEach(m => {
             if (!(m.id in _data.menuPerms)) _data.menuPerms[m.id] = defaultPerms(m);
             if (!(m.id in _data.menuUsage)) _data.menuUsage[m.id] = true;
         });
+        persist(_data);
     }
     function data() { return _data; }
     function save() { persist(_data); }
@@ -252,6 +256,7 @@
         const role = {
             id: 'role-' + n, name, desc: String(o.desc || ''),
             protected: false, fullAccess: !!o.fullAccess, autoAll: !!o.autoAll,
+            dataScope: o.dataScope || (o.fullAccess ? 'ALL' : 'SELF'),
             members: o.members || [],
         };
         _data.roles.push(role); save();

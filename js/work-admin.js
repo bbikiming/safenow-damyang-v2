@@ -20,7 +20,11 @@
         return '<span class="chip-status ' + (tone || V().toneOf(label)) + '">' + esc(label) + '</span>';
     }
 
-    var state = { mount: null, tab: 'issues', autoFired: [], upOpen: null, year: 0, fStatus: '', q: '', openOnly: false, newTpl: '', newPeriod: '' };
+    var state = {
+        mount: null, tab: 'issues', autoFired: [], upOpen: null,
+        year: 0, fStatus: '', q: '', openOnly: false,
+        newTpl: '', newPeriod: '', reviewTpl: '', reviewPeriod: '', reviewDue: '', reviewMemo: '',
+    };
 
     /* 발행·회수는 주관부서 담당자만. 조회는 막지 않는다(§12 두 축). */
     function canIssue() {
@@ -35,7 +39,7 @@
     function init(mountId) {
         state.mount = document.getElementById(mountId);
         state.year = +W().today().slice(0, 4);
-        /* 정기 업무는 **스스로** 나간다 — 사람이 누르지 않는다.
+        /* 자동발행 8종만 **스스로** 나간다 — 사람이 누르지 않는다.
            실 개발에서는 배치 스케줄러가, 프로토타입에서는 화면 진입이 트리거다. */
         state.autoFired = W().autoIssue();
         render();
@@ -207,8 +211,8 @@
 
         if (!list.length) {
             return bar + '<div class="v2-empty">조건에 맞는 발행 건이 없습니다.<br>' +
-                '<span style="color:var(--text-gray);">발행일이 되면 위 <b>다음 자동 발행</b>에 나타나고, ' +
-                '[＋ 업무 발행]으로 즉시 내보낼 수도 있습니다.</span></div>';
+                '<span style="color:var(--text-gray);">자동 대상은 발행일에 생성되고, 담당자 확인 대상은 ' +
+                '<b>연간 캘린더</b>에서 발행합니다. 사건형 업무는 [＋ 발생시 업무]로 만듭니다.</span></div>';
         }
         var canScope = R().canScopeDept && R().canScopeDept();
         var rows = list.map(function (i) {
@@ -275,8 +279,13 @@
                 .map(function (it) {
                     var done = !!it.iss;
                     var mode = it.tpl.issueMode === 'SCHEDULED' ? 'sch' : 'man';
+                    var action = done
+                        ? 'detail(\'' + esc(it.iss.id) + '\')'
+                        : (it.tpl.issueMode === 'MANUAL_REVIEW'
+                            ? 'reviewPlan(\'' + esc(it.tpl.id) + '\',\'' + esc(it.pl.periodKey) + '\')'
+                            : 'ruleInfo(\'' + esc(it.tpl.id) + '\')');
                     return '<button type="button" class="wk-cal-chip ' + (done ? 'is-done' : 'is-plan') + ' ' + mode + '"' +
-                        ' onclick="WKADM.' + (done ? 'detail(\'' + esc(it.iss.id) + '\')' : 'ruleInfo(\'' + esc(it.tpl.id) + '\')') + '">' +
+                        ' onclick="WKADM.' + action + '">' +
                         '<span class="wk-cal-d">' + esc(it.pl.issueDate.slice(5)) + '</span> ' + esc(it.tpl.name) +
                         '</button>';
                 }).join('');
@@ -499,9 +508,8 @@
     }
 
     /* ── 발행 모달 ── */
-    /* 수동 생성은 **발생시(ADHOC) 업무만**이다(발주처 확정 2026-08-11).
-       주기가 있는 업무는 스스로 나가므로 손으로 만들 이유가 없고, 손으로 만들면
-       같은 회차가 두 번 도는 사고가 난다(멱등키가 막지만 화면이 헷갈린다). */
+    /* 상단 [발생시 업무]는 ADHOC 전용이다. 주기형 MANUAL_REVIEW 업무는 연간
+       캘린더의 후보를 눌러 회차·기한을 확인한 뒤 발행한다. */
     function adhocTemplates() {
         return T().active().filter(function (t) { return t.schedule.kind === 'ADHOC'; });
     }
@@ -520,8 +528,8 @@
         state.adhocDate = state.adhocDate || W().today();
         state.adhocMemo = state.adhocMemo || '';
         var body =
-            '<p class="wka-note">주기가 있는 업무는 <b>기간이 되면 스스로 나갑니다</b> — 여기서는 ' +
-                '<b>발생시 업무</b>만 만듭니다(외부 용역 결과가 들어왔거나 점검 지적사항을 받았을 때).</p>' +
+            '<p class="wka-note">여기서는 <b>외부 사건으로 생긴 업무</b>만 만듭니다. 주기형 검토 대상은 ' +
+                '<b>연간 캘린더</b>에서 회차와 기한을 확인한 뒤 발행합니다.</p>' +
             '<div class="wka-field"><label class="form-label">업무</label>' +
                 '<select class="form-select" onchange="WKADM._tpl(this.value)">' +
                 adhocTemplates().map(function (t) {
@@ -563,12 +571,64 @@
         toast('생성했습니다 — 대상 ' + r.issue.depts.length + '개 부서');
         render();
     }
-    /* 발행일이 도래한 정기 건을 그 자리에서 내보낸다 */
-    function fire(templateId, periodKey) {
+    /* 주기형 검토 대상 — 후보 회차를 담당자가 확인해야만 발행한다. */
+    function reviewPlan(templateId, periodKey) {
         if (!canIssue()) { denyIssue(); return; }
-        var r = W().issueBatch(templateId, periodKey, { origin: 'SCHEDULED' });
+        var tpl = T().byId(templateId);
+        if (!tpl || tpl.issueMode !== 'MANUAL_REVIEW') { ruleInfo(templateId); return; }
+        var plan = W().planOf(templateId, +String(periodKey).slice(0, 4)).filter(function (p) {
+            return p.periodKey === periodKey;
+        })[0];
+        if (!plan) { toast('발행 후보 회차를 찾을 수 없습니다'); return; }
+        var dup = W().issueByKey(templateId + '|' + periodKey);
+        if (dup) { detail(dup.id); return; }
+        state.reviewTpl = templateId;
+        state.reviewPeriod = periodKey;
+        state.reviewDue = plan.due;
+        state.reviewMemo = '';
+        renderReviewForm();
+    }
+    function renderReviewForm() {
+        var tpl = T().byId(state.reviewTpl);
+        var plan = W().planOf(state.reviewTpl, +String(state.reviewPeriod).slice(0, 4)).filter(function (p) {
+            return p.periodKey === state.reviewPeriod;
+        })[0];
+        if (!tpl || !plan) { V().closeModal(); return; }
+        var depts = W().targetDepts(tpl, state.reviewPeriod);
+        var body =
+            '<p class="wka-note">이 업무는 주기가 있지만 발행일 근거가 충분히 안정되지 않아 자동으로 내보내지 않습니다. ' +
+                '이번 회차의 대상과 실제 기한을 확인한 뒤 발행하세요.</p>' +
+            '<div class="wka-sum">' +
+                row('회차', esc(plan.periodLabel)) +
+                row('달력 후보일', esc(plan.issueDate) + '<div class="wk-sub">실측 기반 후보일이며 실제 발행일은 오늘로 기록됩니다</div>') +
+                row('대상 부서', depts.length + '개 — ' + esc(T().scopeLabel(tpl)) +
+                    (depts.length ? '<div class="wk-sub">' + esc(depts.map(W().deptName).join(' · ')) + '</div>'
+                                  : '<div class="wk-sub" style="color:var(--status-warning-fg);">대상 부서가 없어 발행할 수 없습니다</div>')) +
+            '</div>' +
+            '<div class="wka-field"><label class="form-label">제출 기한 <span class="wka-req">*</span></label>' +
+                '<input type="date" class="form-input" value="' + esc(state.reviewDue) + '" onchange="WKADM._reviewDue(this.value)">' +
+                '<div class="wk-sub">공문·기관 일정의 기한이 있으면 그 날짜를 입력하고, 없으면 업무 규칙 기본값을 사용합니다.</div></div>' +
+            '<div class="wka-field"><label class="form-label">확인 근거 <span class="wka-req">*</span></label>' +
+                '<input type="text" class="form-input" maxlength="200" value="' + esc(state.reviewMemo) + '" ' +
+                'placeholder="예: 2026년 교육 운영계획 일정 확인" oninput="WKADM._reviewMemo(this.value)"></div>';
+        V().openModal('담당자 확인 후 발행 — ' + esc(tpl.name), body,
+            '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+            (depts.length ? '<button class="btn btn-primary" onclick="WKADM.doReviewIssue()">발행</button>' : ''));
+    }
+    function _reviewDue(v) { state.reviewDue = v; }
+    function _reviewMemo(v) { state.reviewMemo = v; }
+    function doReviewIssue() {
+        if (!state.reviewDue) { toast('제출 기한을 입력하세요'); return; }
+        if (state.reviewDue < W().today()) { toast('제출 기한은 오늘 이후여야 합니다'); return; }
+        if (!state.reviewMemo.trim()) { toast('확인 근거를 입력하세요'); return; }
+        var r = W().issueBatch(state.reviewTpl, state.reviewPeriod, {
+            origin: 'MANUAL', originRef: 'MANUAL_REVIEW', issuedAt: W().today(),
+            due: state.reviewDue, memo: state.reviewMemo.trim(),
+        });
+        V().closeModal();
         if (!r.ok) { toast(r.msg); return; }
-        toast('정기 발행 완료 — 대상 ' + r.issue.depts.length + '개 부서');
+        state.reviewMemo = '';
+        toast('확인 발행 완료 — 대상 ' + r.issue.depts.length + '개 부서');
         render();
     }
 
@@ -642,8 +702,10 @@
     global.WKADM = {
         init: init, setTab: setTab, setYear: setYear, setF: setF, toggleOpen: toggleOpen,
         detail: detail, ruleInfo: ruleInfo, openIssue: openIssue, doIssue: doIssue,
+        reviewPlan: reviewPlan, doReviewIssue: doReviewIssue,
         scopeDept: scopeDept, saveScope: saveScope, _scopeSel: _scopeSel, _scopeToggle: _scopeToggle,
         _tpl: _tpl, _period: _period, _rr: _rr, _adhocDate: _adhocDate, _adhocMemo: _adhocMemo,
+        _reviewDue: _reviewDue, _reviewMemo: _reviewMemo,
         confirmT: confirmT, returnT: returnT, saveReturn: saveReturn,
         remindOne: remindOne, remindAll: remindAll, remindDept: remindDept,
         confirmCancel: confirmCancel, doCancel: doCancel, confirmClose: confirmClose, doClose: doClose,

@@ -12048,3 +12048,52 @@ window.DY_DOCS_V2 = [
 "version": "v1.8"
 }
 ];
+
+/* =========================================================================
+ * 기획 확정 정규화 (2026-08-12)
+ *
+ * 원본 재분류표 429행은 추적을 위해 DY_DOCS_V2_SOURCE에 그대로 보존한다.
+ * 화면·통계·등록 정본은 다음 규칙으로 만든다.
+ *   1) ID만 다르고 나머지 필드가 완전히 같은 행은 한 문서로 합친다(3쌍).
+ *   2) needReview는 과거 분류 작업의 주석이지 현재 기획 미결이 아니다.
+ *      세트·PDCA·처리유형은 이미 확정됐으며, 조건부 적용은 applyCond로 판정한다.
+ *   3) G4·H1의 A단계는 점검에서 미흡이 발견될 때 개선조치 메뉴에 생성한다.
+ *      세트 안에 빈 A문서를 상시 강제하지 않는다.
+ * ========================================================================= */
+(function normalizeResolvedPlanning() {
+    window.DY_DOCS_V2_SOURCE = window.DY_DOCS_V2.slice();
+
+    const seen = Object.create(null);
+    window.DY_DOCS_V2 = window.DY_DOCS_V2.filter(function (doc) {
+        const comparable = Object.assign({}, doc);
+        delete comparable.id;
+        const signature = JSON.stringify(comparable);
+        if (seen[signature]) return false;
+        seen[signature] = doc.id;
+        return true;
+    }).map(function (doc) {
+        const resolved = Object.assign({}, doc);
+        if (resolved.needReview === 'Y') {
+            resolved.sourceReviewNote = resolved.needReason || '';
+            resolved.planningResolution = resolved.docRole === '참고자료'
+                ? '참고·보관 문서로 분류 확정; 해당 작업·사업 존재 시만 적용'
+                : '현재 V2 세트·PDCA·처리유형으로 분류 확정';
+            resolved.needReview = 'N';
+            resolved.needReason = '';
+            resolved.confidence = '확정';
+            resolved.procClass = String(resolved.procClass || '').replace(' / 중복 삭제 후보', '');
+        }
+        resolved.applicabilityPolicy = /해당|조건부/.test(resolved.applyCond || '')
+            ? 'IF_APPLICABLE'
+            : 'ALWAYS';
+        return resolved;
+    });
+
+    ['G4', 'H1'].forEach(function (setId) {
+        const set = window.DY_SETS_V2.find(function (item) { return item.id === setId; });
+        if (!set) return;
+        set.valid = 'ok';
+        set.validMsg = '';
+        set.actionPolicy = '점검 미흡 발생 시 개선조치 메뉴에 A 조치를 생성';
+    });
+})();

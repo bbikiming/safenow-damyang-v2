@@ -197,6 +197,10 @@
         /* ── 대상 요소가 없을 때 왜 없는지 ──
            아무 데도 안 가리키는 투어는 안내가 아니라 소음이다. */
         function whyMissing(s, i) {
+            /* **아직 만들지 않은 단계**는 관점·선행 탓으로 돌리지 않는다 — 관점을 바꿔도,
+               앞 단계를 끝내도 그 버튼은 나타나지 않는다. 그렇게 안내하면 시연자가
+               없는 것을 찾아 헤맨다. 흐름에 단계를 두는 것과 그 화면이 있는 것은 다르다. */
+            if (s.planned) return '이 단계는 기획만 끝났고 화면은 아직 없습니다 — 흐름에서 어디에 오는지만 보여 줍니다.';
             var want = personaId(s);
             if (curPersonaId() !== want) {
                 var wl = personaLabel(want);
@@ -229,7 +233,9 @@
                    조회하라고 해 놓고 "관점을 바꾸세요"라고 하면 모순이다.
                    그 상황의 설명은 이미 액션 자리(.dy-tour-wait)가 하고 있다. */
                 var vm = viewMode();
-                var quiet = vm === 'read' || (vm === 'mine' && blockedBy(idx).length > 0);
+                /* 미구현 단계의 안내는 **관점과 무관한 사실**이라 조회 뷰에서도 낸다 —
+                   여기서 숨기면 "왜 아무 일도 안 일어나지"만 남는다. */
+                var quiet = !s.planned && (vm === 'read' || (vm === 'mine' && blockedBy(idx).length > 0));
                 if (why) { why.hidden = quiet; if (!quiet) why.innerHTML = '⚠ ' + esc(whyMissing(s, idx)); }
                 return;
             }
@@ -298,6 +304,9 @@
                     esc(personaLabel(want)) + ' 관점으로 전환 →</button>';
             } else if (!onPage) {
                 actionBtn = '<button class="btn btn-primary dy-tour-action" type="button" onclick="' + NS + '.go(' + idx + ')">이 단계 화면으로 이동 →</button>';
+            } else if (s.planned || !s.actionLabel) {
+                /* 누를 것이 없는데 버튼을 내면 그게 거짓말이다(§ 도달 가능한 행동만 약속한다) */
+                actionBtn = '';
             } else {
                 actionBtn = '<button class="btn btn-primary dy-tour-action" type="button" onclick="' + NS + '.action()">' +
                     esc(s.actionLabel) + '</button>';
@@ -332,9 +341,9 @@
                 '<div class="dy-tour-steps' + (cfg.stepsClass ? ' ' + cfg.stepsClass : '') + '" aria-label="시연 단계">' + STEPS.map(function (x, i) {
                     var out = order.indexOf(i) < 0;
                     return '<button type="button" class="dy-tour-step' + (safeDone(x) ? ' done' : '') +
-                        (i === idx ? ' active' : '') + (out ? ' other' : '') + '"' +
+                        (i === idx ? ' active' : '') + (out ? ' other' : '') + (x.planned ? ' planned' : '') + '"' +
                         (out ? ' disabled' : '') + (i === idx ? ' aria-current="step"' : '') +
-                        ' title="' + esc((i + 1) + '. ' + x.title + (out ? ' — ' + personaLabel(personaId(x)) + ' 몫' : '')) + '"' +
+                        ' title="' + esc((i + 1) + '. ' + x.title + (x.planned ? ' — 기획 완료 · 화면 미구현' : (out ? ' — ' + personaLabel(personaId(x)) + ' 몫' : ''))) + '"' +
                         (out ? '' : ' onclick="' + NS + '.go(' + i + ')"') + '>' + esc(x.label) + '</button>';
                 }).join('') + '</div>' +
                 '<div class="dy-tour-who' + (wrongWho && !readOnly && !waiting ? ' is-warn' : '') + '">' +
@@ -387,7 +396,7 @@
             if (modal && active()) {
                 var s = STEPS[stateIdx()];
                 var body = modal.querySelector('.modal-body');
-                /* 셸 크롬 모달(정책 확인·검토 전 안내)은 업무 흐름이 아니다 —
+                /* 셸 크롬 모달(자료 준비·검토 전 안내)은 업무 흐름이 아니다 —
                    투어가 떠 있다고 해서 '파일을 제출하세요' 같은 단계 안내를 얹으면
                    전혀 다른 맥락의 지시가 된다. openModal(..., {chrome:true}) 로 표시한다. */
                 if (modal.classList.contains('dy-modal-chrome')) return;
@@ -451,8 +460,11 @@
                 var d = safeDone(s);
                 var now = !d && i === cur;
                 var out = vorder.indexOf(i) < 0;      /* 이 관점에서 남의 몫 */
-                return '<li class="rl-my-step' + (d ? ' is-done' : '') + (now ? ' is-now' : '') + (out ? ' is-other' : '') + '">' +
-                    '<span class="rl-my-no">' + (d ? '✓' : (out ? '⏳' : (i + 1))) + '</span>' +
+                /* 미구현 단계는 '아직 안 한 것'이 아니라 '아직 없는 것'이다 — 번호를 매기면
+                   순서만 기다리면 되는 것처럼 읽힌다. */
+                return '<li class="rl-my-step' + (d ? ' is-done' : '') + (now ? ' is-now' : '') + (out ? ' is-other' : '') +
+                    (s.planned ? ' is-planned' : '') + '">' +
+                    '<span class="rl-my-no">' + (s.planned ? '◌' : (d ? '✓' : (out ? '⏳' : (i + 1)))) + '</span>' +
                     '<span class="rl-my-body">' +
                         '<b>' + esc(s.title) + '</b>' +
                         '<span class="rl-my-who">' + esc(personaLabel(personaId(s))) + '</span>' +

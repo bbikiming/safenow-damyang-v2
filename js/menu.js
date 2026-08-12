@@ -113,14 +113,6 @@
                 ['점검 시', '목표 대비 달성도와 미달 원인 분석'],
                 ['점검 시', '법령 개정사항이 방침에 반영되었는지 확인'],
             ];
-            const CHK = [
-                ['목표·KPI', 'KPI 목표값 대비 달성 여부', 'O / X', '중처법 시행령 §4-1'],
-                ['목표·KPI', '미달 KPI 원인 분석 수행', '텍스트', '중처법 시행령 §4-1'],
-                ['조직·인력', '안전관리자 법정 인원 충족', 'O / X', '산안법 §17·§18'],
-                ['위험성평가', '정기 위험성평가 시행률', 'O / X', '산안법 §36'],
-                ['도급·협력', '도급업체 평가 적격률', 'O / X', '중처법 시행령 §4-9'],
-                ['의견청취', '종사자 의견청취 정기 실시', 'O / X', '중처법 시행령 §4-7'],
-            ];
             const GUIDE = [
                 ['1', '경영방침 작성 원칙', '최고경영자(군수)의 안전보건 의지 표현 · 법규 준수·지속 개선 · 조직 특성 반영 · 전 종사자 이해 가능', '산업안전보건법 §14 · 중처법 시행령 §4-1'],
                 ['2', '목표(KPI) 설정', '측정 가능·달성 가능(SMART) · 전년 재해·점검 결과 반영 · 산출식·집계주기·책임부서 명시', '중처법 시행령 §4-1'],
@@ -156,18 +148,11 @@
                 '<button class="btn btn-primary" onclick="DYV2.closeModal(); DYV2.toast(\'근거·고려사항이 저장되었습니다\')">저장</button>');
 
             /* 점검표 관리 모달 (CRUD) — 관련 근거는 근거법령 사전(LAW_DICT)에서 선택 인용 */
+            /* 관리와 F5가 같은 마스터를 사용한다. 실제 편집기는 아래 근거 설정 화면 하나다. */
             PG.policyChecklist = () => {
-                const lawOpts = Object.keys(T.LAW_DICT || {}).map(k => '<option value="' + V.esc(k) + '">').join('');
-                V.openModal('경영방침 점검표 관리',
-                    '<datalist id="pol-law-list">' + lawOpts + '</datalist>' +
-                    subT('점검 항목 · 결과유형(O/X·텍스트) · 관련 근거는 근거법령 사전에서 선택 인용합니다.') +
-                    '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>영역</th><th>점검 항목</th><th>결과유형</th><th>관련 근거</th><th></th></tr></thead><tbody id="policy-chk-tbody">' +
-                    CHK.map(r => '<tr><td><input value="' + r[0] + '" style="width:100%"></td><td><input value="' + r[1] + '" style="width:100%"></td><td><select><option' + (r[2] === 'O / X' ? ' selected' : '') + '>O / X</option><option' + (r[2] === '텍스트' ? ' selected' : '') + '>텍스트</option></select></td><td><input value="' + r[3] + '" list="pol-law-list" style="width:100%"></td><td>' + delBtn + '</td></tr>').join('') +
-                    '</tbody></table></div>' +
-                    '<button class="btn btn-sm btn-outline" style="margin-top:8px;" onclick="PG.policyChkItemAdd()">+ 점검 항목 추가</button>' +
-                    '<p style="font-size:12px; color:var(--text-gray); margin-top:10px;">저장한 항목은 [이행점검 작성] 점검표에 사용됩니다. 관련 근거는 사전에 등록된 법령에서 선택되며, X 판정 항목은 확정 시 개선조치로 자동 등록됩니다.</p>',
-                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
-                    '<button class="btn btn-primary" onclick="DYV2.closeModal(); DYV2.toast(\'점검표가 저장되었습니다\')">저장</button>');
+                const v = POL.active();
+                if (!v) { V.toast('현행 경영방침이 없어 점검표를 관리할 수 없습니다'); return; }
+                PG.polChkBasis(v.ver);
             };
 
             /* '추가' 폼 — 단일 모달 규칙: 모달이 열려 있으면 모달 본문 안 인라인(.stack-inline)으로,
@@ -291,17 +276,25 @@
                 const tb = document.getElementById('pol-chkb-tbody');
                 if (!tb) { V.closeModal(); return; }
                 const list = [];
+                let invalid = null;
                 Array.prototype.slice.call(tb.querySelectorAll('tr')).forEach(tr => {
                     const area = ((tr.querySelector('.cb-area') || {}).value || '').trim();
                     const item = ((tr.querySelector('.cb-item') || {}).value || '').trim();
                     const type = ((tr.querySelector('.cb-type') || {}).value || 'O / X').trim();
                     const basis = ((tr.querySelector('.cb-basis') || {}).value || '').trim();
                     if (!area && !item) return; // 빈 행 제외
+                    if (!item && !invalid) invalid = tr.querySelector('.cb-item');
                     list.push({ area: area, item: item, type: type, basis: basis });
                 });
+                if (invalid) { V.toast('점검 항목명을 입력하세요'); invalid.focus(); return; }
+                if (!list.length) { V.toast('점검 항목을 1건 이상 등록하세요'); return; }
+                /* 마스터를 바꾸기 전에 기존 작성·확정 문서에 당시 항목을 고정한다. */
+                if (window.EDOC && EDOC.freezeChecklist) {
+                    EDOC.freezeChecklist('EDOC-경영방침점검-', (T.CHECKLIST_PRESETS && T.CHECKLIST_PRESETS.policy) || []);
+                }
                 T.CHECKLIST_PRESETS = T.CHECKLIST_PRESETS || {};
                 T.CHECKLIST_PRESETS.policy = list;
-                V.closeModal(); render(); V.toast('점검표 관련 근거가 저장되었습니다');
+                V.closeModal(); render(); V.toast('점검표 마스터가 저장되었습니다 — 새 문서부터 적용됩니다');
             };
             PG.polChkLawDetail = btn => {
                 const tr = btn.closest('tr'); if (!tr) return;
@@ -1709,16 +1702,15 @@
          * 그래서 §4/§5 조문 축(기존) 위에 **부서 전수 축(신규)** 을 얹는다.
          * 중대재해처벌법은 중대산업재해(§4·§5)와 중대시민재해(§9·시행령 §10·§11) 두 축이고
          * 담양군은 양쪽 다 적용 대상이라 부서 점검도 두 축으로 나눈다(CLAUDE.md §10 검증 6문 ④).
-         * 점검 항목 자체는 발주처가 양식을 주기로 해 아직 확정 전이다 — 항목을 지어내지 않는다. */
+         * 관계 법령 목록이 오기 전에는 확인된 공통 항목만 쓰고 목록 미완결을 표시한다. */
         comply() {
             PG.cmpCheck = () => E.openForm({
                 id: 'EDOC-의무이행점검-2026H1', title: '2026 상반기 의무이행 점검표 (중처법 시행령 §4·§5)', form: 'F5',
                 ctx: { menuLabel: '이행관리 · 반기', checklist: T.CHECKLIST_PRESETS.comply }, onChange: render,
             });
             PG.cmpClose = () => E.onnaraPopup('2026 상반기 의무이행 점검 마감 보고');
-            /* 관계 법령 목록은 발주처·재난안전과가 확정할 대상이라 시스템이 임의로 채우지
-             * 않는다. 무엇을 정해야 하는지만 안내한다. */
-            PG.cmpLawList = () => V.openModal('관계 법령 목록 — 무엇을 정해야 하나',
+            /* 관계 법령 목록은 담양군 제공 자료다. 미수신 대체 동작과 요청 범위를 안내한다. */
+            PG.cmpLawList = () => V.openModal('관계 법령 목록 — 외부 준비 안내',
                 '<p style="font-size:13px; line-height:1.7;">중처법 시행령 §5①·§11①은 "안전·보건 관계 법령"을 ' +
                 '<b>"해당 사업장(또는 공중이용시설)에 적용되는 것으로서 안전·보건 확보에 관련되는 법령"</b>이라고 ' +
                 '정의만 하고 <b>목록을 주지 않습니다</b>. 따라서 담양군이 직접 목록을 확정해야 합니다.</p>' +
@@ -1730,7 +1722,8 @@
                 '<li><b>도로·공원 시설</b> — 도로법, 어린이놀이시설 안전관리법</li>' +
                 '</ul>' +
                 '<p style="font-size:12px; color:var(--status-warning-fg); margin-top:12px;">' +
-                '확정해야 할 것 — ① 목록에 넣을 법령 ② 법령별 점검 항목과 증빙 ③ 점검 주체(부서) ④ 위탁 점검 여부.</p>',
+                '담양군 제공 범위 — ① 적용 법령 ② 법령별 점검 항목·증빙 ③ 점검 주체(부서) ④ 위탁 점검 여부. ' +
+                '수신 전에는 확인된 공통 항목만 운영하고 목록 미완결을 계속 표시합니다.</p>',
                 '<button class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
             /* ── 부서별 이행 현황 (전수) ── */
             window.COMPLY_STATE = window.COMPLY_STATE || { axis: 'industrial' };
@@ -1813,7 +1806,7 @@
                     ['§5-1 관계 법령 의무이행 점검 (종사자)', '반기 1회', '<span class="chip-status warning">관계 법령 목록 미등록</span>'],
                     ['§5-3 유해·위험작업 안전보건교육 실시 점검', '반기 1회', '<a href="edu-status.html" style="color:var(--main-dark); font-weight:700;">이수현황</a> 연결 가능'],
                     ['§11-1 관계 법령 의무이행 점검 (공중이용시설)', '연 1회', '<span class="chip-status warning">관계 법령 목록 미등록</span>'],
-                    ['§11-3 시설 안전관리자 의무교육 이수 점검', '연 1회', '<span class="chip-status warning">대상자·교육 미정의</span>'],
+                    ['§11-3 시설 안전관리자 의무교육 이수 점검', '연 1회', '<span class="chip-status warning">기관 대상자 명단 미수신</span>'],
                 ]),
                 '<button class="btn btn-sm btn-primary" onclick="PG.cmpLawList()">관계 법령 목록이란</button>') +
             sectionCard('안전보건 예산 편성·집행',

@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="./css/style.css">
     <link rel="stylesheet" href="./css/v2.css">
 </head>
-<body data-dy-page="docs-archive" data-page-title="기준문서함" data-page-subtitle="업무문서 > 기준문서함 — 첨부(보관) 문서 일괄 관리 · 대메뉴별 필터 · 버전 이력 · 다중 첨부">
+<body data-dy-page="docs-archive" data-page-title="기준문서함" data-page-subtitle="업무문서 > 기준문서함 — V2 분류가 확정된 첨부·보관 문서 조회 · 버전 이력 · 다중 첨부">
     <main>
         <div id="archive-stats" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin-bottom:16px;"></div>
 
@@ -24,21 +24,23 @@
                         <option value="">대메뉴 전체</option>
                     </select>
                     <select class="select" id="f-law">
-                        <option value="">법령 전체</option>
+                        <option value="">근거 구분 전체</option>
                         <option>중처법</option>
                         <option>산안법</option>
+                        <option>복합근거</option>
+                        <option>기타근거</option>
                     </select>
                     <select class="select" id="f-flag">
                         <option value="">표시 전체</option>
-                        <option value="unassigned">분류 미확정 (노란 뱃지)</option>
-                        <option value="second">2차 검토 대상 (점검 계열)</option>
+                        <option value="reference">참고·보관</option>
+                        <option value="inspection">안전점검 계열</option>
                     </select>
                     <div class="search-bar">
                         <input class="search-input" id="f-q" type="text" placeholder="문서명 검색">
                         <button class="search-submit" type="button">검색</button>
                     </div>
                     <span class="spacer"></span>
-                    <span class="v2-todo">TODO 안전점검 프로그램 메뉴 승격 여부 — 2차 검토 (회의 보류 결정)</span>
+                    <span class="v2-todo">안전점검은 별도 대메뉴 없이 현장점검 흐름과 기준문서 분류로 관리합니다.</span>
                 </div>
                 <div style="overflow-x:auto;">
                     <table class="table-figma">
@@ -55,27 +57,28 @@
 
     <script src="./js/layout.js"></script>
     <script src="./js/law-map.js"></script>
-    <script src="./js/policy-open.js"></script><!-- 발주처 확정 필요 항목 (DYPOLICY) -->
+    <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
     <script src="./js/data.js"></script>
     <script src="./js/common.js"></script>
     <script src="./js/edoc-templates.js"></script>
     <script src="./js/edoc.js"></script>
+    <script src="./js/sets-data-v2.js"></script>
     <script>
-        /* 기준문서함 = workType=첨부 전체 + 확인필요(분류 미확정) 124건 일괄 수용
-         * 확인필요 → 노란 "분류 미확정" 뱃지 / 점검 계열 → "2차 검토 대상" 뱃지 */
+        /* 기준문서함 = V2 정본의 첨부파일 문서.
+         * 분류 상태가 아니라 문서 성격(참고·보관 / 안전점검 계열)을 표시한다. */
         (function () {
             const V = DYV2;
-            const ALL = V.docs().filter(d => d.workType === '첨부' || d.daemenu === '확인필요');
+            const ALL = (window.DY_DOCS_V2 || []).filter(d => d.processType === '첨부파일');
             const PAGE = 20;
             let shownLimit = PAGE;
 
-            const unassigned = ALL.filter(d => d.daemenu === '확인필요');
-            const second = ALL.filter(d => d.secondReview);
+            const reference = ALL.filter(d => d.docRole === '참고자료');
+            const inspection = ALL.filter(isInspection);
             document.getElementById('archive-stats').innerHTML =
                 '<div class="statbox neutral"><div class="statbox-num">' + ALL.length + '</div><div class="statbox-label">보관 문서 전체</div></div>' +
-                '<div class="statbox warning"><div class="statbox-num">' + unassigned.length + '</div><div class="statbox-label">분류 미확정 (확인필요)</div></div>' +
-                '<div class="statbox info"><div class="statbox-num">' + second.length + '</div><div class="statbox-label">2차 검토 대상 (점검 계열)</div></div>' +
-                '<div class="statbox success"><div class="statbox-num">' + (ALL.length - unassigned.length) + '</div><div class="statbox-label">대메뉴 확정</div></div>';
+                '<div class="statbox info"><div class="statbox-num">' + reference.length + '</div><div class="statbox-label">참고·보관</div></div>' +
+                '<div class="statbox info"><div class="statbox-num">' + inspection.length + '</div><div class="statbox-label">안전점검 계열</div></div>' +
+                '<div class="statbox success"><div class="statbox-num">' + ALL.filter(d => d.setId && d.pdca).length + '</div><div class="statbox-label">V2 분류 완료</div></div>';
 
             /* 대메뉴 필터 옵션 — 실데이터 기준 자동 생성 */
             const menus = [...new Set(ALL.map(d => d.daemenu))];
@@ -86,10 +89,22 @@
                 fMenu.appendChild(o);
             });
 
+            function basisGroup(d) {
+                const b = d.legalBasis || '';
+                const c = b.indexOf('중처') >= 0;
+                const o = b.indexOf('산안') >= 0;
+                if (c && o) return '복합근거';
+                if (c) return '중처법';
+                if (o) return '산안법';
+                return '기타근거';
+            }
+            function isInspection(d) {
+                return /점검/.test([d.subType, d.theme, d.name].join(' '));
+            }
             function flags(d) {
                 let h = '';
-                if (d.daemenu === '확인필요') h += V.unassignedBadge() + ' ';
-                if (d.secondReview) h += V.secondReviewBadge();
+                if (d.docRole === '참고자료') h += '<span class="chip-mini wt-attach">참고·보관</span> ';
+                if (isInspection(d)) h += V.secondReviewBadge();
                 return h || '-';
             }
             function render() {
@@ -99,9 +114,9 @@
                 const q = document.getElementById('f-q').value.trim();
                 const list = ALL.filter(d =>
                     (!m || d.daemenu === m) &&
-                    (!law || d.law === law) &&
-                    (flag !== 'unassigned' || d.daemenu === '확인필요') &&
-                    (flag !== 'second' || d.secondReview) &&
+                    (!law || basisGroup(d) === law) &&
+                    (flag !== 'reference' || d.docRole === '참고자료') &&
+                    (flag !== 'inspection' || isInspection(d)) &&
                     (!q || d.name.indexOf(q) >= 0)
                 );
                 const shown = list.slice(0, shownLimit);
@@ -109,12 +124,12 @@
                 document.getElementById('archive-tbody').innerHTML = shown.map(d =>
                     '<tr>' +
                     '<td style="font-weight:600; max-width:420px;">' + V.esc(d.name) + '</td>' +
-                    '<td>' + (d.daemenu === '확인필요' ? '<span class="chip-mini wt">미배치</span>' : '<a href="menu.html?m=' + d.menuKey + '&tab=docs" class="chip-mini pdca" style="text-decoration:none;">' + V.esc(d.daemenu) + '</a>') + '</td>' +
-                    '<td>' + V.lawChip(d.law) + '</td>' +
+                    '<td><a href="docs-preset.html?ver=v2&menu=' + d.menuKey + '" class="chip-mini pdca" style="text-decoration:none;">' + V.esc(d.daemenu) + '</a></td>' +
+                    '<td><span class="chip-mini wt" title="' + V.esc(d.legalBasis || '근거 없음') + '">' + basisGroup(d) + '</span></td>' +
                     '<td>' + flags(d) + '</td>' +
                     '<td>' + V.esc(d.version) + '</td>' +
                     '<td>' + V.esc(d.updated) + '</td>' +
-                    '<td class="col-action"><button class="btn btn-sm btn-outline" onclick="DYV2.openDoc(\'' + d.id + '\')">업로드</button></td>' +
+                    '<td class="col-action"><a class="btn btn-sm btn-outline" href="doc-detail.html?id=' + d.id + '&v=2">미리보기</a></td>' +
                     '</tr>'
                 ).join('') || '<tr><td colspan="7"><div class="v2-empty">조건에 맞는 문서가 없습니다.</div></td></tr>';
                 document.getElementById('archive-note').innerHTML = list.length > shown.length
@@ -126,9 +141,10 @@
                 document.getElementById(id).addEventListener('change', () => { shownLimit = PAGE; render(); }));
             document.getElementById('f-q').addEventListener('input', () => { shownLimit = PAGE; render(); });
 
-            /* 대시보드 딥링크 ?filter=unassigned */
-            if (new URLSearchParams(location.search).get('filter') === 'unassigned') {
-                document.getElementById('f-flag').value = 'unassigned';
+            /* 딥링크 ?filter=reference|inspection */
+            const deepFilter = new URLSearchParams(location.search).get('filter');
+            if (deepFilter === 'reference' || deepFilter === 'inspection') {
+                document.getElementById('f-flag').value = deepFilter;
             }
             render();
         })();

@@ -1,7 +1,7 @@
 /* =========================================================================
  * 업무 목록 — 세트 단위 그룹 테이블 컴포넌트 (목업 Variant 1 구조 차용, v2 디자인 토큰 유지)
  *   세트 카드 헤더([대메뉴 칩] 세트명 · n건·완료 m · 선행 칩) + 하위 PDCA 단계 rowspan 테이블.
- *   세트 마스터: sets-data.js (49세트 · 선행관계) / 문서 배정: DY_DOC_SET (휴리스틱 — TODO 정식 매핑 교체)
+ *   정본: sets-data-v2.js(법적의무 재분류). 기존 V1은 비교 조회용으로만 제공한다.
  *   사용처: docs-preset.html(전체, 대메뉴 탭 포함) · menu.js [문서] 탭(menuKey 고정, 탭 숨김)
  *
  *   DYSETLIST.render(el, { menuKey: null|'policy'…, hideTabs: false })
@@ -30,8 +30,8 @@
         opts = opts || {};
         const fixedMenu = opts.menuKey || null;
 
-        /* 버전: v1(기존 51세트) / v2(법적의무 재분류 53세트). 기본 v1 — 페이지에서 명시적으로 v2 지정 */
-        const ver = opts.version === 'v2' ? 'v2' : 'v1';
+        /* 버전: v2가 운영 정본, v1은 명시적으로 요청할 때만 비교 조회 */
+        const ver = opts.version === 'v1' ? 'v1' : 'v2';
         const isV2 = ver === 'v2';
 
         /* 세트에 표시할 문서·세트·메뉴 메타 — 버전별 데이터 소스 선택 */
@@ -67,7 +67,7 @@
         function validBadge(s) {
             if (!isV2 || !s || !s.valid || s.valid === 'ok') return '';
             const cls = s.valid === 'error' ? 'sl-vbadge err' : 'sl-vbadge warn';
-            return '<span class="' + cls + '" title="' + esc(s.validMsg || '') + '">' + esc(s.validMsg || '검토 필요') + '</span>';
+            return '<span class="' + cls + '" title="' + esc(s.validMsg || '') + '">' + esc(s.validMsg || '구성 주의') + '</span>';
         }
         function flowBadge(s) {
             if (!isV2 || !s || !s.pdcaFlow) return '';
@@ -89,9 +89,15 @@
             const done = docs.filter(d => (E.statusOf(d.id) === '확정') || (!E.statusOf(d.id) && d.status === '완료')).length;
             const isBase = s.order === 0;
             let body = '';
-            PDCA_ORDER.forEach(step => {
+            const steps = isV2 ? ['P', 'D', 'C', 'A'] : PDCA_ORDER;
+            steps.forEach(step => {
                 const sd = docs.filter(d => (d.pdca || '') === step);
-                if (!sd.length) return;   // 해당 문서가 있는 단계만 행 생성 — 빈 단계 강제 없음
+                if (!sd.length) {
+                    const emptyText = step === 'A' && s.actionPolicy ? s.actionPolicy : '문서 없음';
+                    body += '<tr><td class="sl-pdca">' + PDCA_LABEL[step] + '</td>' +
+                        '<td colspan="6"><span class="sl-dim">' + esc(emptyText) + '</span></td></tr>';
+                    return;
+                }
                 sd.forEach((d, i) => {
                     const cell = i === 0
                         ? '<td class="sl-pdca' + (step === 'REVIEW' ? ' rev' : '') + '" rowspan="' + sd.length + '">' + PDCA_LABEL[step] + '</td>'
@@ -126,9 +132,15 @@
             const due = dues.length ? dues[dues.length - 1].slice(2) : '-';
             const rep = docs[0];
             let body = '';
-            PDCA_ORDER.forEach(step => {
+            const steps = isV2 ? ['P', 'D', 'C', 'A'] : PDCA_ORDER;
+            steps.forEach(step => {
                 const sd = docs.filter(d => (d.pdca || '') === step);
-                if (!sd.length) return;
+                if (!sd.length) {
+                    const emptyText = step === 'A' && s.actionPolicy ? s.actionPolicy : '문서 없음';
+                    body += '<div class="slg-stage"><span class="slg-dot"></span>' + PDCA_LABEL[step] + '</div>' +
+                        '<div class="slg-doc"><span class="slg-doc-name sl-dim">' + esc(emptyText) + '</span></div>';
+                    return;
+                }
                 body += '<div class="slg-stage"><span class="slg-dot' + (step === 'REVIEW' ? ' rev' : '') + '"></span>' + PDCA_LABEL[step] + '</div>' +
                     sd.map(d =>
                         '<div class="slg-doc" onclick="' + docRowAction(d) + '" title="' + esc(d.name) + '">' +
@@ -147,12 +159,12 @@
                 '<div class="slg-body">' + body + '</div>' +
                 '<div class="slg-foot">' +
                     '<span class="slg-owner">' + esc(rep.assignee || '-') + ' (' + esc(rep.dept) + ')</span>' +
-                    (isUnassigned ? '<span class="v2-todo" style="padding:2px 8px;">TODO 미지정</span>' : '<span class="chip-mini pdca">' + esc(s.menu) + '</span>') +
+                    (isUnassigned ? '<span class="v2-todo" style="padding:2px 8px;">세트 지정 필요</span>' : '<span class="chip-mini pdca">' + esc(s.menu) + '</span>') +
                 '</div>' +
             '</div>';
         }
 
-        /* ── 미지정 그룹 (휴리스틱 미배정 — TODO) ── */
+        /* ── 미지정 그룹 (이전 저장 데이터 방어 표시) ── */
         function unassignedCard(menuLabel, docs) {
             let body = '';
             docs.forEach((d, i) => {
@@ -163,7 +175,7 @@
                 '<div class="set-card-head">' +
                     '<span class="chip-mini pdca">' + esc(menuLabel) + '</span>' +
                     '<b class="sl-set-name">세트 미지정</b>' +
-                    '<span class="v2-todo">TODO 정식 매핑 시트 수령 후 배정</span>' +
+                    '<span class="v2-todo">등록 문서 편집에서 세트를 지정하세요</span>' +
                     '<span class="sl-count">' + docs.length + '건</span>' +
                 '</div>' +
                 '<div class="sl-scroll"><table class="sl-table">' + SL_HEAD + '<tbody>' + body + '</tbody></table></div>' +
@@ -234,7 +246,7 @@
                     '</span>' +
                     (allClear ? '' :
                         '<button class="sl-vb-btn ' + (onlyFlagged ? 'on' : '') + '" id="sl-vb-filter">' +
-                        (onlyFlagged ? '전체 보기' : '검토 대상만 보기') + '</button>') +
+                        (onlyFlagged ? '전체 보기' : '구성 오류만 보기') + '</button>') +
                 '</div>';
         }
 
@@ -255,7 +267,8 @@
                 '<select class="select" id="sl-st"><option value="">상태 전체</option><option>완료</option><option>진행</option><option>미시행</option></select>' +
                 '<div class="pdca-filter" id="sl-pdca">' +
                     '<button data-v="" class="on">전체</button><button data-v="P">P 계획</button><button data-v="D">D 실행</button>' +
-                    '<button data-v="C">C 점검</button><button data-v="A">A 조치</button><button data-v="REVIEW">미확정</button>' +
+                    '<button data-v="C">C 점검</button><button data-v="A">A 조치</button>' +
+                    (isV2 ? '' : '<button data-v="REVIEW">미확정</button>') +
                 '</div>' +
                 '<span class="spacer"></span>' +
                 '<span id="sl-summary" style="font-size:12px; color:var(--text-gray); font-weight:600;"></span>' +
@@ -282,7 +295,7 @@
             if (vbBtn) vbBtn.addEventListener('click', () => {
                 onlyFlagged = !onlyFlagged;
                 vbBtn.classList.toggle('on', onlyFlagged);
-                vbBtn.textContent = onlyFlagged ? '전체 보기' : '검토 대상만 보기';
+                vbBtn.textContent = onlyFlagged ? '전체 보기' : '구성 오류만 보기';
                 renderBody();
             });
         }

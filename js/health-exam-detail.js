@@ -75,7 +75,7 @@
                 '<dt>담당자</dt><dd>' + esc(r.owner) + '</dd>' +
                 '<dt>대상 근거</dt><dd>' + esc(r.targetBasis || '현업 종사자 · 유해인자 노출') + '</dd>' +
                 '<dt>결과 보존연한</dt><dd><b>' + S().retentionOf(r) + '년</b>' +
-                    (r.carcinogen ? ' <span style="color:var(--status-warning-fg)">(발암성·특별관리물질)</span>' : '') + '</dd>' +
+                    (r.carcinogen ? ' <span style="color:var(--status-warning-fg)">(고시 대상 물질)</span>' : '') + '</dd>' +
             '</dl></div>';
 
         /* 대상자 현황 */
@@ -461,6 +461,7 @@
     function complete() {
         var r = S().healthOf(state.id);
         if (!r.done) {
+            if (!r.evidence) { toast('실시 증빙을 먼저 등록하세요.'); return; }
             V().openModal('검진 완료 처리',
                 '<div style="margin-bottom:12px;"><label class="form-label">검진 실시일</label>' +
                     '<input type="date" class="form-input" id="hd-c-date" value="' + esc(S().TODAY) + '"></div>' +
@@ -488,11 +489,15 @@
     function saveComplete() {
         var ex = Number(document.getElementById('hd-c-ex').value);
         var dateEl = document.getElementById('hd-c-date');
+        var r = S().healthOf(state.id);
+        if (!Number.isInteger(ex) || ex < 0 || ex > r.targetCount) { toast('수검자 수는 0명 이상 대상자 수 이하로 입력하세요.'); return; }
+        if (dateEl && (!dateEl.value || dateEl.value > S().TODAY)) { toast('검진 실시일을 확인하세요.'); return; }
         S().completeHealth(state.id, { doneDate: dateEl ? dateEl.value : undefined, examinedCount: isNaN(ex) ? undefined : ex });
         V().closeModal(); render(); toast('검진 실시가 반영되었습니다.');
     }
     function saveFollowup() {
         var v = (document.getElementById('hd-c-fu').value || '').trim();
+        if (!v) { toast('사후관리 실적을 입력하세요.'); return; }
         S().completeHealth(state.id, { followupResult: v });
         V().closeModal(); render(); toast('사후관리 완료 처리되었습니다.');
     }

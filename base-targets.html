@@ -12,29 +12,23 @@
 <body data-dy-page="base-targets" data-page-title="관리대상 현황" data-page-subtitle="기본정보 > 관리대상 — 사업장 · 공중이용시설 · 원료·제조물 (SFR-002 · FMS 연계)">
     <main>
         <div class="tabs" id="tgt-tabs">
-            <button class="tab active" data-tab="biz">사업장 (23)</button>
+            <button class="tab active" data-tab="biz">사업장 <span id="tgt-site-cnt">(불러오는 중)</span></button>
             <button class="tab" data-tab="facility">공중이용시설 <span id="tgt-fac-cnt">(판정 전)</span></button>
-            <button class="tab" data-tab="material">원료·제조물 (6)</button>
+            <button class="tab" data-tab="material">원료·제조물 <span id="tgt-mat-cnt">(불러오는 중)</span></button>
         </div>
 
         <section data-pane="biz">
             <div class="card">
                 <div class="card-header">
-                    <span class="card-title">사업장 목록</span>
-                    <button class="btn btn-primary btn-sm" onclick="DYV2.toast('사업장 등록 (프로토타입)')">+ 등록</button>
+                    <span class="card-title">사업장 대상 현황 <span class="chip-mini wt-elec" style="margin-left:6px;">사업장 관리 참조</span></span>
+                    <button class="btn btn-outline btn-sm" onclick="location.href='admin-sites.html'">사업장 관리</button>
                 </div>
                 <div class="card-body" style="overflow-x:auto;">
                     <table class="table-figma">
-                        <thead><tr><th>사업장명</th><th>구분</th><th>소관부서</th><th>상시근로자</th><th>위험성평가</th><th>관리</th></tr></thead>
-                        <tbody>
-                            <tr><td style="font-weight:600;">담양군청사</td><td><span class="chip-mini pdca">청사</span></td><td>행정과</td><td>612명</td><td><span class="chip-mini st-done">완료</span></td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('사업장 상세 (프로토타입)')">상세</button></td></tr>
-                            <tr><td style="font-weight:600;">하수처리장</td><td><span class="chip-mini pdca">환경기초시설</span></td><td>환경과</td><td>28명</td><td><span class="chip-mini st-done">완료</span></td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('사업장 상세 (프로토타입)')">상세</button></td></tr>
-                            <tr><td style="font-weight:600;">생활자원회수센터</td><td><span class="chip-mini pdca">환경기초시설</span></td><td>환경과</td><td>19명</td><td><span class="chip-mini st-doing">진행</span></td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('사업장 상세 (프로토타입)')">상세</button></td></tr>
-                            <tr><td style="font-weight:600;">상수도사업소</td><td><span class="chip-mini pdca">사업소</span></td><td>상하수도과</td><td>34명</td><td><span class="chip-mini st-done">완료</span></td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('사업장 상세 (프로토타입)')">상세</button></td></tr>
-                            <tr><td style="font-weight:600;">농업기술센터</td><td><span class="chip-mini pdca">사업소</span></td><td>농업기술센터</td><td>47명</td><td><span class="chip-mini st-todo">미시행</span></td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('사업장 상세 (프로토타입)')">상세</button></td></tr>
-                        </tbody>
+                        <thead><tr><th>사업장명</th><th>구분</th><th>소관부서</th><th>대상 판정</th><th>판정 근거</th><th>운영 상태</th></tr></thead>
+                        <tbody id="tgt-site-rows"></tbody>
                     </table>
-                    <p style="font-size:12px; color:var(--text-gray); margin-top:10px;">외 18개소 — 페이지네이션 생략 (프로토타입)</p>
+                    <p id="tgt-site-foot" style="font-size:12px; color:var(--text-gray); margin-top:10px;"></p>
                 </div>
             </div>
         </section>
@@ -54,6 +48,9 @@
                     </span>
                 </div>
                 <div class="card-body">
+                    <div class="admr-note warn" style="margin-bottom:12px;">
+                        <b>공중교통수단 대상 자료 미수신</b> — 담양군이 실질적으로 지배·운영·관리하는 철도·여객선·항공기 등 대상 유무를 확인할 자료가 아직 없습니다. 자료 수신 전에는 0건으로 단정하지 않고 별도 탭을 만들지 않습니다.
+                    </div>
                     <div id="tgt-fac-note"></div>
                     <div style="overflow-x:auto;"><table class="table-figma">
                         <thead><tr><th>시설명 / 시설물번호</th><th>구분 / 종류</th><th>종별</th><th>소재</th><th>규모</th><th>별표3 판정</th><th>관리</th></tr></thead>
@@ -71,14 +68,12 @@
                     <button class="btn btn-primary btn-sm" onclick="MATREG.open()">+ 등록</button>
                 </div>
                 <div class="card-body" style="overflow-x:auto;">
+                    <div class="admr-note warn" style="margin-bottom:12px;">
+                        <b>담양군 적용 대상 품목 목록 미수신</b> — 현재 행은 기능 검증용 확인 전 자료입니다. 실제 생산·판매·유통·관리 품목 자료가 오면 이 대장에서 확인·정정하며, 현재 건수를 법정 적용 대상 수로 사용하지 않습니다.
+                    </div>
                     <table class="table-figma">
-                        <thead><tr><th>품목</th><th>구분</th><th>사용처</th><th>MSDS</th><th>관리</th></tr></thead>
-                        <tbody id="tgt-mat-rows">
-                            <tr><td style="font-weight:600;">수처리 약품 (PAC)</td><td>화학물질</td><td>정수장</td><td><span class="chip-mini st-done">비치</span></td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('품목 상세 (프로토타입)')">상세</button></td></tr>
-                            <tr><td style="font-weight:600;">차아염소산나트륨</td><td>화학물질</td><td>정수장·하수처리장</td><td><span class="chip-mini st-done">비치</span></td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('품목 상세 (프로토타입)')">상세</button></td></tr>
-                            <tr><td style="font-weight:600;">제설제 (염화칼슘)</td><td>자재</td><td>도로 제설</td><td><span class="chip-mini st-doing">갱신 중</span></td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('품목 상세 (프로토타입)')">상세</button></td></tr>
-                            <tr><td style="font-weight:600;">급식 식자재 (공공급식)</td><td>제조물</td><td>군청 구내식당</td><td><span class="chip-mini wt">해당 없음</span></td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('품목 상세 (프로토타입)')">상세</button></td></tr>
-                        </tbody>
+                        <thead><tr><th>품목</th><th>구분</th><th>사용처</th><th>안전자료</th><th>상태</th><th>관리</th></tr></thead>
+                        <tbody id="tgt-mat-rows"></tbody>
                     </table>
                 </div>
             </div>
@@ -89,16 +84,47 @@
 
     <script src="./js/layout.js"></script>
     <script src="./js/law-map.js"></script>
-    <script src="./js/policy-open.js"></script><!-- 발주처 확정 필요 항목 (DYPOLICY) -->
+    <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
     <script src="./js/data.js"></script>
     <script src="./js/common.js"></script>
     <script src="./js/org-pick.js"></script><!-- 부서 선택 공용 인라인 조직도 -->
+    <script src="./js/site-data.js"></script><!-- 사업장 대상 현황 단일 출처 -->
+    <script src="./js/material-data.js"></script><!-- 원료·제조물 대장 단일 출처 -->
     <script src="./js/facil-data.js"></script><!-- FMS 시설물 대장 시드 -->
     <script src="./js/facil.js"></script><!-- 공중이용시설 후보 모집단 = 대장 파생 -->
     <script>
+        /* 사업장 탭 — 시스템 관리의 사업장 마스터를 조회 전용으로 파생한다.
+           이 화면에서는 같은 사업장을 다시 등록·수정하지 않는다. */
+        (function () {
+            const esc = s => DYV2.esc(String(s == null ? '' : s));
+            function render() {
+                const rows = document.getElementById('tgt-site-rows');
+                if (!rows || !window.DYSITE) return;
+                const list = DYSITE.sites();
+                const active = list.filter(s => s.active !== false);
+                rows.innerHTML = list.map(s => {
+                    const tone = s.targetState === '대상' ? 'st-done' : s.targetState === '비대상' ? 'wt' : 'st-doing';
+                    return '<tr' + (s.active === false ? ' style="opacity:.62;"' : '') + '>' +
+                        '<td><b>' + esc(s.name) + '</b><div style="font-size:var(--fs-12);color:var(--text-gray);">' + esc(s.id) + '</div></td>' +
+                        '<td><span class="chip-mini pdca">' + esc(s.type) + '</span></td>' +
+                        '<td>' + esc(s.dept || '미확보') + '</td>' +
+                        '<td><span class="chip-mini ' + tone + '">' + esc(s.targetState || '검토 중') + '</span></td>' +
+                        '<td style="font-size:var(--fs-12);">' + esc(s.targetBasis || '미등록') + '</td>' +
+                        '<td>' + (s.active === false
+                            ? '<span class="chip-mini wt">사용 중지</span><div class="file-hint">' + esc(s.inactiveReason || '사유 미등록') + '</div>'
+                            : '<span class="chip-mini st-done">운영 중</span>') + '</td></tr>';
+                }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-gray);">등록된 사업장이 없습니다. 사업장 관리에서 먼저 등록하세요.</td></tr>';
+                const cnt = document.getElementById('tgt-site-cnt');
+                if (cnt) cnt.textContent = '(' + active.length + ')';
+                const foot = document.getElementById('tgt-site-foot');
+                if (foot) foot.textContent = '운영 중 ' + active.length + '건 · 사용 중지 ' + (list.length - active.length) + '건 — 등록·판정·정정은 시스템 관리 > 사업장 관리에서 수행합니다.';
+            }
+            document.addEventListener('DOMContentLoaded', render);
+        })();
+
         /* 공중이용시설 탭 — FMS 시설물 대장(SCR-FAC-001) 파생.
            규모가 있어야 별표3 판정이 서므로, 규모 확보 여부를 행마다 드러내고
-           판정 자체는 규칙 확정 전까지 하지 않는다. */
+           판정 규칙은 확정됐으며 필수 항목이 모두 확보되기 전에는 판정 불가로 둔다. */
         (function () {
             const esc = s => DYV2.esc(String(s == null ? '' : s));
             const CLS = { '1': '1종', '2': '2종', '3': '3종' };
@@ -112,11 +138,9 @@
                     const size = (e.sizeValue || '').toString().trim();
                     const hasSize = !!size;
                     if (hasSize) sized++;
-                    /* 두 가지 '미판정'을 구분한다 — 규모가 없어서 못 재는 것과,
-                       규모는 있으나 판정 규칙이 아직 안 정해진 것은 다른 문제다. */
-                    const verdict = hasSize
-                        ? '<span class="chip-mini wt-attach">판정 대기 — 규칙 미확정</span>'
-                        : '<span class="chip-mini wt">판정 불가 — 규모 미확보</span>';
+                    /* 법정 판정 규칙은 확정됐다. 아직 모든 필수 판정항목을 받지 못했으므로
+                       규모 한 칸만으로 해당·미해당을 추정하지 않는다. */
+                    const verdict = '<span class="chip-mini wt">판정 불가 — 판정항목 미확보</span>';
                     return '<tr>' +
                         '<td><b>' + esc(r.facilNm) + '</b><div style="font-size:var(--fs-12); color:var(--text-gray);">' + esc(r.facilNo) + '</div></td>' +
                         '<td>' + esc(r.gbnNm) + '<div style="font-size:var(--fs-12); color:var(--text-gray);">' + esc(r.kindNm) + '</div></td>' +
@@ -184,39 +208,98 @@
                             F.depts.map((d, i) => '<button type="button" class="btn btn-sm btn-outline" onclick="MATREG.delDept(' + i + ')">' + esc(d) + ' ×</button>').join(' ') +
                         '</p>' : '') +
                     '</div>' +
-                    '<div class="form-group"><label class="form-label">물질안전보건자료</label>' +
+                    '<div class="form-group"><label class="form-label" for="mat-doc-state">안전자료 상태 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                        '<select class="form-select" id="mat-doc-state" onchange="MATREG.setDocState(this.value)">' +
+                            ['보유', '미보유', '해당 없음'].map(k => '<option value="' + k + '"' + (F.safetyDocState === k ? ' selected' : '') + '>' + k + '</option>').join('') +
+                        '</select></div>' +
+                    (F.safetyDocState === '보유' ? '<div class="form-group"><label class="form-label">물질안전보건자료 또는 제품 안전자료 <span style="color:var(--status-danger-fg)">*</span></label>' +
                         DYV2.uploadDrop('자료 파일을 끌어다 놓거나 클릭하여 선택', 'MATREG.pickFile()', { hint: true }) +
-                        (F.msds ? '<p class="file-hint" style="margin-top:4px;">선택됨 — ' + esc(F.msds) + '</p>'
-                                : '<p class="file-hint" style="margin-top:4px;">없으면 <b>미보유</b>로 표시됩니다 — 감추지 않습니다.</p>') +
-                    '</div>';
+                        (F.msdsName ? '<p class="file-hint" style="margin-top:4px;">선택됨 — ' + esc(F.msdsName) + '</p>'
+                                : '<p class="file-hint" style="margin-top:4px;">보유로 표시하려면 파일을 선택해야 합니다.</p>') +
+                    '</div>' : '') +
+                    (F.safetyDocState === '해당 없음' ? '<div class="form-group"><label class="form-label" for="mat-doc-reason">해당 없음 사유 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                        '<textarea class="form-input" id="mat-doc-reason" rows="2">' + esc(F.msdsReason) + '</textarea></div>' : '') +
+                    '<div class="form-group"><label class="form-label" for="mat-note">비고</label><textarea class="form-input" id="mat-note" rows="2">' + esc(F.note) + '</textarea></div>';
             }
-            function draw() { DYV2.openModal('원료·제조물 등록', body(),
+            function draw() { DYV2.openModal(F.id ? '원료·제조물 수정' : '원료·제조물 등록', body(),
                 '<button type="button" class="btn btn-outline" onclick="DYV2.closeModal()">취소</button>' +
-                '<button type="button" class="btn btn-primary" onclick="MATREG.save()">등록</button>'); wire(); }
+                '<button type="button" class="btn btn-primary" onclick="MATREG.save()">' + (F.id ? '저장' : '등록') + '</button>'); wire(); }
             function wire() { if (window.ORGPICK) ORGPICK.toggle('mat-dept', 'dept', 'MATREG.addDept'); }
-            function cap() { const el = document.getElementById('mat-nm'); if (el) F.name = el.value; }
-            function open() { F = { name: '', kind: '원료', depts: [], msds: '' }; draw(); }
+            function cap() {
+                const name = document.getElementById('mat-nm'); if (name) F.name = name.value;
+                const reason = document.getElementById('mat-doc-reason'); if (reason) F.msdsReason = reason.value;
+                const note = document.getElementById('mat-note'); if (note) F.note = note.value;
+            }
+            function open(id) {
+                const src = id && DYMATERIAL.itemOf(id);
+                F = src ? JSON.parse(JSON.stringify(src)) : { id: '', name: '', kind: '원료', depts: [], safetyDocState: '미보유', msdsName: '', msdsReason: '', note: '' };
+                draw();
+            }
             function setKind(k) { cap(); F.kind = k; draw(); }
+            function setDocState(k) { cap(); F.safetyDocState = k; if (k !== '보유') F.msdsName = ''; if (k !== '해당 없음') F.msdsReason = ''; draw(); }
             function addDept(nm) { cap(); if (nm && F.depts.indexOf(nm) < 0) F.depts.push(nm); draw(); }
             function delDept(i) { cap(); F.depts.splice(i, 1); draw(); }
-            function pickFile() { cap(); F.msds = '물질안전보건자료.pdf'; draw(); DYV2.toast('자료를 선택했습니다 (프로토타입)'); }
+            function pickFile() { cap(); F.msdsName = '물질안전보건자료.pdf'; draw(); DYV2.toast('자료를 선택했습니다 (프로토타입)'); }
             function save() {
                 cap();
                 if (!F.name.trim()) { DYV2.toast('품목명을 입력하세요.'); return; }
                 if (!F.depts.length) { DYV2.toast('사용하는 부서를 고르세요.'); return; }
-                const tb = document.getElementById('tgt-mat-rows');
-                const msds = F.msds
-                    ? '<span class="chip-status chip-sm ' + DYV2.toneOf('완료') + '">보유</span>'
-                    : '<span class="chip-status chip-sm ' + DYV2.toneOf('미시행') + '">미보유</span>';
-                const tr = document.createElement('tr');
-                tr.innerHTML = '<td style="font-weight:600;">' + esc(F.name) + '</td><td>' + esc(F.kind) + '</td>' +
-                    '<td>' + esc(F.depts.join(' · ')) + '</td><td>' + msds + '</td>' +
-                    '<td class="col-action"><span class="file-hint">방금 등록</span></td>';
-                tb.appendChild(tr);
+                if (F.safetyDocState === '보유' && !F.msdsName) { DYV2.toast('보유한 안전자료 파일을 선택하세요.'); return; }
+                if (F.safetyDocState === '해당 없음' && !F.msdsReason.trim()) { DYV2.toast('해당 없음 사유를 입력하세요.'); return; }
+                if (DYMATERIAL.duplicateOf(F.name, F.id)) { DYV2.toast('같은 이름의 품목이 이미 있습니다. 기존 품목을 수정하세요.'); return; }
+                if (F.id) DYMATERIAL.update(F.id, F); else DYMATERIAL.add(F);
                 DYV2.closeModal();
-                DYV2.toast('원료·제조물을 등록했습니다 · ' + F.name + (F.msds ? '' : ' (자료 미보유)'));
+                render();
+                DYV2.toast((F.id ? '원료·제조물을 수정했습니다 · ' : '원료·제조물을 등록했습니다 · ') + F.name);
             }
-            return { open, setKind, addDept, delDept, pickFile, save };
+            let stopId = '';
+            function askStop(id) {
+                stopId = id;
+                const item = DYMATERIAL.itemOf(id);
+                DYV2.openModal('원료·제조물 사용 중지',
+                    '<p class="file-hint" style="margin-bottom:12px;"><b>' + esc(item ? item.name : '') + '</b>을 신규 업무 선택지에서 제외합니다. 과거 기록과 품목 식별값은 보존됩니다.</p>' +
+                    '<div class="form-group"><label class="form-label" for="mat-stop-reason">사용 중지 사유 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                    '<textarea class="form-input" id="mat-stop-reason" rows="3" maxlength="200"></textarea></div>',
+                    '<button type="button" class="btn btn-outline" onclick="DYV2.closeModal()">취소</button>' +
+                    '<button type="button" class="btn btn-primary" onclick="MATREG.confirmStop()">사용 중지</button>');
+            }
+            function confirmStop() {
+                const el = document.getElementById('mat-stop-reason');
+                const reason = el ? el.value.trim() : '';
+                if (!reason) { DYV2.toast('사용 중지 사유를 입력하세요.'); return; }
+                DYMATERIAL.setActive(stopId, false, reason);
+                stopId = '';
+                DYV2.closeModal();
+                render();
+                DYV2.toast('품목을 사용 중지했습니다.');
+            }
+            function reactivate(id) {
+                DYMATERIAL.setActive(id, true, '');
+                render();
+                DYV2.toast('품목을 다시 사용합니다.');
+            }
+            function render() {
+                const tb = document.getElementById('tgt-mat-rows');
+                if (!tb) return;
+                const all = DYMATERIAL.list(true);
+                const active = all.filter(r => r.active !== false);
+                tb.innerHTML = all.map(r => {
+                    const docTone = r.safetyDocState === '보유' ? 'st-done' : r.safetyDocState === '해당 없음' ? 'wt' : 'st-doing';
+                    const docNote = r.safetyDocState === '보유' ? r.msdsName : r.safetyDocState === '해당 없음' ? r.msdsReason : '자료 확보 필요';
+                    return '<tr' + (r.active === false ? ' style="opacity:.62;"' : '') + '><td><b>' + esc(r.name) + '</b><div class="file-hint">' + esc(r.note || '') + '</div></td>' +
+                        '<td>' + esc(r.kind) + '</td><td>' + esc(r.depts.join(' · ')) + '</td>' +
+                        '<td><span class="chip-mini ' + docTone + '">' + esc(r.safetyDocState) + '</span><div class="file-hint">' + esc(docNote) + '</div></td>' +
+                        '<td>' + (r.active === false ? '<span class="chip-mini wt">사용 중지</span><div class="file-hint">' + esc(r.inactiveReason || '') + '</div>' : '<span class="chip-mini st-done">사용 중</span>') + '</td>' +
+                        '<td class="col-action"><button type="button" class="btn btn-sm btn-outline" onclick="MATREG.open(\'' + r.id + '\')">수정</button> ' +
+                        (r.active === false
+                            ? '<button type="button" class="btn btn-sm btn-outline" onclick="MATREG.reactivate(\'' + r.id + '\')">다시 사용</button>'
+                            : '<button type="button" class="btn btn-sm btn-outline" onclick="MATREG.askStop(\'' + r.id + '\')">사용 중지</button>') + '</td></tr>';
+                }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--text-gray);">등록된 품목이 없습니다. 0건은 해당 없음이 아니며, 확인 결과를 등록하세요.</td></tr>';
+                const cnt = document.getElementById('tgt-mat-cnt');
+                if (cnt) cnt.textContent = '(' + active.length + ')';
+            }
+            document.addEventListener('DOMContentLoaded', render);
+            return { open, setKind, setDocState, addDept, delDept, pickFile, save, askStop, confirmStop, reactivate, render };
         })();
     </script>
 </body>

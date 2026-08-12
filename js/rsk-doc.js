@@ -235,7 +235,7 @@
         }).join('');
         return '<div class="rskdoc-block"><label class="form-label">관련 근거 <span class="pdf-note">(고른 것만 지면에 찍힙니다 — 안 골라도 됩니다)</span></label>' +
             '<div class="rskdoc-cks">' + items + '</div>' +
-            '<p class="file-hint">보존 항목·기간 기준은 <b>미확정</b>입니다 — 산업안전보건법 시행규칙 §37(위험성평가 기록·보존)이 법령 스냅샷에 미수집이라 이 문서는 "법정 기록·보존 항목"이라고 주장하지 않습니다.</p></div>';
+            '<p class="file-hint">산업안전보건법 시행규칙 제37조의4에 따라 실시 시기·담당자, 참여자, 유해·위험요인, 위험성 결정 내용, 감소대책과 실시 결과를 기록하고 <b>3년간 보존</b>합니다.</p></div>';
     }
     function attachHtml() {
         var auto = F.attach.map(function (x, i) {
@@ -470,8 +470,8 @@
                     '<td class="c" colspan="3">' + (t.total && t.ok === t.total ? '전 부서 확인 완료' : '확인 진행 중') + '</td></tr>' +
             '</tbody></table></div>' +
             basisBlock +
-            '<p class="pdf-gm-annex-note">전자서명 방식은 미확정입니다 — 현재는 로그인 사용자 이름을 기록합니다. ' +
-                '관인·전자관인 연계는 하지 않습니다.</p>' +
+            '<p class="pdf-gm-annex-note">시스템 확인 기록은 로그인 사용자·처리시각·변경 이력으로 남깁니다. ' +
+                '온나라 상신 후 결재 서명이 공식 승인 기록이며, 이 시스템은 관인·전자관인을 대신 찍지 않습니다.</p>' +
         '</div>';
     }
 

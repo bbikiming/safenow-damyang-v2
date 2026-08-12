@@ -483,7 +483,7 @@
         return '<span class="chip-mini wt">' + esc(law || '-') + '</span>';
     }
     function unassignedBadge() { return '<span class="badge-unassigned">분류 미확정</span>'; }
-    function secondReviewBadge() { return '<span class="badge-second-review">2차 검토 대상</span>'; }
+    function secondReviewBadge() { return '<span class="badge-second-review">안전점검 계열</span>'; }
 
     /* ── 모달 (페이지에 #v2-modal 컨테이너 없으면 동적 생성) ──
      * opts.variant — 크기·크롬 변형. 문서 미리보기·라이트박스도 자작 오버레이를 만들지 말고
@@ -497,7 +497,7 @@
         const wrap = document.createElement('div');
         /* opts.chrome — 셸(헤더) 크롬 모달임을 표시한다. 업무 흐름의 일부가 아니므로
            시연 투어가 여기에 '시연 포인트' 안내를 주입하지 않는다(DYTOUR.syncModalState).
-           표시가 없으면 투어가 떠 있을 때 정책 확인 모달 위에 엉뚱한 단계 안내가 붙었다. */
+           표시가 없으면 투어가 떠 있을 때 자료 준비 모달 위에 엉뚱한 단계 안내가 붙었다. */
         wrap.className = 'modal' + (opts.variant ? ' modal-' + opts.variant : '') +
             (opts.chrome ? ' dy-modal-chrome' : '');
         wrap.id = 'v2-modal';

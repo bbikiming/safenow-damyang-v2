@@ -181,7 +181,7 @@
                 '<input type="text" class="form-input" id="we-n-vendor" placeholder="예: (주)한국산업보건환경연구원"></div>' +
             '<div class="ri-modal-row" style="margin-bottom:12px;"><label class="form-label" for="we-n-planned">측정 예정일</label>' +
                 '<input type="date" class="form-input" id="we-n-planned" value="2026-09-15"></div>' +
-            '<div class="ri-modal-row"><label><input type="checkbox" id="we-n-carc"> 발암성·특별관리물질 취급 (결과 30년 보존)</label></div>',
+            '<div class="ri-modal-row"><label><input type="checkbox" id="we-n-carc"> 고용노동부 고시 30년 보존 대상 물질 기록</label></div>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="WENV.saveNew()">등록</button>');
         if (state.dept) updateSiteOptions(state.dept);   // 목록에서 부서 필터가 걸려 있으면 사업장도 채움
@@ -198,7 +198,8 @@
             sel.innerHTML = '<option value="">등록된 사업장 없음 — 시스템 관리 &gt; 사업장 관리에서 등록</option>';
         } else {
             sel.innerHTML = '<option value="">-- 사업장 선택 --</option>' + list.map(function (s) {
-                return '<option value="' + esc(s.name) + '" data-haz="' + esc(s.hazards || '') + '">' + esc(s.name) + ' (' + esc(s.type) + ')</option>';
+                return '<option value="' + esc(s.id) + '" data-haz="' + esc(s.hazards || '') + '" data-target="' + esc(s.targetState || '검토 중') + '">' +
+                    esc(s.name) + ' (' + esc(s.type) + ' · ' + esc(s.targetState || '검토 중') + ')</option>';
             }).join('');
         }
     }
@@ -212,17 +213,28 @@
     function saveNew() {
         if (!canAct()) { V().toast('측정 계획 등록은(는) 해당 부서 담당자가 수행합니다.'); return; }
         var dept = (document.getElementById('we-n-deptname').value || '').trim();
-        var site = document.getElementById('we-n-site').value || '';
+        var siteId = document.getElementById('we-n-site').value || '';
+        var siteRec = global.DYSITE && siteId ? DYSITE.siteOf(siteId) : null;
         var subject = (document.getElementById('we-n-subject').value || '').trim();
+        var planned = document.getElementById('we-n-planned').value;
         if (!dept) { V().toast('대상 부서를 선택하세요.'); return; }
-        if (!site) { V().toast('사업장을 선택하세요.'); return; }
+        if (!siteRec) { V().toast('사업장을 선택하세요.'); return; }
         if (!subject) { V().toast('측정 대상을 입력하세요.'); return; }
+        if (!planned) { V().toast('측정 예정일을 선택하세요.'); return; }
+        var dup = S().workEnv().filter(function (r) {
+            var sameSite = r.siteId ? r.siteId === siteId : (r.dept === dept && r.site === siteRec.name);
+            return sameSite && r.year === String(planned).slice(0, 4) && r.half === (Number(String(planned).slice(5, 7)) <= 6 ? 'H1' : 'H2') &&
+                String(r.subject || '').trim().replace(/\s+/g, ' ').toLowerCase() === subject.replace(/\s+/g, ' ').toLowerCase();
+        })[0];
+        if (dup) { V().toast('같은 반기·사업장·유해인자의 측정계획이 이미 있습니다.'); return; }
         S().addWorkEnv({
             dept: dept,
-            site: site,
+            siteId: siteId,
+            site: siteRec.name,
+            siteTargetState: siteRec.targetState || '검토 중',
             subject: subject,
             vendor: (document.getElementById('we-n-vendor').value || '').trim(),
-            planned: document.getElementById('we-n-planned').value,
+            planned: planned,
             carcinogen: !!document.getElementById('we-n-carc').checked
         });
         V().closeModal(); render(); V().toast('측정 계획이 등록되었습니다.');

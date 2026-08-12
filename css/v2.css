@@ -1865,6 +1865,10 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .dy-tour-step { min-width: 0; border: 1px solid var(--brand-100); border-radius: var(--radius-md); background: var(--surface); padding: 6px 2px; color: var(--text-gray); font-size: var(--fs-12); font-weight: var(--fw-bold); cursor: pointer; }
 .edu-tour-step.done,
 .dy-tour-step.done { background: var(--brand-50); color: var(--main-dark); }
+/* 기획만 끝나고 화면이 없는 단계 — '아직 안 한 것'과 구분한다(점선) */
+.dy-tour-step.planned { border-style: dashed; color: var(--text-gray); }
+.rl-my-step.is-planned .rl-my-no { border-style: dashed; color: var(--text-gray); }
+.rl-my-step.is-planned > .rl-my-body > b { color: var(--text-gray); }
 .edu-tour-step.active,
 .dy-tour-step.active { border-color: var(--main-dark); background: var(--main-dark); color: var(--surface); }
 /* 위험성평가 투어는 9단계라 4단 고정 그리드에 안 들어간다 — 중립 계열만 유연 그리드.

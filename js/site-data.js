@@ -15,6 +15,7 @@
 
     /* 사업장 유형 (드롭다운 단일 정의) */
     var TYPES = ['정수시설', '환경기초시설(하수)', '폐기물처리시설', '체육시설', '건설현장', '공원·관광지', '청사', '기타'];
+    var TARGET_STATES = ['대상', '비대상', '검토 중'];
 
     /* 담양군 사업장 시드 — dept 는 조직도(DYV2.ORG) 부서명과 일치 */
     var SEED = [
@@ -41,29 +42,60 @@
         try { var raw = global.sessionStorage.getItem(SKEY); db = raw ? JSON.parse(raw) : { list: clone(SEED), seq: SEED.length }; }
         catch (e) { db = { list: clone(SEED), seq: SEED.length }; }
         if (!db.list) db = { list: clone(SEED), seq: SEED.length };
+        /* 과거 시드/브라우저 저장값 마이그레이션: 공란을 비대상으로 단정하지 않는다. */
+        db.list.forEach(function (s) {
+            if (s.active == null) s.active = true;
+            if (!s.targetState) s.targetState = '검토 중';
+            if (s.targetBasis == null) s.targetBasis = '';
+            if (s.inactiveReason == null) s.inactiveReason = '';
+        });
         return db;
     }
     function save() { try { global.sessionStorage.setItem(SKEY, JSON.stringify(db)); } catch (e) {} }
 
     function sites() { return load().list; }
     function siteOf(id) { var a = sites(); for (var i = 0; i < a.length; i++) if (a[i].id === id) return a[i]; return null; }
-    function sitesByDept(dept) { return sites().filter(function (s) { return s.dept === dept; }); }
+    function sitesByDept(dept) { return sites().filter(function (s) { return s.dept === dept && s.active !== false; }); }
+    function norm(v) { return String(v == null ? '' : v).trim().replace(/\s+/g, ' ').toLowerCase(); }
+    function duplicateOf(dept, name, exceptId) {
+        var nd = norm(dept), nn = norm(name);
+        return sites().filter(function (s) { return s.id !== exceptId && norm(s.dept) === nd && norm(s.name) === nn; })[0] || null;
+    }
+    function isUsed(id) {
+        var s = siteOf(id);
+        if (!s || !global.DYSH || typeof global.DYSH.workEnv !== 'function') return false;
+        return global.DYSH.workEnv().some(function (r) {
+            return r.siteId === id || (!r.siteId && r.dept === s.dept && r.site === s.name);
+        });
+    }
     function addSite(o) {
         var d = load(); d.seq++; o = o || {};
         var rec = { id: 'S' + (100 + d.seq), dept: o.dept || '', name: o.name || '', type: o.type || TYPES[0],
-            hazards: o.hazards || '', note: o.note || '' };
+            hazards: o.hazards || '', note: o.note || '', targetState: o.targetState || '검토 중',
+            targetBasis: o.targetBasis || '', active: true, inactiveReason: '' };
         d.list.push(rec); save(); return rec;
     }
     function updateSite(id, patch) {
         var s = siteOf(id); if (!s) return null;
-        ['dept', 'name', 'type', 'hazards', 'note'].forEach(function (k) { if (patch[k] != null) s[k] = patch[k]; });
+        ['dept', 'name', 'type', 'hazards', 'note', 'targetState', 'targetBasis', 'active', 'inactiveReason'].forEach(function (k) { if (patch[k] != null) s[k] = patch[k]; });
         save(); return s;
     }
-    function removeSite(id) { var d = load(); d.list = d.list.filter(function (s) { return s.id !== id; }); save(); }
+    function removeSite(id) {
+        if (isUsed(id)) return { ok: false, msg: '측정계획에서 사용 중인 사업장은 삭제할 수 없습니다.' };
+        var d = load(); d.list = d.list.filter(function (s) { return s.id !== id; }); save();
+        return { ok: true, msg: '사업장이 삭제되었습니다.' };
+    }
+    function setActive(id, active, reason) {
+        var s = siteOf(id); if (!s) return { ok: false, msg: '사업장을 찾을 수 없습니다.' };
+        s.active = !!active;
+        s.inactiveReason = active ? '' : String(reason || '').trim();
+        save(); return { ok: true, msg: active ? '사업장이 다시 활성화되었습니다.' : '사업장이 비활성화되었습니다.' };
+    }
     function reset() { db = { list: clone(SEED), seq: SEED.length }; save(); return db; }
 
     global.DYSITE = {
-        TYPES: TYPES, sites: sites, siteOf: siteOf, sitesByDept: sitesByDept,
-        addSite: addSite, updateSite: updateSite, removeSite: removeSite, reset: reset
+        TYPES: TYPES, TARGET_STATES: TARGET_STATES, sites: sites, siteOf: siteOf, sitesByDept: sitesByDept,
+        duplicateOf: duplicateOf, isUsed: isUsed, addSite: addSite, updateSite: updateSite,
+        removeSite: removeSite, setActive: setActive, reset: reset
     };
 })(window);

@@ -10,10 +10,10 @@
  *   R5 — 점검표 등록·조회·수정
  *   R6 — 전자결재(온나라) 수신 구조 — 상신 + 결재 상태 조회(수신값 반영)
  *
- *   [3차] 점검 대상 = 조직도(기관)·대상 관리(시설) 연계 선택.
+ *   점검 대상 = 조직도(기관)·시설물 대장(시설) 연계 선택.
  *     · 기관 원본 = 타 메뉴 공용 조직도(window.EDOC.ORG_TREE 부서 목록)
- *     · 시설 원본 = 대상 관리(FMS 시설물 현황) 연계 시뮬레이션(FAC_SOURCE, 종별·안전점검 등급)
- *     · 자체 수기 등록·자체 FMS 동기화 폐지 — 팝업 뷰에서 다중 선택해 추가(addTargetsFromSource)
+ *     · 시설 원본 = 시설물 대장(DYFACIL, 종별·안전등급)
+ *     · 자체 수기 원본·별도 FMS 명단은 만들지 않고 원천 선택값만 보존한다.
  * ========================================================================= */
 (function () {
     'use strict';
@@ -25,14 +25,8 @@
         : String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     const now = () => new Date().toISOString().slice(0, 16).replace('T', ' ');
 
-    /* ── 시설 원본 FAC_SOURCE (대상 관리 연계 데이터 시뮬레이션) ──
-     * '중대재해 관리 대상 현황정보 관리'(대상 관리 메뉴)가 FMS 시설물을 연계해 제공하는
-     * 원본을 흉내낸 상수. 9건 = 기존 6 + 담양청소년수련관·담양국민체육센터·메타세쿼이아랜드 관리동.
-     *   cls   : 시설물안전법 종별(1·2·3종)
-     *   grade : 안전점검 등급(A~D)
-     * listSources('시설')가 이 원본을 그대로 노출하고, addTargetsFromSource가 선택분의
-     * cls·grade 를 target 에 복사한다. (자체 등록·자체 동기화 없음 — 대상 관리에서 현행화) */
-    const FAC_SOURCE = [
+    /* 시설물 대장 모듈이 없는 단위 시연에서만 쓰는 폴백. 운영 원본은 DYFACIL이다. */
+    const FAC_FALLBACK = [
         { name: '담양군민체육관', cls: '1종', grade: 'B' },
         { name: '담양공공도서관', cls: '2종', grade: 'A' },
         { name: '죽녹원 관리사무소', cls: '3종', grade: 'B' },
@@ -52,16 +46,15 @@
 
     function seed() {
         /* ── 점검 대상 (3차) ──
-         * 대상 관리에 '추가된' 대상만 시드. 픽커 데모 목적으로 최소 축소:
+         * 원천에서 '추가된' 대상만 시드. 픽커 데모 목적으로 최소 축소:
          *   기관(org) = 조직도 연계 2건(재난안전과·환경과, src '조직도')
-         *   시설(fac) = 대상 관리 연계 2건(담양군민체육관·담양하수처리장, src '대상관리',
-         *               FAC_SOURCE와 동일한 cls·grade 복사) — 점검표 시드가 참조하는 대상만 */
+         *   시설(fac) = 시설물 대장 연계 2건(담양군민체육관·담양하수처리장) */
         const facSeed = ['담양군민체육관', '담양하수처리장'].map((name, i) => {
-            const src = FAC_SOURCE.find(f => f.name === name) || {};
-            return { id: 'tg-f' + (i + 1), name, src: '대상관리', cls: src.cls || '', grade: src.grade || '' };
+            const src = facilitySources().find(f => f.name === name) || {};
+            return { id: 'tg-f' + (i + 1), sourceId: src.id || '', name, src: '시설물 대장', cls: src.cls || '', grade: src.grade || '' };
         });
         const targets = {
-            org: ['재난안전과', '환경과'].map((name, i) => ({ id: 'tg-o' + (i + 1), name, src: '조직도' })),
+            org: ['재난안전과', '환경과'].map((name, i) => ({ id: 'tg-o' + (i + 1), sourceId: orgSourceId(name), name, src: '조직도' })),
             fac: facSeed,
         };
 
@@ -188,6 +181,25 @@
     let _data = load();
     if (!_data || !_data.targets || !_data.items || !_data.sheets || !_data.policies) { _data = seed(); }
 
+    /* 구 저장값을 원천 식별값·선택 당시 스냅샷 계약으로 보강한다. */
+    (function migrateTargetRefs() {
+        ['org', 'fac'].forEach(bucket => (_data.targets[bucket] || []).forEach(t => {
+            if (!t.sourceId) {
+                const hit = listSources(bucket === 'fac' ? '시설' : '기관').find(s => s.name === t.name);
+                t.sourceId = hit ? hit.id : '';
+            }
+        }));
+        (_data.sheets || []).forEach(s => {
+            const bucket = s.targetType === '시설' ? _data.targets.fac : _data.targets.org;
+            const hit = bucket.find(t => t.name === s.target);
+            if (!s.targetId && hit) s.targetId = hit.id;
+            if (!s.targetSourceId && hit) s.targetSourceId = hit.sourceId || '';
+            if (!s.targetSnapshot) s.targetSnapshot = s.target;
+            (s.rows || []).forEach(r => { if (!r.itemSnapshot) r.itemSnapshot = itemPath(r.itemId); });
+        });
+        persist(_data);
+    })();
+
     function data() { return _data; }
     function save() { persist(_data); }
 
@@ -253,11 +265,11 @@
     }
 
     /* ─────────────────────────────────────────────────────────────────────
-     * 점검 대상 (기관·시설) — §7 REQ-A (3차: 연계 선택)
+     * 점검 대상 (기관·시설) — 원천 선택
      *   type: '기관' → targets.org / '시설' → targets.fac
      *   대상은 자체 등록하지 않고 연계 원본에서 팝업으로 선택해 추가한다.
      *     · 기관 원본 = 공용 조직도(window.EDOC.ORG_TREE 부서)  src '조직도'
-     *     · 시설 원본 = 대상 관리 연계(FAC_SOURCE 종별·등급)   src '대상관리'
+     *     · 시설 원본 = 시설물 대장(DYFACIL 종별·안전등급)      src '시설물 대장'
      * ───────────────────────────────────────────────────────────────────── */
     function targetBucket(type) { return type === '시설' ? _data.targets.fac : _data.targets.org; }
     function targetPrefix(type) { return type === '시설' ? 'tg-f' : 'tg-o'; }
@@ -265,26 +277,39 @@
     function listTargets(type) { return targetBucket(type).slice(); }
 
     /* 점검표(sheets)에서 대상 이름으로 사용 중인지 */
-    function targetUsed(name) {
-        return _data.sheets.some(s => s.target === name);
+    function targetUsed(name, id) {
+        return _data.sheets.some(s => (id && s.targetId ? s.targetId === id : s.target === name));
+    }
+
+    function orgSourceId(name) {
+        return (window.DYV2 && DYV2.deptIdOf && DYV2.deptIdOf(name)) || ('ORG:' + name);
+    }
+    function facilitySources() {
+        if (window.DYFACIL && typeof DYFACIL.list === 'function') {
+            return DYFACIL.list({ jur: '담양' }).map(f => ({
+                id: f.facilNo, name: f.facilNm, cls: f.facilClass ? f.facilClass + '종' : '',
+                grade: (DYFACIL.ext(f.facilNo) || {}).safetyGrade || ''
+            }));
+        }
+        return FAC_FALLBACK.map((f, i) => ({ id: 'DEMO-FAC-' + (i + 1), name: f.name, cls: f.cls, grade: f.grade }));
     }
 
     /* 연계 원본 목록 (선택 팝업이 참조) — 픽커 계약 고정
      *   type '기관' : 공용 조직도 부서. EDOC 부재 시 [] 폴백
      *                 → [{ name, meta: '구성원 N명' }]
-     *   type '시설' : 대상 관리 연계(FAC_SOURCE) 그대로
+     *   type '시설' : 시설물 대장 연계(DYFACIL) 그대로
      *                 → [{ name, cls, grade }] */
     function listSources(type) {
         if (type === '시설') {
-            return FAC_SOURCE.map(f => ({ name: f.name, cls: f.cls, grade: f.grade }));
+            return facilitySources();
         }
         const tree = (window.EDOC && EDOC.ORG_TREE) || [];
-        return tree.map(d => ({ name: d.dept, meta: '구성원 ' + ((d.members || []).length) + '명' }));
+        return tree.map(d => ({ id: orgSourceId(d.dept), name: d.dept, meta: '구성원 ' + ((d.members || []).length) + '명' }));
     }
 
     /* 원본에서 선택한 이름들을 대상으로 추가 (다중) — 픽커 계약 고정
      *   · 원본(listSources)에 존재하고 아직 미등록인 이름만 추가
-     *   · 시설은 원본의 cls·grade 를 target 에 복사 / src 는 기관='조직도'·시설='대상관리'
+     *   · 시설은 원본의 cls·grade 를 선택 당시 값으로 복사한다.
      *   · 반환 { ok:true, added, skipped } (added 0이어도 ok:true — skipped만 증가) */
     function addTargetsFromSource(type, names) {
         const bucket = targetBucket(type);
@@ -298,8 +323,8 @@
         arr.forEach(nm => {
             const name = String(nm == null ? '' : nm).trim();
             const srcRow = src.find(x => x.name === name);
-            if (!name || !srcRow || bucket.some(t => t.name === name)) { skipped++; return; }
-            const tg = { id: pfx + (next++), name, src: type === '시설' ? '대상관리' : '조직도' };
+            if (!name || !srcRow || bucket.some(t => (t.sourceId && srcRow.id) ? t.sourceId === srcRow.id : t.name === name)) { skipped++; return; }
+            const tg = { id: pfx + (next++), sourceId: srcRow.id || '', name, src: type === '시설' ? '시설물 대장' : '조직도' };
             if (type === '시설') { tg.cls = srcRow.cls || ''; tg.grade = srcRow.grade || ''; }
             bucket.push(tg);
             added++;
@@ -312,7 +337,7 @@
         const bucket = targetBucket(type);
         const tg = bucket.find(t => t.id === id);
         if (!tg) return { ok: false, msg: '대상을 찾을 수 없습니다.' };
-        if (targetUsed(tg.name)) return { ok: false, msg: '점검표에서 사용 중인 대상은 삭제할 수 없습니다.' };
+        if (targetUsed(tg.name, tg.id)) return { ok: false, msg: '점검표에서 사용 중인 대상은 삭제할 수 없습니다.' };
         const idx = bucket.indexOf(tg);
         bucket.splice(idx, 1);
         save();
@@ -337,10 +362,13 @@
         const year = Number(o.year);
         const targetType = o.targetType;
         const target = o.target;
+        const targetId = o.targetId || '';
+        const targetSourceId = o.targetSourceId || '';
         const itemIds = o.itemIds || [];
         if (!target) return { ok: false, msg: '대상을 선택하세요.' };
         if (!itemIds.length) return { ok: false, msg: '예방 항목을 1개 이상 선택하세요.' };
-        if (_data.sheets.some(s => s.year === year && s.target === target)) {
+        if (_data.sheets.some(s => s.year === year && s.targetType === targetType &&
+            (targetId && s.targetId ? s.targetId === targetId : s.target === target))) {
             return { ok: false, msg: '이미 ' + year + '년 ' + target + ' 점검표가 있습니다.' };
         }
         const n = _data.sheets.reduce((mx, s) => {
@@ -348,8 +376,8 @@
         }, 0) + 1;
         const id = 'bs-' + year + '-' + n;
         _data.sheets.unshift({
-            id, year, targetType, target,
-            rows: itemIds.map(itemId => ({ itemId, plan: 0, exec: 0, note: '' })),
+            id, year, targetType, targetId, targetSourceId, target, targetSnapshot: target,
+            rows: itemIds.map(itemId => ({ itemId, itemSnapshot: itemPath(itemId), plan: 0, exec: 0, note: '' })),
             status: '작성중', rejectReason: '', onnara: null,
             history: [{ at: now(), ev: '점검표 생성' }],
             updated: now(),
@@ -398,7 +426,7 @@
     }
 
     /* ─────────────────────────────────────────────────────────────────────
-     * 온나라 전자결재 — §3 REQ-C (수신 구조)
+     * 온나라 전자결재 — 수신 구조
      *   · sheet.onnara = { docNo:'온나라-2026-<4자리>', steps:[{at, act, by, note}] }
      *   · 결재선 고정: 팀장(이팀장) → 과장(김과장) → 부군수(부군수)
      *   · 승인·반려는 '처리'가 아니라 온나라에서 수신하는 값(receiveOnnara)
@@ -428,6 +456,7 @@
         const s = getSheet(id);
         if (!s) return { ok: false, msg: '점검표를 찾을 수 없습니다.' };
         if (s.status !== '작성중' && s.status !== '반려') return { ok: false, msg: '작성중·반려 상태에서만 상신할 수 있습니다.' };
+        if (sheetTotals(s).plan <= 0) return { ok: false, msg: '편성액 합계가 0원인 점검표는 상신할 수 없습니다.' };
         if (!s.onnara) s.onnara = { docNo: issueDocNo(), steps: [] };
         else if (!s.onnara.docNo) s.onnara.docNo = issueDocNo();
         const at = now();
@@ -498,7 +527,7 @@
      * 집계
      * ───────────────────────────────────────────────────────────────────── */
     function rate(plan, exec) {
-        return plan > 0 ? Math.round(exec / plan * 100) : 0;
+        return plan > 0 ? Math.round(exec / plan * 100) : null;
     }
     function sheetTotals(sheet) {
         const rows = (sheet && sheet.rows) || [];
@@ -518,7 +547,9 @@
     /* ─────────────────────────────────────────────────────────────────────
      * 관리 원칙 (정책 문서) — 최신 개정이 [0]
      * ───────────────────────────────────────────────────────────────────── */
-    function listPolicies() { return _data.policies; }
+    function listPolicies() {
+        return _data.policies.slice().sort((a, b) => String(b.effective || '').localeCompare(String(a.effective || '')) || String(b.updated || '').localeCompare(String(a.updated || '')));
+    }
 
     /* id 있으면 해당 건 필드 갱신(수정), 없으면 신규(개정) 등록 — 신규는 unshift로 [0]에 */
     function savePolicy(obj) {
@@ -602,6 +633,7 @@
     }
     /* 집행률 프로그레스 바 (menu.js exec() 패턴) — 70%↑ green / 미만 warning, 바 폭은 100 캡·숫자는 실제값 */
     function execBar(p) {
+        if (p == null) return '<span class="chip-status neutral">산정 불가</span>';
         const w = Math.min(100, Math.max(0, p));
         return '<div class="bgt-rate">' +
             '<div class="progress" style="width:90px;"><div class="progress-bar ' + (p >= 70 ? 'green' : 'warning') + '" style="width:' + w + '%"></div></div>' +
@@ -623,7 +655,7 @@
         return '<div class="board-grid cols-3" style="margin-bottom:16px;">' +
             card('총 편성액', '<span style="font-size:24px;">' + fmtAmt(plan) + '</span>', UI.year + '년 점검표 ' + list.length + '건') +
             card('총 집행액', '<span style="font-size:24px;">' + fmtAmt(exec) + '</span>', '편성 대비 집행 진행') +
-            card('집행률', r + '<span class="unit">%</span>', '편성 ' + fmtAmt(plan) + ' 기준') +
+            card('집행률', (r == null ? '<span style="font-size:20px;">산정 불가</span>' : r + '<span class="unit">%</span>'), '편성 ' + fmtAmt(plan) + ' 기준') +
         '</div>';
     }
 
@@ -726,7 +758,7 @@
             const planDis = planEditable ? '' : ' disabled';
             const execDis = execEditable ? '' : ' disabled';
             return '<tr>' +
-                '<td>' + esc(itemPath(r.itemId)) + '</td>' +
+                '<td>' + esc(r.itemSnapshot || itemPath(r.itemId)) + '</td>' +
                 '<td><input type="number" class="bgt-in" min="0" value="' + (Number(r.plan) || 0) + '" data-row-plan="' + esc(r.itemId) + '"' + planDis + '></td>' +
                 '<td><input type="number" class="bgt-in" min="0" value="' + (Number(r.exec) || 0) + '" data-row-exec="' + esc(r.itemId) + '"' + execDis + '></td>' +
                 '<td data-rate="' + esc(r.itemId) + '">' + execBar(rr) + '</td>' +
@@ -785,7 +817,7 @@
         return '<p class="bgt-edit-hint">' + esc(msg) + '</p>';
     }
 
-    /* 상태별 전자결재 카드 — §3 REQ-C
+    /* 상태별 전자결재 카드
      * 공통: '온나라 결재' 행(칩 + docNo + [이력]) + 상태별 액션/안내 */
     function actionCard(s) {
         const docNo = (s.onnara && s.onnara.docNo) || '';
@@ -910,12 +942,12 @@
      * R4 기관별·시설별 점검표 생성 / R5 등록
      * ===================================================================== */
     /* 모달 폼 로컬 상태 */
-    const CREATE = { year: 2026, targetType: '기관', target: '', checked: {} };
+    const CREATE = { year: 2026, targetType: '기관', targetId: '', checked: {} };
 
     function openCreate() {
         CREATE.year = UI.year || 2026;
         CREATE.targetType = '기관';
-        CREATE.target = '';
+        CREATE.targetId = '';
         CREATE.checked = {};
         V().openModal('편성·집행 점검표 생성', createBody(),
             '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
@@ -930,7 +962,7 @@
             return '<p class="bgt-target-empty" id="bgt-c-target-wrap">예산 기준 설정 &gt; 점검 대상 관리에서 대상을 먼저 등록하세요.</p>';
         }
         const opts = '<option value="">대상 선택</option>' +
-            list.map(t => '<option value="' + esc(t.name) + '"' + (CREATE.target === t.name ? ' selected' : '') + '>' + esc(t.name) + '</option>').join('');
+            list.map(t => '<option value="' + esc(t.id) + '"' + (CREATE.targetId === t.id ? ' selected' : '') + '>' + esc(t.name) + '</option>').join('');
         return '<select class="select" id="bgt-c-target" style="width:100%;">' + opts + '</select>';
     }
 
@@ -996,7 +1028,7 @@
     /* 대상 필드 wiring (select 존재 시 change 바인딩) — 라디오 전환 후에도 재호출 */
     function wireTargetField() {
         const tg = document.getElementById('bgt-c-target');
-        if (tg) tg.onchange = () => { CREATE.target = tg.value; };
+        if (tg) tg.onchange = () => { CREATE.targetId = tg.value; };
     }
     function wireCreate() {
         const yr = document.getElementById('bgt-c-year');
@@ -1006,7 +1038,7 @@
         document.querySelectorAll('input[name="bgt-ttype"]').forEach(r => {
             r.onchange = () => {
                 CREATE.targetType = r.value;
-                CREATE.target = '';
+                CREATE.targetId = '';
                 document.querySelectorAll('.bgt-radio').forEach(l => l.classList.remove('on'));
                 const lab = r.closest('.bgt-radio'); if (lab) lab.classList.add('on');
                 const slot = document.getElementById('bgt-c-target-slot');
@@ -1043,11 +1075,14 @@
     /* 생성 확정 — 선택 항목 중 '리프(하위 없는 항목)'만 시트 rows 로.
      * (대분류 자체는 금액 입력 대상이 아니므로 리프만 담아 rows 를 구성) */
     function createConfirm() {
-        if (!CREATE.target) { V().toast('대상을 선택하세요.'); return; }
+        if (!CREATE.targetId) { V().toast('대상을 선택하세요.'); return; }
+        const targetRec = listTargets(CREATE.targetType).find(t => t.id === CREATE.targetId);
+        if (!targetRec) { V().toast('선택한 대상을 찾을 수 없습니다.'); return; }
         const checkedIds = Object.keys(CREATE.checked);
         const leafIds = checkedIds.filter(id => itemChildren(id).length === 0);
         if (!leafIds.length) { V().toast('예방 항목을 1개 이상 선택하세요.'); return; }
-        const res = createSheet({ year: CREATE.year, targetType: CREATE.targetType, target: CREATE.target, itemIds: leafIds });
+        const res = createSheet({ year: CREATE.year, targetType: CREATE.targetType, targetId: targetRec.id,
+            targetSourceId: targetRec.sourceId || '', target: targetRec.name, itemIds: leafIds });
         if (!res.ok) { V().toast(res.msg); return; }
         V().closeModal();
         UI.year = CREATE.year;

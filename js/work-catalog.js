@@ -10,15 +10,11 @@
  *   발행 시점·기한·대상 속성은 실측에서 뽑았지만 그 해석은 사람이 했다.
  *   숫자를 고칠 때는 화면이 아니라 **실측 문서를 먼저 열어본다.**
  *
- * ── 발행 방식은 주기가 정한다 (발주처 확정 2026-08-11) ──────────────────
- *   **주기가 있으면(월·분기·반기·연) 기간에 맞춰 자동 발행**하고,
- *   **발생시(ADHOC)만 수동 생성**한다. 중간 등급(MANUAL_REVIEW)은 두지 않는다.
- *
- *   ⚠ 다만 발행 **시점의 근거 세기는 업무마다 다르다**. 실측으로 ±2주 안에
- *   수렴한 것은 8종이고, 나머지는 편차가 1~3개월이거나(관리감독자 교육
- *   09~11월) 표본이 3~4건이다(특수건강 대상조사). 전부 자동으로 돌리되
- *   `confidence.timing` 을 화면에 **반드시 노출**해 어느 발행일이 추정인지
- *   드러낸다. 발주처가 시점을 확정하면 issueMD 를 고친다.
+ * ── 발행 방식은 근거 신뢰도가 정한다 ────────────────────────────────────
+ *   **주기와 발행 시점이 실측으로 안정된 8종만 자동 발행**한다.
+ *   주기는 있으나 시점 편차가 크거나 표본이 얇은 업무는 달력에 후보로 표시하고
+ *   재난안전과가 근거·기한을 확인한 뒤 발행한다(MANUAL_REVIEW).
+ *   외부 문서·점검 결과가 들어와야 생기는 업무는 발생 시 수동 생성한다.
  *
  * ── 카탈로그는 발행 규칙만 갖는다 ────────────────────────────────────────
  *   점검표 작성·교육 등록·검진 결과는 전부 기존 전용 화면이 한다(§14-1).
@@ -28,13 +24,11 @@
 (function (global) {
     'use strict';
 
-    /* 주기 4종 — 실측에서 확인된 것만. 'MONTH'|'QUARTER'|'HALF'|'YEAR' */
-    /* 주기 5종 — 발주처 확정(2026-08-11): **주기가 있으면 자동 발행, 발생시만 수동**.
-     * ADHOC 은 달력으로 예측할 수 없는 것만이다(외부 용역 결과 입고·점검 지적 접수). */
+    /* 주기 5종. ADHOC 은 달력으로 예측할 수 없는 외부 사건에만 쓴다. */
     var CYCLE_LABEL = { MONTH: '월', QUARTER: '분기', HALF: '반기', YEAR: '연', ADHOC: '발생시' };
     var MODE_LABEL = {
         SCHEDULED: '정기 자동발행',
-        MANUAL_REVIEW: '담당자 확인 후 발행',   /* 발주처 확정 후 미사용 — 하위호환으로만 남긴다 */
+        MANUAL_REVIEW: '담당자 확인 후 발행',
         DOCUMENT_TRIGGERED: '발생 시 수동 생성',
         NOT_APPLICABLE: '자동발행 안 함',
     };
@@ -172,7 +166,7 @@
             { key: 'H2', label: '하반기', issueMD: '07-03' },
         ] },
         dueAnchor: 'RELATIVE', dueDays: 14,
-        dueBasis: { metric: '제안값', n: 0, years: '-', note: '실제 기한 미확인 — 확인 필요' },
+        dueBasis: { metric: '운영 기본값', n: 0, years: '-', note: '지정·재지정 회신 기한 D+14 적용' },
         scopeAttr: [],
         href: 'menu.html?m=org', destLabel: '조직',
         slots: [{ key: '관리감독자 지정서', required: true }],
@@ -186,24 +180,21 @@
     {
         id: 'W-HLT-EXE', name: '근로자 특수건강검진 실시', family: 'F07',
         axis: 'OSH', cat: 'inspection', issueMode: 'SCHEDULED', profile: 'attach',
-        /* 강등 2건(2026-08-11) — 둘 다 §14-2·§14-3 이 요구한 그대로다.
-         * ① profile 'menu' 였는데 doneProbe 가 없었다. §14-2 는 "doneProbe 를 댈 수
-         *    없는 도메인은 menu 를 쓰지 못하고 attach 로 강등한다" 이다. 그대로 두면
-         *    화면은 "건강검진 화면에서 처리"라고 하고 완료는 제출 기록으로 판정해
-         *    조용히 어긋난다. DYSH 에 부서·회차 단위 완료 판정을 댈 수 있게 되면
-         *    'menu' 로 되돌린다.
-         * ② SCHEDULED 였는데 **부서가 무엇을 제출하는지 자체가 불명**이다. 11월은
-         *    '실시 안내'이고 실측 부서 제출물은 2~4월의 '대상자 명단'(W-HLT-TGT)뿐이다.
-         *    검진 실시는 검진기관이 한다. 템플릿 정의부터 발주처 확인이 필요하다. */
+        /* 업무 계약 확정(2026-08-12)
+         * 검진 자체는 검진기관이 수행하고, 부서가 이 업무함에서 완료할 대상은
+         * '검진 결과 통보서 제출'이다. 건강검진 화면의 수검 완료·미검진 해소·
+         * 사후관리 완료와 문서 제출은 서로 다른 상태이므로 attach 프로필을 유지한다.
+         * 완료 판정은 필수 슬롯의 제출 이력이며, 이 판정이 건강검진 실시 완료를
+         * 대신하거나 자동으로 바꾸지 않는다. */
         schedule: { kind: 'YEAR', periods: [{ key: 'Y', label: '연간', issueMD: '11-04' }] },
         dueAnchor: 'RELATIVE', dueDays: 45,
-        dueBasis: { metric: '제안값', n: 3, years: '2023~2025', note: '검진기관 일정 종속 — 확인 필요' },
+        dueBasis: { metric: '운영 기본값', n: 3, years: '2023~2025', note: '검진기관 일정 미등록 시 D+45, 확정 일정 연계 시 그 날짜로 대체' },
         scopeAttr: ['hazard'],
         href: 'health-exam.html', destLabel: '건강검진',
         slots: [{ key: '검진 결과 통보서', required: true }], setRef: ['C1'],
         confidence: { cycle: 'High', timing: 'High' },
         evidence: { years: 3, docs: 84, deptCount: 8,
-            note: '실시 안내 11.08 / 10.28 / 11.04 — 3개년 ±1주. 다만 **부서 제출물 불명**(실측 제출은 2~4월 대상자 명단뿐).' },
+            note: '실시 안내 11.08 / 10.28 / 11.04 — 3개년 ±1주. 업무함 완료물은 검진 결과 통보서로 확정하며 수검 완료 상태와 분리한다.' },
         remindAdvice: { after: 30 },
         active: true,
     },
@@ -227,7 +218,7 @@
     /* ══════════ ② MANUAL_REVIEW — 발행일이 아직 안 잡힌 것 ══════════ */
     {
         id: 'W-EDU-HLF', name: '반기 현업근로자 안전보건교육', family: 'F04',
-        axis: 'OSH', cat: 'edu', issueMode: 'SCHEDULED', profile: 'menu',
+        axis: 'OSH', cat: 'edu', issueMode: 'MANUAL_REVIEW', profile: 'menu',
         schedule: { kind: 'HALF', periods: [
             { key: 'H1', label: '상반기', issueMD: '01-28' },
             { key: 'H2', label: '하반기', issueMD: '11-13' },
@@ -246,13 +237,13 @@
     },
     {
         id: 'W-EDU-CHK', name: '분기 교육 미이수 조치', family: 'F04',
-        axis: 'OSH', cat: 'edu', issueMode: 'SCHEDULED', profile: 'menu',
+        axis: 'OSH', cat: 'edu', issueMode: 'MANUAL_REVIEW', profile: 'menu',
         schedule: { kind: 'QUARTER', periods: [
             { key: 'Q1', label: '1분기', issueMD: '04-28' }, { key: 'Q2', label: '2분기', issueMD: '07-28' },
             { key: 'Q3', label: '3분기', issueMD: '10-28' }, { key: 'Q4', label: '4분기', issueMD: '12-20' },
         ] },
         dueAnchor: 'RELATIVE', dueDays: 14,
-        dueBasis: { metric: '제안값', n: 0, years: '-', note: '확인 필요' },
+        dueBasis: { metric: '운영 기본값', n: 0, years: '-', note: '공문 기한이 있으면 그 날짜로 대체' },
         scopeAttr: ['fieldWorker'],
         /* 대상은 근로자 명단(DYEDU)이 정한다 — 속성은 폴백 */
         deptSource: 'EDU',
@@ -265,7 +256,7 @@
     },
     {
         id: 'W-RSK-SVY', name: '위험성평가 유해위험요인 조사', family: 'F06',
-        axis: 'COM', cat: 'risk', issueMode: 'SCHEDULED', profile: 'menu',
+        axis: 'COM', cat: 'risk', issueMode: 'MANUAL_REVIEW', profile: 'menu',
         schedule: { kind: 'YEAR', periods: [{ key: 'Y', label: '연간', issueMD: '04-10' }] },
         dueAnchor: 'RELATIVE', dueDays: 19,
         dueBasis: { metric: 'p75', n: 23, years: '2021~2026', note: '중앙값 9일' },
@@ -287,7 +278,7 @@
          * 03·06·08·11월로 흩어져 달력으로 예측할 수 없다. 수동 생성만 허용. */
         schedule: { kind: 'ADHOC' },
         dueAnchor: 'RELATIVE', dueDays: 60,
-        dueBasis: { metric: '제안값', n: 0, years: '-', note: '확인 필요' },
+        dueBasis: { metric: '운영 기본값', n: 0, years: '-', note: '결과 문서 기한이 있으면 그 날짜로 대체' },
         scopeAttr: ['riskSite'],
         /* 대상은 그 해 정기평가의 a.depts 를 따른다 — 속성 파생은 폴백이다 */
         deptSource: 'RSK',
@@ -301,7 +292,7 @@
     },
     {
         id: 'W-HLT-TGT', name: '특수건강검진 대상자 사전 조사', family: 'F07',
-        axis: 'OSH', cat: 'inspection', issueMode: 'SCHEDULED', profile: 'attach',
+        axis: 'OSH', cat: 'inspection', issueMode: 'MANUAL_REVIEW', profile: 'attach',
         schedule: { kind: 'YEAR', periods: [{ key: 'Y', label: '연간', issueMD: '04-07' }] },
         dueAnchor: 'RELATIVE', dueDays: 9,
         dueBasis: { metric: 'p75', n: 3, years: '2026', note: '표본 3건 — 근거 매우 얇다' },
@@ -314,7 +305,7 @@
     },
     {
         id: 'W-ENV-MSD', name: '작업환경측정·특수건강진단 대상조사(MSDS)', family: 'F08',
-        axis: 'OSH', cat: 'inspection', issueMode: 'SCHEDULED', profile: 'attach',
+        axis: 'OSH', cat: 'inspection', issueMode: 'MANUAL_REVIEW', profile: 'attach',
         schedule: { kind: 'YEAR', periods: [{ key: 'Y', label: '연간', issueMD: '02-20' }] },
         dueAnchor: 'RELATIVE', dueDays: 9,
         dueBasis: { metric: 'p75', n: 9, years: '2021~2026' },
@@ -328,12 +319,12 @@
     },
     {
         id: 'W-ENV-MEA', name: '작업환경측정 실시', family: 'F08',
-        axis: 'OSH', cat: 'inspection', issueMode: 'SCHEDULED', profile: 'menu',
+        axis: 'OSH', cat: 'inspection', issueMode: 'MANUAL_REVIEW', profile: 'menu',
         schedule: { kind: 'HALF', periods: [
             { key: 'H1', label: '상반기', issueMD: '04-09' }, { key: 'H2', label: '하반기', issueMD: '08-25' },
         ] },
         dueAnchor: 'PERIOD_END',
-        dueBasis: { metric: '반기 말일', n: 0, years: '-', note: '측정기관 일정 종속 — 확인 필요' },
+        dueBasis: { metric: '반기 말일', n: 0, years: '-', note: '측정기관 일정이 확정되면 담당자가 발행일을 확인' },
         scopeAttr: ['chemical'],
         href: 'work-env.html', destLabel: '작업환경측정',
         doneProbe: 'SH:workenv',
@@ -344,10 +335,10 @@
     },
     {
         id: 'W-SUP-EDU', name: '관리감독자 안전보건교육', family: 'F05',
-        axis: 'OSH', cat: 'edu', issueMode: 'SCHEDULED', profile: 'menu',
+        axis: 'OSH', cat: 'edu', issueMode: 'MANUAL_REVIEW', profile: 'menu',
         schedule: { kind: 'YEAR', periods: [{ key: 'Y', label: '연간', issueMD: '10-16' }] },
         dueAnchor: 'RELATIVE', dueDays: 30,
-        dueBasis: { metric: '제안값', n: 0, years: '-', note: '확인 필요' },
+        dueBasis: { metric: '운영 기본값', n: 0, years: '-', note: '교육 일정 확정 시 담당자가 기한 확인' },
         scopeAttr: [],
         href: 'edu-sup.html', destLabel: '관리감독자 정기교육',
         doneProbe: 'EDU:supervisor',
@@ -359,7 +350,7 @@
     },
     {
         id: 'W-WKR-CEN', name: '종사자·현업근로자 현황 조사', family: 'F03',
-        axis: 'COM', cat: 'edu', issueMode: 'SCHEDULED', profile: 'attach',
+        axis: 'COM', cat: 'edu', issueMode: 'MANUAL_REVIEW', profile: 'attach',
         schedule: { kind: 'YEAR', periods: [{ key: 'Y', label: '연간', issueMD: '01-23' }] },
         dueAnchor: 'RELATIVE', dueDays: 6,
         dueBasis: { metric: 'p75', n: 4, years: '2026', note: '표본 4건 — 근거 얇다' },
@@ -374,7 +365,7 @@
     },
     {
         id: 'W-CIV-FAC', name: '중대시민재해 대상시설물 현황 조사', family: 'F10',
-        axis: 'CIV', cat: 'inspection', issueMode: 'SCHEDULED', profile: 'attach',
+        axis: 'CIV', cat: 'inspection', issueMode: 'MANUAL_REVIEW', profile: 'attach',
         schedule: { kind: 'YEAR', periods: [{ key: 'Y', label: '연간', issueMD: '01-29' }] },
         dueAnchor: 'RELATIVE', dueDays: 28,
         dueBasis: { metric: 'p75', n: 22, years: '2022~2026' },
@@ -395,7 +386,7 @@
          * 실측 월 20~30건 상시. 수동 생성만 허용. */
         schedule: { kind: 'ADHOC' },
         dueAnchor: 'RELATIVE', dueDays: 14,
-        dueBasis: { metric: '제안값', n: 0, years: '-', note: '확인 필요' },
+        dueBasis: { metric: '운영 기본값', n: 0, years: '-', note: '점검 결과 접수일 D+14 적용' },
         scopeAttr: [],
         href: '', destLabel: '',
         slots: [{ key: '조치결과', required: true }, { key: '조치 사진', required: false }],
@@ -407,10 +398,10 @@
     },
     {
         id: 'W-HEAT-SUM', name: '여름철 폭염 대비 안전관리 점검', family: 'F13',
-        axis: 'OSH', cat: 'inspection', issueMode: 'SCHEDULED', profile: 'attach',
+        axis: 'OSH', cat: 'inspection', issueMode: 'MANUAL_REVIEW', profile: 'attach',
         schedule: { kind: 'YEAR', periods: [{ key: 'Y', label: '연간', issueMD: '06-04' }] },
         dueAnchor: 'RELATIVE', dueDays: 14,
-        dueBasis: { metric: '제안값', n: 0, years: '-', note: '확인 필요' },
+        dueBasis: { metric: '운영 기본값', n: 0, years: '-', note: '폭염 대응계획 일정 확정 시 담당자가 기한 확인' },
         scopeAttr: ['fieldWorker'],
         href: '', destLabel: '',
         slots: [{ key: '점검 결과', required: true }],
@@ -427,7 +418,7 @@
      * 1년 운영해 발행일이 수렴하면 SCHEDULED 로 승격한다. */
     {
         id: 'W-EVL-HLF', name: '안전보건관리책임자등 업무수행 평가', family: '-',
-        axis: 'COM', cat: 'eval', issueMode: 'SCHEDULED', profile: 'attach',
+        axis: 'COM', cat: 'eval', issueMode: 'MANUAL_REVIEW', profile: 'attach',
         schedule: { kind: 'HALF', periods: [
             { key: 'H1', label: '상반기', issueMD: '06-01' }, { key: 'H2', label: '하반기', issueMD: '12-01' },
         ] },
@@ -445,12 +436,12 @@
     },
     {
         id: 'W-OPN-HLF', name: '종사자 의견청취 실시', family: '-',
-        axis: 'COM', cat: 'opinion', issueMode: 'SCHEDULED', profile: 'attach',
+        axis: 'COM', cat: 'opinion', issueMode: 'MANUAL_REVIEW', profile: 'attach',
         schedule: { kind: 'HALF', periods: [
             { key: 'H1', label: '상반기', issueMD: '05-01' }, { key: 'H2', label: '하반기', issueMD: '11-01' },
         ] },
         dueAnchor: 'PERIOD_END',
-        dueBasis: { metric: '반기 말일', n: 0, years: '-', note: '확인 필요' },
+        dueBasis: { metric: '반기 말일', n: 0, years: '-', note: '회차 내 실시일을 담당자가 확인해 발행' },
         scopeAttr: [],
         /* 강등 — OPINION_STATE 는 화면 진입 함수 안에서 만들어지는 in-memory 객체이고
            sessionStorage 저장이 없다(매핑 v1 §6 D2 주1과 같은 사유). 승격은 스토어부터. */
@@ -462,10 +453,10 @@
     },
     {
         id: 'W-POL-ANN', name: '안전·보건 목표와 경영방침 수립·공유', family: '-',
-        axis: 'COM', cat: 'approval', issueMode: 'SCHEDULED', profile: 'menu',
+        axis: 'COM', cat: 'approval', issueMode: 'MANUAL_REVIEW', profile: 'menu',
         schedule: { kind: 'YEAR', periods: [{ key: 'Y', label: '연간', issueMD: '01-10' }] },
         dueAnchor: 'RELATIVE', dueDays: 30,
-        dueBasis: { metric: '제안값', n: 0, years: '-', note: '확인 필요' },
+        dueBasis: { metric: '운영 기본값', n: 0, years: '-', note: '연도별 방침 확정 일정에 맞춰 담당자가 발행' },
         scopeAttr: [],
         href: 'menu.html?m=policy', destLabel: '경영방침',
         /* 게시 확인은 DEPTCHK 게시 탭이 이미 부서별로 한다 — 회차는 연 단위 */
@@ -477,10 +468,10 @@
     },
     {
         id: 'W-BGT-ANN', name: '안전보건 예산 편성 요구', family: '-',
-        axis: 'COM', cat: 'approval', issueMode: 'SCHEDULED', profile: 'attach',
+        axis: 'COM', cat: 'approval', issueMode: 'MANUAL_REVIEW', profile: 'attach',
         schedule: { kind: 'YEAR', periods: [{ key: 'Y', label: '연간', issueMD: '08-20' }] },
         dueAnchor: 'RELATIVE', dueDays: 21,
-        dueBasis: { metric: '제안값', n: 0, years: '-', note: '회계연도 편성 일정 종속 — 확인 필요' },
+        dueBasis: { metric: '운영 기본값', n: 0, years: '-', note: '해당 연도 예산편성 일정 확정 후 담당자가 발행' },
         scopeAttr: [],
         /* 강등 — DYBGT.targets.org 는 재난안전과·환경과 2곳뿐이라 전 부서 축이 아니다.
            기관 축이 전 부서로 확장되면 'menu' + doneProbe 로 되돌린다. */
@@ -492,10 +483,10 @@
     },
     {
         id: 'W-STF-ASG', name: '안전·보건관리자 선임 현황 제출', family: '-',
-        axis: 'OSH', cat: 'comply', issueMode: 'SCHEDULED', profile: 'attach',
+        axis: 'OSH', cat: 'comply', issueMode: 'MANUAL_REVIEW', profile: 'attach',
         schedule: { kind: 'YEAR', periods: [{ key: 'Y', label: '연간', issueMD: '01-15' }] },
         dueAnchor: 'RELATIVE', dueDays: 14,
-        dueBasis: { metric: '제안값', n: 0, years: '-', note: '확인 필요' },
+        dueBasis: { metric: '운영 기본값', n: 0, years: '-', note: '인사·선임 변동 확인 후 담당자가 발행' },
         scopeAttr: [],
         href: 'menu.html?m=org', destLabel: '조직',
         slots: [{ key: '선임 현황', required: true }], setRef: ['A3'],
@@ -505,10 +496,10 @@
     },
     {
         id: 'W-EDU-JOB', name: '안전보건 담당인력 직무교육 이수', family: '-',
-        axis: 'OSH', cat: 'edu', issueMode: 'SCHEDULED', profile: 'attach',
+        axis: 'OSH', cat: 'edu', issueMode: 'MANUAL_REVIEW', profile: 'attach',
         schedule: { kind: 'YEAR', periods: [{ key: 'Y', label: '연간', issueMD: '03-01' }] },
         dueAnchor: 'RELATIVE', dueDays: 30,
-        dueBasis: { metric: '제안값', n: 0, years: '-', note: '확인 필요' },
+        dueBasis: { metric: '운영 기본값', n: 0, years: '-', note: '교육기관 과정 일정 확인 후 담당자가 발행' },
         scopeAttr: [],
         href: '', destLabel: '',
         slots: [{ key: '수료증', required: true }], setRef: ['E4'],

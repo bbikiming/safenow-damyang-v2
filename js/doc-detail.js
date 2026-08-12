@@ -112,7 +112,7 @@
             '</div>' +
             '<h1 class="dd-doc-title">' + esc(d.name) + '</h1>' +
             (isV2 && d.needReview === 'Y'
-                ? '<div class="v2-todo" style="margin-bottom:12px;">기획자 확인 필요' + (d.needReason ? ' — ' + esc(d.needReason) : '') + '</div>'
+                ? '<div class="v2-todo" style="margin-bottom:12px;">운영 자료 적용성 확인' + (d.needReason ? ' — ' + esc(d.needReason) : '') + '</div>'
                 : '') +
             '<div class="dd-meta">' +
                 metaField('문서 번호', docNo(d)) +

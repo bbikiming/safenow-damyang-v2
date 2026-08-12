@@ -269,7 +269,7 @@
     function halfLabel(planned) { return halfOf(planned) === 'H2' ? '하반기' : '상반기'; }
 
     /* ================= 보존연한·법정 제출기한 헬퍼 ================= */
-    /* 결과 보존연한 — 발암성/특별관리물질 노출 건은 30년, 그 외 5년 (방어적 기본값: false→5년) */
+    /* 결과 보존연한 — 고용노동부 고시 대상 물질 기록은 30년, 그 외 5년 */
     function retentionOf(rec) { return rec && rec.carcinogen ? 30 : 5; }
     /* dateStr('YYYY-MM-DD')에 n일을 더한 날짜 문자열 반환 */
     function addDays(dateStr, n) {
@@ -305,7 +305,8 @@
     function addWorkEnv(o) {
         var d = load(); d.seqWE++; o = o || {};
         var rec = { id: 'WE-' + yearOf(o.planned) + '-N' + d.seqWE, year: yearOf(o.planned), half: halfOf(o.planned),
-            dept: o.dept || '', site: o.site || o.dept || '', subject: o.subject || '', vendor: o.vendor || '미지정',
+            dept: o.dept || '', siteId: o.siteId || '', site: o.site || o.dept || '',
+            siteTargetState: o.siteTargetState || '검토 중', subject: o.subject || '', vendor: o.vendor || '미지정',
             planned: o.planned || '', done: '', report: false, result: null, improveReq: '', improveDue: '',
             improveDone: false, beforePhoto: false, afterPhoto: false, owner: (o.dept || '') + ' · 담당자',
             reason: '', expectedDone: '', carcinogen: !!o.carcinogen,
@@ -422,16 +423,14 @@
     }
     /* 결과 문서 업로드(제출) — 담당부서 제출 / 주관부서 대행 구분 기록.
        resultBy 는 '결과 제출'만의 전용 마커(단순/상세뷰 실시증빙 evidence 와 분리).
-       간소 모델: 결과 문서 제출 = 검진 완료 → 완료 축(done·examinedCount)도 함께 반영해
-       상태(effHealth)·수검률·인력평가 연계 지표가 제출을 반영하도록 한다(뷰 간 모순 제거). */
+       결과 문서 제출과 수검 완료는 별개다. 문서가 도착했다는 사실만 기록하고
+       실시일·수검자 수는 완료 처리에서 별도로 확정한다. */
     function submitResult(id, by, actor) {
         var r = healthOf(id); if (!r) return null;
         ensureProc(r);
         r.evidence = true;
         r.resultBy = by || '담당부서';
         r.resultAt = TODAY;
-        if (!r.done) r.done = r.resultAt;
-        if (!r.examinedCount) r.examinedCount = r.targetCount || 0;
         pushHist(r, '검진 결과 문서 업로드 (' + r.resultBy + ')', actor || (by === '담당부서' ? r.dept : '박안전'));
         save(); return r;
     }
@@ -515,12 +514,13 @@
         if (!r.done) {
             r.done = opts.doneDate || TODAY;
             r.result = opts.result || '적정';
-            r.report = true;
             if (r.result === '개선 필요') { r.improveReq = opts.improveReq || r.improveReq; r.improveDue = opts.improveDue || r.improveDue; }
             pushHist(r, '측정 실시 완료 · 결과 「' + r.result + '」');
         } else if (weNeedsImprove(r)) {
             r.improveDone = true; r.afterPhoto = true;
-            pushHist(r, '개선조치 완료 · 조치 후 사진 등록');
+            r.improveDoneAt = opts.improveDoneAt || TODAY;
+            r.improveResult = opts.improveResult || r.improveResult || '';
+            pushHist(r, '개선조치 완료 · ' + r.improveResult + ' · 조치 후 증빙 등록');
         }
         save(); return r;
     }
@@ -530,14 +530,13 @@
         if (!r.done) {
             r.done = opts.doneDate || TODAY;
             if (opts.examinedCount != null) r.examinedCount = Math.min(r.targetCount || 0, opts.examinedCount);   // 수검자 ≤ 대상자 상한
-            r.evidence = true;
             pushHist(r, '검진 실시 완료 (수검 ' + r.examinedCount + '/' + r.targetCount + ')');
         } else if (hcUnexamined(r) > 0 && opts.examinedCount != null) {
             r.examinedCount = Math.min(r.targetCount, opts.examinedCount);
             pushHist(r, '추가검진 반영 (수검 ' + r.examinedCount + '/' + r.targetCount + ')');
         } else if (hcFollowup(r)) {
             r.followupDone = true;
-            r.followupResult = opts.followupResult || r.followupResult || '사후관리 완료';
+            r.followupResult = opts.followupResult || r.followupResult || '';
             pushHist(r, '사후관리 완료 · ' + r.followupResult);
         }
         save(); return r;

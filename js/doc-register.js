@@ -165,7 +165,6 @@
             '<p class="reg-lab">세트 (업무 묶음)</p>' +
             '<select id="reg-set">' +
                 sets.map(s => '<option value="' + s.id + '"' + (s.id === S.set ? ' selected' : '') + '>' + esc(s.id + ' · ' + s.name) + '</option>').join('') +
-                '<option value=""' + (!S.set ? ' selected' : '') + '>세트 미지정</option>' +
             '</select>' +
             (curSet && curSet.pdcaFlow ? '<p class="reg-sub">이 세트의 PDCA 구성: ' + esc(curSet.pdcaFlow.split('').join('·')) + '</p>' : '') +
             '<p class="reg-lab">PDCA 단계 <span class="reg-req">*</span></p>' +
@@ -392,6 +391,7 @@
     function validate(step) {
         if (step === 0) {
             if (!S.menu) { V().toast('법령 분류(대메뉴)를 선택하세요'); return false; }
+            if (!S.set) { V().toast('업무 세트를 선택하세요'); return false; }
             if (!S.pdca) { V().toast('PDCA 단계를 선택하세요'); return false; }
         }
         if (step === 1 && !S.pt) { V().toast('처리유형을 선택하세요'); return false; }

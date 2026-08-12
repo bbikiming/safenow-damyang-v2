@@ -21,7 +21,7 @@
     const now = () => new Date().toISOString().slice(0, 16).replace('T', ' ');
     const THIS_YEAR = 2026;
 
-    /* ── 코드 라벨 (가이드 stale — FMS 최신 공통코드 재확인 필요, PRD §9-2) ── */
+    /* ── 코드 라벨 (보유 가이드 기준 — FMS 최신 공통코드 규격 미수신, PRD §9-2) ── */
     const CLASS_NM = { '1': '1종', '2': '2종', '3': '3종' };
     const GRADE_DESC = {
         A: '우수 — 문제점 없는 최상 상태',
@@ -440,7 +440,7 @@
 
         /* 3) 위험도 요약 */
         const riskBlock =
-            '<div class="fac-sec-t" style="margin-top:18px;">위험도 · 위험성평가</div>' +
+            '<div class="fac-sec-t" style="margin-top:18px;">시설물 위험도 · 근로자 위험성평가 연계</div>' +
             '<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">' +
             riskChip(rk) + '<span style="font-size:12px; color:var(--text-gray);">확보 변수: ' + (rk.have.length ? rk.have.join(', ') : '없음') + '</span>' +
             (rk.level === 'na' ? '<span class="chip-mini wt-attach">핵심변수(안전등급/점검일) 부족 — 보완입력 후 착수</span>' : '') +
@@ -455,8 +455,8 @@
                 '<p class="fac-note">위험성평가 자료를 불러오지 못했습니다.</p>';
         } else if (!imps.length) {
             impBlock = '<div class="fac-sec-t" style="margin-top:18px;">개선조치 내역 <span class="chip-mini wt-attach">0건</span></div>' +
-                '<p class="fac-note">이 시설물로 지정된 개선조치가 아직 없습니다. ' +
-                '위험성평가 보고서 검수에서 유해위험요인 행에 이 시설물을 지정하면 여기에 쌓입니다.</p>';
+                '<p class="fac-note">근로자 위험성평가에서 이 시설물로 연결된 개선조치가 아직 없습니다. ' +
+                '청소·정비 등 종사자 작업의 유해위험요인 행에 이 시설물을 지정한 경우에만 여기에 쌓입니다.</p>';
         } else {
             const R = window.DYRSK;
             const done = imps.filter(m => m.status === 'DONE').length;
@@ -493,7 +493,7 @@
             '<button class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
             '<button class="btn btn-outline" onclick="DYFACIL._send(\'' + no + '\', \'update\')">FMS 전송(수정)</button>' +
             (rk.level !== 'na'
-                ? '<button class="btn btn-primary" onclick="DYFACIL._toRisk(\'' + no + '\')">위험성평가 착수</button>'
+                ? '<button class="btn btn-primary" onclick="DYFACIL._toRisk(\'' + no + '\')">근로자 위험성평가 연계</button>'
                 : '<button class="btn btn-primary" onclick="DYFACIL._saveExt(\'' + no + '\')">보완입력 저장</button>') +
             '<button class="btn btn-primary" onclick="DYFACIL._saveExt(\'' + no + '\')" style="' + (rk.level !== 'na' ? '' : 'display:none;') + '">보완입력 저장</button>';
 
@@ -549,7 +549,7 @@
                 const btn = s.rk.level === 'na'
                     ? '<button class="btn btn-sm btn-outline" onclick="DYFACIL._detail(\'' + s.r.facilNo + '\')">보완입력</button>'
                     : '<button class="btn btn-sm ' + (nImp ? 'btn-outline' : 'btn-primary') + '" onclick="DYFACIL._toRisk(\'' + s.r.facilNo + '\')">' +
-                      (nImp ? '평가 보기' : '평가 착수') + '</button>';
+                      (nImp ? '연계 보기' : '근로자 위험성평가 연계') + '</button>';
                 /* 점검 — 법정 주기 초과 여부. 위험도 점수에 이미 반영돼 있으므로
                    여기서는 왜 점수가 그런지 설명하는 자리다(별표3). */
                 const od = overdueMonths(s.e.lastInspectYmd, s.e.safetyGrade);
@@ -697,7 +697,7 @@
                 '<div><div class="fac-sec-t">자체 소유 (수신 불가침)</div><p style="font-size:13px; color:var(--text-gray);">안전등급 · 점검일 · 중대결함 · 규모 · 이용인원 · 위험물 · 좌표 · 소관부서 · 담당자 · 중대재해대상 구분.</p></div>' +
                 '</div></div></div>' +
                 /* 공통코드 */
-                '<div class="card" style="margin-top:12px;"><div class="card-header"><span class="card-title">공통코드 매핑 <span class="chip-mini wt-attach">가이드 stale — FMS 최신 공통코드 재확인 필요</span></span></div>' +
+                '<div class="card" style="margin-top:12px;"><div class="card-header"><span class="card-title">공통코드 매핑 <span class="chip-mini wt-attach">FMS 최신 공통코드 규격 미수신</span></span></div>' +
                 '<div class="card-body" style="overflow-x:auto; padding:0;">' +
                 '<table class="table-figma"><thead><tr><th>코드</th><th>가이드 v4.1</th><th>실데이터</th><th>판정</th></tr></thead><tbody>' +
                 cmap('시설물구분/종류', 'GBN=RO·KIND=BR', 'GBN=BR·KIND=ROB', '코드체계 개편') +
