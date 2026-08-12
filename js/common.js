@@ -610,9 +610,20 @@
         '</div>';
     }
 
+    /* 조사 — 받침 유무로 은/는·이/가·으로/로 를 고른다.
+       "게시으로 등록하려면" 처럼 어긋난 조사가 화면에 나가지 않게 한 곳에 둔다.
+       종전에는 rsk-list.js·tour-core.js 가 같은 함수를 각자 갖고 있었다. */
+    function josa(word, withJong, withoutJong) {
+        var t = String(word == null ? '' : word).trim();
+        if (!t) return withJong;
+        var c = t.charCodeAt(t.length - 1);
+        var has = (c >= 0xac00 && c <= 0xd7a3) ? ((c - 0xac00) % 28) > 0 : false;
+        return has ? withJong : withoutJong;
+    }
+
     window.DYV2 = {
         MENUS, byMenu, complianceRate, dueCount,
-        esc, statusChip, workTypeChip, processTypeChip, pdcaChip, lawChip,
+        esc, josa, statusChip, workTypeChip, processTypeChip, pdcaChip, lawChip,
         unassignedBadge, secondReviewBadge,
         openModal, closeModal, toast, openDoc,
         docs, FILE_LIMITS, fileHint, uploadDrop, dropKey,

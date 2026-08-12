@@ -176,6 +176,25 @@ var SKEY = 'dy-deptcheck-v3';
                 '전수 점검이 성립하려면 부서 명단을 먼저 받아야 합니다.</div>'
             : '';
 
+        /* 조작 권한이 없으면 **왜 없는지 상시 안내한다** — 종전에는 버튼을 눌렀을 때만
+           토스트로 알렸다. 애초에 버튼을 내지 않으니 그 토스트에 도달할 길이 없고,
+           관리·감독 계층은 "내 화면이 왜 비어 있지"만 남는다. 안내는 *왜*를 맡고
+           표는 *무엇이 있는지*를 맡는다(§12 readOnlyNote 와 같은 기준). */
+        var roleNote = '';
+        if (R() && R().current) {
+            var p = R().current();
+            var anyAct = list.some(function (d) { return canAct(d.id); });
+            if (!anyAct) {
+                roleNote = '<div class="check-notice" style="margin-bottom:10px;">' +
+                    (p.tier !== 'staff'
+                        ? '<b>조회 전용입니다.</b> 관리·감독 계층은 현황을 보고 지휘하며, ' +
+                          (opts.labels && opts.labels.DONE ? esc(opts.labels.DONE) : '이행') +
+                          ' 등록은 각 부서 담당자가 직접 수행합니다.'
+                        : '<b>조회 전용입니다.</b> 등록은 해당 부서 담당자와 주관부서(재난안전과)가 수행합니다.') +
+                    '</div>';
+            }
+        }
+
         var stat =
             '<div class="dchk-stat">' +
                 statBox('전체', g.registered + '개 부서', 'neutral') +
@@ -189,7 +208,7 @@ var SKEY = 'dy-deptcheck-v3';
         var rows = list.map(function (d) { return rowHtml(key, ns, d, opts); }).join('');
         if (!rows) rows = '<tr><td colspan="6"><div class="v2-empty">등록된 부서가 없습니다.</div></td></tr>';
 
-        return gapNote + stat +
+        return gapNote + roleNote + stat +
             '<div class="dchk-scroll"><table class="table-figma table-compact"><thead><tr>' +
                 '<th style="min-width:130px;">부서·사업장</th>' +
                 '<th style="width:120px;">' + esc(opts.statusLabel || (L.DONE + ' 여부')) + '</th>' +
@@ -212,10 +231,17 @@ var SKEY = 'dy-deptcheck-v3';
         /* 해당없음인데 사유가 없으면 그 사실을 행에서 바로 보이게 한다 — 조용히 넘어가면 안 된다 */
         var naWarn = (st.status === ST.NA && !st.naReason)
             ? '<div class="dchk-warn">사유 미기재 — 확인 필요</div>' : '';
+        /* 증빙 삭제는 **조작 권한이 있을 때만** 낸다 — 저장 경로에는 가드가 있어 눌러도
+           지워지지 않지만(denied), 남의 부서 행에 삭제 버튼이 보이면 담당자는 자기가
+           할 수 있는 일로 읽는다. `[확인 등록]`(아래)과 같은 기준이어야 한다.
+           도달할 수 없는 행동을 버튼으로 약속하지 않는다. */
+        var mayAct = canAct(d.id);
         var photos = (st.photos || []).length
             ? '<div class="dchk-thumbs">' + st.photos.map(function (p, i) {
-                  return '<span class="dchk-thumb" title="' + esc(p.name) + '">🖼️<button type="button" ' +
-                      'onclick="' + ns + '.delPhoto(\'' + esc(d.id) + '\',' + i + ')" aria-label="' + esc(p.name) + ' 삭제">×</button></span>';
+                  return '<span class="dchk-thumb" title="' + esc(p.name) + '">🖼️' + (mayAct
+                      ? '<button type="button" onclick="' + ns + '.delPhoto(\'' + esc(d.id) + '\',' + i + ')"' +
+                        ' aria-label="' + esc(p.name) + ' 삭제">×</button>'
+                      : '') + '</span>';
               }).join('') + '</div>'
             : '<span class="dchk-none">증빙 없음</span>';
 
@@ -320,8 +346,15 @@ var SKEY = 'dy-deptcheck-v3';
         capture();
         /* '이행'이라고 적으려면 증빙이 있어야 한다 — 시스템 존재 자체가 증빙 역할이라는 것이 회의 결론이다 */
         var L = labelsOf(F.opts);
-        if (F.status === ST.DONE && !F.photos.length) { toast(L.DONE + '으로 등록하려면 ' + (F.opts.evidenceLabel || '증빙') + '이 필요합니다.'); return; }
-        if (F.status === ST.DONE && !F.place) { toast((F.opts.placeLabel || '위치') + '를 입력하세요.'); return; }
+        if (F.status === ST.DONE && !F.photos.length) {
+            var ev = F.opts.evidenceLabel || '증빙';
+            toast(L.DONE + V().josa(L.DONE, '으로', '로') + ' 등록하려면 ' + ev + V().josa(ev, '이', '가') + ' 필요합니다.');
+            return;
+        }
+        if (F.status === ST.DONE && !F.place) {
+            var pl = F.opts.placeLabel || '위치';
+            toast(pl + V().josa(pl, '을', '를') + ' 입력하세요.'); return;
+        }
         /* 해당없음은 사유 없이 저장할 수 없다 — 필수(*)라고 표시해 놓고 통과시키면 종이 서식과 같아진다.
          * (이미 사유 없이 쌓여 있는 기존 데이터는 행에서 '사유 미기재 — 확인 필요'로 계속 드러난다) */
         if (F.status === ST.NA && !F.naReason) {

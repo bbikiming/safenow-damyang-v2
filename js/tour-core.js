@@ -47,12 +47,14 @@
     var ROLE_KEY = 'dy-role-sim-v1';          /* js/layout.js ROLE_KEY 와 같은 값 */
 
     /* 받침에 맞는 조사만 돌려준다 — '주무관로'/'소장로' 같은 오식을 막는다 */
+    /* 조사 — 공용 DYV2.josa 로 수렴(2026-08-12). 같은 함수를 두 모듈이 각자 갖고
+       있어 한쪽만 고치면 어긋난다. DYV2 부재 시에만 자체 계산으로 떨어진다. */
     function josa(word, withJong, withoutJong) {
-        var s = String(word == null ? '' : word).trim();
-        if (!s) return withJong;
-        var c = s.charCodeAt(s.length - 1);
-        var has = (c >= 0xac00 && c <= 0xd7a3) ? ((c - 0xac00) % 28) > 0 : false;
-        return has ? withJong : withoutJong;
+        var V0 = global.DYV2 || window.DYV2;
+        if (V0 && V0.josa) return V0.josa(word, withJong, withoutJong);
+        var t = String(word == null ? '' : word).trim(); if (!t) return withJong;
+        var c = t.charCodeAt(t.length - 1);
+        return ((c >= 0xac00 && c <= 0xd7a3) ? ((c - 0xac00) % 28) > 0 : false) ? withJong : withoutJong;
     }
     function personaOf(id) {
         var list = (R() && R().PERSONAS) || [];
