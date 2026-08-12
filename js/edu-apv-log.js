@@ -55,12 +55,19 @@
         var rows = filtered(list);
         var cnt = function (st) { return list.filter(function (s) { return s.status === st; }).length; };
 
+        /* **도달할 수 없는 축을 지표로 두지 않는다** — 결재 완료·반려는 온나라가 회신해야
+           생기는 상태이고 연동이 아직 없다. 칩으로 걸어 두면 영영 0 인 칸이 두 개 남아
+           "우리가 못 하고 있다"로 오독된다. 회신이 붙으면 그때 축을 늘린다. */
+        var done = cnt('결재완료'), rej = cnt('반려');
         var stats =
             '<div class="statbox-grid cols-4" style="margin-bottom:12px;">' +
-                '<div class="statbox info"><div class="statbox-num">' + list.length + '</div><div class="statbox-label">전체 상신 (건)</div></div>' +
-                '<div class="statbox info"><div class="statbox-num">' + cnt('결재중') + '</div><div class="statbox-label">결재중</div></div>' +
-                '<div class="statbox success"><div class="statbox-num">' + cnt('결재완료') + '</div><div class="statbox-label">결재완료</div></div>' +
-                '<div class="statbox ' + (cnt('반려') ? 'danger' : 'neutral') + '"><div class="statbox-num">' + cnt('반려') + '</div><div class="statbox-label">반려</div></div>' +
+                '<div class="statbox info"><div class="statbox-num">' + list.length + '</div><div class="statbox-label">상신한 공문 (건)</div></div>' +
+                '<div class="statbox info"><div class="statbox-num">' + cnt('결재중') + '</div><div class="statbox-label">결재 진행 중</div></div>' +
+                (done || rej
+                    ? '<div class="statbox success"><div class="statbox-num">' + done + '</div><div class="statbox-label">결재완료</div></div>' +
+                      '<div class="statbox ' + (rej ? 'danger' : 'neutral') + '"><div class="statbox-num">' + rej + '</div><div class="statbox-label">반려</div></div>'
+                    : '<div class="statbox neutral" style="grid-column:span 2;"><div class="statbox-label" style="text-align:left;">' +
+                      '<b>결재 완료·반려는 온나라 회신으로 채워집니다</b><br>연동 전에는 상신한 사실과 문서만 남습니다.</div></div>') +
             '</div>';
 
         var bar = EDUFILTER.bar([
@@ -69,7 +76,10 @@
               options: [['', '구분 전체'], ['summary', '총괄'], ['course', '교육별'], ['person', '개인별']],
               on: "EDUAPVLOG.setF('Kind', this.value)" },
             { type: 'select', id: 'eal-status', value: state.fStatus, label: '상태',
-              options: [['', '상태 전체'], ['결재중', '결재중'], ['결재완료', '결재완료'], ['반려', '반려']],
+              /* 목록에 실재하는 상태만 고르게 한다 — 없는 값을 두면 고를 때마다 0건이 된다 */
+              options: [['', '상태 전체']].concat(
+                  ['결재중', '결재완료', '반려'].filter(function (st) { return cnt(st) > 0; })
+                      .map(function (st) { return [st, st]; })),
               on: "EDUAPVLOG.setF('Status', this.value)" },
             { type: 'select', id: 'eal-year', value: state.fYear, label: '상신연도',
               options: EDUFILTER.yearOptions(list.map(function (s) { return s.at; }), '상신연도 전체'),

@@ -332,7 +332,12 @@
             if (!String(F.body || '').trim()) { toast('공문 본문을 입력하세요.'); return; }
             var t = cfg.targetOf(F.id);
             V().openModal('문서 미리보기 — ' + esc(F.title),
-                '<div class="rskdoc-preview">' + paperHtml(t, null) + '</div>',
+                /* 지면(.pdf-paper)은 `margin: 0 auto` 로 중앙 정렬되므로 좁은 화면에서는 양쪽으로
+                   넘쳐 **왼쪽이 스크롤로도 닿지 않는 곳으로 밀린다**(375px 실측). 래퍼가 가로로
+                   스크롤되게 하고 왼쪽에 붙여 시작점을 지면 왼쪽 끝에 맞춘다. 지면 CSS 는 다른
+                   도메인과 공유하므로 건드리지 않는다. */
+                '<div class="rskdoc-preview" style="overflow-x:auto; display:flex; justify-content:flex-start;">' +
+                    '<div>' + paperHtml(t, null) + '</div></div>',
                 '<button type="button" class="btn btn-secondary" onclick="' + NS + '.back()">← 수정</button>' +
                 '<button type="button" class="btn btn-primary" onclick="' + NS + '.confirmSend()">온나라로 결재 상신</button>',
                 { variant: 'wide', headHtml: '<button type="button" class="btn btn-sm btn-outline pdf-noprint" onclick="' + NS + '.print()">PDF 저장 / 인쇄</button>' });
@@ -388,7 +393,8 @@
             var doc = (cfg.docsFor(t) || []).filter(function (d) { return d.sid === sid; })[0];
             if (!doc) { toast('문서를 찾지 못했습니다.'); return; }
             V().openModal('공문 — ' + esc(doc.title),
-                '<div class="rskdoc-preview">' + paperHtml(t, doc) + '</div>',
+                '<div class="rskdoc-preview" style="overflow-x:auto; display:flex; justify-content:flex-start;">' +
+                    '<div>' + paperHtml(t, doc) + '</div></div>',
                 '<button type="button" class="btn btn-primary" onclick="DYV2.closeModal()">닫기</button>',
                 { variant: 'wide', headHtml: '<button type="button" class="btn btn-sm btn-outline pdf-noprint" onclick="' + NS + '.print()">PDF 저장 / 인쇄</button>' });
         }
