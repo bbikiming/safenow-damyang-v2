@@ -654,10 +654,11 @@
                     '<p style="font-size:var(--fs-12); color:var(--text-gray); margin-bottom:10px;">' +
                         '현행 경영방침 <b>v' + (act ? act.ver : '-') + '</b>' + (act ? ' · ' + V.esc(act.title) : '') +
                         ' 을 <b>전 부서·사업장이 게시</b>했는지 확인합니다. ' +
+                        '<b>게시 자체를 명시한 조문은 없습니다</b> — 시행령 제4조제1호는 목표·경영방침을 <b>설정할 것</b>만 정하고, 게시는 그 설정이 실제로 구성원에게 닿았는지 확인하는 <b>이행 수단</b>입니다. ' +
                         '게시로 등록하려면 <b>게시 위치와 게시 사진</b>이 있어야 합니다. ' +
                         '이 결과는 <a href="menu.html?m=comply" style="color:var(--main-dark); font-weight:700;">의무 이행점검</a>의 부서별 이행 현황과 같은 축을 씁니다.</p>' +
                     DEPTCHK.render(Object.assign({ key: BOARD_KEY }, boardOpts()));
-                return subtabs + sectionCard('부서별 게시 현황 <span class="chip-mini wt" style="margin-left:6px; font-weight:600;">산안법 §14</span>', body, '');
+                return subtabs + sectionCard('부서별 게시 현황', body, '');
             }
             function renderDetail(v) {
                 if (!v) return renderListPolicy();
@@ -683,7 +684,7 @@
                 /* 게시 여부는 **부서 전수 체크리스트([게시 현황] 탭)** 가 단일 출처다(2026-07-30 회의).
                    버전별 게시 카드를 여기 남겨 두면 같은 화면에서 '게시율 0%'와 '게시완료 2건'이
                    동시에 보인다 — 구 카드를 지우고 그 탭으로 보낸다. */
-                const boardSec = sectionCard('게시 현황 <span class="chip-mini wt" style="margin-left:6px;">산안법 §14</span>',
+                const boardSec = sectionCard('게시 현황',
                     '<div class="pol-board-moved">게시 여부는 <b>부서별 전수 점검</b>으로 관리합니다 — ' +
                         '상단 <b>[게시 현황]</b> 탭에서 과·사업소별 게시 여부·위치·게시사진을 확인·등록하세요.' +
                         '<button class="btn btn-sm btn-outline" style="margin-left:10px;" onclick="PG.polGoBoard()">게시 현황 탭 열기</button></div>' +
