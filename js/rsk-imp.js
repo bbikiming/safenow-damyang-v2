@@ -85,8 +85,10 @@
             var t = KO().targetOf(m.target_id);
             var scope = m.dept_id ? D().deptName(m.dept_id) : (t ? t.name : '-');
             var hazardName = (m.hazard && m.hazard.name) || m.hazard_risk_factor || '';
-            /* 시설물 — 위험성평가 검수에서 지정한 대상. 미지정은 표시하지 않는다
-               (작업행동·화학물질처럼 시설물에 붙지 않는 요인이 정상적으로 존재한다). */
+            /* 시설물 — 위험성평가 검수에서 지정한 대상. 세 상태 중 **미지정만** 줄을 만들지
+               않는다(아직 아무도 판단하지 않은 상태라 말할 것이 없다). '해당 없음'은
+               확인이 끝난 결과이므로 그대로 보여 준다 — 안 보여 주면 담당자가 앞 단계로
+               되돌아가 같은 확인을 다시 한다. 판정은 D().facilLabel() 한 곳이다. */
             var facil = D().facilLabel ? D().facilLabel(m) : '';
             var titleCell = esc(m.description) +
                 (hazardName ? '<div class="ri-hrf">' + esc(hazardName) +

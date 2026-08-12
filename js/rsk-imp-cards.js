@@ -97,7 +97,8 @@
         var basis = m.hazard && m.hazard.basis;
         var meta = [];
         /* 시설물 — 조치하러 갈 대상을 담당자가 알아야 개선 전·후 사진을 찍으러 간다.
-           미지정은 줄을 만들지 않는다(시설물에 붙지 않는 요인이 정상적으로 있다). */
+           **미지정만** 줄을 만들지 않는다. '해당 없음'은 앞 단계에서 확인이 끝난 결과라
+           그대로 보여 준다(판정은 D().facilLabel() 한 곳). */
         var facil = D().facilLabel ? D().facilLabel(m) : '';
         if (facil) meta.push('<span>시설물 <b>' + esc(facil) + '</b></span>');
         if (m.hazard && m.hazard.category) meta.push('<span>분류 <b>' + esc(m.hazard.category) + '</b></span>');

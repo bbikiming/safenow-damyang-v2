@@ -15,9 +15,17 @@
             <div class="card-header"><span class="card-title">1. 서식 다운로드</span></div>
             <div class="card-body" style="display:flex; gap:10px; flex-wrap:wrap;">
                 <button class="btn btn-outline" onclick="DYV2.toast('사업장 서식 다운로드 (프로토타입)')">사업장 서식.xlsx</button>
-                <button class="btn btn-outline" onclick="DYV2.toast('공중이용시설 서식 다운로드 (프로토타입)')">공중이용시설 서식.xlsx</button>
-                <button class="btn btn-outline" onclick="DYV2.toast('구성원·인력 서식 다운로드 (프로토타입)')">구성원·인력 서식.xlsx</button>
                 <button class="btn btn-outline" onclick="DYV2.toast('기준문서 목록 서식 다운로드 (프로토타입)')">기준문서 목록 서식.xlsx</button>
+            </div>
+            <!-- 일괄등록 대상은 '이 시스템이 정본을 갖는 자료'뿐이다. 정본이 밖에 있는 자료에
+                 서식을 두면 엑셀본과 연계본 두 명단이 생겨, 어느 쪽이 맞는지 아무도 모르게 된다. -->
+            <div class="card-body" style="padding-top:0;">
+                <p style="font-size:var(--fs-12); color:var(--text-gray); margin:0 0 6px;"><b>서식을 두지 않는 자료</b> — 정본이 이 시스템 밖에 있어 엑셀로 올리면 명단이 둘로 갈립니다.</p>
+                <ul style="font-size:var(--fs-12); color:var(--text-gray); margin:0; padding-left:18px; line-height:1.7;">
+                    <li><b>공중이용시설</b> — 시설물 정보의 단일 출처는 시설물 대장이며 FMS 연계로 받습니다. <a href="fac-sync.html" style="color:var(--main-dark);">시설물 연계로 이동</a></li>
+                    <li><b>구성원·인력</b> — 조직도는 행정포털 연계 소관입니다. 실무에서 부르는 &lsquo;온나라 조직도&rsquo;와 같은 것인지가 확정 대상이라 지금은 서식을 두지 않습니다.</li>
+                    <li><b>원료·제조물</b> — 관리대상 명단 자체가 미확보라 개별 등록으로 시작합니다. 건수가 쌓이면 그때 서식을 만듭니다.</li>
+                </ul>
             </div>
         </div>
 
@@ -33,7 +41,7 @@
 
         <div class="card" id="bulk-result" style="display:none;">
             <div class="card-header">
-                <span class="card-title">3. 유효성 체크 결과 <span class="chip-status chip-sm warning">예시 결과 — 실제 파일 미해석</span> — 공중이용시설 서식.xlsx (47행)</span>
+                <span class="card-title">3. 유효성 체크 결과 <span class="chip-status chip-sm warning">예시 결과 — 실제 파일 미해석</span> — 사업장 서식.xlsx (47행)</span>
                 <button class="btn btn-primary btn-sm" onclick="DYV2.toast('정상 44행 반영 완료 (프로토타입)')">정상 행 반영 (44)</button>
             </div>
             <div class="card-body">
@@ -43,11 +51,11 @@
                     <div class="statbox warning"><div class="statbox-num">1</div><div class="statbox-label">중복 의심</div></div>
                 </div>
                 <table class="table-figma">
-                    <thead><tr><th>행</th><th>시설명</th><th>판정</th><th>사유</th></tr></thead>
+                    <thead><tr><th>행</th><th>사업장명</th><th>판정</th><th>사유</th></tr></thead>
                     <tbody>
-                        <tr><td>12</td><td>○○경로당</td><td><span class="chip-mini st-todo">오류</span></td><td>연면적 누락 (필수값)</td></tr>
-                        <tr><td>31</td><td>△△마을회관</td><td><span class="chip-mini st-todo">오류</span></td><td>시설 유형 코드 불일치 ("회관" → 허용값 아님)</td></tr>
-                        <tr><td>40</td><td>군민체육관</td><td><span class="chip-mini st-doing">중복 의심</span></td><td>기존 등록 시설과 명칭·주소 동일</td></tr>
+                        <tr><td>12</td><td>○○사업장</td><td><span class="chip-mini st-todo">오류</span></td><td>상시근로자 수 누락 (필수값)</td></tr>
+                        <tr><td>31</td><td>△△사업소</td><td><span class="chip-mini st-todo">오류</span></td><td>사업장 구분 코드 불일치 ("사업소" → 허용값 아님)</td></tr>
+                        <tr><td>40</td><td>군민체육관 운영사업장</td><td><span class="chip-mini st-doing">중복 의심</span></td><td>기존 등록 사업장과 명칭·주소 동일</td></tr>
                     </tbody>
                 </table>
             </div>

@@ -258,7 +258,8 @@
                     round: cf.round || 1,
                     basis: (m.hazard && m.hazard.basis) || '',
                     /* 시설물 — 어디를 조치하러 가는지. 개선 전·후 사진을 찍을 대상이라
-                       담당자 화면에서 가장 먼저 필요한 정보다(미지정이면 빈 값). */
+                       담당자 화면에서 가장 먼저 필요한 정보다. 세 상태 중 **미지정만**
+                       빈 값이고 '해당 없음'은 그대로 온다(판정은 D().facilLabel() 한 곳). */
                     facil: D().facilLabel ? D().facilLabel(m) : '',
                     dept: m.dept_id, dept_label: D().deptName(m.dept_id),
                     href: 'rsk-list.html' + (m.assessment_id ? '?year=' + (m.assessment_id.match(/RA-(\d{4})/) || [])[1] : ''),

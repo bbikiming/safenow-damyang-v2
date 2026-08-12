@@ -27,7 +27,7 @@
     /* r11 — 개선조치 증빙 사진 객체(before_photos/after_photos) 승계.
      * r10 — 2026-07-30 회의 반영: 부서별 보고서(dept.reportFile) · 수시평가 실시 사유 6종(고시 §15②) ·
      *       안전관리자 검토파일(occ.reviewFile) · 개선조치 완료일·전자서명 추가. 시드 변경 시 버전 범프. */
-    var SKEY = 'damyangRskV2r11';
+    var SKEY = 'damyangRskV2r12';   /* r12 — 개선조치 시드에 시설물 3상태 연결(지정 6·해당 없음 3·미지정 1) */
 
     /* ================= 스토어 ================= */
     var db = null;
@@ -189,7 +189,7 @@
                 {
                     id: 'IMP-201', source_type: 'risk_assessment', assessment_id: 'RA-2025-01', dept_id: 'safety',
                     target_id: '', process_id: '', occ_id: '',
-                    hazard: { name: '옥상 점검통로 안전난간 미설치', category: '물리적', cause: '난간 미설치 구간 30m', basis: '' },
+                    hazard: { name: '옥상 점검통로 안전난간 미설치', category: '물리적', cause: '난간 미설치 구간 30m', basis: '', facilNo: 'AR1968-0000226', facilNm: '담양군청(본관동)' },
                     hazard_risk_factor: '옥상 점검통로 안전난간 미설치',
                     description: '점검통로 전 구간 안전난간(H=1.2m) 설치 및 추락주의 표지 부착', action: '점검통로 전 구간 안전난간(H=1.2m) 설치 및 추락주의 표지 부착',
                     assigned_to: '재난안전과 · 안전관리 주무관 / 박안전', due: '2025-07-31', due_date: '2025-07-31',
@@ -209,7 +209,7 @@
                 {
                     id: 'IMP-202', source_type: 'risk_assessment', assessment_id: 'RA-2025-01', dept_id: 'safety',
                     target_id: '', process_id: '', occ_id: '',
-                    hazard: { name: '비상발전기실 소화기 미비치', category: '화학적', cause: '소화기 노후·수량 부족', basis: '' },
+                    hazard: { name: '비상발전기실 소화기 미비치', category: '화학적', cause: '소화기 노후·수량 부족', basis: '', facilNo: 'AR1968-0000226', facilNm: '담양군청(본관동)' },
                     hazard_risk_factor: '비상발전기실 소화기 미비치',
                     description: 'ABC분말소화기 4대 교체 비치 및 점검표 부착', action: 'ABC분말소화기 4대 교체 비치 및 점검표 부착',
                     assigned_to: '재난안전과 · 안전관리담당 / 박담당', due: '2025-07-31', due_date: '2025-07-31',
@@ -249,7 +249,7 @@
                 {
                     id: 'IMP-204', source_type: 'risk_assessment', assessment_id: 'RA-2025-01', dept_id: 'env',
                     target_id: '', process_id: '', occ_id: '',
-                    hazard: { name: '자원순환팀 파쇄기 방호덮개 파손', category: '기계적', cause: '덮개 균열·고정볼트 이완', basis: '' },
+                    hazard: { name: '자원순환팀 파쇄기 방호덮개 파손', category: '기계적', cause: '덮개 균열·고정볼트 이완', basis: '', facilNa: true },
                     hazard_risk_factor: '자원순환팀 파쇄기 방호덮개 파손',
                     description: '방호덮개 교체 및 비상정지 스위치 동작 점검', action: '방호덮개 교체 및 비상정지 스위치 동작 점검',
                     assigned_to: '환경과 · 주무관 / 정수빈', due: '2025-08-15', due_date: '2025-08-15',
@@ -269,7 +269,7 @@
                 {
                     id: 'IMP-205', source_type: 'risk_assessment', assessment_id: 'RA-2025-01', dept_id: 'water',
                     target_id: '', process_id: '', occ_id: '',
-                    hazard: { name: '정수장 약품투입실 환기 불량', category: '화학적', cause: '국소배기장치 용량 부족', basis: '' },
+                    hazard: { name: '정수장 약품투입실 환기 불량', category: '화학적', cause: '국소배기장치 용량 부족', basis: '', facilNo: 'WS1996-0000011', facilNm: '신계정수장' },
                     hazard_risk_factor: '정수장 약품투입실 환기 불량',
                     description: '국소배기장치 2대 증설 및 MSDS 게시, 보호구 비치', action: '국소배기장치 2대 증설 및 MSDS 게시, 보호구 비치',
                     assigned_to: '물순환사업소 · 주무관 / 하정수', due: '2025-09-30', due_date: '2025-09-30',
@@ -289,7 +289,7 @@
                 {
                     id: 'IMP-206', source_type: 'risk_assessment', assessment_id: 'RA-2025-01', dept_id: 'water',
                     target_id: '', process_id: '', occ_id: '',
-                    hazard: { name: '침전지 개구부 추락 위험', category: '물리적', cause: '개구부 덮개·난간 미설치', basis: '' },
+                    hazard: { name: '침전지 개구부 추락 위험', category: '물리적', cause: '개구부 덮개·난간 미설치', basis: '', facilNo: 'WS1996-0000011', facilNm: '신계정수장' },
                     hazard_risk_factor: '침전지 개구부 추락 위험',
                     description: '개구부 안전덮개 6개소 설치 및 추락주의 표지 부착', action: '개구부 안전덮개 6개소 설치 및 추락주의 표지 부착',
                     assigned_to: '물순환사업소 · 주무관 / 하정수', due: '2025-09-30', due_date: '2025-09-30',
@@ -309,7 +309,7 @@
                 {
                     id: 'IMP-207', source_type: 'risk_assessment', assessment_id: 'RA-2025-01', dept_id: 'water',
                     target_id: '', process_id: '', occ_id: '',
-                    hazard: { name: '전기 분전반 시건장치 미설치', category: '전기적', cause: '분전반 개방 상태 방치', basis: '' },
+                    hazard: { name: '전기 분전반 시건장치 미설치', category: '전기적', cause: '분전반 개방 상태 방치', basis: '', facilNo: 'ST1999-0000017', facilNm: '담양하수종말처리장' },
                     hazard_risk_factor: '전기 분전반 시건장치 미설치',
                     description: '분전반 6면 시건장치 설치 및 활선 경고표지 부착', action: '분전반 6면 시건장치 설치 및 활선 경고표지 부착',
                     assigned_to: '물순환사업소 · 주무관 / 오수질', due: '2025-09-30', due_date: '2025-09-30',
@@ -329,7 +329,7 @@
                 {
                     id: 'IMP-208', source_type: 'risk_assessment', assessment_id: 'RA-2025-01', dept_id: 'water',
                     target_id: '', process_id: '', occ_id: '',
-                    hazard: { name: '슬러지 이송 컨베이어 비상정지 미작동', category: '기계적', cause: '비상정지 스위치 접점 불량', basis: '' },
+                    hazard: { name: '슬러지 이송 컨베이어 비상정지 미작동', category: '기계적', cause: '비상정지 스위치 접점 불량', basis: '', facilNa: true },
                     hazard_risk_factor: '슬러지 이송 컨베이어 비상정지 미작동',
                     description: '비상정지 스위치 전량 교체 및 월 1회 작동 점검 지정', action: '비상정지 스위치 전량 교체 및 월 1회 작동 점검 지정',
                     assigned_to: '물순환사업소 · 시설 담당 / 서담당', due: '2025-09-30', due_date: '2025-09-30',
@@ -350,7 +350,7 @@
                 {
                     id: 'IMP-209', source_type: 'occasional', assessment_id: '', dept_id: 'water',
                     target_id: '', process_id: '', occ_id: 'OCC-2026-01',
-                    hazard: { name: '밸브실 고압 배관 파손 시 수증기 분출', category: '물리적', cause: '노후 밸브·차폐 부재', basis: '' },
+                    hazard: { name: '밸브실 고압 배관 파손 시 수증기 분출', category: '물리적', cause: '노후 밸브·차폐 부재', basis: '', facilNo: 'WS2008-0000016', facilNm: '담양지방상수도' },
                     hazard_risk_factor: '밸브실 고압 배관 파손 시 수증기 분출',
                     description: '노후 밸브 3개소 교체 및 작업 전 차단 절차 게시, 보호구 비치',
                     action: '노후 밸브 3개소 교체 및 작업 전 차단 절차 게시, 보호구 비치',
@@ -372,7 +372,7 @@
                 {
                     id: 'IMP-210', source_type: 'occasional', assessment_id: '', dept_id: 'env',
                     target_id: '', process_id: '', occ_id: 'OCC-2026-02',
-                    hazard: { name: '신규 압축기 회전부 끼임 위험', category: '기계적', cause: '방호덮개 미설치 상태 반입', basis: '' },
+                    hazard: { name: '신규 압축기 회전부 끼임 위험', category: '기계적', cause: '방호덮개 미설치 상태 반입', basis: '', facilNa: true },
                     hazard_risk_factor: '신규 압축기 회전부 끼임 위험',
                     description: '방호덮개 설치 및 비상정지 스위치 설치, 취급자 특별교육 실시',
                     action: '방호덮개 설치 및 비상정지 스위치 설치, 취급자 특별교육 실시',
@@ -769,7 +769,7 @@
             /* 시설물(facilNo)은 검수 행에서 개선조치까지 그대로 승계한다 — 여기서 버리면
              * 시설물 상세(FMS 대장)에서 "이 시설물에 무슨 조치를 했나"를 되짚을 수 없다.
              * 이름(facilNm)은 표시용이고 잇는 키는 시설물번호다(동명 시설물·개명 대비). */
-            dp.hazards = rows.map(function (r) { return { name: r.name.trim(), category: r.category || '', cause: r.cause || '', basis: r.basis || '', action: r.action.trim(), facilNo: r.facilNo || '', facilNm: r.facilNm || '' }; });
+            dp.hazards = rows.map(function (r) { return { name: r.name.trim(), category: r.category || '', cause: r.cause || '', basis: r.basis || '', action: r.action.trim(), facilNo: r.facilNo || '', facilNm: r.facilNm || '', facilNa: !!r.facilNa }; });
             dp.dueDate = deptDue;
             dp.deliveredAt = today();
             dp.status = 'BEFORE';
@@ -791,7 +791,7 @@
                     source_type: 'risk_assessment',
                     assessment_id: aid, dept_id: deptId,
                     hazard: { name: r.name.trim(), category: r.category || '', cause: r.cause || '', basis: r.basis || '',
-                              facilNo: r.facilNo || '', facilNm: r.facilNm || '' },
+                              facilNo: r.facilNo || '', facilNm: r.facilNm || '', facilNa: !!r.facilNa },
                     description: r.action.trim(), action: r.action.trim(),
                     due: deptDue, due_date: deptDue,
                     /* 미지정은 **비워서 내려보낸다** — 담당자는 그 부서가 정한다
@@ -828,11 +828,26 @@
     function improvements() { return load().improvements; }
     /* 개선조치가 가리키는 시설물 표시 라벨 — 화면 4곳(개선조치 목록·상세·카드·내 할일)이
      * 각자 hazard 를 파헤치지 않도록 한 곳에서 만든다. 이름이 비면 시설물번호로 떨어진다
-     * (이름은 표시용이고 잇는 키는 번호다). 지정하지 않은 건은 빈 문자열 — 미지정은
-     * 오류가 아니라 '시설물에 붙지 않는 요인'이라는 정상 상태다. */
+     * (이름은 표시용이고 잇는 키는 번호다).
+     *
+     * **세 상태를 두 글자로 구분한다** — 지정이면 시설물명, '해당 없음'이면 그 말 그대로,
+     * 미지정이면 빈 문자열이다. 소비처 4곳이 모두 `label ? 줄 표시 : 줄 없음` 이라
+     * 여기서 구분하면 화면을 고칠 필요가 없다. 빈 문자열을 '해당 없음'으로 읽지 않는 것이
+     * 요점이다 — 앞은 **아직 아무도 안 본 것**이고 뒤는 **확인이 끝난 것**이라,
+     * 담당자가 되돌아가 확인해야 하는지 여부가 갈린다. */
     function facilLabel(m) {
         var h = m && m.hazard; if (!h) return '';
-        return (h.facilNm || h.facilNo || '').trim();
+        if (h.facilNo) {
+            /* **이름은 대장(정본)에서 매번 찾는다.** 저장된 facilNm 은 그때 복사해 둔
+             * 스냅샷이라, FMS 가 시설물을 개명해 보내면 대장은 새 이름인데 개선조치만
+             * 옛 이름으로 남는다 — 잇는 키(facilNo)는 멀쩡해서 역조회는 되는데 **보이는
+             * 이름만 조용히 갈리므로** 담당자가 현장에서 그 이름의 시설물을 못 찾는다.
+             * 스냅샷은 지우지 않고 **폴백**으로 남긴다 — 폐지된 시설물은 대장에서 빠질 수
+             * 있고, 그때 이름조차 없으면 지난 이력이 '번호만 남은 줄'이 된다. */
+            var cur = global.DYFACIL && global.DYFACIL.label ? (global.DYFACIL.label(h.facilNo) || '').trim() : '';
+            return cur || (h.facilNm || '').trim() || h.facilNo;
+        }
+        return h.facilNa ? '해당 없음' : '';
     }
     function improvementOf(id) { var d = load(); for (var i = 0; i < d.improvements.length; i++) if (d.improvements[i].id === id) return d.improvements[i]; return null; }
     function improvementsFor(aid, deptId) {
@@ -863,8 +878,12 @@
             hazard: o.hazard ? {
                 name: o.hazard.name || '', category: o.hazard.category || '',
                 cause: o.hazard.cause || '', basis: o.hazard.basis || '',
-                facilNo: o.hazard.facilNo || '', facilNm: o.hazard.facilNm || ''
-            } : { name: '', category: '', cause: '', basis: '', facilNo: '', facilNm: '' },
+                facilNo: o.hazard.facilNo || '', facilNm: o.hazard.facilNm || '',
+                /* 시설물 축은 세 상태다 — 지정 / 해당 없음(확인함) / 미지정(아직 안 봄).
+                   facilNa 를 여기서 떨어뜨리면 앞 단계에서 이미 끝낸 판단이 사라져,
+                   개선조치 담당자가 같은 확인을 다시 하게 된다. */
+                facilNa: !!o.hazard.facilNa
+            } : { name: '', category: '', cause: '', basis: '', facilNo: '', facilNm: '', facilNa: false },
             hazard_risk_factor: (o.hazard && o.hazard.name) || o.hazard_risk_factor || '',
             description: o.description || (o.hazard && o.hazard.action) || '',
             action: o.action || o.description || '',
@@ -1176,7 +1195,7 @@
                 return {
                     name: (h.name || '').trim(), cause: h.cause || '',
                     action: (h.action || '').trim(), owner: h.owner || '',
-                    facilNo: h.facilNo || '', facilNm: h.facilNm || '',
+                    facilNo: h.facilNo || '', facilNm: h.facilNm || '', facilNa: !!h.facilNa,
                     due: h.due || ''
                 };
             }),
@@ -1201,7 +1220,7 @@
                 /* 시설물은 정기 검수 행과 같이 개선조치까지 승계한다 — 여기서 떨어뜨리면
                    수시평가로 만든 조치만 시설물 대장에서 되짚을 수 없게 된다. */
                 hazard: { name: h.name.trim(), category: h.category || '', cause: h.cause || '', basis: '',
-                          facilNo: h.facilNo || '', facilNm: h.facilNm || '' },
+                          facilNo: h.facilNo || '', facilNm: h.facilNm || '', facilNa: !!h.facilNa },
                 description: h.action.trim(), action: h.action.trim(),
                 due: h.due || o.due || '', due_date: h.due || o.due || '',
                 /* 미지정은 **비워서 내려보낸다** — 정기(§deliverFromReview)와 같은 규칙이다.

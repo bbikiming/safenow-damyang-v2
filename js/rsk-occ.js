@@ -281,7 +281,12 @@
     /* 시설물(facilNo·facilNm)은 선택 항목이다 — 수시평가 사유 6종 중 '건설물의 설치·이전·변경·해체'와
      * '기계·설비 등의 정비 또는 보수'는 애초에 시설물이 원인이라 정기평가보다 오히려 결합도가 높다.
      * 잇는 키는 이름이 아니라 시설물번호다(동명 시설물·개명 대비). 정기 검수 행과 같은 규칙. */
-    function newHazard() { return { name: '', cause: '', action: '', owner: '', facilNo: '', facilNm: '', beforePhotos: [] }; }
+    /* 시설물 축은 **세 상태**다 — 지정 / 해당 없음(확인 결과 붙지 않음) / 미지정(아직 판단 안 함).
+     * 정기 검수 행(rsk-list)과 같은 규칙이며, 둘이 같은 개선조치 테이블로 흘러가므로
+     * 어긋나면 개선조치에서 빈 값의 뜻을 정할 수 없다. 종전에는 수시만 2상태여서
+     * **미입력을 '해당 없음'이라는 판단으로 단정**했다 — 이 프로젝트가 다른 축에서
+     * 명시적으로 금지한 실패 모드다(부서 이행 체크의 '해당 없음' 사유 강제와 같은 근거). */
+    function newHazard() { return { name: '', cause: '', action: '', owner: '', facilNo: '', facilNm: '', facilNa: false, beforePhotos: [] }; }
 
     /* 재해 발생(고시 §15② 5호)만 추가 필수 항목을 둔다 (docs/planning/확정-미결사항… §2)
        5호에는 다른 사유에 없는 단서가 붙어 있다 —
@@ -320,11 +325,20 @@
             '<div class="roc-hz-grid">' +
                 '<label class="form-label">시설물</label>' +
                 '<div class="orgpick-field" id="roc-hz-ff' + i + '">' +
-                    '<div style="display:flex;gap:8px;">' +
+                    /* 입력과 버튼을 한 줄에 두면 세 상태를 오가는 버튼 두 개가 자리를 먹어
+                       시설물명이 들어갈 폭이 90px 남짓밖에 안 된다 — 이름을 못 읽는다.
+                       입력은 한 줄을 통째로 쓰고 버튼은 그 아래로 내린다(좁은 화면에서도 같다). */
+                    '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
                         '<input type="text" class="form-input" id="roc-hz-fn' + i + '" readonly' +
-                            ' placeholder="해당 없음 — 시설물에 해당하는 요인만 지정" style="flex:1;" value="' + esc(h.facilNm || '') + '">' +
+                            ' placeholder="미지정 — 아직 판단하지 않음" style="flex:1 1 100%;"' +
+                            ' value="' + esc(h.facilNo ? (h.facilNm || h.facilNo) : (h.facilNa ? '해당 없음' : '')) + '">' +
+                        /* 세 상태를 오갈 수 있어야 한다 — 잘못 고른 것도, 잘못 '해당 없음' 한 것도
+                           미지정으로 되돌아갈 길이 있어야 판단을 취소할 수 있다. */
+                        (h.facilNo || h.facilNa
+                            ? '<button type="button" class="btn btn-outline" onclick="RSKOCC.hzClearFacil(' + i + ')">미지정으로</button>'
+                            : '<button type="button" class="btn btn-outline" onclick="RSKOCC.hzNaFacil(' + i + ')">해당 없음</button>') +
                         (h.facilNo
-                            ? '<button type="button" class="btn btn-outline" onclick="RSKOCC.hzClearFacil(' + i + ')">해제</button>'
+                            ? ''
                             : '<button type="button" class="btn btn-outline" onclick="RSKOCC.hzPickFacil(' + i + ')">시설물 대장</button>') +
                     '</div></div>' +
                 '<label class="form-label" for="roc-hz-n' + i + '">유해위험요인 <span class="roc-req">*</span></label>' +
@@ -443,13 +457,19 @@
     function hzSetFacil(i, no, nm) {
         var h = F.hazards[i]; if (!h) return;
         h.facilNo = no; h.facilNm = nm || (global.DYFACIL ? DYFACIL.label(no) : '');
+        h.facilNa = false;   /* 지정하면 '해당 없음'은 자동으로 풀린다 — 둘은 배타다 */
         renderRegister();
         toast('시설물 지정: ' + (h.facilNm || no));
     }
+    function hzNaFacil(i) {
+        var h = F.hazards[i]; if (!h) return;
+        h.facilNo = ''; h.facilNm = ''; h.facilNa = true;
+        renderRegister(); toast('시설물 해당 없음으로 표시');
+    }
     function hzClearFacil(i) {
         var h = F.hazards[i]; if (!h) return;
-        h.facilNo = ''; h.facilNm = '';
-        renderRegister(); toast('시설물 지정 해제');
+        h.facilNo = ''; h.facilNm = ''; h.facilNa = false;
+        renderRegister(); toast('미지정으로 되돌림');
     }
     function hzDel(i) {
         captureRegister();
@@ -623,7 +643,7 @@
         /* 실시 결과 행 (유해위험요인 → 개선조치) */
         hzAdd: hzAdd, hzDel: hzDel, hzPickOwner: hzPickOwner, hzDelPhoto: hzDelPhoto,
         /* 행 시설물 — FMS 시설물 대장(SCR-FAC-001) 연계. 선택 항목이다 */
-        hzPickFacil: hzPickFacil, hzClearFacil: hzClearFacil,
+        hzPickFacil: hzPickFacil, hzClearFacil: hzClearFacil, hzNaFacil: hzNaFacil,
         openImp: openImp,
         /* 안전관리자 검토 — 서명 파일 등록이 곧 검토 완료 */
         openReviewFile: openReviewFile, onPickReview: onPickReview, doReviewFile: doReviewFile, clearReviewFile: clearReviewFile,
