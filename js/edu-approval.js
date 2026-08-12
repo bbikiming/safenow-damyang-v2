@@ -706,7 +706,11 @@
             '<div class="eduapv-wrap" id="eduapv-wrap">' + wrapHtml() + '</div>',
             '<span class="eduapv-foot-note" id="eduapv-footnote">' + footNote() + '</span>' +
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
-            '<button type="button" class="btn btn-primary" onclick="EDUAPV.submit()">온나라로 결재 상신</button>',
+            /* 상신이 꺼져 있으면 **버튼을 내지 않는다** — 눌러도 안 되는 버튼은 없느니만 못하다.
+               문서 미리보기 자체는 막지 않는다(보는 것은 해가 없고, 되살릴 때 확인에 쓴다). */
+            (SUBMIT_ENABLED
+                ? '<button type="button" class="btn btn-primary" onclick="EDUAPV.submit()">온나라로 결재 상신</button>'
+                : '<span class="eduapv-foot-note">공문 작성 단계가 붙기 전까지 상신은 막혀 있습니다 — 미리보기 전용</span>'),
             { variant: 'wide', headHtml: '<button type="button" class="btn btn-sm btn-outline" onclick="EDUAPV.print()">PDF 저장 / 인쇄</button>' });
     }
 
@@ -724,6 +728,15 @@
     function print() { global.print(); }
 
     function submit() {
+        /* **렌더에서 버튼을 지우는 것만으로는 부족하다.** 위험성평가에서 같은 교훈을 이미 얻었다 —
+           "표에서 지운 행은 전역 호출로도 못 연다. 렌더에서만 지우면 URL·콘솔로 뚫린다"(CLAUDE.md §12).
+           가드가 없으면 꺼진 상태에서도 문서번호가 채번되고 상태가 '결재중'으로 남아,
+           lockOf() 가 그 교육의 수정·삭제를 잠근다 — 발주처가 상신을 지워 달라고 한 상태에서
+           원인을 알 수 없는 잠금이 걸린다. 되살릴 때 스위치 하나만 바꾸면 되는 성질도 여기서 깨진다. */
+        if (!SUBMIT_ENABLED) {
+            toast('상신은 현재 막혀 있습니다 — 공문 작성 단계가 붙은 뒤에 열립니다 (2026-07-30 회의)');
+            return;
+        }
         var L = line();
         var blank = L.filter(function (s) { return !s.name; }).length;
         if (blank) { toast('결재선에 지정하지 않은 단계가 ' + blank + '건 있습니다 — 조직도에서 결재자를 고르세요'); return; }

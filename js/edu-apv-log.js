@@ -27,6 +27,10 @@
         });
     }
 
+    /* 상신 활성 여부 — 값이 아니라 함수로 묻는다(모듈 초기화 시점 스냅샷을 들면
+       나중에 켜도 이 화면만 꺼진 채로 남는다). EDUAPV 가 같은 이유로 함수로 내보낸다. */
+    function apvOn() { return !!(global.EDUAPV && global.EDUAPV.submitEnabled && global.EDUAPV.submitEnabled()); }
+
     function render() {
         if (!state.mount) return;
         var list = all();
@@ -56,8 +60,14 @@
 
         var body = rows.length ? rows.map(rowHtml).join('')
             : '<tr><td colspan="8"><div class="v2-empty">' +
+                /* 빈 상태는 **도달 가능한 행동만** 약속한다 — 상신이 꺼져 있는 동안
+                   "[총괄 결재 상신]에서 올리면 쌓입니다"라고 쓰면 바로 위 안내
+                   ("현재 신규 상신은 막혀 있습니다")와 한 화면에서 서로 모순된다.
+                   되살아나면 그때 원래 문구가 나온다. */
                 (list.length ? '조건에 맞는 상신 이력이 없습니다.'
-                             : '아직 상신한 결재 문서가 없습니다. 각 교육 화면의 [총괄 결재 상신]·교육별·개인별 상신에서 문서를 올리면 여기에 쌓입니다.') +
+                             : (apvOn()
+                                 ? '아직 상신한 결재 문서가 없습니다. 각 교육 화면의 [총괄 결재 상신]·교육별·개인별 상신에서 문서를 올리면 여기에 쌓입니다.'
+                                 : '상신한 결재 문서가 없습니다 — 신규 상신이 막혀 있는 동안에는 새로 쌓이지 않습니다. 공문 작성 단계가 붙으면 그때부터 이 표에 쌓입니다.')) +
               '</div></td></tr>';
 
         state.mount.innerHTML = stats + bar +
