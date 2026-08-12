@@ -73,12 +73,8 @@
         ];
     }
 
-    /* 개인별 결재 상신은 2026-07-30 회의로 잠시 꺼져 있다(EDUAPV.SUBMIT_ENABLED).
-     * 꺼진 동안 빈 열이 남으면 표만 넓어지므로 열 자체를 빼고, 다시 켜지면 자동으로 돌아온다. */
-    function apvOn() { return !!(global.EDUAPV && global.EDUAPV.submitEnabled && global.EDUAPV.submitEnabled()); }
-    function apvCell(w) {
-        return apvOn() ? '<td class="edu-apv-cell">' + global.EDUAPV.personControl(w.id) + '</td>' : '';
-    }
+    /* 개인별 결재 열은 **없다** — 한 사람 이수 확인서는 결재가 아니라 증명서라
+       보고서·제증명이 발급한다(SCR-EDU-005 §6). 공문은 교육 1건 단위뿐이다. */
 
     function render() {
         if (!state.mount) return;
@@ -210,9 +206,8 @@
                 '<td>' + (!r.assessable ? '<span class="chip-status chip-sm warning">판정 불가</span>' : (r.complete
                     ? '<span class="chip-status chip-sm ' + V().toneOf('완료') + '">완료</span>'
                     : '<span class="chip-status chip-sm ' + V().toneOf('미이수') + '">미이수</span>')) + '</td>' +
-                apvCell(w) +
             '</tr>';
-        }).join('') : '<tr><td colspan="' + (apvOn() ? 13 : 12) + '"><div class="v2-empty">조건에 맞는 대상자가 없습니다.</div></td></tr>';
+        }).join('') : '<tr><td colspan="12"><div class="v2-empty">조건에 맞는 대상자가 없습니다.</div></td></tr>';
 
         var bar = EDUFILTER.bar([
             { type: 'search', id: 'es-q', value: state.fQ, placeholder: '이름·부서·구분 검색', on: "EDUS.setF('Q', this.value)" },
@@ -246,7 +241,7 @@
             '<table class="table-figma table-compact table-nowrap"><thead><tr>' +
                 '<th style="width:44px;"></th><th>이름</th><th>부서</th><th>구분</th><th>고용형태</th>' +
                 '<th>채용일</th><th>현재 사이클</th><th>종료 D-day</th>' +
-                '<th>필요</th><th>인정</th><th>미달</th><th>정기</th>' + (apvOn() ? '<th>개인 결재</th>' : '') +
+                '<th>필요</th><th>인정</th><th>미달</th><th>정기</th>' +
             '</tr></thead><tbody>' + rows + '</tbody></table>' +
             '</div>' +
         '</div>';
@@ -334,7 +329,7 @@
         /* 하위호환 — 기존 딥링크 ?short=1 은 새 '이수 상태' 필터의 미달 값으로 매핑 */
         if (q.get('short') === '1') { state.fStatus = 'short'; state.view = 'detail'; }
         if (q.get('status')) { state.fStatus = q.get('status'); state.view = 'detail'; }
-        if (global.EDUAPV) global.EDUAPV.registerRefresh(render);
+        if (global.EDUDOC) global.EDUDOC.registerRefresh(render);
         render();
     }
     global.EDUS = {

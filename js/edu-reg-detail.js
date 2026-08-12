@@ -41,10 +41,12 @@
 
         var sessions = E().courseSessions(c);
         /* 온나라 결재 상태 칩/상신 버튼 (교육별 = Type 2) */
-        var apvChip = global.EDUAPV ? '<span class="edu-apv-slot">' + global.EDUAPV.courseControl(c.id) + '</span>' : '';
+        /* 공문 기안 — 종료 처리된 교육에만 나타난다(SCR-EDU-004 §4-5).
+           상신은 이 자리가 아니라 문서 미리보기에만 있다. */
+        var docCtl = global.EDUDOC ? '<span class="edu-doc-slot">' + global.EDUDOC.control(c.id) + '</span>' : '';
         var summary =
             '<div class="edu-detail-head">' +
-                '<div class="edu-detail-title">' + esc(c.desc) + ' ' + stChip + ' ' + apvChip + '</div>' +
+                '<div class="edu-detail-title">' + esc(c.desc) + ' ' + stChip + ' ' + docCtl + '</div>' +
                 '<div class="edu-detail-meta">' +
                     '<span>구분 <b>' + esc(E().kindLabel(c.kind)) + '</b></span>' +
                     '<span>일정 <b>' + esc(E().courseDateTime(c)) + '</b></span>' +
@@ -223,7 +225,7 @@
         state.mount = document.getElementById(mountId);
         if (!state.mount) return;
         state.courseId = new URLSearchParams(location.search).get('id');
-        if (global.EDUAPV) global.EDUAPV.registerRefresh(render);
+        if (global.EDUDOC) global.EDUDOC.registerRefresh(render);
         render();
     }
     global.EDURD = {

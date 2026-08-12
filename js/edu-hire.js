@@ -18,7 +18,7 @@
     /* tab: 'all' 전체 | 'undone' 미이수 | 'done' 이수
      *   ※ 구 '교육 건' 탭은 2026-07-30 회의에서 제거 확정 — 발주처: "이 교육 건 지워버리고
      *      미이수랑 이수만 나오게끔… 전체가 200명, 미이수 50명, 이수 150명 그런 식으로".
-     *      다시 만들지 말 것. 채용시교육의 결재 상신은 우측 상단 [총괄 결재 상신](EDUAPV Type 1)으로 건다.
+     *      다시 만들지 말 것. 채용시교육의 공문은 **이수 처리된 교육 건 단위**로 기안한다(SCR-EDU-002 §6).
      * groupBy: 'dept' 부서별 | 'hire' 채용일(월)별 | 'none' 안 묶기 */
     var B = null; /* 일괄 이수처리 폼 */
     var A = null; /* 채용시 교육 추가 폼 (자체교육과 동일 구성 · EDUFORM) */
@@ -197,14 +197,35 @@
             '<td>' + hs.need + 'h</td>' +
             '<td>' + esc(hs.lastDate || '-') + '</td>' +
             '<td><span class="chip-status chip-sm ' + V().toneOf(stLabel) + '">' + esc(stLabel) + '</span></td>' +
-            '<td class="col-action">' + (hs.status !== 'NONE' ? editBtnHtml(w) : '') + '</td>' +
+            '<td class="col-action">' + (hs.status !== 'NONE' ? editBtnHtml(w) + ' ' + docBtnHtml(w) : '') + '</td>' +
         '</tr>';
     }
     /* 이수 기록 손보기 — '취소'가 아니라 '수정'이다.
      * 발주처: "왜 취소는 왜 할 필요가 왜 있는지 모르겠네. 수정을 차라리 수정 버튼을 누르는 게 낫지"
-     * 결재가 올라간 뒤에는 잠긴다(EDUAPV.lockOf 단일 판정). */
+     * 결재가 올라간 뒤에는 잠긴다(EDUDOC.lockOf 단일 판정). */
     function lockOf(workerId) {
-        return global.EDUAPV && global.EDUAPV.lockOf ? global.EDUAPV.lockOf('person', workerId) : null;
+        /* 잠금은 그 사람이 이수한 **교육 건**의 공문이 건다 — 개인 단위 결재는 없다.
+           판정은 EDUDOC.lockOf 한 곳이고 여기서는 결과만 쓴다. */
+        if (!global.EDUDOC || !global.EDUDOC.lockOf) return null;
+        var recs = E().records().filter(function (r) { return r.workerId === workerId && r.kind === 'HIRE'; });
+        for (var i = 0; i < recs.length; i++) {
+            var lk = global.EDUDOC.lockOf(recs[i].courseId);
+            if (lk) return lk;
+        }
+        return null;
+    }
+    /* 공문 — 채용시교육은 사람 행 화면이라 교육 카드가 없다. 그 사람이 이수한
+       **교육 건**의 공문으로 연결한다(단위는 교육 1건, SCR-EDU-002 §6).
+       한 건에 여러 명이 묶인 경우 같은 공문을 공유한다 — 건이 하나이기 때문이다. */
+    function docCourseOf(workerId) {
+        var recs = E().records().filter(function (r) { return r.workerId === workerId && r.kind === 'HIRE'; });
+        return recs.length ? recs[recs.length - 1].courseId : '';
+    }
+    function docBtnHtml(w) {
+        if (!global.EDUDOC) return '';
+        var cid = docCourseOf(w.id);
+        if (!cid) return '';
+        return '<span class="edu-doc-slot">' + global.EDUDOC.control(cid) + '</span>';
     }
     function editBtnHtml(w) {
         var lock = lockOf(w.id);
@@ -582,7 +603,7 @@
     function init(mountId) {
         state.mount = document.getElementById(mountId);
         if (!state.mount) return;
-        if (global.EDUAPV) global.EDUAPV.registerRefresh(render);
+        if (global.EDUDOC) global.EDUDOC.registerRefresh(render);
         render();
     }
     global.EDUH = {

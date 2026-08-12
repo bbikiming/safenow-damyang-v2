@@ -130,14 +130,13 @@
         }
         actions += editDeleteBtns(c.id);
         /* 온나라 결재 상태 칩/상신 버튼 (교육별 = Type 2) */
-        var apv = global.EDUAPV ? '<span class="edu-apv-slot">' + global.EDUAPV.courseControl(c.id) + '</span>' : '';
         /* 공문 기안 — 종료 처리된 교육에만 나타난다(EDUDOC 이 판정).
            상신은 이 자리가 아니라 문서 미리보기에만 있다. */
         var docCtl = global.EDUDOC ? '<span class="edu-doc-slot">' + global.EDUDOC.control(c.id) + '</span>' : '';
         return '<div class="edu-course-card" data-course-id="' + esc(c.id) + '">' +
             '<div class="edu-course-head">' +
                 '<div class="edu-course-title">' + deptChip + esc(c.desc) + ' ' + stChip + '</div>' +
-                '<div class="edu-course-actions">' + apv + docCtl + actions + '</div>' +
+                '<div class="edu-course-actions">' + docCtl + actions + '</div>' +
             '</div>' +
             '<div class="edu-course-meta">' +
                 '<span>일시 <b>' + esc(E().courseDateTime(c)) + '</b></span>' +
@@ -149,17 +148,15 @@
         '</div>';
     }
 
-    /* 결재가 올라간 뒤에는 잠근다 — 판정은 EDUAPV.lockOf 한 곳에서만 한다(CLAUDE.md §4).
+    /* 결재가 올라간 뒤에는 잠근다 — 판정은 EDUDOC.lockOf 한 곳에서만 한다(CLAUDE.md §4·§7-1).
      * 근거: "공문을 여기다 첨부하면은 문서들에 대한 기록이 남잖아요. 그러면 더 이상 수정이
      * 안 돼요. 이건 문서 위조예요."(2026-07-30 회의)
      * 상신이 꺼져 있는 동안은 항상 null 이라 아무 것도 잠기지 않는다 — 되살리는 순간부터
      * 동작한다. 채용시교육(edu-hire.js)이 같은 패턴의 정본이다. */
     function lockOf(courseId) {
         /* 잠금은 **공문 상신**이 건다 — 공문에 붙어 나간 기록을 뒤에서 바꾸는 것이
-           문서 위조이기 때문이다. 판정은 EDUDOC.lockOf 한 곳이다.
-           (구 EDUAPV 경로는 상신 단위 3종 시절의 것으로, 되살릴 때 함께 정리한다.) */
-        if (global.EDUDOC && global.EDUDOC.lockOf) return global.EDUDOC.lockOf(courseId);
-        return global.EDUAPV && global.EDUAPV.lockOf ? global.EDUAPV.lockOf('course', courseId) : null;
+           문서 위조이기 때문이다. 판정은 EDUDOC.lockOf 한 곳이다. */
+        return global.EDUDOC && global.EDUDOC.lockOf ? global.EDUDOC.lockOf(courseId) : null;
     }
     function lockBtn(lock) {
         return '<button type="button" class="btn btn-outline btn-sm" disabled title="결재 ' + esc(lock) +
@@ -202,7 +199,7 @@
     function openEdit(courseId) {
         var c = E().courseOf(courseId); if (!c) return;
         /* **버튼을 감추는 것만으로는 부족하다** — 전역 호출로 뚫린다(CLAUDE.md §12·§4).
-           판정은 EDUAPV.lockOf 한 곳이고 여기서는 그 결과만 쓴다. */
+           판정은 EDUDOC.lockOf 한 곳이고 여기서는 그 결과만 쓴다. */
         var lock = lockOf(courseId);
         if (lock) { toast('결재 ' + lock + ' 상태라 수정할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
         /* 회차가 없는 구 데이터는 대표값(date·time)에서 1회차를 파생해 그대로 편집한다 */
@@ -408,7 +405,7 @@
     function confirmRemove(courseId) {
         var c = E().courseOf(courseId); if (!c) return;
         /* **버튼을 감추는 것만으로는 부족하다** — 전역 호출로 뚫린다(CLAUDE.md §12·§4).
-           판정은 EDUAPV.lockOf 한 곳이고 여기서는 그 결과만 쓴다. */
+           판정은 EDUDOC.lockOf 한 곳이고 여기서는 그 결과만 쓴다. */
         var lock = lockOf(courseId);
         if (lock) { toast('결재 ' + lock + ' 상태라 삭제할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
         var enrolls = E().enrolls(courseId);
@@ -474,7 +471,7 @@
         SUP_MODE = !!opts.supMode;
         state.mount = document.getElementById(mountId);
         if (!state.mount) return;
-        if (global.EDUAPV) global.EDUAPV.registerRefresh(render);
+        if (global.EDUDOC) global.EDUDOC.registerRefresh(render);
         render();
     }
     global.EDUR = {

@@ -208,7 +208,9 @@
                     wl + josa(wl, '으로', '로') + ' 바꾸세요.';
             }
             if (safeDone(s)) return '이미 끝난 단계라 그 버튼은 화면에서 사라졌습니다.';
-            if (!onStepPage(s)) return '이 단계는 다른 화면(' + s.page + ')에 있습니다.';
+            /* **사용자에게 파일명을 보여주지 않는다** — pageLabel() 로 사람이 읽는 이름을 낸다
+               (같은 파일의 toast 는 이미 그렇게 하고 있었다). */
+            if (!onStepPage(s)) return '이 단계는 ' + pageLabel(s.page) + ' 화면에 있습니다.';
             if (s.scopeDept && R() && R().inScope && !R().inScope(safeCall(s.scopeDept, ''))) {
                 return '조회 범위 밖 부서라 화면에 표시되지 않습니다.';
             }

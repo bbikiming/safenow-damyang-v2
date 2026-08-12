@@ -169,6 +169,41 @@
             '<button type="button" class="btn btn-outline btn-sm" onclick="EDUDOC.openDoc(\'' + esc(courseId) + '\',\'' + esc(d.sid) + '\')">문서 보기</button>';
     }
 
+    /* ===================== 결재 이력 소비 API =====================
+     * 결재 이력 화면(edu-approval.html)은 **여기만 읽는다** — 상신을 이 모듈이 하므로
+     * 이력도 이 모듈이 낸다. 종전 구 축(EDUAPV)을 읽으면 공문을 올려도 이력이 0건으로
+     * 남는다(실제로 그랬다). 화면이 스토어 구조를 직접 파헤치지 않도록 형태를 맞춰 준다. */
+    function submissions() {
+        var d = store(), out = [];
+        Object.keys(d.docs || {}).forEach(function (cid) {
+            var arr = d.docs[cid] || [];
+            var c = courseOf(cid);
+            arr.forEach(function (doc, i) {
+                out.push({
+                    sid: doc.sid, no: doc.no, at: doc.at, status: doc.status,
+                    label: doc.title, line: doc.lineText || '',
+                    kind: 'course', kindLabel: '교육별',
+                    scope: c ? c.desc : cid,
+                    year: String(doc.at || '').slice(0, 4),
+                    courseId: cid,
+                    latest: i === arr.length - 1
+                });
+            });
+        });
+        return out.sort(function (a, b) { return String(b.at).localeCompare(String(a.at)); });
+    }
+    function openDocSid(sid) {
+        var d = store();
+        var hit = null;
+        Object.keys(d.docs || {}).forEach(function (cid) {
+            (d.docs[cid] || []).forEach(function (doc) { if (doc.sid === sid) hit = { cid: cid, doc: doc }; });
+        });
+        if (!hit) { V().toast('문서를 찾지 못했습니다.'); return; }
+        T.openDoc(hit.cid, sid);
+    }
+
+    T.submissions = submissions;
+    T.openDocSid = openDocSid;
     T.control = control;
     T.lockOf = lockOf;
     T.docsOf = docsOf;

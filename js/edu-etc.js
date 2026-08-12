@@ -103,13 +103,12 @@
             '교육시간은 산업안전보건법 시행규칙 별표4 기준입니다.</p>' +
         '</details>';
     }
-    /* 결재가 올라간 뒤에는 잠근다 — 판정은 EDUAPV.lockOf 한 곳에서만(CLAUDE.md §4).
+    /* 결재가 올라간 뒤에는 잠근다 — 판정은 EDUDOC.lockOf 한 곳에서만(CLAUDE.md §4·§7-1).
      * "공문을 여기다 첨부하면은 문서들에 대한 기록이 남잖아요. 그러면 더 이상 수정이
      *  안 돼요. 이건 문서 위조예요."(2026-07-30 회의) */
     function lockOf(courseId) {
         /* 잠금은 공문 상신이 건다 — 판정은 EDUDOC.lockOf 한 곳(edu-reg.js 와 같은 근거) */
-        if (global.EDUDOC && global.EDUDOC.lockOf) return global.EDUDOC.lockOf(courseId);
-        return global.EDUAPV && global.EDUAPV.lockOf ? global.EDUAPV.lockOf('course', courseId) : null;
+        return global.EDUDOC && global.EDUDOC.lockOf ? global.EDUDOC.lockOf(courseId) : null;
     }
     function cardHtml(c) {
         var stChip = c.status === 'DONE'
@@ -119,7 +118,6 @@
         var deptChip = c.deptId ? '<span class="chip-status chip-sm neutral" style="margin-right:6px;">' + esc(E().deptName(c.deptId)) + '</span>' : '';
         var enrolls = E().enrolls(c.id);
         var cnt = enrolls.reduce(function (n, e) { return n + (e.workerIds || []).length; }, 0);
-        var apv = global.EDUAPV ? '<span class="edu-apv-slot">' + global.EDUAPV.courseControl(c.id) + '</span>' : '';
         var docCtl = global.EDUDOC ? '<span class="edu-doc-slot">' + global.EDUDOC.control(c.id) + '</span>' : '';
         /* 법정 최소 미달 — 시스템이 아는 사실을 감추지 않는다. 저장을 막지는 않았으므로
            (막으면 미달 교육이 아예 기록되지 않는다) 목록에서 계속 드러나야 한다.
@@ -134,7 +132,7 @@
         return '<div class="edu-course-card">' +
             '<div class="edu-course-head">' +
                 '<div class="edu-course-title">' + typeBadge + deptChip + esc(c.desc) + ' ' + stChip + shortChip + workChip + '</div>' +
-                '<div class="edu-course-actions">' + apv + docCtl +
+                '<div class="edu-course-actions">' + docCtl +
                     '<button type="button" class="btn btn-outline btn-sm" onclick="EDUE.viewDetail(\'' + c.id + '\')">상세</button>' +
                     (lock
                         ? '<button type="button" class="btn btn-outline btn-sm" disabled title="결재 ' + esc(lock) +
@@ -171,7 +169,7 @@
     function openEdit(courseId) {
         var c = E().courseOf(courseId); if (!c) return;
         /* **버튼을 감추는 것만으로는 부족하다** — 전역 호출로 뚫린다(CLAUDE.md §12·§4).
-           판정은 EDUAPV.lockOf 한 곳이고 여기서는 그 결과만 쓴다. */
+           판정은 EDUDOC.lockOf 한 곳이고 여기서는 그 결과만 쓴다. */
         var lock = lockOf(courseId);
         if (lock) { toast('결재 ' + lock + ' 상태라 수정할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
         F = {
@@ -396,7 +394,7 @@
     function confirmRemove(courseId) {
         var c = E().courseOf(courseId); if (!c) return;
         /* **버튼을 감추는 것만으로는 부족하다** — 전역 호출로 뚫린다(CLAUDE.md §12·§4).
-           판정은 EDUAPV.lockOf 한 곳이고 여기서는 그 결과만 쓴다. */
+           판정은 EDUDOC.lockOf 한 곳이고 여기서는 그 결과만 쓴다. */
         var lock = lockOf(courseId);
         if (lock) { toast('결재 ' + lock + ' 상태라 삭제할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
         var cnt = E().enrolls(courseId).reduce(function (n, e) { return n + (e.workerIds || []).length; }, 0);
@@ -420,7 +418,7 @@
         SUP_MODE = !!opts.supMode;
         state.mount = document.getElementById(mountId);
         if (!state.mount) return;
-        if (global.EDUAPV) global.EDUAPV.registerRefresh(render);
+        if (global.EDUDOC) global.EDUDOC.registerRefresh(render);
         render();
     }
     global.EDUE = {
