@@ -107,6 +107,8 @@
      * "공문을 여기다 첨부하면은 문서들에 대한 기록이 남잖아요. 그러면 더 이상 수정이
      *  안 돼요. 이건 문서 위조예요."(2026-07-30 회의) */
     function lockOf(courseId) {
+        /* 잠금은 공문 상신이 건다 — 판정은 EDUDOC.lockOf 한 곳(edu-reg.js 와 같은 근거) */
+        if (global.EDUDOC && global.EDUDOC.lockOf) return global.EDUDOC.lockOf(courseId);
         return global.EDUAPV && global.EDUAPV.lockOf ? global.EDUAPV.lockOf('course', courseId) : null;
     }
     function cardHtml(c) {
@@ -118,6 +120,7 @@
         var enrolls = E().enrolls(c.id);
         var cnt = enrolls.reduce(function (n, e) { return n + (e.workerIds || []).length; }, 0);
         var apv = global.EDUAPV ? '<span class="edu-apv-slot">' + global.EDUAPV.courseControl(c.id) + '</span>' : '';
+        var docCtl = global.EDUDOC ? '<span class="edu-doc-slot">' + global.EDUDOC.control(c.id) + '</span>' : '';
         /* 법정 최소 미달 — 시스템이 아는 사실을 감추지 않는다. 저장을 막지는 않았으므로
            (막으면 미달 교육이 아예 기록되지 않는다) 목록에서 계속 드러나야 한다.
            최소는 사람마다 다르므로 몇 명이 미달인지를 함께 낸다. */
@@ -131,7 +134,7 @@
         return '<div class="edu-course-card">' +
             '<div class="edu-course-head">' +
                 '<div class="edu-course-title">' + typeBadge + deptChip + esc(c.desc) + ' ' + stChip + shortChip + workChip + '</div>' +
-                '<div class="edu-course-actions">' + apv +
+                '<div class="edu-course-actions">' + apv + docCtl +
                     '<button type="button" class="btn btn-outline btn-sm" onclick="EDUE.viewDetail(\'' + c.id + '\')">상세</button>' +
                     (lock
                         ? '<button type="button" class="btn btn-outline btn-sm" disabled title="결재 ' + esc(lock) +

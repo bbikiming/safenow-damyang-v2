@@ -175,37 +175,39 @@
             }
         },
         /* ── 5단계 · 공문 기안 → 상신 ─────────────────────────────────────────
-         * **아직 구현되지 않은 단계다.** 기획만 끝났고(기획-안전보건교육-온나라결재상신 v1.2 ·
-         * SCR-EDU-001 §4-6 · SCR-EDU-004 §4-5) 화면은 없다.
-         *
-         * 그런데도 흐름 보드에 넣는 이유는, 빼 두면 **교육 업무가 이수현황에서 끝나는 것처럼**
-         * 보이기 때문이다. 실제 업무는 거기서 끝나지 않는다 — 실시 결과를 공문으로 올려야 끝난다.
-         * "미구현 갭은 그럴듯하게 채우지 말고 화면에 드러낸다"(CLAUDE.md)를 따라, 단계는 두되
-         * **없다는 사실과 왜 없는지를 그 자리에서 말한다**. done() 은 영영 false 이고
-         * action 은 두지 않는다 — 누를 것이 없는데 버튼을 내면 그게 거짓말이다. */
+         * 교육을 끝냈다고 업무가 끝나는 것이 아니라 실시 결과를 공문으로 올려야 끝난다.
+         * 순서는 발주처가 지적한 그대로다 — 기안 → 미리보기 → 상신이고 기안 폼에는
+         * 상신 수단이 없다. 골격은 공용(DYDOC)이고 교육은 지면·붙임만 얹는다. */
         {
             key: 'doc', label: '공문', page: 'edu-reg.html',
             persona: ownerP, href: function () { return 'edu-reg.html'; },
             selector: '[data-tour="edu-doc"]',
-            planned: true,
             title: '실시 결과를 공문으로 기안 → 온나라 상신',
-            where: '교육 카드의 <b>[공문 기안]</b> <span class="chip-status chip-sm warning">기획 완료 · 화면 미구현</span>',
+            where: '종료된 교육 카드의 <b>[공문 기안]</b>',
             clickPath: [
-                '종료 처리된 교육에서 [공문 기안] → 공문 본문을 직접 씁니다',
-                '붙임은 이미 올려 둔 파일에서 고릅니다 — 교육일지·교육사진·부서별 서명파일',
-                '이수자 명단은 별지로 붙습니다',
-                '[문서 미리보기 →] → [온나라로 결재 상신] → 상신 확인'
+                '[공문 기안] → 공문 본문을 직접 씁니다 (삽입 조각으로 수치를 넣습니다)',
+                '붙임은 이미 올려 둔 파일에서 고릅니다 — 교육일지·부서별 서명부',
+                '이수자 명단은 붙임 별지로 자동으로 짜입니다',
+                '[문서 미리보기 →] → [온나라로 결재 상신] → [상신]'
             ],
-            desc: '교육을 끝냈다고 업무가 끝나는 것이 아니라, 실시 결과를 공문으로 올려야 끝납니다. ' +
-                  '본문은 담당자가 직접 쓰고 시스템은 붙임을 엮어 건넵니다. ' +
-                  '이 단계는 아직 화면이 없습니다 — 기획만 끝났습니다.',
-            script: '지금은 여기서 멈춥니다. 결재 상신을 먼저 붙였다가 “공문 작성 단계 없이 결재만 올라간다”는 지적을 받아 껐고, ' +
-                    '공문 작성 화면을 만든 뒤에 다시 엽니다.',
-            note: function () {
-                var on = global.EDUAPV && global.EDUAPV.submitEnabled && global.EDUAPV.submitEnabled();
-                return on ? '상신 열림' : '화면 미구현 — 기획 완료';
+            desc: '본문은 담당자가 직접 쓰고 시스템은 붙임을 엮어 건넵니다. 기안 화면에는 상신 수단이 없습니다 — 반드시 미리보기를 거칩니다.',
+            script: '결재 상신을 먼저 붙였다가 "공문 작성 단계 없이 결재만 올라간다"는 지적을 받았습니다. 지금은 말씀하신 순서대로 공문을 쓰고 나서 올라갑니다.',
+            modalGuide: '본문을 쓰고 붙임을 고른 뒤 <b>[문서 미리보기 →]</b> 로 넘어갑니다. 상신은 미리보기 화면에 있습니다.',
+            actionLabel: '공문 기안 열기',
+            action: function () {
+                var c = demoCourse();
+                if (c && global.EDUDOC) global.EDUDOC.open(c.id);
             },
-            done: function () { return false; }
+            done: function () {
+                var c = demoCourse();
+                return !!c && !!(global.EDUDOC && global.EDUDOC.latestDoc(c.id));
+            },
+            note: function () {
+                var c = demoCourse(); if (!c) return '교육 등록 후';
+                if (c.status !== 'DONE') return '종료 처리 후';
+                var d = global.EDUDOC && global.EDUDOC.latestDoc(c.id);
+                return d ? '상신됨 · ' + d.no : '기안 전';
+            }
         }
     ];
 
@@ -255,6 +257,7 @@
     };
     T.restoreAndStart = function () {
         E().reset();
+        if (global.EDUDOC && global.EDUDOC.reset) global.EDUDOC.reset();   /* 공문도 함께 회수 — 안 지우면 재시연 때 잠긴 채 남는다 */
         V().closeModal();
         T.go(0);
     };
