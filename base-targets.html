@@ -68,12 +68,12 @@
             <div class="card">
                 <div class="card-header">
                     <span class="card-title">원료·제조물 목록</span>
-                    <button class="btn btn-primary btn-sm" onclick="DYV2.toast('원료·제조물 등록 (프로토타입)')">+ 등록</button>
+                    <button class="btn btn-primary btn-sm" onclick="MATREG.open()">+ 등록</button>
                 </div>
                 <div class="card-body" style="overflow-x:auto;">
                     <table class="table-figma">
                         <thead><tr><th>품목</th><th>구분</th><th>사용처</th><th>MSDS</th><th>관리</th></tr></thead>
-                        <tbody>
+                        <tbody id="tgt-mat-rows">
                             <tr><td style="font-weight:600;">수처리 약품 (PAC)</td><td>화학물질</td><td>정수장</td><td><span class="chip-mini st-done">비치</span></td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('품목 상세 (프로토타입)')">상세</button></td></tr>
                             <tr><td style="font-weight:600;">차아염소산나트륨</td><td>화학물질</td><td>정수장·하수처리장</td><td><span class="chip-mini st-done">비치</span></td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('품목 상세 (프로토타입)')">상세</button></td></tr>
                             <tr><td style="font-weight:600;">제설제 (염화칼슘)</td><td>자재</td><td>도로 제설</td><td><span class="chip-mini st-doing">갱신 중</span></td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('품목 상세 (프로토타입)')">상세</button></td></tr>
@@ -92,6 +92,7 @@
     <script src="./js/policy-open.js"></script><!-- 발주처 확정 필요 항목 (DYPOLICY) -->
     <script src="./js/data.js"></script>
     <script src="./js/common.js"></script>
+    <script src="./js/org-pick.js"></script><!-- 부서 선택 공용 인라인 조직도 -->
     <script src="./js/facil-data.js"></script><!-- FMS 시설물 대장 시드 -->
     <script src="./js/facil.js"></script><!-- 공중이용시설 후보 모집단 = 대장 파생 -->
     <script>
@@ -155,6 +156,67 @@
             tabs.forEach(t => t.addEventListener('click', () => show(t.dataset.tab)));
             const init = new URLSearchParams(location.search).get('tab');
             if (init) show(init);
+        })();
+
+        /* 원료·제조물 개별 등록 (SCR-BASE-003 §5).
+           일괄등록 서식을 두지 않기로 확정했으므로(SCR-BASE-004 §6 BLK-02) 이 경로가
+           유일한 입력 수단이다 — 버튼이 안내만 내면 등록 흐름을 확정할 수 없다.
+           부서 선택은 공용 인라인 조직도만 쓴다(새 select 금지). */
+        window.MATREG = (function () {
+            const esc = s => DYV2.esc(String(s == null ? '' : s));
+            let F = null;
+            function body() {
+                return '<div class="form-group"><label class="form-label" for="mat-nm">품목명 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                        '<input type="text" class="form-input" id="mat-nm" value="' + esc(F.name) + '" placeholder="예: 수처리 약품 (PAC)"></div>' +
+                    '<div class="form-group"><label class="form-label">구분 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                        '<div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+                        ['원료', '제조물'].map(k =>
+                            '<button type="button" class="btn btn-sm ' + (F.kind === k ? 'btn-primary' : 'btn-outline') + '"' +
+                            ' onclick="MATREG.setKind(\'' + k + '\')">' + k + '</button>').join('') +
+                        '</div></div>' +
+                    '<div class="form-group"><label class="form-label">사용처 <span style="color:var(--status-danger-fg)">*</span>' +
+                        ' <span class="file-hint">여러 곳을 고를 수 있습니다</span></label>' +
+                        '<div class="orgpick-field" id="mat-dept">' +
+                            '<input type="text" class="form-input" id="mat-dept-in" readonly' +
+                                ' placeholder="조직도에서 사용 부서를 고르세요" value="' + esc(F.depts.join(' · ')) + '">' +
+                        '</div>' +
+                        (F.depts.length ? '<p class="file-hint" style="margin-top:4px;">' +
+                            F.depts.map((d, i) => '<button type="button" class="btn btn-sm btn-outline" onclick="MATREG.delDept(' + i + ')">' + esc(d) + ' ×</button>').join(' ') +
+                        '</p>' : '') +
+                    '</div>' +
+                    '<div class="form-group"><label class="form-label">물질안전보건자료</label>' +
+                        DYV2.uploadDrop('자료 파일을 끌어다 놓거나 클릭하여 선택', 'MATREG.pickFile()', { hint: true }) +
+                        (F.msds ? '<p class="file-hint" style="margin-top:4px;">선택됨 — ' + esc(F.msds) + '</p>'
+                                : '<p class="file-hint" style="margin-top:4px;">없으면 <b>미보유</b>로 표시됩니다 — 감추지 않습니다.</p>') +
+                    '</div>';
+            }
+            function draw() { DYV2.openModal('원료·제조물 등록', body(),
+                '<button type="button" class="btn btn-outline" onclick="DYV2.closeModal()">취소</button>' +
+                '<button type="button" class="btn btn-primary" onclick="MATREG.save()">등록</button>'); wire(); }
+            function wire() { if (window.ORGPICK) ORGPICK.toggle('mat-dept', 'dept', 'MATREG.addDept'); }
+            function cap() { const el = document.getElementById('mat-nm'); if (el) F.name = el.value; }
+            function open() { F = { name: '', kind: '원료', depts: [], msds: '' }; draw(); }
+            function setKind(k) { cap(); F.kind = k; draw(); }
+            function addDept(nm) { cap(); if (nm && F.depts.indexOf(nm) < 0) F.depts.push(nm); draw(); }
+            function delDept(i) { cap(); F.depts.splice(i, 1); draw(); }
+            function pickFile() { cap(); F.msds = '물질안전보건자료.pdf'; draw(); DYV2.toast('자료를 선택했습니다 (프로토타입)'); }
+            function save() {
+                cap();
+                if (!F.name.trim()) { DYV2.toast('품목명을 입력하세요.'); return; }
+                if (!F.depts.length) { DYV2.toast('사용하는 부서를 고르세요.'); return; }
+                const tb = document.getElementById('tgt-mat-rows');
+                const msds = F.msds
+                    ? '<span class="chip-status chip-sm ' + DYV2.toneOf('완료') + '">보유</span>'
+                    : '<span class="chip-status chip-sm ' + DYV2.toneOf('미시행') + '">미보유</span>';
+                const tr = document.createElement('tr');
+                tr.innerHTML = '<td style="font-weight:600;">' + esc(F.name) + '</td><td>' + esc(F.kind) + '</td>' +
+                    '<td>' + esc(F.depts.join(' · ')) + '</td><td>' + msds + '</td>' +
+                    '<td class="col-action"><span class="file-hint">방금 등록</span></td>';
+                tb.appendChild(tr);
+                DYV2.closeModal();
+                DYV2.toast('원료·제조물을 등록했습니다 · ' + F.name + (F.msds ? '' : ' (자료 미보유)'));
+            }
+            return { open, setKind, addDept, delDept, pickFile, save };
         })();
     </script>
 </body>

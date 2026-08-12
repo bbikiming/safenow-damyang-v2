@@ -50,14 +50,18 @@
                     <div class="statbox danger"><div class="statbox-num">2</div><div class="statbox-label">오류</div></div>
                     <div class="statbox warning"><div class="statbox-num">1</div><div class="statbox-label">중복 의심</div></div>
                 </div>
+                <!-- 좁은 화면에서 표가 스스로 찌그러지면 사유 열이 한 글자씩 줄바꿈된다.
+                     최소 폭을 주어 표 대신 이 래퍼가 가로로 스크롤되게 한다. -->
+                <div style="overflow-x:auto;">
                 <table class="table-figma">
-                    <thead><tr><th>행</th><th>사업장명</th><th>판정</th><th>사유</th></tr></thead>
+                    <thead><tr><th style="min-width:52px;">행</th><th style="min-width:120px;">사업장명</th><th style="min-width:86px;">판정</th><th style="min-width:240px;">사유</th></tr></thead>
                     <tbody>
                         <tr><td>12</td><td>○○사업장</td><td><span class="chip-mini st-todo">오류</span></td><td>상시근로자 수 누락 (필수값)</td></tr>
                         <tr><td>31</td><td>△△사업소</td><td><span class="chip-mini st-todo">오류</span></td><td>사업장 구분 코드 불일치 ("사업소" → 허용값 아님)</td></tr>
                         <tr><td>40</td><td>군민체육관 운영사업장</td><td><span class="chip-mini st-doing">중복 의심</span></td><td>기존 등록 사업장과 명칭·주소 동일</td></tr>
                     </tbody>
                 </table>
+                </div>
             </div>
         </div>
     </main>
