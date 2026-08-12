@@ -112,9 +112,15 @@
         var enrolls = E().enrolls(c.id);
         var cnt = enrolls.reduce(function (n, e) { return n + (e.workerIds || []).length; }, 0);
         var apv = global.EDUAPV ? '<span class="edu-apv-slot">' + global.EDUAPV.courseControl(c.id) + '</span>' : '';
+        /* 법정 최소 미달 — 시스템이 아는 사실을 감추지 않는다. 저장을 막지는 않았으므로
+           (막으면 미달 교육이 아예 기록되지 않는다) 목록에서 계속 드러나야 한다.
+           최소는 사람마다 다르므로 몇 명이 미달인지를 함께 낸다. */
+        var short = E().etcShortfall ? E().etcShortfall(c) : [];
+        var shortChip = short.length
+            ? '<span class="chip-status chip-sm danger" style="margin-left:6px;">법정 최소 미달 ' + short.length + '명</span>' : '';
         return '<div class="edu-course-card">' +
             '<div class="edu-course-head">' +
-                '<div class="edu-course-title">' + typeBadge + deptChip + esc(c.desc) + ' ' + stChip + '</div>' +
+                '<div class="edu-course-title">' + typeBadge + deptChip + esc(c.desc) + ' ' + stChip + shortChip + '</div>' +
                 '<div class="edu-course-actions">' + apv +
                     '<button type="button" class="btn btn-outline btn-sm" onclick="EDUE.viewDetail(\'' + c.id + '\')">상세</button>' +
                     '<button type="button" class="btn btn-outline btn-sm" onclick="EDUE.openEdit(\'' + c.id + '\')">수정</button>' +
@@ -123,7 +129,8 @@
             '</div>' +
             '<div class="edu-course-meta">' +
                 '<span>일정 <b>' + esc(E().courseDateTime(c)) + '</b></span>' +
-                '<span>시간 <b>' + c.hours + 'h</b></span>' +
+                '<span>시간 <b' + (short.length ? ' class="edu-short-h"' : '') + '>' + c.hours + 'h</b>'
+                    + (short.length ? ' <span class="edu-short-need">최소 ' + short[0].need + 'h</span>' : '') + '</span>' +
                 '<span>강사 <b>' + esc(c.instructor || '-') + '</b></span>' +
                 '<span>장소 <b>' + esc(c.place || '-') + '</b></span>' +
                 '<span>대상자 <b>' + cnt + '명</b></span>' +
@@ -276,7 +283,16 @@
         E().recordCourseCompletion(c.id, ids, F.hours, F.date);
         E().pushCourseHistory(c.id, { type: 'STATUS', by: E().deptName(F.deptId), memo: F.etcType + ' 진행 처리 · ' + ids.length + '명 카운트' });
         V().closeModal();
-        toast(F.etcType + ' 진행 완료 · ' + ids.length + '명 카운트');
+        /* 법정 최소 미달은 **막지 않고 알린다** — 미달로 실시된 교육도 기록은 남아야 하고,
+           막으면 담당자가 시간을 부풀려 적는다. 대신 그 사실이 이력과 목록에 계속 남는다. */
+        var short = E().etcShortfall(c);
+        if (short.length) {
+            E().pushCourseHistory(c.id, { type: 'STATUS', by: E().deptName(F.deptId),
+                memo: '법정 최소 교육시간 미달 ' + short.length + '명 (실시 ' + F.hours + 'h · 최소 ' + short[0].need + 'h)' });
+            toast(F.etcType + ' 진행 완료 · ' + ids.length + '명 · 법정 최소 미달 ' + short.length + '명');
+        } else {
+            toast(F.etcType + ' 진행 완료 · ' + ids.length + '명 카운트');
+        }
         render();
     }
 
@@ -292,6 +308,21 @@
                 esc(h.memo) + (h.by ? '<span style="color:var(--text-gray);margin-left:6px;">— ' + esc(h.by) + '</span>' : '') +
             '</div>';
         }).join('');
+        /* 법정 최소 — 미달이면 누가 미달인지 이름으로 낸다(목록은 인원수만 알려준다).
+           판정하지 않는 유형(특별교육)은 왜 판정하지 않는지를 대신 밝힌다 — 아무 표시가
+           없으면 '검사했고 이상 없음'으로 읽힌다. */
+        var short = E().etcShortfall(c);
+        var info = E().etcTypeInfo(c.etcType) || {};
+        var lawBlock = short.length
+            ? '<div class="check-notice" style="margin-top:10px;border-color:var(--status-danger-border);">' +
+                '<b>법정 최소 교육시간 미달 ' + short.length + '명</b> — 실시 ' + c.hours + 'h · 최소 ' + short[0].need + 'h<br>' +
+                short.map(function (x) { return esc(x.worker.name) + '(' + esc(E().empLabel(x.worker.empType)) + ' · 최소 ' + x.need + 'h)'; }).join(', ') +
+                '<br><span class="file-hint">기록은 그대로 남습니다 — 미달 사실을 지우지 않기 위해서입니다.</span>' +
+              '</div>'
+            : (info.perCourseCheck === false && info.checkNote
+                ? '<div class="check-notice" style="margin-top:10px;"><b>이 유형은 한 건만으로 미달을 판정하지 않습니다</b><br>' +
+                    esc(info.checkNote) + '</div>'
+                : '');
         V().openModal((c.etcType || '기타 교육') + ' — 상세',
             '<div style="font-size:var(--fs-13);">' +
                 '<div style="font-weight:var(--fw-bold);">' + esc(c.desc) + '</div>' +
@@ -300,7 +331,7 @@
                     '일정 ' + esc(E().courseDateTime(c)) + ' · ' + c.hours + 'h · 강사 ' + esc(c.instructor || '-') + ' · 장소 ' + esc(c.place || '-') +
                 '</div>' +
                 '<div style="margin-top:10px;"><b>대상자:</b> ' + esc(names || '없음') + '</div>' +
-            '</div>' +
+            '</div>' + lawBlock +
             (hist ? '<label class="form-label" style="margin-top:12px;">이력</label><div>' + hist + '</div>' : ''),
             '<button type="button" class="btn btn-primary" onclick="DYV2.closeModal()">닫기</button>');
     }

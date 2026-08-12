@@ -13,7 +13,7 @@
 
     /* r5 — 2026-07-30 회의: 기타교육 분류를 법정 3유형으로 재정의(구 5종 폐지) ·
      * 첨부 슬롯(file.slot) 도입. 구 etcType 이 남으면 필터·표시가 어긋나므로 버전 범프. */
-    var SKEY = 'damyangEduV1r5';
+    var SKEY = 'damyangEduV1r6';   /* r6 — 기타교육 시드 4건(법정 3유형 + 관리감독자) · 법정 최소 미달 판정 */
     /* 오늘 기준 — DYV2.today() 단일 출처. TODAY 는 하위호환 게터(DYEDU.TODAY)로 유지. */
     function today() { return (global.DYV2 && global.DYV2.today) ? global.DYV2.today() : realToday(); }
     function realToday() {
@@ -292,6 +292,70 @@
         });
         enrolls.push({ courseId: 'C-H2', deptId: 'facility', workerIds: ['w_fac_c2'], at: '2025-07-30' });
         records.push({ workerId: 'w_fac_c2', courseId: 'C-H2', kind: 'HIRE', hours: 8, date: '2025-07-30' });
+        /* ── 기타교육 (법정 3유형) ────────────────────────────────────────────
+         * 세 유형이 화면에 모두 나와야 분류 필터·법정 최소 안내·미달 표시를 확인할 수 있다.
+         * C-E2 는 **판정 가능한 유형에서 의도적으로 미달**인 건이다 — 같은 한 건인데
+         * 정규 현업(2h 필요)에게는 미달이고 일용(1h 필요)에게는 충족이라, 최소시간이
+         * 사람마다 다르다는 사실이 화면에 드러난다. 특별교육(C-E3)은 분할·단기간 단서가
+         * 있어 한 건만으로 판정하지 않는다(etcShortfall 참고). */
+        courses.push({
+            id: 'C-E1', kind: 'ETC', etcType: '작업내용 변경 시 교육', deptId: 'water',
+            date: '2026-04-08', time: '10:00', hours: 2,
+            instructor: '오순환(자체)', place: '물순환사업소 교육장',
+            desc: '정수장 → 하수처리장 배치 전환에 따른 작업내용 변경 교육',
+            files: [{ name: '작업변경교육_일지_20260408.pdf', slot: '교육일지 및 교육사진 등' }],
+            status: 'DONE', createdBy: '물순환사업소',
+            history: [{ type: 'CREATE', at: '2026-04-08', by: '물순환사업소', memo: '기타교육 등록 · 작업내용 변경 시 교육' }]
+        });
+        enrolls.push({ courseId: 'C-E1', deptId: 'water', workerIds: ['w_wat_c1', 'w_wat_c2'], at: '2026-04-08' });
+        ['w_wat_c1', 'w_wat_c2'].forEach(function (wid) {
+            records.push({ workerId: wid, courseId: 'C-E1', kind: 'ETC', hours: 2, date: '2026-04-08' });
+        });
+
+        courses.push({
+            id: 'C-E2', kind: 'ETC', etcType: '작업내용 변경 시 교육', deptId: 'facility',
+            date: '2026-06-11', time: '15:00', hours: 1.5,
+            instructor: '임시설(자체)', place: '공공시설사업소',
+            desc: '환경시설 점검 업무 전환 교육 — 계약직·일용 혼재',
+            files: [{ name: '작업변경교육_일지_20260611.pdf', slot: '교육일지 및 교육사진 등' }],
+            status: 'DONE', createdBy: '공공시설사업소',
+            history: [{ type: 'CREATE', at: '2026-06-11', by: '공공시설사업소', memo: '기타교육 등록 · 작업내용 변경 시 교육' }]
+        });
+        enrolls.push({ courseId: 'C-E2', deptId: 'facility', workerIds: ['w_fac_c1', 'w_fac_c4'], at: '2026-06-11' });
+        ['w_fac_c1', 'w_fac_c4'].forEach(function (wid) {
+            records.push({ workerId: wid, courseId: 'C-E2', kind: 'ETC', hours: 1.5, date: '2026-06-11' });
+        });
+
+        courses.push({
+            id: 'C-E3', kind: 'ETC', etcType: '특별교육', deptId: 'water',
+            date: '2026-05-21', time: '09:00', hours: 4,
+            instructor: '한국안전기술원', place: '정수장 현장',
+            desc: '밀폐공간(정수장 침전지·맨홀) 작업 특별교육 — 최초 4시간분',
+            files: [{ name: '특별교육_일지_20260521.pdf', slot: '교육일지 및 교육사진 등' }],
+            status: 'DONE', createdBy: '물순환사업소',
+            history: [{ type: 'CREATE', at: '2026-05-21', by: '물순환사업소', memo: '기타교육 등록 · 특별교육' }]
+        });
+        enrolls.push({ courseId: 'C-E3', deptId: 'water', workerIds: ['w_wat_c1', 'w_wat_c3', 'w_wat_c5'], at: '2026-05-21' });
+        ['w_wat_c1', 'w_wat_c3', 'w_wat_c5'].forEach(function (wid) {
+            records.push({ workerId: wid, courseId: 'C-E3', kind: 'ETC', hours: 4, date: '2026-05-21' });
+        });
+
+        /* 관리감독자 기타교육 — 같은 모듈을 supMode 플래그로 재사용하는 화면이라
+           대상이 없으면 그 화면이 통째로 빈다(edu-sup-etc.html). */
+        courses.push({
+            id: 'C-SE1', kind: 'SUP_ETC', etcType: '작업내용 변경 시 교육', deptId: 'construct',
+            date: '2026-04-23', time: '14:00', hours: 2,
+            instructor: '외부위탁', place: '건설과 회의실',
+            desc: '도로보수 → 교량점검 감독 업무 전환에 따른 교육',
+            files: [{ name: '감독자_작업변경교육_20260423.pdf', slot: '교육일지 및 교육사진 등' }],
+            status: 'DONE', createdBy: '건설과',
+            history: [{ type: 'CREATE', at: '2026-04-23', by: '건설과', memo: '관리감독자 기타교육 등록' }]
+        });
+        enrolls.push({ courseId: 'C-SE1', deptId: 'construct', workerIds: ['w_u_con1', 'w_u_con6'], at: '2026-04-23' });
+        ['w_u_con1', 'w_u_con6'].forEach(function (wid) {
+            records.push({ workerId: wid, courseId: 'C-SE1', kind: 'ETC', hours: 2, date: '2026-04-23' });
+        });
+
         var reminders = [
             { at: '2026-07-15 09:20', by: '재난안전과', deptId: 'env',
               workerIds: ['w_env_c3'], memo: '7월 말 사이클 종료 예정 · 정기교육 보강 요청' },
@@ -390,6 +454,54 @@
     function sumSessionHours(list) {
         var total = (list || []).reduce(function (n, s) { return n + sessionHours(s); }, 0);
         return Math.round(total * 10) / 10;
+    }
+    /* ── 기타교육 법정 최소 교육시간 (산안법 시행규칙 별표4) ─────────────────────
+     * 같은 교육 한 건이라도 **사람마다 최소가 다르다** — 별표4가 '일용·1주 이하 기간제'와
+     * '그 밖의 근로자'를 나눠 놓았기 때문이다. 그래서 건 단위가 아니라 대상자 단위로 센다.
+     * 구분 축은 채용시교육의 hireHours() 와 같다(같은 별표의 같은 갈래).
+     *
+     * **판정만 하고 저장을 막지 않는다.** 법정 미달로 실시된 교육도 기록은 남아야 한다 —
+     * 막으면 아예 안 남기고, 안 남으면 미달이었다는 사실 자체가 사라진다. 사유도 받지
+     * 않는다. 사유를 강제하면 담당자가 시간을 부풀려 적을 유인이 생겨 더 나빠진다.
+     * 대신 입력할 때 알리고 목록·상세에 **계속 드러낸다** — 시스템이 아는 사실을 감추지
+     * 않는 것이 요점이다. (부서 이행 체크의 '해당 없음' 사유 강제와는 이유가 다르다 —
+     * 저기는 빠져나가는 수단이라 막아야 했고 여기는 사실 기록이다.) */
+    function isShortTermWorker(w) {
+        if (!w) return false;
+        if (w.empType === 'DAILY') return true;
+        return w.empType === 'CONTRACT' && (w.contractMonths || 0) <= 0.25;   /* 1주 이하 */
+    }
+    function etcMinHours(etcType, worker) {
+        var info = ETC_TYPE_INFO[etcType];
+        if (!info || !info.hours || !info.hours.length) return 0;
+        if (info.hours.length === 1) return info.hours[0].h;   /* 건설업 기초 — 갈래가 하나다 */
+        return isShortTermWorker(worker) ? info.hours[0].h : info.hours[info.hours.length - 1].h;
+    }
+    /* 그 교육 건에서 법정 최소에 못 미친 대상자 — [{ worker, need, got }]
+     *
+     * **한 건만 보고 판정해도 되는 유형에만 한다**(ETC_TYPE_INFO 의 perCourseCheck).
+     * 별표4를 열어 보면 특별교육에는 다른 두 유형에 없는 단서가 붙어 있다 —
+     *   "16시간 이상(최초 작업 종사 전 4시간 이상, 12시간은 3개월 이내 분할 가능
+     *    / 단기간·간헐적 작업은 2시간 이상)"
+     * 즉 4시간짜리 한 건은 적법한 첫 회차일 수 있고, 단기간 작업이면 2시간으로 끝난다.
+     * 그런데 이 시스템은 ① 어느 대상 작업에 대한 특별교육인지 ② 분할 이력 ③ 단기간·간헐
+     * 여부를 받지 않는다. 받지 않기로 한 것은 의도된 결정이다(대상 작업을 등록 항목으로
+     * 만들면 목록에 없는 사례를 등록 불가로 만든다). 모르는 것을 근거로 '미달'이라 찍으면
+     * 적법한 교육에 위법 표시가 붙는다 — 그래서 특별교육은 판정하지 않고 규정을 안내한다.
+     * 최소시간만 보고 판정했다면 이 단서를 놓쳤을 것이다. */
+    function etcShortfall(course) {
+        if (!course || (course.kind !== 'ETC' && course.kind !== 'SUP_ETC')) return [];
+        var info = ETC_TYPE_INFO[course.etcType];
+        if (!info || info.perCourseCheck === false) return [];
+        var got = course.hours || 0, out = [];
+        /* recordsFor(workerId) 는 사람 축이다 — 여기선 그 교육 건의 이수기록이 필요하다 */
+        records().forEach(function (r) {
+            if (r.courseId !== course.id) return;
+            var w = workerOf(r.workerId); if (!w) return;
+            var need = etcMinHours(course.etcType, w);
+            if (need > 0 && got < need) out.push({ worker: w, need: need, got: got });
+        });
+        return out;
     }
     /* 교육 일시 표시 헬퍼 — 'YYYY-MM-DD HH:MM~HH:MM' (다회차면 '외 N일') */
     function courseDateTime(c) {
@@ -583,13 +695,19 @@
      *   복사본을 두면 조문 개정 때 화면만 옛 목록으로 남는다(CLAUDE.md §10). */
     var ETC_TYPES = ['작업내용 변경 시 교육', '특별교육', '건설업 기초안전보건교육'];
     var ETC_TYPE_INFO = {
+        /* perCourseCheck — 한 건의 교육시간만 보고 법정 최소 미달을 판정해도 되는가.
+           별표4에 분할·예외 단서가 붙은 유형은 false 다(아래 특별교육 참고). */
         '작업내용 변경 시 교육': {
-            basis: 'oshr-t4',
+            basis: 'oshr-t4', perCourseCheck: true,
             hours: [{ who: '일용·1주 이하 기간제', h: 1 }, { who: '그 밖의 근로자', h: 2 }],
             guide: '작업 내용을 바꿔 새로운 유해·위험에 노출될 때 실시합니다.'
         },
         '특별교육': {
             basis: 'oshr-t4',
+            /* 한 건만 보고 미달을 판정하지 않는다 — 별표4에 분할·예외 단서가 붙어 있고
+               이 시스템은 대상 작업·분할 이력·단기간 여부를 받지 않는다(etcShortfall 참고) */
+            perCourseCheck: false,
+            checkNote: '16시간은 최초 작업 전 4시간을 하고 나머지 12시간을 3개월 이내에 나눠 할 수 있으며, 단기간·간헐적 작업은 2시간입니다. 이 화면은 대상 작업과 분할 이력을 받지 않으므로 한 건만 보고 미달 여부를 판정하지 않습니다.',
             hours: [
                 { who: '일용·1주 이하 기간제', h: 2, note: '별표5 제1호라목 제39호는 8시간' },
                 { who: '그 밖의 근로자', h: 16, note: '최초 작업 전 4시간 + 12시간은 3개월 내 분할 / 단기간·간헐 작업은 2시간' }
@@ -604,7 +722,7 @@
             }
         },
         '건설업 기초안전보건교육': {
-            basis: 'oshr-t4',
+            basis: 'oshr-t4', perCourseCheck: true,
             hours: [{ who: '건설 일용근로자', h: 4 }],
             guide: '건설 일용근로자가 최초로 취업할 때 실시합니다.'
         }
@@ -670,6 +788,7 @@
         reminders: reminders, addReminder: addReminder,
         /* 계산 */
         cycleOf: cycleOf, requiredHours: requiredHours, hireHours: hireHours,
+        etcMinHours: etcMinHours, etcShortfall: etcShortfall, isShortTermWorker: isShortTermWorker,
         acknowledgedRegHours: acknowledgedRegHours, hireStatus: hireStatus,
         statusRow: statusRow, deptSummary: deptSummary,
         /* 메타 */

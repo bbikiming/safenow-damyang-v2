@@ -1709,6 +1709,9 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .edu-course-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
 .edu-course-meta { display: flex; gap: 16px; font-size: var(--fs-12); color: var(--text-gray); flex-wrap: wrap; }
 .edu-course-meta b { color: var(--text-black); font-weight: var(--fw-bold); }
+/* 법정 최소 교육시간 미달 — 색만으로 말하지 않고 '최소 Nh' 를 함께 낸다 */
+.edu-course-meta b.edu-short-h { color: var(--status-danger-fg); }
+.edu-short-need { color: var(--status-danger-fg); font-weight: var(--fw-bold); }
 
 .edu-tg-body { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 3px; max-height: 220px; overflow-y: auto; border: 1px solid var(--card-line); border-radius: var(--radius-md); padding: 6px; }
 .edu-tg-member { display: flex; align-items: center; gap: 6px; font-size: var(--fs-12); padding: 4px 6px; border-radius: var(--radius-xs); cursor: pointer; }
