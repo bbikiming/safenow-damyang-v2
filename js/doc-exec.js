@@ -124,15 +124,10 @@
         var lead = '<b>' + S.year + '년</b> · 완료 ' + s.counts.complete + ' · 진행중 ' + s.counts.in_progress +
             ' · 미이행 ' + s.counts.not_started + ' <span class="dx-lead-dim">/ 업무단계 ' + s.stages + '개</span>';
         var rest =
-            '<p>법정 이행항목마다 하위 업무단계의 <b>증빙 문서가 갖춰졌는지</b>를 봅니다. ' +
-            '업무를 올리면 선택한 단계가 <b>진행중</b>이 되고, 주관부서(재난안전과) 담당자가 증빙을 확인해 ' +
-            '<b>완료 처리</b>해야 진행률에 반영됩니다.</p>' +
-            '<p class="dx-note-rel">같은 말을 쓰는 다른 화면 — 부서별 반기 점검은 ' +
-            '<a href="menu.html?m=comply">안전보건관리체계 &gt; 이행관리</a>, ' +
-            '업무 발행·배정은 <a href="work-admin.html">업무 관리</a>에서 봅니다. ' +
-            '이 화면은 <b>증빙 문서</b> 축입니다.</p>' +
-            '<p class="dx-note-gap"><b>2025년 자료는 재난안전과 문서 원장</b>입니다 — 부서별 담당 정보는 ' +
-            '새로 등록하는 업무부터 쌓입니다. 2025년 진행상태는 원자료 <b>취합상태</b> 값에서 파생했습니다.</p>';
+            '<p><b>법으로 해야 하는 일이 서류로 갖춰졌는지</b> 보는 화면입니다. ' +
+            '서류를 올리면 <b>진행중</b>이 되고, 재난안전과가 확인해야 <b>완료</b>가 됩니다.</p>' +
+            '<p class="dx-note-rel">부서별 반기 점검은 <a href="menu.html?m=comply">이행점검</a>, ' +
+            '업무 배정은 <a href="work-admin.html">업무 관리</a>에서 봅니다.</p>';
         return V().notice('docs-exec', lead, rest);
     }
 
@@ -148,12 +143,12 @@
                 '<b>' + n + '</b></button>';
         }
         return '<div class="dx-summary" role="group" aria-label="' + S.year + '년 이행 현황 요약">' +
-            '<span class="dx-sum-static"><b>' + s.items + '</b> 이행항목 · <b>' + s.stages + '</b> 업무단계</span>' +
+            '<span class="dx-sum-static">법정 의무 <b>' + s.items + '</b>가지 · 할 일 <b>' + s.stages + '</b>개</span>' +
             chip(D().ST.DONE, '완료', s.counts.complete, 'success') +
             chip(D().ST.WIP, '진행중', s.counts.in_progress, 'info') +
             chip(D().ST.NONE, '미이행', s.counts.not_started, 'danger') +
             chip(D().ST.NA, '해당없음', s.counts.na, 'neutral') +
-            '<a class="dx-sum-link" href="docs-preset.html?mapping=unmapped">미분류 문서 ' + s.unmapped + '건 →</a>' +
+            '<a class="dx-sum-link" href="docs-preset.html?mapping=unmapped">의무 연결이 안 된 문서 ' + s.unmapped + '건 →</a>' +
         '</div>';
     }
 
@@ -165,13 +160,13 @@
         var stages = list.reduce(function (a, g) { return a + g.stages.length; }, 0);
         var adv = !!(S.cycle || S.collect || S.target);
         var bar = F().bar([
-            { type: 'search', id: 'dx-q', value: S.q, placeholder: '이행항목·업무단계·코드·법령', on: "DOCEXEC.setF('q', this.value)" },
-            { type: 'select', id: 'dx-st', value: S.status, label: '진행상태', options: [['', '진행상태 전체'], [D().ST.NONE, '미이행'], [D().ST.WIP, '진행중'], [D().ST.DONE, '완료'], [D().ST.NA, '해당없음']], on: "DOCEXEC.setF('status', this.value)" },
+            { type: 'search', id: 'dx-q', value: S.q, placeholder: '의무·할 일·법 이름으로 찾기', on: "DOCEXEC.setF('q', this.value)" },
+            { type: 'select', id: 'dx-st', value: S.status, label: '진행상태', options: [['', '진행상태 전체'], [D().ST.NONE, '아직'], [D().ST.WIP, '진행중'], [D().ST.DONE, '완료'], [D().ST.NA, '해당없음']], on: "DOCEXEC.setF('status', this.value)" },
             { type: 'select', id: 'dx-cy', value: S.cycle, label: '운영주기', options: cycleOptions(), on: "DOCEXEC.setF('cycle', this.value)", hidden: !S.adv && !adv },
             { type: 'select', id: 'dx-co', value: S.collect, label: '취합상태', options: collectOptions(), on: "DOCEXEC.setF('collect', this.value)", hidden: !S.adv && !adv },
             { type: 'select', id: 'dx-tg', value: S.target, label: '적용대상', options: targetOptions(), on: "DOCEXEC.setF('target', this.value)", hidden: !S.adv && !adv },
         ].filter(function (f) { return !f.hidden; }), {
-            count: list.length + '개 항목 · ' + stages, unit: '개 단계',
+            count: list.length + '가지 의무 · ' + stages, unit: '개 할 일',
             reset: 'DOCEXEC.resetF()',
             actions: '<button type="button" class="btn btn-outline btn-sm" aria-expanded="' + (S.adv || adv ? 'true' : 'false') +
                 '" onclick="DOCEXEC.toggleAdv()">상세 조건 ' + (S.adv || adv ? '▴' : '▾') +
@@ -205,8 +200,8 @@
                     '<h2 class="dx-title">' + esc(it.name) + '</h2>' +
                 '</div>' +
                 '<div class="dx-head-meta">' +
-                    '<span class="dx-meta">업무단계 ' + g.total + '개' +
-                        (g.stages.length !== g.total ? ' <em>· 조건 일치 ' + g.stages.length + '</em>' : '') + '</span>' +
+                    '<span class="dx-meta">할 일 ' + g.total + '개' +
+                        (g.stages.length !== g.total ? ' <em>· 조건 맞음 ' + g.stages.length + '</em>' : '') + '</span>' +
                     lawToggle(it) +
                 '</div>' +
                 lawPanel(it) +
@@ -214,11 +209,11 @@
             '<div class="card-body dx-body">' +
                 progressBlock(it, pr) +
                 (pr.error
-                    ? '<div class="v2-empty dx-err"><b>데이터 오류 — ' + esc(pr.error) + '</b></div>'
+                    ? '<div class="v2-empty dx-err"><b>자료 오류 — ' + esc(pr.error) + '</b></div>'
                     : '<table class="table-figma table-compact dx-table"><tbody>' + rows.map(stageRow).join('') + '</tbody></table>') +
                 (more > 0
                     ? '<button type="button" class="dx-more" onclick="DOCEXEC.toggleItem(\'' + esc(it.id) + '\')">' +
-                        '업무단계 ' + g.stages.length + '개 모두 보기 <span aria-hidden="true">▾</span></button>'
+                        '할 일 ' + g.stages.length + '개 모두 보기 <span aria-hidden="true">▾</span></button>'
                     : (showAll && g.stages.length > PREVIEW && !filtering()
                         ? '<button type="button" class="dx-more" onclick="DOCEXEC.toggleItem(\'' + esc(it.id) + '\')">접기 <span aria-hidden="true">▴</span></button>'
                         : '')) +
@@ -228,9 +223,9 @@
 
     function lawToggle(it) {
         var n = (it.lawBases || []).length;
-        if (!n) return '<span class="dx-meta">법령 근거 미등록</span>';
+        if (!n) return '<span class="dx-meta">근거 법 미등록</span>';
         return '<button type="button" class="dx-law-btn" aria-expanded="' + (S.law[it.id] ? 'true' : 'false') +
-            '" onclick="DOCEXEC.toggleLaw(\'' + esc(it.id) + '\')">법령 ' + n + '건 <span aria-hidden="true">' +
+            '" onclick="DOCEXEC.toggleLaw(\'' + esc(it.id) + '\')">근거 법 ' + n + '건 <span aria-hidden="true">' +
             (S.law[it.id] ? '▴' : '▾') + '</span></button>';
     }
     /* 조문 펼침은 인라인 — 모달을 띄우지 않는다(CLAUDE.md §1·§10) */
@@ -248,7 +243,7 @@
         if (!pr.visible) {
             return '<div class="dx-prog dx-prog-none">' +
                 '<span class="dx-nocycle">' + esc(D().noCycleNote()) + '</span>' +
-                '<span class="dx-prog-cnt">완료 ' + pr.completed + ' / 전체 ' + pr.total + '개 단계</span>' +
+                '<span class="dx-prog-cnt">완료 ' + pr.completed + ' / 전체 ' + pr.total + '개</span>' +
             '</div>';
         }
         return '<div class="dx-prog">' +
@@ -257,9 +252,9 @@
                 '<div class="progress-bar" style="width:' + pr.percentage + '%;"></div>' +
             '</div>' +
             '<span class="dx-prog-pct">' + pr.percentage + '%</span>' +
-            '<span class="dx-prog-cnt">완료 ' + pr.completed + ' / 전체 ' + pr.total + '개 단계' +
+            '<span class="dx-prog-cnt">완료 ' + pr.completed + ' / 전체 ' + pr.total + '개' +
                 /* 노출 조건(주기 보유)과 분모(전체 단계)의 축이 다르다는 걸 밝힌다 */
-                (pr.cycleStages < pr.total ? ' <em>· 정기 주기 ' + pr.cycleStages + '개 포함</em>' : '') +
+                (pr.cycleStages < pr.total ? ' <em>· 이 중 정기 ' + pr.cycleStages + '개</em>' : '') +
             '</span>' +
         '</div>';
     }
@@ -270,7 +265,7 @@
         var code = D().statusOfStage(s.id, S.year);
         var rec = D().stageRecord(s.id, S.year);
         var docs = D().documentIdsOfStage(s.id, S.year);
-        var when = s.opCycle || s.timing || '주기·시점 미지정';
+        var when = s.opCycle || s.timing || '수시';
         var href = 'docs-preset.html?stage=' + encodeURIComponent(s.id) + '&year=' + S.year;
         return '<tr class="dx-row' + (rec.needsRecheck ? ' is-recheck' : '') + '" id="dx-stage-' + esc(s.id) + '">' +
             '<td class="dx-c-main">' +
@@ -280,8 +275,8 @@
                 '</a>' +
                 '<span class="dx-swhen">' + esc(when) + '<span class="dx-sep">·</span>' +
                     (docs.length
-                        ? '<a class="dx-doclink" href="' + href + '">연결 문서 ' + docs.length + '건</a>'
-                        : '<span class="dx-nodoc">연결 문서 0건</span>') +
+                        ? '<a class="dx-doclink" href="' + href + '">서류 ' + docs.length + '건</a>'
+                        : '<span class="dx-nodoc">서류 없음</span>') +
                 '</span>' +
             '</td>' +
             '<td class="dx-c-side">' +
@@ -290,7 +285,7 @@
                 (rec.needsRecheck ? '<span class="chip-status chip-sm warning">재확인 필요</span>' : '') +
                 (code === D().ST.NA && !rec.naReason ? '<span class="chip-status chip-sm warning">사유 미기재</span>' : '') +
                 (D().canConfirm()
-                    ? '<button type="button" class="btn btn-sm btn-outline dx-conf" onclick="DOCEXEC.openStage(\'' + esc(s.id) + '\')">증빙 확인</button>'
+                    ? '<button type="button" class="btn btn-sm btn-outline dx-conf" onclick="DOCEXEC.openStage(\'' + esc(s.id) + '\')">서류 확인</button>'
                     : '') +
             '</td>' +
         '</tr>';
@@ -312,21 +307,21 @@
                 '<p class="dx-mod-path">' + esc(it.id) + ' · ' + esc(it.name) + '</p>' +
                 '<h3 class="dx-mod-title">' + esc(s.name) + '</h3>' +
                 '<dl class="dx-mod-meta">' +
-                    '<div><dt>업무단계코드</dt><dd>' + esc(s.id) + '</dd></div>' +
-                    '<div><dt>운영주기</dt><dd>' + esc(s.opCycle || s.timing || '미지정') + '</dd></div>' +
-                    '<div><dt>법령근거</dt><dd>' + esc(s.law || '미등록') + '</dd></div>' +
+                    '<div><dt>번호</dt><dd>' + esc(s.id) + '</dd></div>' +
+                    '<div><dt>주기</dt><dd>' + esc(s.opCycle || s.timing || '수시') + '</dd></div>' +
+                    '<div><dt>근거 법</dt><dd>' + esc(s.law || '미등록') + '</dd></div>' +
                     '<div><dt>현재 상태</dt><dd><span class="chip-status chip-sm ' +
                         V().toneOf(D().statusLabel(rec.status)) + '">' + esc(D().statusLabel(rec.status)) + '</span>' +
                         (rec.confirmedBy ? ' <span class="dx-mod-dim">' + esc(rec.confirmedBy) + ' · ' + esc(rec.confirmedAt) + '</span>' : '') +
                     '</dd></div>' +
                 '</dl>' +
-                '<h4 class="dx-mod-sub">증빙 문서 ' + docs.length + '건</h4>' +
+                '<h4 class="dx-mod-sub">올라온 서류 ' + docs.length + '건</h4>' +
                 (docs.length
                     ? '<ul class="dx-mod-docs">' + docs.map(function (d) {
                         return '<li><a href="doc-detail.html?id=' + esc(d.id) + '">' + esc(d.title) + '</a>' +
                             '<span class="dx-mod-dim">' + esc(d.date || '') + (d.sr ? ' · ' + esc(d.sr) : '') + '</span></li>';
                       }).join('') + '</ul>'
-                    : '<div class="v2-empty">연결된 증빙 문서가 없습니다. 업무를 올리면 여기에 나타납니다.</div>') +
+                    : '<div class="v2-empty">아직 올라온 서류가 없습니다.</div>') +
                 '<div class="form-field dx-mod-reason">' +
                     '<label class="form-label" for="dx-reason">사유 <span class="dx-mod-dim">— 반려·해당없음은 사유가 있어야 저장됩니다</span></label>' +
                     '<input type="text" class="form-input" id="dx-reason" placeholder="예: 2분기 실시 결과가 빠져 있습니다">' +
@@ -346,7 +341,7 @@
                 : '<button class="btn btn-secondary" onclick="DOCEXEC.clearNA(\'' + esc(stageId) + '\')">해당없음 해제</button>') +
             '<button class="btn btn-outline" onclick="DYV2.closeModal()">닫기</button>';
 
-        V().openModal('증빙 확인 · ' + S.year + '년', body, foot);
+        V().openModal('서류 확인 · ' + S.year + '년', body, foot);
     }
 
     function reasonVal() {
@@ -377,8 +372,8 @@
        된다(CLAUDE.md §4-3 denyToast 선례). */
     function readOnlyWhy() {
         var R = global.DYROLE, p = R && R.current ? R.current() : null;
-        if (p && p.tier !== 'staff') return '관리·감독 계층은 조회만 합니다 — 증빙 확인은 담당자 본인이 수행합니다.';
-        return '증빙 확인·완료 처리는 주관부서(재난안전과) 담당자만 할 수 있습니다.';
+        if (p && p.tier !== 'staff') return '관리·감독 계층은 조회만 합니다 — 서류 확인은 담당자 본인이 합니다.';
+        return '서류 확인·완료 처리는 재난안전과 담당자만 할 수 있습니다.';
     }
 
     /* ── 페이지 제목 줄 액션 ── */

@@ -36,9 +36,6 @@
             dupWith: null,          /* 중복 후보 문서 id */
             dupMode: '',            /* 'append' 기존 문서에 파일 추가 | 'new' 새 문서 */
             stageIds: [],
-            /* STEP2 조회 조건 */
-            q: '', cycle: '', collect: '', target: '',
-            open: {},               /* 아코디언 펼침 */
             err: '', fieldErr: {},  /* 배너 + **필드 단위** 오류 (aria-invalid 연결) */
         };
     }
@@ -78,6 +75,7 @@
     function open(year) {
         if (!D().canUpload()) { V().toast(denyNote()); return; }
         W = blankW(year);
+        global.DYPICK.reset('');
         armGuard();
         renderW();
     }
@@ -228,121 +226,37 @@
             '<button class="btn btn-primary" onclick="DOCUP.next()">다음 — 업무단계 선택 →</button>';
     }
 
-    /* ── STEP 2 — 168단계 다중 선택 ──────────────────────────────────────
-     * 하나의 긴 체크박스 목록이나 select multiple 로 만들지 않는다(§6-3).
-     * 이행항목별 아코디언 + 통합검색 + 하단 고정 선택 요약. */
+    /* ── STEP 2 — 할 일 고르기 ─────────────────────────────────────────
+     * 78개 아코디언을 펼쳤다 접었다 하면 원하는 것을 만나기까지 계속 굴려야 한다.
+     * 채용 사이트의 직무 선택과 같은 2단 트리(DYPICK)로 낸다 —
+     * 왼쪽 의무 / 오른쪽 그 의무의 할 일, 칸마다 검색, 아래에 고른 것.
+     * 업무 목록의 상세 조건도 같은 선택기를 쓴다(두 번 배우지 않게). */
     function step2() {
-        var groups = stageGroups();
-        var hit = groups.reduce(function (a, g) { return a + g.stages.length; }, 0);
         return '<div class="du-pick">' +
-            '<div class="du-pick-bar">' +
-                '<input type="search" class="form-input du-pick-q" id="du-q" value="' + esc(W.q) + '"' +
-                    ' placeholder="이행항목·업무단계·코드·법령 검색" aria-label="업무단계 검색"' +
-                    ' oninput="DOCUP.setPF(\'q\', this.value)">' +
-                sel('du-cy', W.cycle, cycleOpts(), "DOCUP.setPF('cycle', this.value)", '운영주기') +
-                sel('du-co', W.collect, collectOpts(), "DOCUP.setPF('collect', this.value)", '취합상태') +
-                sel('du-tg', W.target, targetOpts(), "DOCUP.setPF('target', this.value)", '적용대상') +
-                '<span class="dy-count">' + groups.length + '개 항목 · ' + hit + '개 단계</span>' +
-            '</div>' +
-            '<div class="du-pick-body">' +
-                (groups.length ? groups.map(accordion).join('')
-                    : '<div class="v2-empty"><b>조건에 맞는 업무단계가 없습니다.</b><br>검색어나 조건을 지워보세요.</div>') +
-            '</div>' +
-            selSummary() +
+            '<p class="du-pick-lead">이 서류가 <b>어떤 의무의 무슨 일</b>을 했다는 증거인지 고르세요. ' +
+                '여러 개를 고를 수 있습니다.</p>' +
+            global.DYPICK.render({
+                ns: 'DOCUP.onPick', multi: true,
+                item: global.DYPICK.currentItem(), stages: W.stageIds, height: 260,
+            }) +
         '</div>';
     }
-    function sel(id, v, opts, on, label) {
-        return '<select class="form-select" id="' + id + '" aria-label="' + esc(label) + '" onchange="' + on + '">' +
-            F().optionsHtml(opts, v) + '</select>';
-    }
-    function cycleOpts() {
-        var seen = {};
-        D().stages().forEach(function (s) { if (s.opCycle) seen[s.opCycle] = 1; });
-        return [['', '운영주기 전체']].concat(Object.keys(seen).sort().map(function (c) { return [c, c]; }));
-    }
-    function collectOpts() {
-        var seen = {};
-        D().stages().forEach(function (s) { if (s.collect) seen[s.collect] = 1; });
-        return [['', '취합상태 전체']].concat(Object.keys(seen).sort().map(function (c) { return [c, c]; }));
-    }
-    function targetOpts() {
-        var seen = {};
-        D().stages().forEach(function (s) { if (s.target) seen[s.target] = 1; });
-        return [['', '적용대상 전체']].concat(Object.keys(seen).sort().map(function (c) { return [c, c]; }));
-    }
-    function stageGroups() {
-        var out = [];
-        D().items().forEach(function (it) {
-            var hit = D().stagesOfItem(it.id).filter(function (s) {
-                if (W.cycle && s.opCycle !== W.cycle) return false;
-                if (W.collect && s.collect !== W.collect) return false;
-                if (W.target && s.target !== W.target) return false;
-                if (W.q && !F().match(W.q, [s.id, s.name, s.law, it.id, it.name])) return false;
-                return true;
+    /* DYPICK 콜백 — 고른 값은 마법사가 들고 있다 */
+    function onPick(kind, a, b) {
+        if (kind === 'stage') {
+            var i = W.stageIds.indexOf(a);
+            if (b && i < 0) W.stageIds.push(a);
+            if (!b && i >= 0) W.stageIds.splice(i, 1);
+        } else if (kind === 'all') {
+            a.forEach(function (id) {
+                var j = W.stageIds.indexOf(id);
+                if (b && j < 0) W.stageIds.push(id);
+                if (!b && j >= 0) W.stageIds.splice(j, 1);
             });
-            if (hit.length) out.push({ item: it, stages: hit });
-        });
-        return out;
+        } else if (kind === 'clear') { W.stageIds = []; }
+        F().rerender(renderW);
     }
-    function accordion(g) {
-        var it = g.item;
-        /* 검색 중이면 자동으로 펼친다 — 찾아 놓고 또 눌러야 하면 검색이 아니다 */
-        var openNow = !!W.open[it.id] || !!(W.q || W.cycle || W.collect || W.target);
-        var picked = g.stages.filter(function (s) { return W.stageIds.indexOf(s.id) >= 0; }).length;
-        var allOn = picked === g.stages.length && picked > 0;
-        return '<section class="du-acc' + (openNow ? ' is-open' : '') + '">' +
-            '<h4 class="du-acc-h">' +
-                '<button type="button" class="du-acc-btn" aria-expanded="' + (openNow ? 'true' : 'false') +
-                    '" onclick="DOCUP.toggleAcc(\'' + esc(it.id) + '\')">' +
-                    '<span class="du-acc-code">' + esc(it.id) + '</span>' +
-                    '<span class="du-acc-name">' + esc(it.name) + '</span>' +
-                    '<span class="du-acc-n">' + g.stages.length + '개' +
-                        (picked ? ' <b>· 선택 ' + picked + '</b>' : '') + '</span>' +
-                    '<span class="du-acc-car" aria-hidden="true">' + (openNow ? '▴' : '▾') + '</span>' +
-                '</button>' +
-            '</h4>' +
-            (openNow
-                ? '<div class="du-acc-body">' +
-                    '<label class="du-all"><input type="checkbox"' + (allOn ? ' checked' : '') +
-                        ' onchange="DOCUP.pickGroup(\'' + esc(it.id) + '\', this.checked)"> 이 항목의 ' + g.stages.length + '개 단계 전체 선택</label>' +
-                    g.stages.map(pickRow).join('') +
-                  '</div>'
-                : '') +
-        '</section>';
-    }
-    function pickRow(s) {
-        var on = W.stageIds.indexOf(s.id) >= 0;
-        var cur = D().statusOfStage(s.id, W.year);
-        var id = 'du-s-' + s.id;
-        return '<label class="du-srow' + (on ? ' is-on' : '') + '" for="' + id + '">' +
-            '<input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') +
-                ' onchange="DOCUP.pickStage(\'' + esc(s.id) + '\', this.checked)">' +
-            '<span class="du-srow-main">' +
-                '<span class="du-srow-code">' + esc(s.id) + '</span>' +
-                '<span class="du-srow-name">' + esc(s.name) + '</span>' +
-                '<span class="du-srow-sub">' + esc(s.opCycle || s.timing || '주기·시점 미지정') + '</span>' +
-            '</span>' +
-            '<span class="chip-status chip-sm ' + V().toneOf(D().statusLabel(cur)) + '">' + esc(D().statusLabel(cur)) + '</span>' +
-        '</label>';
-    }
-    /* 선택 요약은 하단에 고정 — 긴 이름을 툴팁에 숨기지 않고 줄바꿈한다 */
-    function selSummary() {
-        var items = {};
-        W.stageIds.forEach(function (sid) { var s = D().stage(sid); if (s) items[s.itemId] = 1; });
-        return '<div class="du-sel">' +
-            '<div class="du-sel-head">' +
-                '<b>선택 ' + W.stageIds.length + '개 단계</b> · 이행항목 ' + Object.keys(items).length + '개' +
-                (W.stageIds.length ? '<button type="button" class="du-link" onclick="DOCUP.clearStages()">전체 해제</button>' : '') +
-            '</div>' +
-            (W.stageIds.length
-                ? '<ul class="du-sel-list">' + W.stageIds.map(function (sid) {
-                    var s = D().stage(sid); if (!s) return '';
-                    return '<li><span>' + esc(s.id) + ' ' + esc(s.name) + '</span>' +
-                        '<button type="button" aria-label="' + esc(s.name) + ' 선택 해제" onclick="DOCUP.pickStage(\'' + esc(sid) + '\', false)">×</button></li>';
-                  }).join('') + '</ul>'
-                : '<p class="du-sel-none">아직 선택한 업무단계가 없습니다. 이 문서가 증빙하는 단계를 하나 이상 고르세요.</p>') +
-        '</div>';
-    }
+
     function foot2() {
         return '<button class="btn btn-outline" onclick="DOCUP.prev()">← 이전</button>' +
             '<button class="btn btn-primary" onclick="DOCUP.next()">다음 — 확인 →</button>';
@@ -438,22 +352,6 @@
         if (hit) { W.dupWith = hit.id; if (!W.dupMode) W.dupMode = 'new'; }
     }
 
-    function setPF(k, v) { W[k] = v; F().rerender(renderW); }
-    function toggleAcc(id) { W.open[id] = !W.open[id]; renderW(); }
-    function pickStage(sid, on) {
-        var i = W.stageIds.indexOf(sid);
-        if (on && i < 0) W.stageIds.push(sid);
-        if (!on && i >= 0) W.stageIds.splice(i, 1);
-        F().rerender(renderW);
-    }
-    function pickGroup(itemId, on) {
-        D().stagesOfItem(itemId).forEach(function (s) {
-            var i = W.stageIds.indexOf(s.id);
-            if (on && i < 0) W.stageIds.push(s.id);
-            if (!on && i >= 0) W.stageIds.splice(i, 1);
-        });
-        F().rerender(renderW);
-    }
     function clearStages() { W.stageIds = []; F().rerender(renderW); }
 
     function next() {
@@ -793,7 +691,7 @@
     global.DOCUP = {
         open: open, cancel: cancel, next: next, prev: prev, submit: submit,
         addFiles: addFiles, delFile: delFile, onTitle: onTitle, pickOwner: pickOwner, setDup: setDup,
-        setPF: setPF, toggleAcc: toggleAcc, pickStage: pickStage, pickGroup: pickGroup, clearStages: clearStages,
+        onPick: onPick, clearStages: clearStages,
         openPreset: openPreset, closePreset: closePreset, runPreset: runPreset, dirty: dirty,
         setPreF: setPreF, resetPreF: resetPreF, prePage: prePage,
         selDoc: selDoc, clearSel: clearSel, expand: expand, setOne: setOne, setBulk: setBulk,

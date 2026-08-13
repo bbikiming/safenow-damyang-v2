@@ -32,12 +32,12 @@
 
     /* 상세필터 정의 — 칩 라벨·해제를 한 곳에서 만든다(개별 해제 누락 방지) */
     var CHIPS = [
-        ['q', '검색어'], ['year', '기준연도'], ['src', '문서 출처'], ['status', '상태'],
-        ['from', '보고일자 시작'], ['to', '보고일자 끝'],
-        ['item', '이행항목'], ['stage', '업무단계'], ['law', '법령근거'],
-        ['cycle', '운영주기'], ['collect', '취합상태'], ['target', '적용대상'], ['actor', '이행주체'],
-        ['dept', '담당부서'], ['assignee', '담당자'], ['sr', '수발신자'],
-        ['hasFile', '첨부'], ['hasPdf', 'PDF'], ['mapping', '매핑 상태'], ['menu', '대메뉴'],
+        ['q', '검색어'], ['year', '연도'], ['src', '출처'], ['status', '상태'],
+        ['from', '보고일 시작'], ['to', '보고일 끝'],
+        ['item', '어떤 의무'], ['stage', '무슨 일'], ['law', '법 조문'],
+        ['cycle', '주기'], ['collect', '2025년 취합'], ['target', '적용대상'], ['actor', '담당 주체'],
+        ['dept', '담당부서'], ['assignee', '담당자'], ['sr', '상대 기관'],
+        ['hasFile', '첨부'], ['hasPdf', '공문 지면'], ['mapping', '의무 연결'], ['menu', '분야'],
     ];
 
     /* =========================================================================
@@ -180,13 +180,10 @@
         var lead = '<b>문서 ' + docs.length.toLocaleString() + '건</b> · 2025 원장 ' + led.toLocaleString() +
             ' · 현행 업무문서 ' + v2 + (user ? ' · 등록분 ' + user : '');
         var rest =
-            '<p>온나라 상신 문서, 시스템 전자문서, 직접 첨부한 문서, 전용 화면에서 처리하는 업무를 <b>한곳에서 조회</b>합니다. ' +
-            '문서 1건이 여러 업무단계에 걸쳐 있어도 <b>한 행</b>으로 봅니다.</p>' +
-            '<p class="dx-note-rel">이행 현황(어느 업무단계가 미이행인지)은 ' +
-            '<a href="docs-exec.html">업무문서 &gt; 이행 목록</a>에서 봅니다. 이 화면은 <b>문서를 찾는</b> 화면입니다.</p>' +
-            '<p class="dx-note-gap"><b>2025년 원장은 재난안전과 문서</b>라 담당부서·담당자 값이 없습니다' +
-            '(<em>원장 미보유</em>로 표시). 수발신자 상위 값은 전라남도 등 <b>외부 발신기관</b>이며 담당자가 아닙니다. ' +
-            '문서 출처·상태는 <b>시연값</b>이고 실서비스에서는 온나라·전자문서·파일관리 어댑터의 원천 상태로 대체됩니다.</p>';
+            '<p><b>문서를 찾는 화면</b>입니다. 온나라·전자문서·직접 첨부·전용 화면 업무를 한곳에서 봅니다. ' +
+            '어느 의무가 아직 안 됐는지는 <a href="docs-exec.html">이행 목록</a>에서 봅니다.</p>' +
+            '<p class="dx-note-gap">2025년 자료는 <b>재난안전과가 주고받은 공문 기록</b>이라 담당자 칸이 비어 있고, ' +
+            '수발신자는 전라남도 같은 <b>상대 기관</b>입니다. 출처·상태는 <b>시연용 값</b>입니다.</p>';
         return V().notice('docs-preset', lead, rest);
     }
 
@@ -219,38 +216,60 @@
         D().SRC_ORDER.forEach(function (k) {
             D().SRC[k].status.forEach(function (s) { if (all.indexOf(s) < 0) all.push(s); });
         });
-        return [['', '상태 전체 — 출처를 고르면 그 출처의 상태만 나옵니다']].concat(all.map(function (s) { return [s, s]; }));
+        return [['', '상태 전체 — 출처를 고르면 그것만']].concat(all.map(function (s) { return [s, s]; }));
     }
 
     /* 상세필터는 모달이 아니라 **페이지 안에서** 펼친다(§8-5) */
     function advPanel() {
         if (!S.adv) return '';
-        var stageOpts = S.item
-            ? [['', '업무단계 전체']].concat(D().stagesOfItem(S.item).map(function (s) { return [s.id, s.id + ' ' + s.name]; }))
-            : [['', '이행항목을 먼저 고르세요']];
-        return '<div class="dl-adv" id="dl-adv">' +
+        /* 이행항목 78 · 업무단계 168 은 드롭다운으로 고를 양이 아니다.
+           채용 사이트의 직무 선택처럼 2단 트리 + 칸별 검색으로 낸다(DYPICK). */
+        var tree =
+            '<div class="dl-adv-tree">' +
+                '<div class="dl-adv-tree-h">어떤 법정 의무의 문서인가요' +
+                    (S.item || S.stage ? '<button type="button" class="du-link" onclick="DOCLIST.clearTree()">고른 것 지우기</button>' : '') +
+                '</div>' +
+                global.DYPICK.render({
+                    ns: 'DOCLIST.onTree', multi: false,
+                    item: S.item, stages: S.stage ? [S.stage] : [], height: 200,
+                }) +
+            '</div>';
+        return '<div class="dl-adv" id="dl-adv">' + tree +
             '<div class="dl-adv-grid">' +
-                f('이행항목 <span class="dl-f-n">78</span>', combo('dl-item', S.item, [['', '']].concat(D().items().map(function (i) { return [i.id, i.id + ' ' + i.name]; })), 'item', '이행항목명·코드로 좁히기')) +
-                f('업무단계', selHtml('dl-stage', S.stage, stageOpts, "DOCLIST.setF('stage', this.value)", !S.item)) +
                 f('상태', selHtml('dl-status', S.status, statusOpts(), "DOCLIST.setF('status', this.value)")) +
-                f('법령근거', combo('dl-law', S.law, uniqOpts('laws', '').map(function (o) { return [o[0], o[0] || '']; }), 'law', '법·조문으로 좁히기')) +
-                f('운영주기', selHtml('dl-cycle', S.cycle, uniqOpts('cycles', '운영주기 전체'), "DOCLIST.setF('cycle', this.value)")) +
-                f('취합상태', selHtml('dl-collect', S.collect, uniqOpts('collects', '취합상태 전체'), "DOCLIST.setF('collect', this.value)")) +
-                f('적용대상', selHtml('dl-target', S.target, uniqOpts('targets', '적용대상 전체'), "DOCLIST.setF('target', this.value)")) +
-                f('이행주체', selHtml('dl-actor', S.actor, uniqOpts('actors', '이행주체 전체'), "DOCLIST.setF('actor', this.value)")) +
-                f('담당부서', selHtml('dl-dept', S.dept, docOpts('dept', '담당부서 전체'), "DOCLIST.setF('dept', this.value)")) +
-                f('담당자', selHtml('dl-assignee', S.assignee, docOpts('assignee', '담당자 전체'), "DOCLIST.setF('assignee', this.value)")) +
-                f('수발신자 <span class="dl-f-n">326</span>', combo('dl-sr', S.sr, docOpts('sr', '').map(function (o) { return [o[0], o[0] || '']; }), 'sr', '기관·직위로 좁히기')) +
-                f('매핑 상태', selHtml('dl-mapping', S.mapping, [['', '전체'], ['mapped', '분류완료'],
-                    ['unmapped', '미분류 — 원장 교정 대상'], ['noaxis', '이행항목 축 없음 — 현행 업무문서']],
+                f('법정 의무 연결', selHtml('dl-mapping', S.mapping, [['', '전체'], ['mapped', '연결됨'],
+                    ['unmapped', '연결 안 됨 — 지정 필요'], ['noaxis', '이 목록 밖 문서']],
                     "DOCLIST.setF('mapping', this.value)")) +
-                f('첨부 유무', selHtml('dl-hasFile', S.hasFile, [['', '전체'], ['y', '첨부 있음'], ['n', '첨부 없음']], "DOCLIST.setF('hasFile', this.value)")) +
-                f('PDF 유무', selHtml('dl-hasPdf', S.hasPdf, [['', '전체'], ['y', 'PDF 있음'], ['n', 'PDF 없음']], "DOCLIST.setF('hasPdf', this.value)")) +
-                f('보고일자 시작', '<input type="date" class="form-input" value="' + esc(S.from) + '" onchange="DOCLIST.setF(\'from\', this.value)">') +
-                f('보고일자 끝', '<input type="date" class="form-input" value="' + esc(S.to) + '" onchange="DOCLIST.setF(\'to\', this.value)">') +
+                f('담당부서', selHtml('dl-dept', S.dept, docOpts('dept', '담당부서 전체'), "DOCLIST.setF('dept', this.value)")) +
+                f('첨부', selHtml('dl-hasFile', S.hasFile, [['', '전체'], ['y', '있음'], ['n', '없음']], "DOCLIST.setF('hasFile', this.value)")) +
+                f('보고일 시작', '<input type="date" class="form-input" value="' + esc(S.from) + '" onchange="DOCLIST.setF(\'from\', this.value)">') +
+                f('보고일 끝', '<input type="date" class="form-input" value="' + esc(S.to) + '" onchange="DOCLIST.setF(\'to\', this.value)">') +
             '</div>' +
-            '<p class="dl-adv-note">담당부서·담당자는 <b>새로 등록한 문서</b>에만 값이 있습니다 — 2025년 원장은 부서 정보를 담고 있지 않습니다.</p>' +
+            /* 나머지는 한 겹 더 접는다 — 14개를 한 번에 늘어놓으면 벽이 된다.
+               값이 걸려 있으면 자동으로 펼쳐 숨은 조건 때문에 결과가 이상해 보이는 일을 막는다. */
+            moreBlock() +
+            '<p class="dl-adv-note">담당 칸은 <b>새로 올린 문서</b>에만 값이 있습니다.</p>' +
         '</div>';
+    }
+    function moreOn() { return !!(S.law || S.cycle || S.collect || S.target || S.actor || S.sr || S.hasPdf || S.assignee); }
+    function moreBlock() {
+        var open = S.more || moreOn();
+        var n = [S.law, S.cycle, S.collect, S.target, S.actor, S.sr, S.hasPdf, S.assignee].filter(Boolean).length;
+        return '<button type="button" class="dl-more-btn" aria-expanded="' + (open ? 'true' : 'false') +
+                '" aria-controls="dl-more" onclick="DOCLIST.toggleMore()">그 밖의 조건 ' + (open ? '▴' : '▾') +
+                (n ? ' <b>' + n + '</b>' : '') + '</button>' +
+            (open
+                ? '<div class="dl-adv-grid" id="dl-more">' +
+                    f('담당자', selHtml('dl-assignee', S.assignee, docOpts('assignee', '담당자 전체'), "DOCLIST.setF('assignee', this.value)")) +
+                    f('상대 기관 <span class="dl-f-n">325</span>', combo('dl-sr', S.sr, docOpts('sr', '').map(function (o) { return [o[0], o[0] || '']; }), 'sr', '기관 이름으로 찾기')) +
+                    f('법 조문', combo('dl-law', S.law, uniqOpts('laws', '').map(function (o) { return [o[0], o[0] || '']; }), 'law', '법 이름으로 찾기')) +
+                    f('얼마나 자주', selHtml('dl-cycle', S.cycle, uniqOpts('cycles', '주기 전체'), "DOCLIST.setF('cycle', this.value)")) +
+                    f('2025년 취합', selHtml('dl-collect', S.collect, uniqOpts('collects', '취합 전체'), "DOCLIST.setF('collect', this.value)")) +
+                    f('어디에 적용', selHtml('dl-target', S.target, uniqOpts('targets', '적용대상 전체'), "DOCLIST.setF('target', this.value)")) +
+                    f('누가 하나', selHtml('dl-actor', S.actor, uniqOpts('actors', '담당 주체 전체'), "DOCLIST.setF('actor', this.value)")) +
+                    f('공문 지면', selHtml('dl-hasPdf', S.hasPdf, [['', '전체'], ['y', '있음'], ['n', '없음']], "DOCLIST.setF('hasPdf', this.value)")) +
+                  '</div>'
+                : '');
     }
     /* label 은 신뢰된 내부 문자열이다(옵션 개수 배지 때문에 HTML 을 받는다) */
     function f(label, inner) { return '<label class="dl-f"><span>' + label + '</span>' + inner + '</label>'; }
@@ -313,7 +332,7 @@
         if (k === 'src') return D().SRC[v] ? D().SRC[v].label : v;
         if (k === 'item') { var i = D().item(v); return i ? i.name : v; }
         if (k === 'stage') { var s = D().stage(v); return s ? s.name : v; }
-        if (k === 'mapping') return v === 'mapped' ? '분류완료' : v === 'noaxis' ? '이행항목 축 없음' : '미분류';
+        if (k === 'mapping') return v === 'mapped' ? '연결됨' : v === 'noaxis' ? '이 목록 밖' : '연결 안 됨';
         if (k === 'hasFile' || k === 'hasPdf') return v === 'y' ? '있음' : '없음';
         if (k === 'menu') { var m = (global.DY_MENUS_V2 || {})[v]; return m ? m.label : v; }
         return v;
@@ -328,7 +347,7 @@
                     ['date-desc', '보고일자 최신순'], ['date-asc', '보고일자 오래된순'],
                     ['title-asc', '문서명 가나다순'], ['title-desc', '문서명 역순'],
                 ], "DOCLIST.setF('sort', this.value)") + '</label>' +
-            '<label class="dl-size"><span>페이지 크기</span>' +
+            '<label class="dl-size"><span>한 쪽에</span>' +
                 selHtml('dl-size', S.size, [[20, '20건'], [50, '50건'], [100, '100건']], "DOCLIST.setF('size', this.value)") + '</label>' +
         '</div>';
     }
@@ -348,8 +367,8 @@
              · 이행항목 + 업무단계 → 한 칸(단계가 항목을 함축한다)
            8열이 되어 가로 스크롤 없이 들어온다. */
         return '<div class="dl-wrap"><table class="table-figma table-compact dl-table"><thead><tr>' +
-            '<th>문서명 / 수발신자</th><th>출처</th><th>상태</th><th>이행항목 · 업무단계</th>' +
-            '<th>담당부서 / 담당자</th><th>보고일자</th><th>첨부 / PDF</th>' +
+            '<th>문서명 / 상대 기관</th><th>출처</th><th>상태</th><th>어떤 의무 · 무슨 일</th>' +
+            '<th>담당</th><th>보고일자</th><th>첨부</th>' +
             '<th class="col-action">관리</th>' +
         '</tr></thead><tbody>' + res.rows.map(row).join('') + '</tbody></table></div>';
     }
@@ -365,8 +384,8 @@
                 (d.nearDup ? ' <span class="chip-status chip-sm warning">중복 의심</span>' : '') +
                 /* 현행 업무문서(v2)는 세트 축이라 이행항목 매핑이 애초에 없다 —
                    '미분류' 배지를 붙이면 교정해야 할 것처럼 읽힌다 */
-                (d.origin === 'ledger' && !d.mapped ? ' <span class="chip-status chip-sm warning">미분류</span>' : '') +
-                '<span class="dl-sr">' + (d.sr ? esc(d.sr) : '<span class="dx-nodoc">수발신자 미기재</span>') + '</span>' +
+                (d.origin === 'ledger' && !d.mapped ? ' <span class="chip-status chip-sm warning">의무 연결 필요</span>' : '') +
+                '<span class="dl-sr">' + (d.sr ? esc(d.sr) : '<span class="dx-nodoc">상대 기관 미기재</span>') + '</span>' +
             '</td>' +
             '<td><span class="chip-status chip-sm ' + V().toneOf(D().SRC[d.src] ? D().SRC[d.src].label : '') + '">' +
                 esc(D().SRC[d.src] ? D().SRC[d.src].label : d.src) + '</span></td>' +
@@ -379,7 +398,7 @@
                 stageCell(r) +
             '</td>' +
             '<td>' + (d.dept ? esc(d.dept) + (d.assignee ? ' / ' + esc(d.assignee) : '')
-                : '<span class="dx-nodoc">원장 미보유</span>') + '</td>' +
+                : '<span class="dx-nodoc">기록 없음</span>') + '</td>' +
             '<td class="dl-c-date">' + esc(d.date || '—') + '</td>' +
             '<td class="dl-c-file">' +
                 (files ? '<span class="dl-att">첨부 ' + files + '</span>' : '<span class="dx-nodoc">—</span>') +
@@ -392,8 +411,8 @@
     function stageCell(r) {
         if (!r.stages.length) {
             return r.d.origin === 'v2'
-                ? '<span class="dx-nodoc">세트 축 · ' + esc((global.DY_MENUS_V2 || {})[r.d.menuKey] ? global.DY_MENUS_V2[r.d.menuKey].label : '—') + '</span>'
-                : '<span class="dx-nodoc">미분류</span>';
+                ? '<span class="dx-nodoc">' + esc((global.DY_MENUS_V2 || {})[r.d.menuKey] ? global.DY_MENUS_V2[r.d.menuKey].label + ' 분야' : '—') + '</span>'
+                : '<span class="dx-nodoc">연결 안 됨</span>';
         }
         if (r.stages.length === 1) return esc(r.stages[0].name);
         if (S.expand[r.d.id]) {
@@ -476,6 +495,15 @@
         rerender();
     }
     function toggleAdv() { S.adv = !S.adv; render(); }
+    function toggleMore() { S.more = !(S.more || moreOn()); if (!S.more) { S.law=''; S.cycle=''; S.collect=''; S.target=''; S.actor=''; S.sr=''; S.hasPdf=''; S.assignee=''; } render(); }
+    /* DYPICK 콜백 — 선택값은 이 화면이 들고 있고 선택기는 그리기만 한다 */
+    function onTree(kind, a, b) {
+        if (kind === 'item') { S.item = a; S.stage = ''; S.page = 1; }
+        else if (kind === 'stage') { S.stage = b === false ? '' : a; S.page = 1; }
+        else if (kind === 'clear') { S.item = ''; S.stage = ''; S.page = 1; }
+        rerender();
+    }
+    function clearTree() { global.DYPICK.reset(''); S.item = ''; S.stage = ''; S.page = 1; render(); }
     function toggle(id) { S.expand[id] = !S.expand[id]; render(); }
     function go(n) { S.page = n; render(); try { window.scrollTo(0, 0); } catch (e) {} }
 
@@ -585,6 +613,7 @@
     global.DOCLIST = {
         init: init, render: function () { dropIdx(); render(); },
         setF: setF, resetF: resetF, toggleAdv: toggleAdv, toggle: toggle, go: go, pickCombo: pickCombo, setRemapQ: setRemapQ,
+        onTree: onTree, clearTree: clearTree, toggleMore: toggleMore,
         openRemap: openRemap, saveRemap: saveRemap, toggleRemapStage: toggleRemapStage, mergeDup: mergeDup, doMerge: doMerge,
         state: S,
     };
