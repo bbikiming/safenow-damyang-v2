@@ -151,8 +151,9 @@
     /* 결재가 올라간 뒤에는 잠근다 — 판정은 EDUDOC.lockOf 한 곳에서만 한다(CLAUDE.md §4·§7-1).
      * 근거: "공문을 여기다 첨부하면은 문서들에 대한 기록이 남잖아요. 그러면 더 이상 수정이
      * 안 돼요. 이건 문서 위조예요."(2026-07-30 회의)
-     * 상신이 꺼져 있는 동안은 항상 null 이라 아무 것도 잠기지 않는다 — 되살리는 순간부터
-     * 동작한다. 채용시교육(edu-hire.js)이 같은 패턴의 정본이다. */
+     * 공문을 올리기 전에는 null 이라 아무 것도 잠기지 않고, [공문 기안] → 미리보기 →
+     * 상신을 거친 순간부터 동작한다. 채용시교육(edu-hire.js)·정기교육 상세
+     * (edu-reg-detail.js)가 같은 패턴을 쓴다 — 판정을 화면마다 재구현하지 말 것. */
     function lockOf(courseId) {
         /* 잠금은 **공문 상신**이 건다 — 공문에 붙어 나간 기록을 뒤에서 바꾸는 것이
            문서 위조이기 때문이다. 판정은 EDUDOC.lockOf 한 곳이다. */
@@ -391,6 +392,11 @@
         var ids = Object.keys(G.workerIds).filter(function (k) { return G.workerIds[k]; });
         if (!ids.length) { toast('근로자를 1명 이상 선택하세요.'); return; }
         if (!G.signFile) { toast('서명파일을 업로드하세요 (필수).'); return; }
+        /* 같은 부서가 두 번 쌓이면 이수기록이 이중으로 붙는다 — 정정은 취소 후 재등록 */
+        if (E().hasEnroll(G.courseId, G.deptId)) {
+            toast(E().deptName(G.deptId) + '은(는) 이미 등록된 부서입니다 — 신청 취소 후 다시 등록하세요.');
+            return;
+        }
         E().addEnroll({ courseId: G.courseId, deptId: G.deptId, workerIds: ids, signFile: G.signFile, at: E().today() });
         E().pushCourseHistory(G.courseId, { type: 'STATUS', by: E().deptName(G.deptId), memo: '참석자 등록부 등록 · ' + ids.length + '명 · 서명파일 첨부' });
         V().closeModal();

@@ -17,7 +17,7 @@
      * 배포 링크를 받아 여는 사람에게는 이 화면이 완성본으로 보인다. README·배포 안내에
      * 적어 둔 "검토 전" 고지는 저장소를 여는 사람만 보므로, 화면 자체에도 표시한다.
      * 헤더 셸 한 곳에서 렌더하므로 전 화면(54개)에 한 번에 붙고 한 번에 걷힌다
-     * (js/edu-approval.js 의 SUBMIT_ENABLED 와 같은 스위치 방식).
+     * (도달할 수 없는 수단을 화면에 남기지 않는다는 같은 원칙).
      * 걷어낼 때 함께 정리할 것 — README.md 상단 안내 블록 · 배포본의 배포-안내.md
      * ========================================================================= */
     const PRE_REVIEW = true;
@@ -544,6 +544,7 @@
             { id: 'edu-etc',     section: '현업근로자',  label: '기타 교육',  icon: 'user',  href: 'edu-etc.html',     screen: 'EDU-ETC / SFR-004' },
             /* 관리감독자 2종 */
             { id: 'edu-sup',     section: '관리감독자',  label: '정기교육',  icon: 'user',  href: 'edu-sup.html',     screen: 'EDU-SUP / SFR-004' },
+            { id: 'edu-sup-hire', section: '관리감독자', label: '채용시교육', icon: 'user', href: 'edu-sup-hire.html', screen: 'EDU-SUP-HIRE / SFR-004' },
             { id: 'edu-sup-etc', section: '관리감독자',  label: '기타 교육', icon: 'user',  href: 'edu-sup-etc.html', screen: 'EDU-SUP-ETC / SFR-004' },
             /* 직속 (section 없음) */
             { id: 'edu-status',  label: '이수현황',           icon: 'chart', href: 'edu-status.html',  screen: 'EDU-STATUS / SFR-004·010' },
@@ -588,12 +589,14 @@
             { id: 'bgt-settings', label: '예산 기준 설정', icon: 'cog',   href: 'bgt-settings.html', screen: 'BGT02-S' },
         ]},
 
-        // GNB 5. 업무문서 — 공통 메커니즘 2종 (기준문서함 + 프리셋 등록폼)
-        //    ※ 안전점검: 별도 대메뉴를 만들지 않음 — 점검 계열 문서는 기준문서함 "안전점검 계열" 뱃지
+        // GNB 5. 업무문서 — 기준문서함 + 문서 찾기(업무 목록) + 이행 현황(이행 목록)
+        //    ※ 두 목록은 같은 문서 데이터를 공유하지만 **기본 단위와 목적이 다르다**:
+        //      업무 목록 = 문서 1건을 찾는 화면 / 이행 목록 = 법정 이행항목의 증빙이
+        //      갖춰졌는지 보는 화면. 파일명 docs-preset 은 옛 이름이고 딥링크 호환용이다.
         { id: 'docs', label: '업무문서', icon: 'file', items: [
             { id: 'docs-archive', label: '기준문서함',          icon: 'file', href: 'docs-archive.html' },
-            { id: 'docs-preset',  label: '업무 목록',           icon: 'list', href: 'docs-preset.html' },
-            { id: 'docs-exec',    label: '이행 목록',           icon: 'grid', href: 'docs-exec.html' },   // 같은 데이터 — 격자 카드형 보기
+            { id: 'docs-preset',  label: '업무 목록',           icon: 'list', href: 'docs-preset.html' },  // 평면 문서 검색
+            { id: 'docs-exec',    label: '이행 목록',           icon: 'grid', href: 'docs-exec.html' },    // 법정 이행항목 78 · 업무단계 168
         ]},
 
         // GNB 6. 통계·보고 (SFR-018·021)

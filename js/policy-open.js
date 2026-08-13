@@ -17,7 +17,7 @@
         {
             id: 'doc-org', kind: 'data', menu: '공문·보고서',
             title: '담양군 기관정보·관인 자료',
-            now: '처리과 기호·주소·전화·팩스·관인이 아직 없습니다. 미수신 동안 미등록을 표시하고 결재 상신·공식 출력은 막되 초안 저장과 미리보기는 허용합니다.',
+            now: '처리과 기호·주소·전화·팩스·관인이 아직 없습니다. 미수신 동안 지면의 그 칸을 미등록으로 표시하고 문서번호에 임시 채번임을 밝힙니다. 상신 자체를 막지는 않습니다 — 막으면 공문 흐름을 시연할 수 없고, 무엇이 비었는지는 지면이 드러냅니다.',
             options: [{ k: 'waiting', label: '자료 대기' }, { k: 'received', label: '수신 완료' }]
         },
         {
@@ -29,7 +29,7 @@
         {
             id: 'onnara', kind: 'integration', menu: '온나라 연동',
             title: '온나라 연계 규격·접속정보',
-            now: '실연계 전에는 PDF·첨부 묶음을 내려받아 사용자가 온나라에 직접 상신합니다. 화면은 상신 완료로 바꾸지 않고 문서번호·결과를 수동 기록하게 합니다.',
+            now: '실연계가 없어 상신은 시뮬레이션입니다. 상신하면 화면에 결재중으로만 남고 결재완료·반려는 만들지 않습니다 — 그 두 상태는 온나라 회신으로만 생깁니다. 묶음 내려받기·수동 결과 기록 경로는 아직 없습니다.',
             options: [{ k: 'waiting', label: '규격 대기' }, { k: 'received', label: '규격 수신' }]
         },
         {
@@ -45,9 +45,9 @@
             options: [{ k: 'waiting', label: '규격 대기' }, { k: 'received', label: '규격 수신' }]
         },
         {
-            id: 'official-letter', kind: 'data', menu: '위험성평가',
+            id: 'official-letter', kind: 'data', menu: '위험성평가·안전보건교육',
             title: '담양군 공문 샘플',
-            now: '샘플은 나중에 받습니다. 그전에는 확정 필드 구조로 초안을 만들되 공식 문서번호·관인·서식 적합 판정은 하지 않습니다.',
+            now: '샘플은 나중에 받습니다. 그전에는 표준 별지 제1호서식 지면으로 초안을 만들되 공식 문서번호·관인·서식 적합 판정은 하지 않습니다. 두 도메인이 같은 공용 골격(DYDOC)을 쓰므로 샘플이 오면 본문 문구만 맞춥니다.',
             options: [{ k: 'later', label: '추후 제공' }, { k: 'received', label: '수신 완료' }]
         },
         {
@@ -86,6 +86,18 @@
         'base-targets': ['fms-data', 'public-transport', 'material-scope'],
         'sbm-org': ['dept-list', 'hr-sync'], 'sbm-comply': ['dept-list', 'law-list'], 'sbm-policy': ['dept-list'],
         'work-admin': ['dept-list', 'onnara'], 'work-dept': ['dept-list', 'hr-sync'], 'my-work': ['dept-list'],
+        /* 공문을 쓰는 교육 화면은 위험성평가와 같은 외부 의존을 진다 —
+           기관정보·관인(doc-org) · 온나라 연계(onnara) · 공문 샘플(official-letter).
+           갭이 그 화면에서 안 보이면 시연 중에 처음 발견된다.
+           ※ 'edu-reg-detail' 을 넣지 않는 이유 — 그 화면은 data-dy-page 가 'edu-reg' 라
+             별도 page id 가 아니고, DYLAW.MAP 에도 키가 없어 selfCheck() 가 경고를 낸다. */
+        'edu-reg': ['hr-sync', 'doc-org', 'onnara', 'official-letter'],
+        'edu-etc': ['hr-sync', 'doc-org', 'onnara', 'official-letter'],
+        'edu-hire': ['hr-sync', 'doc-org', 'onnara', 'official-letter'],
+        'edu-sup': ['hr-sync', 'doc-org', 'onnara', 'official-letter'],
+        'edu-sup-hire': ['hr-sync', 'doc-org', 'onnara', 'official-letter'],
+        'edu-sup-etc': ['hr-sync', 'doc-org', 'onnara', 'official-letter'],
+        'edu-approval': ['doc-org', 'onnara', 'official-letter'],
         'edu-workers': ['hr-sync'], 'edu-status': ['hr-sync'],
         'admin-law': ['law-list'],
         'docs-archive': ['doc-retain'], 'docs-preset': ['doc-retain'], 'docs-exec': ['doc-retain']

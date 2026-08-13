@@ -10,6 +10,13 @@
 
     const params = new URLSearchParams(location.search);
     const id = params.get('id');
+
+    /* ── 새 축(이행항목·업무단계)의 문서는 DOCDET 가 그린다 ──────────────────
+     * 2025 원장 3,830건과 사용자 등록분은 세트·PDCA 축이 없어 아래 로직이 통째로
+     * 성립하지 않는다. 이 화면(현행 업무문서 426건)은 docs-archive·menu.js 문서탭·
+     * screen-definitions 가 그대로 쓰고 있어 손대지 않고, 앞단에서만 갈라 보낸다. */
+    if (window.DOCDET && window.DOCDET.init()) return;
+
     const isV2 = params.get('v') === '2';
     const verQS = isV2 ? '&v=2' : '';
     const listHref = isV2 ? 'docs-preset.html?ver=v2' : 'docs-preset.html';

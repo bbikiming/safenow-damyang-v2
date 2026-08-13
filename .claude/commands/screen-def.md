@@ -11,7 +11,7 @@ argument-hint: <SCR-ID 또는 화면/URL 설명>
    - `docs/screen-definitions/_작성하네스.md` (작성 하네스 — 절대 원칙·절차·깊이 기준·체크리스트·금지 토큰)
    - `docs/screen-definitions/_화면정의서_템플릿_v6.md` (7섹션 템플릿)
    - `docs/screen-definitions/_규칙.md` (자동 규칙)
-   - `docs/screen-definitions/SCR-DOC-007_업무등록마법사.md` (**골드 스탠다드** — 이 깊이·톤을 목표로)
+   - `docs/screen-definitions/SCR-DOC-007_업무업로드_전년도프리셋.md` (**골드 스탠다드** — 이 깊이·톤을 목표로)
 
 2. **프로토타입 관찰** — 대상 화면의 실제 HTML/JS를 **직접 읽어** 진입점·영역·버튼/동작·메시지·상태·입력 폼·다른 화면 연계를 수집한다. **추측 금지**. 프로토타입에 있는 동작은 빠뜨리지 말고, 없는 기능은 지어내지 않는다.
 

@@ -15,10 +15,10 @@
         <nav class="dd-breadcrumb" id="dd-breadcrumb" aria-label="위치"></nav>
 
         <div class="dd-grid">
-            <!-- 좌측: 문서 상세 (첨부=미리보기 / 전자문서=입력폼) -->
+            <!-- 좌측: 문서 상세 (원장·등록분 = DOCDET / 현행 업무문서 = doc-detail.js) -->
             <section class="dd-main" id="dd-main"></section>
 
-            <!-- 우측: 기준·선행·후행 문서 -->
+            <!-- 우측: 관련 문서 -->
             <aside class="dd-side" id="dd-side"></aside>
         </div>
     </main>
@@ -30,11 +30,17 @@
     <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
     <script src="./js/data.js"></script>
     <script src="./js/common.js"></script>
+    <script src="./js/org-pick.js"></script>
     <script src="./js/edoc-templates.js"></script>
     <script src="./js/edoc.js"></script>
     <script src="./js/sets-data.js"></script>
     <script src="./js/sets-data-v2.js"></script>
     <script src="./js/doc-register.js"></script>
+    <!-- 업무문서 데이터 — 생성물(tools/build-docs-seed.py) -->
+    <script src="./js/doc-taxonomy-data.js"></script>
+    <script src="./js/doc-history-data.js"></script>
+    <script src="./js/doc-progress.js"></script>
+    <script src="./js/doc-detail-ledger.js"></script><!-- DOCDET — 새 축 문서. doc-detail.js 앞에 로드 -->
     <script src="./js/doc-detail.js"></script>
 </body>
 </html>

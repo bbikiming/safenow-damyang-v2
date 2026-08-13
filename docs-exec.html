@@ -9,13 +9,9 @@
     <link rel="stylesheet" href="./css/style.css">
     <link rel="stylesheet" href="./css/v2.css">
 </head>
-<body data-dy-page="docs-exec" data-page-title="이행 목록" data-page-subtitle="업무문서 > 이행 목록 — 업무 목록과 같은 세트를 격자 카드로 한눈에 (진행률 · PDCA 단계) · 분류 버전 전환">
+<body data-dy-page="docs-exec" data-page-title="이행 목록" data-page-subtitle="업무문서 &gt; 이행 목록 — 법정 이행항목별 하위 업무단계의 증빙 문서가 갖춰졌는지 봅니다">
     <main>
-        <div id="setlist"></div>
-        <p style="font-size:12px; color:var(--text-gray); margin-top:4px;">
-            <a href="docs-preset.html" style="color:var(--main-dark); font-weight:700;">업무 목록</a>과 동일한 세트·문서 데이터를 카드형으로 봅니다.
-            상단 토글로 <b>법적의무 재분류 v2(9대메뉴·53세트)</b> ↔ <b>기존 분류</b>를 전환할 수 있습니다.
-        </p>
+        <div id="docs-exec"></div>
     </main>
 
     <div id="toast" class="toast"></div>
@@ -25,25 +21,23 @@
     <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
     <script src="./js/data.js"></script>
     <script src="./js/common.js"></script>
+    <script src="./js/org-pick.js"></script>
+    <script src="./js/edu-filter.js"></script><!-- 공용 필터 바 (EDUFILTER) -->
     <script src="./js/edoc-templates.js"></script>
     <script src="./js/edoc.js"></script>
-    <script src="./js/sets-data.js"></script>
-    <script src="./js/sets-data-v2.js"></script>
-    <script src="./js/doc-register.js"></script>
-    <script src="./js/setlist.js"></script>
+    <!-- 업무문서 데이터 — 생성물(tools/build-docs-seed.py). 손으로 고치지 말 것 -->
+    <script src="./js/doc-taxonomy-data.js"></script><!-- DYDOCT: 이행항목 78 · 업무단계 168 -->
+    <script src="./js/doc-history-data.js"></script><!-- DYDOCH: 2025 문서 원장 3,830 -->
+    <script src="./js/sets-data-v2.js"></script><!-- DY_DOCS_V2 426 — 전자문서·전용화면 진입점 보존 -->
+    <script src="./js/doc-progress.js"></script><!-- DYDOCS: 상태·진행률·문서 축 단일 출처 -->
+    <script src="./js/doc-upload.js"></script><!-- DOCUP: 업무 업로드 마법사 · 전년도 프리셋 -->
+    <script src="./js/doc-exec.js"></script>
     <script>
-        /* 업무 목록과 같은 데이터·필터 — 렌더만 격자 카드형. 기본 v2 표시 */
-        (function () {
-            const params = new URLSearchParams(location.search);
-            const ver = params.get('ver') === 'v1' ? 'v1' : 'v2';
-            const mk = params.get('menu');
-            const el = document.getElementById('setlist');
-            DYSETLIST.render(el, { layout: 'grid', version: ver });
-            if (mk) {
-                const btn = el.querySelector('#sl-tabs button[data-mk="' + mk + '"]');
-                if (btn) btn.click();
-            }
-        })();
+        /* layout.js 가 DOMContentLoaded 에서 .dy-page-title 을 주입하므로 그 뒤에 붙는다
+           — 먼저 돌면 제목 줄 액션(기준연도·업로드)이 붙을 자리가 없다 */
+        document.addEventListener('DOMContentLoaded', function () {
+            DOCEXEC.init(document.getElementById('docs-exec'));
+        });
     </script>
 </body>
 </html>

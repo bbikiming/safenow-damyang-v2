@@ -14,6 +14,15 @@
     function esc(s) { return V().esc(String(s == null ? '' : s)); }
     function toast(m) { V().toast(m); }
 
+    /* 모집단 플래그 — 관리감독자 채용시교육(edu-sup-hire)이 같은 모듈을 재사용한다.
+       별표4 제1호(근로자)와 제1호의2(관리감독자)가 다른 표라 필요시간·기준일이 갈린다.
+       화면을 새로 만들지 않고 정기·기타 교육과 같은 방식으로 플래그만 얹는다(CLAUDE.md §4). */
+    var SUP_MODE = false;
+    function pool() {
+        return E().workers().filter(function (w) {
+            return SUP_MODE ? w.category === 'SUPERVISOR' : w.category !== 'SUPERVISOR';
+        });
+    }
     var state = { mount: null, tab: 'all', fDept: '', fEmp: '', fQ: '', fYear: '', fDone: '', groupBy: 'dept', checked: {} };
     /* tab: 'all' 전체 | 'undone' 미이수 | 'done' 이수
      *   ※ 구 '교육 건' 탭은 2026-07-30 회의에서 제거 확정 — 발주처: "이 교육 건 지워버리고
@@ -25,13 +34,16 @@
 
     /* 탭 필터만 적용한 원본 (연도 옵션 파생용) */
     function tabRows() {
-        var arr = E().workers().filter(function (w) { return w.category !== 'SUPERVISOR'; }).map(function (w) {
+        var arr = pool().map(function (w) {
             return { w: w, hs: E().hireStatus(w.id) };
         });
         if (state.tab === 'all') return arr;
+        /* **판정 불가(기준일 미등록)는 두 탭 어디에도 넣지 않는다.** 이수로 넣으면 하지
+           않은 교육을 했다고 하는 것이고, 미이수로 넣으면 대상인지도 모르는 사람에게
+           의무를 지우는 것이다. 전체 탭에서만 보이고 그 사실이 상태 배지에 드러난다. */
         return state.tab === 'undone'
             ? arr.filter(function (r) { return r.hs.status === 'NONE'; })
-            : arr.filter(function (r) { return r.hs.status !== 'NONE'; });
+            : arr.filter(function (r) { return r.hs.status === 'BEFORE' || r.hs.status === 'LATE_DONE' || r.hs.status === 'UNKNOWN_DONE'; });
     }
     function rowsForTab() {
         var arr = tabRows().filter(function (r) {
@@ -171,18 +183,32 @@
         render();
     }
     function tabCount(tab) {
-        var arr = E().workers().filter(function (w) { return w.category !== 'SUPERVISOR'; });
+        var arr = pool();
         if (tab === 'all') return arr.length;
         return arr.filter(function (w) {
-            var s = E().hireStatus(w.id);
-            return tab === 'undone' ? s.status === 'NONE' : s.status !== 'NONE';
+            var s = E().hireStatus(w.id).status;
+            return tab === 'undone' ? s === 'NONE'
+                : (s === 'BEFORE' || s === 'LATE_DONE' || s === 'UNKNOWN_DONE');
+        }).length;
+    }
+    /* 전체 = 미이수 + 이수 + 판정 불가. 세 번째가 0이 아니면 그 사실을 화면에 밝힌다 —
+       탭 합이 전체와 안 맞는 이유를 담당자가 알아야 한다. */
+    function unknownCount() {
+        return pool().filter(function (w) {
+            var s = E().hireStatus(w.id).status;
+            return s === 'UNKNOWN' || s === 'UNKNOWN_DONE';
         }).length;
     }
     function selectedCount() { return Object.keys(state.checked).filter(function (k) { return state.checked[k]; }).length; }
 
     function rowHtml(r) {
         var w = r.w, hs = r.hs;
-        var stLabel = hs.status === 'BEFORE' ? '정상 이수' : (hs.status === 'LATE_DONE' ? '지연 이수' : '미이수');
+        /* 기준일이 없으면 이수·미이수를 말할 수 없다 — 없는 기준으로 미이수를 찍지 않는다 */
+        var stLabel = hs.status === 'BEFORE' ? '정상 이수'
+            : hs.status === 'LATE_DONE' ? '지연 이수'
+            : hs.status === 'UNKNOWN_DONE' ? '이수 (시점 판정 불가)'
+            : hs.status === 'UNKNOWN' ? '판정 불가 — ' + hs.anchorKind + ' 미등록'
+            : '미이수';
         var empLabel = E().empLabel(w.empType) + (w.contractMonths ? '[' + w.contractMonths + '개월]' : '');
         var ck = state.tab === 'undone'
             ? '<input type="checkbox"' + (state.checked[w.id] ? ' checked' : '') +
@@ -193,7 +219,7 @@
             '<td class="edu-name">' + esc(w.name) + '</td>' +
             '<td>' + esc(E().deptName(w.deptId)) + '</td>' +
             '<td>' + esc(empLabel) + '</td>' +
-            '<td>' + esc(w.hireDate) + '</td>' +
+            '<td>' + esc(hs.anchor || (SUP_MODE ? '지정일 미등록' : w.hireDate)) + '</td>' +
             '<td>' + hs.need + 'h</td>' +
             '<td>' + esc(hs.lastDate || '-') + '</td>' +
             '<td><span class="chip-status chip-sm ' + V().toneOf(stLabel) + '">' + esc(stLabel) + '</span></td>' +
@@ -477,8 +503,7 @@
      * 대상자 = 아직 채용시교육 미이수(hireStatus NONE)인 현업근로자.
      * 이수 시간은 대상자 고용형태별 '필요시간'으로 인정한다(일용 1h · 1주~1개월 4h · 그 밖 8h). */
     function addPool() {
-        return E().workers().filter(function (w) { return w.category !== 'SUPERVISOR'; })
-            .filter(function (w) { return E().hireStatus(w.id).status === 'NONE'; });
+        return pool().filter(function (w) { return E().hireStatus(w.id).status === 'NONE'; });
     }
     function openAdd() {
         A = {
@@ -600,7 +625,8 @@
         state.tab = 'done'; state.checked = {}; render();
     }
 
-    function init(mountId) {
+    function init(mountId, opts) {
+        SUP_MODE = !!(opts && opts.supMode);
         state.mount = document.getElementById(mountId);
         if (!state.mount) return;
         if (global.EDUDOC) global.EDUDOC.registerRefresh(render);

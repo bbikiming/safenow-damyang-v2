@@ -49,7 +49,16 @@
             by: doc.dept, memo: '공문 온나라 상신 — ' + doc.title + ' (' + doc.no + ')'
         });
     }
-    function nextNo() { var d = store(); d.seq = (d.seq || 2600) + 1; save(d); return '재난안전과-' + d.seq; }
+    /* 임시 문서번호 — 실제 채번은 온나라가 한다(지면에 '임시 채번'으로 밝힌다).
+     * 처리과 기호를 '재난안전과'로 **하드코딩하지 않는다** — 자체·기타 교육은 각 과가
+     * 등록·기안하므로 담양읍장이 올린 공문에 재난안전과 번호가 찍히면 이력이 거짓이 된다.
+     * 위험성평가 공문(js/rsk-doc.js `myDeptName()`)이 같은 결함을 이미 한 번 냈고
+     * 기획-위험성평가-공문-온나라이관-v1.md 가 복제를 명시적으로 금지했다. */
+    function myDeptName() {
+        var p = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
+        return (p && p.deptName) || '재난안전과';
+    }
+    function nextNo() { var d = store(); d.seq = (d.seq || 2600) + 1; save(d); return myDeptName() + '-' + d.seq; }
     function latestDoc(courseId) { var a = docsOf(courseId); return a.length ? a[a.length - 1] : null; }
 
     /* 결재가 올라간 교육은 잠근다 — 판정은 여기 한 곳이다.
@@ -93,6 +102,23 @@
             if (c.status !== 'DONE') return { ok: false, why: '교육 종료 처리 후에 기안할 수 있습니다.' };
             return { ok: true };
         },
+
+        /* 기안·상신 **권한** — `DYROLE.canAct` 한 곳에서만 판정한다(CLAUDE.md §12).
+         *   담당자(staff)만 · 재난안전과 담당자는 전 부서 · 그 밖은 자기 부서 건만.
+         *
+         * **등록 주체 = 기안 주체**다. 자체·기타·채용시 교육은 각 과가 직접 실시하고
+         * 등록하므로(§4) 그 과가 자기 실시 결과를 보고할 수 있어야 한다. 재난안전과로만
+         * 좁히면 40개 과의 공문을 주관부서가 대필하게 되고, 등록한 부서는 자기 교육의
+         * 결과를 영영 보고하지 못한다.
+         *
+         * 위험성평가 공문이 '주관부서만'인 것과 규칙이 갈리는 것은 결함이 아니라
+         * **도메인이 실제로 다르기 때문**이다 — 위험성평가는 주관부서가 총괄해
+         * 내려보내지만, 교육은 각 과가 실시한다.
+         *
+         * 부서가 비어 있는 건(여러 부서를 묶은 채용시교육)은 재난안전과가 일괄 처리한
+         * 것이므로 자연히 주관부서 담당자만 기안하게 된다.
+         * 관리·감독 계층(군수·과장·소장)은 어느 경우에도 조회만 한다. */
+        canDraft: function (c) { return canDraft(c); },
 
         /* 본문 삽입 조각 — 문장을 지어내지 않고 **수치만** 건넨다 */
         chips: function (c) {
@@ -156,17 +182,50 @@
         lockNote: '상신 후에는 이 교육의 정보·대상자·이수기록을 수정하거나 삭제할 수 없습니다.'
     });
 
+    /* 기안·상신 권한 — 골격(cfg.canDraft)과 화면(control)이 **같은 함수**를 본다.
+       두 곳이 따로 판정하면 버튼은 보이는데 눌러도 거절되는 상태가 생긴다. */
+    function canDraft(c) {
+        var R = global.DYROLE;
+        if (!c || !R || !R.canAct) return { ok: true };   /* 롤 스위처 없는 환경은 종전대로 */
+        if (R.canAct(c.deptId || '')) return { ok: true };
+        return { ok: false, why: draftDenyNote(c) };
+    }
+
+    /* 차단 사유는 한 곳에서만 낸다 — 계층마다 막히는 이유가 다르므로 그 이유를 말한다.
+       "재난안전과만 가능합니다"로 뭉뚱그리면 등록 부서 담당자에게 거짓말이 된다. */
+    function draftDenyNote(c) {
+        var p = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
+        if (p && p.tier !== 'staff') {
+            return '관리·감독 계층은 공문을 조회만 합니다 — 기안은 담당자가 합니다.';
+        }
+        var dn = c && c.deptId ? E().deptName(c.deptId) : '';
+        return dn
+            ? '이 교육을 등록한 ' + dn + ' 담당자 또는 재난안전과 담당자가 기안합니다.'
+            : '여러 부서를 묶은 건이라 재난안전과 담당자가 기안합니다.';
+    }
+
     /* 목록·상세가 쓰는 표시 컨트롤 — 종료 처리된 교육에만 나타난다 */
     function control(courseId) {
         var c = courseOf(courseId);
         if (!c || c.status !== 'DONE') return '';
         var d = latestDoc(courseId);
         if (!d) {
+            /* 기안 권한이 없으면 **버튼을 내지 않는다** — 누르면 거절하는 버튼을 남기면
+               담당자가 이유를 모른 채 두 번 누른다. 대신 누가 기안하는지를 밝힌다. */
+            var perm = canDraft(c);
+            if (!perm.ok) {
+                return '<span class="file-hint">' + esc(perm.why) + '</span>';
+            }
             return '<button type="button" class="btn btn-outline btn-sm" data-tour="edu-doc"' +
                 ' onclick="EDUDOC.open(\'' + esc(courseId) + '\')">공문 기안</button>';
         }
+        /* 문서 보기는 권한과 무관하다 — 조회는 막지 않는다(조회 범위와 조작은 다른 축).
+           상신 뒤에는 결재 진행 상황을 이 시스템이 알 수 없으므로 어디서 보는지 밝힌다. */
         return '<span class="chip-status chip-sm ' + V().toneOf(d.status) + '">' + esc(d.status) + '</span> ' +
-            '<button type="button" class="btn btn-outline btn-sm" onclick="EDUDOC.openDoc(\'' + esc(courseId) + '\',\'' + esc(d.sid) + '\')">문서 보기</button>';
+            '<button type="button" class="btn btn-outline btn-sm" onclick="EDUDOC.openDoc(\'' + esc(courseId) + '\',\'' + esc(d.sid) + '\')">문서 보기</button> ' +
+            '<span class="file-hint" title="온나라 연동 전이라 이 시스템은 상신 사실까지만 압니다">' +
+                '진행 상황은 온나라에서 <b>' + esc(d.no) + '</b>로 확인' +
+            '</span>';
     }
 
     /* ===================== 결재 이력 소비 API =====================
@@ -182,7 +241,10 @@
                 out.push({
                     sid: doc.sid, no: doc.no, at: doc.at, status: doc.status,
                     label: doc.title, line: doc.lineText || '',
-                    kind: 'course', kindLabel: '교육별',
+                    /* 상신 단위는 교육 1건 하나뿐이라 '총괄/교육별/개인별' 축은 없다.
+                       그 자리에 **그 교육이 무슨 교육인지**(정기·자체·기타·채용시)를 낸다 —
+                       값이 하나뿐인 칸을 남겨 두면 축이 살아 있는 것처럼 읽힌다. */
+                    kind: c ? c.kind : '', kindLabel: c ? E().kindLabel(c.kind) : '-',
                     scope: c ? c.desc : cid,
                     year: String(doc.at || '').slice(0, 4),
                     courseId: cid,
@@ -202,6 +264,8 @@
         T.openDoc(hit.cid, sid);
     }
 
+    /* 화면이 권한을 재구현하지 않도록 판정을 그대로 내준다 */
+    T.canDraftOf = canDraft;
     T.submissions = submissions;
     T.openDocSid = openDocSid;
     T.control = control;

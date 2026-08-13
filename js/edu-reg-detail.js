@@ -31,6 +31,10 @@
             : '<span class="chip-status chip-sm ' + V().toneOf('진행중') + '">진행중 · 신청 접수</span>';
         var enrolls = E().enrolls(c.id);
         var enrolledCnt = enrolls.reduce(function (n, e) { return n + (e.workerIds || []).length; }, 0);
+        /* '개 부서'는 행 수가 아니라 **서로 다른 부서 수**다. 데이터 계층이 부서 중복
+           등록을 막은 뒤로는 둘이 같지만, 그 전에 저장된 데이터가 브라우저에 남아
+           있을 수 있어 세는 축을 표기와 맞춰 둔다. */
+        var deptCnt = Object.keys(enrolls.reduce(function (m, e) { m[e.deptId] = 1; return m; }, {})).length;
 
         var actions = '';
         if (c.status === 'OPEN') {
@@ -53,7 +57,7 @@
                     '<span>시간 <b>' + c.hours + 'h</b>' + (sessions.length > 1 ? ' (' + sessions.length + '일 합계)' : '') + '</span>' +
                     '<span>강사 <b>' + esc(c.instructor || '-') + '</b></span>' +
                     '<span>장소 <b>' + esc(c.place || '-') + '</b></span>' +
-                    '<span>신청 <b>' + enrolls.length + '개 부서 · ' + enrolledCnt + '명</b></span>' +
+                    '<span>신청 <b>' + deptCnt + '개 부서 · ' + enrolledCnt + '명</b></span>' +
                 '</div>' +
                 /* 다회차 교육은 회차별 일자·시간을 펼쳐 보여준다 (합계만 보이면 일정 확인이 불가) */
                 (sessions.length > 1
@@ -68,7 +72,9 @@
                 (actions ? '<div class="edu-detail-actions">' + actions + '</div>' : '') +
             '</div>';
 
-        /* 신청현황 테이블 */
+        /* 신청현황 테이블 — 상신 뒤에는 취소 수단 자체를 내지 않는다.
+         * 누르면 거절하는 버튼을 남겨 두면 담당자가 왜 안 되는지 모른 채 두 번 누른다. */
+        var enrollLock = lockOf(state.courseId);
         var rows = enrolls.length ? enrolls.map(function (e) {
             var names = (e.workerIds || []).map(function (wid) { var w = E().workerOf(wid); return w ? w.name : wid; }).join(', ');
             return '<tr>' +
@@ -77,11 +83,15 @@
                 '<td>' + (e.workerIds || []).length + '명</td>' +
                 '<td>' + (e.signFile ? '<span style="color:var(--main-dark);font-size:var(--fs-12);">📎 ' + esc(e.signFile) + '</span>' : '<span style="color:var(--text-gray);">-</span>') + '</td>' +
                 '<td>' + esc(e.at) + '</td>' +
-                '<td class="col-action"><button type="button" class="btn btn-outline btn-sm" style="border-color:var(--status-danger-border);color:var(--status-danger-fg);" onclick="EDURD.confirmCancel(\'' + esc(e.deptId) + '\')">신청 취소</button></td>' +
+                '<td class="col-action">' + (enrollLock
+                    ? '<button type="button" class="btn btn-outline btn-sm" disabled title="결재 ' + esc(enrollLock) +
+                      ' — 공문에 이수자 명단이 실려 나가 취소할 수 없습니다">🔒 ' + esc(enrollLock) + '</button>'
+                    : '<button type="button" class="btn btn-outline btn-sm" style="border-color:var(--status-danger-border);color:var(--status-danger-fg);" onclick="EDURD.confirmCancel(\'' + esc(e.deptId) + '\')">신청 취소</button>') + '</td>' +
             '</tr>';
         }).join('') : '<tr><td colspan="6"><div class="v2-empty">아직 신청이 없습니다.</div></td></tr>';
         var enrollTable =
-            '<div class="edu-card"><div class="edu-card-title">신청현황 (' + enrolls.length + '개 부서 · ' + enrolledCnt + '명)</div>' +
+            '<div class="edu-card"><div class="edu-card-title">신청현황 (' + deptCnt + '개 부서 · ' + enrolledCnt + '명)</div>' +
+                (enrollLock ? '<div class="check-notice">결재 <b>' + esc(enrollLock) + '</b> — 이 교육의 이수자 명단이 공문 붙임으로 올라가 있어 신청을 취소할 수 없습니다. 정정하려면 반려 후 다시 시도하세요.</div>' : '') +
                 '<div class="edu-scroll"><table class="table-figma table-compact"><thead><tr>' +
                     '<th style="width:20%;">부서</th><th>신청자 명단</th><th style="width:10%;">인원</th><th style="width:22%;">서명파일</th><th style="width:12%;">신청일</th><th></th>' +
                 '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
@@ -158,6 +168,12 @@
         var ids = Object.keys(G.workerIds).filter(function (k) { return G.workerIds[k]; });
         if (!ids.length) { toast('근로자를 1명 이상 선택하세요.'); return; }
         if (!G.signFile) { toast('서명파일을 업로드하세요 (필수).'); return; }
+        /* 같은 부서가 두 번 쌓이면 이수기록이 이중으로 붙어 이수 판정과 공문 수치가
+           함께 틀어진다. 인원·서명파일 정정은 신청 취소 후 재등록 경로다. */
+        if (E().hasEnroll(state.courseId, G.deptId)) {
+            toast(E().deptName(G.deptId) + '은(는) 이미 등록된 부서입니다 — 신청 취소 후 다시 등록하세요.');
+            return;
+        }
         E().addEnroll({ courseId: state.courseId, deptId: G.deptId, workerIds: ids, signFile: G.signFile, at: E().today() });
         E().pushCourseHistory(state.courseId, { type: 'STATUS', by: E().deptName(G.deptId), memo: '참석자 등록부 등록 · ' + ids.length + '명 · 서명파일 첨부' });
         V().closeModal();
@@ -168,9 +184,20 @@
 
     /* =============== 참석자 등록부 등록 취소 =============== */
     /* 잘못 신청한 부서를 되돌린다. 이미 종료 처리된 교육이면 그 부서 몫의
-     * 이수기록까지 회수되므로 확인 문구에 명시한다. */
+     * 이수기록까지 회수되므로 확인 문구에 명시한다.
+     *
+     * **결재가 올라간 뒤에는 잠근다.** 공문의 이수자 명단(붙임 별지)은 저장된 사본이
+     * 아니라 **열 때마다 현재 이수기록에서 다시 파생**된다(js/doc-flow.js). 그래서
+     * 상신 뒤에 신청을 취소하면 이미 결재선을 타고 올라간 문서의 명단이 사후에 줄어든다.
+     * 판정은 EDUDOC.lockOf 한 곳에서만 한다(CLAUDE.md §4 — 화면이 재구현하지 말 것). */
+    function lockOf(courseId) {
+        return global.EDUDOC && global.EDUDOC.lockOf ? global.EDUDOC.lockOf(courseId) : null;
+    }
     function confirmCancel(deptId) {
         var c = E().courseOf(state.courseId); if (!c) return;
+        /* 버튼을 감추는 것만으로는 부족하다 — 전역 호출(EDURD.confirmCancel)로 뚫린다 */
+        var lock = lockOf(state.courseId);
+        if (lock) { toast('결재 ' + lock + ' 상태라 신청을 취소할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
         var mine = E().enrolls(state.courseId).filter(function (e) { return e.deptId === deptId; });
         var cnt = mine.reduce(function (n, e) { return n + (e.workerIds || []).length; }, 0);
         V().openModal('참석자 등록부 등록 취소',
@@ -182,6 +209,8 @@
             '<button type="button" class="btn btn-primary" onclick="EDURD.doCancel(\'' + esc(deptId) + '\')">신청 취소</button>');
     }
     function doCancel(deptId) {
+        var lock = lockOf(state.courseId);
+        if (lock) { V().closeModal(); toast('결재 ' + lock + ' 상태라 신청을 취소할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
         var r = E().removeEnroll(state.courseId, deptId);
         if (r) {
             E().pushCourseHistory(state.courseId, {

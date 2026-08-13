@@ -2,7 +2,13 @@
    edu-etc.js · 기타 교육 (EDU-ETC, EDU-SUP-ETC 공용)
    ---------------------------------------------------------------------
    docs/planning/기획-2026-07-30-회의반영-v1.md §1-4 · 기획-안전보건교육-재설계-v1.md §6.
-   자체교육 형식 + **법정 3유형**(작업내용 변경 시 / 특별교육 / 건설업 기초안전보건교육) 선택.
+   자체교육 형식 + **법정 유형** 선택. 유형 목록은 모집단이 정한다 — 별표4가 제1호
+   (근로자)와 제1호의2(관리감독자)를 다른 표로 두기 때문이다. `DYEDU.etcTypes(supMode)`
+   한 창구에서만 받고 이 파일이 배열을 다시 쓰지 않는다.
+     · 근로자(EDU-ETC)      3유형 — 작업내용 변경 시 / 특별교육 / 건설업 기초안전보건교육
+     · 관리감독자(EDU-SUP-ETC) 2유형 — 작업내용 변경 시 / 특별교육
+       (건설업 기초는 제1호의2 에 없다. 산안법 §31① 이 「건설업의 사업주」가
+        「건설 일용근로자를 채용할 때」로 의무 주체를 한정한다.)
    등록 주체는 **각 과**이고(연도마다 용역·채용자가 달라져 고정할 수 없다), 화면 상단에
    해당 여부 **판단 기준을 상시 노출**해 담당자가 법령 원문을 읽고 판단하지 않게 한다 —
      발주처 "이 기준을 위에다가 띄워놓고 이 기준에 해당하면 이거 만들어서 교육해야 된다"(녹취 1138)
@@ -41,7 +47,7 @@
         var head = EDUFILTER.bar([
             { type: 'search', id: 'ee-q', value: state.q, placeholder: '내용·강사·장소 검색', on: "EDUE.setF('q', this.value)" },
             { type: 'select', id: 'ee-f-type', value: state.fType, label: '교육 분류',
-              options: [['', '분류 전체']].concat(E().ETC_TYPES.map(function (t) { return [t, t]; })), on: "EDUE.setF('fType', this.value)" },
+              options: [['', '분류 전체']].concat(E().etcTypes(SUP_MODE).map(function (t) { return [t, t]; })), on: "EDUE.setF('fType', this.value)" },
             { type: 'select', id: 'ee-f-dept', value: state.dept, label: '부서',
               options: [['', '부서 전체']].concat(E().deptCandidates().map(function (d) { return [d.id, d.name]; })), on: "EDUE.setF('dept', this.value)" },
             { type: 'select', id: 'ee-f-year', value: state.year, label: '연도',
@@ -74,9 +80,9 @@
         '</details>';
     }
     function criteriaHtml() {
-        var types = E().ETC_TYPES;
+        var types = E().etcTypes(SUP_MODE);
         var rows = types.map(function (t) {
-            var info = E().etcTypeInfo(t) || {};
+            var info = E().etcTypeInfo(t, SUP_MODE) || {};
             var hrs = (info.hours || []).map(function (x) {
                 return esc(x.who) + ' <b>' + x.h + 'h</b>';
             }).join(' · ') || '-';
@@ -159,7 +165,7 @@
         var depts = E().deptCandidates();
         F = {
             edit: null,
-            etcType: E().ETC_TYPES[0], deptId: depts[0].id,
+            etcType: E().etcTypes(SUP_MODE)[0], deptId: depts[0].id,
             date: E().today(), time: '10:00', hours: 2, instructor: '', place: '', desc: '',
             files: [], workerIds: {}, specialWorkNos: {}, specialWorkOtherReason: ''
         };
@@ -174,7 +180,7 @@
         if (lock) { toast('결재 ' + lock + ' 상태라 수정할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
         F = {
             edit: courseId,
-            etcType: c.etcType || E().ETC_TYPES[0], deptId: c.deptId || E().deptCandidates()[0].id,
+            etcType: c.etcType || E().etcTypes(SUP_MODE)[0], deptId: c.deptId || E().deptCandidates()[0].id,
             date: c.date, time: c.time || '', hours: c.hours,
             instructor: c.instructor || '', place: c.place || '', desc: c.desc || '',
             files: (c.files || []).slice(), workerIds: {}, specialWorkNos: {}, specialWorkOtherReason: c.specialWorkOtherReason || ''
@@ -187,7 +193,7 @@
      * 만들어 놓은 상태에서 그 법의 근거를 적어두는 게 나아요": 담당자에게 조문을 읽혀
      * 판단시키지 않고, 시스템이 만든 분류를 고르게 하고 근거는 참고로만 붙인다. */
     function typeGuideHtml(label) {
-        var info = E().etcTypeInfo(label);
+        var info = E().etcTypeInfo(label, SUP_MODE);
         if (!info) return '';
         var chip = (window.DYLAW && info.basis) ? ' ' + DYLAW.basisChip(info.basis) : '';
         var rows = info.hours.map(function (x) {
@@ -212,7 +218,7 @@
     }
     function specialWorksPickerHtml() {
         if (!F || F.etcType !== '특별교육') return '';
-        var info = E().etcTypeInfo('특별교육') || {}, works = info.works || [];
+        var info = E().etcTypeInfo('특별교육', SUP_MODE) || {}, works = info.works || [];
         var selected = Object.keys(F.specialWorkNos || {}).filter(function (k) { return F.specialWorkNos[k]; }).length;
         var rows = works.map(function (w) {
             var ck = F.specialWorkNos[String(w.no)] ? ' checked' : '';
@@ -231,7 +237,7 @@
             '<p class="file-hint">선택한 작업 번호·명칭을 교육 기록에 보존합니다. 기타는 등록을 막지 않되 법령 매핑 대기로 남깁니다.</p></div>';
     }
     function renderCreate() {
-        var typeOpts = E().ETC_TYPES.map(function (t) { return '<option value="' + esc(t) + '"' + (t === F.etcType ? ' selected' : '') + '>' + esc(t) + '</option>'; }).join('');
+        var typeOpts = E().etcTypes(SUP_MODE).map(function (t) { return '<option value="' + esc(t) + '"' + (t === F.etcType ? ' selected' : '') + '>' + esc(t) + '</option>'; }).join('');
         var ws = pickWorkers(F.deptId);
         var selCnt = Object.keys(F.workerIds).filter(function (k) { return F.workerIds[k]; }).length;
         var rows = ws.length ? ws.map(function (w) {
@@ -302,6 +308,15 @@
     function delFile(i) { captureCreate(); EDUFORM.delFile(F, i); renderCreate(); }
     function doCreate() {
         captureCreate();
+        /* **셀렉트에서 감추는 것만으로는 부족하다** — 전역 호출(EDUE.pickType)로 뚫린다.
+           별표4 제1호의2 에 없는 유형이 관리감독자 교육으로 저장되면, 그 뒤로는 화면이
+           법에 없는 의무를 이수기록으로 들고 있게 된다(CLAUDE.md §4 저장 경로 가드). */
+        if (E().etcTypes(SUP_MODE).indexOf(F.etcType) < 0) {
+            toast(SUP_MODE
+                ? '관리감독자 교육과정이 아닙니다 — 별표4 제1호의2 는 작업내용 변경 시 교육·특별교육 둘만 정합니다.'
+                : '교육 종류를 다시 선택하세요.');
+            return;
+        }
         if (!F.date || !F.time || !F.hours || !F.desc) { toast('일자·시각·시간·내용을 모두 입력하세요.'); return; }
         var specialNos = Object.keys(F.specialWorkNos || {}).filter(function (k) { return F.specialWorkNos[k]; });
         if (F.etcType === '특별교육' && !specialNos.length && !F.specialWorkOtherReason) { toast('특별교육 대상 작업을 1건 이상 선택하세요.'); return; }
@@ -313,9 +328,16 @@
                 specialWorkNos: F.etcType === '특별교육' ? specialNos : [],
                 specialWorkOtherReason: F.etcType === '특별교육' ? F.specialWorkOtherReason : ''
             });
-            E().pushCourseHistory(F.edit, { type: 'STATUS', by: E().deptName(F.deptId), memo: '기타 교육 정보 수정' });
+            /* 시간·일자를 고치면 **이미 쌓인 이수기록도 함께 맞춘다** — 정기교육이
+             * 같은 자리에서 하는 일이다(js/edu-reg.js). 안 맞추면 카드의 'Nh'와 개인
+             * 이수기록이 조용히 갈라지고, 그 상태로 공문 붙임 별지가 **옛 시간**을
+             * 싣는다(CLAUDE.md §4 — syncCourseRecordHours MUST). */
+            var synced = E().syncCourseRecordHours(F.edit, F.hours, F.date);
+            E().pushCourseHistory(F.edit, { type: 'STATUS', by: E().deptName(F.deptId),
+                memo: '기타 교육 정보 수정 · ' + F.hours + 'h' +
+                    (synced ? ' (이수기록 ' + synced + '건 시간 재반영)' : '') });
             V().closeModal();
-            toast('기타 교육 정보를 저장했습니다.');
+            toast('기타 교육 정보를 저장했습니다' + (synced ? ' · 이수기록 ' + synced + '건 갱신' : '') + '.');
             render();
             return;
         }
@@ -361,7 +383,7 @@
            판정하지 않는 유형(특별교육)은 왜 판정하지 않는지를 대신 밝힌다 — 아무 표시가
            없으면 '검사했고 이상 없음'으로 읽힌다. */
         var short = E().etcShortfall(c);
-        var info = E().etcTypeInfo(c.etcType) || {};
+        var info = E().etcTypeInfo(c.etcType, c.kind === 'SUP_ETC') || {};
         var selectedWorks = (info.works || []).filter(function (w) { return (c.specialWorkNos || []).map(String).indexOf(String(w.no)) >= 0; });
         var worksBlock = c.etcType === '특별교육'
             ? '<div style="margin-top:10px;"><b>대상 작업:</b> ' +

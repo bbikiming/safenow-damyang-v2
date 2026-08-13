@@ -299,6 +299,16 @@
          * 예약돼 있어 재사용하지 않고 '제출'을 따로 둔다. */
         '미배정': 'warning', '미배정 지연': 'danger', '미제출': 'danger',
         '제출': 'info', '반송': 'warning', '후보': 'purple', '종결': 'success', '취소': 'neutral',
+        /* 업무문서 (docs-exec·docs-preset) — 문서 출처 4종.
+         * 판정이 아니라 **분류**라서 색은 구분용이다(명단 출처 '인사연동/직접등록/
+         * 엑셀업로드' 와 같은 용법). 라벨을 항상 함께 쓴다. */
+        '온나라': 'info', '전자문서': 'purple', '직접 첨부': 'neutral', '프로그램': 'success',
+        /* 업무문서 — 출처별 업무 흐름 상태. 서로 다른 출처의 상태를 하나의 거짓된
+         * 공통 단계로 환산하지 않는다(UX설계 §5-3). */
+        '작성중': 'info', '등록완료': 'success', '확정': 'success',
+        '검토대기': 'warning', '확인완료': 'success', '미시행': 'neutral',
+        /* 업무문서 — 증빙 축 보조 어휘 */
+        '재확인 필요': 'warning', '중복 의심': 'warning', '미분류': 'warning', '분류완료': 'success',
     };
     /* 매핑에 없는 라벨은 neutral 로 수렴(색을 임의로 만들지 않는다). */
     function toneOf(label) { return STATUS_TONE[String(label || '').trim()] || 'neutral'; }
@@ -495,7 +505,9 @@
      *     'lightbox' : 이미지 확대 — 크롬 없이 어두운 스크림 위 이미지만
      * opts.headHtml — 헤더 제목 우측에 끼울 도구 버튼(예: [PDF 다운로드]). */
     function openModal(title, bodyHtml, footHtml, opts) {
-        closeModal();
+        /* 본문 교체(마법사 STEP 전환)도 이 경로를 지난다 — 여기서 닫기 가드를 태우면
+           재렌더가 막혀 모달이 두 겹으로 쌓인다. 레이어만 걷어내고 가드는 유지한다. */
+        removeLayers();
         opts = opts || {};
         const wrap = document.createElement('div');
         /* opts.chrome — 셸(헤더) 크롬 모달임을 표시한다. 업무 흐름의 일부가 아니므로
@@ -520,15 +532,35 @@
         document.addEventListener('keydown', escClose);
     }
     function escClose(e) { if (e.key === 'Escape') closeModal(); }
+
+    /* ── 닫기 가드 — 입력 중인 모달이 조용히 버려지지 않게 ──────────────────
+     * 종전에는 취소 버튼에만 폐기 확인을 걸 수 있었고 X · 백드롭 · Esc 는 곧장
+     * closeModal() 로 빠져 3단계 마법사의 입력이 아무 말 없이 사라졌다. 닫는 길이
+     * 넷인데 확인은 하나에만 있으면 그건 확인이 아니다.
+     *   setModalGuard(fn) — fn() 이 false 를 돌려주면 닫지 않는다.
+     *   모달을 실제로 닫을 때(또는 가드가 필요 없어질 때) 반드시 해제한다.
+     * 가드는 openModal 이 본문을 갈아끼울 때는 유지된다(같은 흐름의 STEP 전환). */
+    let _modalGuard = null;
+    function setModalGuard(fn) { _modalGuard = typeof fn === 'function' ? fn : null; }
+    function clearModalGuard() { _modalGuard = null; }
     /* 단일 모달 규칙(UI-RULE: 한 시점에 모달은 1개) — 본 모달과 함께 부수 오버레이도 제거해 잔류 레이어 방지.
      * 규칙 전문은 프로젝트 루트 CLAUDE.md 참고. */
-    function closeModal() {
+    /* DOM 레이어만 제거 — 가드는 건드리지 않는다(재렌더용) */
+    function removeLayers() {
         const m = document.getElementById('v2-modal');
         if (m) m.remove();
         ['org-tree-overlay', 'reg-owner-overlay', 'stack-overlay'].forEach(id => {
             const o = document.getElementById(id); if (o) o.remove();
         });
         document.removeEventListener('keydown', escClose);
+    }
+    /* 실제 '닫기' — 가드가 막으면 false 를 돌려주고 아무것도 지우지 않는다.
+       force 는 소비처가 이미 확인을 받았거나 저장을 마친 뒤 부르는 길이다. */
+    function closeModal(force) {
+        if (!force && _modalGuard) { try { if (_modalGuard() === false) return false; } catch (e) {} }
+        _modalGuard = null;
+        removeLayers();
+        return true;
     }
 
     function toast(msg) {
@@ -628,7 +660,7 @@
         MENUS, byMenu, complianceRate, dueCount,
         esc, josa, statusChip, workTypeChip, processTypeChip, pdcaChip, lawChip,
         unassignedBadge, secondReviewBadge,
-        openModal, closeModal, toast, openDoc,
+        openModal, closeModal, setModalGuard, clearModalGuard, toast, openDoc,
         docs, FILE_LIMITS, fileHint, uploadDrop, dropKey,
         /* 실제 파일 선택·끌어놓기 (uploadDrop opts.pick 이 인라인으로 호출) */
         TODAY: DEMO_TODAY, today, daysTo, realToday,

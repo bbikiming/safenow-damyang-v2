@@ -1668,16 +1668,19 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
    표준 치환: edu-table→.table-figma(.table-compact) · edu-tabs→.sub-tabs ·
    edu-empty→.v2-empty · chip-mini→.chip-status(.chip-sm) · edu-bar→.progress
    ========================================================================= */
-.edu-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); padding: 10px 14px; margin-bottom: 12px; }
-.edu-toolbar .form-select { width: auto; min-width: 130px; }
+/* ※ EDUFILTER 는 안전보건교육 밖(업무문서)에서도 쓰는 공용 필터 바다. 도메인
+   이름을 지우면 edu 화면 9곳이 깨지므로, DYTOUR 이관 때 .edu-tour-* 에 .dy-tour-*
+   를 병기한 선례(CLAUDE.md §4-3)대로 중립 별칭 .dy-* 를 쉼표로 함께 둔다. */
+.edu-toolbar, .dy-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); padding: 10px 14px; margin-bottom: 12px; }
+.edu-toolbar .form-select, .dy-toolbar .form-select { width: auto; min-width: 130px; }
 .edu-spacer { flex: 1; }
-.edu-count { font-size: var(--fs-12); color: var(--text-gray); font-weight: var(--fw-bold); white-space: nowrap; }
+.edu-count, .dy-count { font-size: var(--fs-12); color: var(--text-gray); font-weight: var(--fw-bold); white-space: nowrap; }
 
 /* 공용 필터 바 (EDUFILTER.bar) — 좌: 조회 조건 / 우: 건수·초기화·액션 */
-.edu-filterbar { justify-content: space-between; align-items: flex-start; }
-.edu-filterbar-fields { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 0; }
-.edu-filterbar-tail { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
-.edu-f-search { width: auto; flex: 0 1 220px; min-width: 160px; }
+.edu-filterbar, .dy-filterbar { justify-content: space-between; align-items: flex-start; }
+.edu-filterbar-fields, .dy-filterbar-fields { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 0; }
+.edu-filterbar-tail, .dy-filterbar-tail { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
+.edu-f-search, .dy-f-search { width: auto; flex: 0 1 220px; min-width: 160px; }
 
 .edu-card { background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); padding: 14px 16px; margin-bottom: 12px; }
 .edu-card-title { font-size: var(--fs-13); font-weight: var(--fw-bold); color: var(--text-black); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -3296,6 +3299,17 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 }
 .rskdoc-demo-btns { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
 
+/* 공문 미리보기 래퍼 — 지면(.pdf-paper)은 `margin: 0 auto` 로 중앙 정렬되므로 좁은
+   화면에서 양쪽으로 넘쳐 **왼쪽이 스크롤로도 닿지 않는 곳으로 밀린다**(375px 실측).
+   래퍼가 가로로 스크롤되게 하고 시작점을 지면 왼쪽 끝에 맞춘다. 지면 CSS 는 다른
+   도메인과 공유하므로 건드리지 않는다. (종전에는 이 세 줄이 인라인 style 이었다) */
+.rskdoc-preview { overflow-x: auto; display: flex; justify-content: flex-start; }
+
+/* 공문 컨트롤 자리 — 교육 목록·상세·채용시 4개 모듈이 쓰는 래퍼인데 규칙이 없었다.
+   안에 [공문 기안] 버튼 / 상태 배지 + [문서 보기] + 안내 문구가 번갈아 들어오므로,
+   간격을 문자열 공백에 맡기지 않고 좁은 폭에서 줄바꿈되게 한다. */
+.edu-doc-slot { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+
 /* ── 기안문 지면 보강 — 새 계열이 아니라 .pdf-doc-* 패밀리 modifier 2개 ── */
 /* base .pdf-sign 은 우측정렬이라 공문 발신명의(중앙)가 나오지 않는다 */
 .pdf-doc .pdf-sign.pdf-doc-issuer {
@@ -3637,3 +3651,247 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .mw-headact { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .mw-headact .mw-synced { font-size: var(--fs-12); color: var(--text-gray); }
 .mw-headact .form-select { width: auto; min-width: 130px; }
+
+/* =========================================================================
+   업무문서 — 이행 목록 (docs-exec · DOCEXEC) · 업무 목록 (docs-preset · DOCLIST)
+   기획: docs/planning/기획-업무문서-이행목록-업무목록-UX설계-v1.md
+   표준 계열(.card·.table-figma·.chip-status·.v2-empty·.progress·.form-*) 위에
+   레이아웃만 얹는다. 색·크기·반경·z-index 는 토큰만 쓴다(CLAUDE.md §6).
+   ========================================================================= */
+
+/* ── 공통 요약 줄 — 카드 4장 대신 한 줄. 첫 데이터까지의 거리를 지킨다(§14-12) ── */
+.dx-summary { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card);
+  padding: 8px 14px; margin-bottom: 10px; }
+.dx-sum-static { font-size: var(--fs-13); color: var(--text-gray); }
+.dx-sum-static b { color: var(--text-black); font-weight: var(--fw-bold); }
+.dx-sum { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 2px 8px;
+  background: none; border: 1px solid transparent; border-radius: var(--radius-pill);
+  font-family: inherit; font-size: var(--fs-13); color: var(--text-black); cursor: pointer; }
+.dx-sum:hover { background: var(--surface-alt); }
+.dx-sum.is-on { border-color: var(--main); background: var(--brand-50); }
+.dx-sum:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
+.dx-sum b { font-weight: var(--fw-bold); }
+.dx-sum-link { margin-left: auto; font-size: var(--fs-12); font-weight: var(--fw-bold); color: var(--main-dark); }
+.dx-lead-dim { color: var(--text-gray); font-weight: var(--fw-regular); }
+.dx-note-rel, .dx-note-gap { margin-top: 6px; font-size: var(--fs-12); color: var(--text-gray); }
+.dx-note-rel a { color: var(--main-dark); font-weight: var(--fw-bold); }
+.dx-ro { font-size: var(--fs-12); font-weight: var(--fw-bold); color: var(--text-gray); }
+
+/* ── 이행항목 카드 격자 — 데스크톱 2열. 3열은 긴 단계명을 담지 못한다 ── */
+.dx-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.dx-card { padding: 0; overflow: hidden; }
+.dx-card.is-focus, .dx-row.is-focus { outline: 2px solid var(--main); outline-offset: -2px; }
+.dx-head { display: block; padding: 12px 14px 10px; border-bottom: 1px solid var(--card-line); }
+.dx-head-top { display: flex; align-items: baseline; gap: 8px; }
+.dx-code { flex-shrink: 0; font-size: var(--fs-12); font-weight: var(--fw-bold); color: var(--main-dark);
+  background: var(--surface-alt); border: 1px solid var(--card-line); border-radius: var(--radius-sm); padding: 1px 6px; }
+/* 긴 한국어 이행항목명은 자르지 않고 줄바꿈한다(툴팁에 숨기지 않는다) */
+.dx-title { font-size: var(--fs-14); font-weight: var(--fw-bold); color: var(--text-black);
+  line-height: 1.4; margin: 0; word-break: keep-all; }
+.dx-head-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.dx-meta { font-size: var(--fs-12); color: var(--text-gray); }
+.dx-meta em { font-style: normal; color: var(--main-dark); font-weight: var(--fw-bold); }
+.dx-law-btn { min-height: 32px; padding: 2px 10px; background: none; border: 1px solid var(--card-line);
+  border-radius: var(--radius-pill); font-family: inherit; font-size: var(--fs-12); color: var(--text-gray); cursor: pointer; }
+.dx-law-btn:hover { color: var(--main-dark); border-color: var(--main); }
+.dx-law-btn:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
+.dx-law { margin-top: 8px; }
+.dx-law li { font-size: var(--fs-12); color: var(--text-black); line-height: 1.6; }
+.dx-body { padding: 10px 14px 12px; }
+
+/* 진행률 — 주기 있는 항목만 바. 없는 항목은 자리 대신 사유 텍스트를 낸다 */
+.dx-prog { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.dx-prog .progress { flex: 1 1 120px; min-width: 100px; }
+.dx-prog-pct { font-size: var(--fs-13); font-weight: var(--fw-bold); color: var(--text-black); }
+.dx-prog-cnt { font-size: var(--fs-12); color: var(--text-gray); }
+.dx-prog-cnt em { font-style: normal; }
+.dx-prog-none .dx-nocycle { font-size: var(--fs-12); font-weight: var(--fw-bold); color: var(--text-gray);
+  background: var(--surface-alt); border: 1px solid var(--card-line); border-radius: var(--radius-pill); padding: 2px 10px; }
+.dx-err { padding: 12px; }
+
+/* 업무단계 표 */
+.dx-table { table-layout: auto; }
+.dx-table td { vertical-align: middle; padding: 7px 6px; }
+.dx-row.is-recheck { background: var(--status-warning-bg); }
+.dx-c-main { width: 100%; }
+.dx-stage-link { display: flex; align-items: baseline; gap: 6px; color: var(--text-black); text-decoration: none; }
+.dx-stage-link:hover .dx-sname { color: var(--main-dark); text-decoration: underline; }
+.dx-scode { flex-shrink: 0; font-size: var(--fs-12); color: var(--text-gray); font-variant-numeric: tabular-nums; }
+.dx-sname { font-size: var(--fs-13); font-weight: var(--fw-medium); line-height: 1.45; word-break: keep-all; }
+.dx-swhen { display: block; margin-top: 2px; font-size: var(--fs-12); color: var(--text-gray); }
+.dx-sep { margin: 0 5px; }
+.dx-doclink { color: var(--main-dark); font-weight: var(--fw-bold); }
+.dx-nodoc { color: var(--text-gray); }
+/* 상태·액션은 우측 한 칸에 모아 세로로 쌓는다 — 이름 폭을 뺏지 않는다 */
+.dx-c-side { width: 1%; white-space: nowrap; text-align: right; }
+.dx-c-side > * { display: inline-flex; margin-left: 4px; }
+.dx-c-side .dx-conf { margin-top: 4px; }
+.dx-more { width: 100%; min-height: 36px; margin-top: 8px; background: var(--surface-alt);
+  border: 1px solid var(--card-line); border-radius: var(--radius-button); font-family: inherit;
+  font-size: var(--fs-12); font-weight: var(--fw-bold); color: var(--text-gray); cursor: pointer; }
+.dx-more:hover { color: var(--main-dark); border-color: var(--main); }
+.dx-more:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
+
+/* 증빙 확인 모달 */
+.dx-mod-path { font-size: var(--fs-12); color: var(--text-gray); }
+.dx-mod-title { font-size: var(--fs-16); font-weight: var(--fw-bold); color: var(--text-black); margin: 2px 0 10px; word-break: keep-all; }
+.dx-mod-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 14px; margin-bottom: 12px; }
+.dx-mod-meta dt { font-size: var(--fs-12); color: var(--text-gray); }
+.dx-mod-meta dd { font-size: var(--fs-13); color: var(--text-black); margin: 0; word-break: keep-all; }
+.dx-mod-sub { font-size: var(--fs-13); font-weight: var(--fw-bold); color: var(--text-black); margin: 12px 0 6px; }
+.dx-mod-docs li { padding: 5px 0; border-bottom: 1px solid var(--card-line); font-size: var(--fs-13); }
+.dx-mod-docs a { color: var(--main-dark); font-weight: var(--fw-medium); }
+.dx-mod-dim { margin-left: 6px; font-size: var(--fs-12); color: var(--text-gray); }
+.dx-mod-reason { margin-top: 12px; }
+
+@media (max-width: 1023px) {
+  .dx-grid { grid-template-columns: 1fr; }
+  .dx-mod-meta { grid-template-columns: 1fr; }
+}
+@media (max-width: 767px) {
+  .dx-summary { gap: 6px; padding: 8px 10px; }
+  .dx-sum-link { margin-left: 0; }
+  .dx-table td { padding: 6px 4px; }
+  .dx-c-docs, .dx-c-st, .dx-c-act { white-space: normal; }
+}
+.dx-headact { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.dx-yr { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-12); color: var(--text-gray); font-weight: var(--fw-bold); }
+.dx-yr .form-select { width: auto; min-width: 96px; }
+
+/* 좁은 화면 — 제목 줄 액션을 가로로 두면 오른쪽 버튼이 뷰포트 밖으로 나간다.
+   .dy-page-title 은 flex 라 margin-left:auto 가 걸린 액션 묶음이 줄바꿈해도
+   폭을 넘겨 잘렸다(375px 에서 [＋ 업무 업로드] 오른쪽 끝 400px — 누를 수 없었다).
+   세로로 쌓고 각 컨트롤을 전체 너비로 준다. */
+@media (max-width: 767px) {
+  .dy-page-title:has(.page-head-action) { flex-direction: column; align-items: stretch; }
+  .page-head-action { margin-left: 0; width: 100%; max-width: 100%; }
+  .dx-headact { flex-direction: column; align-items: stretch; width: 100%; }
+  .dx-headact > .btn { width: 100%; min-height: 44px; }
+  .dx-yr { justify-content: space-between; width: 100%; }
+  .dx-yr .form-select { flex: 1; min-height: 44px; }
+}
+
+/* ── 업무 목록 — 평면 문서 검색 (DOCLIST) ── */
+.dl-adv { background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card);
+  padding: 12px 14px; margin-bottom: 10px; }
+.dl-adv-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 12px; }
+.dl-f { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.dl-f > span { font-size: var(--fs-12); color: var(--text-gray); font-weight: var(--fw-bold); }
+.dl-f .form-select, .dl-f .form-input { width: 100%; min-width: 0; }
+.dl-adv-note { margin-top: 10px; font-size: var(--fs-12); color: var(--text-gray); }
+
+.dl-chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.dl-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 6px 3px 10px;
+  background: var(--surface-alt); border: 1px solid var(--card-line); border-radius: var(--radius-pill);
+  font-size: var(--fs-12); color: var(--text-gray); }
+.dl-chip b { color: var(--text-black); font-weight: var(--fw-bold); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dl-chip button { min-width: 22px; min-height: 22px; background: none; border: none; font-family: inherit;
+  font-size: var(--fs-13); color: var(--text-gray); cursor: pointer; }
+.dl-chip button:hover { color: var(--status-danger-fg); }
+.dl-chip button:focus-visible { outline: 2px solid var(--main); outline-offset: 1px; border-radius: var(--radius-full); }
+
+.dl-tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.dl-tools .dy-count { font-size: var(--fs-13); color: var(--text-black); }
+.dl-dim { color: var(--text-gray); font-weight: var(--fw-regular); }
+.dl-sort, .dl-size { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; font-size: var(--fs-12); color: var(--text-gray); }
+.dl-size { margin-left: 0; }
+.dl-sort .form-select, .dl-size .form-select { width: auto; min-width: 120px; }
+
+/* 10컬럼 — 375px 까지 가로 스크롤 래퍼 안에서만 넘친다(페이지 본문은 안 밀린다) */
+.dl-wrap { overflow-x: auto; }
+.dl-table { min-width: 860px; }
+.dl-table th { white-space: nowrap; }
+.dl-table td { vertical-align: top; }
+.dl-c-title { min-width: 210px; }
+.dl-c-title a { color: var(--text-black); font-weight: var(--fw-medium); word-break: keep-all; }
+.dl-c-title a:hover { color: var(--main-dark); text-decoration: underline; }
+.dl-c-stage { min-width: 170px; word-break: keep-all; }
+.dl-item-name { display: block; font-size: var(--fs-12); color: var(--main-dark); font-weight: var(--fw-bold); }
+.dl-more-n { color: var(--text-gray); font-weight: var(--fw-regular); }
+.dl-sr { display: block; margin-top: 2px; font-size: var(--fs-12); color: var(--text-gray); }
+.dl-c-date { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.dl-c-file { white-space: nowrap; }
+.dl-att { display: inline-block; font-size: var(--fs-12); font-weight: var(--fw-bold); color: var(--main-dark); }
+.dl-more { padding: 1px 6px; background: var(--surface-alt); border: 1px solid var(--card-line);
+  border-radius: var(--radius-pill); font-family: inherit; font-size: var(--fs-12); color: var(--text-gray); cursor: pointer; }
+.dl-more:hover { color: var(--main-dark); border-color: var(--main); }
+.dl-more:focus-visible { outline: 2px solid var(--main); outline-offset: 1px; }
+.dl-stages li { font-size: var(--fs-12); line-height: 1.6; }
+.dl-stages a { color: var(--main-dark); }
+
+.dl-pager { display: flex; align-items: center; gap: 4px; justify-content: center; flex-wrap: wrap; margin-top: 12px; }
+.dl-pg { min-width: 36px; min-height: 36px; padding: 0 10px; background: var(--surface);
+  border: 1px solid var(--card-line); border-radius: var(--radius-button); font-family: inherit;
+  font-size: var(--fs-13); color: var(--text-black); cursor: pointer; }
+.dl-pg:hover:not(:disabled) { border-color: var(--main); color: var(--main-dark); }
+.dl-pg.is-on { background: var(--main); border-color: var(--main); color: var(--surface); font-weight: var(--fw-bold); }
+.dl-pg:disabled { color: var(--text-gray); cursor: default; opacity: 0.6; }
+.dl-pg:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
+.dl-pg-gap { padding: 0 4px; color: var(--text-gray); }
+
+@media (max-width: 1279px) { .dl-adv-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 1023px) { .dl-adv-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 767px) {
+  .dl-adv-grid { grid-template-columns: 1fr; }
+  .dl-sort, .dl-size { margin-left: 0; }
+}
+
+/* ── 문서 상세 — 새 축(원장·등록분) DOCDET ── */
+.dd-head-chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+.dd-title { font-size: var(--fs-18); font-weight: var(--fw-bold); color: var(--text-black); line-height: 1.4; word-break: keep-all; margin-bottom: 12px; }
+.dd-meta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; }
+.dd-meta dt { font-size: var(--fs-12); color: var(--text-gray); font-weight: var(--fw-bold); }
+.dd-meta dd { font-size: var(--fs-13); color: var(--text-black); margin: 0; word-break: keep-all; }
+.dd-note { margin-top: 12px; padding: 8px 10px; background: var(--surface-alt); border-radius: var(--radius-sm); font-size: var(--fs-12); color: var(--text-gray); }
+.dd-sec { margin-top: 12px; }
+.dd-h3 { font-size: var(--fs-14); font-weight: var(--fw-bold); color: var(--text-black); margin-bottom: 8px; }
+.dd-n { display: inline-block; margin-left: 4px; padding: 0 6px; background: var(--surface-alt); border-radius: var(--radius-pill); font-size: var(--fs-12); color: var(--text-gray); }
+.dd-item-row td { background: var(--surface-alt); font-size: var(--fs-12); font-weight: var(--fw-bold); }
+.dd-item-row a { color: var(--main-dark); }
+.dd-stage-name { word-break: keep-all; }
+.dd-files li { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; padding: 6px 0; border-bottom: 1px solid var(--card-line); }
+.dd-f-name { font-size: var(--fs-13); font-weight: var(--fw-medium); color: var(--text-black); }
+.dd-f-meta { font-size: var(--fs-12); color: var(--text-gray); }
+.dd-f-note { margin-left: auto; }
+.dd-pdf { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--card-line); font-size: var(--fs-13); }
+.dd-imp { font-size: var(--fs-13); color: var(--text-black); margin-bottom: 10px; }
+.dd-acts { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.dd-side-box { background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); padding: 12px 14px; }
+.dd-side-box h4 { font-size: var(--fs-13); font-weight: var(--fw-bold); color: var(--text-black); margin-bottom: 8px; }
+.dd-rel li { padding: 6px 0; border-bottom: 1px solid var(--card-line); }
+.dd-rel a { display: block; font-size: var(--fs-12); color: var(--text-black); line-height: 1.5; word-break: keep-all; }
+.dd-rel a:hover { color: var(--main-dark); text-decoration: underline; }
+.dd-rel .dx-nodoc { font-size: var(--fs-12); }
+.dd-del-list li { font-size: var(--fs-13); line-height: 1.8; }
+.dd-del-warn { margin-top: 10px; padding: 8px 10px; background: var(--status-danger-bg); border: 1px solid var(--status-danger-border); border-radius: var(--radius-sm); font-size: var(--fs-12); color: var(--status-danger-fg); }
+@media (max-width: 767px) { .dd-meta { grid-template-columns: 1fr; } .dd-f-note { margin-left: 0; } }
+
+/* 좁은 화면에서는 보조 컨트롤도 손가락으로 누를 만해야 한다 */
+@media (max-width: 767px) {
+  .dx-law-btn, .dl-more, .dl-chip button { min-height: 36px; }
+  .dl-chip button { min-width: 36px; }
+}
+
+/* 상세필터 — 옵션이 많은 축은 콤보박스(input+datalist) */
+.dl-f-n { display: inline-block; margin-left: 4px; padding: 0 5px; background: var(--surface-alt);
+  border-radius: var(--radius-pill); font-size: var(--fs-12); color: var(--text-gray); font-weight: var(--fw-regular); }
+
+/* 미분류 교정 · 중복 정리 */
+.dl-remap-t { font-size: var(--fs-13); margin-bottom: 6px; word-break: keep-all; }
+.dl-remap-help { font-size: var(--fs-12); color: var(--text-gray); margin-bottom: 10px; }
+.dl-remap-n { margin: 8px 0 6px; font-size: var(--fs-12); color: var(--text-gray); }
+.dl-remap-body { max-height: 320px; overflow-y: auto; border: 1px solid var(--card-line); border-radius: var(--radius-sm); padding: 8px; }
+.dl-rm-grp { margin-bottom: 10px; }
+.dl-rm-grp h5 { font-size: var(--fs-12); font-weight: var(--fw-bold); color: var(--main-dark); margin-bottom: 4px; }
+.dl-rm-row { display: flex; align-items: flex-start; gap: 8px; min-height: 34px; padding: 4px 6px;
+  border-radius: var(--radius-sm); font-size: var(--fs-13); cursor: pointer; }
+.dl-rm-row:hover { background: var(--surface-alt); }
+.dl-rm-row.is-on { background: var(--brand-50); }
+.dl-rm-row span { word-break: keep-all; }
+.dl-merge-list li { padding: 6px 0; border-bottom: 1px solid var(--card-line); font-size: var(--fs-13); word-break: keep-all; }
+.dl-merge-list code { font-size: var(--fs-12); color: var(--text-gray); }
+
+/* 폼 필드 오류 상태 — 색만으로 말하지 않고 테두리+문구를 함께 준다 */
+.form-field.has-err .form-input, .form-field.has-err .form-select { border-color: var(--status-danger-border); }
+.du-owner.has-err .du-orgbtn { border-color: var(--status-danger-border); }

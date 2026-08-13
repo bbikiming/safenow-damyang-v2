@@ -3,27 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>관리감독자 기타 교육 — 담양군 중대재해예방통합관리시스템</title>
+    <title>관리감독자 채용시교육 — 담양군 중대재해예방통합관리시스템</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="./js/tailwind-config.js"></script>
     <link rel="stylesheet" href="./css/style.css">
     <link rel="stylesheet" href="./css/v2.css">
 </head>
-<body data-dy-page="edu-sup-etc"
-      data-page-title="관리감독자 기타 교육"
-      data-page-subtitle="작업내용 변경 시 교육 / 특별교육 (EDU-SUP-ETC)">
+<body data-dy-page="edu-sup-hire"
+      data-page-title="관리감독자 채용시교육"
+      data-page-subtitle="관리감독자 채용 시 교육 8시간 — 별표4 제1호의2 나목 (EDU-SUP-HIRE)">
     <main>
         <div class="check-notice">
-            <b>관리감독자 기타 교육</b>은 자체교육 폼에 유형 선택을 추가한 형식입니다.
-            교육 종류와 시간은 <b>시행규칙 별표4 제1호의2</b>(관리감독자 안전보건교육)를 따라
-            <b>작업내용 변경 시 교육 2시간 · 특별교육 16시간</b>(단기간·간헐적 작업 2시간)
-            <b>2유형</b>이며, 현업근로자 화면과 목록이 다릅니다.
-            <b>건설업 기초안전보건교육</b>은 제1호의2에 없어 이 화면에 두지 않습니다 —
-            산업안전보건법 제31조제1항이 「건설업의 사업주」가 「건설 일용근로자를 채용할 때」로
-            의무 주체를 한정합니다.
-            <b>채용 시 교육 8시간</b>(제1호의2 나목)은 법에 있으나 현재 화면 범위 밖입니다.
+            <b>관리감독자 채용 시 교육은 8시간</b>입니다 — 시행규칙 별표4 <b>제1호의2 나목</b>이
+            교육과정별 시간만 정하고 교육대상 열을 두지 않아, 근로자와 달리 고용형태로 갈리지 않습니다.
+            <b>기준일은 채용일과 지정일 중 늦은 쪽</b>입니다. 담양군은 기존 공무원 중에서 관리감독자를
+            지정하므로 채용일을 기준으로 삼으면 <b>그 시점에 관리감독자가 아니었던 사람</b>을 미이수로
+            찍게 되기 때문입니다.
+            <b>지정일이 등록되지 않은 사람은 '판정 불가'</b>로 두고 미이수로 세지 않습니다 —
+            없는 기준으로 의무를 지우지 않습니다. 지정일은 <b>근로자 명단 관리</b>에서 등록합니다.
         </div>
-        <div id="ee-root"></div>
+        <div id="eh-root"></div>
     </main>
 
     <div id="toast" class="toast" role="status"></div>
@@ -38,12 +37,12 @@
     <script src="./js/edu-doc.js"></script><!-- 교육 공문 (EDUDOC) -->
     <script src="./js/edu-filter.js"></script>
     <script src="./js/edu-form.js"></script>
-    <script src="./js/edu-etc.js"></script>
+    <script src="./js/edu-hire.js"></script>
     <script src="./js/tour-core.js"></script><!-- 시연 투어 공용 엔진 (DYTOUR) -->
     <script src="./js/edu-tour.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            window.EDUE.init('ee-root', { supMode: true });
+            window.EDUH.init('eh-root', { supMode: true });
             window.EDUTOUR.boot();
         });
     </script>

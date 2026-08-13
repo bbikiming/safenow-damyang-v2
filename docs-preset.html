@@ -9,15 +9,12 @@
     <link rel="stylesheet" href="./css/style.css">
     <link rel="stylesheet" href="./css/v2.css">
 </head>
-<body data-dy-page="docs-preset" data-page-title="업무 목록" data-page-subtitle="업무문서 > 업무 목록 — 세트 단위 문서 현황 · 세트 하위 PDCA 단계 구분 · 분류 버전 전환(기존 ↔ 법적의무 재분류 v2)">
+<!-- ※ 파일명 주의 — 'preset' 은 옛 이름이다. 전년도 프리셋 기능은 이 화면이 아니라
+     이행 목록(docs-exec.html)에 있고, 이 화면은 평면 문서 검색이다. URL 은 기존
+     딥링크(stats·docs-archive·my-work·menu) 호환 때문에 그대로 둔다. -->
+<body data-dy-page="docs-preset" data-page-title="업무 목록" data-page-subtitle="업무문서 &gt; 업무 목록 — 온나라·전자문서·직접 첨부·전용화면 업무를 한곳에서 조건 조합으로 찾습니다">
     <main>
-        <div id="setlist"></div>
-        <p style="font-size:12px; color:var(--text-gray); margin-top:4px;">
-            <b>법적의무 재분류 v2</b>는 「PDCA 재분류결과(법적 의무 기준)」 — 9대메뉴·53세트·유효 426문서 기준입니다
-            (원본 429행 중 완전 동일 3쌍은 추적용으로 보존하고 화면에서는 통합).
-            상단에서 <b>기존 분류</b>로 전환하면 종전 51세트 구성으로 볼 수 있습니다.
-            전자문서는 [입력], 첨부는 [미리보기], 프로그램은 [이동]으로 상세 화면이 열립니다.
-        </p>
+        <div id="docs-list"></div>
     </main>
 
     <div id="toast" class="toast"></div>
@@ -27,25 +24,22 @@
     <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
     <script src="./js/data.js"></script>
     <script src="./js/common.js"></script>
+    <script src="./js/org-pick.js"></script>
+    <script src="./js/edu-filter.js"></script><!-- 공용 필터 바 (EDUFILTER) -->
     <script src="./js/edoc-templates.js"></script>
     <script src="./js/edoc.js"></script>
-    <script src="./js/sets-data.js"></script>
-    <script src="./js/sets-data-v2.js"></script>
-    <script src="./js/doc-register.js"></script>
-    <script src="./js/setlist.js"></script>
+    <!-- 업무문서 데이터 — 생성물(tools/build-docs-seed.py). 손으로 고치지 말 것 -->
+    <script src="./js/doc-taxonomy-data.js"></script><!-- DYDOCT: 이행항목 78 · 업무단계 168 -->
+    <script src="./js/doc-history-data.js"></script><!-- DYDOCH: 2025 문서 원장 3,830 -->
+    <script src="./js/sets-data-v2.js"></script><!-- DY_DOCS_V2 426 — 전자문서·전용화면 진입점 보존 -->
+    <script src="./js/doc-progress.js"></script><!-- DYDOCS: 상태·진행률·문서 축 단일 출처 -->
+    <script src="./js/doc-upload.js"></script><!-- DOCUP: 업무 업로드 마법사 · 전년도 프리셋 -->
+    <script src="./js/doc-list.js"></script>
     <script>
-        /* 기본 v2(신규 재분류) 표시 · ?ver=v1 또는 토글로 기존 분류 전환 · ?menu= 딥링크 */
-        (function () {
-            const params = new URLSearchParams(location.search);
-            const ver = params.get('ver') === 'v1' ? 'v1' : 'v2';
-            const mk = params.get('menu');
-            const el = document.getElementById('setlist');
-            DYSETLIST.render(el, { version: ver });
-            if (mk) {
-                const btn = el.querySelector('#sl-tabs button[data-mk="' + mk + '"]');
-                if (btn) btn.click();
-            }
-        })();
+        /* layout.js 가 DOMContentLoaded 에서 .dy-page-title 을 주입한 뒤에 붙는다 */
+        document.addEventListener('DOMContentLoaded', function () {
+            DOCLIST.init(document.getElementById('docs-list'));
+        });
     </script>
 </body>
 </html>

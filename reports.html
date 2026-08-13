@@ -35,7 +35,10 @@
                     <span class="card-title" id="report-preview-title">총괄보고서 미리보기 — 2026-01-01 ~ 2026-06-30</span>
                     <div style="display:flex; gap:8px;">
                         <button class="btn btn-secondary btn-sm" onclick="reportAction('PDF 출력')">PDF 출력</button>
-                        <button class="btn btn-primary btn-sm" onclick="reportAction('온나라 결재')">온나라 결재</button>
+                        <!-- 결재 버튼은 **보고서 계열에만** 나타난다. 증명서(개인 이수 확인서·
+                             이행사실 확인서) 발급은 신청인에게 내주는 행위이지 내부 의사결정이
+                             아니라 결재 대상이 아니다. updateReportPreview() 가 여닫는다. -->
+                        <button class="btn btn-primary btn-sm" id="report-approve-btn" onclick="reportAction('온나라 결재')">온나라 결재</button>
                     </div>
                 </div>
                 <div class="card-body">
@@ -45,7 +48,7 @@
                             <span style="font-size:var(--fs-38); font-weight:700; color:var(--brand-100); transform:rotate(-24deg); white-space:nowrap;">담양군 대외주의 · WATERMARK</span>
                         </div>
                         <p id="report-document-heading" style="text-align:center; font-size:var(--fs-18); font-weight:700; margin-bottom:6px;">2026-01-01 ~ 2026-06-30 중대재해예방 총괄보고서</p>
-                        <p style="text-align:center; font-size:var(--fs-12); color:var(--text-gray); margin-bottom:26px;">담양군 재난안전과 중대재해팀 · 출력일 2026-06-11</p>
+                        <p style="text-align:center; font-size:var(--fs-12); color:var(--text-gray); margin-bottom:26px;">담양군 재난안전과 중대재해팀 · 출력일 <span id="report-issued-at">2026-06-11</span></p>
                         <table class="table-figma" style="margin-bottom:20px;">
                             <thead><tr><th>구분</th><th>내용</th></tr></thead>
                             <tbody>
@@ -90,21 +93,41 @@
             const kind = document.getElementById('report-kind').value;
             const from = document.getElementById('report-from').value;
             const to = document.getElementById('report-to').value;
-            const valid = !!from && !!to && from <= to && to <= '2026-08-12';
+            /* 기준일을 여기 박아 두면 시연일이 바뀌는 순간 미래일 검사가 어긋난다 —
+               '오늘'은 DYV2.today() 단일 출처다(CLAUDE.md §11). */
+            const today = (window.DYV2 && DYV2.today) ? DYV2.today() : new Date().toISOString().slice(0, 10);
+            const valid = !!from && !!to && from <= to && to <= today;
             document.getElementById('report-condition-error').style.display = valid ? 'none' : 'block';
             return { kind, from, to, valid };
         }
+        /* 증명서 계열 — 발급 대상이 '사람'이고 결재를 타지 않는다. 보고서 계열과
+           지면 구성·발급 행위가 달라 같은 틀로 묶으면 문장이 성립하지 않는다
+           ('중대재해예방 개인 안전보건교육 이수 확인서'). */
+        function isCert(kind) { return /확인서$/.test(kind || ''); }
         function updateReportPreview() {
             const c = reportCondition();
             if (!c.valid) return;
+            const cert = isCert(c.kind);
             document.getElementById('report-preview-title').textContent = c.kind + ' 미리보기 — ' + c.from + ' ~ ' + c.to;
-            document.getElementById('report-document-heading').textContent = c.from + ' ~ ' + c.to + ' 중대재해예방 ' + c.kind;
+            document.getElementById('report-document-heading').textContent =
+                cert ? (c.kind + ' (' + c.from + ' ~ ' + c.to + ')')
+                     : (c.from + ' ~ ' + c.to + ' 중대재해예방 ' + c.kind);
+            const btn = document.getElementById('report-approve-btn');
+            if (btn) btn.style.display = cert ? 'none' : '';
+            const issued = document.getElementById('report-issued-at');
+            if (issued) issued.textContent = (window.DYV2 && DYV2.today) ? DYV2.today() : issued.textContent;
         }
         function reportAction(action) {
             const c = reportCondition();
             if (!c.valid) { DYV2.toast('보고서 기간을 확인하세요.'); return; }
+            /* 버튼을 감추는 것만으로는 부족하다 — 전역 호출로 뚫린다 */
+            if (action === '온나라 결재' && isCert(c.kind)) {
+                DYV2.toast('증명서는 결재 대상이 아닙니다 — 발급은 신청인에게 내주는 행위입니다.');
+                return;
+            }
             DYV2.toast(action + ' — 프로토타입에서는 파일·결재를 생성하지 않습니다.');
         }
+        document.addEventListener('DOMContentLoaded', updateReportPreview);
     </script>
 </body>
 </html>

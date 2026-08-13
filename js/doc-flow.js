@@ -133,27 +133,52 @@
                     '<button type="button" class="btn btn-sm btn-outline" onclick="' + NS + '.addStep()">＋ 단계</button> ' +
                     '<button type="button" class="btn btn-sm btn-outline" onclick="' + NS + '.resetLine()">기본값</button>' +
                 '</div>' +
-                '<div class="rskdoc-line-body">' +
-                    '<span class="rskdoc-ln-fixed">기안 <b>' + esc(persona().name) + '</b></span>' +
-                    L.map(function (s, i) {
-                        return '<div class="rskdoc-ln orgpick-field" id="' + NS + '-ln-' + i + '">' +
-                            '<span class="rskdoc-ln-k">' + stepLabel(i, L.length) + '</span>' +
-                            '<input type="text" class="form-input" readonly placeholder="조직도에서 결재자를 선택하세요"' +
-                                ' value="' + esc(s.name ? (s.role ? s.role + ' ' + s.name : s.name) : '') + '">' +
-                            '<button type="button" class="btn btn-sm btn-outline" onclick="' + NS + '.pickOpen(' + i + ')">조직도</button>' +
-                            '<button type="button" class="btn btn-sm btn-outline" onclick="' + NS + '.delStep(' + i + ')">×</button>' +
-                        '</div>';
-                    }).join('') +
+                /* 결재선 행은 **이미 있는 계열**(.rskdoc-ln-row / -step / -pick)로 그린다.
+                   골격을 분리할 때 여기만 새 이름(.rskdoc-ln·-ln-k·-line-body)을 만들어
+                   CSS 가 하나도 붙지 않았다 — 계열을 새로 만들지 않는다(CLAUDE.md §7). */
+                '<div class="rskdoc-ln-row">' +
+                    '<span class="rskdoc-ln-step">기안</span>' +
+                    '<div class="rskdoc-ln-pick"><b>' + esc(persona().name) + '</b></div>' +
                 '</div>' +
+                L.map(function (s, i) {
+                    return '<div class="rskdoc-ln-row">' +
+                        '<span class="rskdoc-ln-step">' + stepLabel(i, L.length) + '</span>' +
+                        '<div class="orgpick-field" id="' + NS + '-ln-' + i + '">' +
+                            '<div class="rskdoc-ln-pick">' +
+                                '<input type="text" class="form-input" readonly placeholder="조직도에서 결재자를 선택하세요"' +
+                                    ' aria-label="' + stepLabel(i, L.length) + ' 결재자"' +
+                                    ' value="' + esc(s.name ? (s.role ? s.role + ' ' + s.name : s.name) : '') + '">' +
+                                '<button type="button" class="btn btn-sm btn-outline" onclick="' + NS + '.pickOpen(' + i + ')">조직도</button>' +
+                                (L.length > 1 ? '<button type="button" class="btn btn-sm btn-outline" onclick="' + NS + '.delStep(' + i + ')"' +
+                                    ' aria-label="' + stepLabel(i, L.length) + ' 단계 삭제">×</button>' : '') +
+                            '</div>' +
+                        '</div>' +
+                    '</div>';
+                }).join('') +
             '</div>';
         }
 
         /* ===================== 기안 폼 =====================
          * **본문은 자동 생성하지 않는다.** 발주처: "이게 다 직접 타이핑 하셔야 돼".
          * 자동 연결에 합의된 것은 붙임뿐이고, 시스템은 수치를 세어 '삽입' 칩으로 건넬 뿐이다. */
+        /* 기안·상신 **권한** — `ready`(기안 조건)와 다른 축이다.
+         * ready 는 "이 건이 기안할 수 있는 상태인가"(예: 종료 처리됐는가),
+         * canDraft 는 "이 사람이 이 건을 기안해도 되는가"를 묻는다.
+         * 도메인이 주지 않으면 종전대로 열어 둔다 — 동결된 위험성평가 공문은
+         * 자체 구현이라 영향이 없고, 훅을 안 준 도메인의 화면도 흔들리지 않는다. */
+        function permit(t) { return cfg.canDraft ? cfg.canDraft(t) : { ok: true }; }
+        function denied(t) {
+            var r = permit(t);
+            if (r.ok) return false;
+            toast(r.why || '이 공문을 기안할 권한이 없습니다.');
+            return true;
+        }
         function open(id) {
             var t = cfg.targetOf(id);
             if (!t) { toast('대상을 찾지 못했습니다.'); return; }
+            /* **버튼을 감추는 것만으로는 부족하다** — 전역 호출로 뚫린다.
+               기안·미리보기·확인·상신 네 경로에 모두 건다. */
+            if (denied(t)) return;
             var r = cfg.ready ? cfg.ready(t) : { ok: true };
             if (!r.ok) { toast(r.why || '아직 기안할 수 없습니다.'); return; }
             F = {
@@ -188,7 +213,7 @@
         function chipsHtml(t) {
             var list = cfg.chips ? cfg.chips(t) : [];
             if (!list.length) return '';
-            return '<div class="rskdoc-chips">' + list.map(function (c) {
+            return '<div class="rskdoc-inslist">' + list.map(function (c) {
                 return '<button type="button" class="btn btn-sm btn-outline" onclick="' + NS + '.insert(' +
                     JSON.stringify(c.text).replace(/"/g, '&quot;') + ')">＋ ' + esc(c.label) + '</button>';
             }).join('') + '</div>';
@@ -197,8 +222,8 @@
             if (!F.attach.length) {
                 return '<p class="file-hint">붙일 수 있는 파일이 없습니다 — 교육·평가에 올려 둔 파일이 붙임 후보가 됩니다.</p>';
             }
-            return '<div class="rskdoc-attach">' + F.attach.map(function (a, i) {
-                return '<label class="rskdoc-att"><input type="checkbox"' + (a.on ? ' checked' : '') +
+            return '<div class="rskdoc-cks">' + F.attach.map(function (a, i) {
+                return '<label class="rskdoc-ck"><input type="checkbox"' + (a.on ? ' checked' : '') +
                     ' onchange="' + NS + '.setAttach(' + i + ', this.checked)">' +
                     '<span><b>' + esc(a.label) + '</b>' + (a.meta ? ' <span class="file-hint">' + esc(a.meta) + '</span>' : '') + '</span></label>';
             }).join('') + '</div>';
@@ -206,9 +231,9 @@
         function basisHtml(t) {
             var list = cfg.basisOf ? cfg.basisOf(t) : [];
             if (!list.length) return '';
-            return '<div class="rskdoc-row"><label class="form-label">관련 근거 <span class="file-hint">고른 것만 지면에 실립니다</span></label>' +
-                '<div class="rskdoc-basis">' + list.map(function (b) {
-                    return '<label class="rskdoc-att"><input type="checkbox"' + (F.basis[b.key] ? ' checked' : '') +
+            return '<div class="rskdoc-block"><label class="form-label">관련 근거 <span class="file-hint">고른 것만 지면에 실립니다</span></label>' +
+                '<div class="rskdoc-cks">' + list.map(function (b) {
+                    return '<label class="rskdoc-ck"><input type="checkbox"' + (F.basis[b.key] ? ' checked' : '') +
                         ' onchange="' + NS + '.setBasis(\'' + b.key + '\', this.checked)"><span>' + esc(b.label) + '</span></label>';
                 }).join('') + '</div></div>';
         }
@@ -218,26 +243,26 @@
             var out = F.docType === '외부발송';
             V().openModal('공문 기안 — ' + esc(cfg.subjectOf ? cfg.subjectOf(t) : ''),
                 '<div class="rskdoc-draft">' +
-                    '<div class="rskdoc-row"><label class="form-label" for="' + NS + '-type">문서 종류</label>' +
+                    '<div class="rskdoc-block"><label class="form-label" for="' + NS + '-type">문서 종류</label>' +
                         '<select class="form-select" id="' + NS + '-type" onchange="' + NS + '.setType(this.value)">' +
                             ['내부결재', '외부발송'].map(function (k) {
                                 return '<option value="' + k + '"' + (F.docType === k ? ' selected' : '') + '>' + k + '</option>';
                             }).join('') + '</select></div>' +
-                    '<div class="rskdoc-row"><label class="form-label" for="' + NS + '-title">제목 <span class="roc-req">*</span></label>' +
+                    '<div class="rskdoc-block"><label class="form-label" for="' + NS + '-title">제목 <span class="roc-req">*</span></label>' +
                         '<input type="text" class="form-input" id="' + NS + '-title" value="' + esc(F.title) + '"></div>' +
                     (out
-                        ? '<div class="rskdoc-row"><label class="form-label" for="' + NS + '-to">수신</label>' +
+                        ? '<div class="rskdoc-block"><label class="form-label" for="' + NS + '-to">수신</label>' +
                             '<input type="text" class="form-input" id="' + NS + '-to" value="' + esc(F.to) + '" placeholder="예: 수신자 참조"></div>'
                         : '') +
-                    '<div class="rskdoc-row"><label class="form-label" for="' + NS + '-body">본문 <span class="roc-req">*</span>' +
+                    '<div class="rskdoc-block"><label class="form-label" for="' + NS + '-body">본문 <span class="roc-req">*</span>' +
                         ' <span class="file-hint">직접 작성합니다 — 아래 조각을 눌러 넣을 수 있습니다</span></label>' +
                         chipsHtml(t) +
                         '<textarea class="form-textarea" id="' + NS + '-body" rows="8" placeholder="공문 본문을 직접 입력하세요.">' + esc(F.body) + '</textarea></div>' +
                     basisHtml(t) +
-                    '<div class="rskdoc-row"><label class="form-label">붙임 <span class="file-hint">이미 올려 둔 파일에서 고릅니다 — 여기서 새로 올리지 않습니다</span></label>' +
+                    '<div class="rskdoc-block"><label class="form-label">붙임 <span class="file-hint">이미 올려 둔 파일에서 고릅니다 — 여기서 새로 올리지 않습니다</span></label>' +
                         attachPickHtml() +
                         ((cfg.annexes && cfg.annexes(t, null).length)
-                            ? '<label class="rskdoc-att" style="margin-top:6px;"><input type="checkbox"' + (F.annex ? ' checked' : '') +
+                            ? '<label class="rskdoc-ck" style="margin-top:6px;"><input type="checkbox"' + (F.annex ? ' checked' : '') +
                                 ' onchange="' + NS + '.setAnnex(this.checked)"><span><b>붙임 별지</b> <span class="file-hint">' +
                                 esc(cfg.annexes(t, null).map(function (x) { return x.title; }).join(' · ')) + '</span></span></label>'
                             : '') +
@@ -322,33 +347,35 @@
             var annex = (src.annex && cfg.annexes) ? cfg.annexes(t, doc) : [];
             return paperMain(t, doc) + annex.map(function (a, i) {
                 return '<div class="pdf-paper pdf-doc pdf-gm pdf-gm-annex">' +
-                    '<div class="pdf-gm-annex-k">[붙임 ' + (i + 1) + '] ' + esc(a.title) + '</div>' + a.html + '</div>';
+                    '<div class="pdf-gm-annex-h">[붙임 ' + (i + 1) + '] ' + esc(a.title) + '</div>' + a.html + '</div>';
             }).join('');
         }
 
         function preview() {
+            /* 기안 폼을 거치지 않고 전역 호출로 들어오면 F 가 없다 — 크래시 대신 조용히 막는다 */
+            if (!F) { toast('먼저 [공문 기안]으로 문서를 작성하세요.'); return; }
             capture();
+            if (denied(cfg.targetOf(F.id))) return;
             if (!String(F.title || '').trim()) { toast('공문 제목을 입력하세요.'); return; }
             if (!String(F.body || '').trim()) { toast('공문 본문을 입력하세요.'); return; }
             var t = cfg.targetOf(F.id);
             V().openModal('문서 미리보기 — ' + esc(F.title),
-                /* 지면(.pdf-paper)은 `margin: 0 auto` 로 중앙 정렬되므로 좁은 화면에서는 양쪽으로
-                   넘쳐 **왼쪽이 스크롤로도 닿지 않는 곳으로 밀린다**(375px 실측). 래퍼가 가로로
-                   스크롤되게 하고 왼쪽에 붙여 시작점을 지면 왼쪽 끝에 맞춘다. 지면 CSS 는 다른
-                   도메인과 공유하므로 건드리지 않는다. */
-                '<div class="rskdoc-preview" style="overflow-x:auto; display:flex; justify-content:flex-start;">' +
+                /* 좁은 화면에서 지면이 왼쪽으로 밀리는 것을 막는 래퍼 — 규칙은 .rskdoc-preview(css/v2.css) */
+                '<div class="rskdoc-preview">' +
                     '<div>' + paperHtml(t, null) + '</div></div>',
                 '<button type="button" class="btn btn-secondary" onclick="' + NS + '.back()">← 수정</button>' +
                 '<button type="button" class="btn btn-primary" onclick="' + NS + '.confirmSend()">온나라로 결재 상신</button>',
                 { variant: 'wide', headHtml: '<button type="button" class="btn btn-sm btn-outline pdf-noprint" onclick="' + NS + '.print()">PDF 저장 / 인쇄</button>' });
         }
-        function back() { renderDraft(); }
+        function back() { if (!F) return; renderDraft(); }
         function print() { global.print(); }
 
         /* ===================== 상신 =====================
          * 확인 단계는 **되돌릴 수 없다는 사실만** 말한다. 문서·붙임·결재선은 바로 앞
          * 미리보기 지면에 이미 있으므로 표로 반복하지 않는다. */
         function confirmSend() {
+            if (!F) { toast('먼저 [공문 기안]으로 문서를 작성하세요.'); return; }
+            if (denied(cfg.targetOf(F.id))) return;
             var L = line();
             var blank = L.filter(function (s) { return !s.name; }).length;
             if (blank) { toast('결재선에 지정하지 않은 단계가 ' + blank + '건 있습니다 — 조직도에서 결재자를 고르세요'); return; }
@@ -364,7 +391,9 @@
                 '<button type="button" class="btn btn-primary" onclick="' + NS + '.send()">상신</button>');
         }
         function send() {
+            if (!F) { toast('먼저 [공문 기안]으로 문서를 작성하세요.'); return; }
             var t = cfg.targetOf(F.id);
+            if (denied(t)) return;
             var no = cfg.nextNo();
             var doc = {
                 sid: no + '-' + (cfg.docsFor(t) || []).length,

@@ -60,6 +60,10 @@
     /* 채용시교육 필요시간 (고용형태·계약기간별) */
     function hireHours(worker) {
         if (!worker) return 0;
+        /* 관리감독자는 별표4 **제1호의2 나목**이 8시간 단일로 정한다 — 제1호(근로자)의
+           고용형태 갈래(1·4·8h)를 타지 않는다. 담양군 관리감독자는 전원 공무원이라
+           아래 폴백으로도 8이 나오지만, 근거가 다른 조문이므로 갈래를 명시한다. */
+        if (worker.category === 'SUPERVISOR') return 8;
         if (worker.empType === 'DAILY') return 1;
         if (worker.empType === 'CONTRACT') {
             var m = worker.contractMonths || 0;
@@ -81,20 +85,42 @@
         return rec.reduce(function (n, r) { return n + (r.hours || 0); }, 0);
     }
     /* 채용시교육 상태: 이수일 vs 채용일 */
+    /* 채용 시 교육의 **기준일**.
+     *
+     * 근로자는 채용일이다. 관리감독자는 **채용일과 지정일 중 늦은 쪽**을 쓴다 —
+     * 담양군은 기존 공무원 중에서 관리감독자를 지정하므로, 채용일을 기준으로 삼으면
+     * *그 시점에 관리감독자가 아니었던 사람*을 채용 시 교육 미이수로 찍게 된다.
+     * 별표4 제1호의2 나목의 취지는 「그 지위에서 일하기 전에 교육」이므로 지위에 오른
+     * 날을 기준으로 본다.
+     *
+     * 지정일이 없으면 **판정하지 않는다**('' 반환). 없는 기준일을 채용일로 대신하면
+     * 위 오판정이 그대로 돌아온다 — 모르는 것을 근거로 미이수를 찍지 않는다.
+     * (담양군 관리감독자 지정일은 현재 전원 미등록이며 발주처 자료 대기다.) */
+    function hireAnchor(worker) {
+        if (!worker) return '';
+        if (worker.category !== 'SUPERVISOR') return worker.hireDate || '';
+        if (!worker.designatedAt) return '';
+        return worker.designatedAt > (worker.hireDate || '') ? worker.designatedAt : worker.hireDate;
+    }
     function hireStatus(workerId) {
         var w = workerOf(workerId); if (!w) return null;
         var need = hireHours(w);
+        var anchor = hireAnchor(w);
         var rec = records().filter(function (r) { return r.workerId === workerId && r.kind === 'HIRE'; });
         var doneHours = rec.reduce(function (n, r) { return n + (r.hours || 0); }, 0);
         var lastDate = rec.length ? rec.sort(function (a, b) { return b.date.localeCompare(a.date); })[0].date : '';
         var status;
-        if (doneHours >= need) {
-            /* 채용일 이전~당일이면 OK, 이후면 지연 */
-            status = lastDate <= w.hireDate ? 'BEFORE' : 'LATE_DONE';
+        if (!anchor) {
+            /* 기준일이 없으면 이수·미이수를 말할 수 없다. 이수 기록이 있으면 그 사실만 남긴다. */
+            status = doneHours >= need ? 'UNKNOWN_DONE' : 'UNKNOWN';
+        } else if (doneHours >= need) {
+            /* 기준일 이전~당일이면 정상, 이후면 지연 */
+            status = lastDate <= anchor ? 'BEFORE' : 'LATE_DONE';
         } else {
             status = 'NONE';
         }
-        return { need: need, done: doneHours, lastDate: lastDate, status: status };
+        return { need: need, done: doneHours, lastDate: lastDate, status: status, anchor: anchor,
+                 anchorKind: w.category === 'SUPERVISOR' ? '지정일' : '채용일' };
     }
 
     /* ================= 스토어 ================= */
@@ -107,8 +133,17 @@
         var isDeptLike = function (n) { return n.type === 'dept' || n.type === 'office' || n.type === 'town'; };
         function collect(n, deptId, deptName) {
             (n.members || []).forEach(function (m) {
-                /* '재난안전과장·팀장·사업소장' 등을 SUPERVISOR로 지정 */
-                var isSup = /(과장|팀장|소장|실장|국장)/.test(m.role || '');
+                /* '재난안전과장·팀장·사업소장·담양읍장' 등을 SUPERVISOR로 지정.
+                 *
+                 * ⚠ **이것은 개발자가 고른 폴백이지 담양군이 정한 명단이 아니다.**
+                 * 산안법 §16①은 관리감독자를 "소속 직원을 직접 지휘·감독하는 직위"로
+                 * 정의하므로 팀장이야말로 전형적 관리감독자다. 그래서 `lead:true`
+                 * (부서당 1명)로 갈아타면 안 된다 — 국장·팀장이 통째로 빠진다.
+                 * 2026-08-13 `읍장|면장` 추가 — 담양읍장이 현업 부서장인데 이 규칙에
+                 * 걸리지 않아 사무직 6시간으로 집계되고 있었다.
+                 * 실제 명단(성명·부서·직위·지정일)은 발주처 자료 대기 — 받으면 이
+                 * 정규식을 지우고 명시 플래그로 바꾼다(99_미결사항 EXT). */
+                var isSup = /(과장|팀장|소장|실장|국장|읍장|면장)/.test(m.role || '');
                 out.push({
                     id: 'w_' + m.uid, name: m.name, deptId: deptId, deptName: deptName,
                     category: isSup ? 'SUPERVISOR' : 'OFFICE',
@@ -478,10 +513,12 @@
         if (w.empType === 'DAILY') return true;
         return w.empType === 'CONTRACT' && (w.contractMonths || 0) <= 0.25;   /* 1주 이하 */
     }
-    function etcMinHours(etcType, worker) {
-        var info = ETC_TYPE_INFO[etcType];
-        if (!info || !info.hours || !info.hours.length) return 0;
-        if (info.hours.length === 1) return info.hours[0].h;   /* 건설업 기초 — 갈래가 하나다 */
+    function etcMinHours(etcType, worker, supMode) {
+        var info = etcTypeInfo(etcType, supMode);
+        if (!info || !info.hours || !info.hours.length) return 0;   /* 그 모집단에 없는 유형 */
+        /* 갈래가 하나인 경우 — 건설업 기초(건설 일용근로자)와 관리감독자 전 유형.
+           별표4 제1호의2 에는 교육대상 열 자체가 없어 고용형태로 갈리지 않는다. */
+        if (info.hours.length === 1) return info.hours[0].h;
         return isShortTermWorker(worker) ? info.hours[0].h : info.hours[info.hours.length - 1].h;
     }
     /* 그 교육 건에서 법정 최소에 못 미친 대상자 — [{ worker, need, got }]
@@ -498,14 +535,15 @@
      * 최소시간만 보고 판정했다면 이 단서를 놓쳤을 것이다. */
     function etcShortfall(course) {
         if (!course || (course.kind !== 'ETC' && course.kind !== 'SUP_ETC')) return [];
-        var info = ETC_TYPE_INFO[course.etcType];
+        var sup = course.kind === 'SUP_ETC';
+        var info = etcTypeInfo(course.etcType, sup);
         if (!info || info.perCourseCheck === false) return [];
         var got = course.hours || 0, out = [];
         /* recordsFor(workerId) 는 사람 축이다 — 여기선 그 교육 건의 이수기록이 필요하다 */
         records().forEach(function (r) {
             if (r.courseId !== course.id) return;
             var w = workerOf(r.workerId); if (!w) return;
-            var need = etcMinHours(course.etcType, w);
+            var need = etcMinHours(course.etcType, w, sup);
             if (need > 0 && got < need) out.push({ worker: w, need: need, got: got });
         });
         return out;
@@ -589,14 +627,32 @@
     }
 
     function enrolls(courseId) { return load().enrolls.filter(function (e) { return !courseId || e.courseId === courseId; }); }
+    /* 그 교육에 이 부서가 이미 등록했는가 — 화면이 저장 전에 미리 묻는 창구 */
+    function hasEnroll(courseId, deptId) {
+        return load().enrolls.some(function (e) { return e.courseId === courseId && e.deptId === deptId; });
+    }
+    /* 참석자 등록부 등록.
+     *
+     * **한 교육에 같은 부서를 두 번 담지 않는다 (2026-08-13 신설).** 종전에는 무조건
+     * push 라 같은 부서가 다시 등록하면 행이 하나 더 쌓였고, 그 행마다 이수기록이
+     * 새로 붙어 **한 사람이 같은 교육을 두 번 이수한 것**이 됐다. 이수 판정(완료율)과
+     * 공문 붙임 별지의 인원 수가 함께 부풀고, 신청 취소는 부서 단위라 한 번에 두 행이
+     * 지워져 단위까지 어긋났다.
+     * 인원·서명파일을 고치는 경로는 **신청 취소 후 재등록**이다 — 대상자 변경을
+     * '취소 → 재신청'으로 확정한 것과 같은 규칙이다(CLAUDE.md §4).
+     * 데이터 계층에서 막는 이유는 호출부가 7곳이고 그중 넷이 채용시교육 자동 생성
+     * 경로라, 화면마다 검사를 두면 반드시 빠뜨리는 곳이 생기기 때문이다.
+     * 반환 — 저장했으면 true, 중복이라 거절했으면 false. */
     function addEnroll(o) {
         var d = load();
+        if (d.enrolls.some(function (e) { return e.courseId === o.courseId && e.deptId === o.deptId; })) return false;
         d.enrolls.push({
             courseId: o.courseId, deptId: o.deptId,
             workerIds: (o.workerIds || []).slice(),
             signFile: o.signFile || '', at: o.at || today()
         });
         save();
+        return true;
     }
 
     function records() { return load().records; }
@@ -699,22 +755,54 @@
      * works — 그 유형의 대상 작업 목록. 특별교육 대상 작업(39종)은 별표4가 아니라
      *   **시행규칙 별표5 제1호라목**이 정한다(2026-08-11 수집, DYLAW 'oshr-t5').
      *   목록을 여기 복사해 두지 않고 `DYLAW.specialEduWorks()` 로 조문에서 파생한다 —
-     *   복사본을 두면 조문 개정 때 화면만 옛 목록으로 남는다(CLAUDE.md §10). */
+     *   복사본을 두면 조문 개정 때 화면만 옛 목록으로 남는다(CLAUDE.md §10).
+     *
+     * ── 모집단마다 유형이 다르다 (2026-08-13 정정) ────────────────────────────
+     * 별표4는 **제1호(근로자)와 제1호의2(관리감독자)를 다른 표로** 두고 있고,
+     * 두 표의 내용이 실제로 다르다. 종전에는 `ETC_TYPES` 배열 하나를 두 화면이
+     * 공유해 관리감독자 화면이 **법에 없는 의무를 있다고 표시**하고 있었다.
+     *
+     *   | | 근로자(제1호) | 관리감독자(제1호의2) |
+     *   |---|---|---|
+     *   | 작업내용 변경 시 | 일용·1주 이하 1h / 그 밖 2h | **2h 단일** |
+     *   | 특별교육 | 일용·1주 이하 2h(별표5 라목39호 8h) / 그 밖 16h | **16h 단일** |
+     *   | 건설업 기초 | 건설 일용근로자 4h | **없음** |
+     *   | 채용 시 | 채용시교육 화면(edu-hire) | 8h — **현행 화면 범위 밖** |
+     *
+     * 관리감독자 표에 **일용 갈래가 없는 것**은 오탈자가 아니다. 제1호의2 는
+     * 교육대상 열 자체가 없고 교육과정별 시간 하나만 정한다.
+     * 건설업 기초가 없는 근거는 별표4만이 아니라 **산안법 §31①**(`osh-31`)이다 —
+     * 의무 주체를 「건설업의 사업주」가 「건설 일용근로자를 채용할 때」로 한정한다.
+     * ⚠ "관리감독자는 일용근로자가 아니다"라는 논거를 쓰지 말 것 — 산안법 §16①은
+     *   관리감독자를 **직위**로 정의하고 시행규칙 §27③도 "관리감독자의 **지위에
+     *   있는 사람**"이라 쓴다. 별도 신분이 아니다.
+     * ------------------------------------------------------------------------- */
     var ETC_TYPES = ['작업내용 변경 시 교육', '특별교육', '건설업 기초안전보건교육'];
+    var SUP_ETC_TYPES = ['작업내용 변경 시 교육', '특별교육'];
+    /* 그 화면에서 고를 수 있는 유형 — 화면이 배열을 직접 참조하지 않고 이 창구를 쓴다 */
+    function etcTypes(supMode) { return (supMode ? SUP_ETC_TYPES : ETC_TYPES).slice(); }
     var ETC_TYPE_INFO = {
         /* perCourseCheck — 한 건의 교육시간만 보고 법정 최소 미달을 판정해도 되는가.
-           별표4에 분할·예외 단서가 붙은 유형은 false 다(아래 특별교육 참고). */
+           별표4에 분할·예외 단서가 붙은 유형은 false 다(아래 특별교육 참고).
+           sup — 관리감독자 화면에서 덮어쓸 값(별표4 제1호의2). 없으면 그 유형은
+           관리감독자에게 적용되지 않는다는 뜻이고, SUP_ETC_TYPES 가 그것을 막는다. */
         '작업내용 변경 시 교육': {
             basis: 'oshr-t4', perCourseCheck: true,
             hours: [{ who: '일용·1주 이하 기간제', h: 1 }, { who: '그 밖의 근로자', h: 2 }],
-            guide: '작업 내용을 바꿔 새로운 유해·위험에 노출될 때 실시합니다.'
+            guide: '작업 내용을 바꿔 새로운 유해·위험에 노출될 때 실시합니다.',
+            sup: {
+                hours: [{ who: '관리감독자', h: 2 }],
+                guide: '지휘·감독하는 작업의 내용이 바뀔 때 실시합니다.'
+            }
         },
         '특별교육': {
             basis: 'oshr-t4',
             /* 한 건만 보고 미달을 판정하지 않는다 — 별표4에 분할·예외 단서가 붙어 있고
-               이 시스템은 대상 작업·분할 이력·단기간 여부를 받지 않는다(etcShortfall 참고) */
+               이 시스템은 분할 이력·최초 작업일·단기간 여부를 받지 않는다(etcShortfall 참고).
+               대상 작업은 등록 폼에서 복수 선택으로 **받는다**(js/edu-etc.js) — 판정에
+               쓰지 않을 뿐이다. */
             perCourseCheck: false,
-            checkNote: '16시간은 최초 작업 전 4시간을 하고 나머지 12시간을 3개월 이내에 나눠 할 수 있으며, 단기간·간헐적 작업은 2시간입니다. 이 화면은 대상 작업과 분할 이력을 받지 않으므로 한 건만 보고 미달 여부를 판정하지 않습니다.',
+            checkNote: '16시간은 최초 작업 전 4시간을 하고 나머지 12시간을 3개월 이내에 나눠 할 수 있으며, 단기간·간헐적 작업은 2시간입니다. 이 화면은 분할 이력과 최초 작업일·단기간 여부를 받지 않으므로 한 건만 보고 미달 여부를 판정하지 않습니다.',
             hours: [
                 { who: '일용·1주 이하 기간제', h: 2, note: '별표5 제1호라목 제39호는 8시간' },
                 { who: '그 밖의 근로자', h: 16, note: '최초 작업 전 4시간 + 12시간은 3개월 내 분할 / 단기간·간헐 작업은 2시간' }
@@ -726,15 +814,32 @@
             get works() {
                 return (global.DYLAW && global.DYLAW.specialEduWorks)
                     ? global.DYLAW.specialEduWorks() : [];
+            },
+            sup: {
+                hours: [{ who: '관리감독자', h: 16, note: '최초 작업 전 4시간 + 12시간은 3개월 내 분할 / 단기간·간헐 작업은 2시간' }]
             }
         },
         '건설업 기초안전보건교육': {
-            basis: 'oshr-t4', perCourseCheck: true,
+            basis: 'oshr-t4', basisAlso: 'osh-31', perCourseCheck: true,
             hours: [{ who: '건설 일용근로자', h: 4 }],
             guide: '건설 일용근로자가 최초로 취업할 때 실시합니다.'
+            /* sup 없음 — 별표4 제1호의2 에 이 과정이 없다 */
         }
     };
-    function etcTypeInfo(label) { return ETC_TYPE_INFO[label] || null; }
+    /* 유형 정보. supMode 면 제1호의2 값으로 덮어쓴 뷰를 준다.
+       그 모집단에 없는 유형이면 **null** — 없는 의무의 시간을 돌려주지 않는다.
+       Object.create 로 덮는 이유는 특별교육의 `works` 가 조문 파생 getter라
+       Object.assign 으로 복사하면 그 자리에서 평가돼 조문 개정을 못 따라가기 때문이다. */
+    function etcTypeInfo(label, supMode) {
+        var base = ETC_TYPE_INFO[label];
+        if (!base) return null;
+        if (!supMode) return base;
+        if (SUP_ETC_TYPES.indexOf(label) < 0) return null;
+        if (!base.sup) return base;
+        var view = Object.create(base);
+        Object.keys(base.sup).forEach(function (k) { view[k] = base.sup[k]; });
+        return view;
+    }
 
     /* ================= 이수현황 요약 (설계서 §8) ================= */
     /* 현업(현업/사무직/판매) 정기교육 이수 여부 — 미달자 도출 */
@@ -798,7 +903,7 @@
         pushCourseHistory: pushCourseHistory, courseDateTime: courseDateTime,
         courseSessions: courseSessions, sessionHours: sessionHours, sumSessionHours: sumSessionHours,
         /* 신청·이수 */
-        enrolls: enrolls, addEnroll: addEnroll, removeEnroll: removeEnroll,
+        enrolls: enrolls, addEnroll: addEnroll, hasEnroll: hasEnroll, removeEnroll: removeEnroll,
         removeWorkerFromCourse: removeWorkerFromCourse,
         records: records, recordsFor: recordsFor, addRecord: addRecord,
         recordCourseCompletion: recordCourseCompletion, recordKindForCourse: recordKindForCourse,
@@ -806,13 +911,14 @@
         /* 독촉 */
         reminders: reminders, addReminder: addReminder,
         /* 계산 */
-        cycleOf: cycleOf, requiredHours: requiredHours, hireHours: hireHours,
+        cycleOf: cycleOf, requiredHours: requiredHours, hireHours: hireHours, hireAnchor: hireAnchor,
         etcMinHours: etcMinHours, etcShortfall: etcShortfall, isShortTermWorker: isShortTermWorker,
         acknowledgedRegHours: acknowledgedRegHours, hireStatus: hireStatus,
         statusRow: statusRow, deptSummary: deptSummary,
         /* 메타 */
         KIND_LABEL: KIND_LABEL, CAT_LABEL: CAT_LABEL, EMP_LABEL: EMP_LABEL, SRC_LABEL: SRC_LABEL,
-        ETC_TYPES: ETC_TYPES, ETC_TYPE_INFO: ETC_TYPE_INFO, etcTypeInfo: etcTypeInfo,
+        ETC_TYPES: ETC_TYPES, SUP_ETC_TYPES: SUP_ETC_TYPES, etcTypes: etcTypes,
+        ETC_TYPE_INFO: ETC_TYPE_INFO, etcTypeInfo: etcTypeInfo,
         kindLabel: kindLabel, catLabel: catLabel, empLabel: empLabel, srcLabel: srcLabel,
         deptName: deptName, deptCandidates: deptCandidates
     };
