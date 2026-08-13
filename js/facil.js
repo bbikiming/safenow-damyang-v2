@@ -5,7 +5,9 @@
  *         FAC04-S FMS 연계 / FAC05-S 연계 설정
  *   영속 키 'dyfacil-v1' = { recs, ext, syncLog, settings }
  *     recs  = FMS 소유(읽기전용) — 시드는 js/facil-data.js DY_FACIL_SEED.recs (80건)
- *     ext   = 자체 소유(보완입력) { <facilNo>: {...} }
+ *     ext   = 보완입력 { <facilNo>: {...} } — 수신이 덮어쓰지 않는 칸.
+ *             입력은 6항목만 받는다(2026-08-13 축소). 그중 4개는 FMS 추가 연계가
+ *             붙으면 소유권이 FMS 로 넘어가는 **임시** 입력이다(openDetail 주석).
  *     syncLog = 수신/전송·필드변경 감사추적 []
  *     settings = FMS 연계 파라미터
  *   기획 근거: docs/planning/기획-시설물관리-FMS연계-PRD-v1.md
@@ -57,7 +59,13 @@
             '그 밖에 국토교통부령으로 정하는 공중 이용 부위의 결함',
         ] },
     ];
-    const REPAIR_STATUS = ['계획', '착수', '완료'];
+    /* ※ DEFECT_GROUPS 는 보완입력 축소(2026-08-13) 이후 입력 select 를 그리지 않는다.
+       그래도 지우지 않는다 — 중대결함은 FMS 가 원천이라(등록·삭제 인터페이스가 없고
+       updateMantbSeriousDefect 로 조치만 회신) 유형은 손으로 받을 값이 아니라
+       **중대결함사후관리 연계로 수신할 값**이고, 이 목록이 그때 수신값을 읽는 기준표다.
+       조문 원문 대조(2026-08-11)로 얻은 유일한 사본이기도 하다.
+       종전 REPAIR_STATUS(보수보강 진행)는 제거했다 — 중대결함 조치는 개선조치 대장이
+       맡는다는 확정(SCR-FAC-002 §6 FDT-08)과 중복이었다. */
     /* 위험도 산정에 쓰는 변수 종수 — 표시 분모의 단일 출처.
        경과연수·종별·내진·안전등급·최근점검·중대결함·이용인원 7종.
        하드코딩 8 이던 시절엔 어떤 시설물도 분모를 채울 수 없었다. */
@@ -351,7 +359,9 @@
                 const flags = [];
                 if (age != null && age >= 30) flags.push('<span class="chip-mini wt-attach">노후 ' + age + '년</span>');
                 if (r.jur === '미상') flags.push('<span class="chip-mini wt-attach">소관확인</span>');
-                if (!e.lat) flags.push('<span class="chip-mini wt-attach">좌표없음</span>');
+                /* '좌표없음'은 담당자가 안 채운 것으로 읽혔다. 실제로는 80건 전건 결측이고
+                   수기 입력이 아니라 주소 지오코딩 일괄 확보 대상이라(PRD §9-3) 문구를 고쳤다. */
+                if (!e.lat) flags.push('<span class="chip-mini wt-attach">좌표 미확보</span>');
                 /* 이 시설물로 지정된 개선조치가 있으면 대장에서 바로 보인다 — 조치 실적이
                    시설물에 쌓이는 것이 FMS 연계의 값이므로 상세를 열지 않아도 드러낸다. */
                 const im = impsOf(r.facilNo);
@@ -407,26 +417,50 @@
             ro('공사명', r.constNm) + ro('내진설계', r.eqDsnAppYn === 'Y' ? '적용' : r.eqDsnAppYn === 'N' ? '미적용' : '') +
             '</div>';
 
-        /* 2) 보완입력 (자체 소유 · 편집) */
+        /* 2) 보완입력 — **6항목**. 2026-08-13 축소(종전 13항목).
+           뺀 7개(차기 점검예정일·중대결함 유형·보수보강 진행·위험물 취급·인접 위험요소·
+           좌표 위/경도)는 어느 화면도 읽지 않는 입력란이었다. 채워도 아무 일이 안 일어나는
+           칸을 담당자에게 요구하면 곧 아무도 안 채우고, 그때부터 화면 전체가 신뢰를 잃는다.
+           남긴 6개는 각각 소비처가 있다 —
+             안전등급·최근 점검일·중대결함 유무·이용인원 = 위험도 산정 변수(riskOf)
+             규모(값·단위) = 중대재해법 별표3 공중이용시설 판정의 유일한 근거
+             소관부서       = 점검 주체. 없으면 누가 점검하는지가 정해지지 않는다
+           **차기 점검예정일은 입력이 아니라 파생이다** — 최근 점검일 + 등급별 법정주기
+           (시행령 별표3)로 나온다. 사람이 손으로 넣을 값이 아니라 읽기 전용으로 낸다.
+           **좌표는 입력란을 두지 않는다** — 80건 전건 결측이라 수기 입력이 아니라
+           주소 지오코딩 일괄 확보 대상이다(PRD §9-3). 결측 사실은 목록 태그로 남긴다.
+           뺀 항목의 기존 저장값은 지우지 않는다 — collectExt 가 6키만 돌려주고
+           saveExt 가 병합이라 이전 값은 ext 에 그대로 남는다. */
         const sel = (id, cur, opts, ph) => '<select class="select" id="' + id + '" style="width:100%;"><option value="">' + ph + '</option>' + opts.map(o => { const v = Array.isArray(o) ? o[0] : o, l = Array.isArray(o) ? o[1] : o; return '<option value="' + v + '"' + (cur === v ? ' selected' : '') + '>' + esc(l) + '</option>'; }).join('') + '</select>';
         const inp = (id, cur, ph, type) => '<input class="select" id="' + id + '" style="width:100%;" type="' + (type || 'text') + '" value="' + esc(cur || '') + '" placeholder="' + esc(ph || '') + '">';
         const nextSuggest = e.lastInspectYmd ? DYFACIL.suggestNext(e.lastInspectYmd, e.safetyGrade || 'C') : '';
         const extBlock =
-            '<div class="fac-sec-t" style="margin-top:18px;">보완입력 <span class="chip-mini wt-program">자체 소유 · FMS 수신이 덮어쓰지 않음</span></div>' +
+            '<div class="fac-sec-t" style="margin-top:18px;">보완입력 ' +
+                '<span class="chip-mini wt-program">FMS 수신이 덮어쓰지 않음</span></div>' +
+            /* 개발자·발주처가 이 구획을 "담양군 자체 데이터"로 읽은 사례가 있어(2026-08-13
+               FMS 추가 요청 질의) 두 부류를 화면에서 갈라 밝힌다. 라벨만으로는 구분되지 않고,
+               구분이 틀리면 추가 연계 요청 목록에서 FMS 소관 항목이 통째로 빠진다. */
+            '<p class="fac-note">이 중 <b>안전등급 · 최근 점검일 · 중대결함 · 규모</b>는 원래 FMS 소관' +
+                '(점검진단실적 · 중대결함사후관리 · 상세제원)인데 이번 수신분<b>(시설물관리대장 기본현황)</b>에 ' +
+                '들어 있지 않아 <b>추가 연계가 붙을 때까지만</b> 직접 받는 값입니다. 연계되면 입력란은 닫히고 ' +
+                '소유권이 FMS 로 넘어가며, 그때까지 채운 값은 지우지 않고 "직접 입력값"으로 남겨 수신값과 대조합니다. ' +
+                '<b>소관부서 · 이용인원</b>은 FMS 표준연계 규격에 없어 담양군이 계속 관리합니다.</p>' +
             '<div class="fac-grid">' +
-            '<div class="fac-f2"><span class="fac-f-l">안전등급 (A~E)</span>' + sel('ex-grade', e.safetyGrade, ['A', 'B', 'C', 'D', 'E'].map(g => [g, g + ' — ' + GRADE_DESC[g].split(' — ')[1]]), '미평가') + '</div>' +
-            '<div class="fac-f2"><span class="fac-f-l">소관부서</span>' + inp('ex-dept', e.deptNm, '예: 건설과') + '</div>' +
-            '<div class="fac-f2"><span class="fac-f-l">최근 점검일</span>' + inp('ex-last', e.lastInspectYmd, 'YYYY-MM-DD', 'date') + '</div>' +
-            '<div class="fac-f2"><span class="fac-f-l">차기 정기안전점검 예정일 ' + (nextSuggest ? '<span style="font-size:var(--fs-12); color:var(--primary);">(제안 ' + nextSuggest + ')</span>' : '') + '</span>' + inp('ex-next', e.nextInspectYmd, 'YYYY-MM-DD', 'date') +
-                '<span class="fac-hint">' + esc(cycleNote(e.safetyGrade)) + '</span></div>' +
-            '<div class="fac-f2"><span class="fac-f-l">중대결함 유무</span>' + sel('ex-defyn', e.defectYn, [['N', '없음'], ['Y', '있음']], '미확인') + '</div>' +
-            '<div class="fac-f2"><span class="fac-f-l">중대결함 유형</span>' + defectSel(e.defectType) + '</div>' +
-            '<div class="fac-f2"><span class="fac-f-l">보수보강 진행</span>' + sel('ex-repair', e.repairStatus, REPAIR_STATUS, '해당 없음') + '</div>' +
-            '<div class="fac-f2"><span class="fac-f-l">규모 (값 / 단위)</span><div style="display:flex; gap:6px;">' + inp('ex-size', e.sizeValue, '값') + inp('ex-unit', e.sizeUnit, '㎡·m·톤/일') + '</div></div>' +
-            '<div class="fac-f2"><span class="fac-f-l">이용인원 (일평균)</span>' + inp('ex-users', e.dailyUsers, '명', 'number') + '</div>' +
-            '<div class="fac-f2"><span class="fac-f-l">위험물 취급</span>' + sel('ex-hazmat', e.hazmatYn, [['N', '없음'], ['Y', '있음']], '미확인') + '</div>' +
-            '<div class="fac-f2"><span class="fac-f-l">좌표 (위도 / 경도)</span><div style="display:flex; gap:6px;">' + inp('ex-lat', e.lat, '위도') + inp('ex-lng', e.lng, '경도') + '</div></div>' +
-            '<div class="fac-f2"><span class="fac-f-l">인접 위험요소</span>' + inp('ex-adj', e.adjacentRisk, '예: 급경사지 인접') + '</div>' +
+            '<div class="fac-f2"><span class="fac-f-l">안전등급 (A~E)</span>' + sel('ex-grade', e.safetyGrade, ['A', 'B', 'C', 'D', 'E'].map(g => [g, g + ' — ' + GRADE_DESC[g].split(' — ')[1]]), '미평가') +
+                '<span class="fac-hint">연계 전 임시 입력 · 점검·진단 실시결과로 지정하는 값</span></div>' +
+            '<div class="fac-f2"><span class="fac-f-l">최근 점검일</span>' + inp('ex-last', e.lastInspectYmd, 'YYYY-MM-DD', 'date') +
+                '<span class="fac-hint">연계 전 임시 입력</span></div>' +
+            '<div class="fac-f2"><span class="fac-f-l">차기 정기안전점검 예정일 <span class="chip-mini wt-elec">자동 산출</span></span>' +
+                '<div class="fac-f-v">' + (nextSuggest ? esc(nextSuggest) : '<em style="color:var(--text-gray);">최근 점검일 입력 후 산출</em>') + '</div>' +
+                '<span class="fac-hint">' + esc(cycleNote(e.safetyGrade)) + ' — 시행령 별표3</span></div>' +
+            '<div class="fac-f2"><span class="fac-f-l">중대결함 유무</span>' + sel('ex-defyn', e.defectYn, [['N', '없음'], ['Y', '있음']], '미확인') +
+                '<span class="fac-hint">연계 전 임시 입력 · 유형·통보일은 FMS 가 원천이라 받지 않음</span></div>' +
+            '<div class="fac-f2"><span class="fac-f-l">규모 (값 / 단위)</span><div style="display:flex; gap:6px;">' + inp('ex-size', e.sizeValue, '값') + inp('ex-unit', e.sizeUnit, '㎡·m·톤/일') + '</div>' +
+                '<span class="fac-hint">연계 전 임시 입력 · 공중이용시설 판정 근거</span></div>' +
+            '<div class="fac-f2"><span class="fac-f-l">소관부서</span>' + inp('ex-dept', e.deptNm, '예: 건설과') +
+                '<span class="fac-hint">담양군 관리 항목</span></div>' +
+            '<div class="fac-f2"><span class="fac-f-l">이용인원 (일평균)</span>' + inp('ex-users', e.dailyUsers, '명', 'number') +
+                '<span class="fac-hint">담양군 관리 항목</span></div>' +
             '</div>' +
             /* 시행령 §19 — 착수기한은 **통보일 +2년**, 완료기한은 **착수일 +3년**이다.
                종전에는 완료기한도 통보일 기준(+3년)으로 계산해 법정 기한보다 짧게 표시했다.
@@ -500,24 +534,20 @@
         V().openModal('시설물 상세 — ' + esc(r.facilNm), fmsBlock + extBlock + riskBlock + impBlock, foot);
         /* 등급/최근점검 바뀌면 차기 제안 갱신은 저장 시 반영(단순화) */
     }
-    /* 중대결함 유형 선택 — 시행령 §18 의 두 축을 그룹으로 나눠 보여준다.
-       구조안전(①)과 공중 이용 부위(②)는 통보 근거 조항이 달라 섞으면 안 된다. */
-    function defectSel(cur) {
-        const opts = DEFECT_GROUPS.map(g =>
-            '<optgroup label="' + esc(g.label) + '">' +
-            g.items.map(v => '<option value="' + esc(v) + '"' + (cur === v ? ' selected' : '') + '>' + esc(v) + '</option>').join('') +
-            '</optgroup>').join('');
-        return '<select class="select" id="ex-deftype" style="width:100%;"><option value="">해당 없음</option>' + opts + '</select>';
-    }
+    /* 중대결함 유형 select(defectSel)는 보완입력 축소로 제거했다(2026-08-13).
+       유형은 손으로 고를 값이 아니라 중대결함사후관리 연계로 받을 값이다 —
+       기준표 DEFECT_GROUPS 는 수신값을 읽기 위해 남겨 두었다(상단 주석). */
     function plusYear(ymd, n) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd); return m ? (+m[1] + n) + '-' + m[2] + '-' + m[3] : '-'; }
 
+    /* 입력받는 6키만 돌려준다 — 축소로 사라진 입력란(ex-next·ex-deftype·ex-repair·
+       ex-hazmat·ex-lat·ex-lng·ex-adj)을 계속 읽으면 getElementById 가 null 이라
+       빈 문자열이 되고, saveExt 병합이 시드에 있던 값을 **조용히 지운다**. */
     function collectExt() {
         const g = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
         return {
-            safetyGrade: g('ex-grade'), deptNm: g('ex-dept'), lastInspectYmd: g('ex-last'), nextInspectYmd: g('ex-next'),
-            defectYn: g('ex-defyn'), defectType: g('ex-deftype'), repairStatus: g('ex-repair'),
-            sizeValue: g('ex-size'), sizeUnit: g('ex-unit'), dailyUsers: g('ex-users'), hazmatYn: g('ex-hazmat'),
-            lat: g('ex-lat'), lng: g('ex-lng'), adjacentRisk: g('ex-adj'),
+            safetyGrade: g('ex-grade'), lastInspectYmd: g('ex-last'), defectYn: g('ex-defyn'),
+            sizeValue: g('ex-size'), sizeUnit: g('ex-unit'), dailyUsers: g('ex-users'),
+            deptNm: g('ex-dept'),
         };
     }
 
@@ -694,7 +724,14 @@
                 '<div class="card" style="margin-top:12px;"><div class="card-header"><span class="card-title">필드 소유권 규칙</span></div><div class="card-body">' +
                 '<div class="board-grid cols-2">' +
                 '<div><div class="fac-sec-t">FMS 소유 (읽기전용)</div><p style="font-size:13px; color:var(--text-gray);">BASTB_MASTER 42컬럼 + FMS반영키. 수신 시 갱신, 정정은 updateBastbMaster 전송으로만.</p></div>' +
-                '<div><div class="fac-sec-t">자체 소유 (수신 불가침)</div><p style="font-size:13px; color:var(--text-gray);">안전등급 · 점검일 · 중대결함 · 규모 · 이용인원 · 위험물 · 좌표 · 소관부서 · 담당자 · 중대재해대상 구분.</p></div>' +
+                /* 종전에는 보완입력 전 항목을 '자체 소유' 한 덩어리로 적어, 원래 FMS 소관인
+                   항목까지 담양군 데이터로 읽혔다(2026-08-13 FMS 추가 요청 질의에서 드러남).
+                   추가 연계 요청 목록이 이 표에서 나오므로 두 부류를 갈라 적는다. */
+                '<div><div class="fac-sec-t">연계 전 임시 입력 <span class="chip-mini wt-attach">추가 연계 시 FMS 소유로 이관</span></div>' +
+                '<p style="font-size:13px; color:var(--text-gray);">안전등급(점검진단실적) · 점검일(점검진단계획·실적) · 중대결함(중대결함사후관리) · 규모(상세제원). ' +
+                'FMS 규격에는 있으나 이번 수신분(시설물관리대장 기본현황)에 0건이라 직접 받는다. 수신이 붙으면 입력란을 닫고 직접 입력값은 대조용으로 보관.</p>' +
+                '<div class="fac-sec-t" style="margin-top:12px;">담양군 관리 (FMS 규격 밖)</div>' +
+                '<p style="font-size:13px; color:var(--text-gray);">소관부서 · 관리담당자 · 이용인원 · 좌표 · 중대재해대상 구분. 추가 연계 요청 대상이 아니다.</p></div>' +
                 '</div></div></div>' +
                 /* 공통코드 */
                 '<div class="card" style="margin-top:12px;"><div class="card-header"><span class="card-title">공통코드 매핑 <span class="chip-mini wt-attach">FMS 최신 공통코드 규격 미수신</span></span></div>' +
