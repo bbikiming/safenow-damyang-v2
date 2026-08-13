@@ -242,7 +242,16 @@
             /* 완료였다가 담당자 수정으로 되돌아온 건 — 관리자가 다시 봐야 한다 */
             needsRecheck: !!p.needsRecheck,
             round: p.round || 0,
+            /* 확인 반려 — status 와 **다른 축**이다(IMP-01).
+               undefined = 반려 없음으로 파생되므로 옛 저장 데이터가 그대로 로드된다. */
+            returned: p.returned || null,
+            returnRound: p.returnRound || 0,
         };
+    }
+    /* 반려 여부만 묻는 자리(요약 집계)는 stageRecord 를 통째로 만들지 않는다 */
+    function isReturned(stageId, year) {
+        var p = progOf(stageId, +(year || DEFAULT_YEAR));
+        return !!(p && p.returned);
     }
 
     function hasOperatingCycle(itemId) {
@@ -377,7 +386,9 @@
     /**
      * 업무단계 상태 전이.
      *   to: ST.WIP | ST.DONE | ST.NA | ST.NONE
-     *   opt: { docId, reason, silent }
+     *   opt: { docId, reason, silent, kind }
+     *        kind:'reject' 면 **확인 반려**다 — status 는 진행중 그대로 두고
+     *        별도 축(returned·returnRound)에 사유를 남긴다(IMP-01).
      * 반환: { ok, reason }
      */
     function transition(stageId, year, to, opt) {
@@ -385,6 +396,18 @@
         year = +(year || DEFAULT_YEAR);
         if (!stage(stageId)) return { ok: false, reason: '없는 업무단계입니다.' };
 
+        /* ── 확인 반려 ────────────────────────────────────────────────────
+         * status 를 건드리지 않는 이유 — '진행중' 이분법을 소비하는 곳(요약 칩·
+         * 진행률·필터)이 있어 값을 하나 더 넣으면 그 전부가 동시에 어긋난다
+         * (위험성평가 improvement.confirm 선례 — CLAUDE.md §4-3).
+         * 사유 검사는 화면이 아니라 **여기**서 한다 — 전역 호출로 뚫리지 않게. */
+        var reject = opt.kind === 'reject';
+        if (reject) {
+            if (!canConfirm()) return { ok: false, reason: '확인 반려는 주관부서(재난안전과) 담당자만 할 수 있습니다.' };
+            if (!String(opt.reason || '').trim()) {
+                return { ok: false, reason: '반려 사유를 입력해야 저장됩니다 — 담당자가 무엇을 다시 해야 하는지 알 수 없습니다.' };
+            }
+        }
         if (to === ST.DONE && !canConfirm()) {
             return { ok: false, reason: '완료 확인은 주관부서(재난안전과) 담당자만 할 수 있습니다.' };
         }
@@ -414,10 +437,24 @@
         if (to === ST.NA) p.naReason = String(opt.reason || '').trim();
         else p.naReason = '';
 
+        if (reject) {
+            p.returned = { reason: String(opt.reason).trim(), at: nowTs(), by: actor() };
+            /* 회차는 누적이다 — 재제출이 표시를 지워도 몇 번 반려됐는지는 남는다 */
+            p.returnRound = (p.returnRound || 0) + 1;
+        } else if (to !== ST.WIP) {
+            /* 완료·해당없음·미이행으로 정리되면 반려는 해소된 것이다.
+               (진행중 → 진행중 은 applyDocument 가 재제출로 판단해 지운다) */
+            delete p.returned;
+        }
+
         store().prog[k] = p;
         if (!opt.silent) {
-            log('transition', stage(stageId).name + ' — ' + statusLabel(from) + ' → ' + statusLabel(to) +
-                (opt.reason ? ' (' + opt.reason + ')' : ''), { stageId: stageId, year: year });
+            log(reject ? 'reject' : 'transition',
+                reject
+                    ? stage(stageId).name + ' — 확인 반려 ' + p.returnRound + '회 (' + p.returned.reason + ')'
+                    : stage(stageId).name + ' — ' + statusLabel(from) + ' → ' + statusLabel(to) +
+                      (opt.reason ? ' (' + opt.reason + ')' : ''),
+                { stageId: stageId, year: year });
         }
         save();
         return { ok: true };
@@ -427,15 +464,20 @@
      *  완료였던 단계는 진행중으로 **환원**한다(D-01) — 재확인을 받아야 한다. */
     function applyDocument(docId, stageIds, year) {
         year = +(year || DEFAULT_YEAR);
-        var reverted = [];
+        var reverted = [], cleared = [];
         (stageIds || []).forEach(function (sid) {
             if (statusOfStage(sid, year) === ST.DONE) reverted.push(sid);
             transition(sid, year, ST.WIP, { docId: docId, silent: true });
+            /* 재제출이 반려 표시를 지운다(IMP-01) — 회차(returnRound)는 남긴다.
+               지우지 않으면 다시 올린 뒤에도 '반려됨' 이 남아 담당자가 또 올린다. */
+            var p = store().prog[pkey(sid, year)];
+            if (p && p.returned) { delete p.returned; cleared.push(sid); }
         });
         log('upload', '문서 ' + docId + ' — 업무단계 ' + (stageIds || []).length + '개 진행중' +
-            (reverted.length ? ' (완료 ' + reverted.length + '개 환원)' : ''), { docId: docId });
+            (reverted.length ? ' (완료 ' + reverted.length + '개 환원)' : '') +
+            (cleared.length ? ' (반려 ' + cleared.length + '개 해소)' : ''), { docId: docId });
         save();
-        return { reverted: reverted };
+        return { reverted: reverted, cleared: cleared };
     }
 
     /** 완료 처리 대상이 어느 단계인지 미리 알려준다 (수정 경고용) */
@@ -587,13 +629,19 @@
     function summary(year) {
         year = +(year || DEFAULT_YEAR);
         var c = { not_started: 0, in_progress: 0, complete: 0, na: 0 };
-        T().STAGES.forEach(function (s) { c[statusOfStage(s.id, year)]++; });
+        var returned = 0;
+        T().STAGES.forEach(function (s) {
+            c[statusOfStage(s.id, year)]++;
+            if (isReturned(s.id, year)) returned++;
+        });
         var docs = allDocs();
         return {
             year: year,
             items: T().ITEMS.length,
             stages: T().STAGES.length,
             counts: c,
+            /* 반려는 status 축이 아니므로 counts 안에 넣지 않는다 — 넣으면 합이 168 을 넘는다 */
+            returned: returned,
             unmapped: docs.filter(function (d) { return d.origin === 'ledger' && !d.mapped; }).length,
             nearDup: docs.filter(function (d) { return d.nearDup; }).length,
             docsOfYear: docs.filter(function (d) { return d.year === year; }).length,
@@ -602,6 +650,41 @@
 
     /* 화면이 '정기 주기 없음'을 같은 말로 내도록 문구도 한 곳에서 */
     function noCycleNote() { return '상시·수시 항목 — 정기 주기 없음'; }
+
+    /* =========================================================================
+     * 내 부서 관련 업무단계 — **추정** 파생 (IMP-02)
+     * -------------------------------------------------------------------------
+     * 확정 담당부서 연계(새올·온나라 — DYPOLICY 'doc-dept-src')를 받기 전까지의
+     * 대체 동작이다. 원자료 `적용대상` 문구에서 부서명을 찾는다.
+     *   ① 부서명(전체 또는 접미어를 뗀 형태, 2자 이상)을 포함하거나
+     *   ② 전부서형 문구(전 부서·각 부서·전체 부서)를 포함하면 그 부서 몫으로 본다.
+     *
+     * 판정을 여기 한 곳에 두는 이유 — 화면이 각자 문자열 매칭을 복제하면 이행
+     * 목록과 다른 화면이 서로 다른 '내 부서'를 말하게 된다(CLAUDE.md §5).
+     * ⚠ 이것은 확정 매핑이 아니다. 화면은 반드시 '추정'임을 함께 밝힌다.
+     * ========================================================================= */
+    var ALLDEPT_RE = /(전\s*부서|각\s*부서|전체\s*부서)/;
+    /* 담양군 부서 접미어 — '물순환사업소'→'물순환', '재난안전과'→'재난안전'.
+       원자료가 접미어를 떼고 부르는 자리가 많다("건설과·물순환·공공시설"). */
+    var DEPTSUFFIX_RE = /(사업소|보건소|사업단|센터|과|실|소|단|읍|면)$/;
+    function deptAliases(deptName) {
+        var n = String(deptName || '').trim();
+        if (!n) return [];
+        var out = [n];
+        var short = n.replace(DEPTSUFFIX_RE, '');
+        /* 1자로 줄면 아무 문장에나 걸린다('과'·'소') — 2자 미만은 쓰지 않는다 */
+        if (short.length >= 2 && out.indexOf(short) < 0) out.push(short);
+        return out;
+    }
+    function stageDeptHit(s, deptName) {
+        if (!s) return false;
+        var t = String(s.target || '');
+        if (!t) return false;
+        if (ALLDEPT_RE.test(t)) return true;
+        var al = deptAliases(deptName);
+        for (var i = 0; i < al.length; i++) { if (t.indexOf(al[i]) >= 0) return true; }
+        return false;
+    }
 
     global.DYDOCS = {
         /* 상수 */
@@ -622,6 +705,7 @@
         itemIdsOfDocument: itemIdsOfDocument,
         /* 상태·진행률 (§10 계약) */
         statusOfStage: statusOfStage, statusLabel: statusLabel, stageRecord: stageRecord,
+        isReturned: isReturned, stageDeptHit: stageDeptHit, deptAliases: deptAliases,
         progressOfItem: progressOfItem, completedStageCount: completedStageCount,
         totalStageCount: totalStageCount, hasOperatingCycle: hasOperatingCycle,
         cycleStageCount: cycleStageCount, itemCounts: itemCounts,

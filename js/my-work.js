@@ -824,7 +824,8 @@
         try { deptName = D().deptName(state.deptId) || ''; } catch (e) {}
         if (!pubs.length) {
             return '<div class="mw-empty"><b>' + esc(deptName) + '</b> 부서로 발행된 업무가 없습니다.<br>' +
-                '<span style="color:var(--text-gray);">업무 목록에서 세트를 발행하면 담당 부서의 내 할일에 나타납니다.</span><br><br>' +
+                '<span style="color:var(--text-gray);">법으로 해야 하는 일 중 아직 서류가 없는 것은 <b>이행 목록</b>에서 확인하고 올릴 수 있습니다.</span><br><br>' +
+                '<a class="btn btn-sm btn-primary" href="docs-exec.html">이행 목록 열기 ' + ICO.arrow + '</a> ' +
                 '<a class="btn btn-sm btn-outline" href="docs-preset.html">업무 목록 열기 ' + ICO.arrow + '</a></div>';
         }
         var counts = { all: 0, '첨부파일': 0, '전자문서': 0, '프로그램': 0 };
@@ -849,7 +850,8 @@
                     '<option value="진행"'   + (state.pubStatus === '진행' ? ' selected' : '') + '>진행</option>' +
                     '<option value=""'       + (state.pubStatus === '' ? ' selected' : '') + '>완료 포함 전체</option>' +
                 '</select>' +
-                '<a class="btn btn-sm btn-outline" href="docs-preset.html" style="margin-left:auto;">업무 목록 ' + ICO.arrow + '</a>' +
+                '<a class="btn btn-sm btn-outline" href="docs-exec.html" style="margin-left:auto;">이행 목록 ' + ICO.arrow + '</a>' +
+            '<a class="btn btn-sm btn-outline" href="docs-preset.html">업무 목록 ' + ICO.arrow + '</a>' +
             '</div>';
 
         var view = pubFiltered(pubs);

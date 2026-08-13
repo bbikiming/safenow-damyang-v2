@@ -620,7 +620,11 @@
     }
     function noticeToggle(id) {
         const m = noticeClosed();
-        m[id] = !m[id];
+        /* 지금 화면 상태를 보고 뒤집는다 — 저장값이 없을 수도(기본 접힘) 있으므로
+           !m[id] 로 뒤집으면 첫 클릭이 먹지 않는다. */
+        const el0 = document.getElementById('dyn-' + id);
+        const nowFolded = el0 ? el0.classList.contains('is-folded') : !!m[id];
+        m[id] = !nowFolded;
         try { localStorage.setItem(NOTICE_KEY, JSON.stringify(m)); } catch (e) {}
         const el = document.getElementById('dyn-' + id);
         if (el) el.classList.toggle('is-folded', !!m[id]);
@@ -630,9 +634,17 @@
             btn.textContent = m[id] ? '자세히 ▾' : '접기 ▴';
         }
     }
-    /* lead: 접혔을 때도 남는 한 줄 · rest: 접히는 본문 */
-    function notice(id, lead, rest) {
-        const folded = !!noticeClosed()[id];
+    /* lead: 접혔을 때도 남는 한 줄 · rest: 접히는 본문
+     * opts.foldedByDefault — 사용자가 한 번도 손대지 않았을 때의 기본을 '접힘'으로.
+     *   §14-12 의 "기본은 펼침(처음 오는 사람이 놓치면 안 된다)" 은 그 화면에 **다른
+     *   안내 장치가 없을 때**의 규칙이다. 시연 가이드 바가 흐름을 이미 설명하는
+     *   화면에서는 안내가 같은 말을 반복하며 목록만 아래로 민다.
+     *   한 번이라도 여닫으면 그 선택을 따른다(노출/접힘 둘 다 명시 저장). */
+    function notice(id, lead, rest, opts) {
+        const m = noticeClosed();
+        const folded = (m[id] === undefined)
+            ? !!(opts && opts.foldedByDefault)
+            : !!m[id];
         return '<div class="check-notice dy-notice' + (folded ? ' is-folded' : '') + '" id="dyn-' + esc(id) + '">' +
             /* lead 는 텍스트 노드로 시작할 수 있다 — span 으로 감싸야 flex 가 먹는다
                (안 감싸면 첫 <b> 만 flex 아이템이 되어 뒷말이 버튼 쪽으로 밀린다) */

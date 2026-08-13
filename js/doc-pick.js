@@ -51,11 +51,21 @@
         '</div>';
     }
 
-    /* ── 왼쪽: 이행항목 78 ── */
+    /* ── 왼쪽: 이행항목 78 ──────────────────────────────────────────────────
+     * 담당자는 의무명("종사자 안전보건교육 실시")보다 실제 일 이름("특별교육")으로
+     * 기억한다. 의무명만 맞춰 보면 "특별교육"에 0건이 나와 찾을 길이 없다 —
+     * 그 의무의 **단계명까지** 훑는다(IMP-07). 단계명으로 걸린 항목은 '왜 나왔는지'를
+     * 배지 옆에 짧게 밝힌다. 우측 검색어(qR) 자동 주입은 하지 않는다 — 항목을 고르면
+     * 오른쪽이 어차피 그 의무의 전체 목록이라 훑을 수 있다(과잉 동작). */
     function colItems(sel) {
         var q = S.qL.trim();
+        var byStage = {};
         var list = D().items().filter(function (it) {
-            return !q || (it.id + ' ' + it.name).indexOf(q) >= 0;
+            if (!q) return true;
+            if ((it.id + ' ' + it.name).indexOf(q) >= 0) return true;
+            var hit = D().stagesOfItem(it.id).some(function (s) { return (s.id + ' ' + s.name).indexOf(q) >= 0; });
+            if (hit) byStage[it.id] = 1;
+            return hit;
         });
         return '<div class="dyp-col">' +
             '<div class="dyp-col-h"><span>어떤 의무인가요</span>' +
@@ -63,19 +73,27 @@
             '<div class="dyp-search">' +
                 '<input type="search" class="form-input" value="' + esc(S.qL) + '"' +
                     ' placeholder="의무 이름·번호로 찾기" aria-label="이행항목 검색"' +
-                    ' oninput="DYPICK._qL(this.value)">' +
+                    ' oninput="DYPICK._qL(this.value)" onkeydown="DYPICK._toList(event)">' +
             '</div>' +
             '<div class="dyp-list" role="listbox" aria-label="이행항목">' +
-                (list.length ? list.map(function (it) {
+                (list.length ? list.map(function (it, i) {
                     var n = D().stagesOfItem(it.id).length;
                     var picked = D().stagesOfItem(it.id)
                         .filter(function (s) { return sel.indexOf(s.id) >= 0; }).length;
                     var on = S.item === it.id;
+                    /* roving tabindex — 목록 전체가 Tab 1회다. 78개를 모두 Tab 으로
+                       지나야 오른쪽 칸에 닿으면 키보드 사용자에게는 못 쓰는 화면이다
+                       (실측 Tab 78회). 화살표로 항목을 옮기고 Tab 은 칸을 넘긴다. */
+                    var roving = (S.item ? on : i === 0) ? '0' : '-1';
                     return '<button type="button" class="dyp-row' + (on ? ' is-on' : '') + '"' +
                         ' role="option" aria-selected="' + (on ? 'true' : 'false') + '"' +
+                        ' tabindex="' + roving + '" onkeydown="DYPICK._key(event)"' +
                         ' onclick="DYPICK._item(\'' + esc(it.id) + '\')">' +
                         '<span class="dyp-row-t">' + esc(it.name) + '</span>' +
-                        '<span class="dyp-row-n">' + n + (picked ? ' <b>· ' + picked + '</b>' : '') + '</span>' +
+                        '<span class="dyp-row-n">' +
+                            (byStage[it.id] ? '<em class="dyp-hit">할 일 일치</em>' : '') +
+                            n + (picked ? ' <b>· ' + picked + '</b>' : '') +
+                        '</span>' +
                     '</button>';
                 }).join('') : '<p class="dyp-empty">찾는 의무가 없습니다.</p>') +
             '</div>' +
@@ -102,7 +120,7 @@
             '<div class="dyp-search">' +
                 '<input type="search" class="form-input" value="' + esc(S.qR) + '"' +
                     ' placeholder="할 일 이름으로 찾기" aria-label="업무단계 검색"' +
-                    ' oninput="DYPICK._qR(this.value)">' +
+                    ' oninput="DYPICK._qR(this.value)" onkeydown="DYPICK._toList(event)">' +
             '</div>' +
             (multi
                 ? '<label class="dyp-all"><input type="checkbox"' + (onAll ? ' checked' : '') +
@@ -115,6 +133,7 @@
                     if (multi) {
                         return '<label class="dyp-row dyp-row-ck' + (on ? ' is-on' : '') + '">' +
                             '<input type="checkbox"' + (on ? ' checked' : '') +
+                                ' onkeydown="DYPICK._key(event)"' +
                                 ' onchange="DYPICK._stage(\'' + esc(s.id) + '\', this.checked)">' +
                             '<span class="dyp-row-t">' + esc(s.name) +
                                 (when ? '<span class="dyp-row-s">' + esc(when) + '</span>' : '') + '</span>' +
@@ -168,6 +187,51 @@
         return o;
     }
 
+    /* 화살표로 목록 안을 옮긴다. Home/End 로 처음·끝. 좌 목록에서 →(오른쪽)를
+       누르면 오른쪽 칸으로 건너간다 — 마우스 없이도 2단 구조를 그대로 쓴다. */
+    function _key(e) {
+        var k = e.key;
+        var row = e.target.closest ? e.target.closest('.dyp-row') : null;
+        var col = row && row.closest ? row.closest('.dyp-col') : null;
+        if (!col) return;
+        var rows = [].slice.call(col.querySelectorAll('.dyp-row'));
+        var focusables = rows.map(function (r) {
+            return r.tagName === 'LABEL' ? r.querySelector('input') : r;
+        });
+        var cur = focusables.indexOf(e.target);
+        if (cur < 0) cur = rows.indexOf(row);
+        var to = -1;
+        if (k === 'ArrowDown') to = Math.min(focusables.length - 1, cur + 1);
+        else if (k === 'ArrowUp') to = Math.max(0, cur - 1);
+        else if (k === 'Home') to = 0;
+        else if (k === 'End') to = focusables.length - 1;
+        else if (k === 'ArrowRight' && col.nextElementSibling) {
+            var nxt = col.nextElementSibling.querySelector('.dyp-search input, .dyp-row');
+            if (nxt) { e.preventDefault(); nxt.focus(); }
+            return;
+        } else if (k === 'ArrowLeft' && col.previousElementSibling) {
+            var prv = col.previousElementSibling.querySelector('.dyp-row[tabindex="0"], .dyp-row');
+            if (prv) { e.preventDefault(); prv.focus(); }
+            return;
+        } else return;
+        if (to >= 0 && focusables[to]) {
+            e.preventDefault();
+            rows.forEach(function (r) { if (r.tagName !== 'LABEL') r.setAttribute('tabindex', '-1'); });
+            if (focusables[to].tagName !== 'INPUT') focusables[to].setAttribute('tabindex', '0');
+            focusables[to].focus();
+        }
+    }
+
+    /* 검색창에서 ↓ 를 누르면 바로 목록으로 — 검색하고 손을 옮기는 동선이다 */
+    function _toList(e) {
+        if (e.key !== 'ArrowDown') return;
+        var col = e.target.closest('.dyp-col'); if (!col) return;
+        var first = col.querySelector('.dyp-row');
+        if (!first) return;
+        e.preventDefault();
+        (first.tagName === 'LABEL' ? first.querySelector('input') : first).focus();
+    }
+
     function _qL(v) { S.qL = v; fire('redraw'); }
     function _qR(v) { S.qR = v; fire('redraw'); }
     function _item(id) {
@@ -188,6 +252,6 @@
 
     global.DYPICK = {
         render: render, reset: reset, currentItem: currentItem,
-        _qL: _qL, _qR: _qR, _item: _item, _stage: _stage, _all: _all, _clear: _clear,
+        _qL: _qL, _qR: _qR, _item: _item, _stage: _stage, _all: _all, _clear: _clear, _key: _key, _toList: _toList,
     };
 }(window));

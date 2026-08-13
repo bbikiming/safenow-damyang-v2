@@ -60,9 +60,13 @@
         }).length;
     }
 
+    /* opts.extraActive — 이 바깥에서 걸린 조건 수(기본 0).
+       같은 축을 셀렉트로 두 번 묻지 않으려고 컨트롤을 칩으로 뺀 화면(업무문서
+       이행 목록의 상태·반려 칩)은 그 조건이 fields 에 없다. 그대로 두면 칩만 켠
+       상태에서 [필터 초기화] 가 비활성이 되어 끌 수단이 사라진다. */
     function bar(fields, opts) {
         opts = opts || {};
-        var n = activeCount(fields);
+        var n = activeCount(fields) + (+opts.extraActive || 0);
         return '<div class="edu-toolbar edu-filterbar">' +
             '<div class="edu-filterbar-fields">' + (fields || []).map(fieldHtml).join('') + '</div>' +
             '<div class="edu-filterbar-tail">' +

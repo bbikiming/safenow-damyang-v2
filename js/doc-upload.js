@@ -105,7 +105,7 @@
      * 마법사 렌더
      * ========================================================================= */
     function renderW() {
-        var title = '업무 업로드 · ' + W.year + '년 <span class="du-step">STEP ' + W.step + ' / 3</span>';
+        var title = '서류 올리기 · ' + W.year + '년 <span class="du-step">' + W.step + '단계 / 3</span>';
         var body, foot;
         if (W.step === 1) { body = step1(); foot = foot1(); }
         else if (W.step === 2) { body = step2(); foot = foot2(); }
@@ -113,7 +113,7 @@
         V().openModal(title, '<div class="du-wrap">' + stepBar() + errBox(W.err) + body + '</div>', foot);
     }
     function stepBar() {
-        var names = ['문서·파일', '업무단계 선택', '확인'];
+        var names = ['서류 올리기', '무슨 일인지 고르기', '확인'];
         return '<ol class="du-steps">' + names.map(function (n, i) {
             var k = i + 1;
             return '<li class="' + (k === W.step ? 'is-on' : (k < W.step ? 'is-done' : '')) + '">' +
@@ -128,7 +128,7 @@
     function step1() {
         var dup = W.dupWith ? D().docById(W.dupWith) : null;
         return '<div class="form-section">' +
-            V().uploadDrop('업무 증빙 파일을 끌어다 놓거나 클릭하여 업로드', null,
+            V().uploadDrop('서류 파일을 끌어다 놓거나 눌러서 고르세요', null,
                 { pick: 'DOCUP.addFiles', multiple: true, hint: true }) +
             fileList() +
             '<div class="du-grid">' +
@@ -139,9 +139,9 @@
                     '<input type="date" class="form-input" id="du-date" value="' + esc(W.date) + '" ' + inv('du-date') +
                     ' min="' + W.year + '-01-01" max="' + W.year + '-12-31">',
                     W.year + '년 업무이므로 ' + W.year + '년 안의 날짜만 받습니다') +
-                field('수발신자', false, 'du-sr',
-                    '<input type="text" class="form-input" id="du-sr" value="' + esc(W.sr) + '" placeholder="예: 전라남도 안전정책과">') +
-                field('문서 출처', false, 'du-src',
+                field('상대 기관', false, 'du-sr',
+                    '<input type="text" class="form-input" id="du-sr" value="' + esc(W.sr) + '" placeholder="주고받은 기관 (없으면 비워 두세요)">') +
+                field('어디서 온 서류인가요', false, 'du-src',
                     '<select class="form-select" id="du-src">' +
                         D().SRC_ORDER.filter(function (k) { return k !== 'program'; }).map(function (k) {
                             return '<option value="' + k + '"' + (W.src === k ? ' selected' : '') + '>' + esc(D().SRC[k].label) + '</option>';
@@ -223,7 +223,7 @@
     }
     function foot1() {
         return '<button class="btn btn-outline" onclick="DOCUP.cancel()">취소</button>' +
-            '<button class="btn btn-primary" onclick="DOCUP.next()">다음 — 업무단계 선택 →</button>';
+            '<button class="btn btn-primary" onclick="DOCUP.next()">다음 — 무슨 일인지 고르기 →</button>';
     }
 
     /* ── STEP 2 — 할 일 고르기 ─────────────────────────────────────────
@@ -234,7 +234,7 @@
     function step2() {
         return '<div class="du-pick">' +
             '<p class="du-pick-lead">이 서류가 <b>어떤 의무의 무슨 일</b>을 했다는 증거인지 고르세요. ' +
-                '여러 개를 고를 수 있습니다.</p>' +
+                '왼쪽에서 의무를 고르면 오른쪽에 그 의무의 할 일이 나옵니다. 여러 개 고를 수 있습니다.</p>' +
             global.DYPICK.render({
                 ns: 'DOCUP.onPick', multi: true,
                 item: global.DYPICK.currentItem(), stages: W.stageIds, height: 260,
@@ -272,18 +272,18 @@
                 row('문서명', W.title) +
                 row('파일', W.files.map(function (f) { return f.name; }).join(', ') || '—') +
                 row('보고일자', W.date) +
-                row('수발신자', W.sr || '—') +
-                row('담당부서 · 담당자', W.dept + ' / ' + W.assignee) +
-                row('문서 출처', D().SRC[W.src] ? D().SRC[W.src].label : W.src) +
+                row('상대 기관', W.sr || '—') +
+                row('담당', W.dept + ' / ' + W.assignee) +
+                row('어디서 온 서류', D().SRC[W.src] ? D().SRC[W.src].label : W.src) +
                 row('기준연도', W.year + '년') +
             '</dl>' +
             (reverting.length
-                ? '<div class="du-dup" role="alert"><b>완료된 단계 ' + reverting.length + '개가 진행중으로 되돌아갑니다.</b>' +
-                  '<p class="du-dim">증빙이 바뀌었으므로 주관부서의 재확인을 다시 받습니다.</p></div>'
+                ? '<div class="du-dup" role="alert"><b>이미 확인이 끝난 할 일 ' + reverting.length + '개가 다시 진행중이 됩니다.</b>' +
+                  '<p class="du-dim">서류가 바뀌었으니 재난안전과 확인을 다시 받습니다.</p></div>'
                 : '') +
-            '<h4 class="du-conf-sub">이행항목 ' + Object.keys(items).length + '개 · 업무단계 ' + W.stageIds.length + '개</h4>' +
+            '<h4 class="du-conf-sub">의무 ' + Object.keys(items).length + '가지 · 할 일 ' + W.stageIds.length + '개</h4>' +
             '<table class="table-figma table-compact du-conf-tbl"><thead><tr>' +
-                '<th>이행항목 / 업무단계</th><th>변경 전</th><th>저장 후</th>' +
+                '<th>어떤 의무 · 무슨 일</th><th>지금</th><th>등록 후</th>' +
             '</tr></thead><tbody>' +
             Object.keys(items).map(function (iid) {
                 var it = D().item(iid);
@@ -296,14 +296,14 @@
                     }).join('');
             }).join('') +
             '</tbody></table>' +
-            '<p class="du-hint">저장하면 선택한 단계는 <b>진행중</b>이 됩니다. ' +
-                '<b>완료</b>는 주관부서(재난안전과) 담당자가 증빙을 확인한 뒤에만 부여됩니다.</p>' +
+            '<p class="du-hint">등록하면 고른 할 일이 <b>진행중</b>이 됩니다. ' +
+                '<b>완료</b>는 재난안전과가 서류를 확인한 뒤에 붙습니다 — 내가 직접 완료로 만들 수는 없습니다.</p>' +
         '</div>';
     }
     function row(k, v) { return '<div><dt>' + esc(k) + '</dt><dd>' + esc(v) + '</dd></div>'; }
     function foot3() {
         return '<button class="btn btn-outline" onclick="DOCUP.prev()">← 이전</button>' +
-            '<button class="btn btn-primary" onclick="DOCUP.submit()">등록</button>';
+            '<button class="btn btn-primary" onclick="DOCUP.submit()">이대로 등록</button>';
     }
 
     /* =========================================================================
@@ -502,6 +502,13 @@
         var pages = Math.max(1, Math.ceil(total / P.size));
         if (P.page > pages) P.page = pages;
         return { list: list, total: total, pages: pages, rows: list.slice((P.page - 1) * P.size, P.page * P.size) };
+    }
+    /* 조회 조건 <select> — 표준 계열(.form-select)만 쓴다(CLAUDE.md §7).
+       ⚠ 이 헬퍼가 없어 presetBar() 가 ReferenceError 로 죽었다(프리셋 모달이 아예
+         열리지 않았다). 호출부는 처음부터 sel(...) 이었는데 정의가 없었다. */
+    function sel(id, v, opts, on, label) {
+        return '<select class="form-select" id="' + esc(id) + '" aria-label="' + esc(label || '조회 조건') + '"' +
+            ' onchange="' + on + '">' + F().optionsHtml(opts, v) + '</select>';
     }
     function presetBar(res) {
         var items = [['', '이행항목 전체']].concat(D().items().map(function (i) { return [i.id, i.id + ' ' + i.name]; }));

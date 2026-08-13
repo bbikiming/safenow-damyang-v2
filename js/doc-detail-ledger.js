@@ -169,15 +169,31 @@
     /* '사용자 등록 문서인가'만으로 판단하면 타 부서 담당자가 남의 문서를 고칠 수
        있다. 부서·작성자 범위까지 보는 DYDOCS.canEditDoc() 단일 출처를 쓴다. */
     function canManage() { return D().canEditDoc(doc); }
+    /* 지울 수 있는 것은 **사용자 등록분뿐**이다 — removeDocument() 가 store().docs
+       만 건드리므로 원장·시드 문서에서는 확인 모달까지 띄운 뒤 반드시 거부된다.
+       확인까지 시키고 거절하는 버튼은 '없는 동작을 시각적으로 약속하는' 패턴이다
+       (CLAUDE.md §2 무핸들러 드롭존 금지와 같은 근거). 데이터 계층 가드는 화면
+       우회 방어로 그대로 둔다(IMP-04). */
+    function canDeleteDoc() { return D().canDelete() && doc.origin === 'user'; }
+    function delDenyNote() {
+        if (doc.origin !== 'user') {
+            return '원장·시드 문서는 지울 수 없습니다 — 잘못 붙은 분류는 [단계 지정]으로 고칩니다.';
+        }
+        return D().ownDenyNote(doc.dept);
+    }
     function manage() {
         var imp = D().impactOf(doc.id) || {};
-        return '<p class="dd-imp">이 문서를 지우면 <b>업무단계 ' + (imp.stages || 0) + '개</b>' +
-                (imp.completed ? ' (완료 확인된 ' + imp.completed + '개 포함)' : '') +
-                ' · 이행항목 ' + (imp.items || 0) + '개의 증빙에서 빠지고, 남은 증빙이 없는 단계는 <b>미이행</b>으로 돌아갑니다.</p>' +
+        /* 영향 범위 설명은 **지울 수 있을 때만** 낸다 — 못 지우는 문서에 삭제
+           영향을 적어 두면 도달할 수 없는 행동을 설명하는 글이 된다. */
+        return (canDeleteDoc()
+                ? '<p class="dd-imp">이 문서를 지우면 <b>업무단계 ' + (imp.stages || 0) + '개</b>' +
+                  (imp.completed ? ' (완료 확인된 ' + imp.completed + '개 포함)' : '') +
+                  ' · 이행항목 ' + (imp.items || 0) + '개의 증빙에서 빠지고, 남은 증빙이 없는 단계는 <b>미이행</b>으로 돌아갑니다.</p>'
+                : '') +
             '<div class="dd-acts">' +
                 (doc.origin === 'user' ? '<button class="btn btn-secondary" onclick="DOCDET.remap()">업무단계 수정</button>' : '') +
-                (D().canDelete() ? '<button class="btn btn-outline" onclick="DOCDET.confirmDel()">문서 삭제</button>'
-                    : '<span class="dx-nodoc">' + esc(D().ownDenyNote(doc.dept)) + '</span>') +
+                (canDeleteDoc() ? '<button class="btn btn-outline" onclick="DOCDET.confirmDel()">문서 삭제</button>'
+                    : '<span class="dx-nodoc">' + esc(delDenyNote()) + '</span>') +
             '</div>';
     }
 
@@ -217,6 +233,8 @@
         V().toast('업무단계 수정은 업무 업로드 마법사에서 다시 등록해 주세요 — 이미 붙은 확인 기록과 어긋나지 않게 하기 위해서입니다.');
     }
     function confirmDel() {
+        /* 버튼만 감추면 전역 호출로 뚫린다 — 확인 모달 진입도 같은 판정으로 막는다 */
+        if (!canDeleteDoc()) { V().toast(delDenyNote()); return; }
         var imp = D().impactOf(doc.id);
         if (!imp) return;
         V().openModal('문서 삭제 확인',

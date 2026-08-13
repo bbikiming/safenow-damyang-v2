@@ -3673,8 +3673,20 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .dx-sum:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
 .dx-sum b { font-weight: var(--fw-bold); }
 .dx-sum-link { margin-left: auto; font-size: var(--fs-12); font-weight: var(--fw-bold); color: var(--main-dark); }
+/* 반려는 status 축이 아니라 보조 축이다 — 구분선을 두어 4종 칩의 합과 헷갈리지 않게 */
+.dx-sum-ret { margin-left: 2px; padding-left: 12px; border-left: 1px solid var(--card-line);
+  border-radius: 0 var(--radius-pill) var(--radius-pill) 0; }
+.dx-sum-ret.is-on { border-color: var(--main); }
 .dx-lead-dim { color: var(--text-gray); font-weight: var(--fw-regular); }
-.dx-note-rel, .dx-note-gap { margin-top: 6px; font-size: var(--fs-12); color: var(--text-gray); }
+/* '내 부서 관련만' — 추정 파생임을 감추지 않는다(CLAUDE.md §14-12) */
+.dx-mine-note { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
+  margin: -4px 0 10px; padding: 5px 10px; background: var(--status-info-bg);
+  border: 1px solid var(--status-info-border); border-radius: var(--radius-sm);
+  font-size: var(--fs-12); color: var(--text-black); line-height: 1.5; word-break: keep-all; }
+.dx-mine-note b { font-weight: var(--fw-bold); }
+.dx-note-rel { margin-top: 6px; font-size: var(--fs-12); color: var(--text-gray); }
+.dx-note-gap { color: var(--text-gray); }
+p > .dx-note-gap { display: inline; }
 .dx-note-rel a { color: var(--main-dark); font-weight: var(--fw-bold); }
 .dx-ro { font-size: var(--fs-12); font-weight: var(--fw-bold); color: var(--text-gray); }
 
@@ -3714,6 +3726,16 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .dx-table { table-layout: auto; }
 .dx-table td { vertical-align: middle; padding: 7px 6px; }
 .dx-row.is-recheck { background: var(--status-warning-bg); }
+/* 확인 반려 — 담당자가 다시 올려야 끝나는 줄이다. 사유는 접지 않고 그 자리에 낸다 */
+.dx-row.is-returned { background: var(--status-warning-bg); }
+.dx-ret { display: block; margin-top: 3px; padding: 4px 8px; border-left: 3px solid var(--status-warning-border);
+  background: var(--surface); border-radius: var(--radius-xs);
+  font-size: var(--fs-12); color: var(--text-black); line-height: 1.5; word-break: keep-all; }
+.dx-ret-by { display: block; margin-top: 1px; color: var(--text-gray); }
+/* 칩이 하나 늘면 nowrap 인 우측 칸이 넓어지고, 표 열 폭은 카드 전체가 공유하므로
+   그 카드의 **모든 행**에서 이름 칸이 60px 씩 줄었다(실측 300→234px).
+   반려 행에서만 칩이 아래로 접히게 해 열 폭을 되돌린다. */
+.dx-row.is-returned .dx-c-side { white-space: normal; }
 .dx-c-main { width: 100%; }
 .dx-stage-link { display: flex; align-items: baseline; gap: 6px; color: var(--text-black); text-decoration: none; }
 .dx-stage-link:hover .dx-sname { color: var(--main-dark); text-decoration: underline; }
@@ -3742,7 +3764,13 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .dx-mod-sub { font-size: var(--fs-13); font-weight: var(--fw-bold); color: var(--text-black); margin: 12px 0 6px; }
 .dx-mod-docs li { padding: 5px 0; border-bottom: 1px solid var(--card-line); font-size: var(--fs-13); }
 .dx-mod-docs a { color: var(--main-dark); font-weight: var(--fw-medium); }
+/* 새 탭으로 열린다는 시각 표지 — 링크에 aria-label 을 함께 단다(IMP-05) */
+.dx-mod-new { margin-left: 3px; font-size: var(--fs-12); color: var(--text-gray); }
+.dx-mod-hint { border-bottom: none; font-size: var(--fs-12); color: var(--text-gray); }
 .dx-mod-dim { margin-left: 6px; font-size: var(--fs-12); color: var(--text-gray); }
+/* 반려 이력 — 자기가 반려해 둔 건인지 알아야 같은 서류를 두 번 반려하지 않는다 */
+.dx-mod-ret { display: block; margin-top: 4px; font-size: var(--fs-12); color: var(--text-black);
+  line-height: 1.5; word-break: keep-all; }
 .dx-mod-reason { margin-top: 12px; }
 
 @media (max-width: 1023px) {
@@ -3791,7 +3819,7 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .dl-chip button:hover { color: var(--status-danger-fg); }
 .dl-chip button:focus-visible { outline: 2px solid var(--main); outline-offset: 1px; border-radius: var(--radius-full); }
 
-.dl-tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.dl-tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; margin-top: 10px; }
 .dl-tools .dy-count { font-size: var(--fs-13); color: var(--text-black); }
 .dl-dim { color: var(--text-gray); font-weight: var(--fw-regular); }
 .dl-sort, .dl-size { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; font-size: var(--fs-12); color: var(--text-gray); }
@@ -3877,18 +3905,13 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .dl-f-n { display: inline-block; margin-left: 4px; padding: 0 5px; background: var(--surface-alt);
   border-radius: var(--radius-pill); font-size: var(--fs-12); color: var(--text-gray); font-weight: var(--fw-regular); }
 
-/* 미분류 교정 · 중복 정리 */
+/* 미분류 교정 · 중복 정리
+   ※ 단계 선택 목록은 DYPICK(dyp 계열)이 그린다 — 자체 목록(dl-remap-body·dl-rm-grp·
+     dl-rm-row)은 2단 선택기로 전환하면서 규칙까지 함께 지웠다(IMP-03).
+     마크업만 옮기고 CSS 를 남기면 다음 작업자가 살아 있는 계열로 오인한다(§7-1). */
 .dl-remap-t { font-size: var(--fs-13); margin-bottom: 6px; word-break: keep-all; }
 .dl-remap-help { font-size: var(--fs-12); color: var(--text-gray); margin-bottom: 10px; }
 .dl-remap-n { margin: 8px 0 6px; font-size: var(--fs-12); color: var(--text-gray); }
-.dl-remap-body { max-height: 320px; overflow-y: auto; border: 1px solid var(--card-line); border-radius: var(--radius-sm); padding: 8px; }
-.dl-rm-grp { margin-bottom: 10px; }
-.dl-rm-grp h5 { font-size: var(--fs-12); font-weight: var(--fw-bold); color: var(--main-dark); margin-bottom: 4px; }
-.dl-rm-row { display: flex; align-items: flex-start; gap: 8px; min-height: 34px; padding: 4px 6px;
-  border-radius: var(--radius-sm); font-size: var(--fs-13); cursor: pointer; }
-.dl-rm-row:hover { background: var(--surface-alt); }
-.dl-rm-row.is-on { background: var(--brand-50); }
-.dl-rm-row span { word-break: keep-all; }
 .dl-merge-list li { padding: 6px 0; border-bottom: 1px solid var(--card-line); font-size: var(--fs-13); word-break: keep-all; }
 .dl-merge-list code { font-size: var(--fs-12); color: var(--text-gray); }
 
@@ -3927,6 +3950,10 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .dyp-row-s { display: block; margin-top: 1px; font-size: var(--fs-12); font-weight: var(--fw-regular); color: var(--text-gray); }
 .dyp-row-n { flex-shrink: 0; font-size: var(--fs-12); font-weight: var(--fw-regular); color: var(--text-gray); }
 .dyp-row-n b { color: var(--main-dark); }
+/* 왜 이 항목이 검색에 남았는지 — 의무명이 아니라 그 의무의 '할 일' 이름이 맞았다(IMP-07) */
+.dyp-hit { display: inline-block; margin-right: 5px; padding: 0 5px; font-style: normal;
+  font-size: var(--fs-12); color: var(--main-dark); background: var(--brand-50);
+  border-radius: var(--radius-pill); white-space: nowrap; }
 .dyp-empty { padding: 16px 10px; font-size: var(--fs-12); color: var(--text-gray); text-align: center; }
 .dyp-sel { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 8px 10px;
   border-top: 1px solid var(--card-line); background: var(--surface-alt); }
@@ -4041,3 +4068,21 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
   /* 본문 안 텍스트 링크형 버튼도 손가락으로 누를 수 있어야 한다 */
   .du-link { display: inline-flex; align-items: center; min-height: 36px; padding: 0 2px; }
 }
+
+/* 다음에 할 일 — 숫자만 보여주지 말고 무엇부터 하라고 말한다.
+   안내의 '접혀도 남는 한 줄' 자리에 들어간다(별도 띠를 만들지 않는다). */
+.dy-notice-lead .dx-next-t { font-size: var(--fs-13); color: var(--text-black); }
+.dy-notice-lead .btn { margin-left: 10px; flex-shrink: 0; }
+.dx-next-t { min-width: 0; }
+.dx-next-t b { color: var(--main-dark); font-weight: var(--fw-bold); }
+/* 내 부서 건수 옆의 전체 건수 — 주된 수치를 가리지 않게 흐리게 둔다(IMP-02) */
+.dx-next-dim { color: var(--text-gray); }
+/* 0% 인데 상태가 진행중이라 모순으로 읽히는 카드에만 이유를 붙인다 */
+.dx-prog-why { flex: 1 1 100%; font-size: var(--fs-12); color: var(--text-gray); }
+/* 코드는 이름 뒤로 · 흐리게 */
+.dx-head-top { align-items: baseline; }
+.dx-head-top .dx-code { margin-left: auto; }
+.dx-scode { margin-right: 6px; }
+.dx-law li { display: block; }
+.dx-law-un { font-size: var(--fs-12); color: var(--text-gray); }
+.dx-law-part { font-style: normal; color: var(--main-dark); }

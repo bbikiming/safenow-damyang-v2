@@ -168,7 +168,9 @@
         syncURL();
         injectHeadActions();
         var res = view();
-        S.mount.innerHTML = notice() + quickBar(res) + advPanel() + chipRow() + toolRow(res) + table(res) + pager(res);
+        S.mount.innerHTML = notice() + quickBar(res) + advPanel() + chipRow() + table(res) + pager(res);
+        /* 투어 앵커 — 검색창은 공용 필터 바가 그리므로 렌더 뒤에 속성만 얹는다 */
+        var q = document.getElementById('dl-q'); if (q) q.setAttribute('data-tour', 'doc-search');
     }
     function rerender() { F().rerender(render); }
 
@@ -177,20 +179,23 @@
         var led = docs.filter(function (d) { return d.origin === 'ledger'; }).length;
         var v2 = docs.filter(function (d) { return d.origin === 'v2'; }).length;
         var user = docs.length - led - v2;
-        var lead = '<b>문서 ' + docs.length.toLocaleString() + '건</b> · 2025 원장 ' + led.toLocaleString() +
-            ' · 현행 업무문서 ' + v2 + (user ? ' · 등록분 ' + user : '');
+        var lead = '<b>문서 ' + docs.length.toLocaleString() + '건</b>' +
+            (user ? ' · 내가 올린 것 ' + user + '건' : '') +
+            ' <span class="dx-lead-dim">— 조건으로 좁혀 찾습니다</span>';
+        /* 두 문단이던 것을 한 문단으로 — 위에 투어 바가 생겨 상단이 과밀해졌고,
+           표가 주인공인 화면에서 첫 행이 600px 밖으로 밀렸다(§14-12). */
         var rest =
-            '<p><b>문서를 찾는 화면</b>입니다. 온나라·전자문서·직접 첨부·전용 화면 업무를 한곳에서 봅니다. ' +
-            '어느 의무가 아직 안 됐는지는 <a href="docs-exec.html">이행 목록</a>에서 봅니다.</p>' +
-            '<p class="dx-note-gap">2025년 자료는 <b>재난안전과가 주고받은 공문 기록</b>이라 담당자 칸이 비어 있고, ' +
-            '수발신자는 전라남도 같은 <b>상대 기관</b>입니다. 출처·상태는 <b>시연용 값</b>입니다.</p>';
-        return V().notice('docs-preset', lead, rest);
+            '<p>문서를 <b>찾는</b> 화면입니다. 어느 의무가 아직 안 됐는지는 ' +
+            '<a href="docs-exec.html">이행 목록</a>에서 봅니다. ' +
+            '<span class="dx-note-gap">2025년 자료는 재난안전과가 주고받은 공문 기록이라 담당 칸이 비어 있고, ' +
+            '출처·상태는 시연용 값입니다.</span></p>';
+        return V().notice('docs-preset', lead, rest, { foldedByDefault: true });
     }
 
     /* 빠른필터 — 연도·출처·기간. 상태는 여기 두지 않는다(출처 종속) */
     function quickBar(res) {
         return F().bar([
-            { type: 'search', id: 'dl-q', value: S.q, placeholder: '문서명·수발신자·담당자·이행항목·업무단계', on: "DOCLIST.setF('q', this.value)" },
+            { type: 'search', id: 'dl-q', value: S.q, placeholder: '문서명·상대 기관·담당자·의무·할 일', on: "DOCLIST.setF('q', this.value)" },
             { type: 'select', id: 'dl-year', value: S.year, label: '기준연도', options: yearOpts(), on: "DOCLIST.setF('year', this.value)" },
             { type: 'select', id: 'dl-src', value: S.src, label: '문서 출처', options: srcOpts(), on: "DOCLIST.setF('src', this.value)" },
         ], {
@@ -338,19 +343,6 @@
         return v;
     }
 
-    function toolRow(res) {
-        return '<div class="dl-tools">' +
-            '<span class="dy-count">' + res.total.toLocaleString() + '건' +
-                (res.pages > 1 ? ' <span class="dl-dim">· ' + res.pages + '페이지</span>' : '') + '</span>' +
-            '<label class="dl-sort"><span>정렬</span>' +
-                selHtml('dl-sort', S.sort, [
-                    ['date-desc', '보고일자 최신순'], ['date-asc', '보고일자 오래된순'],
-                    ['title-asc', '문서명 가나다순'], ['title-desc', '문서명 역순'],
-                ], "DOCLIST.setF('sort', this.value)") + '</label>' +
-            '<label class="dl-size"><span>한 쪽에</span>' +
-                selHtml('dl-size', S.size, [[20, '20건'], [50, '50건'], [100, '100건']], "DOCLIST.setF('size', this.value)") + '</label>' +
-        '</div>';
-    }
 
     function table(res) {
         if (!res.total) {
@@ -451,7 +443,8 @@
     }
 
     function pager(res) {
-        if (res.pages <= 1) return '';
+        if (!res.total) return '';
+        if (res.pages <= 1) return sortRow();
         var cur = S.page, out = [];
         function btn(n, label, dis) {
             return '<button type="button" class="dl-pg' + (n === cur ? ' is-on' : '') + '"' +
@@ -465,7 +458,22 @@
         for (var i = s; i <= e; i++) out.push(btn(i));
         if (e < res.pages) { if (e < res.pages - 1) out.push('<span class="dl-pg-gap">…</span>'); out.push(btn(res.pages)); }
         out.push(btn(cur + 1, '다음 →', cur >= res.pages));
-        return '<nav class="dl-pager" aria-label="문서 목록 페이지">' + out.join('') + '</nav>';
+        return '<nav class="dl-pager" aria-label="문서 목록 페이지">' + out.join('') + '</nav>' + sortRow();
+    }
+
+    /* 정렬·쪽 크기는 목록 **아래**에 둔다. 상단에 별도 도구 줄을 만들면 결과 건수가
+       필터 바와 두 번 나오고 띠가 늘어 첫 행이 밀린다. 다 보고 나서 바꾸는 값이라
+       아래가 자연스럽다. */
+    function sortRow() {
+        return '<div class="dl-tools">' +
+            '<label class="dl-sort"><span>정렬</span>' +
+                selHtml('dl-sort', S.sort, [
+                    ['date-desc', '보고일자 최신순'], ['date-asc', '보고일자 오래된순'],
+                    ['title-asc', '문서명 가나다순'], ['title-desc', '문서명 역순'],
+                ], "DOCLIST.setF('sort', this.value)") + '</label>' +
+            '<label class="dl-size"><span>한 쪽에</span>' +
+                selHtml('dl-size', S.size, [[20, '20건'], [50, '50건'], [100, '100건']], "DOCLIST.setF('size', this.value)") + '</label>' +
+        '</div>';
     }
 
     function injectHeadActions() {
@@ -514,62 +522,62 @@
      * 도달할 수 없는 행동을 약속한 것이다(CLAUDE.md §14-12). 조회만 만들고
      * '미구현'으로 넘기지 않는다.
      * ========================================================================= */
-    var RM = null;                     /* {docId, stageIds[], q} */
+    /* 고르는 UI 는 DYPICK 하나다(CLAUDE.md §5·§7 MUST) — 78개 그룹 × 168개 체크박스를
+       한 스크롤에 쌓던 자체 마크업을 걷어냈다. 업무 업로드 STEP2·상세 조건과 같은
+       선택기라 담당자가 같은 과업을 두 번 배우지 않는다(IMP-03). */
+    var RM = null;                     /* {docId, stageIds[]} — 선택값은 이 화면이 든다 */
     function openRemap(docId) {
         if (!D().isManager()) { V().toast('미분류 교정은 주관부서(재난안전과) 담당자만 할 수 있습니다.'); return; }
         var d = D().docById(docId); if (!d) return;
-        RM = { docId: docId, stageIds: d.stageIds.slice(), q: '' };
+        RM = { docId: docId, stageIds: d.stageIds.slice() };
+        global.DYPICK.reset('');
         renderRemap();
     }
     function renderRemap() {
         var d = D().docById(RM.docId);
-        var groups = [];
-        D().items().forEach(function (it) {
-            var hit = D().stagesOfItem(it.id).filter(function (s) {
-                return !RM.q || F().match(RM.q, [s.id, s.name, it.id, it.name, s.law]);
-            });
-            if (hit.length) groups.push({ item: it, stages: hit });
-        });
         var body =
             '<div class="dl-remap">' +
                 '<p class="dl-remap-t"><b>' + esc(d.title) + '</b>' +
                     '<span class="dx-nodoc"> ' + esc(d.date || '') + (d.sr ? ' · ' + esc(d.sr) : '') + '</span></p>' +
                 '<p class="dl-remap-help">원자료에 분류가 비어 있던 문서입니다. 이 문서가 증빙하는 업무단계를 고르면 ' +
                     '해당 단계가 <b>진행중</b>이 되고 이행 목록에 반영됩니다.</p>' +
-                '<input type="search" class="form-input" id="dl-rm-q" value="' + esc(RM.q) + '"' +
-                    ' placeholder="이행항목·업무단계·코드 검색" aria-label="업무단계 검색"' +
-                    ' oninput="DOCLIST.setRemapQ(this.value)">' +
                 '<p class="dl-remap-n">선택 <b>' + RM.stageIds.length + '</b>개</p>' +
-                '<div class="dl-remap-body">' +
-                    (groups.length ? groups.map(function (g) {
-                        return '<div class="dl-rm-grp"><h5>' + esc(g.item.id) + ' · ' + esc(g.item.name) + '</h5>' +
-                            g.stages.map(function (s) {
-                                var on = RM.stageIds.indexOf(s.id) >= 0;
-                                return '<label class="dl-rm-row' + (on ? ' is-on' : '') + '">' +
-                                    '<input type="checkbox"' + (on ? ' checked' : '') +
-                                    ' onchange="DOCLIST.toggleRemapStage(\'' + esc(s.id) + '\', this.checked)"> ' +
-                                    '<span>' + esc(s.id) + ' ' + esc(s.name) + '</span></label>';
-                            }).join('') + '</div>';
-                    }).join('') : '<div class="v2-empty">조건에 맞는 업무단계가 없습니다.</div>') +
-                '</div>' +
+                global.DYPICK.render({
+                    ns: 'DOCLIST.onRemapPick', multi: true,
+                    stages: RM.stageIds, height: 260,
+                }) +
             '</div>';
         V().openModal('업무단계 지정 · 미분류 교정', body,
-            '<button class="btn btn-outline" onclick="DYV2.closeModal()">취소</button>' +
+            '<button class="btn btn-outline" onclick="DOCLIST.closeRemap()">취소</button>' +
             '<button class="btn btn-primary" onclick="DOCLIST.saveRemap()">저장</button>');
     }
-    function setRemapQ(v) { RM.q = v; F().rerender(renderRemap); }
-    function toggleRemapStage(sid, on) {
-        var i = RM.stageIds.indexOf(sid);
-        if (on && i < 0) RM.stageIds.push(sid);
-        if (!on && i >= 0) RM.stageIds.splice(i, 1);
+    /* DYPICK 콜백 — DOCUP.onPick 과 같은 계약(item/stage/all/clear/redraw) */
+    function onRemapPick(kind, a, b) {
+        if (!RM) return;
+        if (kind === 'stage') {
+            var i = RM.stageIds.indexOf(a);
+            if (b && i < 0) RM.stageIds.push(a);
+            if (!b && i >= 0) RM.stageIds.splice(i, 1);
+        } else if (kind === 'all') {
+            a.forEach(function (id) {
+                var j = RM.stageIds.indexOf(id);
+                if (b && j < 0) RM.stageIds.push(id);
+                if (!b && j >= 0) RM.stageIds.splice(j, 1);
+            });
+        } else if (kind === 'clear') { RM.stageIds = []; }
         F().rerender(renderRemap);
     }
+    /* 선택기는 한 벌뿐이라 상세 조건 트리와 상태를 공유한다 — 모달을 닫을 때
+       원래 조건(S.item)으로 되돌려 놓지 않으면 뒤에 있던 트리가 엉뚱한 의무를
+       고른 것처럼 보인다. */
+    function closeRemap() { global.DYPICK.reset(S.item); RM = null; V().closeModal(); }
     function saveRemap() {
         if (!RM.stageIds.length) { V().toast('업무단계를 하나 이상 선택해야 저장됩니다.'); return; }
         var r = D().remapLedger(RM.docId, RM.stageIds);
         if (!r.ok) { V().toast(r.reason); return; }
         V().closeModal(true);
         RM = null;
+        global.DYPICK.reset(S.item);
         DOCLIST.render();
         V().toast('업무단계 ' + r.doc.stageIds.length + '개를 지정했습니다 — 해당 단계가 진행중이 되었습니다.');
     }
@@ -612,9 +620,10 @@
 
     global.DOCLIST = {
         init: init, render: function () { dropIdx(); render(); },
-        setF: setF, resetF: resetF, toggleAdv: toggleAdv, toggle: toggle, go: go, pickCombo: pickCombo, setRemapQ: setRemapQ,
+        setF: setF, resetF: resetF, toggleAdv: toggleAdv, toggle: toggle, go: go, pickCombo: pickCombo,
         onTree: onTree, clearTree: clearTree, toggleMore: toggleMore,
-        openRemap: openRemap, saveRemap: saveRemap, toggleRemapStage: toggleRemapStage, mergeDup: mergeDup, doMerge: doMerge,
+        openRemap: openRemap, saveRemap: saveRemap, closeRemap: closeRemap, onRemapPick: onRemapPick,
+        mergeDup: mergeDup, doMerge: doMerge,
         state: S,
     };
 }(window));

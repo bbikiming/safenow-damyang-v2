@@ -57,6 +57,14 @@
             options: [{ k: 'waiting', label: '자료 대기' }, { k: 'received', label: '수신 완료' }]
         },
         {
+            /* 업무문서의 담당부서·담당자 — 새올·온나라에서 받는다(2026-08-13 확정).
+               2025년 문서 원장에는 부서 정보가 없어 지금은 '기록 없음' 으로 드러낸다. */
+            id: 'doc-dept-src', kind: 'integration', menu: '업무문서',
+            title: '새올행정시스템 · 온나라 문서 담당부서·담당자 연계 규격',
+            now: '지난 연도 문서에는 담당부서·담당자 값이 없어 «기록 없음» 으로 표시하고, 새로 올린 문서에만 값이 쌓입니다. 부서로 조회를 좁히지 않습니다 — 좁히면 주관부서 외 담당자에게 아무것도 보이지 않기 때문입니다. 연계가 열리면 부서 축을 조회 조건과 내 부서 보기에 함께 켭니다.',
+            options: [{ k: 'waiting', label: '규격 대기' }, { k: 'partial', label: '부분 연계' }, { k: 'received', label: '수신 완료' }]
+        },
+        {
             id: 'law-list', kind: 'data', menu: '법령·이행점검',
             title: '담양군 적용 관계 법령 목록',
             now: '법이 적용 법령을 기관별로 열거하지 않아 담양군 확인이 필요합니다. 수신 전에는 이미 근거가 확인된 법령만 표시하고 목록이 완결되지 않았음을 알리며, 근거 미지정 업무의 저장은 허용하되 전달 전에 경고합니다.',
@@ -100,7 +108,9 @@
         'edu-approval': ['doc-org', 'onnara', 'official-letter'],
         'edu-workers': ['hr-sync'], 'edu-status': ['hr-sync'],
         'admin-law': ['law-list'],
-        'docs-archive': ['doc-retain'], 'docs-preset': ['doc-retain'], 'docs-exec': ['doc-retain']
+        'docs-archive': ['doc-retain'],
+        'docs-preset': ['doc-retain', 'doc-dept-src', 'onnara'],
+        'docs-exec': ['doc-retain', 'doc-dept-src']
     };
 
     var KIND = {

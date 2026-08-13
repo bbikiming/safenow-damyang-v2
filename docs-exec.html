@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="./css/style.css">
     <link rel="stylesheet" href="./css/v2.css">
 </head>
-<body data-dy-page="docs-exec" data-page-title="이행 목록" data-page-subtitle="업무문서 &gt; 이행 목록 — 법정 이행항목별 하위 업무단계의 증빙 문서가 갖춰졌는지 봅니다">
+<body data-dy-page="docs-exec" data-page-title="이행 목록" data-page-subtitle="업무문서 &gt; 이행 목록 — 법으로 해야 하는 일이 서류로 갖춰졌는지 봅니다">
     <main>
         <div id="docs-exec"></div>
     </main>
@@ -17,6 +17,7 @@
     <div id="toast" class="toast"></div>
 
     <script src="./js/layout.js"></script>
+    <script src="./js/tour-core.js"></script><!-- DYTOUR 공용 투어 엔진 -->
     <script src="./js/law-map.js"></script>
     <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
     <script src="./js/data.js"></script>
@@ -33,11 +34,13 @@
     <script src="./js/doc-pick.js"></script><!-- DYPICK: 이행항목·업무단계 2단 선택기 -->
     <script src="./js/doc-upload.js"></script><!-- DOCUP: 업무 업로드 마법사 · 전년도 프리셋 -->
     <script src="./js/doc-exec.js"></script>
+    <script src="./js/doc-tour.js"></script><!-- DOCTOUR: 업무문서 시연 투어 -->
     <script>
         /* layout.js 가 DOMContentLoaded 에서 .dy-page-title 을 주입하므로 그 뒤에 붙는다
            — 먼저 돌면 제목 줄 액션(기준연도·업로드)이 붙을 자리가 없다 */
         document.addEventListener('DOMContentLoaded', function () {
             DOCEXEC.init(document.getElementById('docs-exec'));
+            DOCTOUR.boot();
         });
     </script>
 </body>
