@@ -50,9 +50,11 @@
  * 종전 rowKey(key, deptId) 에는 회차가 없어 상·하반기가 한 행을 공유했다.
  * 5월에 이행을 찍으면 11월 하반기 업무가 발행 즉시 완료로 파생되고 이듬해도
  * 영구 완료였다. 회차는 **호출자가 key 에 실어 보낸다**(이 모듈은 무수정).
- *   예) 'comply-industrial|2026-H1' · 'policy-post|2026'
+ *   예) 'comply-industrial|2026-H1'(반기) · 'policy-post|v2.0'(방침 버전)
+ *   회차 축은 그 업무가 무엇을 기준으로 다시 하는가로 정한다 — 의무 이행점검은
+ *   반기마다, 경영방침 게시는 **방침이 바뀔 때** 다시 붙인다.
  * 업무 자동발행(DYWORK.deptDone)이 이 key 로 완료를 파생한다. */
-var SKEY = 'dy-deptcheck-v3';
+var SKEY = 'dy-deptcheck-v4';   /* v4 — 경영방침 게시 회차 축을 연도 → 방침 버전으로 */
 
     /* 회의에서 확인된 전체 대상 수(과 + 사업소). 실제 명단은 발주처 제공 대기. */
     var EXPECTED_DEPTS = 39;
@@ -77,7 +79,7 @@ var SKEY = 'dy-deptcheck-v3';
     function ph(n) { return { name: n, size: 164000, type: 'image/jpeg', w: 1600, h: 1200, thumb: SEED_THUMB }; }
     var SEED = {
         /* 경영방침 게시 — 게시 4 · 미게시 5 · 해당없음(사유O) 1 · 해당없음(사유X) 1 */
-        'policy-post|2026': {
+        'policy-post|v2.0': {
             safety:   { status: 'DONE', place: '군청 본관 1층 게시판', date: '2026-03-04', photos: [ph('재난안전과_게시_1.jpg')] },
             env:      { status: 'DONE', place: '환경과 사무실 입구', date: '2026-03-05', photos: [ph('환경과_게시_1.jpg')] },
             water:    { status: 'DONE', place: '물순환사업소 정문 게시판', date: '2026-03-06', photos: [ph('물순환_게시_1.jpg'), ph('물순환_게시_2.jpg')] },

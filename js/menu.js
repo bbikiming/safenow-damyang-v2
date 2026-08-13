@@ -613,8 +613,8 @@
             /* ===== 뷰 빌더 ===== */
             function renderListPolicy() {
                 if (!S.VERSIONS.length) return subtabs + sectionCard('경영방침', '<div style="text-align:center; padding:44px 20px; color:var(--text-gray);">등록된 경영방침이 없습니다.<br><br><button class="btn btn-primary" onclick="PG.polNew()">최초 등록</button></div>', '');
-                const body = '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>버전</th><th>방침명</th><th>반기 점검</th><th>온나라 결재 상태</th></tr></thead><tbody>' +
-                    S.VERSIONS.map(v => '<tr style="cursor:pointer;" onclick="PG.polOpen(\'' + v.ver + '\')"><td><b>v' + v.ver + '</b> ' + typeChip(v.type) + '</td><td>' + V.esc(v.title) + '</td><td>' + checkChip(v) + '</td><td>' + apprChip(v.appr) + '</td></tr>').join('') +
+                const body = '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>버전</th><th>상태</th><th>방침명</th><th>반기 점검</th><th>온나라 결재 상태</th></tr></thead><tbody>' +
+                    S.VERSIONS.map(v => '<tr style="cursor:pointer;" onclick="PG.polOpen(\'' + v.ver + '\')"><td><b>v' + v.ver + '</b> ' + typeChip(v.type) + '</td><td>' + stateChip(v) + '</td><td>' + V.esc(v.title) + '</td><td>' + checkChip(v) + '</td><td>' + apprChip(v.appr) + '</td></tr>').join('') +
                     '</tbody></table></div>';
                 return subtabs + sectionCard('경영방침 (' + S.VERSIONS.length + '건)', body, '<button class="btn btn-sm btn-primary" onclick="PG.polNew()">+ 등록</button>');
             }
@@ -646,7 +646,15 @@
              * 부서 축 표는 의무 이행점검과 같은 엔진(DEPTCHK)을 쓴다 — 회의 결론이
              * "경영방침 원본은 계획에서, 게시 여부는 이행점검에서 확인"이라 축이 같기 때문이다. */
             /* 회차 축 — 게시 확인은 연 단위다(dept-check.js v3 주석 참고) */
-            const BOARD_KEY = 'policy-post|' + DYV2.today().slice(0, 4);
+            /* 게시 확인의 **회차 축은 방침 버전**이다 (dept-check.js v3 주석과 같은 근거).
+             * 연도만 넣으면 방침을 개정해도 옛 방침 게시 기록이 그대로 '게시함'으로 남아,
+             * 새 방침을 아직 안 붙인 부서가 완료로 보인다. 방침이 바뀌면 다시 붙여야 하므로
+             * 현행본 버전이 바뀌는 순간 게시 현황도 처음부터 다시 받는 것이 맞다.
+             * 현행본이 없으면(승인 0건) 게시를 물을 대상 자체가 없다. */
+            const BOARD_KEY = (function () {
+                const a = POL.active && POL.active();
+                return 'policy-post|v' + (a ? a.ver : '-');
+            })();
             const boardOpts = () => ({
                 ns: 'PG.POLCHK', title: '경영방침 게시 확인',
                 labels: { DONE: '게시', TODO: '미게시', NA: '해당없음' }, statusLabel: '게시 여부', rateLabel: '게시율',
