@@ -559,7 +559,11 @@
             memo: deptName(deptId) + (fileName ? ' 부서 설문조사표 첨부 · ' + fileName : ' 부서 설문조사표 삭제(공통본 적용)') });
         save(); return dp;
     }
-    /* ===== 부서별 보고서 첨부 (2026-07-30 회의 확정) =====
+    /* ===== 부서 설문조사표 제출본 (필드명 reportFile · 2026-07-30 회의 확정) =====
+     * ⚠ 이 필드가 담는 것은 **부서가 작성해 낸 설문조사표 작성본**이다. 용역업체 보고서는
+     * 통합본 하나(`a.files.report`)뿐이고 부서별 보고서라는 것은 없다 — 화면 라벨을
+     * '부서 보고서'로 쓰지 말 것(2026-08-14 정정, rsk-list.js deptFilesBar 주석 참고).
+     * 아래 회의 기록은 이 필드가 처음 생긴 배경이다.
      * 용역업체 보고서는 **부서별로 쪼개진 한글 파일**로 오고, 그것을 합친 통합 PDF 가 따로 있다.
      * 회의 결론은 통합본 1건을 올려 시스템이 부서별로 자동 분배하는 방식이 아니라,
      * **처음부터 부서별로 나눠 올리는 것**이다 —
@@ -577,7 +581,7 @@
         dp.reportAt = fileName ? today() : '';
         dp.reportBy = fileName ? (by || '재난안전과') : '';
         pushHistory(aid, { type: 'FILE', by: by || '재난안전과',
-            memo: deptName(deptId) + (fileName ? ' 설문조사표 작성본 제출 · ' + fileName : ' 부서 보고서 삭제') });
+            memo: deptName(deptId) + (fileName ? ' 설문조사표 작성본 제출 · ' + fileName : ' 설문조사표 제출본 삭제') });
         save(); return dp;
     }
     /* 부서별 보고서 첨부 진행률 */

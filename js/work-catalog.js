@@ -282,7 +282,8 @@
         scopeAttr: ['riskSite'],
         /* 대상은 그 해 정기평가의 a.depts 를 따른다 — 속성 파생은 폴백이다 */
         deptSource: 'RSK',
-        href: 'rsk-imp.html', destLabel: '개선조치',
+        /* 개선조치는 독립 메뉴가 아니다 — 정기평가 화면 안에서 처리한다(2026-08-14) */
+        href: 'rsk-list.html', destLabel: '정기 위험성평가',
         doneProbe: 'RSK:improve',
         slots: [], setRef: ['B1', 'B4'],
         confidence: { cycle: 'High', timing: 'Low' },

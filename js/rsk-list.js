@@ -133,13 +133,45 @@
         if (p.tier !== 'staff') return false;       /* 총괄·관리감독자는 조회 전용 */
         return p.deptId === OWNER_DEPT;             /* 재난안전과 담당자 */
     }
+    /* ===== 부서별 개선조치 작성 권한 (2026-08-14 발주처 지시) =====
+     * "부서별 개선조치 입력이니까 담당자로 지정된 부서에서 확인하고 설정할 수 있어야 해"
+     * 작성 대상이 그 부서의 조치 내용이므로 **그 부서 담당자도 같은 표에서 직접 적는다.**
+     * 창구만 둘이고(이 화면의 인라인 표 · 내 할일의 업로드) 데이터는 하나다 —
+     * 별도 '개선조치' 메뉴로 보내지 않는다(그 메뉴는 없앴다).
+     * 열리는 범위는 **자기 부서 블록 하나**다. 남의 부서 조치를 적는 것은 조회 범위(§12)
+     * 위반이자 저작 위조다. 판정은 DYROLE.canAct 단일 출처를 함께 본다.
+     * 단계 진행(보고서 취소·재업로드 · 작성완료·조치기한 설정)은 여전히 주관부서 몫이다 —
+     * 기한을 정하는 것은 총괄이고, 부서가 자기 기한을 정하는 흐름이 아니다. */
+    function canWriteReview(deptId) {
+        if (canManage()) return true;
+        var p = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
+        if (!p) return true;                        /* 롤 스위처가 없는 환경은 종전대로 */
+        if (p.tier !== 'staff') return false;       /* 관리·감독은 조회 전용 */
+        if (!deptId || p.deptId !== deptId) return false;
+        return !global.DYROLE.canAct || global.DYROLE.canAct(deptId);
+    }
+    /* 작성 패널을 주관부서가 아닌 사람에게도 보여줄지 — 내 부서가 이 평가의 대상이고
+       작성 단계(REVIEW)일 때만이다. 대상이 아니면 종전대로 조회 전용 표를 그린다. */
+    function myReviewDept(a) {
+        if (!a || ((a.review && a.review.stage) || 'NONE') !== 'REVIEW') return '';
+        var p = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
+        var mine = (p && p.deptId) || '';
+        if (!mine || !canWriteReview(mine)) return '';
+        return (a.depts || []).some(function (x) { return x.deptId === mine; }) ? mine : '';
+    }
     /* 차단 안내 — 재난안전과장에게 "재난안전과만 할 수 있다"고 하면 거짓말이 된다.
        같은 화면의 조회 전용 안내(manageNote)와 같은 말을 해야 한다. */
-    function denyToast() {
+    function denyToast(deptId) {
         var p = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
+        /* 부서 담당자가 남의 부서 행을 건드린 경우 — '재난안전과만'이라고 하면 거짓말이다.
+           자기 부서 블록은 열려 있으므로 그 사실을 함께 알린다. */
+        if (deptId && p && p.tier === 'staff' && p.deptId && p.deptId !== deptId && p.deptId !== OWNER_DEPT) {
+            toast('다른 부서의 개선조치는 그 부서 담당자가 적습니다 — 내 부서 블록에서 작성하세요.');
+            return;
+        }
         toast(p && p.deptId === OWNER_DEPT
             ? '주관부서 안에서도 담당자(주무관)만 수행할 수 있습니다.'
-            : '주관부서(재난안전과) 담당자만 수행할 수 있습니다.');
+            : '개선조치 작성은 주관부서(재난안전과) 담당자와 해당 부서 담당자가 수행합니다.');
     }
     /* 권한이 없을 때 관리 버튼 자리에 넣는 안내 — 버튼을 그냥 지우면 '왜 없지'가 된다.
      * 어휘 기준은 my-work.js readOnlyNote() (head / super / 타 부서) 와 맞춘다.
@@ -265,13 +297,14 @@
                     : (returnedN
                         ? doneN + ' / ' + ms.length + '건 완료 · 반려 ' + returnedN + '건 재조치 필요'
                         : doneN + ' / ' + ms.length + '건 완료'),
-                /* 완료 처리는 개선조치 상세(rsk-imp-detail)가 자족 경로를 갖는다.
-                   '내 할일'로 보내면 이 축을 떼어 개발할 수 없으므로 대장으로 잇는다 —
-                   대장은 조회 범위가 걸려 있어 자기 부서 건만 보인다. */
+                /* 완료 처리는 **이 화면 안에서** 끝난다 (2026-08-14 발주처 지시) —
+                   개선조치는 독립 메뉴가 아니므로 rsk-imp 대장으로 내보내지 않는다.
+                   [개선조치 완료 처리] → 부서 상세(IMPCARD) 카드의 [완료 처리] 로 이어지고,
+                   같은 데이터를 '내 할일'에서 올려도 같은 곳에 쌓인다(창구만 둘이다). */
                 act: ((!closed || returnedN) && ms.length && doneN < ms.length)
                     ? (isStaff
-                        ? '<a class="btn btn-primary btn-sm" href="rsk-imp.html?status=IN_PROGRESS">' +
-                          '개선조치에서 마무리 →</a>'
+                        ? '<button type="button" class="btn btn-primary btn-sm" data-tour="rsk-complete" ' +
+                          'onclick="RSKLIST.openDept(\'' + esc(mine) + '\')">개선조치 완료 처리</button>'
                         /* 감독자의 행동은 '대신 처리'가 아니라 '재촉'이다 (산안법 §16 지휘·감독) */
                         : '<button type="button" class="btn btn-outline btn-sm" onclick="RSKLIST.remindDept(\'' +
                           esc(mine) + '\')">기한초과 재촉</button>')
@@ -365,10 +398,13 @@
                 '<button class="rl-tab ' + (state.tab === 'history' ? 'on' : '') + '" onclick="RSKLIST.setTab(\'history\')">이력</button>' +
             '</div>';
 
-        var body = state.tab === 'depts'
-            ? (canManage() ? confirmBanner(a) + docBar(a) + renderDepts(a)
-                           : confirmBanner(a) + docBar(a) + manageNote(a) + renderDeptsReadOnly(a))
-            : renderHistory(a);
+        /* 작성 단계에서는 대상 부서 담당자도 **자기 부서 블록**을 직접 적는다(위 canWriteReview).
+           그래서 조회 전용 표 대신 작성 패널을 그린다 — 같은 데이터, 같은 표다. */
+        var body;
+        if (state.tab !== 'depts') body = renderHistory(a);
+        else if (canManage()) body = confirmBanner(a) + docBar(a) + renderDepts(a);
+        else if (myReviewDept(a)) body = confirmBanner(a) + docBar(a) + renderReviewPanel(a);
+        else body = confirmBanner(a) + docBar(a) + manageNote(a) + renderDeptsReadOnly(a);
         state.mount.innerHTML = head + myDeptPanel(a) + summary + tabs + body;
     }
 
@@ -643,6 +679,14 @@
         toast(D().deptName(deptId) + ' 제출본 삭제');
         render();
     }
+    /* 용역 통합 보고서 열기 — 부서별 개선조치를 적을 때 근거로 여는 문서다.
+       프로토타입이라 실제 파일이 없으므로 그 사실을 알린다. */
+    function openIntegratedReport() {
+        var a = current(); if (!a) return;
+        var f = a.files && a.files.report;
+        if (!f) { toast('첨부된 통합 보고서가 없습니다.'); return; }
+        toast('통합 보고서 열기: ' + f + ' (프로토타입 — 실제 파일 뷰어는 미연결)');
+    }
     /* 제출본 열기 — 프로토타입이라 실제 파일이 없다. 없는 동작을 약속하지 않고 그 사실을 알린다. */
     function openDeptReportFile(deptId) {
         var a = current(); if (!a) return;
@@ -821,7 +865,7 @@
         var deptTable =
             '<div class="rl-card"><div class="rl-card-title">부서별 조치</div>' +
                 '<div class="rl-table-scroll"><table class="rl-dept-table"><thead><tr>' +
-                    '<th>부서</th><th>점검일</th><th>설문조사표</th><th>부서 보고서</th><th>개선건수</th><th>조치기한</th><th>상태</th><th>관리</th>' +
+                    '<th>부서</th><th>점검일</th><th>설문조사표 양식</th><th>설문조사표 제출본</th><th>개선건수</th><th>조치기한</th><th>상태</th><th>관리</th>' +
                 '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
                 excludedNote +
             '</div>';
@@ -868,17 +912,18 @@
                 ? '<span style="color:var(--text-gray);">-</span>'
                 : '<button type="button" class="rl-file-btn" onclick="RSKLIST.openDeptSurvey(\'' + dp.deptId + '\')">＋ 설문조사표 첨부</button>';
         }
-        /* 부서 보고서 — 용역업체가 부서별로 쪼개 준 보고서를 그 부서 행에 직접 붙인다.
+        /* 설문조사표 제출본 — 그 부서가 양식을 받아 작성해 낸 파일이다(용역 보고서가 아니다).
+         * 부서 담당자 본인 제출은 openMySubmit, 이 칸은 주관부서의 대리 등록 경로다.
          * 대상 부서는 점검일(방문일)을 지정한 이 목록에서 그대로 이어지므로 부서를 다시 고르지 않는다. */
         var reportCell;
         if (dp.reportFile) {
-            reportCell = '<button type="button" class="rl-file-btn" onclick="RSKLIST.openDeptReportFile(\'' + dp.deptId + '\')" title="보고서 열기">📄 ' + esc(dp.reportFile) + '</button>' +
+            reportCell = '<button type="button" class="rl-file-btn" onclick="RSKLIST.openDeptReportFile(\'' + dp.deptId + '\')" title="제출본 열기">📄 ' + esc(dp.reportFile) + '</button>' +
                 (locked ? '' : ' <button type="button" class="rl-file-btn" onclick="RSKLIST.openDeptReport(\'' + dp.deptId + '\')">교체</button>' +
                     ' <button type="button" class="rl-file-btn" onclick="RSKLIST.clearDeptReport(\'' + dp.deptId + '\')">×</button>');
         } else {
             reportCell = locked
                 ? '<span style="color:var(--text-gray);">-</span>'
-                : '<button type="button" class="rl-file-btn" onclick="RSKLIST.openDeptReport(\'' + dp.deptId + '\')">＋ 보고서 첨부</button>';
+                : '<button type="button" class="rl-file-btn" onclick="RSKLIST.openDeptReport(\'' + dp.deptId + '\')">＋ 제출본 대리 등록</button>';
         }
         var impCell = c.total ? c.done + ' / ' + c.total : '<span style="color:var(--text-gray);">-</span>';
         var dueCell = dp.dueDate
@@ -913,7 +958,7 @@
         var body;
         if (stage === 'NONE') {
             body = '<button type="button" class="rl-file-btn" data-tour="rsk-report" onclick="RSKLIST.uploadReport()">＋ 통합 보고서 첨부</button>' +
-                '<span style="font-size:12px;color:var(--text-gray);">전체 통합본을 첨부하면 <b>부서별 개선조치 작성표</b>가 열립니다. 부서별 원본은 아래 표의 <b>[부서 보고서]</b>에 각각 첨부하세요.</span>';
+                '<span style="font-size:12px;color:var(--text-gray);">전체 통합본을 첨부하면 <b>부서별 개선조치 작성표</b>가 열립니다. 용역 보고서는 통합본 하나이며, 부서가 낸 <b>설문조사표 제출본</b>은 아래 표에서 따로 관리합니다.</span>';
         } else if (stage === 'REVIEW') {
             var pd0 = (review.parsedDepts || {});
             var totalRows = 0;
@@ -940,30 +985,42 @@
        담당자가 부서별 보고서를 열어 보고 **직접** 개선조치를 적는다(자동 추출 없음 — 2026-07-30 회의).
        이 단계에서는 유해위험요인·분류·원인·개선조치 내용만 다루고,
        조치기한은 다음 단계 [조치기한 설정] 모달에서 일괄+부서별로 지정한다. */
-    /* 부서 작성 블록 상단의 자료 바 — **보고서를 열어 보며 적는 단계이므로 여기서 열려야 한다.**
-     * 종전에는 부서별 보고서·설문조사표 첨부가 '부서별 조치' 표에만 있었는데, 작성(REVIEW) 단계에서는
-     * 그 표가 검수 패널로 교체돼 사라졌다. "이 부서의 보고서를 열어 보고 적으세요"라고 안내하면서
+    /* 부서 작성 블록 상단의 자료 바 — **자료를 열어 보며 적는 단계이므로 여기서 열려야 한다.**
+     * 종전에는 제출본·설문조사표 첨부가 '부서별 조치' 표에만 있었는데, 작성(REVIEW) 단계에서는
+     * 그 표가 검수 패널로 교체돼 사라졌다. "이 부서의 자료를 열어 보고 적으세요"라고 안내하면서
      * 정작 열 수 없는 상태였다. 설문조사표도 발주처 요구(녹취 264 "조치 보고서 끝나기 전까지만
-     * 첨부하면 돼요")대로 이 단계에서 계속 붙일 수 있어야 한다. */
+     * 첨부하면 돼요")대로 이 단계에서 계속 붙일 수 있어야 한다.
+     *
+     * ⚠ 라벨을 '부서 보고서'로 쓰지 말 것 (2026-08-14 정정) — 이 자리의 값은 `dp.reportFile`
+     * 이고 그것이 담는 것은 **부서가 작성해 낸 설문조사표 작성본**이다(setDeptReport 참고).
+     * 용역업체 보고서는 통합본 하나(`a.files.report`)뿐이라 부서별 보고서라는 것이 없는데,
+     * 종전 라벨이 '부서 보고서'여서 설문조사표 제출본이 용역 보고서로 읽혔다. */
     function deptFilesBar(a, deptId) {
         var dp = (a.depts || []).filter(function (x) { return x.deptId === deptId; })[0] || {};
         var common = (a.files && a.files.surveyAll) || '';
+        /* 제출본 교체·대리 등록은 주관부서 몫이다 — 부서 담당자의 제출 경로는
+           설문조사표 제출(openMySubmit)이고 보고서 등록 뒤에는 이미 잠긴다. */
         var rep = dp.reportFile
             ? '<button type="button" class="rl-file-btn" onclick="RSKLIST.openDeptReportFile(\'' + deptId + '\')">📄 ' + esc(dp.reportFile) + '</button>' +
-              ' <button type="button" class="rl-file-btn" onclick="RSKLIST.openDeptReport(\'' + deptId + '\')">교체</button>'
-            : '<button type="button" class="rl-file-btn" onclick="RSKLIST.openDeptReport(\'' + deptId + '\')">＋ 부서 보고서 첨부</button>' +
-              ' <span class="rl-files-warn">보고서를 첨부해야 무엇을 조치할지 확인할 수 있습니다</span>';
-        /* 설문조사표는 이 단계(보고서 등록 후)에서는 **열람만** 한다 — 첨부 시점은 보고서 등록 전까지다.
+              (canManage() ? ' <button type="button" class="rl-file-btn" onclick="RSKLIST.openDeptReport(\'' + deptId + '\')">교체</button>' : '')
+            : '<span class="rl-files-warn">미제출</span>' +
+              (canManage() ? ' <button type="button" class="rl-file-btn" onclick="RSKLIST.openDeptReport(\'' + deptId + '\')">＋ 대리 등록</button>' : '');
+        /* 설문조사표 양식은 이 단계(보고서 등록 후)에서는 **열람만** 한다 — 첨부 시점은 보고서 등록 전까지다.
          * 방금 무엇을 근거로 조치를 적는지 확인은 되어야 하므로 파일명은 계속 보여준다. */
         var applied = dp.surveyFile || common;
         var sur = applied
             ? '<span class="rl-tiny-file">' + esc(applied) + '</span>' +
               (dp.surveyFile ? '' : '<span class="rl-survey-tag">공통</span>') +
               '<span class="rl-survey-lock">🔒 열람</span>'
-            : '<span class="rl-files-warn">설문조사표 미첨부 — 보고서 등록 전에만 붙일 수 있습니다</span>';
+            : '<span class="rl-files-warn">설문조사표 양식 미첨부 — 보고서 등록 전에만 붙일 수 있습니다</span>';
+        /* 조치 내용의 근거는 용역업체 **통합** 보고서다 — 열 수 있어야 한다. */
+        var integ = (a.files && a.files.report)
+            ? '<button type="button" class="rl-file-btn" onclick="RSKLIST.openIntegratedReport()">📄 ' + esc(a.files.report) + '</button>'
+            : '<span class="rl-files-warn">미첨부</span>';
         return '<div class="rl-files-bar">' +
-            '<span class="rl-files-item"><span class="rl-files-k">부서 보고서</span>' + rep + '</span>' +
-            '<span class="rl-files-item"><span class="rl-files-k">설문조사표</span>' + sur + '</span>' +
+            '<span class="rl-files-item"><span class="rl-files-k">용역 통합 보고서</span>' + integ + '</span>' +
+            '<span class="rl-files-item"><span class="rl-files-k">설문조사표 양식</span>' + sur + '</span>' +
+            '<span class="rl-files-item"><span class="rl-files-k">설문조사표 제출본</span>' + rep + '</span>' +
         '</div>';
     }
 
@@ -983,7 +1040,11 @@
     function renderReviewPanel(a) {
         var pd = (a.review && a.review.parsedDepts) || {};
         var totalRows = 0;
-        var deptIds = (a.depts || []).map(function (dp) { return dp.deptId; });
+        var owner = canManage();
+        /* 부서 담당자에게는 **자기 부서 블록만** 그린다 — 남의 부서 조치 내용은
+           조회 범위 밖이다(§12). 주관부서는 종전대로 전 부서를 본다. */
+        var deptIds = (a.depts || []).map(function (dp) { return dp.deptId; })
+            .filter(function (id) { return owner || canWriteReview(id); });
         var deptBlocks = deptIds.map(function (deptId) {
             var rows = pd[deptId] || [];
             totalRows += rows.length;
@@ -999,7 +1060,7 @@
             var body = '';
             if (open) {
                 var tbody = rows.map(function (r, i) { return reviewRow(a.id, deptId, i, r); }).join('');
-                if (!rows.length) tbody = '<tr><td colspan="9" style="text-align:center;color:var(--text-gray);padding:14px;">이 부서의 보고서를 열어 보고 [＋행 추가]로 조치할 내용을 적으세요.</td></tr>';
+                if (!rows.length) tbody = '<tr><td colspan="9" style="text-align:center;color:var(--text-gray);padding:14px;">위 자료(통합 보고서·설문조사표 제출본)를 열어 보고 [＋행 추가]로 조치할 내용을 적으세요.</td></tr>';
                 body = '<div class="rl-rv-dept-body">' +
                     deptFilesBar(a, deptId) +
                     '<div class="rl-rv-scroll"><table class="rl-rv-table"><thead><tr>' +
@@ -1021,9 +1082,21 @@
         }).join('');
 
         var hasRows = totalRows > 0;
-        var footNote = hasRows
-            ? '<span style="color:var(--text-gray);">[＋행 추가]로 부서별 조치 내용을 모두 적은 뒤 <b>[작성완료 · 조치기한 설정]</b>으로 진행하세요.</span>'
-            : '<span style="color:var(--status-warning-fg);font-weight:700;">아직 작성한 항목이 없습니다. [＋행 추가]로 최소 1건을 입력해야 다음 단계로 갈 수 있습니다.</span>';
+        /* 부서 담당자에게는 자기 부서 몫의 안내를 낸다 — 조치기한 설정은 주관부서가 한다.
+           도달할 수 없는 버튼을 안내에 쓰지 않는다(§4-3 "도달 가능한 행동만 약속한다"). */
+        var footNote = owner
+            ? (hasRows
+                ? '<span style="color:var(--text-gray);">[＋행 추가]로 부서별 조치 내용을 모두 적은 뒤 <b>[작성완료 · 조치기한 설정]</b>으로 진행하세요.</span>'
+                : '<span style="color:var(--status-warning-fg);font-weight:700;">아직 작성한 항목이 없습니다. [＋행 추가]로 최소 1건을 입력해야 다음 단계로 갈 수 있습니다.</span>')
+            : (hasRows
+                ? '<span style="color:var(--text-gray);">적은 내용은 <b>즉시 저장</b>됩니다. 조치기한은 주관부서(재난안전과)가 설정합니다.</span>'
+                : '<span style="color:var(--text-gray);">[＋행 추가]로 우리 부서 조치 내용을 적으세요. 내용은 <b>즉시 저장</b>되고, 조치기한은 주관부서(재난안전과)가 설정합니다.</span>');
+        /* 단계 진행 버튼은 주관부서만 — 없는 권한의 1차 CTA 를 띄우지 않는다 */
+        var footActions = owner
+            ? '<button type="button" class="btn btn-secondary" onclick="RSKLIST.clearReport()">보고서 취소·재업로드</button>' +
+              '<button type="button" class="btn btn-primary"' + (hasRows ? '' : ' disabled style="opacity:.5;cursor:not-allowed;"') +
+                  ' data-tour="rsk-deliver" onclick="RSKLIST.openDueSet()">작성완료 · 조치기한 설정 →</button>'
+            : '';
 
         return '<div class="rl-card rl-rv-card">' +
             '<div class="rl-card-title" style="justify-content:space-between;">' +
@@ -1031,17 +1104,16 @@
                 '<span style="font-size:12px;color:var(--text-gray);font-weight:400;">시작 ' + esc(a.review.extractedAt || '') + ' · 총 ' + totalRows + '건</span>' +
             '</div>' +
             '<p style="font-size:12px;color:var(--text-gray);margin-bottom:12px;">' +
-                '용역업체 보고서를 <b>시스템이 자동으로 옮기지 않습니다</b> — 부서별 보고서를 열어 보고 조치할 내용을 <b>직접</b> 적습니다. ' +
-                '현재 <b>' + totalRows + '건</b> 작성됨. 조치기한은 다음 단계 [조치기한 설정] 모달에서 <b>일괄·부서별</b>로 지정합니다.' +
+                '용역업체 보고서를 <b>시스템이 자동으로 옮기지 않습니다</b> — 부서 블록 상단의 <b>통합 보고서</b>를 열어 보고 조치할 내용을 <b>직접</b> 적습니다. ' +
+                '현재 <b>' + totalRows + '건</b> 작성됨. ' +
+                (owner
+                    ? '조치기한은 다음 단계 [조치기한 설정] 모달에서 <b>일괄·부서별</b>로 지정합니다. 대상 부서 담당자도 자기 부서 블록을 같은 표에서 직접 적을 수 있습니다.'
+                    : '<b>우리 부서 블록</b>만 표시되며, 여기서 적은 내용은 주관부서가 보는 것과 <b>같은 데이터</b>입니다 — <b>내 할일</b>에서 증빙을 올려도 같은 곳에 쌓입니다.') +
             '</p>' +
             deptBlocks +
             '<div class="rl-rv-foot">' +
                 '<div class="rl-rv-foot-note">' + footNote + '</div>' +
-                '<div class="rl-rv-foot-actions">' +
-                    '<button type="button" class="btn btn-secondary" onclick="RSKLIST.clearReport()">보고서 취소·재업로드</button>' +
-                    '<button type="button" class="btn btn-primary"' + (hasRows ? '' : ' disabled style="opacity:.5;cursor:not-allowed;"') +
-                        ' data-tour="rsk-deliver" onclick="RSKLIST.openDueSet()">작성완료 · 조치기한 설정 →</button>' +
-                '</div>' +
+                '<div class="rl-rv-foot-actions">' + footActions + '</div>' +
             '</div>' +
         '</div>';
     }
@@ -1190,7 +1262,7 @@
         var a = (D().assessments(state.year) || [])[0]; if (!a) return;
         surveyModal('용역업체 통합 보고서 첨부',
             '<p style="font-size:var(--fs-13);">전체 통합본을 첨부하면 <b>' + (a.depts || []).length + '개 부서</b>의 ' +
-            '개선조치 작성표가 열립니다. 부서별 원본은 표의 <b>[부서 보고서]</b>에 각각 첨부하세요.</p>',
+            '개선조치 작성표가 열립니다. 용역 보고서는 이 통합본 하나이며, 부서가 낸 설문조사표 제출본과는 별개입니다.</p>',
             a.year + '_정기평가_통합보고서.pdf', 'RSKLIST.doUploadReport()', { what: '통합 보고서' });
     }
     function doUploadReport() {
@@ -1232,18 +1304,18 @@
         render();
     }
     function reviewSet(deptId, i, k, v) {
-        if (!canManage()) { denyToast(); return; }
+        if (!canWriteReview(deptId)) { denyToast(deptId); return; }
         var a = (D().assessments(state.year) || [])[0]; if (!a) return;
         D().reviewSet(a.id, deptId, i, k, v);
     }
     function reviewDel(deptId, i) {
-        if (!canManage()) { denyToast(); return; }
+        if (!canWriteReview(deptId)) { denyToast(deptId); return; }
         var a = (D().assessments(state.year) || [])[0]; if (!a) return;
         D().reviewDel(a.id, deptId, i);
         render();
     }
     function reviewAdd(deptId) {
-        if (!canManage()) { denyToast(); return; }
+        if (!canWriteReview(deptId)) { denyToast(deptId); return; }
         var a = (D().assessments(state.year) || [])[0]; if (!a) return;
         D().reviewAdd(a.id, deptId);
         /* 시설물 위험도에서 넘어왔으면 새 행에 그 시설물을 미리 채운다 —
@@ -1270,7 +1342,7 @@
     var ROW = null;       /* 열려 있는 행 {deptId, i} */
     var PREVIEW = null;   /* 펼쳐 둔 미리보기 {kind:'before'|'after', n} */
     function openRowOwner(deptId, i) {
-        if (!canManage()) { denyToast(); return; }
+        if (!canWriteReview(deptId)) { denyToast(deptId); return; }
         var r = rowOf(deptId, i); if (!r) return;
         ROW = { deptId: deptId, i: i };
         V().openModal('개선조치 담당자 지정',
@@ -1312,7 +1384,7 @@
      * 조직도 선택기와 같은 GUI 를 쓰되 데이터만 대장이다(DYFACIL.toggle).
      * 이 값이 개선조치까지 승계되어(js/rsk-data.js) 시설물 상세에 조치 내역으로 쌓인다. */
     function openRowFacil(deptId, i) {
-        if (!canManage()) { denyToast(); return; }
+        if (!canWriteReview(deptId)) { denyToast(deptId); return; }
         var r = rowOf(deptId, i); if (!r) return;
         if (!global.DYFACIL) { toast('시설물 대장을 불러오지 못했습니다.'); return; }
         ROW = { deptId: deptId, i: i };
@@ -1377,7 +1449,7 @@
      * 발주처: "개선 전 개선 후가 없어요. 이 개선 후를 사진을 올리기만 하면 돼요"(녹취 222)
      * 실제 파일을 고른다(DYV2.uploadDrop opts.pick — 형식·용량 검증 포함). */
     function openRowPhotos(deptId, i) {
-        if (!canManage()) { denyToast(); return; }
+        if (!canWriteReview(deptId)) { denyToast(deptId); return; }
         var r = rowOf(deptId, i); if (!r) return;
         ROW = { deptId: deptId, i: i };
         PREVIEW = null;
@@ -1465,7 +1537,7 @@
 
     /* ===== 행 완료 체크 ===== */
     function reviewDone(deptId, i, on) {
-        if (!canManage()) { denyToast(); return; }
+        if (!canWriteReview(deptId)) { denyToast(deptId); return; }
         var r = rowOf(deptId, i); if (!r) return;
         if (on && !(r.afterPhotos || []).length) {
             toast('개선 후 사진을 올려야 완료로 체크할 수 있습니다.');
@@ -1573,7 +1645,8 @@
                 (dp.reportFile ? '<span>부서 제출본 <b>' + esc(dp.reportFile) + '</b></span>' : '') +
                 (dp.deliveredAt ? '<span>전달일 <b>' + esc(dp.deliveredAt) + '</b></span>' : '') +
                 (dp.dueDate ? '<span>조치기한 <b>' + esc(dp.dueDate) + '</b></span>' : ''),
-            noteHtml: '부서 담당자는 <b>개선조치</b>에서 완료 처리·재촉 응답을 수행합니다.',
+            noteHtml: '부서 담당자는 <b>이 카드에서 바로</b> 완료 처리·재촉 응답을 합니다 — ' +
+                '같은 건을 <b>내 할일</b>에서 올려도 같은 곳에 쌓입니다.',
             items: function () { return D().improvementsFor(a.id, deptId); },
             canRemind: a.status !== 'COMPLETED',
             onRemind: 'RSKLIST.remindOne',
@@ -1813,7 +1886,7 @@
         openDeptReport: openDeptReport, doDeptReport: doDeptReport, clearDeptReport: clearDeptReport,
         /* 부서 담당자 본인의 설문조사표 제출 — '내 할일' 없이도 이 축이 닫히게 하는 경로 */
         openMySubmit: openMySubmit, doMySubmit: doMySubmit, dlForm: dlForm,
-        openDeptReportFile: openDeptReportFile,
+        openDeptReportFile: openDeptReportFile, openIntegratedReport: openIntegratedReport,
         /* 실제 파일 선택 콜백 (DYV2.uploadDrop opts.pick) */
         onPickFile: onPickFile, clearPick: clearPick,
         /* 보고서 첨부·교체 (개선 건수 확인 단계) */

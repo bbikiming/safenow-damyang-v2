@@ -73,13 +73,6 @@
     /* 받침에 맞는 조사 (DYTOUR 가 노출) */
     function jo(w, a, b) { return global.DYTOUR ? global.DYTOUR.josa(w, a, b) : a; }
 
-    /* 시연 대상 개선조치 — 그 부서의 미완료 건 중 첫 건. id 를 저장하지 않는 이유는
-       진행 판정과 같다(초기화·재시연 때 옛 id 를 가리킨 채 멈춘다). */
-    function openImp() {
-        var ms = imps().filter(function (m) { return m.status !== 'DONE'; });
-        return ms[0] || imps()[0] || null;
-    }
-
     var STEPS = [
         {
             key: 'create', label: '생성', page: 'rsk-list.html',
@@ -221,27 +214,29 @@
             }
         },
         {
-            /* 상세 화면에서 완료 처리가 이뤄지므로 그 건으로 바로 데려간다 —
-               목록에 세워 두면 어느 행을 눌러야 하는지 투어가 말해 주지 못한다. */
-            key: 'complete', label: '조치완료', page: 'rsk-imp-detail.html',
+            /* 완료 처리는 **이 화면 안에서** 한다 (2026-08-14 발주처 지시) — 개선조치는
+               독립 메뉴가 아니므로 rsk-imp 대장·상세로 투어가 나가지 않는다.
+               [개선조치 완료 처리] → 부서 상세(IMPCARD) 카드의 [완료 처리] 가 그 경로다. */
+            key: 'complete', label: '조치완료', page: 'rsk-list.html',
             persona: deptPersona, scopeDept: demoDept,
-            href: function () { var m = openImp(); return m ? 'rsk-imp-detail.html?id=' + m.id : 'rsk-imp.html'; },
-            selector: '[data-tour="imp-complete"]',
+            href: function () { return 'rsk-list.html'; },
+            selector: '[data-tour="rsk-complete"]',
             title: '부서가 개선조치를 완료',
-            where: '<b>개선조치</b> 목록에서 그 건을 열어 <b>[완료 처리]</b>',
+            where: '<b>내 부서 진행 상황</b>의 <b>[개선조치 완료 처리]</b>',
             clickPath: [
-                '목록에서 조치할 건을 선택 — 상세가 열립니다',
-                '조치 내용·완료일을 적고 개선 후 사진을 올립니다',
-                '담당자 전자서명까지 채워야 [완료 처리]가 저장됩니다'
+                '[개선조치 완료 처리] — 우리 부서 개선조치 카드가 열립니다',
+                '조치할 건의 [완료 처리]를 누릅니다',
+                '조치 내용·완료일을 적고 개선 후 사진과 담당자 서명을 채우면 저장됩니다'
             ],
             desc: '개선 전·후 사진과 담당자 서명을 붙여야 완료가 됩니다. 사진 없이 “했다”만으로는 끝나지 않습니다.',
             script: '증빙이 붙은 완료만 인정합니다. 이 사진이 그대로 뒤에서 만들 공문의 근거가 됩니다.',
-            modalGuide: '조치 내용을 적고 사진을 올리세요 — <b>사진과 서명이 모두 있어야</b> 저장됩니다.',
+            modalGuide: '조치할 건의 <b>[완료 처리]</b> 를 누르고, 조치 내용과 사진을 채우세요 — <b>사진과 서명이 모두 있어야</b> 저장됩니다.',
             /* 무대에서 OS 파일 대화상자를 열지 않기 위한 시연 수단이다(3단계와 같은 이유).
-               실제 파일 입력란은 그대로 두므로 증빙 요건을 낮추는 것이 아니다. */
-            modalAction: { label: '시연용 사진 넣기', fn: 'RSKIMPD.pickAfterDemo()' },
-            actionLabel: '개선조치 열기',
-            action: function () { var m = openImp(); location.href = m ? 'rsk-imp-detail.html?id=' + m.id : 'rsk-imp.html'; },
+               실제 파일 입력란은 그대로 두므로 증빙 요건을 낮추는 것이 아니다.
+               완료 모달을 그리는 주체가 MYWORK 이므로 그쪽 도우미를 쓴다. */
+            modalAction: { label: '시연용 사진 넣기', fn: 'MYWORK.pickAfterDemo()' },
+            actionLabel: '개선조치 카드 열기',
+            action: function () { if (global.RSKLIST) global.RSKLIST.openDept(demoDept()); },
             done: function () {
                 var ms = imps();
                 return ms.length > 0 && ms.every(function (m) { return m.status === 'DONE'; });
@@ -327,7 +322,7 @@
     ];
 
     var T = global.DYTOUR.define({
-        key: 'rsk', ns: 'RSKTOUR', skey: 'dy-tour-rsk-v1', steps: STEPS, ownerPersona: 'staff', pageLabels: { 'rsk-list.html': '정기 위험성평가', 'rsk-imp.html': '개선조치', 'rsk-imp-detail.html': '개선조치 상세' },
+        key: 'rsk', ns: 'RSKTOUR', skey: 'dy-tour-rsk-v1', steps: STEPS, ownerPersona: 'staff', pageLabels: { 'rsk-list.html': '정기 위험성평가', 'my-work.html': '내 할일' },
         kicker: function () { return year() + ' 정기 위험성평가'; },
         flowTitle: function () { return year() + '년 정기 위험성평가 — 전체 흐름 ' + STEPS.length + '단계'; },
         flowNote: function () {

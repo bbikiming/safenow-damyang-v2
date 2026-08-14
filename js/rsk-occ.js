@@ -136,11 +136,12 @@
             '<div class="roc-imp-acts">' +
                 /* 조치가 끝난 뒤 '무엇을 어떻게 고쳤는지'를 사진까지 보는 자리 —
                    정기평가 부서 상세와 같은 화면(IMPCARD)을 쓴다 (CLAUDE.md §7). */
-                '<button type="button" class="btn btn-outline btn-sm" data-tour="occ-imp" onclick="RSKOCC.openImp(\'' + o.id + '\')">조치 상세</button>' +
-                (c.done < c.total
-                    ? '<a class="btn btn-primary btn-sm" href="rsk-imp.html?status=IN_PROGRESS">' +
-                          '개선조치에서 마무리 →</a>'
-                    : '') +
+                /* 미완료 건도 **이 화면 안에서** 끝낸다 (2026-08-14 발주처 지시) —
+                   개선조치는 독립 메뉴가 아니므로 rsk-imp 대장으로 내보내지 않는다.
+                   같은 IMPCARD 카드에 그 부서 담당자용 [완료 처리]가 이미 붙는다. */
+                '<button type="button" class="btn ' + (c.done < c.total ? 'btn-primary' : 'btn-outline') +
+                    ' btn-sm" data-tour="occ-imp" onclick="RSKOCC.openImp(\'' + o.id + '\')">' +
+                    (c.done < c.total ? '조치 상세 · 완료 처리' : '조치 상세') + '</button>' +
             '</div>' +
         '</div>';
     }
