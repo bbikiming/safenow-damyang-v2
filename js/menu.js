@@ -740,6 +740,20 @@
 
         /* ── 조직 [SFR-006·009·010]: 선임 등록 → 수행평가(F6) → 후속조치(F7) ── */
         org() {
+            if (!window.ORG_CONSTRUCTION_STATE) {
+                window.ORG_CONSTRUCTION_STATE = [
+                    { id: 'CONST-01', owner: '담양군', name: '군도 5호선 정비공사', from: '2026-03-02', to: '2026-10-30', amount: '12.4억 원', manager: '김안전', status: '완료', source: '차세대 e호조 시연' },
+                    { id: 'CONST-02', owner: '담양군', name: '정수장 내진보강 공사', from: '2026-06-01', to: '2026-12-20', amount: '8.7억 원', manager: '', status: '미시행', source: '직접 등록' },
+                ];
+            }
+            const construction = window.ORG_CONSTRUCTION_STATE;
+            const staffing = [
+                { role: '안전관리자', required: 1, current: 1, note: '시연용 기준값' },
+                { role: '보건관리자', required: 1, current: 1, note: '시연용 기준값' },
+                { role: '산업보건의', required: null, current: 0, note: '법령 배치 기준 미등록' },
+            ];
+            const staffShort = staffing.filter(x => x.required != null && x.current < x.required).length;
+            const staffPending = staffing.filter(x => x.required == null).length;
             PG.orgAppoint = () => {
                 V.openModal('안전·보건관리자 선임 등록',
                     '<div class="preset-form-grid">' +
@@ -760,6 +774,42 @@
                 ctx: { menuLabel: '조직' }, source: '2026 상반기 수행평가 — 판정 미흡 1건',
                 fields: { source: '수행평가: 예산·인력 지원의 충분성 — 보완 판정' }, onChange: render,
             });
+            PG.orgStaffComplete = () => {
+                if (staffShort) { V.toast('법정 배치 기준 미달 ' + staffShort + '건으로 선임 현황 점검을 완료할 수 없습니다.'); return; }
+                if (staffPending) { V.toast('배치 기준 미등록 ' + staffPending + '건이 있어 완료 확정할 수 없습니다.'); return; }
+                V.toast('선임 현황 점검을 완료했습니다.');
+            };
+            PG.orgConstForm = id => {
+                const row = construction.find(x => x.id === id);
+                V.openModal(row ? '공사별 안전관리자 현황 수정' : '공사 직접 등록',
+                    '<div class="preset-form-grid">' +
+                    '<span class="k">발주처</span><input id="org-c-owner" type="text" value="' + esc(row ? row.owner : '담양군') + '">' +
+                    '<span class="k">공사명 <span class="req">*</span></span><input id="org-c-name" type="text" value="' + esc(row ? row.name : '') + '">' +
+                    '<span class="k">공사기간 <span class="req">*</span></span><div style="display:flex;gap:6px;"><input id="org-c-from" type="date" value="' + esc(row ? row.from : DYV2.today()) + '"><input id="org-c-to" type="date" value="' + esc(row ? row.to : '') + '"></div>' +
+                    '<span class="k">공사금액</span><input id="org-c-amount" type="text" value="' + esc(row ? row.amount : '') + '" placeholder="예: 5.2억 원">' +
+                    '<span class="k">안전관리자</span><input id="org-c-manager" type="text" value="' + esc(row ? row.manager : '') + '" placeholder="조직도 선택 결과">' +
+                    '</div>',
+                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+                    '<button class="btn btn-primary" onclick="PG.orgConstSave(\'' + (id || '') + '\')">저장</button>');
+            };
+            PG.orgConstSave = id => {
+                const val = key => (document.getElementById(key).value || '').trim();
+                const name = val('org-c-name'), from = val('org-c-from'), to = val('org-c-to');
+                if (!name) { V.toast('공사명을 입력하세요.'); return; }
+                if (!from || !to || from > to) { V.toast('공사기간을 확인하세요.'); return; }
+                let row = construction.find(x => x.id === id);
+                const data = { owner: val('org-c-owner'), name: name, from: from, to: to, amount: val('org-c-amount'), manager: val('org-c-manager') };
+                if (row) Object.assign(row, data);
+                else construction.push(Object.assign({ id: 'CONST-' + String(construction.length + 1).padStart(2, '0'), status: '미시행', source: '직접 등록' }, data));
+                V.closeModal(); V.toast(row ? '공사 현황을 수정했습니다.' : '공사를 직접 등록했습니다.'); render();
+            };
+            PG.orgConstCheck = id => {
+                const row = construction.find(x => x.id === id); if (!row) return;
+                if (row.status === '미시행') { row.status = '진행'; V.toast('공사별 선임 점검을 시작했습니다.'); render(); return; }
+                if (row.status === '진행' && !row.manager) { V.toast('안전관리자가 미선임이므로 점검을 완료할 수 없습니다.'); return; }
+                if (row.status === '진행') { row.status = '완료'; V.toast('공사별 선임 점검을 완료했습니다.'); render(); return; }
+                V.toast('이미 완료된 점검입니다.');
+            };
             const team = (name, n) => '<div style="border:1px solid var(--card-line); border-radius:var(--radius-md); padding:10px 14px; text-align:center; background:var(--surface);"><div style="font-size:12px; font-weight:700;">' + name + '</div><div style="font-size:12px; color:var(--text-gray);">' + n + '명</div></div>';
             /* 조직도 요약 — 단일 출처(DYV2.ORG) 파생 실인원 */
             const orgTotal = (V.orgTotal ? V.orgTotal() : 0);
@@ -782,6 +832,27 @@
                     ['안전보건관리책임자', '박과장', '2025-01-02', '재난안전과장', ST('완료')],
                     ['관리감독자 (도시과)', '<span class="badge-unassigned">미선임</span>', '-', '-', '<button class="btn btn-sm btn-primary" onclick="PG.orgAppoint()">선임 등록</button>'],
                 ])) +
+            sectionCard('법정 배치인원 자동 점검',
+                '<div class="check-notice" style="margin-bottom:10px;">법령 배치 기준과 현재 선임 인원을 직역별로 비교합니다. 미달이거나 기준이 미등록된 경우 이 점검의 <b>완료 확정만</b> 차단하고 다른 업무는 막지 않습니다.</div>' +
+                tbl(['직역', '법정 기준', '현재 선임', '판정', '기준 출처'], staffing.map(x => [
+                    x.role,
+                    x.required == null ? '<span class="chip-mini wt">미등록</span>' : x.required + '명',
+                    x.current + '명',
+                    x.required == null ? '<span class="chip-status warning">판정 대기</span>' : (x.current >= x.required ? ST('완료') : '<span class="chip-status danger">미달</span>'),
+                    x.note,
+                ])),
+                '<button class="btn btn-sm btn-primary" onclick="PG.orgStaffComplete()"' + ((staffShort || staffPending) ? ' disabled title="미달·기준 미등록을 해소한 뒤 완료할 수 있습니다"' : '') + '>점검 완료 확정</button>') +
+            sectionCard('공사별 안전관리자 선임 현황',
+                '<div class="check-notice" style="margin-bottom:10px;">차세대 e호조 연계 전에는 직접 등록과 시연용 자료를 구분해 표시합니다. 안전관리자 미선임 공사는 점검을 완료할 수 없습니다.</div>' +
+                tbl(['발주처', '공사명', '공사기간', '공사금액', '안전관리자', '출처', '점검', '관리'], construction.map(x => [
+                    x.owner, x.name, x.from + '<br>~ ' + x.to, x.amount || '-',
+                    x.manager || '<span class="badge-unassigned">미선임</span>',
+                    '<span class="chip-mini ' + (x.source === '직접 등록' ? 'pdca' : 'wt-elec') + '">' + x.source + '</span>',
+                    ST(x.status),
+                    '<button class="btn btn-sm btn-outline" onclick="PG.orgConstForm(\'' + x.id + '\')">수정</button> ' +
+                    '<button class="btn btn-sm btn-primary" onclick="PG.orgConstCheck(\'' + x.id + '\')">' + (x.status === '미시행' ? '점검 시작' : x.status === '진행' ? '완료' : '확인') + '</button>',
+                ])),
+                '<button class="btn btn-sm btn-primary" onclick="PG.orgConstForm()">+ 공사 직접 등록</button>') +
             sectionCard('수행평가 · 후속조치 (반기) ' + docStChip('EDOC-수행평가-2026H1'),
                 '<p style="font-size:12px; color:var(--text-gray);">경영책임자가 안전보건관리책임자등의 업무 수행을 반기 1회 평가하고, 미흡 판정은 후속 조치(포상·인사)로 이어집니다.</p>',
                 '<div style="display:flex; gap:6px;">' +
@@ -948,6 +1019,14 @@
             PG.opnSetCat = v => { S.fcat = v; S.page = 1; render(); };
             PG.opnSetStatus = v => { S.fstatus = v; S.page = 1; render(); };
             PG.opnSetDept = v => { S.fdept = v; S.page = 1; render(); };
+            PG.opnVia = via => {
+                const author = document.getElementById('opn-author');
+                if (!author) return;
+                const online = via === '온라인';
+                author.readOnly = online;
+                author.value = online ? '김대표' : '';
+                author.placeholder = online ? 'SSO 로그인 사용자 자동 입력' : '서면·구두 의견 제출자명 입력';
+            };
             /* 화면 내 2차 탭 (위원회 3탭 / 협의체 2탭) — 탭 상태는 페이지 내 유지 */
             PG.opnCmtTab = t => { S.cmtTab = t; render(); };
             PG.opnCnlTab = t => { S.cnlTab = t; render(); };
@@ -961,6 +1040,7 @@
                 const loc = ((document.getElementById('opn-loc') || {}).value || '').trim();
                 const content = ((document.getElementById('opn-content') || {}).value || '').trim();
                 if (!cat) { V.toast('분류를 선택하세요'); return; }
+                if (via === '오프라인' && !author) { V.toast('오프라인 의견 제출자명을 입력하세요'); return; }
                 if (!title) { V.toast('제목을 입력하세요'); return; }
                 if (!content) { V.toast('상세내용을 입력하세요'); return; }
                 const writer = author || (via === '온라인' ? '김대표' : '(현장 종사자)');
@@ -1346,16 +1426,16 @@
             /* ===== 탭1: 의견 등록 폼 (온·오프라인 병행) ===== */
             function renderVoiceForm() {
                 const head = '<div class="opn-form-head"><button class="btn btn-sm btn-outline" onclick="PG.opnBack()">‹ 목록</button><h2>의견 등록</h2></div>';
-                const writer = sectionCard('작성자 정보',
+                const writer = sectionCard('등록자 정보',
                     '<div class="opn-form-grid">' +
-                    '<div class="opn-field"><label class="opn-flabel">작성자</label><div class="opn-readonly">김대표</div></div>' +
-                    '<div class="opn-field"><label class="opn-flabel">부서명</label><div class="opn-readonly">재난안전과 중대재해팀</div></div>' +
+                    '<div class="opn-field"><label class="opn-flabel">등록 담당자</label><div class="opn-readonly">김대표</div></div>' +
+                    '<div class="opn-field"><label class="opn-flabel">담당 부서</label><div class="opn-readonly">재난안전과 중대재해팀</div></div>' +
                     '</div>', '');
                 const info = sectionCard('의견 정보',
                     '<div class="opn-form-grid">' +
                     '<div class="opn-field"><label class="opn-flabel" for="opn-cat">분류 <span class="req">*</span></label><select id="opn-cat" class="opn-select"><option value="">선택하세요</option>' + CATS.map(c => '<option>' + c + '</option>').join('') + '</select></div>' +
-                    '<div class="opn-field"><label class="opn-flabel" for="opn-via">접수경로</label><select id="opn-via" class="opn-select"><option>온라인</option><option>오프라인</option></select></div>' +
-                    '<div class="opn-field"><label class="opn-flabel" for="opn-author">제출자</label><input id="opn-author" class="opn-input" type="text" placeholder="온라인은 자동 / 오프라인은 제출자명 대리 입력"></div>' +
+                    '<div class="opn-field"><label class="opn-flabel" for="opn-via">접수경로</label><select id="opn-via" class="opn-select" onchange="PG.opnVia(this.value)"><option value="온라인">온라인(본인 등록)</option><option value="오프라인">오프라인(담당자 대리)</option></select></div>' +
+                    '<div class="opn-field"><label class="opn-flabel" for="opn-author">제출자</label><input id="opn-author" class="opn-input" type="text" value="김대표" readonly placeholder="SSO 로그인 사용자 자동 입력"></div>' +
                     '<div class="opn-field"><label class="opn-flabel" for="opn-loc">발생장소</label><input id="opn-loc" class="opn-input" type="text" maxlength="50" placeholder="발생 장소를 입력하세요" oninput="var c=document.getElementById(\'cnt-loc\');if(c)c.textContent=this.value.length+\'/50\';"><div class="opn-counter" id="cnt-loc">0/50</div></div>' +
                     '<div class="opn-field full"><label class="opn-flabel" for="opn-title">제목 <span class="req">*</span></label><input id="opn-title" class="opn-input" type="text" maxlength="50" placeholder="제목을 입력하세요" oninput="var c=document.getElementById(\'cnt-title\');if(c)c.textContent=this.value.length+\'/50\';"><div class="opn-counter" id="cnt-title">0/50</div></div>' +
                     '</div>', '');
@@ -1820,6 +1900,13 @@
                 '<div style="display:flex; gap:6px;">' +
                 '<button class="btn btn-sm btn-primary" onclick="PG.cmpCheck()">점검표 작성</button>' +
                 '<button class="btn btn-sm btn-outline" onclick="PG.cmpClose()">반기 마감 · 온나라 상신</button></div>') +
+            sectionCard('중대재해 예방 매뉴얼·업무처리절차 점검',
+                '<div class="check-notice" style="margin-bottom:10px;">제정·개정 원문과 버전은 <b>기준문서함</b>에서 관리하고, 제정·조치 여부·교육·점검 증빙은 <b>이행 목록</b>에서 회차별로 관리합니다. 같은 파일을 두 곳에 중복 등록하지 않습니다.</div>' +
+                tbl(['관리 구분', '정본 위치', '현재 상태', '이동'], [
+                    ['제정·개정 원문', '기준문서함', '<span class="chip-status info">문서별 버전 관리</span>', '<a class="btn btn-sm btn-outline" href="docs-archive.html?filter=manual">원문 조회</a>'],
+                    ['제정·조치 여부 점검', '이행 목록', '<span class="chip-status warning">회차별 증빙 확인</span>', '<a class="btn btn-sm btn-primary" href="docs-exec.html">이행 점검</a>'],
+                ]),
+                '') +
             /* 시행령 §5·§11 — 관계 법령 의무이행 점검.
              * §4(체계 구축)와 완전히 다른 의무다. 이 영역이 없으면 화면이 "§5를
              * 이행한다"고 주장만 하고 실제로는 §4만 점검하게 된다. */

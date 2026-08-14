@@ -626,7 +626,8 @@
         return { workers: Object.keys(wids).length, records: recordCnt };
     }
 
-    function enrolls(courseId) { return load().enrolls.filter(function (e) { return !courseId || e.courseId === courseId; }); }
+    function allEnrolls(courseId) { return load().enrolls.filter(function (e) { return !courseId || e.courseId === courseId; }); }
+    function enrolls(courseId) { return allEnrolls(courseId).filter(function (e) { return e.status !== 'CANCELLED'; }); }
     /* 그 교육에 이 부서가 이미 등록했는가 — 화면이 저장 전에 미리 묻는 창구 */
     function hasEnroll(courseId, deptId) {
         return load().enrolls.some(function (e) { return e.courseId === courseId && e.deptId === deptId; });
@@ -645,14 +646,37 @@
      * 반환 — 저장했으면 true, 중복이라 거절했으면 false. */
     function addEnroll(o) {
         var d = load();
-        if (d.enrolls.some(function (e) { return e.courseId === o.courseId && e.deptId === o.deptId; })) return false;
+        if (d.enrolls.some(function (e) { return e.courseId === o.courseId && e.deptId === o.deptId && e.status !== 'CANCELLED'; })) return false;
         d.enrolls.push({
             courseId: o.courseId, deptId: o.deptId,
             workerIds: (o.workerIds || []).slice(),
-            signFile: o.signFile || '', at: o.at || today()
+            signFile: o.signFile || '', actualHours: o.actualHours == null ? null : +o.actualHours,
+            status: 'ACTIVE', at: o.at || today()
         });
         save();
         return true;
+    }
+
+    /* 완료 교육의 등록부 정정 — 원행을 지우지 않고 취소 상태·사유를 보존한다.
+     * 이수 집계에서는 연결 기록만 제외하고, 취소된 등록부는 감사 이력으로 남는다. */
+    function cancelCompletedEnroll(courseId, deptId, reason, by) {
+        var d = load();
+        var target = d.enrolls.filter(function (e) {
+            return e.courseId === courseId && e.deptId === deptId && e.status !== 'CANCELLED';
+        });
+        if (!target.length) return null;
+        var wids = {};
+        target.forEach(function (e) {
+            (e.workerIds || []).forEach(function (w) { wids[w] = true; });
+            e.status = 'CANCELLED'; e.cancelReason = reason || ''; e.cancelledBy = by || ''; e.cancelledAt = nowTs();
+        });
+        var recordCnt = 0;
+        d.records = d.records.filter(function (r) {
+            if (r.courseId === courseId && wids[r.workerId]) { recordCnt++; return false; }
+            return true;
+        });
+        save();
+        return { workers: Object.keys(wids).length, records: recordCnt };
     }
 
     function records() { return load().records; }
@@ -903,7 +927,8 @@
         pushCourseHistory: pushCourseHistory, courseDateTime: courseDateTime,
         courseSessions: courseSessions, sessionHours: sessionHours, sumSessionHours: sumSessionHours,
         /* 신청·이수 */
-        enrolls: enrolls, addEnroll: addEnroll, hasEnroll: hasEnroll, removeEnroll: removeEnroll,
+        enrolls: enrolls, allEnrolls: allEnrolls, addEnroll: addEnroll, hasEnroll: hasEnroll, removeEnroll: removeEnroll,
+        cancelCompletedEnroll: cancelCompletedEnroll,
         removeWorkerFromCourse: removeWorkerFromCourse,
         records: records, recordsFor: recordsFor, addRecord: addRecord,
         recordCourseCompletion: recordCourseCompletion, recordKindForCourse: recordKindForCourse,

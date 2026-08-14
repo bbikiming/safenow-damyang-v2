@@ -13,9 +13,10 @@
     const V = () => window.DYV2;
     const esc = s => (window.DYV2 && DYV2.esc) ? DYV2.esc(s) : String(s == null ? '' : s);
 
-    const MUI = { sel: null, addMode: 'role', draft: null, dirty: false, collapsed: {}, expanded: {}, query: '' };
+    const MUI = { sel: null, addMode: 'role', draft: null, dirty: false, collapsed: {}, expanded: {}, query: '', usagePeriod: 90, usageUnused: false };
 
     function clone(list) { return (list || []).map(a => Object.assign({}, a)); }
+    function menuLabel(m) { return (m.section ? m.section + ' · ' : '') + m.label; }
     function isUnset(id) { return A.getAssignments(id).length === 0; }   /* 지정 0건 = 미설정(기본 차단) */
 
     /* ── 좌측 트리 ── */
@@ -31,14 +32,14 @@
         const html = A.groups().map(g => {
             const collapsed = !!MUI.collapsed[g.id];
             let items = g.items || [];
-            if (q) items = items.filter(it => it.label.indexOf(q) !== -1 || g.label.indexOf(q) !== -1);
+            if (q) items = items.filter(it => it.label.indexOf(q) !== -1 || (it.section || '').indexOf(q) !== -1 || g.label.indexOf(q) !== -1);
             if (q && !items.length && g.label.indexOf(q) === -1) return '';
             const gSel = MUI.sel && MUI.sel.type === 'group' && MUI.sel.id === g.id;
             const open = q ? true : !collapsed;
             const rows = open ? items.map(it => {
                 const sel = MUI.sel && MUI.sel.type === 'menu' && MUI.sel.id === it.id;
                 return '<button type="button" class="admm-menu' + (sel ? ' is-sel' : '') + '" onclick="DYADMENU.selMenu(\'' + it.id + '\')">' +
-                    '<span class="admm-menu-label">' + esc(it.label) + '</span>' + statusBadge(it.id) + '</button>';
+                    '<span class="admm-menu-label">' + esc(menuLabel(it)) + '</span>' + statusBadge(it.id) + '</button>';
             }).join('') : '';
             return '<div class="admm-group">' +
                 '<div class="admm-ghead' + (gSel ? ' is-sel' : '') + '">' +
@@ -75,6 +76,44 @@
     function toggleGroup(id) { MUI.collapsed[id] = !MUI.collapsed[id]; renderTree(); }
     function search(v) { MUI.query = v || ''; renderTree(); }
 
+    /* 메뉴 이용 현황(SFR-001) — 프로토타입은 고정 시연 기록을 기간에 맞게 투영한다. */
+    function usageMetric(menu, days) {
+        const key = String(menu.id || menu.label || '');
+        let hash = 0;
+        for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) % 997;
+        const unused = hash % 8 === 0;
+        const base = unused ? 0 : 3 + (hash % 41);
+        const count = base ? Math.max(1, Math.round(base * days / 90)) : 0;
+        if (!count) return { count: 0, last: '-', unused: true };
+        const ago = Math.min(days - 1, hash % Math.max(1, days));
+        const now = new Date(((V() && V().today) ? V().today() : '2026-07-16') + 'T00:00:00');
+        now.setDate(now.getDate() - ago);
+        return { count: count, last: now.toISOString().slice(0, 10), unused: false };
+    }
+    function renderUsageStats() {
+        const body = document.getElementById('admm-usage-rows');
+        const sum = document.getElementById('admm-usage-summary');
+        if (!body || !sum) return;
+        const all = A.middleMenus().map(m => ({ menu: m, metric: usageMetric(m, MUI.usagePeriod) }));
+        const list = MUI.usageUnused ? all.filter(x => x.metric.unused) : all;
+        const unusedN = all.filter(x => x.metric.unused).length;
+        const totalN = all.reduce((n, x) => n + x.metric.count, 0);
+        sum.innerHTML = '최근 <b>' + MUI.usagePeriod + '일</b> 기준 전체 메뉴 <b>' + all.length + '개</b> · 이용 <b>' + totalN + '건</b> · 미사용 <b>' + unusedN + '개</b>';
+        body.innerHTML = list.map(x => {
+            const m = x.menu, u = x.metric;
+            return '<tr>' +
+                '<td>' + esc(m.groupLabel) + '</td>' +
+                '<td style="font-weight:600;">' + esc(menuLabel(m)) + '</td>' +
+                '<td style="text-align:right;">' + u.count + '</td>' +
+                '<td>' + esc(u.last) + '</td>' +
+                '<td>' + (u.unused ? '<span class="chip-mini st-todo">기간 내 미사용</span>' : '<span class="chip-mini st-done">이용</span>') + '</td>' +
+                '<td><button type="button" class="btn btn-sm btn-outline" onclick="DYADMENU.selMenu(\'' + m.id + '\')">권한 설정</button></td>' +
+            '</tr>';
+        }).join('') || '<tr><td colspan="6"><div class="v2-empty">조건에 맞는 메뉴가 없습니다.</div></td></tr>';
+    }
+    function setUsagePeriod(v) { MUI.usagePeriod = Number(v) || 90; renderUsageStats(); }
+    function toggleUsageUnused(on) { MUI.usageUnused = !!on; renderUsageStats(); }
+
     /* ── 우측 패널 ── */
     function renderPanel() {
         const el = document.getElementById('admm-panel');
@@ -95,7 +134,7 @@
             const cnt = st.kind === 'admin' ? '<span class="chip-mini wt">관리자 전용</span>'
                 : ('권한등급 ' + sm.role + ' · 부서 ' + sm.dept + ' · 개인 ' + sm.user);
             return '<tr onclick="DYADMENU.selMenu(\'' + it.id + '\')">' +
-                '<td style="font-weight:600;">' + esc(it.label) + '</td>' +
+                '<td style="font-weight:600;">' + esc(menuLabel(it)) + '</td>' +
                 '<td>' + statusBadge(it.id) + '</td>' +
                 '<td>' + cnt + '</td>' +
                 '<td>' + (A.getUsage(it.id) ? '<span class="chip-mini st-done">사용</span>' : '<span class="chip-mini wt">사용 안 함</span>') + '</td>' +
@@ -106,7 +145,7 @@
             : '<div class="admm-bulk">' +
                 '<span class="admm-bulk-lab">하위 메뉴 일괄 적용</span>' +
                 '<select class="select" id="admm-bulk-src"><option value="">기준 메뉴 선택</option>' +
-                    (g.items || []).map(it => '<option value="' + it.id + '">' + esc(it.label) + (isUnset(it.id) ? ' (미설정)' : '') + '</option>').join('') +
+                    (g.items || []).map(it => '<option value="' + it.id + '">' + esc(menuLabel(it)) + (isUnset(it.id) ? ' (미설정)' : '') + '</option>').join('') +
                 '</select>' +
                 '<button class="btn btn-outline btn-sm" onclick="DYADMENU.bulkApply(\'' + gid + '\')">하위 전체에 복사</button>' +
               '</div>';
@@ -271,7 +310,7 @@
     /* 다른 메뉴 설정 복사 (단일 모달) */
     function openCopy(id) {
         const opts = A.middleMenus().filter(m => m.id !== id && m.groupId !== 'admin')
-            .map(m => '<option value="' + m.id + '">' + esc(m.groupLabel + ' > ' + m.label) + (isUnset(m.id) ? ' (미설정)' : '') + '</option>').join('');
+            .map(m => '<option value="' + m.id + '">' + esc(m.groupLabel + ' > ' + menuLabel(m)) + (isUnset(m.id) ? ' (미설정)' : '') + '</option>').join('');
         V().openModal('다른 메뉴 설정 복사',
             '<p style="font-size:13px; color:var(--text-gray); margin-bottom:12px;">선택한 메뉴의 접근 권한 설정을 현재 목록으로 <b>대체</b>합니다. 저장 전이므로 되돌릴 수 있습니다.</p>' +
             '<select class="select" id="admm-copy-src" style="width:100%;"><option value="">복사할 메뉴 선택</option>' + opts + '</select>',
@@ -309,14 +348,15 @@
         if (!confirm('메뉴·권한 데모 데이터를 초기 시드로 되돌립니다. 이 화면에서 변경한 내용이 모두 사라집니다. 계속하시겠습니까?')) return;
         A.resetDemo();
         MUI.sel = null; MUI.draft = null; MUI.dirty = false; MUI.expanded = {};
-        renderTree(); renderPanel();
+        renderTree(); renderPanel(); renderUsageStats();
         V().toast('데모 데이터를 초기화했습니다.');
     }
 
     window.DYADMENU = {
         selMenu, selGroup, toggleGroup, search, setMode, togglePrev, addRole, pickDirect,
         chk, removeAssign, resetDraft, saveDraft, toggleUsage, openCopy, doCopy, bulkApply, resetDemo,
+        setUsagePeriod, toggleUsageUnused,
     };
 
-    renderTree(); renderPanel();
+    renderTree(); renderPanel(); renderUsageStats();
 })();

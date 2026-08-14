@@ -10,7 +10,7 @@
   "existingSfr": "SFR-020·017",
   "defFile": "SCR-DASH-001_통합현황대시보드.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/index.html",
-  "unresolvedCount": 3
+  "unresolvedCount": 0
  },
  {
   "scrId": "SCR-BASE-001",
@@ -267,7 +267,7 @@
   "type": "목록",
   "route": "menu.html?m=comply",
   "components": "menu.html, menu.js, common.js, edoc.js",
-  "existingSfr": "SFR-008·014",
+  "existingSfr": "SFR-008·012·014",
   "defFile": "SCR-SBM-006_이행관리.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/menu.html",
   "unresolvedCount": 5
@@ -280,7 +280,7 @@
   "type": "목록·등록·상세",
   "route": "menu.html?m=opinion&sub=voice",
   "components": "menu.html, menu.js, common.js, edoc.js",
-  "existingSfr": "SFR-011",
+  "existingSfr": "SFR-011·019",
   "defFile": "SCR-OPN-001_의견청취.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/menu.html",
   "unresolvedCount": 9
@@ -566,7 +566,7 @@
   "type": "목록",
   "route": "docs-archive.html",
   "components": "layout.js, common.js, data.js",
-  "existingSfr": "없음",
+  "existingSfr": "SFR-012",
   "defFile": "SCR-DOC-001_기준문서함.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/docs-archive.html",
   "unresolvedCount": 6
@@ -657,7 +657,7 @@
   "type": "기타",
   "route": "stats.html",
   "components": "layout.js, common.js, data.js",
-  "existingSfr": "SFR-018",
+  "existingSfr": "SFR-018·019",
   "defFile": "SCR-RPT-001_현황통계.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/stats.html",
   "unresolvedCount": 4
@@ -696,7 +696,7 @@
   "type": "목록",
   "route": "admin-users.html",
   "components": "layout.js, common.js",
-  "existingSfr": "SFR-015",
+  "existingSfr": "SFR-006·015",
   "defFile": "SCR-ADMIN-001_사용자권한관리.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/admin-users.html",
   "unresolvedCount": 6
@@ -748,7 +748,7 @@
   "type": "설정",
   "route": "admin-menus.html",
   "components": "admin-menus.html, common.js",
-  "existingSfr": "ADM01-S",
+  "existingSfr": "SFR-001·ADM01-S",
   "defFile": "SCR-ADMIN-005_메뉴관리.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/admin-menus.html",
   "unresolvedCount": 8

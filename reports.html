@@ -9,9 +9,9 @@
     <link rel="stylesheet" href="./css/style.css">
     <link rel="stylesheet" href="./css/v2.css">
 </head>
-<body data-dy-page="reports" data-page-title="보고서·제증명" data-page-subtitle="통계·보고 > 보고서·제증명 — 총괄보고서 출력 (SFR-021)">
+<body data-dy-page="reports" data-page-title="보고서·제증명" data-page-subtitle="통계·보고 > 보고서·제증명 — 보고서 출력·증명서 발급 (SFR-021)">
     <main>
-        <div class="dsh-grid">
+        <div style="display:grid;gap:16px;">
             <div class="card">
                 <div class="card-header"><span class="card-title">보고서 조건</span></div>
                 <div class="card-body">
@@ -25,6 +25,20 @@
                         </div>
                         <div class="form-group"><label class="form-label" for="report-from">시작일 <span class="req">*</span></label><input class="form-input" id="report-from" type="date" value="2026-01-01" onchange="updateReportPreview()"></div>
                         <div class="form-group"><label class="form-label" for="report-to">종료일 <span class="req">*</span></label><input class="form-input" id="report-to" type="date" value="2026-06-30" onchange="updateReportPreview()"></div>
+                        <div class="form-group" id="report-target-group" style="display:none;">
+                            <div id="report-person-fields">
+                                <label class="form-label" for="report-person">발급 대상자 <span class="req">*</span></label>
+                                <div style="display:flex;gap:8px;"><input class="form-input" id="report-person" type="text" value="" placeholder="이수현황에서 대상자를 선택하세요" readonly><a class="btn btn-outline btn-sm" href="edu-status.html">대상자 선택</a></div>
+                                <input id="report-person-id" type="hidden" value="">
+                            </div>
+                            <div id="report-fact-fields" style="display:none;">
+                                <label class="form-label" for="report-fact">증명 대상 업무 <span class="req">*</span></label>
+                                <select class="form-select" id="report-fact" onchange="updateReportPreview()">
+                                    <option value="">증명할 이행사실을 선택하세요</option>
+                                    <option>경영방침 수립·공표</option><option>위험성평가 실시</option><option>안전보건교육 실시</option><option>개선조치 완료</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
                     <p id="report-condition-error" style="display:none; color:var(--danger); font-size:var(--fs-12); margin-top:8px;">시작일은 종료일보다 늦을 수 없고 미래일을 선택할 수 없습니다.</p>
                     <p style="font-size:var(--fs-12); color:var(--text-gray); margin-top:8px;">수치는 선택 기간의 확정 업무자료에서 자동 산출되며 이 화면에서 수정할 수 없습니다.</p>
@@ -48,10 +62,10 @@
                             <span style="font-size:var(--fs-38); font-weight:700; color:var(--brand-100); transform:rotate(-24deg); white-space:nowrap;">담양군 대외주의 · WATERMARK</span>
                         </div>
                         <p id="report-document-heading" style="text-align:center; font-size:var(--fs-18); font-weight:700; margin-bottom:6px;">2026-01-01 ~ 2026-06-30 중대재해예방 총괄보고서</p>
-                        <p style="text-align:center; font-size:var(--fs-12); color:var(--text-gray); margin-bottom:26px;">담양군 재난안전과 중대재해팀 · 출력일 <span id="report-issued-at">2026-06-11</span></p>
+                        <p style="text-align:center; font-size:var(--fs-12); color:var(--text-gray); margin-bottom:26px;">담양군 재난안전과 중대재해팀 · 출력일 <span id="report-issued-at">2026-06-11</span> · 발급번호 <b id="report-issue-number">DY-2026-0004</b></p>
                         <table class="table-figma" style="margin-bottom:20px;">
                             <thead><tr><th>구분</th><th>내용</th></tr></thead>
-                            <tbody>
+                            <tbody id="report-preview-body">
                                 <tr><td style="font-weight:600;">경영방침</td><td>2026년 안전·보건 목표 수립 및 공표 (이행률 표 자동 삽입)</td></tr>
                                 <tr><td style="font-weight:600;">위험성평가</td><td>정기 1회 · 수시 2회 실시, 유해·위험요인 24건 개선</td></tr>
                                 <tr><td style="font-weight:600;">안전보건교육</td><td>정기·특별교육 14회, 이수율 87%</td></tr>
@@ -68,14 +82,26 @@
                 <div class="card-header"><span class="card-title">출력 이력</span></div>
                 <div class="card-body">
                     <table class="table-figma">
-                        <thead><tr><th>보고서</th><th>출력일</th><th>출력자</th></tr></thead>
-                        <tbody>
-                            <tr><td style="font-weight:600;">1분기 총괄보고서</td><td>2026-04-05</td><td>박안전</td></tr>
-                            <tr><td style="font-weight:600;">2025년 연간 총괄보고서</td><td>2026-01-12</td><td>김중대</td></tr>
-                            <tr><td style="font-weight:600;">의무이행 점검 결과 보고</td><td>2025-12-28</td><td>박안전</td></tr>
+                        <thead><tr><th>발급번호</th><th>보고서</th><th>출력일</th><th>출력자</th></tr></thead>
+                        <tbody id="report-history-body">
+                            <tr><td>DY-2026-0003</td><td style="font-weight:600;">1분기 총괄보고서</td><td>2026-04-05</td><td>박안전</td></tr>
+                            <tr><td>DY-2026-0002</td><td style="font-weight:600;">2025년 연간 총괄보고서</td><td>2026-01-12</td><td>김중대</td></tr>
+                            <tr><td>DY-2025-0001</td><td style="font-weight:600;">의무이행 점검 결과 보고</td><td>2025-12-28</td><td>박안전</td></tr>
                         </tbody>
                     </table>
                     <p style="font-size:var(--fs-12); color:var(--text-gray); margin-top:10px;">모든 출력물에는 워터마크와 출력자·출력일시가 기록됩니다.</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><span class="card-title">발급번호 진위확인</span></div>
+                <div class="card-body">
+                    <div style="display:flex;gap:8px;max-width:560px;">
+                        <input class="form-input" id="report-verify-number" type="text" placeholder="예: DY-2026-0003">
+                        <button class="btn btn-primary" onclick="verifyIssuedReport()">조회</button>
+                    </div>
+                    <div id="report-verify-result" class="check-notice" style="display:none;margin-top:10px;"></div>
+                    <p style="font-size:12px;color:var(--text-gray);margin-top:10px;">시스템 내 출력 이력에서 발급 사실·발급일·문서 종류를 대조합니다. 외부 공개 검증 페이지는 구축하지 않습니다.</p>
                 </div>
             </div>
         </div>
@@ -88,7 +114,14 @@
     <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
     <script src="./js/data.js"></script>
     <script src="./js/common.js"></script>
+    <script src="./js/edu-data.js"></script>
     <script>
+        const issuedReports = [
+            { no: 'DY-2026-0003', kind: '1분기 총괄보고서', date: '2026-04-05', by: '박안전' },
+            { no: 'DY-2026-0002', kind: '2025년 연간 총괄보고서', date: '2026-01-12', by: '김중대' },
+            { no: 'DY-2025-0001', kind: '의무이행 점검 결과 보고', date: '2025-12-28', by: '박안전' }
+        ];
+        let reportOutputSeq = 4;
         function reportCondition() {
             const kind = document.getElementById('report-kind').value;
             const from = document.getElementById('report-from').value;
@@ -104,10 +137,58 @@
            지면 구성·발급 행위가 달라 같은 틀로 묶으면 문장이 성립하지 않는다
            ('중대재해예방 개인 안전보건교육 이수 확인서'). */
         function isCert(kind) { return /확인서$/.test(kind || ''); }
+        function isPersonCert(kind) { return kind === '개인 안전보건교육 이수 확인서'; }
+        function isFactCert(kind) { return kind === '이행사실 확인서'; }
+        function selectedEducationStatus(to) {
+            const id = document.getElementById('report-person-id').value;
+            const w = id && window.DYEDU ? DYEDU.workerOf(id) : null;
+            return w ? { worker: w, status: DYEDU.statusRow(w, to) } : null;
+        }
+        function renderReportBody(c) {
+            const body = document.getElementById('report-preview-body');
+            if (!body) return;
+            const row = (k, v) => '<tr><td style="font-weight:600;">' + DYV2.esc(k) + '</td><td>' + v + '</td></tr>';
+            if (isPersonCert(c.kind)) {
+                const x = selectedEducationStatus(c.to);
+                if (!x) {
+                    body.innerHTML = row('발급 대상자', '<span class="chip-mini wt">미선택</span>') + row('판정', '자료 없음');
+                    return;
+                }
+                const w = x.worker, s = x.status, cyc = s.cycle || {};
+                const cycle = s.assessable ? DYV2.esc((cyc.start || '-') + ' ~ ' + (cyc.end || '-')) : DYV2.esc(cyc.reason || '기준일 미등록');
+                body.innerHTML = row('대상자', DYV2.esc(w.name)) +
+                    row('소속', DYV2.esc(DYEDU.deptName(w.deptId))) +
+                    row('구분', DYV2.esc(DYEDU.catLabel(w.category))) +
+                    row('대상 사이클', cycle) +
+                    row('필요시간', s.assessable ? s.need + '시간' : '자료 없음') +
+                    row('인정시간', s.assessable ? s.done + '시간' : '자료 없음') +
+                    row('미달시간', s.assessable ? s.short + '시간' : '자료 없음') +
+                    row('판정', s.complete ? '<span class="chip-status success">이수 완료</span>' : '<span class="chip-status warning">발급 불가</span>') +
+                    row('발급기관', '담양군 재난안전과');
+                return;
+            }
+            if (isFactCert(c.kind)) {
+                const fact = document.getElementById('report-fact').value;
+                body.innerHTML = row('증명 대상', fact ? DYV2.esc(fact) : '<span class="chip-mini wt">미선택</span>') +
+                    row('확인 기간', DYV2.esc(c.from + ' ~ ' + c.to)) +
+                    row('이행 판정', fact ? '<span class="chip-status success">이행 확인됨</span>' : '자료 없음') +
+                    row('확인 자료', fact ? '선택 기간의 확정 업무자료 <span class="chip-mini wt">시연용</span>' : '자료 없음') +
+                    row('발급기관', '담양군 재난안전과');
+                return;
+            }
+            body.innerHTML = row('경영방침', '2026년 안전·보건 목표 수립 및 공표 (이행률 표 자동 삽입)') +
+                row('위험성평가', '정기 1회 · 수시 2회 실시, 유해·위험요인 24건 개선') +
+                row('안전보건교육', '정기·특별교육 14회, 이수율 87%') +
+                row('의견청취', '의견 23건 접수, 15건 조치 완료') +
+                row('개선조치', '전 메뉴 A(조치) 문서 집계 — 조치 완료율 자동 산출');
+        }
         function updateReportPreview() {
             const c = reportCondition();
             if (!c.valid) return;
             const cert = isCert(c.kind);
+            document.getElementById('report-target-group').style.display = cert ? '' : 'none';
+            document.getElementById('report-person-fields').style.display = isPersonCert(c.kind) ? '' : 'none';
+            document.getElementById('report-fact-fields').style.display = isFactCert(c.kind) ? '' : 'none';
             document.getElementById('report-preview-title').textContent = c.kind + ' 미리보기 — ' + c.from + ' ~ ' + c.to;
             document.getElementById('report-document-heading').textContent =
                 cert ? (c.kind + ' (' + c.from + ' ~ ' + c.to + ')')
@@ -116,6 +197,11 @@
             if (btn) btn.style.display = cert ? 'none' : '';
             const issued = document.getElementById('report-issued-at');
             if (issued) issued.textContent = (window.DYV2 && DYV2.today) ? DYV2.today() : issued.textContent;
+            const person = document.getElementById('report-person').value;
+            if (cert && person) document.getElementById('report-document-heading').textContent = person + ' · ' + c.kind;
+            const fact = document.getElementById('report-fact').value;
+            if (isFactCert(c.kind) && fact) document.getElementById('report-document-heading').textContent = fact + ' · 이행사실 확인서';
+            renderReportBody(c);
         }
         function reportAction(action) {
             const c = reportCondition();
@@ -125,9 +211,53 @@
                 DYV2.toast('증명서는 결재 대상이 아닙니다 — 발급은 신청인에게 내주는 행위입니다.');
                 return;
             }
+            if (action === 'PDF 출력' && isPersonCert(c.kind) && !document.getElementById('report-person-id').value) {
+                DYV2.toast('이수현황에서 발급 대상자를 먼저 선택하세요.');
+                return;
+            }
+            if (action === 'PDF 출력' && isPersonCert(c.kind)) {
+                const x = selectedEducationStatus(c.to);
+                if (!x || !x.status.complete) { DYV2.toast('선택 기간의 이수 완료 대상자만 확인서를 발급할 수 있습니다.'); return; }
+            }
+            if (action === 'PDF 출력' && isFactCert(c.kind) && !document.getElementById('report-fact').value) {
+                DYV2.toast('증명할 이행사실을 선택하세요.');
+                return;
+            }
+            if (action === 'PDF 출력') {
+                const no = 'DY-' + c.to.slice(0, 4) + '-' + String(reportOutputSeq++).padStart(4, '0');
+                const rec = { no: no, kind: c.kind, date: (window.DYV2 && DYV2.today) ? DYV2.today() : c.to, by: '박안전' };
+                issuedReports.unshift(rec);
+                document.getElementById('report-issue-number').textContent = no;
+                const tr = document.createElement('tr');
+                tr.innerHTML = '<td>' + no + '</td><td style="font-weight:600;">' + DYV2.esc(c.kind) + '</td><td>' + rec.date + '</td><td>' + rec.by + '</td>';
+                document.getElementById('report-history-body').prepend(tr);
+            }
             DYV2.toast(action + ' — 프로토타입에서는 파일·결재를 생성하지 않습니다.');
         }
-        document.addEventListener('DOMContentLoaded', updateReportPreview);
+        function verifyIssuedReport() {
+            const no = (document.getElementById('report-verify-number').value || '').trim();
+            const rec = issuedReports.find(r => r.no === no);
+            const out = document.getElementById('report-verify-result');
+            out.style.display = '';
+            out.innerHTML = rec
+                ? '<b>발급 이력 확인</b> · ' + DYV2.esc(rec.kind) + ' · 발급일 ' + rec.date + ' · 출력자 ' + DYV2.esc(rec.by)
+                : '<b>일치하는 발급 이력이 없습니다.</b> 발급번호를 다시 확인하세요.';
+        }
+        document.addEventListener('DOMContentLoaded', function () {
+            const q = new URLSearchParams(location.search);
+            const kind = q.get('kind');
+            if (kind && Array.from(document.getElementById('report-kind').options).some(o => o.value === kind)) document.getElementById('report-kind').value = kind;
+            const personId = q.get('person');
+            if (personId && window.DYEDU) {
+                const w = DYEDU.workerOf(personId);
+                if (w) {
+                    document.getElementById('report-person-id').value = w.id;
+                    document.getElementById('report-person').value = w.name + ' · ' + DYEDU.deptName(w.deptId);
+                    document.getElementById('report-kind').value = '개인 안전보건교육 이수 확인서';
+                }
+            }
+            updateReportPreview();
+        });
     </script>
 </body>
 </html>

@@ -74,7 +74,7 @@
         const out = [];
         NAV().forEach(g => (g.items || []).forEach(it => out.push({
             id: it.id, label: it.label, href: it.href || '', screen: it.screen || '',
-            groupId: g.id, groupLabel: g.label,
+            section: it.section || '', groupId: g.id, groupLabel: g.label,
         })));
         return out;
     }

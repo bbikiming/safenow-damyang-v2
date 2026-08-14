@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="./css/style.css">
     <link rel="stylesheet" href="./css/v2.css">
 </head>
-<body data-dy-page="stats" data-page-title="현황 통계" data-page-subtitle="통계·보고 > 현황 통계 — 연도·기간 조회 · 시각화 · 엑셀 다운로드 (SFR-018)">
+<body data-dy-page="stats" data-page-title="현황 통계" data-page-subtitle="통계·보고 > 현황 통계 — 문서·의견 통계 조회 · 엑셀 다운로드 (SFR-018·019)">
     <main>
         <div class="v2-toolbar">
             <div class="form-group"><span class="form-label-inline">연도</span>
@@ -45,6 +45,23 @@
                     <thead><tr><th>대메뉴</th><th>전체</th><th>완료</th><th>진행</th><th>미시행</th><th>이행률</th></tr></thead>
                     <tbody id="st-table"></tbody>
                 </table>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+            <div class="card-header">
+                <span class="card-title">유해·위험요인 신고·개선제안 통계 <span class="chip-mini wt" style="margin-left:6px;">시연용 접수 자료</span></span>
+                <a class="btn btn-sm btn-secondary" href="menu.html?m=opinion&amp;sub=voice">신고 현황</a>
+            </div>
+            <div class="card-body">
+                <div id="st-opinion-summary" class="dsh-duty-sum" style="margin-bottom:12px;"></div>
+                <div style="overflow-x:auto;">
+                    <table class="table-figma">
+                        <thead><tr><th>분류</th><th>접수 건수</th><th>추진결과 등록</th><th>추진결과 등록률</th><th>판정 기준</th></tr></thead>
+                        <tbody id="st-opinion-rows"></tbody>
+                    </table>
+                </div>
+                <p style="font-size:12px;color:var(--text-gray);margin-top:10px;">추진결과 등록률은 전체 접수 건 중 추진결과가 등록된 건의 비율입니다. 등록 여부를 조치 완료로 오해하지 않도록 완료율로 표시하지 않습니다.</p>
             </div>
         </div>
     </main>
@@ -97,6 +114,38 @@
                 }).join('');
             }
 
+            const OPN_SEED = {
+                '2026-H1': [['위험신고', 8, 6], ['안전제안', 7, 5], ['아차사고', 5, 4], ['청취조사', 4, 2]],
+                '2026-H2': [['위험신고', 3, 1], ['안전제안', 3, 1], ['아차사고', 2, 1], ['청취조사', 1, 0]],
+                '2025-H1': [['위험신고', 6, 5], ['안전제안', 5, 4], ['아차사고', 4, 3], ['청취조사', 3, 2]],
+                '2025-H2': [['위험신고', 7, 6], ['안전제안', 4, 4], ['아차사고', 3, 2], ['청취조사', 2, 1]],
+            };
+            function opinionData() {
+                const year = document.getElementById('st-year').value || '2026';
+                const period = document.getElementById('st-period').value;
+                const halves = period ? [period] : ['H1', 'H2'];
+                const map = {};
+                halves.forEach(h => (OPN_SEED[year + '-' + h] || []).forEach(r => {
+                    if (!map[r[0]]) map[r[0]] = [r[0], 0, 0];
+                    map[r[0]][1] += r[1]; map[r[0]][2] += r[2];
+                }));
+                return Object.values(map);
+            }
+            function renderOpinionStats() {
+                const rows = opinionData();
+                const received = rows.reduce((n, r) => n + r[1], 0);
+                const done = rows.reduce((n, r) => n + r[2], 0);
+                const rate = received ? Math.round(done / received * 100) : null;
+                document.getElementById('st-opinion-summary').innerHTML =
+                    '<div class="progress"><div class="progress-bar ' + (rate == null ? 'neutral' : rate >= 80 ? 'green' : rate >= 60 ? 'warning' : 'danger') + '" style="width:' + (rate || 0) + '%"></div></div>' +
+                    '<span>접수 <b>' + received + '건</b> · 추진결과 등록 <b>' + done + '건</b> · 추진결과 등록률 <b>' + (rate == null ? '자료 없음' : rate + '%') + '</b></span>';
+                document.getElementById('st-opinion-rows').innerHTML = rows.map(r => {
+                    const pct = r[1] ? Math.round(r[2] / r[1] * 100) : null;
+                    return '<tr><td style="font-weight:600;">' + r[0] + '</td><td>' + r[1] + '</td><td>' + r[2] + '</td>' +
+                        '<td><b style="color:var(--main-dark);">' + (pct == null ? '자료 없음' : pct + '%') + '</b></td><td>추진결과 등록 여부</td></tr>';
+                }).join('') || '<tr><td colspan="5"><div class="v2-empty">선택 기간에 접수 자료가 없습니다.</div></td></tr>';
+            }
+
             function render() {
                 const list = filtered();
                 const groups = ['중처법', '산안법', '복합근거', '기타근거'];
@@ -128,6 +177,7 @@
                         '<td>' + docs.length + '</td><td>' + c('완료') + '</td><td>' + c('진행') + '</td><td>' + c('미시행') + '</td>' +
                         '<td><b style="color:var(--main-dark);">' + (rate == null ? '대상 없음' : rate + '%') + '</b></td></tr>';
                 }).join('');
+                renderOpinionStats();
             }
 
             ['st-year', 'st-period', 'st-menu'].forEach(id => document.getElementById(id).addEventListener('change', render));

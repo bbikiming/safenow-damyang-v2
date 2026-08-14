@@ -11,10 +11,14 @@
 </head>
 <body data-dy-page="admin-notify" data-page-title="알림 관리" data-page-subtitle="시스템 관리 > 알림 관리 — 문자·메일 설정 및 발송 이력 (SFR-017)">
     <main>
-        <div class="dsh-grid">
+        <div class="check-notice" style="margin-bottom:16px;">
+            <strong>프로토타입 시연 안내</strong> — 아래 문자·메일 선택값과 발송 이력은 알림 규칙·상태 UX를 확인하기 위한 시연용 데이터입니다.
+            외부 메시지 연계 전에는 실제 문자·메일이 발송되지 않으며, 본개발에서 채널별 연계가 연결된 뒤 실제 결과로 대체합니다.
+        </div>
+        <div style="display:grid;gap:16px;">
             <div class="card">
                 <div class="card-header">
-                    <span class="card-title">알림 규칙 설정</span>
+                    <span class="card-title">알림 규칙 설정 <span class="chip-status chip-sm neutral">시연용</span></span>
                     <button class="btn btn-primary btn-sm" onclick="DYV2.toast('알림 규칙 저장 (프로토타입)')">저장</button>
                 </div>
                 <div class="card-body" style="overflow-x:auto;">
@@ -32,7 +36,7 @@
             </div>
 
             <div class="card">
-                <div class="card-header"><span class="card-title">발송 이력</span></div>
+                <div class="card-header"><span class="card-title">발송 이력 <span class="chip-status chip-sm neutral">시연용</span></span></div>
                 <div class="card-body" style="overflow-x:auto;">
                     <table class="table-figma">
                         <thead><tr><th>일시</th><th>채널</th><th>내용</th><th>수신</th><th>결과</th></tr></thead>

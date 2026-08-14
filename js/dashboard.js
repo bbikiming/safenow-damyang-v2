@@ -242,12 +242,26 @@
                 '<div class="dsh-chain-node tier-head"><span class="dsh-chain-tier">총괄 책임자</span>' +
                   '<b>군수 <em>1명</em></b><span class="dsh-chain-who">경영책임자 (중처법 §2)</span>' + chip('완료') + '</div>' +
                 '<span class="dsh-chain-arrow" aria-hidden="true">→</span>' +
-                '<div class="dsh-chain-node tier-super"><span class="dsh-chain-tier">관리감독자</span>' +
-                  '<b>실과장·사업소장·읍면장 <em>' + supers + '명</em></b><span class="dsh-chain-who">부서 관리·감독 (산안법 §16)</span>' + chip('완료') + '</div>' +
+                '<div class="dsh-chain-node tier-super"><span class="dsh-chain-tier">부서 관리자 계층</span>' +
+                  '<b>실과장·사업소장·읍면장 <em>' + supers + '명</em></b><span class="dsh-chain-who">조회·재촉 권한 계층 — 법정 관리감독자 지정과 다름</span>' + chip('완료') + '</div>' +
                 '<span class="dsh-chain-arrow" aria-hidden="true">→</span>' +
                 '<div class="dsh-chain-node tier-staff"><span class="dsh-chain-tier">업무담당자</span>' +
                   '<b>실무 수행자 <em>' + staffN + '명</em></b><span class="dsh-chain-who">부서 안전보건 업무 수행</span>' + chip('완료') + '</div>' +
               '</div></div>' +
+            '</div>';
+
+        const targetCard =
+            '<div class="card" style="margin-bottom:16px;">' +
+              '<div class="card-header"><span class="card-title">중대시민재해 관리대상 기본현황</span>' +
+                '<a class="btn btn-sm btn-secondary" href="base-targets.html">관리대상 현황</a></div>' +
+              '<div class="card-body">' +
+                '<div class="statbox-grid cols-3">' +
+                  '<a class="statbox info" href="base-targets.html?tab=facility" style="text-decoration:none;"><div class="statbox-num" style="font-size:22px;">판정 전</div><div class="statbox-label">공중이용시설 · FMS 후보</div></a>' +
+                  '<a class="statbox warning" href="base-targets.html?tab=material" style="text-decoration:none;"><div class="statbox-num">4<em style="font-size:12px;">건</em></div><div class="statbox-label">원료·제조물 · 확인 전 시연자료</div></a>' +
+                  '<div class="statbox neutral"><div class="statbox-num" style="font-size:22px;">자료 미수신</div><div class="statbox-label">공중교통수단 · 0건으로 단정하지 않음</div></div>' +
+                '</div>' +
+                '<p style="font-size:12px;color:var(--text-gray);margin-top:10px;">세 축은 각 관리대상 화면과 같은 모집단을 사용합니다. 확인 전 자료를 0개소로 표시하지 않습니다.</p>' +
+              '</div>' +
             '</div>';
 
         const deptRows = DEPT_RATES.map(d =>
@@ -426,7 +440,7 @@
               '</div>' +
             '</div>';
 
-        return hero + chain +
+        return hero + targetCard + chain +
             '<div class="dsh-grid">' +
               '<div style="display:flex; flex-direction:column; gap:16px;">' + heatCard + deptCard + dutyCard + '</div>' +
               '<div style="display:flex; flex-direction:column; gap:16px;">' + approveCard + law5Card + accCard + budgetCard + feedCard + '</div>' +

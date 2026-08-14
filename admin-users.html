@@ -20,6 +20,25 @@
             </div>
         </div>
 
+        <div class="card" style="margin-bottom:16px;">
+            <div class="card-header" style="gap:10px;flex-wrap:wrap;">
+                <span class="card-title">조직 직접 등록 <span class="chip-mini wt" style="margin-left:6px;">행정포털 미등록 조직만</span></span>
+                <span class="spacer" style="flex:1;"></span>
+                <button class="btn btn-outline btn-sm" onclick="admOrgMergeCandidates()">병합 후보 확인</button>
+                <button class="btn btn-primary btn-sm" onclick="admOrgForm()">+ 부서 직접 등록</button>
+            </div>
+            <div class="card-body">
+                <div class="check-notice" style="margin-bottom:12px;"><b>프로토타입의 조직·사용자 명단은 시연용 더미입니다.</b> 행정포털에 없는 조직만 직접 등록합니다. 연계 수신 노드는 읽기 전용이며, 직접 등록 노드는 삭제하지 않고 사용 중지로 참조를 보존합니다.</div>
+                <div style="overflow-x:auto;">
+                    <table class="table-figma">
+                        <thead><tr><th>부서명</th><th>상위 노드</th><th>유형</th><th>출처</th><th>상태</th><th>관리</th></tr></thead>
+                        <tbody id="adm-org-rows"></tbody>
+                    </table>
+                </div>
+                <p style="font-size:12px;color:var(--text-gray);margin-top:10px;">프로토타입은 시연용 조직 자료를 표시합니다. 본개발은 부서 식별값을 기준으로 소속 인원·권한·업무 참조를 유지합니다.</p>
+            </div>
+        </div>
+
         <div class="card">
             <div class="card-header">
                 <span class="card-title">사용자 목록</span>
@@ -66,6 +85,12 @@
     <script>
     (function () {
         'use strict';
+        var orgRows = [
+            { id: 'LINK-01', name: '재난안전과', parent: '행정국', type: '부서', source: '연계', active: true },
+            { id: 'LINK-02', name: '재난안전과 중대재해팀', parent: '재난안전과', type: '팀', source: '연계', active: true },
+            { id: 'LOCAL-01', name: '중대재해 예방 TF', parent: '재난안전과', type: '임시조직', source: '직접 등록', active: true }
+        ];
+        var orgSeq = 1;
         function permChip(label) {
             var cls = 'wt';
             if (label === '시스템 관리자') cls = 'wt-program';
@@ -95,6 +120,77 @@
                     '<td style="font-size:12px; color:var(--text-gray);">' + DYV2.esc(r.desc || '') + '</td></tr>';
             }).join('');
         }
+        function renderOrgRows() {
+            var tb = document.getElementById('adm-org-rows');
+            if (!tb) return;
+            tb.innerHTML = orgRows.map(function (r) {
+                var linked = r.source === '연계';
+                var state = r.mergedTo ? '<span class="chip-mini wt">병합됨</span>'
+                    : r.active ? '<span class="chip-mini st-done">사용</span>' : '<span class="chip-mini st-todo">사용 중지</span>';
+                var actions = linked
+                    ? '<span style="font-size:12px;color:var(--text-gray);">읽기 전용</span>'
+                    : '<button class="btn btn-sm btn-outline" onclick="admOrgForm(\'' + r.id + '\')">수정</button> ' +
+                      '<button class="btn btn-sm btn-outline" onclick="admOrgToggle(\'' + r.id + '\')">' + (r.active ? '사용 중지' : '사용') + '</button>';
+                return '<tr><td style="font-weight:600;">' + DYV2.esc(r.name) + (r.mergedTo ? '<br><span style="font-size:12px;color:var(--text-gray);">' + DYV2.esc(r.mergedTo) + '으로 승계</span>' : '') + '</td>' +
+                    '<td>' + DYV2.esc(r.parent) + '</td><td>' + DYV2.esc(r.type) + '</td>' +
+                    '<td><span class="chip-mini ' + (linked ? 'wt-elec' : 'pdca') + '">' + DYV2.esc(r.source) + '</span></td>' +
+                    '<td>' + state + '</td><td>' + actions + '</td></tr>';
+            }).join('');
+        }
+        window.admOrgForm = function (id) {
+            var row = orgRows.filter(function (r) { return r.id === id; })[0] || null;
+            var body = '<div class="preset-form-grid">' +
+                '<span class="k">부서명 <span class="req">*</span></span><input id="adm-org-name" type="text" value="' + DYV2.esc(row ? row.name : '') + '" placeholder="행정포털에 없는 부서명">' +
+                '<span class="k">상위 노드 <span class="req">*</span></span><select id="adm-org-parent"><option>재난안전과</option><option>행정국</option><option>담양군</option></select>' +
+                '<span class="k">유형 <span class="req">*</span></span><select id="adm-org-type"><option>부서</option><option>팀</option><option>임시조직</option></select>' +
+                '<span class="k">출처</span><input type="text" value="직접 등록" readonly>' +
+            '</div>';
+            DYV2.openModal(row ? '조직 직접 등록 수정' : '조직 직접 등록', body,
+                '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+                '<button class="btn btn-primary" onclick="admOrgSave(\'' + (id || '') + '\')">저장</button>');
+            if (row) {
+                document.getElementById('adm-org-parent').value = row.parent;
+                document.getElementById('adm-org-type').value = row.type;
+            }
+        };
+        window.admOrgSave = function (id) {
+            var name = (document.getElementById('adm-org-name').value || '').trim();
+            var parent = document.getElementById('adm-org-parent').value;
+            var type = document.getElementById('adm-org-type').value;
+            if (!name) { DYV2.toast('부서명을 입력하세요.'); return; }
+            var duplicate = orgRows.some(function (r) { return r.id !== id && r.name === name && r.active; });
+            if (duplicate) { DYV2.toast('같은 이름의 사용 중인 조직이 있습니다.'); return; }
+            var row = orgRows.filter(function (r) { return r.id === id; })[0];
+            if (row) { row.name = name; row.parent = parent; row.type = type; }
+            else { orgSeq += 1; orgRows.push({ id: 'LOCAL-' + String(orgSeq).padStart(2, '0'), name: name, parent: parent, type: type, source: '직접 등록', active: true }); }
+            DYV2.closeModal(); renderOrgRows(); DYV2.toast(row ? '조직 정보를 수정했습니다.' : '조직을 직접 등록했습니다.');
+        };
+        window.admOrgToggle = function (id) {
+            var row = orgRows.filter(function (r) { return r.id === id && r.source === '직접 등록'; })[0];
+            if (!row) return;
+            row.active = !row.active; renderOrgRows();
+            DYV2.toast(row.active ? '조직을 다시 사용합니다.' : '참조를 보존하고 조직을 사용 중지했습니다.');
+        };
+        window.admOrgMergeCandidates = function () {
+            var direct = orgRows.filter(function (r) { return r.source === '직접 등록' && r.active && !r.mergedTo; })[0];
+            if (!direct) { DYV2.toast('확인할 병합 후보가 없습니다.'); return; }
+            var target = orgRows.filter(function (r) { return r.id === 'LINK-02'; })[0];
+            var body = '<div class="check-notice"><b>자동 병합하지 않습니다.</b> 이름과 상위 조직이 유사한 후보를 담당자가 확인합니다.</div>' +
+                '<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;margin-top:14px;">' +
+                '<div class="admm-note"><b>' + DYV2.esc(direct.name) + '</b><br><span class="chip-mini pdca">직접 등록</span></div>' +
+                '<b>→</b><div class="admm-note"><b>' + DYV2.esc(target.name) + '</b><br><span class="chip-mini wt-elec">연계</span></div></div>' +
+                '<p style="font-size:12px;color:var(--text-gray);margin-top:10px;">병합 시 소속 인원·권한·업무 참조는 연계 부서 식별값으로 승계되고 병합 이력을 남깁니다.</p>';
+            DYV2.openModal('조직 병합 후보', body,
+                '<button class="btn btn-secondary" onclick="DYV2.closeModal()">별도 유지</button>' +
+                '<button class="btn btn-primary" onclick="admOrgMerge(\'' + direct.id + '\',\'' + target.id + '\')">병합·승계</button>');
+        };
+        window.admOrgMerge = function (fromId, toId) {
+            var from = orgRows.filter(function (r) { return r.id === fromId; })[0];
+            var to = orgRows.filter(function (r) { return r.id === toId; })[0];
+            if (!from || !to) return;
+            from.active = false; from.mergedTo = to.name;
+            DYV2.closeModal(); renderOrgRows(); DYV2.toast('부서 참조를 ' + to.name + '으로 승계했습니다.');
+        };
         /* 사용자별 실효 권한 역조회 (합집합 · 근거 표기) — DYADM.effectiveForUser 사용 */
         window.admAccess = function (uname) {
             if (!window.DYADM) return;
@@ -119,7 +215,7 @@
             DYV2.openModal(DYV2.esc(uname) + ' — 접근 메뉴 (실효 권한)', body,
                 '<button class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
         };
-        function init() { fillPerms(); fillGrades(); }
+        function init() { fillPerms(); fillGrades(); renderOrgRows(); }
         if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
         else init();
     })();

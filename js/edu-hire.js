@@ -4,7 +4,7 @@
    · 근로자 신규 등록/엑셀 시 채용시교육 항목이 자동으로 '미이수' 상태로 표시(별도 DB 스키마 없이 hireStatus 파생).
    · 탭: 미이수 / 이수 (.sub-tabs + .count)
    · 필터: 부서 · 고용형태 (가로 배치 — 조회 조건이므로 select 유지)
-   · 미이수 탭: 필터 결과 헤더 체크박스로 전체선택 + [선택 이수처리] → 이수일 입력 후 일괄 완료
+   · 미이수 탭: 필터 결과 헤더 체크박스로 전체선택 + [선택 교육기록 등록] → 실제 교육일·시간·증빙 등록
    표준: 배지 chip-status+DYV2.toneOf · 표 .table-figma(.table-compact) · 빈상태 .v2-empty
    ===================================================================== */
 (function (global) {
@@ -95,7 +95,7 @@
         }
         var actions = '<button type="button" class="btn btn-primary" onclick="EDUH.openAdd()">＋ 채용시 교육 추가</button>' +
             (state.tab === 'undone'
-                ? ' <button type="button" class="btn btn-outline" onclick="EDUH.openBulk()">선택 이수처리 (' + selectedCount() + ')</button>'
+                ? ' <button type="button" class="btn btn-outline" onclick="EDUH.openBulk()">선택 교육기록 등록 (' + selectedCount() + ')</button>'
                 : '');
         var filters = EDUFILTER.bar(fields, { count: list.length, unit: '명', reset: 'EDUH.resetF()', actions: actions });
 
@@ -360,12 +360,13 @@
         if (!ids.length) { toast('미이수자를 1명 이상 선택하세요.'); return; }
         B = {
             ids: ids,
-            /* 기본값: 각자 채용일 처리(정상 이수). 해제 시 일괄 이수일 지정. */
-            useHireDate: true,
+            /* 소급 등록도 실제 교육일·시간·증빙을 받는다. 채용일 자동 대입은 정상 실시로
+             * 오인되므로 더 이상 제공하지 않는다. */
+            useHireDate: false,
             /* merge — 교육 건 생성 방식. false=근로자별 개별 건(기본) · true=한 건으로 묶기.
              * 묶으려면 이수일이 하나여야 하므로 '일괄 이수일 지정'과 함께만 성립한다. */
             merge: false,
-            date: E().today(), time: '09:00',
+            date: E().today(), time: '09:00', end: '18:00', evidenceName: '',
             instructor: '외부위탁',
             desc: '채용시 안전보건교육 (일괄 이수처리)'
         };
@@ -386,32 +387,25 @@
         var el = function (id) { return document.getElementById(id); };
         if (el('eh-b-date')) B.date = el('eh-b-date').value || B.date;
         if (el('eh-b-time')) B.time = el('eh-b-time').value || B.time;
+        if (el('eh-b-end')) B.end = el('eh-b-end').value || B.end;
+        if (el('eh-b-evidence') && el('eh-b-evidence').files && el('eh-b-evidence').files[0]) B.evidenceName = el('eh-b-evidence').files[0].name;
         if (el('eh-b-inst')) B.instructor = el('eh-b-inst').value.trim();
         if (el('eh-b-desc')) B.desc = el('eh-b-desc').value.trim();
     }
     function renderBulk() {
         var names = B.ids.map(function (id) { var w = E().workerOf(id); return w ? w.name : id; }).join(', ');
         var body =
-            '<p style="font-size:var(--fs-13);">선택한 <b>' + B.ids.length + '명</b>의 채용시교육을 이수 처리합니다.</p>' +
+            '<p style="font-size:var(--fs-13);">선택한 <b>' + B.ids.length + '명</b>의 채용시교육 기록을 등록합니다.</p>' +
             '<div style="max-height:80px;overflow-y:auto;font-size:var(--fs-12);color:var(--text-gray);background:var(--gray-50);padding:8px 10px;border-radius:var(--radius-md);margin-bottom:12px;">' + esc(names) + '</div>' +
-            '<div class="edu-modal-row"><label class="form-label">이수일 처리 방식</label>' +
-                '<label style="display:flex;align-items:center;gap:6px;font-size:var(--fs-12);padding:4px 0;">' +
-                    '<input type="radio" name="eh-mode"' + (B.useHireDate ? ' checked' : '') + ' onchange="EDUH.setBulkMode(true)"> ' +
-                    '<b>각자 채용일</b>로 처리 (권장 · 정상 이수 처리)' +
-                '</label>' +
-                '<label style="display:flex;align-items:center;gap:6px;font-size:var(--fs-12);padding:4px 0;">' +
-                    '<input type="radio" name="eh-mode"' + (!B.useHireDate ? ' checked' : '') + ' onchange="EDUH.setBulkMode(false)"> ' +
-                    '<b>일괄 이수일</b> 지정 (채용일보다 늦으면 지연 이수)' +
-                '</label>' +
+            '<div class="check-notice" style="margin-bottom:10px;"><b>소급 등록</b> — 채용일을 이수일로 자동 대입하지 않습니다. 실제 교육일·시간과 교육일지 증빙을 남기며, 실제 시간만 인정합니다.</div>' +
+            '<div class="edu-modal-row-2">' +
+                '<div><label class="form-label" for="eh-b-date">실제 교육일 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                  '<input type="date" class="form-input" id="eh-b-date" value="' + esc(B.date) + '"></div>' +
+                '<div><label class="form-label" for="eh-b-time">시작 시각 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                  '<input type="time" class="form-input" id="eh-b-time" value="' + esc(B.time) + '"></div>' +
+                '<div><label class="form-label" for="eh-b-end">종료 시각 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                  '<input type="time" class="form-input" id="eh-b-end" value="' + esc(B.end) + '"></div>' +
             '</div>' +
-            (!B.useHireDate
-                ? '<div class="edu-modal-row-2">' +
-                    '<div><label class="form-label" for="eh-b-date">일괄 이수일 <span style="color:var(--status-danger-fg)">*</span></label>' +
-                      '<input type="date" class="form-input" id="eh-b-date" value="' + esc(B.date) + '"></div>' +
-                    '<div><label class="form-label" for="eh-b-time">시작 시각</label>' +
-                      '<input type="time" class="form-input" id="eh-b-time" value="' + esc(B.time) + '"></div>' +
-                  '</div>'
-                : '') +
             /* 교육 건 생성 방식 — 개별/묶기. 묶기는 이수일이 하나여야 성립하므로 일괄 이수일과 함께 쓴다. */
             '<div class="edu-modal-row"><label class="form-label">교육 건 생성 방식</label>' +
                 '<label style="display:flex;align-items:center;gap:6px;font-size:var(--fs-12);padding:4px 0;">' +
@@ -431,33 +425,37 @@
             '<div class="edu-modal-row"><label class="form-label" for="eh-b-inst">강사·주관</label>' +
                 '<input type="text" class="form-input" id="eh-b-inst" value="' + esc(B.instructor) + '"></div>' +
             '<div class="edu-modal-row"><label class="form-label" for="eh-b-desc">내용</label>' +
-                '<textarea class="form-textarea" id="eh-b-desc" rows="2">' + esc(B.desc) + '</textarea></div>';
-        V().openModal('선택 이수처리 · ' + B.ids.length + '명', body,
+                '<textarea class="form-textarea" id="eh-b-desc" rows="2">' + esc(B.desc) + '</textarea></div>' +
+            '<div class="edu-modal-row"><label class="form-label" for="eh-b-evidence">교육일지·서명부 증빙 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                '<input class="form-input" id="eh-b-evidence" type="file" accept=".pdf,.hwp,.hwpx,.jpg,.jpeg,.png">' +
+                (B.evidenceName ? '<p style="font-size:var(--fs-12);color:var(--text-gray);margin:4px 0 0;">선택됨: ' + esc(B.evidenceName) + '</p>' : '') + '</div>';
+        V().openModal('선택 교육기록 등록 · ' + B.ids.length + '명', body,
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-            '<button type="button" class="btn btn-primary" onclick="EDUH.doBulk()">이수 처리</button>');
+            '<button type="button" class="btn btn-primary" onclick="EDUH.doBulk()">교육기록 등록</button>');
     }
     /* 각자 채용일로 되돌리면 이수일이 사람마다 달라지므로 묶기는 자동 해제된다 */
     function setBulkMode(useHire) { captureBulk(); B.useHireDate = useHire; if (useHire) B.merge = false; renderBulk(); }
     /* 묶기를 켜면 이수일이 하나여야 하므로 일괄 이수일 모드로 전환한다 */
     function setBulkMerge(on) { captureBulk(); B.merge = on; if (on) B.useHireDate = false; renderBulk(); }
     function doBulk() {
-        if (!B.useHireDate) {
-            var d = document.getElementById('eh-b-date').value;
-            if (!d) { toast('일괄 이수일을 입력하세요.'); return; }
-            B.date = d;
-            var t = document.getElementById('eh-b-time');
-            if (t) B.time = t.value || B.time;
-        }
+        captureBulk();
+        var d = document.getElementById('eh-b-date').value;
+        if (!d) { toast('실제 교육일을 입력하세요.'); return; }
+        B.date = d;
+        var actualHours = E().sessionHours({ start: B.time, end: B.end });
+        if (!(actualHours > 0)) { toast('시작·종료 시각을 확인하세요.'); return; }
+        if (!B.evidenceName) { toast('교육일지·서명부 증빙을 선택하세요.'); return; }
         B.instructor = document.getElementById('eh-b-inst').value.trim();
         B.desc = document.getElementById('eh-b-desc').value.trim() || '채용시 안전보건교육';
-        var count = 0, made = 0;
+        var count = 0, made = 0, completed = 0;
 
         if (B.merge) {
             /* 한 건으로 묶기 — 필요시간이 같은 인원끼리 교육 건 1개.
              * 여러 부서가 섞이므로 deptId 는 비우고(집합교육과 동일) 부서별 신청 행으로 나눈다. */
             bulkGroups().forEach(function (g) {
                 var c = E().addCourse({
-                    kind: 'HIRE', deptId: '', date: B.date, time: B.time, hours: g.hours,
+                    kind: 'HIRE', deptId: '', date: B.date, time: B.time, endTime: B.end, hours: actualHours,
+                    sessions: [{ date: B.date, start: B.time, end: B.end }], files: [{ name: B.evidenceName, slot: 'evidence' }],
                     instructor: B.instructor, place: '',
                     desc: B.desc + ' (' + g.hours + 'h · ' + g.ids.length + '명)',
                     status: 'DONE', createdBy: '재난안전과 (일괄)'
@@ -471,7 +469,9 @@
                     E().addEnroll({ courseId: c.id, deptId: d, workerIds: byDept[d], at: B.date });
                 });
                 g.ids.forEach(function (id) {
-                    E().addRecord({ workerId: id, courseId: c.id, kind: 'HIRE', hours: g.hours, date: B.date });
+                    var recognized = Math.min(g.hours, actualHours);
+                    E().addRecord({ workerId: id, courseId: c.id, kind: 'HIRE', hours: recognized, date: B.date });
+                    if (recognized >= g.hours) completed++;
                     count++;
                 });
                 made++;
@@ -480,21 +480,24 @@
             B.ids.forEach(function (id) {
                 var w = E().workerOf(id); if (!w) return;
                 var hours = E().hireHours(w);
-                var date = B.useHireDate ? w.hireDate : B.date;
-                var time = B.useHireDate ? '' : B.time; /* 각자 채용일 처리 시 시간 정보 없음 */
+                var date = B.date;
+                var time = B.time;
                 /* 근로자별 개별 course (묶기를 끄면 종전 동작) */
                 var c = E().addCourse({
-                    kind: 'HIRE', deptId: w.deptId, date: date, time: time, hours: hours,
+                    kind: 'HIRE', deptId: w.deptId, date: date, time: time, endTime: B.end, hours: actualHours,
+                    sessions: [{ date: date, start: time, end: B.end }], files: [{ name: B.evidenceName, slot: 'evidence' }],
                     instructor: B.instructor, place: '', desc: B.desc + ' · ' + w.name,
                     status: 'DONE', createdBy: '재난안전과 (일괄)'
                 });
                 E().addEnroll({ courseId: c.id, deptId: w.deptId, workerIds: [id], at: date });
-                E().addRecord({ workerId: id, courseId: c.id, kind: 'HIRE', hours: hours, date: date });
+                var recognized = Math.min(hours, actualHours);
+                E().addRecord({ workerId: id, courseId: c.id, kind: 'HIRE', hours: recognized, date: date });
+                if (recognized >= hours) completed++;
                 count++; made++;
             });
         }
         V().closeModal();
-        toast(count + '명 채용시교육 이수 처리 완료 · 교육 건 ' + made + '건 생성');
+        toast(count + '명 소급 교육기록 등록 · 이수 완료 ' + completed + '명 · 교육 건 ' + made + '건 생성');
         state.checked = {};
         render();
     }
@@ -565,8 +568,8 @@
     function renderAdd() {
         var body =
             EDUFORM.renderSessions(A, 'EDUH', { totalCaption: '행사 진행 시간' }) +
-            '<div class="check-notice" style="margin-bottom:12px;">이수 시간은 대상자 <b>고용형태별 필요시간</b>으로 인정됩니다 ' +
-                '(일용 <b>1h</b> · 1주 초과~1개월 <b>4h</b> · 그 밖 <b>8h</b>). 채용일 이후 이수 시 <b>지연</b>으로 표시됩니다.</div>' +
+            '<div class="check-notice" style="margin-bottom:12px;">실제 회차 합계시간과 대상자별 법정 필요시간 중 <b>작은 값만 인정</b>합니다 ' +
+                '(일용 필요 <b>1h</b> · 1주 초과~1개월 <b>4h</b> · 그 밖 <b>8h</b>). 필요시간에 못 미치면 교육기록은 남지만 미이수 상태를 유지합니다.</div>' +
             '<div class="edu-modal-row"><label class="form-label" for="eh-a-inst">강사·주관</label>' +
                 '<input type="text" class="form-input" id="eh-a-inst" value="' + esc(A.instructor) + '"></div>' +
             '<div class="edu-modal-row"><label class="form-label" for="eh-a-place">장소</label>' +
@@ -577,7 +580,7 @@
             EDUFORM.renderAttach(A, 'EDUH', 'done');
         V().openModal('채용시 교육 추가', body,
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-            '<button type="button" class="btn btn-primary" onclick="EDUH.doAdd()">등록 · 이수 처리</button>');
+            '<button type="button" class="btn btn-primary" onclick="EDUH.doAdd()">교육기록 등록</button>');
     }
     /* 회차·첨부 위임 래퍼 (EDUFORM 공용) */
     function sessTab(i) { captureAdd(); A.sIdx = i; renderAdd(); }
@@ -603,26 +606,29 @@
         var S = pr.payload;
         var ids = Object.keys(A.workerIds).filter(function (k) { return A.workerIds[k]; });
         if (!ids.length) { toast('교육 대상자를 1명 이상 선택하세요.'); return; }
-        var count = 0, late = 0;
+        if (!A.files.length) { toast('교육일지 및 교육사진 등 증빙을 첨부하세요.'); return; }
+        var count = 0, completed = 0, late = 0;
         ids.forEach(function (id) {
             var w = E().workerOf(id); if (!w) return;
-            var hours = E().hireHours(w);           /* 인정 = 고용형태별 필요시간 */
+            var need = E().hireHours(w);
+            var hours = Math.min(need, S.hours);     /* 인정 = 실제 실시시간과 법정 필요시간 중 작은 값 */
             var eventDate = S.date;
             /* 근로자별 개별 course — 이수 취소(removeCourse)가 다른 대상자를 건드리지 않도록 (bulk 패턴과 동일) */
             var c = E().addCourse({
                 kind: 'HIRE', deptId: w.deptId, date: eventDate, time: S.time, endTime: S.endTime,
-                sessions: S.sessions, hours: hours,
+                sessions: S.sessions, hours: S.hours,
                 instructor: A.instructor, place: A.place, desc: A.desc + ' · ' + w.name,
                 files: A.files, photos: A.photos, status: 'DONE', createdBy: '재난안전과'
             });
             E().addEnroll({ courseId: c.id, deptId: w.deptId, workerIds: [id], at: eventDate });
             E().addRecord({ workerId: id, courseId: c.id, kind: 'HIRE', hours: hours, date: eventDate });
+            if (hours >= need) completed++;
             if (eventDate > w.hireDate) late++;
             count++;
         });
         V().closeModal();
-        toast(count + '명 채용시 교육 등록 · 이수 처리 완료' + (late ? ' · 지연 ' + late + '명' : ''));
-        state.tab = 'done'; state.checked = {}; render();
+        toast(count + '명 교육기록 등록 · 이수 완료 ' + completed + '명' + (late ? ' · 지연 ' + late + '명' : ''));
+        state.tab = completed === count ? 'done' : 'all'; state.checked = {}; render();
     }
 
     function init(mountId, opts) {

@@ -34,6 +34,7 @@
                         <option value="">표시 전체</option>
                         <option value="reference">참고·보관</option>
                         <option value="inspection">안전점검 계열</option>
+                        <option value="manual">매뉴얼·업무처리절차</option>
                     </select>
                     <div class="search-bar">
                         <input class="search-input" id="f-q" type="text" placeholder="문서명 검색">
@@ -74,10 +75,12 @@
 
             const reference = ALL.filter(d => d.docRole === '참고자료');
             const inspection = ALL.filter(isInspection);
+            const manuals = ALL.filter(isManual);
             document.getElementById('archive-stats').innerHTML =
                 '<div class="statbox neutral"><div class="statbox-num">' + ALL.length + '</div><div class="statbox-label">보관 문서 전체</div></div>' +
                 '<div class="statbox info"><div class="statbox-num">' + reference.length + '</div><div class="statbox-label">참고·보관</div></div>' +
                 '<div class="statbox info"><div class="statbox-num">' + inspection.length + '</div><div class="statbox-label">안전점검 계열</div></div>' +
+                '<div class="statbox info"><div class="statbox-num">' + manuals.length + '</div><div class="statbox-label">매뉴얼·절차서</div></div>' +
                 '<div class="statbox success"><div class="statbox-num">' + ALL.filter(d => d.setId && d.pdca).length + '</div><div class="statbox-label">V2 분류 완료</div></div>';
 
             /* 대메뉴 필터 옵션 — 실데이터 기준 자동 생성 */
@@ -101,10 +104,14 @@
             function isInspection(d) {
                 return /점검/.test([d.subType, d.theme, d.name].join(' '));
             }
+            function isManual(d) {
+                return /매뉴얼|업무처리절차|절차서|대응절차/.test([d.subType, d.theme, d.name].join(' '));
+            }
             function flags(d) {
                 let h = '';
                 if (d.docRole === '참고자료') h += '<span class="chip-mini wt-attach">참고·보관</span> ';
                 if (isInspection(d)) h += V.secondReviewBadge();
+                if (isManual(d)) h += '<span class="chip-mini pdca">매뉴얼·절차서</span> ';
                 return h || '-';
             }
             function render() {
@@ -117,6 +124,7 @@
                     (!law || basisGroup(d) === law) &&
                     (flag !== 'reference' || d.docRole === '참고자료') &&
                     (flag !== 'inspection' || isInspection(d)) &&
+                    (flag !== 'manual' || isManual(d)) &&
                     (!q || d.name.indexOf(q) >= 0)
                 );
                 const shown = list.slice(0, shownLimit);
@@ -141,9 +149,9 @@
                 document.getElementById(id).addEventListener('change', () => { shownLimit = PAGE; render(); }));
             document.getElementById('f-q').addEventListener('input', () => { shownLimit = PAGE; render(); });
 
-            /* 딥링크 ?filter=reference|inspection */
+            /* 딥링크 ?filter=reference|inspection|manual */
             const deepFilter = new URLSearchParams(location.search).get('filter');
-            if (deepFilter === 'reference' || deepFilter === 'inspection') {
+            if (deepFilter === 'reference' || deepFilter === 'inspection' || deepFilter === 'manual') {
                 document.getElementById('f-flag').value = deepFilter;
             }
             render();

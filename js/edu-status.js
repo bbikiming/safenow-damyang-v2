@@ -191,6 +191,9 @@
                 ? '<input type="checkbox"' + ck + ' onchange="EDUS.toggleCheck(\'' + w.id + '\', this.checked)" aria-label="' + esc(w.name) + ' 선택">'
                 : '';
             var empLabel = E().empLabel(w.empType) + (w.contractMonths ? '[' + w.contractMonths + '개월]' : '');
+            var certEl = r.complete
+                ? '<a class="btn btn-outline btn-sm" href="reports.html?kind=' + encodeURIComponent('개인 안전보건교육 이수 확인서') + '&person=' + encodeURIComponent(w.id) + '">발급</a>'
+                : '<button type="button" class="btn btn-outline btn-sm" disabled title="현재 사이클 이수 완료 후 발급할 수 있습니다.">발급</button>';
             return '<tr' + (r.complete ? '' : ' class="row-short"') + '>' +
                 '<td style="text-align:center;">' + ckEl + '</td>' +
                 '<td class="edu-name">' + esc(w.name) + '</td>' +
@@ -206,8 +209,9 @@
                 '<td>' + (!r.assessable ? '<span class="chip-status chip-sm warning">판정 불가</span>' : (r.complete
                     ? '<span class="chip-status chip-sm ' + V().toneOf('완료') + '">완료</span>'
                     : '<span class="chip-status chip-sm ' + V().toneOf('미이수') + '">미이수</span>')) + '</td>' +
+                '<td>' + certEl + '</td>' +
             '</tr>';
-        }).join('') : '<tr><td colspan="12"><div class="v2-empty">조건에 맞는 대상자가 없습니다.</div></td></tr>';
+        }).join('') : '<tr><td colspan="13"><div class="v2-empty">조건에 맞는 대상자가 없습니다.</div></td></tr>';
 
         var bar = EDUFILTER.bar([
             { type: 'search', id: 'es-q', value: state.fQ, placeholder: '이름·부서·구분 검색', on: "EDUS.setF('Q', this.value)" },
@@ -241,7 +245,7 @@
             '<table class="table-figma table-compact table-nowrap"><thead><tr>' +
                 '<th style="width:44px;"></th><th>이름</th><th>부서</th><th>구분</th><th>고용형태</th>' +
                 '<th>채용일</th><th>현재 사이클</th><th>종료 D-day</th>' +
-                '<th>필요</th><th>인정</th><th>미달</th><th>정기</th>' +
+                '<th>필요</th><th>인정</th><th>미달</th><th>정기</th><th>확인서</th>' +
             '</tr></thead><tbody>' + rows + '</tbody></table>' +
             '</div>' +
         '</div>';
@@ -264,7 +268,8 @@
             var w = E().workerOf(wid); if (!w) return;
             (byDept[w.deptId] = byDept[w.deptId] || []).push(wid);
         });
-        var body = '<p style="font-size:var(--fs-13);">선택한 <b>' + ids.length + '명</b>의 미이수 상태를 부서 담당자에게 알림 발송합니다.</p>' +
+        var body = '<div class="check-notice" style="margin-bottom:10px;"><b>프로토타입 내부 알림 기록</b> — 실제 문자·메일은 발송하지 않습니다.</div>' +
+            '<p style="font-size:var(--fs-13);">선택한 <b>' + ids.length + '명</b>의 미이수 상태를 부서 담당자 알림 이력으로 남깁니다.</p>' +
             '<div style="max-height:200px;overflow-y:auto;margin-top:8px;">' +
             Object.keys(byDept).map(function (dId) {
                 var names = byDept[dId].map(function (wid) { return E().workerOf(wid).name; }).join(', ');
@@ -291,7 +296,7 @@
             E().addReminder({ by: actorLabel(), deptId: dId, workerIds: byDept[dId], memo: memo || '미이수 안전보건교육 이수 요청' });
         });
         V().closeModal();
-        toast(Object.keys(byDept).length + '개 부서, ' + ids.length + '명 독촉 발송 완료');
+        toast(Object.keys(byDept).length + '개 부서, ' + ids.length + '명 독촉 알림 기록 완료 (실제 문자·메일 미발송)');
         state.checked = {};
         render();
     }
