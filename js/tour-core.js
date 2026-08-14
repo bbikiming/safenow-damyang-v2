@@ -411,7 +411,10 @@
                     var g = document.createElement('div');
                     g.className = 'dy-tour-inline';
                     g.innerHTML = '<b>시연 포인트</b>' + s.modalGuide +
-                        (s.modalAction
+                        /* modalAction.when — 그 필드가 있는 모달에서만 버튼을 낸다.
+                           한 단계가 모달을 두 번 여는 흐름(카드 → 완료 처리)에서, 대상 행이
+                           정해지기 전 모달에 시연 버튼을 내면 어느 건에 넣는지 알 수 없다. */
+                        (s.modalAction && (!s.modalAction.when || body.querySelector(s.modalAction.when))
                             ? '<button type="button" class="btn btn-outline btn-sm dy-tour-inline-act" onclick="' +
                               s.modalAction.fn + '">' + esc(s.modalAction.label) + '</button>'
                             : '');

@@ -83,38 +83,32 @@
             '<div class="id-done-note" style="margin-top:12px;">조치 완료' +
                 (isRA ? ' · 정기 위험성평가 완료율에 반영되었습니다.' : '') + '</div></div>';
     }
-    /* 조치 실시 — 개선 후 사진은 필수 증빙이다("이 개선 후를 사진을 올리기만 하면 돼요") */
+    /* ===== 조치 실시 — 이 화면에서는 하지 않는다 (2026-08-14 발주처 지시) =====
+     * 개선조치는 독립 메뉴가 아니고, 조치 실시(완료 처리)의 창구는 **둘뿐**이다:
+     *   ① 위험성평가 화면 안의 조치 상세 카드   ② 내 할일
+     * 종전에는 이 화면에도 같은 입력 폼과 [완료 처리]가 있어 **세 번째 창구**가 됐다 —
+     * 같은 일을 세 곳에서 할 수 있으면 개발자가 어디를 정본으로 볼지 알 수 없고,
+     * 정의서도 "이 화면은 조회용"과 "여기서 완료 처리"를 동시에 적게 된다.
+     * 조회는 막지 않고, **어디서 처리하는지**를 대신 밝힌다(막다른 길로 두지 않는다). */
     function actionSecHtml(m) {
-        var photo = state.photo;
+        var isRA = m.source_type === 'risk_assessment';
+        var backHref = isRA ? 'rsk-list.html' : 'rsk-occ.html';
+        var backLabel = isRA ? '정기 위험성평가' : '수시 위험성평가';
         return '<div class="id-sec"><div class="id-sec-title">조치 실시</div>' +
             '<div class="id-meta" style="margin-bottom:10px;">' +
                 '<span>조치 요구일 <b>' + esc(m.due_date || m.due || '-') + '</b></span>' +
                 '<span>담당자 <b>' + esc(m.assigned_to || '미지정') + '</b></span>' +
+                '<span>담당 부서 <b>' + esc(D().deptName(m.dept_id) || '-') + '</b></span>' +
             '</div>' +
-            '<div class="id-frow"><label class="form-label" for="id-action">조치 내용 <span style="color:var(--status-danger-fg)">*</span></label>' +
-                '<textarea class="form-textarea" id="id-action" rows="3" placeholder="실제 조치한 내용을 입력하세요">' + esc(state.action || '') + '</textarea></div>' +
-            '<div class="id-frow"><label class="form-label" for="id-done-date">완료일 <span style="color:var(--status-danger-fg)">*</span></label>' +
-                '<input type="date" class="form-input" id="id-done-date" value="' + esc(state.doneDate || D().today()) + '" style="max-width:180px;"></div>' +
-            '<div class="id-frow"><label class="form-label">개선 후 사진 <span style="color:var(--status-danger-fg)">*</span></label>' +
-                (photo
-                    ? '<span class="id-photo">' + esc(photo) + '</span>' +
-                      ' <button type="button" class="btn btn-outline btn-sm" onclick="RSKIMPD.clearPhoto()">×</button>'
-                    : V().uploadDrop('<b>개선 후 사진</b> <span style="font-size:var(--fs-12);color:var(--text-gray);">클릭 또는 끌어놓기</span>',
-                        null, { pick: 'RSKIMPD.onPickPhoto', style: 'padding:12px;' })) +
-                '</div>' +
-            '<div class="id-frow"><label class="form-label" for="id-sign">완료 확인 (전자서명) <span style="color:var(--status-danger-fg)">*</span></label>' +
-                '<input type="text" class="form-input" id="id-sign" value="' + esc(state.sign || signerDefault()) + '" placeholder="확인자 이름" style="max-width:220px;">' +
-                '<p class="file-hint">이름을 입력하면 완료일자와 함께 전자서명으로 기록됩니다.</p></div>' +
-            '<div class="id-foot">' + (canAct(m)
-                ? '<button type="button" class="btn btn-primary" data-tour="imp-complete" onclick="RSKIMPD.complete()">' +
-                  (D().confirmState && D().confirmState(m) === 'RETURNED' ? '재제출' : '완료 처리') + '</button>'
-                : '<span class="mw-readonly" style="margin:0;">' +
-                  '<span><b>조회 전용</b> — 완료 처리·전자서명은 <b>담당 부서 본인</b>이 수행합니다.</span></span>') +
+            '<div class="mw-readonly" role="note" style="margin:0;">' +
+                '<span><b>조회 전용</b> — 이 화면은 조치 내용을 <b>확인</b>하는 자리입니다. ' +
+                '조치 결과 등록(조치 내용·완료일·개선 후 사진·전자서명)은 <b>내 할일</b> 또는 ' +
+                '<b>' + esc(backLabel) + '</b> 화면의 <b>조치 상세 카드</b>에서 그 부서 담당자가 수행합니다.</span>' +
+            '</div>' +
+            '<div class="id-foot">' +
+                '<a class="btn btn-primary btn-sm" href="my-work.html">내 할일에서 완료 처리</a> ' +
+                '<a class="btn btn-outline btn-sm" href="' + backHref + '">' + esc(backLabel) + ' 열기</a>' +
             '</div></div>';
-    }
-    function signerDefault() {
-        var p = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
-        return p ? p.name : '';
     }
 
     function capture() {
@@ -123,7 +117,10 @@
         if (el('id-done-date')) state.doneDate = el('id-done-date').value;
         if (el('id-sign')) state.sign = el('id-sign').value;
     }
-    /* 실제 파일을 고른다 — 이 사진 한 장이 조치 완료의 증빙이라 파일명만 지어내면 소명할 수 없다 */
+    /* 실제 파일을 고른다 — 이 사진 한 장이 조치 완료의 증빙이라 파일명만 지어내면 소명할 수 없다.
+       ※ 이 화면이 조회 전용이 된 뒤로는 호출되지 않는다(입력란 자체가 없다). 두 창구
+         (내 할일 · 위험성평가 조치 카드)가 같은 일을 하며, 여기 남긴 것은 이 주소로
+         들어온 옛 링크가 터지지 않게 하기 위한 것이다. */
     function onPickPhoto(files) {
         capture();
         var f = files && files[0]; if (!f) return;
@@ -143,32 +140,12 @@
         onPickPhoto([{ name: nm + '_개선후.jpg', size: 184320, type: 'image/jpeg', w: 1600, h: 1200, thumb: thumb }]);
     }
 
-    /* 완료 처리는 **그 부서 담당자 본인**만 — 군수·과장이 담당자 이름으로 서명하면 문서 위조다 */
-    function canAct(m) {
-        var p = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
-        if (!p) return true;
-        if (p.tier !== 'staff') return false;
-        return !!p.deptId && p.deptId === (m && m.dept_id);
-    }
+    /* 완료 처리는 이 화면의 기능이 아니다 (2026-08-14) — 버튼을 지우는 것만으로는
+       전역 호출(RSKIMPD.complete)로 뚫린다. 저장 경로에서 막고 **어디서 하는지** 알린다.
+       증빙 요건(조치 내용·완료일·개선 후 사진·전자서명)의 검증은 두 창구가 각자 갖고
+       있으므로 여기서 중복해 두지 않는다 — 두 벌이면 한쪽만 고쳐지는 날이 온다. */
     function complete() {
-        var mm = D().improvementOf(state.id);
-        if (!canAct(mm)) { toast('이 부서의 담당자만 완료 처리할 수 있습니다.'); return; }
-        capture();
-        var action = (state.action || '').trim();
-        if (!action) { toast('조치 내용을 입력하세요.'); var a = document.getElementById('id-action'); if (a) a.focus(); return; }
-        if (!state.doneDate) { toast('완료일을 입력하세요.'); return; }
-        /* 개선 후 사진은 법적 증빙이라 없으면 완료로 넘기지 않는다 */
-        if (!state.photo) { toast('개선 후 사진을 첨부하세요 — 조치 완료의 증빙입니다.'); return; }
-        var sign = (state.sign || '').trim();
-        if (!sign) { toast('완료 확인 서명(이름)을 입력하세요.'); var s = document.getElementById('id-sign'); if (s) s.focus(); return; }
-        D().completeImprovement(state.id, {
-            action: action, by: sign, signedBy: sign,
-            completedDate: state.doneDate, afterPhoto: state.photo,
-            afterPhotos: state.photoFile ? [state.photoFile] : []
-        });
-        state.action = ''; state.photo = ''; state.photoFile = null; state.sign = ''; state.doneDate = '';
-        render();
-        toast('조치 완료 처리 · 전자서명 기록');
+        toast('완료 처리는 내 할일 또는 위험성평가 화면의 조치 상세 카드에서 수행합니다.');
     }
 
     function init(mountId) {

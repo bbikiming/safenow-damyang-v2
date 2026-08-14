@@ -160,7 +160,7 @@
            개선조치를 보다가 처리하려면 화면을 옮겨야 했다(발주처 지적).
            MYWORK 이 있는 화면(내 할일)에서는 그 화면의 버튼이 이미 하므로 중복을 피한다. */
         if (m.status !== 'DONE') {
-            if (amendKind(m) === 'owner' && global.MYWORK && global.MYWORK.complete
+            if (canComplete(m) && global.MYWORK && global.MYWORK.complete
                 && !/my-work\.html$/.test(location.pathname)) {
                 return '<div class="rl-imp-doact">' +
                     '<button type="button" class="btn btn-primary btn-sm"' +
@@ -288,6 +288,22 @@
      *                     canRemind, onRemind('전역함수경로')}
      *   items 는 함수로 넘기면 재렌더마다 다시 읽는다(완료 처리 후 즉시 반영). */
 
+    /* ===== 완료 권한 — 수정(기한 변경) 권한과 **다른 축**이다 (MUST, 2026-08-14) =====
+     * 조치 결과를 적고 서명하는 것은 **그 조치를 맡은 부서 담당자 본인**이다.
+     * 종전에는 amendKind(m) === 'owner' 로 완료 버튼을 판정해 두 가지가 어긋났다.
+     *   ① 주관부서(재난안전과) 담당자는 자기 부서 조치에도 'both' 가 나와 **완료 버튼이 없었다**.
+     *   ② 목록의 CTA(수시평가 [조치 상세 · 완료 처리])는 권한과 무관하게 떠서,
+     *      남의 부서 조치를 열면 약속한 버튼이 카드 안에 없었다.
+     * 판정은 여기 하나이고 목록 버튼과 카드가 같이 본다. my-work canAct() 와 같은 기준이다
+     * (남의 이름으로 완료를 찍는 것은 기록 위조다). */
+    function canComplete(m) {
+        if (!m || m.status === 'DONE') return false;
+        var R = global.DYROLE;
+        if (!R || !R.current) return true;                /* 롤 스위처 없는 환경은 종전대로 */
+        var p = R.current();
+        if (!p || p.tier !== 'staff') return false;       /* 관리·감독은 조회 */
+        return !!p.deptId && p.deptId === m.dept_id;      /* 그 조치를 맡은 부서 담당자 */
+    }
     /* '' 권한 없음 | 'owner' 담당자만(그 부서) | 'both' 담당자+기한(주관부서) */
     function amendKind(m) {
         var R = global.DYROLE;
@@ -441,6 +457,8 @@
         open: open, amendOpen: amendOpen, amendPick: amendPick, amendSave: amendSave, filter: filter, shot: shot, render: render, photoItems: photoItems,
         cfmToggle: cfmToggle, cfmCk: cfmCk, cfmDo: cfmDo,
         cfmReturnOpen: cfmReturnOpen, cfmReturnCancel: cfmReturnCancel, cfmDoReturn: cfmDoReturn,
-        cfmCancel: cfmCancel
+        cfmCancel: cfmCancel,
+        /* 목록 화면이 CTA 문구를 같은 기준으로 정하기 위해 함께 공개한다 */
+        canComplete: canComplete
     };
 })(window);

@@ -120,10 +120,19 @@
     }
 
     /* 개선조치 진행 — 수시평가를 '등록하고 끝'으로 두지 않기 위해 진행률을 같은 줄에 낸다.
-       조치를 마무리하는 자리는 개선조치(SCR-IMP-001·002)이므로 그리로 바로 보낸다. */
+       조치를 마무리하는 자리는 **이 화면의 조치 상세 카드**다(2026-08-14). */
+    /* 내가 완료 처리할 수 있는 미완료 조치가 이 건에 있는가 — 판정은 IMPCARD.canComplete
+       한 곳이다. 목록 CTA 와 카드 안 버튼이 같은 기준을 봐야 한다:
+       종전에는 미완료이기만 하면 '완료 처리'라고 써 놓아, 남의 부서 조치를 연 담당자에게
+       약속한 버튼이 카드에 없었다. */
+    function myCompletable(occId) {
+        if (!global.IMPCARD || !IMPCARD.canComplete) return false;
+        return (D().occImprovements(occId) || []).some(function (m) { return IMPCARD.canComplete(m); });
+    }
     function impCell(o) {
         var c = D().occImpCount(o.id);
         if (!c.total) return '<span class="roc-imp-none">감소대책 없음</span>';
+        var mineTodo = c.done < c.total && myCompletable(o.id);
         var pct = Math.round(c.done / c.total * 100);
         var lbl = c.done === c.total ? '조치완료' : '조치중';
         return '<div class="roc-imp">' +
@@ -139,9 +148,9 @@
                 /* 미완료 건도 **이 화면 안에서** 끝낸다 (2026-08-14 발주처 지시) —
                    개선조치는 독립 메뉴가 아니므로 rsk-imp 대장으로 내보내지 않는다.
                    같은 IMPCARD 카드에 그 부서 담당자용 [완료 처리]가 이미 붙는다. */
-                '<button type="button" class="btn ' + (c.done < c.total ? 'btn-primary' : 'btn-outline') +
+                '<button type="button" class="btn ' + (mineTodo ? 'btn-primary' : 'btn-outline') +
                     ' btn-sm" data-tour="occ-imp" onclick="RSKOCC.openImp(\'' + o.id + '\')">' +
-                    (c.done < c.total ? '조치 상세 · 완료 처리' : '조치 상세') + '</button>' +
+                    (mineTodo ? '조치 상세 · 완료 처리' : '조치 상세') + '</button>' +
             '</div>' +
         '</div>';
     }
@@ -162,7 +171,7 @@
                     ? '<span>안전관리자 검토 <b>' + esc(o.reviewer || '안전관리자') + ' · ' + esc(o.reviewedAt || '-') + '</b></span>'
                     : '<span>안전관리자 검토 <b>미완료</b></span>'),
             noteHtml: '수시평가는 실시로 끝나지 않습니다 — <b>위험성 감소대책을 실행</b>해야 완결됩니다. ' +
-                '부서 담당자는 <b>개선조치</b>에서 완료 처리합니다.',
+                '그 부서 담당자는 <b>이 카드에서 바로</b> 완료 처리하며, 같은 건을 <b>내 할일</b>에서 올려도 같은 곳에 쌓입니다.',
             emptyHtml: '이 수시평가에는 등록된 감소대책이 없습니다.',
             items: function () { return D().occImprovements(occId); },
             canRemind: false
@@ -535,7 +544,7 @@
             hazards: F.hazards, due: F.due
         });
         V().closeModal();
-        toast('수시평가 등록 · 개선조치 ' + hz.length + '건 생성 — [개선조치]에서 조치를 마무리하세요');
+        toast('수시평가 등록 · 개선조치 ' + hz.length + '건 생성 — 목록의 [조치 상세]에서 조치를 마무리하세요');
         render();
     }
 

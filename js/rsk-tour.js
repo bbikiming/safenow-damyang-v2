@@ -139,15 +139,17 @@
                "파일명을 그대로 두고 [제출]" 이 거짓이었다 — 그대로 누르면 막힌다.
                무대에서 OS 파일 대화상자를 여는 건 느리고 발표자 개인 파일이 노출되므로
                1단계 pickDemoDept() 와 같은 방식으로 시연용 이름을 넣어 준다. */
-            modalGuide: '[양식 받기]로 서식을 내려받는 것까지 보여준 뒤, 작성본을 올리고 <b>[제출]</b>을 누르세요.',
-            modalAction: { label: '시연용 파일 이름 넣기', fn: 'MYWORK.pickReportDemo()' },
+            modalGuide: '배포된 <b>양식</b>을 내려받는 것까지 보여준 뒤, 파일을 고르고 <b>[첨부]</b>를 누르세요 — 파일명은 이미 채워져 있습니다.',
             actionLabel: '설문조사표 제출 열기',
+            /* **화면과 같은 경로를 쓴다** — 이 단계의 페이지는 rsk-list 이고 화면의
+               [지금 제출하기]가 RSKLIST.openMySubmit() 이다. 종전에는 MYWORK.openReport()
+               를 불렀는데, 그 함수의 권한 판정은 내 할일 화면의 부서 필터(state.deptId)를
+               보므로 rsk-list 에서는 값이 비어 **'이 부서의 담당자만 제출할 수 있습니다'로
+               막혔다**. 투어가 여는 모달과 화면이 여는 모달이 다르면 안내도 어긋난다. */
             action: function () {
                 var a = A(); if (!a) { toast('먼저 1단계에서 정기평가를 생성하세요.'); return; }
-                /* MYWORK 은 내 할일 화면에만 있다 — 이동이 끝나기 전에 눌리면
-                   여기서 터진다(시연 중 빠르게 누르면 실제로 난다). 없으면 먼저 옮긴다. */
-                if (!global.MYWORK || !global.MYWORK.openReport) { location.href = this.href(); return; }
-                global.MYWORK.openReport(a.id, demoDept());
+                if (!global.RSKLIST || !global.RSKLIST.openMySubmit) { location.href = this.href(); return; }
+                global.RSKLIST.openMySubmit();
             },
             done: function () { var d = dp(); return !!(d && d.reportFile); },
             note: function () {
@@ -234,7 +236,9 @@
             /* 무대에서 OS 파일 대화상자를 열지 않기 위한 시연 수단이다(3단계와 같은 이유).
                실제 파일 입력란은 그대로 두므로 증빙 요건을 낮추는 것이 아니다.
                완료 모달을 그리는 주체가 MYWORK 이므로 그쪽 도우미를 쓴다. */
-            modalAction: { label: '시연용 사진 넣기', fn: 'MYWORK.pickAfterDemo()' },
+            /* when — 이 필드가 있는 모달에서만 버튼을 낸다. 앞서 열리는 조치 상세 카드에는
+               대상 행(cmplId)이 정해지지 않아, 거기서 누르면 어느 건의 사진인지 알 수 없다. */
+            modalAction: { label: '시연용 사진 넣기', fn: 'MYWORK.pickAfterDemo()', when: '#mw-cmpl-desc' },
             actionLabel: '개선조치 카드 열기',
             action: function () { if (global.RSKLIST) global.RSKLIST.openDept(demoDept()); },
             done: function () {

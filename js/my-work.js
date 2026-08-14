@@ -1326,9 +1326,9 @@
             '<div style="font-size:var(--fs-13);">' +
                 '<p><b>' + esc((m.hazard && m.hazard.name) || m.hazard_risk_factor || '') + '</b></p>' +
                 '<p style="color:var(--text-gray);margin:6px 0 14px;">' + esc(m.description || m.action || '') + '</p>' +
-                '<label style="font-size:var(--fs-12);font-weight:700;color:var(--text-gray);display:block;margin-bottom:5px;">조치 내용 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                '<label for="mw-cmpl-desc" style="font-size:var(--fs-12);font-weight:700;color:var(--text-gray);display:block;margin-bottom:5px;">조치 내용 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 '<textarea class="form-textarea" id="mw-cmpl-desc" rows="3" placeholder="실제 조치한 내용을 입력하세요">' + esc(state.cmplDesc || '') + '</textarea>' +
-                '<label style="font-size:var(--fs-12);font-weight:700;color:var(--text-gray);display:block;margin:14px 0 5px;">완료일 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                '<label for="mw-cmpl-date" style="font-size:var(--fs-12);font-weight:700;color:var(--text-gray);display:block;margin:14px 0 5px;">완료일 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 '<input type="date" class="form-input" id="mw-cmpl-date" value="' + esc(state.cmplDate || D().today()) + '" style="max-width:180px;">' +
                 /* 확인 화면(IMPCARD)은 개선 전·후 대조로 증빙을 본다 — '전' 칸이 없어
                    확인 단계에서 늘 '개선 전 없음' 이 떴다. '전' 은 사후 발견 건에
@@ -1343,7 +1343,7 @@
                 V().uploadDrop('<b>개선 후 사진</b> <span style="font-size:var(--fs-12);color:var(--text-gray);">클릭 또는 끌어놓기</span>',
                     null, { pick: 'MYWORK.onPickAfter', multiple: true, style: 'padding:12px;' }) +
                 '<p class="file-hint">개선 후 사진은 조치 완료의 증빙입니다. 없으면 완료 처리되지 않습니다.</p>' +
-                '<label style="font-size:var(--fs-12);font-weight:700;color:var(--text-gray);display:block;margin:14px 0 5px;">완료 확인 (전자서명) <span style="color:var(--status-danger-fg)">*</span></label>' +
+                '<label for="mw-cmpl-sign" style="font-size:var(--fs-12);font-weight:700;color:var(--text-gray);display:block;margin:14px 0 5px;">완료 확인 (전자서명) <span style="color:var(--status-danger-fg)">*</span></label>' +
                 '<input type="text" class="form-input" id="mw-cmpl-sign" value="' + esc(state.cmplSign || signerDefault()) + '" placeholder="확인자 이름" style="max-width:220px;">' +
             '</div>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +

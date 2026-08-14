@@ -326,7 +326,7 @@
             }
         ];
         /* 반려 건이 있으면 담당자에게는 아직 할 일이 남은 것이다 —
-           평가가 COMPLETED 라고 커서를 지우면 '개선조치에서 마무리' 버튼이 사라져
+           평가가 COMPLETED 라고 커서를 지우면 [개선조치 완료 처리] 버튼이 사라져
            재제출 수단을 잃는다(§4-3 needsAction 과 같은 취지). */
         var cur = (closed && !returnedN) ? -1 : steps.findIndex(function (s) { return !s.done; });
         var items = steps.map(function (s, i) {
@@ -1595,7 +1595,7 @@
                 '<label class="form-label">부서별 조치기한</label>' +
                 '<table class="rl-dates-table"><thead><tr><th>부서</th><th>작성 건수</th><th>조치기한</th></tr></thead>' +
                     '<tbody>' + rows + '</tbody></table>' +
-                '<p style="font-size:12px;color:var(--text-gray);margin-top:8px;">전달 시 부서별로 개선조치가 배분되고 알림이 발송됩니다. 이후 부서 담당자는 <b>개선조치</b>에서 응답합니다.</p>' +
+                '<p style="font-size:12px;color:var(--text-gray);margin-top:8px;">전달 시 부서별로 개선조치가 배분되고 알림이 발송됩니다. 이후 부서 담당자는 <b>이 화면의 조치 상세 카드</b> 또는 <b>내 할일</b>에서 완료 처리합니다.</p>' +
             '</div>';
         V().openModal('조치기한 설정 · 부서 전달', body,
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
