@@ -72,15 +72,15 @@
 - 소비처: `EDOC.ORG_TREE`(= `orgFlat()` 파생 → 경영방침·의견청취·회의록·업무 등록 담당자·예산 기관) · 메뉴/권한/사용자 관리(`DYADM.ORG = DYV2.ORG` 참조) · 인력평가 평가자 선택(evl-eval.html `PICK_TREE` 파생) · 조직 화면(m=org) 요약 카드.
 - `common.js` 는 `edoc.js`·`adm-perm.js` 보다 먼저 로드되어야 한다(전 페이지 검증됨).
 
-### 4. 안전보건교육 — 별도 GNB 그룹 · 8메뉴 + 상세 1 (재설계 v1 적용, 2026-07-20 · 결재 이력 2026-07-24)
+### 4. 안전보건교육 — 별도 GNB 그룹 · 9메뉴 + 상세 1 (재설계 v1 적용, 2026-07-20 · 결재 이력 2026-07-24)
 
-안전보건교육은 **독립 GNB 그룹 `edu`**(`js/layout.js`)이고, SNB 3뎁스 구조다 — 현업근로자(정기 `edu-reg` · 채용시 `edu-hire` · 기타 `edu-etc`) · 관리감독자(정기 `edu-sup` · 기타 `edu-sup-etc`) · 직속(이수현황 `edu-status` · 근로자 명단 관리 `edu-workers` · 결재 이력 `edu-approval`). 근거: `docs/planning/기획-안전보건교육-재설계-v1.md` — safe-damyang-v2 스냅샷의 UI/UX·메뉴 구조를 이식(2026-07-20). **구 "단일 화면 3탭" 확정(보완안 §7, 2026-07-19)은 이 이식으로 대체됨** — 다시 3탭으로 합치지 말 것.
+안전보건교육은 **독립 GNB 그룹 `edu`**(`js/layout.js`)이고, SNB 3뎁스 구조다 — 현업근로자(정기 `edu-reg` · 채용시 `edu-hire` · 기타 `edu-etc`) · 관리감독자(정기 `edu-sup` · 채용시 `edu-sup-hire` · 기타 `edu-sup-etc`) · 직속(이수현황 `edu-status` · 근로자 명단 관리 `edu-workers` · 결재 이력 `edu-approval`). 근거: `docs/planning/기획-안전보건교육-재설계-v1.md` — safe-damyang-v2 스냅샷의 UI/UX·메뉴 구조를 이식(2026-07-20). **구 "단일 화면 3탭" 확정(보완안 §7, 2026-07-19)은 이 이식으로 대체됨** — 다시 3탭으로 합치지 말 것.
 
 - **'현업근로자'를 '근로자'로 넓히지 말 것 (MUST, 2026-08-13 확인)** — 이름이 좁은 것이 아니라 **법정 대상이 좁다**. 산안법 **시행령 별표1 제4호가목**(`oshe-t1`)이 공공행정을 **제3장(안전보건교육 §29~§33) 적용 제외**로 두고, *"청소, 시설관리, 조리 등 **현업업무에 종사하는 사람**으로서 고용노동부장관이 정하여 고시하는 사람"* 만 그 제외에서 다시 뺀다. 즉 담양군에서 교육 의무가 걸리는 사람은 현업업무 종사자다. 메뉴명을 '근로자'로 바꾸면 법정 대상 범위를 잘못 말하게 된다.
   - **다만 현재 모집단은 과대하다** — `DYEDU.fieldWorkers()` 는 '관리감독자가 아닌 전원'이라 사무직까지 들어간다. 현업업무 종사자 지정명단은 고시 기준으로 **담양군이 정할 자료**라 우리가 임의로 좁힐 수 없다. 화면·정의서에 **갭으로 드러내고**(이수율 분모가 법정 대상보다 넓다) 명단을 받으면 좁힌다. 지어내 채우지 말 것.
   - 별표4의 축은 **제1호(근로자)와 제1호의2(관리감독자) 2분**이고, 사무직·판매는 제1호 **안의** 하위 구분이다. '현업'은 그 하위 구분 이름이면서 동시에 위 적용범위 용어이기도 하다 — 두 뜻이 겹치는 것이지 틀린 것이 아니다.
 
-- 파일 구성: 화면 HTML 9개(`edu-reg/hire/etc/sup/sup-etc/status/workers/reg-detail/approval.html`) + 모듈 7개(`js/edu-reg.js` EDUR · `edu-reg-detail.js` EDURD · `edu-hire.js` EDUH · `edu-etc.js` EDUE · `edu-status.js` EDUS · `edu-workers.js` EDUW · `edu-apv-log.js` EDUAPVLOG) + `js/edu-data.js`(전역 `DYEDU`, 데이터 단일 출처) + `js/edu-filter.js`(전역 `EDUFILTER`, 공용 필터 바) + `js/edu-doc.js`(전역 `EDUDOC`, 공문·결재 — `DYDOC` 골격 위) + `js/edu-tour.js`(전역 `EDUTOUR`, 시연 투어). 공용 스타일은 `css/v2.css`의 `edu-*` 블록 — **별도 `edu.css` 파일 없음**(재생성 금지).
+- 파일 구성: 화면 HTML 10개(`edu-reg/hire/etc/sup/sup-hire/sup-etc/status/workers/reg-detail/approval.html`) + 모듈 7개(`js/edu-reg.js` EDUR · `edu-reg-detail.js` EDURD · `edu-hire.js` EDUH · `edu-etc.js` EDUE · `edu-status.js` EDUS · `edu-workers.js` EDUW · `edu-apv-log.js` EDUAPVLOG) + `js/edu-data.js`(전역 `DYEDU`, 데이터 단일 출처) + `js/edu-filter.js`(전역 `EDUFILTER`, 공용 필터 바) + `js/edu-doc.js`(전역 `EDUDOC`, 공문·결재 — `DYDOC` 골격 위) + `js/edu-tour.js`(전역 `EDUTOUR`, 시연 투어). 공용 스타일은 `css/v2.css`의 `edu-*` 블록 — **별도 `edu.css` 파일 없음**(재생성 금지).
 - 로드 순서: `layout.js → common.js → org-pick.js → edu-data.js → doc-flow.js → edu-doc.js → edu-filter.js → 화면 모듈 → edu-tour.js`.
 - **공문·결재는 `EDUDOC`(`js/edu-doc.js`)로만** — 공용 골격 `DYDOC`(§7-1) 위의 교육 파사드다. 화면마다 결재 버튼·문서를 새로 짜지 않는다. 근거: [`기획-안전보건교육-온나라결재상신-v1.md`](docs/planning/기획-안전보건교육-온나라결재상신-v1.md) **v1.2** · `SCR-EDU-001 §4-6` · `SCR-EDU-004 §4-5`.
   - **순서를 뒤집지 말 것 (MUST)** — `[공문 기안]` → 본문 **직접 작성** → `[문서 미리보기 →]` → `[온나라로 결재 상신]` → 확인 → `[상신]`. **기안 폼에는 상신 수단이 없다.** 발주처가 종전 `[결재 상신]`을 두 번 지우게 한 이유가 기능이 아니라 *"공문 작성 단계 없이 결재만 올라가는 순서"* 였다(*"왜 갑자기 뜬금없이 결재 상신이 있지"*).
@@ -151,7 +151,7 @@
     - '신청 N개 부서'는 행 수가 아니라 **서로 다른 부서 수**로 센다.
 - 딥링크: `edu-status.html?dept={deptId}&short=1`(상세뷰+미달 필터, `?status=done|short|over|soon` 도 지원) · `edu-reg-detail.html?id={courseId}`(백링크는 body `data-back-href`).
 - `layout.js` `renderSidebar`의 SNB 3뎁스(`item.section`) 로직과 `style.css`의 `.dy-sidebar-section`·`.dy-sidebar-sep`·`.dy-sidebar-item.is-nested`는 **이 그룹이 실사용처**다.
-- 잔여 후속(2026-08-13 현재): ① 이수현황 대상자 행 → 보고서·제증명 개인 이수 확인서 **연계 미구현**(정의서가 현재형으로 약속하던 것을 사실로 정정해 둠) ② 관리감독자 **지정일 변경 이력** 미구현(현행은 최신값만 보관) ③ 관리감독자 **채용 시 교육 8h**(별표4 제1호의2 나목) 수용 화면 미정 ④ 현업업무 종사자 지정명단·관리감독자 명단 발주처 자료 대기.
+- 잔여 후속(2026-08-14 현재): ① 이수현황 대상자 행 → 보고서·제증명 개인 이수 확인서 **연계 미구현**(정의서가 현재형으로 약속하던 것을 사실로 정정해 둠) ② 관리감독자 **지정일 변경 이력** 미구현 — **본개발 보존 확정**(SCR-EDU-006 §6, 2026-08-14), 현행은 최신값만 보관 ③ 현업업무 종사자 지정·관리감독자 지정명단은 담양군 확인 항목(99_미결사항 §5 EXT-11·12). ※ 구 "관리감독자 채용시교육 수용 화면 미정"은 해소됨 — `edu-sup-hire.html`이 존재하고 SNB에 등재돼 있으며 SCR-EDU-002가 정의한다(2026-08-14 확인).
 
 ### 4-2. 부서 전수 이행 체크리스트 — `DEPTCHK` (2026-07-30 회의 신설)
 
