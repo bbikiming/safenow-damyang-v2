@@ -4086,3 +4086,246 @@ p > .dx-note-gap { display: inline; }
 .dx-law li { display: block; }
 .dx-law-un { font-size: var(--fs-12); color: var(--text-gray); }
 .dx-law-part { font-style: normal; color: var(--main-dark); }
+
+/* =========================================================================
+   업무 관리(신) cmp-* — 이행 관리(cmp-status) · 문서 목록(cmp-docs)
+   기획: docs/planning/기획-업무관리-신버전-이행관리-문서목록-v1.md §7
+   -------------------------------------------------------------------------
+   같은 요소의 기존 표준(chip-status·table-figma·v2-empty·kpi-card·tabs·
+   sub-tabs·progress·check-notice·lawinfo-inline·form-*)을 재발명하지 않는다.
+   여기 있는 것은 그 표준에 없는 요소(세그먼트 토글·부서 도트·2단 상세 grid)와
+   표준 클래스의 modifier 뿐이다. 색·크기·반경·레이어는 전부 :root 토큰이다(§6).
+   ========================================================================= */
+
+/* ── 공통 유틸 ─────────────────────────────────────────────────────── */
+.cmp-cap { font-size: var(--fs-12); color: var(--text-gray); line-height: 1.6; margin: 8px 0 12px; }
+.cmp-cap b { color: var(--text-black); font-weight: var(--fw-bold); }
+.cmp-dim { color: var(--text-gray); font-weight: var(--fw-regular); }
+.cmp-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cmp-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.cmp-empty-act { margin-top: 10px; }
+.cmp-ro { font-size: var(--fs-12); color: var(--text-gray); font-weight: var(--fw-bold); }
+.cmp-headact { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cmp-yr { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-12); color: var(--text-gray); }
+.cmp-yr .form-select { min-width: 96px; }
+.cmp-back { margin-bottom: 10px; }
+
+/* ── 서브탭 · 계층탭 (표준 .sub-tabs / .tabs 위 modifier) ───────────────
+   두 축을 **한 줄**에 둔다 — 각자 한 줄을 쓰면 첫 데이터 행이 900px 밖으로
+   밀린다(§14-12 실측). 왼쪽이 화면 축(현황/누락), 오른쪽이 계층 축이다. */
+.cmp-tabbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+/* 이 두 화면만의 밀도 조정 — 공용 컴포넌트의 기본 여백을 그대로 두면 1280×900 에서
+   첫 데이터 행이 610px 로 밀린다(§14-12 는 600px 이내를 요구한다). 전역 값을 건드리면
+   다른 화면이 함께 움직이므로 페이지 범위로만 좁힌다. */
+[data-dy-page^="cmp-"] .dy-notice { margin-bottom: 8px; }
+.cmp-subtabs { flex: 1 1 260px; }
+.cmp-lvtabs { flex: 0 0 auto; flex-wrap: wrap; }
+.cmp-lvtabs .tab { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; flex: 0 0 auto; }
+
+/* ── KPI (표준 .kpi-card 4장 그리드) ──────────────────────────────────── */
+.cmp-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 8px; }
+.cmp-kpis .kpi-card { padding: 9px 14px; gap: 3px; }
+.cmp-kpis .kpi-card-title { font-size: var(--fs-12); }
+.cmp-kpis .kpi-card-value { font-size: var(--fs-22); }
+.cmp-kpis .kpi-card-foot { display: block; line-height: 1.45; font-size: var(--fs-12); }
+.cmp-kpi-bad { color: var(--status-danger-fg); }
+.cmp-kpi-bar { height: 5px; margin-top: 6px; }
+
+/* ── 세그먼트 토글 (기존 표준 없음 — 요소 자체가 신규) ───────────────── */
+.cmp-seg { display: inline-flex; flex-wrap: wrap; max-width: 100%; border: 1px solid var(--card-line); border-radius: var(--radius-md); overflow: hidden; }
+.cmp-seg-btn {
+  min-height: 32px; padding: 6px 12px;
+  font-family: inherit; font-size: var(--fs-12); font-weight: var(--fw-medium);
+  color: var(--text-gray); background: var(--surface); border: 0; cursor: pointer;
+}
+.cmp-seg-btn + .cmp-seg-btn { border-left: 1px solid var(--card-line); }
+.cmp-seg-btn:hover { color: var(--main-dark); }
+.cmp-seg-btn.is-on { background: var(--main); color: var(--surface); font-weight: var(--fw-bold); }
+.cmp-seg-btn:focus-visible { outline: 2px solid var(--main); outline-offset: -2px; }
+
+/* ── 표 (표준 .table-figma 위 그룹/단계 행 modifier) ──────────────────── */
+.cmp-table { min-width: 720px; }
+.cmp-table th { white-space: nowrap; }
+.cmp-table tr.cmp-grp { background: var(--surface-alt); cursor: pointer; }
+.cmp-table tr.cmp-grp:hover { background: var(--brand-50); }
+.cmp-table tr.cmp-grp:focus-visible { outline: 2px solid var(--main); outline-offset: -2px; }
+/* 행 전체가 진입 타깃(와이어프레임 tr.stg) — 터치 타깃도 행 폭으로 커진다 */
+.cmp-table tr.cmp-rowlink { cursor: pointer; }
+.cmp-table tr.cmp-rowlink:hover td { background: var(--brand-50); }
+.cmp-table tr.cmp-grp td { font-weight: var(--fw-bold); color: var(--text-black); border-bottom: 1px solid var(--card-line); }
+.cmp-table tr.cmp-stg td { vertical-align: middle; }
+.cmp-table tr.cmp-lawrow td { background: var(--surface-alt); }
+.cmp-table tr.cmp-missing td { color: var(--text-gray); font-size: var(--fs-12); background: var(--surface-alt); }
+.cmp-car { display: inline-block; width: 14px; color: var(--text-gray); }
+.cmp-gcode { font-size: var(--fs-12); font-weight: var(--fw-regular); color: var(--text-gray); }
+.cmp-gm { font-weight: var(--fw-regular); font-size: var(--fs-12); color: var(--text-gray); }
+.cmp-c-main { min-width: 220px; }
+.cmp-c-cy { width: 132px; font-size: var(--fs-12); color: var(--text-gray); }
+.cmp-c-rd { width: 92px; }
+.cmp-c-st { width: 104px; }
+.cmp-c-ac { width: 140px; font-size: var(--fs-12); color: var(--text-gray); }
+.cmp-c-dc { width: 76px; }
+.cmp-c-law { width: 52px; text-align: center; }
+.cmp-c-ck { width: 36px; text-align: center; }
+.cmp-c-act { width: 260px; text-align: right; white-space: nowrap; }
+.cmp-c-stg { min-width: 240px; }
+.cmp-c-stg .chip-mini { margin: 1px 2px 1px 0; }
+.cmp-slink {
+  display: inline; padding: 0; border: 0; background: none; cursor: pointer;
+  font-family: inherit; font-size: var(--fs-13); font-weight: var(--fw-semibold);
+  color: var(--text-black); text-align: left; line-height: 1.5;
+}
+.cmp-slink:hover { color: var(--main-dark); text-decoration: underline; }
+.cmp-slink:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
+.cmp-scode { display: block; margin-top: 2px; font-size: var(--fs-12); color: var(--text-gray); }
+.cmp-law-btn {
+  min-width: 32px; min-height: 32px; padding: 0;
+  border: 0; background: none; cursor: pointer;
+  font-family: inherit; font-size: var(--fs-14); color: var(--main-dark);
+}
+.cmp-law-btn:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
+.cmp-fchips .chip-status { margin: 1px 3px 1px 0; }
+/* L3 단계 칩은 버튼이다(막다른 길 방지) — chip-status 시각은 그대로 쓰고 버튼 기본값만 지운다 */
+.cmp-fchips button.chip-status { cursor: pointer; font-family: inherit; }
+.cmp-fchips button.chip-status:hover { text-decoration: underline; }
+.cmp-fchips button.chip-status:focus-visible { outline: 2px solid var(--main); outline-offset: 1px; }
+
+/* ── 정의 목록 (법령 인라인·상세 좌측) ────────────────────────────────── */
+.cmp-dl { display: flex; flex-direction: column; gap: 8px; margin: 0; }
+.cmp-dl > div { display: grid; grid-template-columns: 108px minmax(0, 1fr); gap: 8px; }
+.cmp-dl dt { font-size: var(--fs-12); color: var(--text-gray); font-weight: var(--fw-semibold); }
+.cmp-dl dd { margin: 0; font-size: var(--fs-13); color: var(--text-black); line-height: 1.6; word-break: break-word; }
+
+/* ── 부서 이행 도트 ───────────────────────────────────────────────────── */
+.cmp-dots { display: flex; gap: 2px; flex-wrap: wrap; max-width: 240px; }
+.cmp-dots i { display: block; width: 9px; height: 9px; border-radius: var(--radius-xs); background: var(--gray-200); }
+.cmp-dots i.ok { background: var(--main); }
+.cmp-dots i.na { background: var(--status-warning-border); }
+.cmp-dot-k { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; }
+.cmp-dot-k i { display: inline-block; width: 9px; height: 9px; border-radius: var(--radius-xs); background: var(--gray-200); }
+.cmp-dot-k i.ok { background: var(--main); }
+.cmp-dot-k i.na { background: var(--status-warning-border); }
+
+/* ── 범례 ─────────────────────────────────────────────────────────────── */
+.cmp-legend { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin: 10px 0 0; font-size: var(--fs-12); color: var(--text-gray); }
+.cmp-legend > span { display: inline-flex; align-items: center; gap: 5px; }
+
+/* ── 2단 상세 (좌 340 고정 / 우 가변, lg 이하 1단) ─────────────────────── */
+.cmp-two { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 16px; align-items: start; }
+.cmp-two-l { padding: 16px; background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); }
+.cmp-two-r { min-width: 0; }
+.cmp-two-doc { padding: 0; }
+.cmp-detail-code { display: block; margin-bottom: 2px; }
+.cmp-detail-h { font-size: var(--fs-18); font-weight: var(--fw-bold); color: var(--text-black); line-height: 1.4; margin: 2px 0 6px; }
+.cmp-detail-h3 { font-size: var(--fs-14); font-weight: var(--fw-bold); color: var(--text-black); margin: 0; }
+.cmp-detail-sum { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--card-line); }
+.cmp-detail-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.cmp-detail-act { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cmp-detail-prev { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--card-line); }
+.cmp-gapbox { text-align: left; padding: 16px; border: 1px dashed var(--card-line); border-radius: var(--radius-button); margin-top: 12px; }
+.cmp-gapbox b { display: block; color: var(--text-black); font-size: var(--fs-13); margin-bottom: 4px; }
+.cmp-gapbox p { margin: 0; }
+
+/* ── 문서 상세 (cmp-docs ⑤) ───────────────────────────────────────────── */
+.cmp-doc-h { display: block; }
+.cmp-doc-tags { margin-top: 8px; display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+.cmp-doc-tags a { text-decoration: none; }
+.cmp-doc-tags a:hover { text-decoration: underline; }
+.cmp-pdf { text-align: left; padding: 20px; border: 1px dashed var(--card-line); border-radius: var(--radius-button); }
+.cmp-pdf b { display: block; color: var(--text-black); font-size: var(--fs-13); margin-bottom: 6px; }
+.cmp-pdf p { margin: 0; }
+.cmp-card { padding: 14px 16px; border: 1px solid var(--card-line); border-radius: var(--radius-button); background: var(--surface); font-size: var(--fs-13); color: var(--text-black); line-height: 1.6; }
+.cmp-card + .cmp-card { margin-top: 10px; }
+.cmp-remove { margin-top: 14px; }
+.cmp-card p { margin: 6px 0 10px; }
+.cmp-yrlist { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.cmp-yrlist li { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: var(--fs-12); }
+.cmp-cond { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; font-size: var(--fs-12); color: var(--text-gray); margin: 0 0 10px; }
+.cmp-cond-x { margin-left: 4px; border: 0; background: none; padding: 0; cursor: pointer; color: inherit; font-family: inherit; font-size: var(--fs-12); }
+.cmp-more { border: 0; cursor: pointer; font-family: inherit; }
+.cmp-more:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
+
+/* ── 페이저 ───────────────────────────────────────────────────────────── */
+.cmp-pager { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; margin-top: 12px; font-size: var(--fs-12); }
+.cmp-pg {
+  min-width: 32px; min-height: 32px; padding: 4px 8px;
+  border: 1px solid var(--card-line); border-radius: var(--radius-md);
+  background: var(--surface); color: var(--text-gray);
+  font-family: inherit; font-size: var(--fs-12); cursor: pointer;
+}
+.cmp-pg.is-on { background: var(--main); border-color: var(--main); color: var(--surface); font-weight: var(--fw-bold); }
+.cmp-pg:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
+
+/* ── 작년 문서 불러오기 모달 ──────────────────────────────────────────── */
+.cmp-pull-h { padding: 10px 12px; background: var(--surface-alt); border: 1px solid var(--card-line); border-radius: var(--radius-button); margin-bottom: 10px; }
+.cmp-pull-h p { margin: 0; }
+.cmp-pull-t { font-size: var(--fs-14); font-weight: var(--fw-bold); color: var(--text-black); }
+.cmp-pull-f { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.cmp-pull-f .form-input { flex: 1 1 180px; min-width: 0; }
+.cmp-pull-b { max-height: 300px; overflow-y: auto; border: 1px solid var(--card-line); border-radius: var(--radius-button); }
+.cmp-pull-row { display: flex; gap: 9px; align-items: flex-start; padding: 9px 11px; border-bottom: 1px solid var(--card-line); cursor: pointer; font-size: var(--fs-13); }
+.cmp-pull-row:last-child { border-bottom: 0; }
+.cmp-pull-row:hover { background: var(--brand-50); }
+.cmp-pull-row input { margin-top: 3px; }
+/* 이미 불러온 원본 — 다시 고를 수 없다(검수 C-2). 흐리게만 하고 지우지 않는다 */
+.cmp-pull-row.is-pulled { cursor: default; }
+.cmp-pull-row.is-pulled:hover { background: var(--surface); }
+.cmp-pull-row.is-pulled .cmp-pull-n { color: var(--text-gray); }
+.cmp-pull-n { display: block; color: var(--text-black); line-height: 1.5; }
+.cmp-pull-row .cmp-dim { display: block; font-size: var(--fs-12); margin-top: 2px; }
+.cmp-pull-fields { margin-right: auto; display: inline-flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: var(--fs-12); color: var(--text-gray); }
+.cmp-pull-ck { display: inline-flex; gap: 4px; align-items: center; }
+.cmp-pick .dyp { margin-bottom: 4px; }
+
+/* ── 비해당 모달 ──────────────────────────────────────────────────────── */
+.cmp-na p { font-size: var(--fs-13); color: var(--text-black); line-height: 1.6; }
+.cmp-bulk-list { list-style: none; margin: 10px 0; padding: 0; max-height: 200px; overflow-y: auto; border: 1px solid var(--card-line); border-radius: var(--radius-button); }
+.cmp-bulk-list li { padding: 8px 11px; border-bottom: 1px solid var(--card-line); font-size: var(--fs-13); }
+.cmp-bulk-list li:last-child { border-bottom: 0; }
+.cmp-bulk-list .cmp-dim { display: block; font-size: var(--fs-12); margin-top: 2px; }
+
+/* ── 누락 점검 ────────────────────────────────────────────────────────── */
+.cmp-gap-head { margin: 12px 0 10px; }
+.cmp-gap-n { font-size: var(--fs-16); font-weight: var(--fw-bold); color: var(--text-black); margin: 0 0 2px; }
+.cmp-gap-blk { border: 1px solid var(--card-line); border-radius: var(--radius-button); overflow: hidden; margin-bottom: 12px; }
+.cmp-gap-h {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin: 0; padding: 9px 13px;
+  background: var(--status-danger-bg); border-bottom: 1px solid var(--card-line);
+  font-size: var(--fs-13); font-weight: var(--fw-bold); color: var(--status-danger-fg);
+}
+.cmp-gap-ax { display: inline-flex; gap: 4px; margin-left: auto; }
+.cmp-gap-yr { display: block; margin-top: 5px; }
+.cmp-gap-yr .chip-status { margin-right: 4px; }
+.cmp-gap-blk .cmp-table { min-width: 640px; }
+.cmp-gap-blk .cmp-table tr:last-child td { border-bottom: 0; }
+
+/* ── 반응형 — 표준 4단계 값만 (§8) ────────────────────────────────────── */
+@media (max-width: 1279px) {
+  .cmp-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 1023px) {
+  .cmp-two { grid-template-columns: minmax(0, 1fr); }
+  .cmp-c-act { width: auto; text-align: left; white-space: normal; }
+}
+@media (max-width: 767px) {
+  .cmp-kpis { grid-template-columns: minmax(0, 1fr); }
+  .cmp-dl > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .cmp-detail-bar { align-items: flex-start; flex-direction: column; }
+  .cmp-legend { gap: 8px; }
+  /* 좁은 폭에서 계층 탭·세그먼트가 컨테이너 밖으로 나가면 마지막 항목
+     (관리대상 단위 · 개별법)이 잘려 **누를 수 없게 된다** — 줄을 나눠 준다. */
+  .cmp-tabbar { flex-direction: column; align-items: stretch; }
+  /* 세로 배치에서 flex-basis 는 **높이**가 된다 — 260px 를 그대로 두면 서브탭
+     한 줄이 260px 높이를 차지해 화면에 큰 빈칸이 생긴다(실측). */
+  .cmp-subtabs { flex: 0 0 auto; }
+  .cmp-lvtabs { flex: 0 0 auto; }
+  .cmp-lvtabs .tab { flex: 1 1 auto; min-width: 0; padding: 8px 6px; font-size: var(--fs-12); }
+  .cmp-lvtabs .tab .chip-status { padding: 2px 6px; }
+  /* 공용 필터 바의 꼬리(.edu-filterbar-tail)는 flex-shrink:0 이라 폭을 양보하지
+     않는다 — 세그먼트가 그 안에서 100% 를 잡아도 컨테이너가 이미 화면보다 넓다.
+     이 두 화면 범위에서만 줄이도록 푼다(전역 값을 건드리면 edu 화면이 함께 움직인다). */
+  [data-dy-page^="cmp-"] .edu-filterbar-tail { flex-shrink: 1; min-width: 0; max-width: 100%; }
+  .cmp-seg { width: 100%; }
+  .cmp-seg-btn { flex: 1 1 auto; }
+}

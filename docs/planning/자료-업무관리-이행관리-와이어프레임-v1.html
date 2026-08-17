@@ -1,0 +1,499 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>담양군 중대재해 통합관리시스템 — 이행관리 화면 와이어프레임</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+ --s0:#f4f4f2; --s1:#fcfcfb; --s2:#eeeeeb; --line:#dcdcd6; --line2:#c9c9c2;
+ --ink:#0b0b0b; --ink2:#52514e; --ink3:#84837c;
+ --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --crit:#d03b3b; --acc:#2a78d6;
+ --r:8px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,"Malgun Gothic","Apple SD Gothic Neo",sans-serif;
+ background:var(--s0);color:var(--ink);font-size:13px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1280px;margin:0 auto;padding:24px 20px 64px}
+.doc-h{margin-bottom:18px}
+.doc-h h1{font-size:19px;font-weight:700;letter-spacing:-.3px}
+.doc-h p{color:var(--ink2);font-size:12.5px;margin-top:4px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin:20px 0 0;flex-wrap:wrap}
+.tabs button{background:none;border:0;padding:10px 14px;font:inherit;font-size:12.5px;color:var(--ink2);
+ cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
+.tabs button[aria-selected=true]{color:var(--acc);border-bottom-color:var(--acc);font-weight:600}
+.screen{display:none;margin-top:18px}
+.screen.on{display:block}
+.app{background:var(--s1);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.crumb{padding:10px 16px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--ink3);background:var(--s2)}
+.crumb b{color:var(--ink2);font-weight:600}
+.pad{padding:16px}
+.filters{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+.sel,.inp{border:1px solid var(--line2);background:var(--s1);border-radius:6px;padding:5px 9px;font-size:12px;color:var(--ink2)}
+.sel::after{content:" ▾"}
+.inp{min-width:170px;color:var(--ink3)}
+.sp{flex:1}
+.btn{border:1px solid var(--line2);background:var(--s1);border-radius:6px;padding:5px 11px;font-size:12px;cursor:pointer;color:var(--ink2)}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.kpi{border:1px solid var(--line);border-radius:var(--r);padding:11px 13px;background:var(--s1)}
+.kpi .lb{font-size:11.5px;color:var(--ink2)}
+.kpi .vl{font-size:24px;font-weight:700;letter-spacing:-.5px;margin:3px 0 2px;font-variant-numeric:tabular-nums}
+.kpi .sub{font-size:11px;color:var(--ink3);font-variant-numeric:tabular-nums}
+.meter{height:5px;border-radius:3px;background:var(--s2);margin-top:7px;overflow:hidden}
+.meter i{display:block;height:100%;border-radius:3px;background:var(--acc)}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:11px;font-weight:600;color:var(--ink2);padding:8px 10px;border-bottom:1px solid var(--line2);background:var(--s2);white-space:nowrap}
+td{padding:7px 10px;border-bottom:1px solid var(--line);font-size:12.3px;vertical-align:middle}
+tr.grp{background:var(--s2);cursor:pointer}
+tr.grp td{font-weight:600;font-size:12.5px;border-bottom:1px solid var(--line2)}
+tr.grp .car{display:inline-block;width:12px;color:var(--ink3)}
+tr.grp .gm{font-weight:400;font-size:11.5px;color:var(--ink2);font-variant-numeric:tabular-nums}
+tr.stg{cursor:pointer}
+tr.stg:hover{background:#f0f6fd}
+tr.stg td:first-child{padding-left:26px}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 7px;border-radius:20px;border:1px solid;white-space:nowrap}
+.b-ok{color:#07730a;border-color:#a9dfa9;background:#eefaee}
+.b-run{color:var(--ink2);border-color:var(--line2);background:var(--s2)}
+.b-late{color:#8a5c00;border-color:#f2d78d;background:#fdf6e3}
+.b-no{color:#9c2626;border-color:#efb4b4;background:#fdeeee}
+.b-na{color:var(--ink3);border-color:var(--line);background:var(--s1)}
+.cyc{font-size:11.5px;color:var(--ink2)}
+.cyc.ev{color:var(--ink3)}
+.zero{color:var(--ink3)}
+.tip{position:relative;cursor:help;color:var(--acc);font-size:12px}
+.tip .tt{display:none;position:absolute;right:0;bottom:130%;width:280px;background:#1a1a19;color:#fff;
+ padding:9px 11px;border-radius:6px;font-size:11.5px;line-height:1.5;z-index:20;font-weight:400;text-align:left}
+.tip:hover .tt{display:block}
+.tip .tt b{display:block;color:#c3c2b7;font-size:10.5px;font-weight:600;margin-bottom:2px}
+.tip .tt hr{border:0;border-top:1px solid #3a3a37;margin:6px 0}
+.note{background:#f0f6fd;border:1px solid #cfe1f7;border-radius:var(--r);padding:10px 13px;font-size:12px;color:#1c4f8f;margin:12px 16px}
+.note b{font-weight:700}
+.two{display:grid;grid-template-columns:340px 1fr;gap:0}
+.two>div{padding:16px}
+.two>div:first-child{border-right:1px solid var(--line);background:var(--s1)}
+.dl{margin-top:10px}
+.dl dt{font-size:11px;color:var(--ink3);margin-top:9px}
+.dl dd{font-size:12.3px;color:var(--ink);margin-top:1px}
+.code{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--ink3)}
+h3.sh{font-size:14px;font-weight:700;margin-bottom:3px}
+.empty{border:1px dashed var(--line2);border-radius:var(--r);padding:26px;text-align:center;color:var(--ink3);font-size:12.3px;margin-top:10px}
+.empty b{display:block;color:var(--ink2);font-size:13px;margin-bottom:5px}
+.tag{display:inline-block;font-size:10.5px;background:#eef3fb;border:1px solid #d4e2f5;color:#1c4f8f;border-radius:4px;padding:1px 6px;margin:1px 3px 1px 0;white-space:nowrap}
+.tag.g{background:var(--s2);border-color:var(--line2);color:var(--ink2)}
+.modal{border:1px solid var(--line2);border-radius:var(--r);background:var(--s1);box-shadow:0 8px 28px rgba(0,0,0,.14);max-width:600px;margin:0 auto}
+.modal .mh{padding:13px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+.modal .mh b{font-size:13.5px}
+.modal .mb{padding:14px 16px;max-height:340px;overflow:auto}
+.modal .mf{padding:12px 16px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:6px;align-items:center}
+.row{display:flex;gap:9px;align-items:flex-start;padding:8px 4px;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row .meta{font-size:11px;color:var(--ink3);margin-top:1px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;padding:9px 16px;border-top:1px solid var(--line);font-size:11.5px;color:var(--ink2);background:var(--s1)}
+.cap{font-size:11.5px;color:var(--ink3);padding:9px 16px 0}
+.pdf{border:1px solid var(--line2);border-radius:var(--r);height:200px;display:flex;align-items:center;justify-content:center;
+ color:var(--ink3);background:repeating-linear-gradient(45deg,var(--s2),var(--s2) 6px,var(--s1) 6px,var(--s1) 12px);font-size:12px;text-align:center;padding:16px}
+.form label{display:block;font-size:11.5px;color:var(--ink2);margin:12px 0 4px;font-weight:600}
+.form .fi{border:1px solid var(--line2);border-radius:6px;background:var(--s1);padding:7px 10px;color:var(--ink3);font-size:12.3px}
+.form .fi.tall{height:78px}
+@media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}.two{grid-template-columns:1fr}.two>div:first-child{border-right:0;border-bottom:1px solid var(--line)}}
+
+.lvtabs{display:flex;gap:0;border-bottom:1px solid var(--line);background:var(--s1);padding:0 16px}
+.lvtabs .lv{background:none;border:0;padding:11px 16px 9px;font:inherit;font-size:12.8px;color:var(--ink2);cursor:pointer;
+ border-bottom:2px solid transparent;display:flex;align-items:center;gap:7px}
+.lvtabs .lv.on{color:var(--acc);border-bottom-color:var(--acc);font-weight:700}
+.lvtabs .cn{font-size:10.5px;font-weight:400;color:var(--ink3);background:var(--s2);border-radius:10px;padding:1px 7px}
+.lvtabs .lv.on .cn{background:#e8f1fc;color:#1c4f8f}
+.lvpane{display:none}.lvpane.on{display:block}
+.scopebar{padding:9px 16px;background:#f0f6fd;border-bottom:1px solid #cfe1f7;font-size:11.8px;color:#1c4f8f;line-height:1.55}
+.scopebar.warn{background:#fdf6e3;border-bottom-color:#f2d78d;color:#8a5c00}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:6px;overflow:hidden;font-size:12px}
+.seg b,.seg span{padding:5px 11px;font-weight:400;color:var(--ink2)}
+.seg b{background:var(--acc);color:#fff;font-weight:600}
+.mini{font-size:11.5px;color:var(--ink3);padding:9px 0 0}
+.bar{display:flex;height:14px;border-radius:3px;overflow:hidden;background:var(--s2);gap:2px;padding:0}
+.bar i{display:block;height:100%}
+.bar .ok{background:#0ca30c}.bar .no{background:#e6e6e2}
+.pct{font-variant-numeric:tabular-nums;font-size:11.5px;color:var(--ink2);margin-left:7px}
+.dots{display:flex;gap:2px;flex-wrap:wrap}
+.dots i{width:9px;height:9px;border-radius:2px;background:#e6e6e2;display:block}
+.dots i.ok{background:#0ca30c}.dots i.na{background:#f2d78d}
+</style></head><body>
+<div class="wrap">
+<div class="doc-h">
+  <h1>이행관리 · 업무문서 화면 와이어프레임</h1>
+  <p>담양군 중대재해 통합관리시스템 · PLAN-CMP-001 v1.0 · 예시 데이터 = 물순환사업소 2025년 분류 결과 (이행항목 54 / 업무단계 137)</p>
+</div>
+<div class="tabs" role="tablist">
+  <button role="tab" aria-selected="true" data-t="s1">① 단계별 이행현황 <span class="code">CMP01-T</span></button>
+  <button role="tab" aria-selected="false" data-t="s2">② 이행 상세·문서등록 <span class="code">CMP02-D</span></button>
+  <button role="tab" aria-selected="false" data-t="s3">③ 작년 문서 불러오기</button>
+  <button role="tab" aria-selected="false" data-t="s4">④ 업무문서 <span class="code">DOC01-L</span></button>
+  <button role="tab" aria-selected="false" data-t="s5">⑤ 지난연도 문서 상세 <span class="code">DOC02-D</span></button>
+  <button role="tab" aria-selected="false" data-t="s6">⑥ 누락 점검 <span class="code">CMP04-V</span></button>
+</div>
+
+<!-- ① -->
+<section class="screen on" id="s1">
+ <div class="app">
+  <div class="crumb">이행·증명 › <b>이행관리</b> › 단계별 이행현황</div>
+  <div class="lvtabs" role="tablist">
+    <button class="lv on" data-l="lv1">군 단위 <span class="cn">80단계</span></button>
+    <button class="lv" data-l="lv2">부서 단위 <span class="cn">58단계 × 39부서</span></button>
+    <button class="lv" data-l="lv3">관리대상 단위 <span class="cn">39단계 × 62개소·공사</span></button>
+  </div>
+
+  <!-- 군 단위 -->
+  <div class="lvpane on" id="lv1">
+   <div class="filters"><span class="sel">2026년</span><span class="sel">법령 전체</span><span class="sel">주기 전체</span>
+     <span class="sel">상태 전체</span><span class="inp">업무단계명 검색</span><span class="sp"></span><span class="btn">엑셀</span></div>
+   <div class="scopebar"><b>군 단위(L1)</b> — 담양군 전체에서 1회 수행. 수행 주체는 군수·전담조직(재난안전과)입니다.
+     부서 담당자에게는 <b>읽기 전용</b>으로 보이고 부서 이행률 분모에서 제외됩니다. 연간 이행 회차 약 <b>40회</b>.</div>
+   <div class="kpis" id="k1"></div>
+   <div style="overflow:auto"><table class="ct" id="t1"><thead><tr>
+     <th>업무단계명</th><th style="width:118px">이행주기</th><th class="num" style="width:60px">회차</th>
+     <th style="width:92px">이행상태</th><th style="width:132px">수행 주체</th><th class="num" style="width:74px">문서</th><th style="width:48px;text-align:center">법령</th>
+   </tr></thead><tbody></tbody></table></div>
+  </div>
+
+  <!-- 부서 단위 -->
+  <div class="lvpane" id="lv2">
+   <div class="filters"><span class="sel">2026년</span><span class="sel">전체 부서</span>
+     <span class="seg"><b>부서별 보기</b><span>단계별 보기</span></span><span class="sp"></span><span class="btn">엑셀</span></div>
+   <div class="scopebar"><b>부서 단위(L2)</b> — 39개 부서가 각각 수행. 정기 23단계 × 부서 = 연간 약 <b>731회</b>.
+     부서 담당자는 자기 부서 1행만 보이고, CEO·전담조직은 전 부서를 봅니다.</div>
+   <div class="kpis" id="k2"></div>
+   <div style="padding:0 16px 4px"><div class="mini">부서별 보기 — 행 클릭 시 해당 부서의 단계 목록으로 진입</div></div>
+   <div style="overflow:auto"><table class="ct" id="t2a"><thead><tr>
+     <th>부서</th><th style="width:210px">정기 이행률 (23단계)</th><th class="num" style="width:74px">정기 충족</th>
+     <th class="num" style="width:74px">상시 충족</th><th class="num" style="width:74px">미이행</th><th class="num" style="width:74px">문서</th>
+   </tr></thead><tbody></tbody></table></div>
+   <div style="padding:14px 16px 4px"><div class="mini">단계별 보기 — 한 단계를 39개 부서가 얼마나 이행했는지</div></div>
+   <div style="overflow:auto"><table class="ct" id="t2b"><thead><tr>
+     <th>업무단계명</th><th style="width:110px">이행주기</th><th style="width:230px">부서 이행 현황</th>
+     <th class="num" style="width:80px">이행 부서</th><th style="width:48px;text-align:center">법령</th>
+   </tr></thead><tbody></tbody></table></div>
+  </div>
+
+  <!-- 관리대상 단위 -->
+  <div class="lvpane" id="lv3">
+   <div class="filters"><span class="sel">2026년</span><span class="sel">시설 전체</span><span class="sel">소관부서 전체</span>
+     <span class="inp">시설명 검색</span><span class="sp"></span><span class="btn">엑셀</span></div>
+   <div class="scopebar warn"><b>관리대상 단위(L3)</b> — 시설·공사 <b>건별</b>로 수행. 주요 7개 단계만 추산해도 연간 약 <b>772회</b>로
+     세 계층 중 이행량이 가장 큽니다. 소방시설 자체점검은 14개소 × 연 2회, 승강기는 12개소 × 월 1회입니다.</div>
+   <div class="kpis" id="k3"></div>
+   <div style="padding:0 16px 4px"><div class="mini">관리대상별 보기 — 시설마다 적용 법령이 달라 열이 가변입니다</div></div>
+   <div style="overflow:auto"><table class="ct" id="t3"><thead><tr>
+     <th>관리대상</th><th style="width:128px">소관부서</th><th style="width:186px">분류</th>
+     <th style="width:250px">적용 단계 이행</th><th class="num" style="width:76px">충족</th>
+   </tr></thead><tbody></tbody></table></div>
+   <div class="note" style="margin:14px 16px"><b>L3는 회차 전수 관리를 권하지 않습니다.</b>
+     승강기·어린이놀이시설 자체점검은 이미 승강기안전종합정보망·어린이놀이시설 안전관리시스템에 등록됩니다.
+     본 시스템은 <b>결과 보고 문서</b>를 관리하는 것이므로, Phase 1은 연간 실적 등록 수준으로 두고
+     회차 단위 관리는 Phase 2에서 확장하는 안을 권합니다.</div>
+  </div>
+
+  <div class="legend">
+    <span><span class="badge b-ok">✓ 충족</span> 도래 회차 전부 등록</span>
+    <span><span class="badge b-run">◐ 진행중</span> 일부 등록</span>
+    <span><span class="badge b-late">! 지연</span> 기한 경과</span>
+    <span><span class="badge b-no">□ 미이행</span> 문서 0건</span>
+    <span><span class="badge b-na">− 비해당</span> 사유 기재</span>
+  </div>
+ </div>
+</section>
+
+<!-- ② -->
+<section class="screen" id="s2">
+ <div class="app">
+  <div class="crumb">이행·증명 › 이행관리 › 단계별 이행현황 › <b>이행 상세</b></div>
+  <div class="two">
+   <div>
+     <div class="code">FAC-15-01</div>
+     <h3 class="sh">소방시설 자체점검 실시 및 결과 보고</h3>
+     <dl class="dl">
+       <dt>법령근거</dt><dd>소방시설 설치 및 관리에 관한 법률 제22조</dd>
+       <dt>법정주기</dt><dd>작동점검 연 1회, 종합점검 연 1회<br><span class="code">cycle_code = YEAR · count 2</span></dd>
+       <dt>수행시점조건</dt><dd class="zero">—</dd>
+       <dt>적용대상</dt><dd>시설 관리부서·사업소</dd>
+       <dt>이행주체</dt><dd>시설 관리주체 · 소방안전관리자</dd>
+     </dl>
+     <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">
+       <dl class="dl" style="margin-top:0">
+         <dt>2026년 이행상태</dt><dd><span class="badge b-late">! 지연</span></dd>
+         <dt>회차</dt><dd style="font-variant-numeric:tabular-nums">1 / 2 <span class="zero">(작동점검 ✓ · 종합점검 미실시)</span></dd>
+         <dt>2025년 실적</dt><dd>38건</dd>
+       </dl>
+     </div>
+   </div>
+   <div>
+     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+       <h3 class="sh">2026년 등록 문서 <span class="zero" style="font-weight:400">(1)</span></h3>
+       <div><span class="btn">📁 작년 문서 불러오기</span> <span class="btn pri">+ 새 문서 등록</span></div>
+     </div>
+     <table style="margin-top:9px">
+       <thead><tr><th>문서명</th><th style="width:64px">구분</th><th style="width:150px">수발신자</th><th style="width:92px">보고일자</th><th style="width:76px">결재</th></tr></thead>
+       <tbody><tr><td>2026년 1분기 담양문화회관 소방시설 작동점검 결과 보고</td><td>생산</td><td>공공시설사업소</td><td class="num">2026.03.18</td><td><span class="badge b-ok">✓ 완료</span></td></tr></tbody>
+     </table>
+     <div class="empty" style="margin-top:14px"><b>종합점검 회차가 비어 있습니다</b>
+       법정주기상 연 1회 종합점검이 필요하나 등록된 문서가 없습니다.<br>
+       <span class="btn" style="margin-top:9px;display:inline-block">📁 2025년 종합점검 문서 불러오기</span></div>
+     <div style="border-top:1px solid var(--line);margin-top:16px;padding-top:12px;display:flex;align-items:center;justify-content:space-between">
+       <h3 class="sh" style="font-size:12.5px">2025년 문서 <span class="zero" style="font-weight:400">(38)</span></h3>
+       <span class="btn">지난연도 전체 보기</span>
+     </div>
+     <div class="cap" style="padding:6px 0 0">연도 셀렉터를 2025로 바꾸면 등록 버튼이 사라지고 해당 연도에 작성한 문서 목록만 필터링되어 표시됩니다.</div>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- ③ -->
+<section class="screen" id="s3">
+ <div class="modal">
+   <div class="mh"><b>2025년 문서 불러오기</b><span class="zero">✕</span></div>
+   <div style="padding:11px 16px;border-bottom:1px solid var(--line);background:var(--s2)">
+     <div class="code">FAC-15-01</div>
+     <div style="font-size:12.5px;font-weight:600">소방시설 자체점검 실시 및 결과 보고</div>
+     <div class="zero" style="font-size:11.5px;margin-top:2px">2025년 이 단계에 등록된 문서 38건</div>
+   </div>
+   <div style="padding:10px 16px 0;display:flex;gap:6px;align-items:center">
+     <span class="inp" style="flex:1">문서명 검색</span><span class="btn">전체 선택</span>
+   </div>
+   <div class="mb">
+     <div class="row"><input type="checkbox" checked><div><div>2025년 1분기 담양문화회관 소방안전관리 대행 수수료 집행</div><div class="meta">생산 · 2025.03.14 · 공공시설사업소-2841</div></div></div>
+     <div class="row"><input type="checkbox"><div><div>2025년 2분기 종합체육관 소방안전관리 대행수수료 집행</div><div class="meta">생산 · 2025.06.11 · 공공시설사업소-7220</div></div></div>
+     <div class="row"><input type="checkbox"><div><div>2025년 소방시설등 작동점검 실시결과 보고서 제출</div><div class="meta">접수 · 2025.09.02 · 담양소방서-11940</div></div></div>
+     <div class="row"><input type="checkbox"><div><div>2025년 창평게이트볼구장 4분기 소방안전관리 대행수수료 집행</div><div class="meta">생산 · 2025.12.09 · 공공시설사업소-19883</div></div></div>
+   </div>
+   <div class="mf">
+     <span style="margin-right:auto;font-size:11.5px;color:var(--ink2)">불러올 항목 &nbsp;☑ 문서명 &nbsp;☑ 수발신자 &nbsp;☐ 보고일자</span>
+     <span class="btn">취소</span><span class="btn pri">불러오기 (1)</span>
+   </div>
+ </div>
+ <div class="note" style="max-width:600px;margin:14px auto 0">
+   <b>현재 불러올 수 있는 것은 메타데이터입니다.</b> 2025년 분류 데이터에는 문서명·수발신자·보고일자·생산등록번호만 있고
+   본문과 결재 PDF는 없습니다. 결재 PDF까지 불러오려면 온나라 연동이 필요합니다(기획안 쟁점 6).
+ </div>
+</section>
+
+<!-- ④ -->
+<section class="screen" id="s4">
+ <div class="app">
+  <div class="crumb">점검·진단 › <b>업무문서</b> › 업무문서 목록</div>
+  <div class="filters">
+    <span class="sel">2026년</span><span class="sel">물순환사업소</span><span class="sel">업무단계 전체</span>
+    <span class="sel">결재상태</span><span class="inp">문서명 검색</span><span class="sp"></span><span class="btn pri">+ 문서 등록</span>
+  </div>
+  <table>
+   <thead><tr><th>문서명</th><th style="width:330px">업무단계</th><th style="width:140px">수발신자</th><th style="width:92px">보고일자</th><th style="width:76px">결재</th></tr></thead>
+   <tbody>
+    <tr><td>2026년 상반기 산업안전보건위원회 회의 결과</td>
+      <td><span class="tag">산업안전보건위원회 회의 개최</span><span class="tag">종사자 의견 청취 절차 운영</span></td>
+      <td>전 부서</td><td class="num">2026.03.20</td><td><span class="badge b-ok">✓ 완료</span></td></tr>
+    <tr><td>2026년 상반기 중대(산업·시민)재해 이행점검 실시 결과 제출</td>
+      <td><span class="tag">부서별 의무이행 점검 결과 제출</span><span class="tag">공중이용시설 이행점검</span><span class="tag g">+1</span></td>
+      <td>재난안전과</td><td class="num">2026.06.18</td><td><span class="badge b-run">◐ 진행</span></td></tr>
+    <tr><td>2026년 1분기 담양문화회관 소방시설 작동점검 결과 보고</td>
+      <td><span class="tag">소방시설 자체점검 실시·보고</span></td>
+      <td>담양소방서</td><td class="num">2026.03.18</td><td><span class="badge b-ok">✓ 완료</span></td></tr>
+    <tr><td>2026년 신계정수장 밀폐공간 질식사고 예방 자율점검표 제출</td>
+      <td><span class="tag">밀폐공간 작업 프로그램 수립·시행</span><span class="tag">유해·위험작업 특별교육</span></td>
+      <td>전라남도 사회재난과</td><td class="num">2026.07.04</td><td><span class="badge b-no">□ 미상신</span></td></tr>
+   </tbody>
+  </table>
+  <div class="cap" style="padding-bottom:14px">업무단계는 다중 선택입니다. 2개 초과는 <span class="tag g">+N</span> 칩으로 접고 툴팁에 전체를 보여줍니다.</div>
+ </div>
+ <div class="note"><b>한 문서가 여러 단계에 연결되므로 이행현황의 문서 수 합계는 실제 문서 수보다 큽니다.</b>
+  2025년 물순환사업소 실측 기준 연결 1,759건 / 문서 1,112건. 화면 상단에 두 숫자를 함께 표기해 오해를 막습니다.</div>
+</section>
+
+<!-- ⑤ -->
+<section class="screen" id="s5">
+ <div class="app">
+  <div class="crumb">점검·진단 › 업무문서 › 지난연도 문서 › <b>문서 상세</b></div>
+  <div class="pad">
+   <span class="tag g">2025년 문서</span>
+   <h3 class="sh" style="margin-top:7px">2025년 상반기 중대(산업)재해 이행점검 실시 결과 제출</h3>
+   <div class="zero" style="font-size:11.5px">생산 · 2025.06.18 · 물순환사업소-7411 · 수신 재난안전과</div>
+   <div style="margin-top:11px">
+     <span class="tag">부서별 의무이행 점검 결과 제출</span>
+     <span class="tag">공중이용시설 안전점검·이행점검 실시 및 결과 보고</span>
+     <span class="tag g" style="background:#fdf6e3;border-color:#f2d78d;color:#8a5c00">분류확인 · 확실</span>
+   </div>
+   <div style="display:grid;grid-template-columns:1fr 300px;gap:16px;margin-top:16px">
+     <div>
+       <div style="font-size:11.5px;font-weight:600;color:var(--ink2);margin-bottom:6px">결재 완료 문서</div>
+       <div class="pdf">PDF 뷰어 영역<br><span style="font-size:11px">온나라 연동 시 결재 완료본 표시 · 미연동 시 “PDF 미보유” 안내</span></div>
+     </div>
+     <div>
+       <div style="font-size:11.5px;font-weight:600;color:var(--ink2);margin-bottom:6px">올해 이어받기</div>
+       <div style="border:1px solid var(--line);border-radius:var(--r);padding:13px">
+         <div style="font-size:12px;color:var(--ink2);line-height:1.6">이 문서를 바탕으로 2026년 문서를 만듭니다.
+           업무단계·수발신자가 그대로 채워지고 제목의 연도가 2026으로 바뀝니다.</div>
+         <div class="btn pri" style="display:block;text-align:center;margin-top:11px">📄 올해 문서로 등록</div>
+       </div>
+       <div style="border:1px solid var(--line);border-radius:var(--r);padding:13px;margin-top:9px">
+         <div style="font-size:11.5px;font-weight:600;margin-bottom:5px">2026년 동일 단계 현황</div>
+         <div style="font-size:12px;color:var(--ink2)">부서별 의무이행 점검 <span class="badge b-late" style="margin-left:3px">! 지연</span><br>
+           <span class="zero" style="font-size:11px">상반기 회차 기한 2026.06.30 경과</span></div>
+       </div>
+     </div>
+   </div>
+  </div>
+ </div>
+</section>
+
+<!-- ⑥ -->
+<section class="screen" id="s6">
+ <div class="app">
+  <div class="crumb">이행·증명 › 이행관리 › <b>누락 점검</b></div>
+  <div class="filters">
+    <span class="sel">2026년</span><span class="sel">물순환사업소</span>
+    <span class="btn">전체</span><span class="btn">중대산업재해</span><span class="btn">중대시민재해</span>
+    <span class="btn">산안법</span><span class="btn">개별법</span><span class="sp"></span>
+    <span class="btn">엑셀</span><span class="btn">일괄 비해당 처리</span>
+  </div>
+  <div class="pad">
+   <div style="font-size:13px;font-weight:700;margin-bottom:3px">미이행 단계 74개</div>
+   <div class="zero" style="font-size:11.5px;margin-bottom:13px">정기 30 + 상시 44 · 2025년에도 문서가 없던 단계는 <b style="color:var(--crit)">2년 연속</b>으로 표시됩니다</div>
+
+   <div style="border:1px solid var(--line);border-radius:var(--r);overflow:hidden">
+     <div style="padding:9px 13px;background:#fdeeee;border-bottom:1px solid var(--line);font-size:12.5px;font-weight:600;color:#9c2626">
+       중대시민재해 — 5개 단계 미이행</div>
+     <table><tbody>
+       <tr><td>
+         <div style="font-weight:600">공중이용시설 안전 담당 인력 확보</div>
+         <div class="zero" style="font-size:11px;margin-top:2px">중대재해처벌법 시행령 제10조제1호 · 정기주기 없음</div>
+         <div style="font-size:11px;margin-top:3px"><span class="badge b-no">□ 2년 연속</span> 2025년 0건 · 2026년 0건</div>
+       </td><td style="width:230px;text-align:right">
+         <span class="btn pri">해당 — 문서 등록</span> <span class="btn">비해당 — 사유 기재</span>
+       </td></tr>
+       <tr><td>
+         <div style="font-weight:600">중대시민재해 예방 업무처리절차 마련·이행</div>
+         <div class="zero" style="font-size:11px;margin-top:2px">중대재해처벌법 시행령 제10조제7호 · 정기주기 없음</div>
+         <div style="font-size:11px;margin-top:3px"><span class="badge b-no">□ 2년 연속</span> 2025년 0건 · 2026년 0건</div>
+       </td><td style="text-align:right">
+         <span class="btn pri">해당 — 문서 등록</span> <span class="btn">비해당 — 사유 기재</span>
+       </td></tr>
+     </tbody></table>
+     <div style="padding:9px 13px;background:#fdeeee;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:12.5px;font-weight:600;color:#9c2626">
+       유해화학물질 취급시설 안전관리 — 3개 단계 미이행</div>
+     <table><tbody>
+       <tr><td>
+         <div style="font-weight:600">화학사고예방관리계획서 작성·제출</div>
+         <div class="zero" style="font-size:11px;margin-top:2px">화학물질관리법 제23조 · 5년마다 1회</div>
+         <div style="font-size:11px;margin-top:3px"><span class="badge b-no">□ 2년 연속</span> 신계정수장 유해화학물질 취급</div>
+       </td><td style="width:230px;text-align:right">
+         <span class="btn pri">해당 — 문서 등록</span> <span class="btn">비해당 — 사유 기재</span>
+       </td></tr>
+     </tbody></table>
+   </div>
+   <div class="note" style="margin:14px 0 0"><b>비해당 처리에는 사유가 반드시 필요합니다.</b>
+     중대재해처벌법 대응에서는 “미이행”보다 “적용 제외 근거 없음”이 더 위험합니다. 비해당 이력은 감사 로그에 남고 매년 재확인합니다.</div>
+  </div>
+ </div>
+</section>
+</div>
+
+<script>
+const D = {"L1": [{"item": "안전·보건 목표 및 경영방침 설정", "name": "안전·보건 목표 및 경영방침 설정·공표", "law": "중대재해처벌법 시행령 제4조제1호", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "최초 설정, 변경 시", "lv": "L1 군(관리주체)", "ap": "군 전체(관리주체 1단계)", "own": "경영책임자(군수) · 전담조직", "n": 1}, {"item": "안전보건 전담조직 설치·운영", "name": "안전보건 업무 전담조직 설치 및 전담인력 배치", "law": "중대재해처벌법 시행령 제4조제2호", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "최초 설치, 조직·인력 변경 시", "lv": "L1 군(관리주체)", "ap": "재난안전과(전담조직)", "own": "경영책임자(군수) · 행정과", "n": 2}, {"item": "안전관리자·보건관리자 배치", "name": "안전관리자 선임 및 위탁용역 운영", "law": "산업안전보건법 제17조, 같은 법 시행령 제16조·제19조, 중대재해처벌법 시행령 제4조제6호", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "선임사유 발생일부터 14일 이내", "lv": "L1 군(관리주체)", "ap": "군 전체(관리주체 1단계)", "own": "전담조직 · 위탁 전문기관", "n": 9}, {"item": "안전관리자·보건관리자 배치", "name": "보건관리자 선임 및 위탁용역 운영", "law": "산업안전보건법 제18조, 같은 법 시행령 제20조·제23조, 중대재해처벌법 시행령 제4조제6호", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "선임사유 발생일부터 14일 이내", "lv": "L1 군(관리주체)", "ap": "군 전체(관리주체 1단계)", "own": "전담조직 · 위탁 전문기관", "n": 4}, {"item": "안전관리자·보건관리자 배치", "name": "안전보건관리담당자·산업보건의 선임 또는 선임제외 근거 관리", "law": "산업안전보건법 제19조·제22조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "선임사유 발생일부터 14일 이내", "lv": "L1 군(관리주체)", "ap": "군 전체(관리주체 1단계)", "own": "전담조직 · 위탁 전문기관", "n": 0}, {"item": "산업안전보건위원회 구성·운영", "name": "산업안전보건위원회 회의 개최 및 결과 보고", "law": "산업안전보건법 제24조, 같은 법 시행령 제37조", "cyc": "분기마다 1회 이상", "cc": "QUARTER", "cl": "분기 1회", "cond": "", "lv": "L1 군(관리주체)", "ap": "군 전체(관리주체 1단계)", "own": "위원장(군수) · 전담조직", "n": 30}, {"item": "산업안전보건위원회 구성·운영", "name": "산업안전보건위원회 위원 구성·변경", "law": "산업안전보건법 제24조, 같은 법 시행령 제34조·제35조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "위원 변경 시", "lv": "L1 군(관리주체)", "ap": "군 전체(관리주체 1단계)", "own": "위원장(군수) · 전담조직", "n": 3}, {"item": "중대재해 예방 역량강화 및 대외협력 (관리업무)", "name": "중대재해 예방 교육·워크숍·제도 운영 및 대외협력", "law": "중대재해처벌법 제16조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "교육·행사·공모 시행 시", "lv": "L1 군(관리주체)", "ap": "재난안전과(전담조직)", "own": "전담조직", "n": 15}, {"item": "시·군·구 안전관리계획 수립·확정", "name": "담양군 안전관리계획 수립·제출", "law": "재난 및 안전관리 기본법 제25조", "cyc": "매년", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 8}, {"item": "시·군·구 안전관리계획 수립·확정", "name": "재난 유형별 부서 안전관리계획 수립·제출", "law": "재난 및 안전관리 기본법 제25조, 같은 법 시행령 제29조", "cyc": "매년", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 28}, {"item": "시·군·구 안전관리계획 수립·확정", "name": "안전관리위원회 안전관리계획 심의·의결", "law": "재난 및 안전관리 기본법 제11조·제25조", "cyc": "매년", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 9}, {"item": "지역안전관리위원회 구성·운영", "name": "지역안전관리위원회·실무위원회 운영", "law": "재난 및 안전관리 기본법 제11조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "심의 안건 발생 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 22}, {"item": "국가안전관리기본계획 추진실적 제출", "name": "국가안전관리계획 추진실적 보고서 제출", "law": "재난 및 안전관리 기본법 제25조의2", "cyc": "매년", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 20}, {"item": "재난관리체계 등에 대한 평가", "name": "재난관리평가 실적·증빙자료 제출", "law": "재난 및 안전관리 기본법 제33조의2", "cyc": "매년", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 55}, {"item": "재난관리체계 등에 대한 평가", "name": "재난관리평가 결과 확인 및 후속조치", "law": "재난 및 안전관리 기본법 제33조의2", "cyc": "매년", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 7}, {"item": "지방자치단체 재난안전예산 사전검토", "name": "재난안전예산 사전검토 운영계획 수립·제출", "law": "재난 및 안전관리 기본법 제10조의4", "cyc": "매년", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 22}, {"item": "지방자치단체 재난안전예산 사전검토", "name": "재난안전예산 편성·집행 및 결산자료 제출", "law": "재난 및 안전관리 기본법 제10조의4", "cyc": "매년", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 25}, {"item": "지방자치단체 재난안전예산 사전검토", "name": "재난안전 국·도비보조금 교부신청 및 정산", "law": "지방자치단체 보조금 관리에 관한 법률 제17조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "보조사업 교부신청·완료 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 109}, {"item": "재난안전분야 종사자 전문교육", "name": "전문교육 대상자 신청 및 명단 제출", "law": "재난 및 안전관리 기본법 제29조의2, 같은 법 시행규칙 제12조의2", "cyc": "신규교육 1년 이내, 정기교육 2년마다 1회 이상", "cc": "MULTIYEAR", "cl": "수년 주기", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 211}, {"item": "재난안전분야 종사자 전문교육", "name": "전문교육 이수현황 관리 및 교육비 집행", "law": "재난 및 안전관리 기본법 제29조의2", "cyc": "신규교육 1년 이내, 정기교육 2년마다 1회 이상", "cc": "MULTIYEAR", "cl": "수년 주기", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 22}, {"item": "재난대비훈련 실시", "name": "재난대비훈련 계획 수립·제출", "law": "재난 및 안전관리 기본법 제35조", "cyc": "매년 1회 이상", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 15}, {"item": "재난대비훈련 실시", "name": "재난대비훈련 실시 및 결과보고서 제출", "law": "재난 및 안전관리 기본법 제35조", "cyc": "매년 1회 이상", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 34}, {"item": "재난대비훈련 실시", "name": "재난상황보고훈련·NDMS 훈련 실시 및 결과 보고", "law": "재난 및 안전관리 기본법 제20조·제35조", "cyc": "매년 1회 이상", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 40}, {"item": "재난분야 위기관리 매뉴얼 작성·운용", "name": "위기관리·현장조치 행동매뉴얼 제·개정", "law": "재난 및 안전관리 기본법 제34조의5", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "매뉴얼 제·개정 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 71}, {"item": "재난분야 위기관리 매뉴얼 작성·운용", "name": "위기관리 매뉴얼 정기점검 및 결과 제출", "law": "재난 및 안전관리 기본법 제34조의5", "cyc": "매년 1회 이상", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 8}, {"item": "다중이용시설 위기상황 매뉴얼 작성·관리 및 훈련", "name": "다중이용시설 위기상황 매뉴얼 점검·훈련 결과 제출", "law": "재난 및 안전관리 기본법 제34조의6", "cyc": "매년 1회 이상 훈련", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 7}, {"item": "재난 비상연락망 및 상황전파체계 관리", "name": "재난 업무담당자·유관기관 비상연락망 현행화", "law": "재난 및 안전관리 기본법 제18조·제34조의5", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "인사이동 등 담당자 변동 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 55}, {"item": "재난안전상황실 운영 및 재난상황 관리", "name": "기상특보 등에 따른 비상근무 발령·해제", "law": "재난 및 안전관리 기본법 제18조·제37조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "기상특보 발표 시, 재난 발생 우려 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 274}, {"item": "재난안전상황실 운영 및 재난상황 관리", "name": "상황판단회의·재난대책회의 개최 및 결과보고", "law": "재난 및 안전관리 기본법 제14조·제16조·제18조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "재난 상황 발생·우려 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 163}, {"item": "재난안전상황실 운영 및 재난상황 관리", "name": "재난상황 보고 및 상급기관 대응지시 이행", "law": "재난 및 안전관리 기본법 제20조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "재난 발생 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 15}, {"item": "자연재난 대비 사전점검 및 안전조치", "name": "계절별 자연재난 대책기간 사전대비 계획 수립·시달", "law": "재난 및 안전관리 기본법 제25조의4, 자연재해대책법 제3조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "여름철·겨울철 대책기간 개시 전", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 347}, {"item": "자연재난 대비 사전점검 및 안전조치", "name": "재해취약시설·지역 사전점검 실시 및 결과 제출", "law": "재난 및 안전관리 기본법 제25조의4·제31조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "대책기간 개시 전", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 327}, {"item": "자연재난 대비 사전점검 및 안전조치", "name": "위험기상 대비 안전관리 지시 접수·시달", "law": "재난 및 안전관리 기본법 제25조의4·제31조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "기상특보 발표 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 1334}, {"item": "재난관리자원의 관리", "name": "재난관리자원 현행화 및 관리계획 수립", "law": "재난관리자원의 관리 등에 관한 법률 제5조", "cyc": "매년", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 2}, {"item": "응급조치 및 재난피해 조사·복구", "name": "재난피해 조사 및 복구계획 수립", "law": "재난 및 안전관리 기본법 제58조·제59조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "재난 발생 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 101}, {"item": "응급조치 및 재난피해 조사·복구", "name": "응급복구공사 시행", "law": "재난 및 안전관리 기본법 제37조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "재난 발생 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 62}, {"item": "응급조치 및 재난피해 조사·복구", "name": "재해복구사업 추진실적 관리 및 점검", "law": "재난 및 안전관리 기본법 제59조의2, 자연재해대책법 제46조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "복구사업 시행 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 621}, {"item": "재해구호 및 이재민 지원", "name": "재해구호물자 확보·관리", "law": "재해구호법 제12조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "재해 발생 대비·발생 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 33}, {"item": "재해구호 및 이재민 지원", "name": "재해구호기금 운용 및 이재민 구호 지원", "law": "재해구호법 제3조·제34조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "재해 발생 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 135}, {"item": "안전취약계층 보호 및 취약시기 대응시설 운영", "name": "무더위쉼터·한파쉼터 등 대응시설 점검·운영", "law": "재난 및 안전관리 기본법 제25조의4·제31조의2", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "폭염·한파 대책기간", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 35}, {"item": "안전취약계층 보호 및 취약시기 대응시설 운영", "name": "폭염·한파 저감시설 설치 및 예방물품 지원", "law": "재난 및 안전관리 기본법 제31조의2", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "폭염·한파 대책기간", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 47}, {"item": "특정관리대상지역 지정·관리 및 정기안전점검", "name": "특정관리대상지역·취약시설 실태조사 및 정기안전점검", "law": "재난 및 안전관리 기본법 제27조, 같은 법 시행령 제34조의2", "cyc": "반기별 1회 이상(정기안전점검)", "cc": "HALF", "cl": "반기 1회", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 36}, {"item": "특정관리대상지역 지정·관리 및 정기안전점검", "name": "취약시기 유관기관 합동 안전점검(동절기·명절·개학기 등)", "law": "재난 및 안전관리 기본법 제27조·제30조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "취약시기·명절 대비 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 119}, {"item": "특정관리대상지역 지정·관리 및 정기안전점검", "name": "안전취약시설 위험요인 개선사업 시행", "law": "재난 및 안전관리 기본법 제31조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "위험요인 확인 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 589}, {"item": "집중 안전점검 기간 운영", "name": "집중안전점검 대상 시설물 선정·제출", "law": "재난 및 안전관리 기본법 제32조의3", "cyc": "매년", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 27}, {"item": "집중 안전점검 기간 운영", "name": "집중안전점검 실시 및 결과 제출", "law": "재난 및 안전관리 기본법 제32조의3", "cyc": "매년", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 104}, {"item": "집중 안전점검 기간 운영", "name": "집중안전점검 후속조치 및 개선 이행", "law": "재난 및 안전관리 기본법 제32조의3", "cyc": "매년", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 11}, {"item": "정부합동 안전점검 수감 및 개선조치", "name": "정부합동 안전점검 자료 제출 및 수감", "law": "재난 및 안전관리 기본법 제32조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "정부합동점검 시행 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 16}, {"item": "정부합동 안전점검 수감 및 개선조치", "name": "정부합동 안전점검 지적사항 조치결과 제출", "law": "재난 및 안전관리 기본법 제32조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "점검 지적사항 발생 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 13}, {"item": "재난예방을 위한 긴급안전점검", "name": "사고 발생 등에 따른 긴급안전점검 실시", "law": "재난 및 안전관리 기본법 제30조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "재난 발생 우려 시, 유사사고 발생 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 108}, {"item": "안전감찰 수감 및 처분 조치", "name": "안전감찰 수감 및 처분 조치결과 제출", "law": "재난 및 안전관리 기본법 제77조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "안전감찰 시행 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 104}, {"item": "안전문화 진흥 시책 추진", "name": "안전문화운동 추진 및 홍보", "law": "재난 및 안전관리 기본법 제66조의4", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 31}, {"item": "안전문화 진흥 시책 추진", "name": "국민 안전교육 시행계획 수립 자료 제출", "law": "국민 안전교육 진흥 기본법 제6조", "cyc": "매년", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 17}, {"item": "안전문화 진흥 시책 추진", "name": "찾아가는 안전교육·안전체험교실 운영", "law": "국민 안전교육 진흥 기본법 제6조, 재난 및 안전관리 기본법 제66조의4", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 33}, {"item": "안전문화 진흥 시책 추진", "name": "남도안전학당 운영 및 보조금 정산", "law": "재난 및 안전관리 기본법 제66조의4", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 38}, {"item": "안전문화 진흥 시책 추진", "name": "안전 한바퀴 등 민관협력 안전지킴 활동", "law": "재난 및 안전관리 기본법 제12조의2·제66조의4", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 17}, {"item": "안전점검의 날 운영", "name": "안전점검의 날 추진 및 실적 제출", "law": "재난 및 안전관리 기본법 제66조의7", "cyc": "매월 4일", "cc": "MONTH", "cl": "월 1회", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 1}, {"item": "안전신고 통합정보시스템(안전신문고) 운영", "name": "안전신문고 운영현황 관리 및 홍보", "law": "재난 및 안전관리 기본법 제66조의14", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 57}, {"item": "안전신고 통합정보시스템(안전신문고) 운영", "name": "안전보안관 활동 운영·지원", "law": "재난 및 안전관리 기본법 제12조의2·제66조의14", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 16}, {"item": "지역안전지수 공표 및 안전진단", "name": "지역안전지수·자연재해 안전도 진단 대응", "law": "재난 및 안전관리 기본법 제66조의10", "cyc": "매년", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 12}, {"item": "지역축제 개최 시 안전관리조치", "name": "지역축제 안전관리계획 수립·제출 및 심의", "law": "재난 및 안전관리 기본법 제66조의11", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "지역축제 개최 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 42}, {"item": "지역축제 개최 시 안전관리조치", "name": "지역축제 합동 안전점검 실시 및 조치", "law": "재난 및 안전관리 기본법 제66조의11", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "지역축제 개최 전", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 70}, {"item": "다중운집 시 재난 등 예방조치", "name": "다중운집행사 개최계획 제출 및 인파관리 대책 수립", "law": "재난 및 안전관리 기본법 제66조의12", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "다중운집행사 개최 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 29}, {"item": "안전사업지구 지정·운영", "name": "안전사업지구 지정 신청 및 수요조사", "law": "재난 및 안전관리 기본법 제66조의13", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "공모 시행 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 1}, {"item": "지하안전관리계획 수립 및 지반침하 관리", "name": "시·군·구 지하안전관리계획 수립·제출", "law": "지하안전관리에 관한 특별법 제8조", "cyc": "매년", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 · 물순환사업소", "own": "재난안전과", "n": 10}, {"item": "지진 대비 및 내진보강 추진", "name": "지진·지진해일 대비 훈련 및 통보체계 관리", "law": "지진·화산재해대책법 제8조·제11조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "훈련 시행 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 · 시설 소관부서", "own": "재난안전과", "n": 28}, {"item": "자연재해위험개선지구 정비 및 재해예방사업 추진", "name": "재해예방사업 추진계획 수립 및 추진지침 시행", "law": "자연재해대책법 제12조·제13조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "사업계획 수립 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 · 건설과", "own": "재난안전과", "n": 63}, {"item": "자연재해위험개선지구 정비 및 재해예방사업 추진", "name": "재해예방사업 보조금 교부·정산 및 추진실적 제출", "law": "자연재해대책법 제14조, 지방자치단체 보조금 관리에 관한 법률 제17조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "보조사업 시행·완료 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 · 건설과", "own": "재난안전과", "n": 18}, {"item": "자연재해저감 종합계획 수립·시행", "name": "자연재해저감 추진실적 및 시행계획 제출", "law": "자연재해대책법 제16조", "cyc": "10년마다 수립(추진실적 매년 제출)", "cc": "MULTIYEAR", "cl": "수년 주기", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과", "own": "재난안전과", "n": 1}, {"item": "물놀이·수상 안전관리", "name": "물놀이 관리지역 지정 및 안전요원 배치·운영", "law": "재난 및 안전관리 기본법 제25조의4·제27조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "여름철 물놀이 성수기", "lv": "L1 군(관리주체)", "ap": "재난안전과 · 관광과 · 읍면", "own": "재난안전과", "n": 83}, {"item": "물놀이·수상 안전관리", "name": "물놀이·수상안전 합동점검 및 추진실적 제출", "law": "재난 및 안전관리 기본법 제27조·제30조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "여름철 물놀이 성수기", "lv": "L1 군(관리주체)", "ap": "재난안전과 · 관광과 · 읍면", "own": "재난안전과", "n": 5}, {"item": "산불·산림재난 대응 협조", "name": "산불 예방·대응 상황관리 및 협조", "law": "산림보호법 제28조, 재난 및 안전관리 기본법 제37조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "산불조심기간, 산불 발생 시", "lv": "L1 군(관리주체)", "ap": "산림정원과 · 재난안전과", "own": "산림정원과", "n": 33}, {"item": "사회재난 대응 및 재난안전대책본부 운영 협조", "name": "가축전염병 등 사회재난 대응 및 대책본부 운영 협조", "law": "재난 및 안전관리 기본법 제16조·제37조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "사회재난 발생 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 · 축산원예과 등", "own": "재난안전과", "n": 17}, {"item": "정부합동평가 대응 (관리업무)", "name": "정부합동평가 지표 실적 제출 및 관리", "law": "정부업무평가 기본법 제21조", "cyc": "매년", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 218}, {"item": "안전관리 지시사항 시달 및 추진상황 관리 (관리업무)", "name": "군수·부군수 지시사항 시달 및 조치결과 제출", "law": "재난 및 안전관리 기본법 제4조·제25조의4", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "지시사항 시달 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 315}, {"item": "안전관리 지시사항 시달 및 추진상황 관리 (관리업무)", "name": "지시사항 추진상황 점검·보고", "law": "재난 및 안전관리 기본법 제4조·제25조의4", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "분기 추진상황 점검 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 7}, {"item": "안전관리 지시사항 시달 및 추진상황 관리 (관리업무)", "name": "중앙·도 지시사항 접수 및 이행", "law": "재난 및 안전관리 기본법 제20조·제25조의4", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "상급기관 지시사항 접수 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 128}, {"item": "재난안전 업무관리 (관리업무)", "name": "재난안전 유공 포상·표창 추천", "law": "재난 및 안전관리 기본법 제65조의2", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "포상 추천 요청 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 31}, {"item": "재난안전 업무관리 (관리업무)", "name": "재난안전 업무담당자 관리 및 제도개선", "law": "재난 및 안전관리 기본법 제4조·제31조의3", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "담당자 변경·제도개선 과제 발굴 시", "lv": "L1 군(관리주체)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 31}, {"item": "안전보건관리규정 작성·변경", "name": "안전보건관리규정 작성·변경 및 산업안전보건위원회 심의·의결", "law": "산업안전보건법 제25조·제26조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "제정 시, 변경 사유 발생 시", "lv": "L1 군(관리주체)", "ap": "군 전체(관리주체 1단계)", "own": "전담조직 · 산업안전보건위원회", "n": 0}], "L2": [{"item": "유해·위험요인 확인·개선 절차 마련 및 위험성평가 실시", "name": "위험성평가 실시계획 수립 및 시행", "law": "산업안전보건법 제36조, 중대재해처벌법 시행령 제4조제3호", "cyc": "정기평가 연 1회 이상", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L2 부서", "ap": "전 부서(39개)", "own": "관리감독자(실과단소장·읍면장) · 안전보건담당자", "n": 21}, {"item": "유해·위험요인 확인·개선 절차 마련 및 위험성평가 실시", "name": "유해·위험요인 파악(종사자 설문조사)", "law": "산업안전보건법 제36조제2항, 중대재해처벌법 시행령 제4조제3호", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "위험성평가 실시 시", "lv": "L2 부서", "ap": "전 부서(39개)", "own": "관리감독자(실과단소장·읍면장) · 안전보건담당자", "n": 15}, {"item": "유해·위험요인 확인·개선 절차 마련 및 위험성평가 실시", "name": "위험성평가 결과 개선조치 이행 및 조치결과 제출", "law": "산업안전보건법 제36조제1항, 중대재해처벌법 시행령 제4조제3호", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "위험성 감소대책 필요 시", "lv": "L2 부서", "ap": "전 부서(39개)", "own": "관리감독자(실과단소장·읍면장) · 안전보건담당자", "n": 12}, {"item": "유해·위험요인 확인·개선 절차 마련 및 위험성평가 실시", "name": "수시 위험성평가 실시(산업재해 발생 등)", "law": "산업안전보건법 제36조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "산업재해 발생 시, 작업내용 변경 시", "lv": "L2 부서", "ap": "전 부서(39개)", "own": "관리감독자(실과단소장·읍면장) · 안전보건담당자", "n": 4}, {"item": "유해·위험요인 확인·개선 절차 마련 및 위험성평가 실시", "name": "고위험 작업 안전작업계획 수립·제출", "law": "산업안전보건법 제36조, 중대재해처벌법 시행령 제4조제3호", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "고위험 작업 착수 전", "lv": "L2 부서", "ap": "전 부서(39개)", "own": "관리감독자(실과단소장·읍면장) · 안전보건담당자", "n": 14}, {"item": "안전·보건 예산 편성 및 집행", "name": "안전·보건 예산 편성", "law": "중대재해처벌법 시행령 제4조제4호", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "예산 편성 시", "lv": "L2 부서", "ap": "전 부서(39개)", "own": "기획예산실 · 각 부서", "n": 2}, {"item": "안전·보건 예산 편성 및 집행", "name": "안전·보건 예산 집행(안전물품·용역 등)", "law": "중대재해처벌법 시행령 제4조제4호", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "사업 시행 시", "lv": "L2 부서", "ap": "전 부서(39개)", "own": "기획예산실 · 각 부서", "n": 2}, {"item": "안전보건관리책임자등의 지정·평가 및 교육", "name": "안전보건관리책임자·관리감독자 지정·변경", "law": "산업안전보건법 제15조·제16조, 중대재해처벌법 시행령 제4조제5호", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "최초 지정, 인사이동·조직 변경 시", "lv": "L2 부서", "ap": "전 부서(39개)", "own": "경영책임자(군수) · 행정과 · 각 부서", "n": 19}, {"item": "안전보건관리책임자등의 지정·평가 및 교육", "name": "안전보건관리책임자·관리감독자 직무교육 실시", "law": "산업안전보건법 제32조제1항, 같은 법 시행규칙 제29조", "cyc": "신규교육 3개월 이내, 이후 2년마다 1회", "cc": "MULTIYEAR", "cl": "수년 주기", "cond": "", "lv": "L2 부서", "ap": "전 부서(39개)", "own": "경영책임자(군수) · 행정과 · 각 부서", "n": 7}, {"item": "안전보건관리책임자등의 지정·평가 및 교육", "name": "안전보건관리책임자등에 대한 권한·예산 부여", "law": "중대재해처벌법 시행령 제4조제5호가목", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "최초 부여, 조직·직제 변경 시", "lv": "L2 부서", "ap": "전 부서(39개)", "own": "경영책임자(군수) · 행정과 · 각 부서", "n": 0}, {"item": "안전보건관리책임자등의 지정·평가 및 교육", "name": "안전보건관리책임자등 업무수행 평가기준 마련 및 반기 평가", "law": "중대재해처벌법 시행령 제4조제5호나목", "cyc": "반기 1회 이상", "cc": "HALF", "cl": "반기 1회", "cond": "", "lv": "L2 부서", "ap": "전 부서(39개)", "own": "경영책임자(군수) · 행정과 · 각 부서", "n": 0}, {"item": "안전·보건관리자 사업장 순회점검 및 개선조치", "name": "안전관리 현장 순회점검 실시 및 결과 통보", "law": "산업안전보건법 제17조, 같은 법 시행령 제18조제1항", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "안전관리자 직무 수행 시", "lv": "L2 부서", "ap": "현업종사자 배치 부서", "own": "위탁 전문기관 · 점검 대상부서", "n": 80}, {"item": "안전·보건관리자 사업장 순회점검 및 개선조치", "name": "보건관리 현장 순회점검 실시 및 결과 통보", "law": "산업안전보건법 제18조, 같은 법 시행령 제22조제1항", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "보건관리자 직무 수행 시", "lv": "L2 부서", "ap": "현업종사자 배치 부서", "own": "위탁 전문기관 · 점검 대상부서", "n": 28}, {"item": "안전·보건관리자 사업장 순회점검 및 개선조치", "name": "순회점검 지적사항 조치결과 제출", "law": "산업안전보건법 제17조·제18조, 중대재해처벌법 시행령 제4조제3호", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "점검 지적사항 발생 시", "lv": "L2 부서", "ap": "현업종사자 배치 부서", "own": "위탁 전문기관 · 점검 대상부서", "n": 54}, {"item": "종사자 의견 청취 및 개선방안 이행", "name": "종사자 의견 청취 절차 운영 및 반기 점검", "law": "중대재해처벌법 시행령 제4조제7호", "cyc": "반기 1회 이상", "cc": "HALF", "cl": "반기 1회", "cond": "", "lv": "L2 부서", "ap": "전 부서(39개)", "own": "전담조직 · 각 부서", "n": 31}, {"item": "중대산업재해 대응 매뉴얼 마련 및 점검", "name": "중대재해 발생 대비 매뉴얼 마련 및 점검", "law": "중대재해처벌법 시행령 제4조제8호", "cyc": "반기 1회 이상", "cc": "HALF", "cl": "반기 1회", "cond": "", "lv": "L2 부서", "ap": "전 부서(39개)", "own": "전담조직 · 각 부서", "n": 1}, {"item": "중대산업재해 대응 매뉴얼 마련 및 점검", "name": "작업중지 요청·조치 및 해제", "law": "산업안전보건법 제51조~제54조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "급박한 위험 발생 시, 중대재해 발생 시", "lv": "L2 부서", "ap": "전 부서(39개)", "own": "전담조직 · 각 부서", "n": 0}, {"item": "중대산업재해 대응 매뉴얼 마련 및 점검", "name": "중대산업재해 발생 시 경영책임자 교육 수강 및 발생사실 공표", "law": "중대재해처벌법 제8조·제13조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "중대산업재해 발생·형 확정 시", "lv": "L2 부서", "ap": "전 부서(39개)", "own": "전담조직 · 각 부서", "n": 0}, {"item": "도급·용역·위탁 안전보건 확보기준 마련 및 점검", "name": "도급·용역·위탁 안전보건 확보 기준·절차 마련 및 점검", "law": "중대재해처벌법 시행령 제4조제9호", "cyc": "반기 1회 이상", "cc": "HALF", "cl": "반기 1회", "cond": "", "lv": "L2 부서", "ap": "발주·계약부서", "own": "발주부서 · 계약부서 · 전담조직", "n": 2}, {"item": "안전·보건 관계 법령 의무이행 점검", "name": "반기 의무이행 점검계획 수립·시달", "law": "중대재해처벌법 시행령 제4조제3호·제7호·제8호·제9호 및 제5조제2항", "cyc": "반기 1회 이상", "cc": "HALF", "cl": "반기 1회", "cond": "", "lv": "L2 부서", "ap": "전 부서(39개)", "own": "전담조직(점검 주관) · 각 부서(결과 제출)", "n": 7}, {"item": "안전·보건 관계 법령 의무이행 점검", "name": "부서별 의무이행 점검 결과 제출", "law": "중대재해처벌법 시행령 제4조제3호·제7호·제8호·제9호 및 제5조제2항", "cyc": "반기 1회 이상", "cc": "HALF", "cl": "반기 1회", "cond": "", "lv": "L2 부서", "ap": "전 부서(39개)", "own": "전담조직(점검 주관) · 각 부서(결과 제출)", "n": 127}, {"item": "안전·보건 관계 법령 의무이행 점검", "name": "의무이행 점검 결과 경영책임자 보고", "law": "중대재해처벌법 시행령 제5조제2항", "cyc": "반기 1회 이상", "cc": "HALF", "cl": "반기 1회", "cond": "", "lv": "L2 부서", "ap": "전 부서(39개)", "own": "전담조직(점검 주관) · 각 부서(결과 제출)", "n": 6}, {"item": "종사자 안전보건교육 실시", "name": "안전보건교육 계획 수립 및 실시", "law": "산업안전보건법 제29조제1항, 같은 법 시행규칙 제26조 및 별표 4", "cyc": "정기교육 매반기 6시간(사무직)·12시간(사무직 외) 이상", "cc": "HALF", "cl": "반기 1회", "cond": "", "lv": "L2 부서", "ap": "현업종사자 배치 부서", "own": "각 부서 관리감독자 · 전담조직", "n": 22}, {"item": "종사자 안전보건교육 실시", "name": "부서별 안전보건교육 결과 제출·점검", "law": "산업안전보건법 제29조, 중대재해처벌법 시행령 제5조제2항제3호", "cyc": "반기 1회 이상", "cc": "HALF", "cl": "반기 1회", "cond": "", "lv": "L2 부서", "ap": "현업종사자 배치 부서", "own": "각 부서 관리감독자 · 전담조직", "n": 140}, {"item": "종사자 안전보건교육 실시", "name": "안전보건교육 비용 집행 및 교육환경 지원", "law": "산업안전보건법 제29조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "교육 실시 시", "lv": "L2 부서", "ap": "현업종사자 배치 부서", "own": "각 부서 관리감독자 · 전담조직", "n": 2}, {"item": "종사자 안전보건교육 실시", "name": "유해·위험작업 종사자 특별교육 실시", "law": "산업안전보건법 제29조제3항, 같은 법 시행규칙 별표 5", "cyc": "16시간 이상(단기간 작업 2시간 이상)", "cc": "YEAR", "cl": "연 1회", "cond": "특별교육 대상 작업 배치 전", "lv": "L2 부서", "ap": "현업종사자 배치 부서", "own": "각 부서 관리감독자 · 전담조직", "n": 4}, {"item": "종사자 안전보건교육 실시", "name": "건설업 기초안전보건교육 이수 확인", "law": "산업안전보건법 제31조", "cyc": "4시간", "cc": "YEAR", "cl": "연 1회", "cond": "건설 일용근로자 채용 시", "lv": "L2 부서", "ap": "현업종사자 배치 부서", "own": "각 부서 관리감독자 · 전담조직", "n": 0}, {"item": "종사자 안전보건교육 실시", "name": "안전보건 법령 요지 게시 및 안전보건표지 설치·부착", "law": "산업안전보건법 제34조·제37조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "상시 게시·부착", "lv": "L2 부서", "ap": "현업종사자 배치 부서", "own": "각 부서 관리감독자 · 전담조직", "n": 0}, {"item": "산업재해 보고 및 재발방지대책 수립", "name": "산업재해조사표 제출", "law": "산업안전보건법 제57조제3항, 같은 법 시행규칙 제73조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "산업재해 발생일부터 1개월 이내", "lv": "L2 부서", "ap": "전 부서(39개)", "own": "재해 발생부서 · 전담조직", "n": 3}, {"item": "산업재해 보고 및 재발방지대책 수립", "name": "재발방지대책 수립·이행", "law": "중대재해처벌법 제4조제1항제2호", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "재해 발생 시", "lv": "L2 부서", "ap": "전 부서(39개)", "own": "재해 발생부서 · 전담조직", "n": 3}, {"item": "작업환경측정 실시", "name": "작업환경측정 실시계획 수립·시행", "law": "산업안전보건법 제125조, 같은 법 시행규칙 제190조", "cyc": "6개월에 1회 이상", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L2 부서", "ap": "유해인자 취급 부서", "own": "전담조직 · 측정기관", "n": 6}, {"item": "작업환경측정 실시", "name": "작업환경측정 결과 통보 및 측정비용 집행", "law": "산업안전보건법 제125조제6항", "cyc": "6개월에 1회 이상", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L2 부서", "ap": "유해인자 취급 부서", "own": "전담조직 · 측정기관", "n": 5}, {"item": "작업환경측정 실시", "name": "작업환경측정 결과 설명회 개최", "law": "산업안전보건법 제125조제7항", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "측정 결과 통보 시(근로자대표 요구 시)", "lv": "L2 부서", "ap": "유해인자 취급 부서", "own": "전담조직 · 측정기관", "n": 0}, {"item": "근로자 건강진단 실시", "name": "특수·배치전 건강진단 실시 및 결과 관리", "law": "산업안전보건법 제130조, 같은 법 시행규칙 제202조", "cyc": "유해인자별 6~24개월에 1회", "cc": "YEAR", "cl": "연 1회", "cond": "유해인자 취급 업무 배치 전", "lv": "L2 부서", "ap": "현업종사자 배치 부서", "own": "전담조직 · 보건소", "n": 10}, {"item": "근로자 건강진단 실시", "name": "일반건강진단 및 근로자 건강보호 조치", "law": "산업안전보건법 제129조", "cyc": "사무직 2년, 사무직 외 1년에 1회 이상", "cc": "MULTIYEAR", "cl": "수년 주기", "cond": "", "lv": "L2 부서", "ap": "현업종사자 배치 부서", "own": "전담조직 · 보건소", "n": 52}, {"item": "근로자 건강진단 실시", "name": "건강진단 결과에 따른 사후관리 조치", "law": "산업안전보건법 제132조제4항·제5항", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "건강진단 결과 통보일부터 30일 이내", "lv": "L2 부서", "ap": "현업종사자 배치 부서", "own": "전담조직 · 보건소", "n": 0}, {"item": "밀폐공간 질식재해 예방", "name": "밀폐공간 작업 프로그램 수립·시행 및 안전조치", "law": "산업안전보건기준에 관한 규칙 제619조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "밀폐공간 작업 시", "lv": "L2 부서", "ap": "밀폐공간 작업 부서(물순환·환경 등)", "own": "작업 소관부서 · 전담조직", "n": 111}, {"item": "중대시민재해 예방 안전관리체계 구축·이행", "name": "공중이용시설 안전 담당 인력 확보", "law": "중대재해처벌법 제9조제2항, 같은 법 시행령 제10조제1호", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "최초 배치, 인력 변동 시", "lv": "L2 부서", "ap": "시설 관리부서(10개 부서)·사업소", "own": "시설 관리부서장 · 전담조직", "n": 0}, {"item": "중대시민재해 예방 안전관리체계 구축·이행", "name": "공중이용시설 안전 예산 편성·집행", "law": "중대재해처벌법 제9조제2항, 같은 법 시행령 제10조제2호", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "예산 편성 시", "lv": "L2 부서", "ap": "시설 관리부서(10개 부서)·사업소", "own": "시설 관리부서장 · 전담조직", "n": 0}, {"item": "중대시민재해 예방 안전관리체계 구축·이행", "name": "관계 법령상 안전점검 계획 수립 및 수행", "law": "중대재해처벌법 제9조제2항, 같은 법 시행령 제10조제3호", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "연간 점검계획 수립 시", "lv": "L2 부서", "ap": "시설 관리부서(10개 부서)·사업소", "own": "시설 관리부서장 · 전담조직", "n": 0}, {"item": "중대시민재해 예방 안전관리체계 구축·이행", "name": "중대시민재해 예방 업무처리절차 마련·이행(1종시설물 대피훈련 포함)", "law": "중대재해처벌법 제9조제2항, 같은 법 시행령 제10조제7호", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "절차 마련 시, 대피훈련 실시 시", "lv": "L2 부서", "ap": "시설 관리부서(10개 부서)·사업소", "own": "시설 관리부서장 · 전담조직", "n": 0}, {"item": "중대시민재해 예방 안전관리체계 구축·이행", "name": "공중이용시설 도급·용역·위탁 기준·절차 마련 및 점검", "law": "중대재해처벌법 제9조제2항, 같은 법 시행령 제10조제8호", "cyc": "연 1회 이상", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L2 부서", "ap": "시설 관리부서(10개 부서)·사업소", "own": "시설 관리부서장 · 전담조직", "n": 0}, {"item": "중대재해 예방 안전계획 수립·제출 (관리업무)", "name": "담양군 중대재해 예방 종합계획 수립·시행", "law": "중대재해처벌법 제4조·제9조 및 같은 법 시행령 제4조·제10조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "매년 종합계획 수립 시", "lv": "L2 부서", "ap": "전 부서(39개)", "own": "전담조직(총괄) · 각 부서(수립)", "n": 1}, {"item": "중대재해 예방 안전계획 수립·제출 (관리업무)", "name": "부서별 중대재해 예방 안전계획 수립·제출", "law": "중대재해처벌법 제4조·제9조 및 같은 법 시행령 제4조·제10조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "매년 부서별 계획 수립 시", "lv": "L2 부서", "ap": "전 부서(39개)", "own": "전담조직(총괄) · 각 부서(수립)", "n": 40}, {"item": "시설물 안전점검·정밀안전진단 관리", "name": "제3종시설물 지정·실태조사 및 사용제한 조치", "law": "시설물의 안전 및 유지관리에 관한 특별법 제8조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "지정 대상 발생 시", "lv": "L2 부서", "ap": "시설물 소관부서(건설과·물순환·공공시설)", "own": "시설물 관리주체", "n": 10}, {"item": "개선·시정명령 이행 조치", "name": "중앙행정기관·지자체 개선·시정명령 접수 및 이행조치 결과 보고", "law": "중대재해처벌법 제4조제1항제3호", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "개선·시정명령 수령 시", "lv": "L2 부서", "ap": "전 부서(39개)", "own": "명령 수령부서 · 전담조직", "n": 0}, {"item": "작업환경 건강장해 예방조치", "name": "온열질환 예방조치(무더위 휴식시간제 등) 시행", "law": "산업안전보건기준에 관한 규칙 제3편 제5장", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "폭염 대책기간(5~9월)", "lv": "L2 부서", "ap": "현업종사자·민원응대 부서", "own": "각 부서 관리감독자", "n": 16}, {"item": "작업환경 건강장해 예방조치", "name": "고객응대근로자 건강장해 예방조치 및 조치기준 마련", "law": "산업안전보건법 제41조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "민원·상담 업무 배치 시, 피해 발생 시", "lv": "L2 부서", "ap": "현업종사자·민원응대 부서", "own": "각 부서 관리감독자", "n": 0}, {"item": "원료·제조물 관련 안전보건관리체계 구축·이행", "name": "원료·제조물 안전 담당 인력 확보", "law": "중대재해처벌법 제9조제1항, 같은 법 시행령 제8조제1호", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "최초 배치, 인력 변동 시", "lv": "L2 부서", "ap": "보건소·보건지소·보건진료소(24), 물순환사업소(1)", "own": "보건행정과 · 물순환사업소 · 전담조직", "n": 0}, {"item": "원료·제조물 관련 안전보건관리체계 구축·이행", "name": "원료·제조물 안전 예산 편성·집행", "law": "중대재해처벌법 제9조제1항, 같은 법 시행령 제8조제2호", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "예산 편성 시", "lv": "L2 부서", "ap": "보건소·보건지소·보건진료소(24), 물순환사업소(1)", "own": "보건행정과 · 물순환사업소 · 전담조직", "n": 0}, {"item": "원료·제조물 관련 안전보건관리체계 구축·이행", "name": "유해·위험요인 점검·신고·대응 업무처리절차 마련 및 반기 점검", "law": "중대재해처벌법 제9조제1항, 같은 법 시행령 제8조제3호", "cyc": "반기 1회 이상", "cc": "HALF", "cl": "반기 1회", "cond": "", "lv": "L2 부서", "ap": "보건소·보건지소·보건진료소(24), 물순환사업소(1)", "own": "보건행정과 · 물순환사업소 · 전담조직", "n": 0}, {"item": "원료·제조물 관련 안전보건관리체계 구축·이행", "name": "원료·제조물 도급·용역·위탁 기준·절차 마련 및 반기 점검", "law": "중대재해처벌법 제9조제1항, 같은 법 시행령 제8조제4호", "cyc": "반기 1회 이상", "cc": "HALF", "cl": "반기 1회", "cond": "", "lv": "L2 부서", "ap": "보건소·보건지소·보건진료소(24), 물순환사업소(1)", "own": "보건행정과 · 물순환사업소 · 전담조직", "n": 0}, {"item": "원료·제조물 관계 법령 의무이행 점검", "name": "원료·제조물 관계 법령 의무이행 및 교육 이수 반기 점검", "law": "중대재해처벌법 제9조제1항, 같은 법 시행령 제9조", "cyc": "반기 1회 이상", "cc": "HALF", "cl": "반기 1회", "cond": "", "lv": "L2 부서", "ap": "보건소·보건지소·보건진료소(24), 물순환사업소(1)", "own": "보건행정과 · 물순환사업소 · 전담조직", "n": 19}, {"item": "공중이용시설 관계 법령 의무이행 및 교육 이수 점검", "name": "공중이용시설 관계 법령 의무이행 및 안전관리자 교육 이수 연 1회 점검", "law": "중대재해처벌법 제9조제2항, 같은 법 시행령 제11조", "cyc": "연 1회 이상", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L2 부서", "ap": "시설 관리부서(10개 부서)·사업소", "own": "시설 관리부서장 · 전담조직", "n": 22}, {"item": "공중이용시설 개별 안전 관계 법령 이행", "name": "소방안전관리자 선임·교육 및 업무 수행", "law": "화재의 예방 및 안전관리에 관한 법률 제24조·제34조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "선임사유 발생일부터 30일 이내", "lv": "L2 부서", "ap": "시설 관리부서(10개 부서)·사업소", "own": "시설 관리주체 · 소방/전기 안전관리자", "n": 52}, {"item": "유해화학물질 취급시설 안전관리", "name": "유해화학물질관리자 선임·변경 신고", "law": "화학물질관리법 제32조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "선임·변경사유 발생 시", "lv": "L2 부서", "ap": "물순환사업소(신계정수장) · 유해화학물질 취급 부서", "own": "유해화학물질관리자 · 시설 관리부서", "n": 0}, {"item": "유해화학물질 취급시설 안전관리", "name": "유해화학물질 안전교육 이수", "law": "화학물질관리법 제33조", "cyc": "종사자 구분별 2년마다 8~16시간", "cc": "MULTIYEAR", "cl": "수년 주기", "cond": "", "lv": "L2 부서", "ap": "물순환사업소(신계정수장) · 유해화학물질 취급 부서", "own": "유해화학물질관리자 · 시설 관리부서", "n": 2}, {"item": "작업환경 건강장해 예방조치", "name": "물질안전보건자료(MSDS) 작성·게시·비치 및 경고표시", "law": "산업안전보건법 제110조·제114조·제115조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "대상물질 취급·양도 시", "lv": "L2 부서", "ap": "현업종사자·민원응대 부서", "own": "각 부서 관리감독자", "n": 1}], "L3": [{"item": "도급사업 안전보건 점검", "name": "도급사업 순회점검 및 합동 안전보건점검", "law": "산업안전보건법 제64조, 같은 법 시행규칙 제80조", "cyc": "순회점검 2일에 1회 이상, 합동점검 2개월에 1회 이상(건설업)", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L3 관리대상(공사·용역)", "ap": "발주부서", "own": "발주부서(도급인) · 수급업체", "n": 0}, {"item": "도급사업 안전보건 점검", "name": "안전보건총괄책임자 지정", "law": "산업안전보건법 제62조, 같은 법 시행령 제52조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "상시근로자 100명 이상 또는 총공사금액 20억원 이상 도급 시", "lv": "L3 관리대상(공사·용역)", "ap": "발주부서", "own": "발주부서(도급인) · 수급업체", "n": 0}, {"item": "도급사업 안전보건 점검", "name": "도급인 안전보건협의체 구성·운영", "law": "산업안전보건법 제64조제1항제1호, 같은 법 시행규칙 제79조", "cyc": "매월 1회 이상", "cc": "MONTH", "cl": "월 1회", "cond": "", "lv": "L3 관리대상(공사·용역)", "ap": "발주부서", "own": "발주부서(도급인) · 수급업체", "n": 0}, {"item": "건설공사 발주자의 산업재해 예방조치", "name": "발주 건설공사 안전점검 및 자율점검표 관리", "law": "산업안전보건법 제67조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "발주 건설공사 시공 중", "lv": "L3 관리대상(공사·용역)", "ap": "발주부서(건설과·공공시설·물순환 등)", "own": "발주부서 · 감독공무원", "n": 520}, {"item": "건설공사 발주자의 산업재해 예방조치", "name": "건설재해예방 전문지도기관 기술지도 계약", "law": "산업안전보건법 제73조, 같은 법 시행령 제59조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "공사금액 1억원 이상 120억원 미만 공사 착공 시", "lv": "L3 관리대상(공사·용역)", "ap": "발주부서(건설과·공공시설·물순환 등)", "own": "발주부서 · 감독공무원", "n": 133}, {"item": "건설공사 발주자의 산업재해 예방조치", "name": "건설공사 안전관리계획 수립·제출 및 건설사업관리", "law": "건설기술 진흥법 제62조, 같은 법 시행령 제98조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "착공 전", "lv": "L3 관리대상(공사·용역)", "ap": "발주부서(건설과·공공시설·물순환 등)", "own": "발주부서 · 감독공무원", "n": 210}, {"item": "건설공사 발주자의 산업재해 예방조치", "name": "기본·설계·공사 안전보건대장 작성 및 이행여부 확인", "law": "산업안전보건법 제67조, 같은 법 시행규칙 제86조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "총공사금액 50억원 이상 공사 계획·설계·시공 단계", "lv": "L3 관리대상(공사·용역)", "ap": "발주부서(건설과·공공시설·물순환 등)", "own": "발주부서 · 감독공무원", "n": 13}, {"item": "건설공사 발주자의 산업재해 예방조치", "name": "산업안전보건관리비 계상 및 사용내역 확인", "law": "산업안전보건법 제72조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "총공사금액 2천만원 이상 공사 발주 시", "lv": "L3 관리대상(공사·용역)", "ap": "발주부서(건설과·공공시설·물순환 등)", "own": "발주부서 · 감독공무원", "n": 12}, {"item": "건설공사 발주자의 산업재해 예방조치", "name": "안전보건조정자 선임", "law": "산업안전보건법 제68조, 같은 법 시행령 제56조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "총공사금액 50억원 이상 분리발주 시", "lv": "L3 관리대상(공사·용역)", "ap": "발주부서(건설과·공공시설·물순환 등)", "own": "발주부서 · 감독공무원", "n": 1}, {"item": "건설공사 발주자의 산업재해 예방조치", "name": "유해위험방지계획서 작성·제출 확인", "law": "산업안전보건법 제42조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "해당 규모·종류 공사 착공 15일 전", "lv": "L3 관리대상(공사·용역)", "ap": "발주부서(건설과·공공시설·물순환 등)", "own": "발주부서 · 감독공무원", "n": 0}, {"item": "건설공사 발주자의 산업재해 예방조치", "name": "노사협의체 구성·운영", "law": "산업안전보건법 제75조", "cyc": "매월 1회 이상", "cc": "MONTH", "cl": "월 1회", "cond": "공사금액 120억원 이상 건설공사", "lv": "L3 관리대상(공사·용역)", "ap": "발주부서(건설과·공공시설·물순환 등)", "own": "발주부서 · 감독공무원", "n": 0}, {"item": "중대시민재해 예방 안전관리체계 구축·이행", "name": "공중이용시설 안전계획 수립·제출", "law": "중대재해처벌법 제9조제2항, 같은 법 시행령 제10조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "매년 안전계획 수립 시", "lv": "L3 관리대상(시설)", "ap": "시설 관리부서(10개 부서)·사업소", "own": "시설 관리부서장 · 전담조직", "n": 19}, {"item": "중대시민재해 예방 안전관리체계 구축·이행", "name": "공중이용시설 안전점검·이행점검 실시 및 결과 보고", "law": "중대재해처벌법 제9조제2항, 같은 법 시행령 제10조", "cyc": "반기 1회 이상", "cc": "HALF", "cl": "반기 1회", "cond": "", "lv": "L3 관리대상(시설)", "ap": "시설 관리부서(10개 부서)·사업소", "own": "시설 관리부서장 · 전담조직", "n": 35}, {"item": "재난 예보·경보체계 구축·운영", "name": "재난 예·경보시설 점검·운영 및 구축사업 추진", "law": "재난 및 안전관리 기본법 제38조의2", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "기상특보 발표 시, 구축사업 시행 시", "lv": "L3 관리대상(시설)", "ap": "재난안전과 주관 / 관련 부서 협조", "own": "재난안전과", "n": 68}, {"item": "재난방지시설의 관리", "name": "배수시설·빗물받이 등 재난방지시설 점검·정비", "law": "재난 및 안전관리 기본법 제29조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "우기 대비 시", "lv": "L3 관리대상(시설)", "ap": "물순환사업소 · 건설과 · 읍면", "own": "시설 소관부서", "n": 1107}, {"item": "시설물의 안전 및 유지관리계획 수립·제출", "name": "시설물 안전 및 유지관리계획 수립·제출 관리", "law": "시설물의 안전 및 유지관리에 관한 특별법 제6조", "cyc": "매년", "cc": "YEAR", "cl": "연 1회", "cond": "매년 2월 15일까지", "lv": "L3 관리대상(시설)", "ap": "시설물 소관부서(건설과·물순환·공공시설)", "own": "시설물 관리주체", "n": 25}, {"item": "시설물 안전점검·정밀안전진단 관리", "name": "시설물 안전점검·정밀안전진단 실시 및 결과 보고 관리", "law": "시설물의 안전 및 유지관리에 관한 특별법 제11조·제17조", "cyc": "정기안전점검 반기 1회 이상", "cc": "HALF", "cl": "반기 1회", "cond": "", "lv": "L3 관리대상(시설)", "ap": "시설물 소관부서(건설과·물순환·공공시설)", "own": "시설물 관리주체", "n": 269}, {"item": "시설물 안전점검·정밀안전진단 관리", "name": "시설물 안전점검 홍보 및 실적 제출", "law": "시설물의 안전 및 유지관리에 관한 특별법 제11조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "", "lv": "L3 관리대상(시설)", "ap": "시설물 소관부서(건설과·물순환·공공시설)", "own": "시설물 관리주체", "n": 12}, {"item": "소규모 공공시설 안전점검", "name": "소규모 공공시설 현황조사 및 안전점검 결과 제출", "law": "소규모 공공시설 안전관리 등에 관한 법률 제5조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "우기 전·후", "lv": "L3 관리대상(시설)", "ap": "읍면 · 건설과", "own": "시설 소관부서", "n": 16}, {"item": "소규모 취약시설 안전점검 및 관리계획 수립", "name": "소규모 취약시설 안전점검 및 관리계획 수립·제출", "law": "시설물의 안전 및 유지관리에 관한 특별법 제46조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "", "lv": "L3 관리대상(시설)", "ap": "시설 소관부서", "own": "시설 소관부서 · 재난안전과", "n": 14}, {"item": "급경사지 안전점검 및 붕괴위험지역 정비", "name": "급경사지 안전점검 실시 및 결과 제출", "law": "급경사지 재해예방에 관한 법률 제5조", "cyc": "연 2회 이상(해빙기·우기 대비)", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L3 관리대상(시설)", "ap": "재난안전과 · 건설과", "own": "재난안전과", "n": 34}, {"item": "급경사지 안전점검 및 붕괴위험지역 정비", "name": "붕괴위험지역 정비 중기계획 수립 및 정비사업 시행", "law": "급경사지 재해예방에 관한 법률 제6조·제12조·제13조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "정비계획 수립·정비사업 시행 시", "lv": "L3 관리대상(시설)", "ap": "재난안전과 · 건설과", "own": "재난안전과", "n": 87}, {"item": "지하안전관리계획 수립 및 지반침하 관리", "name": "지반침하 발생현황 제출 및 지반탐사 실시", "law": "지하안전관리에 관한 특별법 제34조·제35조·제46조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "지반침하 발생·우려 시", "lv": "L3 관리대상(시설)", "ap": "재난안전과 · 물순환사업소", "own": "재난안전과", "n": 87}, {"item": "승강기 안전관리 지도·감독", "name": "승강기 안전관리자 선임·교육 관리감독", "law": "승강기 안전관리법 제29조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "선임·변경 시, 교육 미이수 확인 시", "lv": "L3 관리대상(시설)", "ap": "승강기 설치시설 소관부서", "own": "시설 소관부서 · 재난안전과", "n": 12}, {"item": "승강기 안전관리 지도·감독", "name": "승강기 자체점검·유지관리 위반 조치", "law": "승강기 안전관리법 제31조", "cyc": "자체점검 월 1회 이상", "cc": "MONTH", "cl": "월 1회", "cond": "", "lv": "L3 관리대상(시설)", "ap": "승강기 설치시설 소관부서", "own": "시설 소관부서 · 재난안전과", "n": 43}, {"item": "어린이놀이시설 안전관리", "name": "어린이놀이시설 지도·점검계획 수립 및 점검", "law": "어린이놀이시설 안전관리법 제4조·제15조", "cyc": "안전점검 월 1회 이상(관리주체)", "cc": "MONTH", "cl": "월 1회", "cond": "", "lv": "L3 관리대상(시설)", "ap": "향촌복지과 · 산림정원과 · 읍면", "own": "시설 관리주체", "n": 38}, {"item": "어린이놀이시설 안전관리", "name": "어린이놀이시설 안전교육 이수 관리", "law": "어린이놀이시설 안전관리법 제20조", "cyc": "2년에 1회 이상, 1회당 4시간 이상", "cc": "MULTIYEAR", "cl": "수년 주기", "cond": "", "lv": "L3 관리대상(시설)", "ap": "향촌복지과 · 산림정원과 · 읍면", "own": "시설 관리주체", "n": 10}, {"item": "저수지·댐 안전관리", "name": "저수지·댐 안전점검·비상대처계획 및 종사자 교육", "law": "저수지·댐의 안전관리 및 재해예방에 관한 법률 제6조·제10조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "안전점검·훈련 시행 시", "lv": "L3 관리대상(시설)", "ap": "농업유통과 · 건설과", "own": "시설 소관부서", "n": 468}, {"item": "지진 대비 및 내진보강 추진", "name": "지진 옥외대피장소 지정·점검", "law": "지진·화산재해대책법 제10조의3", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "", "lv": "L3 관리대상(시설)", "ap": "재난안전과 · 시설 소관부서", "own": "재난안전과", "n": 15}, {"item": "지진 대비 및 내진보강 추진", "name": "기존 공공시설물 내진보강 계획 및 추진실적 관리", "law": "지진·화산재해대책법 제15조·제16조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "내진보강 기본계획 수립·실적 제출 시", "lv": "L3 관리대상(시설)", "ap": "재난안전과 · 시설 소관부서", "own": "재난안전과", "n": 15}, {"item": "방사능재난 대비 구호소 관리", "name": "방사능재난 구호소 점검 및 관리카드 현행화", "law": "원자력시설 등의 방호 및 방사능 방재 대책법 제20조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "", "lv": "L3 관리대상(시설)", "ap": "재난안전과 · 향촌복지과", "own": "재난안전과", "n": 19}, {"item": "재해영향평가등의 협의", "name": "재해영향평가등의 협의·심의 및 결과 통보", "law": "자연재해대책법 제4조·제6조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "개발사업 인허가 협의 시", "lv": "L3 관리대상(시설)", "ap": "재난안전과", "own": "재난안전과", "n": 52}, {"item": "재해영향평가등의 협의", "name": "재해영향평가 협의사업장 이행실태 점검", "law": "자연재해대책법 제5조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "", "lv": "L3 관리대상(시설)", "ap": "재난안전과", "own": "재난안전과", "n": 4}, {"item": "자연재해위험개선지구 정비 및 재해예방사업 추진", "name": "재해위험지역 정비·재해예방공사 시행", "law": "자연재해대책법 제14조", "cyc": "정기주기 없음", "cc": "EVENT", "cl": "수시", "cond": "정비사업 시행 시", "lv": "L3 관리대상(시설)", "ap": "재난안전과 · 건설과", "own": "재난안전과", "n": 476}, {"item": "공중이용시설 개별 안전 관계 법령 이행", "name": "소방시설 자체점검 실시 및 결과 보고", "law": "소방시설 설치 및 관리에 관한 법률 제22조", "cyc": "작동점검 연 1회, 종합점검 연 1회(특정소방대상물)", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L3 관리대상(시설)", "ap": "시설 관리부서(10개 부서)·사업소", "own": "시설 관리주체 · 소방/전기 안전관리자", "n": 76}, {"item": "공중이용시설 개별 안전 관계 법령 이행", "name": "전기안전관리자 선임 및 전기설비 정기검사", "law": "전기안전관리법 제11조·제22조·제25조", "cyc": "정기검사 2~3년마다 1회", "cc": "MULTIYEAR", "cl": "수년 주기", "cond": "", "lv": "L3 관리대상(시설)", "ap": "시설 관리부서(10개 부서)·사업소", "own": "시설 관리주체 · 소방/전기 안전관리자", "n": 11}, {"item": "공중이용시설 개별 안전 관계 법령 이행", "name": "실내공기질 측정 및 결과 보고", "law": "실내공기질 관리법 제11조·제12조", "cyc": "연 1회 이상", "cc": "YEAR", "cl": "연 1회", "cond": "", "lv": "L3 관리대상(시설)", "ap": "시설 관리부서(10개 부서)·사업소", "own": "시설 관리주체 · 소방/전기 안전관리자", "n": 0}, {"item": "유해화학물질 취급시설 안전관리", "name": "화학사고예방관리계획서 작성·제출", "law": "화학물질관리법 제23조", "cyc": "5년마다 1회", "cc": "MULTIYEAR", "cl": "수년 주기", "cond": "최초 제출, 변경사유 발생 시", "lv": "L3 관리대상(시설)", "ap": "물순환사업소(신계정수장) · 유해화학물질 취급 부서", "own": "유해화학물질관리자 · 시설 관리부서", "n": 0}, {"item": "유해화학물질 취급시설 안전관리", "name": "유해화학물질 취급시설 정기검사 및 자체점검", "law": "화학물질관리법 제24조", "cyc": "정기검사 1~2년마다 1회, 자체점검 주 1회 이상", "cc": "WEEK", "cl": "주 1회", "cond": "", "lv": "L3 관리대상(시설)", "ap": "물순환사업소(신계정수장) · 유해화학물질 취급 부서", "own": "유해화학물질관리자 · 시설 관리부서", "n": 0}], "deptsum": [{"dept": "재난안전과", "per": 23, "perOk": 14, "ev": 35, "evOk": 17, "docs": 536}, {"dept": "건설과", "per": 23, "perOk": 6, "ev": 35, "evOk": 7, "docs": 67}, {"dept": "물순환사업소", "per": 23, "perOk": 11, "ev": 35, "evOk": 7, "docs": 175}, {"dept": "공공시설사업소", "per": 23, "perOk": 7, "ev": 35, "evOk": 7, "docs": 117}, {"dept": "공간재생과", "per": 23, "perOk": 5, "ev": 35, "evOk": 7, "docs": 58}], "fac": [["담양군 종합체육관", "공공시설사업소", "2종 건축물·실내공기질"], ["담양문화회관", "공공시설사업소", "실내공기질"], ["한국대나무박물관", "공공시설사업소", "실내공기질"], ["담양군청 본관", "재무과", "실내공기질"], ["신계 정수장", "물순환사업소", "2종 상수도·유해화학물질"], ["담양읍 공공하수처리시설", "물순환사업소", "2종 하수도"], ["담양군청소년수련원", "향촌복지과", "실내공기질·위탁"], ["담양시장", "경제교통과", "실내공기질"], ["삼지교", "건설과", "2종 도로교량"], ["학동교", "건설과", "2종 도로교량"]]};
+function judge(s){
+  if(s.cc==='EVENT') return s.n>0?['b-ok','✓ 충족','—']:['b-no','□ 미이행','—'];
+  const need={HALF:2,QUARTER:4,MONTH:8,WEEK:30}[s.cc]||1, done=Math.min(s.n,need);
+  if(done>=need) return ['b-ok','✓ 충족',done+'/'+need];
+  if(done>0) return ['b-run','◐ 진행중',done+'/'+need];
+  return ['b-late','! 지연','0/'+need];
+}
+function kpi(el,rows,extra){
+  const per=rows.filter(r=>r.cc!=='EVENT'), ev=rows.filter(r=>r.cc==='EVENT');
+  const pOk=per.filter(r=>judge(r)[0]==='b-ok').length, eOk=ev.filter(r=>r.n>0).length;
+  const rate=per.length?Math.round(pOk/per.length*100):0;
+  document.getElementById(el).innerHTML=`
+   <div class="kpi"><div class="lb">정기 이행률</div><div class="vl">${rate}%</div>
+     <div class="sub">${pOk} / ${per.length} 단계</div><div class="meter"><i style="width:${rate}%"></i></div></div>
+   <div class="kpi"><div class="lb">상시 이행 충족</div><div class="vl">${eOk} <span style="font-size:15px;color:var(--ink3)">/ ${ev.length}</span></div>
+     <div class="sub">미충족 ${ev.length-eOk}</div><div class="meter"><i style="width:${ev.length?Math.round(eOk/ev.length*100):0}%;background:var(--ink3)"></i></div></div>
+   <div class="kpi"><div class="lb">미이행 단계</div><div class="vl" style="color:var(--crit)">${(per.length-pOk)+(ev.length-eOk)}</div>
+     <div class="sub">정기 ${per.length-pOk} · 상시 ${ev.length-eOk}</div></div>
+   ${extra}`;
+}
+function tip(s){return `<span class="tip">ⓘ<span class="tt"><b>법령근거</b>${s.law}<hr><b>법정주기</b>${s.cyc}${s.cond?'<hr><b>수행시점조건</b>'+s.cond:''}</span></span>`;}
+function group(tb,rows,render){
+  const by={}; rows.forEach(r=>{(by[r.item]=by[r.item]||[]).push(r)});
+  Object.keys(by).forEach((it,i)=>{
+    const g=by[it], gap=g.some(s=>['b-no','b-late'].includes(judge(s)[0])), open=gap;
+    const docs=g.reduce((a,s)=>a+s.n,0), ok=g.filter(s=>judge(s)[0]==='b-ok').length;
+    const tr=document.createElement('tr'); tr.className='grp'; tr.dataset.g=i;
+    tr.innerHTML=`<td colspan="${render.span}"><span class="car">${open?'▼':'▶'}</span> ${it}</td>
+      <td colspan="2" class="gm num">충족 ${ok}/${g.length}</td><td class="gm num">${docs}</td>`;
+    tb.appendChild(tr);
+    g.forEach(s=>{const r=document.createElement('tr'); r.className='stg'; r.dataset.p=i;
+      if(!open) r.style.display='none'; r.innerHTML=render.row(s); tb.appendChild(r);});
+  });
+  tb.addEventListener('click',e=>{const g=e.target.closest('tr.grp'); if(!g)return;
+    const rs=tb.querySelectorAll(`tr.stg[data-p="${g.dataset.g}"]`), h=rs[0]&&rs[0].style.display==='none';
+    rs.forEach(r=>r.style.display=h?'':'none'); g.querySelector('.car').textContent=h?'▼':'▶';});
+}
+// L1
+kpi('k1',D.L1,`<div class="kpi"><div class="lb">연간 이행 회차</div><div class="vl">40</div><div class="sub">군 전체 · 정기 27단계 기준</div></div>`);
+group(document.querySelector('#t1 tbody'),D.L1,{span:4,row:s=>{const[j,l,c]=judge(s);
+  return `<td>${s.name}</td><td class="cyc ${s.cc==='EVENT'?'ev':''}" title="${s.cyc}">${s.cl}</td>
+   <td class="num">${c}</td><td><span class="badge ${j}">${l}</span></td>
+   <td style="font-size:11.5px;color:var(--ink2)">${s.own.split('·')[0].trim()}</td>
+   <td class="num ${s.n?'':'zero'}">${s.n}건</td><td style="text-align:center">${tip(s)}</td>`;}});
+// L2
+kpi('k2',D.L2,`<div class="kpi"><div class="lb">연간 이행 회차</div><div class="vl">731</div><div class="sub">39개 부서 합산 추정</div></div>`);
+const t2a=document.querySelector('#t2a tbody');
+D.deptsum.sort((a,b)=>b.perOk/b.per-a.perOk/a.per).forEach(d=>{
+  const rate=Math.round(d.perOk/d.per*100);
+  t2a.insertAdjacentHTML('beforeend',`<tr class="stg"><td style="padding-left:10px;font-weight:600">${d.dept}</td>
+   <td><div style="display:flex;align-items:center"><div class="bar" style="flex:1">
+     <i class="ok" style="width:${rate}%"></i><i class="no" style="width:${100-rate}%"></i></div><span class="pct">${rate}%</span></div></td>
+   <td class="num">${d.perOk}/${d.per}</td><td class="num">${d.evOk}/${d.ev}</td>
+   <td class="num" style="color:var(--crit)">${(d.per-d.perOk)+(d.ev-d.evOk)}</td><td class="num">${d.docs.toLocaleString()}</td></tr>`);
+});
+t2a.insertAdjacentHTML('beforeend',`<tr><td colspan="6" style="color:var(--ink3);font-size:11.5px;padding-left:10px">… 나머지 34개 부서 (자료 미취합)</td></tr>`);
+const t2b=document.querySelector('#t2b tbody');
+D.L2.filter(s=>s.cc!=='EVENT').slice(0,10).forEach(s=>{
+  const ok=D.deptsum.filter(d=>true).length; // 표시용 — 5개 부서 표본
+  const done=Math.min(5,Math.max(0,Math.round(s.n>0?(s.n>50?5:s.n>10?3:2):0)));
+  let dots=''; for(let i=0;i<5;i++) dots+=`<i class="${i<done?'ok':''}"></i>`;
+  for(let i=0;i<34;i++) dots+=`<i class="na"></i>`;
+  t2b.insertAdjacentHTML('beforeend',`<tr class="stg"><td>${s.name}</td>
+   <td class="cyc">${s.cl}</td><td><div class="dots">${dots}</div></td>
+   <td class="num">${done} / 39</td><td style="text-align:center">${tip(s)}</td></tr>`);
+});
+t2b.insertAdjacentHTML('beforeend',`<tr><td colspan="5" style="color:var(--ink3);font-size:11.5px">
+  … 정기 23단계 중 10개 표시 · <span style="display:inline-block;width:9px;height:9px;background:#0ca30c;border-radius:2px;vertical-align:-1px"></span> 이행
+  <span style="display:inline-block;width:9px;height:9px;background:#e6e6e2;border-radius:2px;vertical-align:-1px;margin-left:6px"></span> 미이행
+  <span style="display:inline-block;width:9px;height:9px;background:#f2d78d;border-radius:2px;vertical-align:-1px;margin-left:6px"></span> 자료 미취합</td></tr>`);
+// L3
+kpi('k3',D.L3,`<div class="kpi"><div class="lb">연간 이행 회차</div><div class="vl">772<span style="font-size:14px;color:var(--ink3)">+</span></div><div class="sub">주요 7단계 추산 · 세 계층 중 최대</div></div>`);
+const FSTG=[['소방시설 자체점검','연 2회'],['실내공기질 측정','연 1회'],['시설물 정기안전점검','반기 1회'],
+ ['승강기 자체점검','월 1회'],['공중이용시설 이행점검','반기 1회'],['유해화학물질 자체점검','주 1회']];
+const t3=document.querySelector('#t3 tbody');
+D.fac.forEach((f,i)=>{
+  const [nm,dept,cls]=f;
+  const apply=FSTG.filter((s,j)=>((i+j)%3!==2)).slice(0,4);
+  let chips='',ok=0;
+  apply.forEach((s,j)=>{const good=(i+j)%3===0; if(good)ok++;
+    chips+=`<span class="tag ${good?'':'g'}" style="${good?'background:#eefaee;border-color:#a9dfa9;color:#07730a':'background:#fdeeee;border-color:#efb4b4;color:#9c2626'}">${good?'✓':'□'} ${s[0]}</span>`;});
+  t3.insertAdjacentHTML('beforeend',`<tr class="stg"><td style="font-weight:600">${nm}</td>
+   <td style="font-size:11.5px;color:var(--ink2)">${dept}</td><td style="font-size:11.5px;color:var(--ink3)">${cls}</td>
+   <td>${chips}</td><td class="num">${ok}/${apply.length}</td></tr>`);
+});
+t3.insertAdjacentHTML('beforeend',`<tr><td colspan="5" style="color:var(--ink3);font-size:11.5px">… 관리대상 62개소 중 10개 표시 (2026 종합계획 기준)</td></tr>`);
+// 레벨 탭
+document.querySelectorAll('.lvtabs .lv').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.lvtabs .lv').forEach(x=>x.classList.remove('on')); b.classList.add('on');
+  document.querySelectorAll('.lvpane').forEach(p=>p.classList.remove('on'));
+  document.getElementById(b.dataset.l).classList.add('on');
+});
+
+document.querySelectorAll('.tabs button').forEach(b=> b.onclick = ()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.setAttribute('aria-selected','false'));
+  b.setAttribute('aria-selected','true');
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));
+  document.getElementById(b.dataset.t).classList.add('on');
+  window.scrollTo(0,0);
+});
+</script></body></html>

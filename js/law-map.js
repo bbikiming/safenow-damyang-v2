@@ -1296,6 +1296,11 @@
         'docs-preset':       ['osh-164'],
         'docs-exec':         ['osh-164'],
 
+        /* 업무 관리(신) — 같은 문서 축을 계층별로 보는 화면이라 성격이 docs-exec 과
+           같다(보존·비치의 이행 수단). 검증 6문 #2(직접 이행 수단) 판단도 동일하다. */
+        'cmp-status':        ['osh-164'],
+        'cmp-docs':          ['osh-164'],
+
         /* 통계는 산업재해 통계 기록·유지의 이행 수단이다.
            보고서 출력은 자체 법정 의무가 아니므로 직접 근거를 붙이지 않는다. */
         'stats':             ['osh-15'],
@@ -1694,6 +1699,7 @@
         'bgt-main': ['bgt-main.html'], 'bgt-settings': ['bgt-settings.html'],
         'docs-archive': ['docs-archive.html'], 'docs-preset': ['docs-preset.html', 'doc-detail.html'],
         'docs-exec': ['docs-exec.html'],
+        'cmp-status': ['cmp-status.html'], 'cmp-docs': ['cmp-docs.html'],
         'stats': ['stats.html'], 'reports': ['reports.html'], 'info-center': ['info-center.html'],
         'admin-users': ['admin-users.html'], 'admin-sites': ['admin-sites.html'],
         'admin-menus': ['admin-menus.html'], 'admin-roles': ['admin-roles.html'],

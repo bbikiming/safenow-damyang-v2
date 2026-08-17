@@ -309,6 +309,11 @@
         '검토대기': 'warning', '확인완료': 'success', '미시행': 'neutral',
         /* 업무문서 — 증빙 축 보조 어휘 */
         '재확인 필요': 'warning', '중복 의심': 'warning', '미분류': 'warning', '분류완료': 'success',
+        /* 업무 관리(신) — 이행 관리·문서 목록(cmp-status·cmp-docs, DYCMP.judge).
+         * '진행중·지연·미이행'은 위 어휘를 그대로 쓰고 둘만 새로 든다.
+         *  · 충족  = 도래 회차를 전부 채웠다('완료'와 다르다 — 완료는 재난안전과 확인까지 끝난 것)
+         *  · 비해당 = 저장값은 DYDOCS 의 '해당없음'이고 화면 표기만 비해당이다 */
+        '충족': 'success', '비해당': 'neutral',
     };
     /* 매핑에 없는 라벨은 neutral 로 수렴(색을 임의로 만들지 않는다). */
     function toneOf(label) { return STATUS_TONE[String(label || '').trim()] || 'neutral'; }

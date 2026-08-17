@@ -72,9 +72,18 @@
     /* =========================================================================
      * 진입
      * ========================================================================= */
-    function open(year) {
+    /* opts.stageIds — 업무단계 프리필(선택). 이행 상세·누락 점검처럼 **이미 어느
+     * 할 일인지 아는 화면**에서 들어오면 STEP2 에서 168개를 다시 찾게 하지 않는다.
+     * 인자 없는 기존 호출(docs-exec·docs-preset)은 그대로 동작한다(추가 전용). */
+    function open(year, opts) {
         if (!D().canUpload()) { V().toast(denyNote()); return; }
         W = blankW(year);
+        if (opts && opts.stageIds) {
+            W.stageIds = opts.stageIds.filter(function (id) { return !!D().stage(id); });
+        }
+        /* 프리필은 사용자가 쓴 것이 아니다 — 이 기준선과 같으면 닫을 때 '작성 중인
+           내용이 사라집니다'를 묻지 않는다(빈 마법사를 닫는데 확인이 뜨면 소음이다) */
+        W._prefill = W.stageIds.join(',');
         global.DYPICK.reset('');
         armGuard();
         renderW();
@@ -88,7 +97,11 @@
         });
     }
     function dirty() {
-        if (W) { captureStep1(); return !!(W.files.length || String(W.title).trim() || W.stageIds.length); }
+        if (W) {
+            captureStep1();
+            return !!(W.files.length || String(W.title).trim() ||
+                W.stageIds.join(',') !== (W._prefill || ''));
+        }
         if (P) return Object.keys(P.sel).length > 0;
         return false;
     }
@@ -453,6 +466,9 @@
         W = null;
         if (global.DOCEXEC && global.DOCEXEC.render) global.DOCEXEC.render();
         if (global.DOCLIST && global.DOCLIST.render) global.DOCLIST.render();
+        /* 업무 관리(신) — 저장 뒤 낡은 화면을 남기지 않는다(같은 가드 패턴) */
+        if (global.CMPST && global.CMPST.render) global.CMPST.render();
+        if (global.CMPDOC && global.CMPDOC.render) global.CMPDOC.render();
         V().toast((extra ? extra + ' ' : '') + '업무 등록 완료 — 업무단계 ' + doc.stageIds.length + '개가 진행중이 되었습니다.');
     }
 
@@ -690,6 +706,8 @@
         closePresetDone();
         if (global.DOCEXEC && global.DOCEXEC.render) global.DOCEXEC.render();
         if (global.DOCLIST && global.DOCLIST.render) global.DOCLIST.render();
+        if (global.CMPST && global.CMPST.render) global.CMPST.render();
+        if (global.CMPDOC && global.CMPDOC.render) global.CMPDOC.render();
         V().toast(made + '건을 ' + TO + '년으로 가져왔습니다.' +
             (missing ? ' ' + missing + '건은 원본 첨부가 없어 «원본 파일 확인 필요»로 남았습니다.' : '') +
             (denied ? ' ' + denied + '건은 소유권 검증에 걸려 만들지 않았습니다.' : ''));

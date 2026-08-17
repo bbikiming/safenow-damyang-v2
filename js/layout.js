@@ -482,7 +482,9 @@
         //   도메인 **위를 가로지르는 축**이다.
         //   ※ docs 그룹에 넣지 않는다 — 군수의 hideNav:['docs','admin'] 때문에
         //     상위 권한용 메뉴를 최상위 권한이 못 보게 된다.
-        { id: 'work', label: '업무 관리', icon: 'check', items: [
+        //   ※ 라벨 '(구)업무관리' — 신설 cmp 그룹(이행 관리·문서 목록)이 '업무 관리' 라벨을
+        //     쓰면서 중복이 생겨, 발주처(사용자) 지시로 기존 그룹을 (구)로 개명(2026-08-16).
+        { id: 'work', label: '(구)업무관리', icon: 'check', items: [
             { id: 'work-admin', label: '업무 발행 관리', icon: 'list',  href: 'work-admin.html', screen: 'WRK01-L' },
             { id: 'work-dept',  label: '부서 업무함',   icon: 'users', href: 'work-dept.html',  screen: 'WRK02-L' },
         ]},
@@ -597,6 +599,17 @@
             { id: 'docs-archive', label: '기준문서함',          icon: 'file', href: 'docs-archive.html' },
             { id: 'docs-preset',  label: '업무 목록',           icon: 'list', href: 'docs-preset.html' },  // 평면 문서 검색
             { id: 'docs-exec',    label: '이행 목록',           icon: 'grid', href: 'docs-exec.html' },    // 법정 이행항목 78 · 업무단계 168
+        ]},
+
+        // GNB. 업무 관리(신) — 이행 관리 · 문서 목록
+        //   근거: docs/planning/기획-업무관리-신버전-이행관리-문서목록-v1.md
+        //   기존 docs 그룹(업무문서)과 **병행**한다 — 구/신 버전이 나란히 보여야 비교 시연이 된다.
+        //   기존 화면·모듈(docs-archive/preset/exec · doc-exec.js · doc-list.js)은 무수정이다.
+        //   ※ 라벨 중복 해소 — 기존 work 그룹(업무 자동발행)도 '업무 관리'였으나
+        //     발주처(사용자) 지시로 그쪽을 '(구)업무관리'로 개명했다(2026-08-16). 이 그룹이 '업무 관리'다.
+        { id: 'cmp', label: '업무 관리', icon: 'check', items: [
+            { id: 'cmp-status', label: '이행 관리', icon: 'grid', href: 'cmp-status.html', screen: 'CMP01-T / CMP02-D / CMP04-V' },
+            { id: 'cmp-docs',   label: '문서 목록', icon: 'list', href: 'cmp-docs.html',   screen: 'DOC01-L / DOC02-D' },
         ]},
 
         // GNB 6. 통계·보고 (SFR-018·021)

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>문서 목록 - 담양군 중대재해예방통합관리시스템 v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="cmp-docs" data-page-title="문서 목록" data-page-subtitle="업무 관리 &gt; 문서 목록 — 어떤 할 일의 증빙인지와 함께 문서를 찾습니다">
+    <main>
+        <div id="cmp-docs"></div>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/tour-core.js"></script><!-- DYTOUR 공용 투어 엔진 -->
+    <script src="./js/law-map.js"></script>
+    <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
+    <script src="./js/data.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/org-pick.js"></script>
+    <script src="./js/edu-filter.js"></script><!-- 공용 필터 바 (EDUFILTER) -->
+    <script src="./js/edoc-templates.js"></script>
+    <script src="./js/edoc.js"></script>
+    <!-- 업무문서 데이터 — 생성물(tools/build-docs-seed.py). 손으로 고치지 말 것 -->
+    <script src="./js/doc-taxonomy-data.js"></script><!-- DYDOCT: 이행항목 78 · 업무단계 168 -->
+    <script src="./js/doc-history-data.js"></script><!-- DYDOCH: 2025 문서 원장 3,830 -->
+    <script src="./js/sets-data-v2.js"></script><!-- DY_DOCS_V2 426 -->
+    <script src="./js/doc-progress.js"></script><!-- DYDOCS: 상태·진행률·문서 축 단일 출처 -->
+    <script src="./js/doc-pick.js"></script><!-- DYPICK: 이행항목·업무단계 2단 선택기 -->
+    <script src="./js/doc-upload.js"></script><!-- DOCUP: 업무 업로드 마법사 -->
+    <script src="./js/cmp-core.js"></script><!-- DYCMP: 계층·주기·이행상태 파생 -->
+    <script src="./js/cmp-docs.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            CMPDOC.init(document.getElementById('cmp-docs'));
+        });
+    </script>
+</body>
+</html>
