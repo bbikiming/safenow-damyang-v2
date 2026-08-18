@@ -33,6 +33,7 @@
         seg3: 'fac',            /* L3 — fac | stage */
         year: 0,
         q: '', cycle: '', st: '', axis: '', dept: '', facCls: '', way: '',
+        adv: false,           /* 상세 조건 펼침 — 값이 걸리면 advOpen() 이 자동 true */
         open: {},               /* itemId → 펼침 */
         law: {},                /* stageId → 법령 인라인 펼침 */
         detail: '',             /* 이행 상세 대상 stageId */
@@ -260,42 +261,112 @@
         return [['', '시설 분류 전체']].concat(Object.keys(seen).sort().map(function (c) { return [c, c]; }));
     }
 
+    /* 필터 3단 — 근거는 설계 문서 §8.
+     *   1단(항상): 검색 · 결과 건수 · [상세 조건] · 초기화
+     *   2단(항상): 상태 칩 줄 — 옵션 5개 · 상호배타 · 가장 자주 바꾸는 축이라
+     *              드롭다운(열기→고르기 2회)이 아니라 한 번에 다 보이는 칩으로 둔다.
+     *              각 칩에 **건수**가 붙어 골라 보고 되돌리는 왕복을 없앤다.
+     *   3단(접힘): 법령 축·수행 위치 칩 + 옵션이 많은 축(주기·부서·분류)은 드롭다운.
+     *              값이 걸려 있으면 자동으로 펼친다 — 숨은 조건 때문에 결과가
+     *              이상해 보이는 일을 막는다(업무 목록 `.dl-adv` 선례).
+     */
     function filterBar(list) {
-        /* L2 부서별 보기는 표의 단위가 '부서 행'이다 — 결과 건수도 같은 단위로
-         * 센다(단계 수를 찍으면 필터가 표에 안 걸린 것처럼 읽힌다, 검수 C-1). */
         var deptSeg = (S.level === 'L2' && S.seg2 === 'dept');
         var facSeg = (S.level === 'L3' && S.seg3 === 'fac');
-        /* 검색창 문구는 그 보기가 **실제로 검색하는 것**을 적는다 — 관리대상별 보기는
-         * 시설명·분류·소재지를 찾는다(D-2). 화면이 하지 않는 일을 약속하지 않는다. */
         var ph = deptSeg ? '부서명으로 찾기'
                : facSeg ? '시설명·분류·소재지로 찾기'
                : '할 일·법령·수행 주체로 찾기';
-        var fields = [{ type: 'search', id: 'cs-q', value: S.q, placeholder: ph, on: "CMPST.setF('q', this.value)" }];
-        if (S.level === 'L1') {
-            fields.push(
-                { type: 'select', id: 'cs-ax', value: S.axis, label: '법령 축', options: axisOptions(), on: "CMPST.setF('axis', this.value)" },
-                { type: 'select', id: 'cs-cy', value: S.cycle, label: '이행주기', options: cycleOptions(), on: "CMPST.setF('cycle', this.value)" },
-                { type: 'select', id: 'cs-st', value: S.st, label: '이행상태', options: statusOptions(), on: "CMPST.setF('st', this.value)" },
-                { type: 'select', id: 'cs-wy', value: S.way, label: '수행 위치', options: wayOptions(), on: "CMPST.setF('way', this.value)" }
-            );
-        } else if (S.level === 'L2') {
-            fields.push({ type: 'select', id: 'cs-dp', value: S.dept, label: '부서', options: deptOptions(), on: "CMPST.setF('dept', this.value)" });
-        } else {
-            fields.push(
-                { type: 'select', id: 'cs-fc', value: S.facCls, label: '시설 분류', options: facClsOptions(), on: "CMPST.setF('facCls', this.value)" },
-                { type: 'select', id: 'cs-st', value: S.st, label: '이행상태', options: statusOptions(), on: "CMPST.setF('st', this.value)" }
-            );
-        }
         var seg = '';
         if (S.level === 'L2') seg = segment('seg2', [['dept', '부서별 보기'], ['stage', '단계별 보기']]);
         if (S.level === 'L3') seg = segment('seg3', [['fac', '관리대상별 보기'], ['stage', '단계별 보기']]);
-        return F().bar(fields, {
-            count: deptSeg ? deptRows().length : list.length,
-            unit: deptSeg ? '개 부서' : '개 할 일',
-            reset: 'CMPST.resetF()',
-            actions: seg,
-        });
+
+        var advN = advCount();
+        var bar = F().bar(
+            [{ type: 'search', id: 'cs-q', value: S.q, placeholder: ph, on: "CMPST.setF('q', this.value)" }],
+            {
+                count: deptSeg ? deptRows().length : list.length,
+                unit: deptSeg ? '개 부서' : '개 할 일',
+                reset: 'CMPST.resetF()',
+                extraActive: advN + (S.st ? 1 : 0),
+                actions: seg +
+                    '<button type="button" class="btn btn-outline btn-sm" aria-expanded="' + (advOpen() ? 'true' : 'false') +
+                        '" aria-controls="cs-adv" onclick="CMPST.toggleAdv()">상세 조건 ' + (advOpen() ? '▴' : '▾') +
+                        (advN ? ' <b>' + advN + '</b>' : '') + '</button>',
+            });
+        return bar + statusChips() + advPanel();
     }
+
+    /* 상태 칩 — 필터이자 요약이다. 건수는 **그 계층·검색어까지 반영한** 실제 수라
+       고르기 전에 몇 건인지 알 수 있다. */
+    function statusChips() {
+        if (deptSegOn()) return '';        /* 부서별 보기는 표 단위가 부서라 상태 축이 없다 */
+        var base = levelStages().filter(function (s2) {
+            if (S.q && !F().match(S.q, [s2.id, s2.name, s2.law, s2.target, s2.actor])) return false;
+            if (S.cycle) { var cy = C().cycleOf(s2); if (S.cycle === '__ev' ? cy.need > 0 : cy.cc !== S.cycle) return false; }
+            if (S.axis && C().axesOf(s2.itemId).indexOf(S.axis) < 0) return false;
+            if (S.way && (s2.taskType || 'UNKNOWN') !== S.way) return false;
+            if (S.dept && !D().stageDeptHit(s2, S.dept)) return false;
+            return true;
+        });
+        var cnt = { ok: 0, run: 0, late: 0, no: 0, na: 0 };
+        base.forEach(function (s2) { var j = C().judge(s2, S.year); if (j && cnt[j.key] !== undefined) cnt[j.key]++; });
+        function chipBtn(key, label, glyph, tone, n) {
+            var on = S.st === key;
+            return '<button type="button" role="radio" aria-checked="' + (on ? 'true' : 'false') + '"' +
+                ' class="cmp-fchip' + (on ? ' is-on' : '') + (tone ? ' t-' + tone : '') + '"' +
+                ' onclick="CMPST.setF(\'st\', \'' + key + '\')">' +
+                (glyph ? '<span class="cmp-fchip-g" aria-hidden="true">' + glyph + '</span>' : '') +
+                esc(label) + '<span class="cmp-fchip-n">' + n + '</span></button>';
+        }
+        var out = chipBtn('', '전체', '', '', base.length);
+        ['ok', 'run', 'late', 'no', 'na'].forEach(function (k) {
+            var j = C().JUDGE[k];
+            out += chipBtn(k, j.label, j.glyph, V().toneOf(j.label), cnt[k]);
+        });
+        return '<div class="cmp-fchips" role="radiogroup" aria-label="이행상태로 거르기">' + out + '</div>';
+    }
+    function deptSegOn() { return S.level === 'L2' && S.seg2 === 'dept'; }
+
+    /* 상세 조건 — 값이 걸려 있으면 접혀 있어도 자동으로 펼친다 */
+    function advCount() {
+        return [S.axis, S.cycle, S.way, (S.level === 'L2' ? S.dept : ''), (S.level === 'L3' ? S.facCls : '')]
+            .filter(Boolean).length;
+    }
+    function advOpen() { return S.adv || advCount() > 0; }
+    function advPanel() {
+        if (!advOpen()) return '';
+        var rows = '';
+        if (S.level === 'L1' || (S.level !== 'L2' && S.level !== 'L3') || S.level === 'L3') {
+            rows += chipRow('법령 축', 'axis', C().AXES.map(function (a) { return [a.id, a.id ? a.label : '전체']; }));
+            rows += chipRow('수행 위치', 'way', wayOptions());
+        }
+        var sel = '';
+        if (S.level === 'L2') {
+            sel += fld('부서', selHtml('cs-dp', S.dept, deptOptions(), "CMPST.setF('dept', this.value)"));
+        }
+        if (S.level === 'L3') {
+            sel += fld('시설 분류', selHtml('cs-fc', S.facCls, facClsOptions(), "CMPST.setF('facCls', this.value)"));
+        }
+        sel += fld('이행주기', selHtml('cs-cy', S.cycle, cycleOptions(), "CMPST.setF('cycle', this.value)"));
+        return '<div class="dl-adv cmp-adv" id="cs-adv">' + rows +
+            '<div class="dl-adv-grid">' + sel + '</div></div>';
+    }
+    function fld(label, inner) { return '<label class="dl-f"><span>' + esc(label) + '</span>' + inner + '</label>'; }
+    function selHtml(id, val, opts, on) {
+        return '<select class="form-select" id="' + id + '" onchange="' + on + '">' + F().optionsHtml(opts, val) + '</select>';
+    }
+    /* 옵션이 적고 상호배타인 축은 칩 줄로 — 드롭다운이면 매번 «열기→고르기»다 */
+    function chipRow(label, key, opts) {
+        return '<div class="cmp-arow"><span class="cmp-arow-l">' + esc(label) + '</span>' +
+            '<span class="cmp-arow-c" role="radiogroup" aria-label="' + esc(label) + '">' +
+            opts.map(function (o) {
+                var on = (S[key] || '') === o[0];
+                return '<button type="button" role="radio" aria-checked="' + (on ? 'true' : 'false') + '"' +
+                    ' class="cmp-fchip is-plain' + (on ? ' is-on' : '') + '"' +
+                    ' onclick="CMPST.setF(\'' + key + '\', \'' + o[0] + '\')">' + esc(o[1]) + '</button>';
+            }).join('') + '</span></div>';
+    }
+
     function segment(key, opts) {
         return '<span class="cmp-seg" role="group" aria-label="보기 방식">' + opts.map(function (o) {
             var on = S[key] === o[0];
@@ -342,11 +413,14 @@
             var docs = js.reduce(function (a, j) { return a + (j ? j.docs : 0); }, 0);
             /* 행 자체가 토글이다 — 마우스 전용으로 두면 키보드 사용자는 그룹을
                영영 못 연다. dropKey 가 Enter/Space 를 클릭으로 수렴시킨다. */
+            /* 요약(충족 n/m)은 항목명 **바로 옆**에 둔다 — 오른쪽 끝에 두면 이름에서
+               수치까지 시선이 표를 가로지른다. 문서 수만 열 정렬을 유지한다. */
             var head = '<tr class="cmp-grp" role="button" tabindex="0" aria-expanded="' + (open ? 'true' : 'false') + '"' +
                 ' onclick="CMPST.toggleItem(\'' + esc(itemId) + '\')" onkeydown="DYV2.dropKey(event)">' +
-                '<td colspan="5"><span class="cmp-car" aria-hidden="true">' + (open ? '▾' : '▸') + '</span> ' +
-                    esc(it.name) + ' <span class="cmp-gcode">' + esc(it.id) + '</span></td>' +
-                '<td class="cmp-num cmp-gm">충족 ' + ok + '/' + g.length + '</td>' +
+                '<td colspan="6"><span class="cmp-car" aria-hidden="true">' + (open ? '▾' : '▸') + '</span>' +
+                    '<span class="cmp-gname">' + esc(it.name) + '</span>' +
+                    '<span class="cmp-gcode">' + esc(it.id) + '</span>' +
+                    '<span class="cmp-gsum' + (ok === g.length ? ' is-full' : '') + '">충족 ' + ok + '/' + g.length + '</span></td>' +
                 '<td class="cmp-num cmp-gm">' + docs + '건</td>' +
                 '<td></td>' +
             '</tr>';
@@ -1193,6 +1267,7 @@
         render();
     }
     function toggleLaw(id) { S.law[id] = !S.law[id]; render(); }
+    function toggleAdv() { S.adv = !advOpen(); render(); }
     function setDetailYear(y) { S.dyear = +y || S.year; render(); }
     /* 등록 마법사 — 단계 프리필. 연도는 지금 보고 있는 연도(상세면 상세 연도) */
     function openReg(stageId) {
@@ -1248,7 +1323,7 @@
     global.CMPST = {
         init: init, render: render,
         setF: setF, resetF: resetF, setTab: setTab, setLevel: setLevel, setSeg: setSeg,
-        toggleItem: toggleItem, toggleLaw: toggleLaw,
+        toggleItem: toggleItem, toggleLaw: toggleLaw, toggleAdv: toggleAdv,
         openDetail: openDetail, closeDetail: closeDetail, setDetailYear: setDetailYear, rowOpen: rowOpen,
         openDept: openDept, openItem: openItem,
         openPull: openPull, pullQ: pullQ, pullSel: pullSel, pullAll: pullAll, pullNone: pullNone,

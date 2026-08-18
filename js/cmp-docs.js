@@ -33,6 +33,7 @@
         expand: {},          /* docId → 업무단계 칩 전부 펼침 */
         doc: '',             /* 문서 상세 */
         pickTmp: null,       /* 선택기 모달 임시값 */
+        adv: false,          /* 상세 조건 펼침 — 값이 걸리면 자동 true */
     };
 
     function me() { var R = global.DYROLE; return R && R.current ? R.current() : null; }
@@ -141,21 +142,22 @@
         if (S.page > pages) S.page = pages;
         var rows = list.slice((S.page - 1) * PAGE, S.page * PAGE);
 
-        var fields = [
-            { type: 'search', id: 'cd-q', value: S.q, placeholder: '문서명으로 찾기', on: "CMPDOC.setF('q', this.value)" },
-            { type: 'select', id: 'cd-yr', value: S.year, label: '연도', options: yearOptions(), on: "CMPDOC.setF('year', this.value)" },
-            { type: 'select', id: 'cd-st', value: S.status, label: '결재상태', options: statusOptions(), on: "CMPDOC.setF('status', this.value)" },
-            { type: 'search', id: 'cd-sr', value: S.sr, placeholder: '수발신처로 찾기', on: "CMPDOC.setF('sr', this.value)" },
-        ];
-        /* '＋ 문서 등록'은 페이지 제목 줄(injectHead) 한 곳에만 둔다 — 같은 화면에
-           같은 버튼이 두 개면 어느 쪽이 진짜인지 묻게 된다(§14-12 두 컨트롤 금지) */
-        var bar = F().bar(fields, {
-            count: list.length.toLocaleString(), unit: '건',
-            reset: 'CMPDOC.resetF()',
-            extraActive: (S.stages.length ? 1 : 0) + (S.dept ? 1 : 0),
-            actions: '<button type="button" class="btn btn-outline btn-sm" onclick="CMPDOC.openPick()">업무단계 고르기' +
-                (S.stages.length ? ' <b>' + S.stages.length + '</b>' : '') + '</button>',
-        });
+        /* 필터 3단 — 설계 §8. 연도는 값이 2~3개뿐이라 칩이 드롭다운보다 빠르고,
+           결재상태·수발신처처럼 값이 많거나 덜 쓰는 축은 상세 조건 안에 둔다. */
+        var advN = docAdvCount();
+        var bar = F().bar(
+            [{ type: 'search', id: 'cd-q', value: S.q, placeholder: '문서명으로 찾기', on: "CMPDOC.setF('q', this.value)" }],
+            {
+                count: list.length.toLocaleString(), unit: '건',
+                reset: 'CMPDOC.resetF()',
+                extraActive: advN + (S.stages.length ? 1 : 0) + (S.dept ? 1 : 0),
+                actions: '<button type="button" class="btn btn-outline btn-sm" onclick="CMPDOC.openPick()">업무단계 고르기' +
+                        (S.stages.length ? ' <b>' + S.stages.length + '</b>' : '') + '</button>' +
+                    '<button type="button" class="btn btn-outline btn-sm" aria-expanded="' + (docAdvOpen() ? 'true' : 'false') +
+                        '" aria-controls="cd-adv" onclick="CMPDOC.toggleAdv()">상세 조건 ' + (docAdvOpen() ? '▴' : '▾') +
+                        (advN ? ' <b>' + advN + '</b>' : '') + '</button>',
+            });
+        bar += yearChips() + docAdvPanel();
 
         return notice() + bar + deptCond() + stageCond() +
             '<p class="cmp-cap">조건에 맞는 <b>문서 ' + list.length.toLocaleString() + '건</b> · 할 일 <b>연결 ' + lc.links.toLocaleString() + '건</b> — ' +
@@ -172,6 +174,36 @@
         return '<p class="cmp-cond"><span class="chip-mini wt-elec">' + esc(S.dept) + ' 문서 ' + total + '건' +
             '<button type="button" class="cmp-cond-x" aria-label="부서 조건 해제" onclick="CMPDOC.setF(\'dept\',\'\')">×</button></span>' +
             '<span class="cmp-dim">담당부서 값이 있는 문서만 셉니다 — 2025년 원장은 재난안전과 소관이라 부서 값이 없습니다.</span></p>';
+    }
+    /* 연도 칩 — 값이 2~3개뿐이라 드롭다운은 과하다. 각 칩에 건수를 붙여
+       고르기 전에 몇 건인지 보이게 한다. */
+    function yearChips() {
+        var all = D().allDocs();
+        var byYear = {};
+        all.forEach(function (d) { if (d.year) byYear[d.year] = (byYear[d.year] || 0) + 1; });
+        var years = Object.keys(byYear).map(Number).sort(function (a, b) { return b - a; });
+        function chip(val, label, n) {
+            var on = String(S.year) === String(val);
+            return '<button type="button" role="radio" aria-checked="' + (on ? 'true' : 'false') + '"' +
+                ' class="cmp-fchip' + (on ? ' is-on' : '') + '" onclick="CMPDOC.setF(\'year\', \'' + val + '\')">' +
+                esc(label) + '<span class="cmp-fchip-n">' + n.toLocaleString() + '</span></button>';
+        }
+        var out = chip('', '전체', all.length);
+        years.forEach(function (y) { out += chip(y, y + '년', byYear[y]); });
+        return '<div class="cmp-fchips" role="radiogroup" aria-label="연도로 거르기">' + out + '</div>';
+    }
+    function docAdvCount() { return [S.status, S.sr].filter(Boolean).length; }
+    function docAdvOpen() { return S.adv || docAdvCount() > 0; }
+    function docAdvPanel() {
+        if (!docAdvOpen()) return '';
+        return '<div class="dl-adv cmp-adv" id="cd-adv"><div class="dl-adv-grid">' +
+            '<label class="dl-f"><span>결재상태</span>' +
+                '<select class="form-select" id="cd-st" onchange="CMPDOC.setF(\'status\', this.value)">' +
+                F().optionsHtml(statusOptions(), S.status) + '</select></label>' +
+            '<label class="dl-f"><span>수발신처</span>' +
+                '<input type="search" class="form-input" id="cd-sr" value="' + esc(S.sr) + '"' +
+                ' placeholder="기관 이름으로 찾기" oninput="CMPDOC.setF(\'sr\', this.value)"></label>' +
+        '</div></div>';
     }
     function stageCond() {
         if (!S.stages.length) return '';
@@ -489,6 +521,7 @@
        초기 상태가 처음 열었을 때의 화면이다. */
     function resetF() { S.q = ''; S.sr = ''; S.year = String(D().defaultYear()); S.status = ''; S.stages = []; S.dept = ''; S.page = 1; rerender(); }
     function expand(id) { S.expand[id] = !S.expand[id]; render(); }
+    function toggleAdv() { S.adv = !docAdvOpen(); render(); }
     function go(n) { S.page = n; render(); try { window.scrollTo(0, 0); } catch (e) {} }
 
     function init(mount) {
@@ -500,7 +533,7 @@
 
     global.CMPDOC = {
         init: init, render: render,
-        setF: setF, resetF: resetF, expand: expand, go: go,
+        setF: setF, resetF: resetF, expand: expand, go: go, toggleAdv: toggleAdv,
         openPick: openPick, pick: pick, applyPick: applyPick, dropStage: dropStage, clearStages: clearStages,
         openDoc: openDoc, closeDoc: closeDoc, carry: carry, rowOpen: rowOpen,
         askRemove: askRemove, doRemove: doRemove,

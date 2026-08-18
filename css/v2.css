@@ -4098,10 +4098,10 @@ p > .dx-note-gap { display: inline; }
    ========================================================================= */
 
 /* ── 공통 유틸 ─────────────────────────────────────────────────────── */
-.cmp-cap { font-size: var(--fs-12); color: var(--text-gray); line-height: 1.6; margin: 8px 0 12px; }
+.cmp-cap { font-size: var(--fs-12); color: var(--text-gray); line-height: 1.7; margin: 12px 0 16px; }
 .cmp-cap b { color: var(--text-black); font-weight: var(--fw-bold); }
 .cmp-dim { color: var(--text-gray); font-weight: var(--fw-regular); }
-.cmp-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cmp-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; font-size: var(--fs-13); }
 .cmp-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .cmp-empty-act { margin-top: 10px; }
 .cmp-ro { font-size: var(--fs-12); color: var(--text-gray); font-weight: var(--fw-bold); }
@@ -4113,11 +4113,11 @@ p > .dx-note-gap { display: inline; }
 /* ── 서브탭 · 계층탭 (표준 .sub-tabs / .tabs 위 modifier) ───────────────
    두 축을 **한 줄**에 둔다 — 각자 한 줄을 쓰면 첫 데이터 행이 900px 밖으로
    밀린다(§14-12 실측). 왼쪽이 화면 축(현황/누락), 오른쪽이 계층 축이다. */
-.cmp-tabbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 2px; }
+.cmp-tabbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
 /* 이 두 화면만의 밀도 조정 — 공용 컴포넌트의 기본 여백을 그대로 두면 1280×900 에서
    첫 데이터 행이 610px 로 밀린다(§14-12 는 600px 이내를 요구한다). 전역 값을 건드리면
    다른 화면이 함께 움직이므로 페이지 범위로만 좁힌다. */
-[data-dy-page^="cmp-"] .dy-notice { margin-bottom: 6px; }
+[data-dy-page^="cmp-"] .dy-notice { margin-bottom: 12px; }
 .cmp-subtabs { flex: 1 1 260px; }
 .cmp-lvtabs { flex: 0 0 auto; flex-wrap: wrap; }
 .cmp-lvtabs .tab { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; flex: 0 0 auto; }
@@ -4126,13 +4126,13 @@ p > .dx-note-gap { display: inline; }
 /* 여백은 §14-12(1280×900 첫 데이터 행 600px 이내)를 맞추는 값이다 — 표 위 한 줄
    안내(.cmp-mini)가 들어오면서 624px 로 밀렸고, 폰트를 줄이는 대신 여백만 깎았다.
    더 늘리려면 첫 행 위치를 다시 재고 넘지 않는지 확인할 것. */
-.cmp-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 4px; }
-.cmp-kpis .kpi-card { padding: 6px 14px; gap: 0; }
-.cmp-kpis .kpi-card-title { font-size: var(--fs-12); }
-.cmp-kpis .kpi-card-value { font-size: var(--fs-22); line-height: 1.25; }
-.cmp-kpis .kpi-card-foot { display: block; line-height: 1.4; font-size: var(--fs-12); }
+.cmp-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.cmp-kpis .kpi-card { padding: 14px 16px; gap: 4px; }
+.cmp-kpis .kpi-card-title { font-size: var(--fs-13); font-weight: var(--fw-medium); }
+.cmp-kpis .kpi-card-value { font-size: var(--fs-24); line-height: 1.2; }
+.cmp-kpis .kpi-card-foot { display: block; line-height: 1.55; font-size: var(--fs-12); margin-top: 2px; }
 .cmp-kpi-bad { color: var(--status-danger-fg); }
-.cmp-kpi-bar { height: 5px; margin-top: 4px; }
+.cmp-kpi-bar { height: 6px; margin-top: 8px; }
 /* 목적지가 하나로 정해지는 KPI 만 버튼이 된다(설계 §3-2) — 카드 시각은 그대로 두고
    버튼 기본값만 지운다. 갈 곳을 라벨 옆에 밝혀 누를 수 있음을 알린다. */
 .cmp-kpi-btn { font-family: inherit; text-align: left; cursor: pointer; width: 100%; }
@@ -4142,8 +4142,51 @@ p > .dx-note-gap { display: inline; }
 .cmp-kpis .kpi-card-label { display: flex; align-items: center; gap: 6px; }
 
 /* 표 위 한 줄 — 무엇을 보는 표인지와 어디를 누르면 되는지(D-3) */
-.cmp-mini { margin: 0 0 2px; font-size: var(--fs-12); color: var(--text-gray); line-height: 1.5; }
+.cmp-mini { margin: 0 0 10px; font-size: var(--fs-13); color: var(--text-gray); line-height: 1.6; }
 .cmp-mini b { color: var(--text-black); font-weight: var(--fw-semibold); }
+
+/* ── 필터 칩 (설계 §8) ─────────────────────────────────────────────────
+   옵션이 적고 상호배타이며 자주 바꾸는 축은 드롭다운 대신 칩 줄로 낸다.
+   드롭다운은 «열기→고르기» 2회이고 고르기 전에는 건수를 알 수 없다. */
+.cmp-fchips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.cmp-fchip {
+  display: inline-flex; align-items: center; gap: 5px;
+  min-height: 32px; padding: 5px 12px;
+  border: 1px solid var(--card-line); border-radius: var(--radius-pill);
+  background: var(--surface); cursor: pointer;
+  font-family: inherit; font-size: var(--fs-13); font-weight: var(--fw-medium); color: var(--text-gray);
+  transition: background .15s, border-color .15s, color .15s;
+}
+.cmp-fchip:hover { border-color: var(--main); color: var(--main-dark); }
+.cmp-fchip:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
+/* 선택 상태는 색만으로 말하지 않는다 — 배경·테두리·굵기가 함께 바뀐다 */
+.cmp-fchip.is-on {
+  background: var(--main); border-color: var(--main); color: var(--surface);
+  font-weight: var(--fw-bold);
+}
+.cmp-fchip-g { font-size: var(--fs-12); }
+.cmp-fchip-n {
+  font-variant-numeric: tabular-nums; font-size: var(--fs-12);
+  padding: 0 6px; border-radius: var(--radius-pill);
+  background: var(--surface-alt); color: var(--text-gray);
+}
+.cmp-fchip.is-on .cmp-fchip-n { background: var(--brand-700); color: var(--surface); }
+/* 상태 tone 을 왼쪽 점으로 — 색 단독 의미가 아니라 글리프·라벨의 보조다 */
+.cmp-fchip.t-success .cmp-fchip-g { color: var(--status-success-fg); }
+.cmp-fchip.t-info .cmp-fchip-g { color: var(--status-info-fg); }
+.cmp-fchip.t-warning .cmp-fchip-g { color: var(--status-warning-fg); }
+.cmp-fchip.t-danger .cmp-fchip-g { color: var(--status-danger-fg); }
+.cmp-fchip.is-on .cmp-fchip-g { color: var(--surface); }
+.cmp-fchip.is-plain { min-height: 30px; padding: 4px 11px; font-size: var(--fs-12); }
+
+/* 상세 조건 패널 — 업무 목록의 .dl-adv 계열을 그대로 쓴다(§7 계열 신설 금지) */
+.cmp-adv { margin-bottom: 12px; }
+.cmp-arow { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+.cmp-arow-l {
+  flex: 0 0 68px; padding-top: 6px;
+  font-size: var(--fs-12); font-weight: var(--fw-bold); color: var(--text-gray);
+}
+.cmp-arow-c { display: flex; flex-wrap: wrap; gap: 6px; min-width: 0; }
 
 /* ── 세그먼트 토글 (기존 표준 없음 — 요소 자체가 신규) ───────────────── */
 .cmp-seg { display: inline-flex; flex-wrap: wrap; max-width: 100%; border: 1px solid var(--card-line); border-radius: var(--radius-md); overflow: hidden; }
@@ -4159,25 +4202,36 @@ p > .dx-note-gap { display: inline; }
 
 /* ── 표 (표준 .table-figma 위 그룹/단계 행 modifier) ──────────────────── */
 .cmp-table { min-width: 820px; table-layout: fixed; }
-.cmp-table th { white-space: nowrap; }
+.cmp-table th { white-space: nowrap; font-weight: var(--fw-semibold); letter-spacing: -0.01em; }
 .cmp-table tr.cmp-grp { background: var(--surface-alt); cursor: pointer; }
 .cmp-table tr.cmp-grp:hover { background: var(--brand-50); }
+.cmp-table tr.cmp-grp:hover td:first-child { box-shadow: inset 3px 0 0 var(--main-dark); }
 .cmp-table tr.cmp-grp:focus-visible { outline: 2px solid var(--main); outline-offset: -2px; }
 /* 행 전체가 진입 타깃(와이어프레임 tr.stg) — 터치 타깃도 행 폭으로 커진다 */
 .cmp-table tr.cmp-rowlink { cursor: pointer; }
 .cmp-table tr.cmp-rowlink:hover td { background: var(--brand-50); }
-.cmp-table tr.cmp-grp td { font-weight: var(--fw-bold); color: var(--text-black); border-bottom: 1px solid var(--card-line); }
-.cmp-table tr.cmp-stg td { vertical-align: middle; }
+.cmp-table tr.cmp-grp td { font-weight: var(--fw-bold); color: var(--text-black); border-bottom: 1px solid var(--card-line); padding-top: 11px; padding-bottom: 11px; font-size: var(--fs-13); }
+.cmp-table tr.cmp-stg td { vertical-align: middle; padding-top: 12px; padding-bottom: 12px; }
 .cmp-table tr.cmp-lawrow td { background: var(--surface-alt); }
 .cmp-table tr.cmp-missing td { color: var(--text-gray); font-size: var(--fs-12); background: var(--surface-alt); }
-.cmp-car { display: inline-block; width: 14px; color: var(--text-gray); }
+/* 그룹 행 — 하위 할 일의 «부모»임이 한눈에 보여야 한다.
+   좌측 강조선 + 이름/코드/요약을 한 줄에 모아 시선 이동을 줄인다. */
+.cmp-car { display: inline-block; width: 16px; color: var(--main-dark); font-size: var(--fs-12); }
+.cmp-gname { font-size: var(--fs-14); font-weight: var(--fw-bold); color: var(--text-black); margin-right: 8px; }
+.cmp-gsum {
+  display: inline-block; margin-left: 10px; padding: 2px 9px;
+  border-radius: var(--radius-pill); background: var(--surface); border: 1px solid var(--card-line);
+  font-size: var(--fs-12); font-weight: var(--fw-medium); color: var(--text-gray);
+}
+.cmp-gsum.is-full { background: var(--status-success-bg); border-color: var(--status-success-border); color: var(--status-success-fg); }
+.cmp-table tr.cmp-grp td:first-child { box-shadow: inset 3px 0 0 var(--main); }
 .cmp-gcode { font-size: var(--fs-12); font-weight: var(--fw-regular); color: var(--text-gray); }
 .cmp-gm { font-weight: var(--fw-regular); font-size: var(--fs-12); color: var(--text-gray); }
 .cmp-c-main { width: 30%; min-width: 200px; }
-.cmp-c-cy { width: 132px; font-size: var(--fs-12); color: var(--text-gray); }
+.cmp-c-cy { width: 132px; font-size: var(--fs-13); color: var(--text-gray); line-height: 1.5; }
 .cmp-c-rd { width: 92px; }
 .cmp-c-st { width: 104px; }
-.cmp-c-ac { width: 140px; font-size: var(--fs-12); color: var(--text-gray); }
+.cmp-c-ac { width: 140px; font-size: var(--fs-13); color: var(--text-gray); line-height: 1.5; }
 .cmp-c-dc { width: 76px; }
 .cmp-c-law { width: 52px; text-align: center; }
 /* 수행 위치 열 — 업무유형 축(2026-08-18). 목록에서 «어디서 하는 일인지»를 읽는다 */
@@ -4185,12 +4239,14 @@ p > .dx-note-gap { display: inline; }
 /* 실측 원장 집계 — 등록분과 시각으로 구분한다(수치 뜻이 다르다) */
 .cmp-real { font-weight: var(--fw-semibold); color: var(--text-black); }
 .cmp-real-tag { display: inline-block; margin-left: 4px; font-size: var(--fs-12); }
-.cmp-c-way .chip-status { white-space: normal; text-align: left; }
+.cmp-c-way .chip-status { white-space: normal; text-align: left; line-height: 1.45; }
+.cmp-c-way { line-height: 1.6; }
 /* 초안 표시 — 발주처 확정이 아니라 개발측 대조 결과임을 숨기지 않는다(§19) */
 .cmp-draft {
-  display: inline-block; margin-left: 4px; padding: 1px 5px;
-  border: 1px dashed var(--status-warning-border); border-radius: var(--radius-xs);
-  font-size: var(--fs-12); color: var(--status-warning-fg); background: var(--status-warning-bg);
+  display: inline-block; margin-left: 5px; padding: 0 4px;
+  border-radius: var(--radius-xs);
+  font-size: var(--fs-12); color: var(--text-gray); background: var(--surface-alt);
+  border: 1px solid var(--card-line);
 }
 /* 갈 곳이 아직 없는 경로 — 버튼처럼 보이면 안 된다 */
 .cmp-cta-off {
@@ -4211,7 +4267,10 @@ p > .dx-note-gap { display: inline; }
 .cmp-c-fchips-h { width: 34%; }
 .cmp-c-ck { width: 36px; text-align: center; }
 .cmp-c-act { width: 260px; text-align: right; white-space: nowrap; }
-.cmp-c-stg { width: 32%; min-width: 240px; }
+.cmp-c-stg { width: 30%; min-width: 220px; }
+/* 문서 목록은 이행 관리보다 첫 열(문서명)이 길다 — 같은 30% 로 두면 제목이
+   석 줄로 접힌다. 열 구성이 다른 화면이라 페이지 범위에서만 비율을 바꾼다. */
+[data-dy-page="cmp-docs"] .cmp-c-main { width: 36%; }
 .cmp-c-stg .chip-mini { margin: 1px 2px 1px 0; }
 /* 목록의 업무단계 칩도 링크다(D-7) — 밑줄은 hover 에서만 준다(칩이 시끄러워지지 않게) */
 .cmp-c-stg a.chip-mini { text-decoration: none; }
@@ -4219,12 +4278,12 @@ p > .dx-note-gap { display: inline; }
 .cmp-c-stg a.chip-mini:focus-visible { outline: 2px solid var(--main); outline-offset: 1px; }
 .cmp-slink {
   display: inline; padding: 0; border: 0; background: none; cursor: pointer;
-  font-family: inherit; font-size: var(--fs-13); font-weight: var(--fw-semibold);
-  color: var(--text-black); text-align: left; line-height: 1.5;
+  font-family: inherit; font-size: var(--fs-14); font-weight: var(--fw-semibold);
+  color: var(--text-black); text-align: left; line-height: 1.55;
 }
 .cmp-slink:hover { color: var(--main-dark); text-decoration: underline; }
 .cmp-slink:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
-.cmp-scode { display: block; margin-top: 2px; font-size: var(--fs-12); color: var(--text-gray); }
+.cmp-scode { display: block; margin-top: 4px; font-size: var(--fs-12); color: var(--text-gray); line-height: 1.5; }
 .cmp-law-btn {
   min-width: 32px; min-height: 32px; padding: 0;
   border: 0; background: none; cursor: pointer;
@@ -4241,14 +4300,14 @@ p > .dx-note-gap { display: inline; }
 .cmp-fchips button.chip-status:focus-visible { outline: 2px solid var(--main); outline-offset: 1px; }
 
 /* ── 정의 목록 (법령 인라인·상세 좌측) ────────────────────────────────── */
-.cmp-dl { display: flex; flex-direction: column; gap: 8px; margin: 0; }
+.cmp-dl { display: flex; flex-direction: column; gap: 12px; margin: 0; }
 .cmp-dl > div { display: grid; grid-template-columns: 108px minmax(0, 1fr); gap: 8px; }
 .cmp-dl dt { font-size: var(--fs-12); color: var(--text-gray); font-weight: var(--fw-semibold); }
-.cmp-dl dd { margin: 0; font-size: var(--fs-13); color: var(--text-black); line-height: 1.6; word-break: break-word; }
+.cmp-dl dd { margin: 0; font-size: var(--fs-13); color: var(--text-black); line-height: 1.65; word-break: break-word; }
 
 /* ── 부서 이행 도트 ───────────────────────────────────────────────────── */
-.cmp-dots { display: flex; gap: 2px; flex-wrap: wrap; max-width: 240px; }
-.cmp-dots i { display: block; width: 9px; height: 9px; border-radius: var(--radius-xs); background: var(--gray-200); }
+.cmp-dots { display: flex; gap: 3px; flex-wrap: wrap; max-width: 260px; }
+.cmp-dots i { display: block; width: 11px; height: 11px; border-radius: var(--radius-xs); background: var(--gray-200); }
 .cmp-dots i.ok { background: var(--main); }
 .cmp-dots i.na { background: var(--status-warning-border); }
 .cmp-dot-k { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; }
@@ -4264,18 +4323,18 @@ p > .dx-note-gap { display: inline; }
 /* 좌측 정의 패널은 고정 340px 이 아니라 유동이다 — 초광폭(1920)에서 340px 에
    묶어 두면 법령·적용대상 문장이 서너 줄로 접히고 우측만 과하게 넓어진다.
    브레이크포인트를 새로 만들지 않고 clamp 로 처리한다(§8). */
-.cmp-two { display: grid; grid-template-columns: minmax(320px, 24%) minmax(0, 1fr); gap: 16px; align-items: start; }
+.cmp-two { display: grid; grid-template-columns: minmax(320px, 24%) minmax(0, 1fr); gap: 20px; align-items: start; }
 /* 2단 상세 안의 표는 목록 화면보다 좁은 칸에 들어간다 — 목록용 min-width(720px)를
    그대로 쓰면 1024 에서 가로 스크롤이 생긴다. 열이 5개뿐이라 더 좁혀도 읽힌다. */
 .cmp-two .cmp-table { min-width: 520px; }
-.cmp-two-l { padding: 16px; background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); }
+.cmp-two-l { padding: 20px; background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); }
 .cmp-two-r { min-width: 0; }
 .cmp-two-doc { padding: 0; }
 .cmp-detail-code { display: block; margin-bottom: 2px; }
-.cmp-detail-h { font-size: var(--fs-18); font-weight: var(--fw-bold); color: var(--text-black); line-height: 1.4; margin: 2px 0 6px; }
-.cmp-detail-h3 { font-size: var(--fs-14); font-weight: var(--fw-bold); color: var(--text-black); margin: 0; }
-.cmp-detail-sum { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--card-line); }
-.cmp-detail-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.cmp-detail-h { font-size: var(--fs-20); font-weight: var(--fw-bold); color: var(--text-black); line-height: 1.4; margin: 4px 0 10px; }
+.cmp-detail-h3 { font-size: var(--fs-15); font-weight: var(--fw-bold); color: var(--text-black); margin: 0; }
+.cmp-detail-sum { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--card-line); }
+.cmp-detail-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
 .cmp-detail-act { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .cmp-detail-prev { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--card-line); }
 .cmp-gapbox { text-align: left; padding: 16px; border: 1px dashed var(--card-line); border-radius: var(--radius-button); margin-top: 12px; }
@@ -4341,12 +4400,12 @@ p > .dx-note-gap { display: inline; }
 .cmp-bulk-list .cmp-dim { display: block; font-size: var(--fs-12); margin-top: 2px; }
 
 /* ── 누락 점검 ────────────────────────────────────────────────────────── */
-.cmp-gap-head { margin: 12px 0 10px; }
+.cmp-gap-head { margin: 16px 0 14px; }
 .cmp-gap-n { font-size: var(--fs-16); font-weight: var(--fw-bold); color: var(--text-black); margin: 0 0 2px; }
-.cmp-gap-blk { border: 1px solid var(--card-line); border-radius: var(--radius-button); overflow: hidden; margin-bottom: 12px; }
+.cmp-gap-blk { border: 1px solid var(--card-line); border-radius: var(--radius-button); overflow: hidden; margin-bottom: 16px; }
 .cmp-gap-h {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-  margin: 0; padding: 9px 13px;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin: 0; padding: 12px 14px;
   background: var(--status-danger-bg); border-bottom: 1px solid var(--card-line);
   font-size: var(--fs-13); font-weight: var(--fw-bold); color: var(--status-danger-fg);
 }
@@ -4363,7 +4422,7 @@ p > .dx-note-gap { display: inline; }
 .cmp-ax-btn { border: 0; cursor: pointer; font-family: inherit; }
 .cmp-ax-btn:hover { text-decoration: underline; }
 .cmp-ax-btn:focus-visible { outline: 2px solid var(--main); outline-offset: 1px; }
-.cmp-gap-yr { display: block; margin-top: 5px; }
+.cmp-gap-yr { display: block; margin-top: 7px; line-height: 1.9; }
 .cmp-gap-yr .chip-status { margin-right: 4px; }
 .cmp-gap-blk .cmp-table { min-width: 640px; }
 .cmp-gap-blk .cmp-table tr:last-child td { border-bottom: 0; }
