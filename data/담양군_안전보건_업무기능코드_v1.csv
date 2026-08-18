@@ -1,0 +1,15 @@
+﻿기능코드,기능명,종류,연결메뉴,딥링크,판정출처,상태,비고
+RSK_REGULAR,정기 위험성평가,INTERNAL,rsk-list,rsk-list.html?year={year},RSK,LIVE,probe RSK:survey·improve 실재
+RSK_OCCASIONAL,수시 위험성평가,INTERNAL,rsk-occ,rsk-occ.html,RSK,PLANNED,화면·데이터 실재하나 수시용 완료판정 함수 미작성
+EDU_STATUS,안전보건교육 이수현황,INTERNAL,edu-status,edu-status.html,EDU,LIVE,probe EDU:quarter·half 실재. 완료는 «결과 있음»이지 이수율 100% 아님
+EDU_ETC,기타 교육(특별교육 등),INTERNAL,edu-etc,edu-etc.html,EDU,PLANNED,등록 경로 완비. perCourseCheck:false 라 «실시 기록 존재» 이상 판정 불가
+COMPLY_IND,의무 이행점검(산업),INTERNAL,sbm-comply,menu.html?m=comply,DEPTCHK,LIVE,DEPTCHK comply-industrial
+COMPLY_CIT,의무 이행점검(시민),INTERNAL,sbm-comply,menu.html?m=comply,DEPTCHK,LIVE,DEPTCHK comply-citizen. 공중이용시설 «안전점검»은 미포함(범위 1/3)
+POLICY_POST,경영방침 게시,INTERNAL,sbm-policy,menu.html?m=policy,DEPTCHK,LIVE,게시 축만 영속. 방침 본문 상태는 인메모리
+WORKENV,작업환경측정,INTERNAL,sbm-workenv,work-env.html,SH,LIVE,probe SH:workenv 실재
+HEALTH,건강검진(일반·특수),INTERNAL,sbm-health,health-exam.html,SH,PLANNED,"addHealth/completeHealth 실재, probe 미작성. «배치전» 축 결측"
+BUDGET,예산 편성·집행 점검표,INTERNAL,bgt-main,bgt-main.html,,NONE,편성 행위가 아니라 점검표. 부서 단위 판정 불가
+FACIL,시설물 대장·위험도,INTERNAL,fac-list,fac-list.html,,NONE,FMS 수신 대장 — 이행 판정 축 없음
+EXT_ELEV,승강기안전종합정보망,EXTERNAL,,,,NONE,"외부 등록이 실체, 시스템은 결과 사본 보관"
+EXT_PLAY,어린이놀이시설 안전관리시스템,EXTERNAL,,,,NONE,동상
+EXT_ONNARA,온나라 전자결재,EXTERNAL,,,,NONE,공문 결재 — 연동 전

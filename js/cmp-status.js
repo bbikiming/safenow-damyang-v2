@@ -32,7 +32,7 @@
         seg2: 'dept',           /* L2 — dept | stage */
         seg3: 'fac',            /* L3 — fac | stage */
         year: 0,
-        q: '', cycle: '', st: '', axis: '', dept: '', facCls: '',
+        q: '', cycle: '', st: '', axis: '', dept: '', facCls: '', way: '',
         open: {},               /* itemId → 펼침 */
         law: {},                /* stageId → 법령 인라인 펼침 */
         detail: '',             /* 이행 상세 대상 stageId */
@@ -102,12 +102,13 @@
             else if (cy.cc !== S.cycle) return false;
         }
         if (S.st) { var j = C().judge(s, S.year); if (!j || j.key !== S.st) return false; }
+        if (S.way && (s.taskType || 'UNKNOWN') !== S.way) return false;
         if (S.axis) { if (C().axesOf(s.itemId).indexOf(S.axis) < 0) return false; }
         if (S.dept && !D().stageDeptHit(s, S.dept)) return false;
         return true;
     }
     function viewStages() { return levelStages().filter(stageMatch); }
-    function filtering() { return !!(S.q || S.cycle || S.st || S.axis || S.dept); }
+    function filtering() { return !!(S.q || S.cycle || S.st || S.axis || S.dept || S.way); }
 
     /* =========================================================================
      * 렌더
@@ -191,13 +192,18 @@
 
     function kpis(list) {
         var k = C().kpiOf(list, S.year);
-        function card(title, value, unit, foot, tone) {
-            return '<div class="kpi-card">' +
-                '<div class="kpi-card-label"><span class="kpi-card-title">' + esc(title) + '</span></div>' +
+        /* act 가 있으면 카드 자체가 버튼이다 — 목적지가 하나로 정해지는 카드만
+         * 누르게 한다(설계 §3-2). 이행률은 여러 상태의 합이라 링크를 만들지 않는다. */
+        function card(title, value, unit, foot, tone, act, hint) {
+            var inner =
+                '<div class="kpi-card-label"><span class="kpi-card-title">' + esc(title) + '</span>' +
+                    (hint ? '<span class="cmp-kpi-go">' + esc(hint) + ' →</span>' : '') + '</div>' +
                 '<div class="kpi-card-value' + (tone ? ' ' + tone : '') + '">' + value +
                     (unit ? '<span class="unit">' + esc(unit) + '</span>' : '') + '</div>' +
-                '<div class="kpi-card-foot">' + foot + '</div>' +
-            '</div>';
+                '<div class="kpi-card-foot">' + foot + '</div>';
+            return act
+                ? '<button type="button" class="kpi-card cmp-kpi-btn" onclick="' + act + '">' + inner + '</button>'
+                : '<div class="kpi-card">' + inner + '</div>';
         }
         var gauge = '<div class="progress cmp-kpi-bar" role="progressbar" aria-valuenow="' + k.rate +
             '" aria-valuemin="0" aria-valuemax="100" aria-label="정기 이행률">' +
@@ -206,15 +212,18 @@
             card('정기 이행률', k.rate, '%', '충족 ' + k.periodicOk + ' / 정기 ' + k.periodic + '개' +
                 (k.na ? ' · 비해당 ' + k.na + '개 제외' : '') + gauge) +
             card('상시 이행 충족', k.eventOk, '/ ' + k.event, '미충족 ' + (k.event - k.eventOk) + '개') +
-            card('미이행 단계', k.unmet, '', '이 중 기한 경과(지연) ' + k.late + '개', 'cmp-kpi-bad') +
+            card('미이행 단계', k.unmet, '', '이 중 기한 경과(지연) ' + k.late + '개', 'cmp-kpi-bad',
+                "CMPST.setTab('gap')", '누락 점검') +
             card('연간 이행 회차', k.rounds, '회', roundsFoot()) +
         '</div>';
     }
     /* 회차 합계는 **단계 기준**이다. 부서·시설 배수를 곱해 적어 두면 근거 없는
        수치가 KPI 자리에 앉는다 — 곱할 수 없는 이유를 대신 밝힌다(§9). */
+    /* 한 줄로 유지한다 — 두 줄이 되면 KPI 카드가 8px 커져 첫 데이터 행이 600px 를
+       넘는다(§14-12, 실측). 뺀 설명은 표 아래 캡션이 이어받는다. */
     function roundsFoot() {
-        if (S.level === 'L2') return '단계 기준 · 부서 배수는 부서 귀속 자료 미취합';
-        if (S.level === 'L3') return '단계 기준 · 시설 건별 배수는 Phase 2';
+        if (S.level === 'L2') return '단계 기준 · 부서 배수 미취합';
+        if (S.level === 'L3') return '단계 기준 · 시설 배수는 Phase 2';
         return '군 전체 · 정기 단계 기준';
     }
 
@@ -223,6 +232,14 @@
         C().stagesOfLevel(S.level).forEach(function (s) { var cy = C().cycleOf(s); if (cy.need > 0) seen[cy.cc] = 1; });
         return [['', '주기 전체']].concat(Object.keys(seen).map(function (cc) { return [cc, C().ccLabel(cc)]; }))
             .concat([['__ev', '상시·수시']]);
+    }
+    function wayOptions() {
+        var c = C().typeCounts();
+        return [['', '수행 위치 전체'],
+                ['PROGRAM', '전용 화면 ' + c.PROGRAM],
+                ['ELECTRONIC_DOC', '공문·문서 ' + c.ELECTRONIC_DOC],
+                ['ATTACHMENT', '결과 등록 ' + c.ATTACHMENT],
+                ['UNKNOWN', '확인 필요 ' + c.UNKNOWN]];
     }
     function statusOptions() {
         var out = [['', '상태 전체']];
@@ -247,12 +264,19 @@
         /* L2 부서별 보기는 표의 단위가 '부서 행'이다 — 결과 건수도 같은 단위로
          * 센다(단계 수를 찍으면 필터가 표에 안 걸린 것처럼 읽힌다, 검수 C-1). */
         var deptSeg = (S.level === 'L2' && S.seg2 === 'dept');
-        var fields = [{ type: 'search', id: 'cs-q', value: S.q, placeholder: deptSeg ? '부서명으로 찾기' : '할 일·법령·수행 주체로 찾기', on: "CMPST.setF('q', this.value)" }];
+        var facSeg = (S.level === 'L3' && S.seg3 === 'fac');
+        /* 검색창 문구는 그 보기가 **실제로 검색하는 것**을 적는다 — 관리대상별 보기는
+         * 시설명·분류·소재지를 찾는다(D-2). 화면이 하지 않는 일을 약속하지 않는다. */
+        var ph = deptSeg ? '부서명으로 찾기'
+               : facSeg ? '시설명·분류·소재지로 찾기'
+               : '할 일·법령·수행 주체로 찾기';
+        var fields = [{ type: 'search', id: 'cs-q', value: S.q, placeholder: ph, on: "CMPST.setF('q', this.value)" }];
         if (S.level === 'L1') {
             fields.push(
                 { type: 'select', id: 'cs-ax', value: S.axis, label: '법령 축', options: axisOptions(), on: "CMPST.setF('axis', this.value)" },
                 { type: 'select', id: 'cs-cy', value: S.cycle, label: '이행주기', options: cycleOptions(), on: "CMPST.setF('cycle', this.value)" },
-                { type: 'select', id: 'cs-st', value: S.st, label: '이행상태', options: statusOptions(), on: "CMPST.setF('st', this.value)" }
+                { type: 'select', id: 'cs-st', value: S.st, label: '이행상태', options: statusOptions(), on: "CMPST.setF('st', this.value)" },
+                { type: 'select', id: 'cs-wy', value: S.way, label: '수행 위치', options: wayOptions(), on: "CMPST.setF('way', this.value)" }
             );
         } else if (S.level === 'L2') {
             fields.push({ type: 'select', id: 'cs-dp', value: S.dept, label: '부서', options: deptOptions(), on: "CMPST.setF('dept', this.value)" });
@@ -282,11 +306,22 @@
     }
 
     function body(list) {
-        if (S.level === 'L2' && S.seg2 === 'dept') return deptTable();
-        if (S.level === 'L2' && S.seg2 === 'stage') return deptDotTable(list);
-        if (S.level === 'L3' && S.seg3 === 'fac') return facTable();
-        return groupTable(list);
+        if (S.level === 'L2' && S.seg2 === 'dept') return mini('dept') + deptTable();
+        if (S.level === 'L2' && S.seg2 === 'stage') return mini('l2stage') + deptDotTable(list);
+        if (S.level === 'L3' && S.seg3 === 'fac') return mini('fac') + facTable();
+        return mini(S.level === 'L3' ? 'l3stage' : 'l1') + groupTable(list);
     }
+    /* 표 위 한 줄 — 와이어프레임 `.mini`. 무엇을 보는 표인지와 **어디를 누르면
+     * 되는지**를 그 자리에서 말한다(D-3). 보기를 전환했을 때 무엇이 달라졌는지가
+     * 표 아래 캡션에 있으면 늦다. */
+    var MINI = {
+        l1: '이행항목을 누르면 하위 할 일이 펼쳐지고, 할 일 줄을 누르면 상세로 들어갑니다.',
+        dept: '부서별 보기 — <b>부서 줄을 누르면 그 부서의 할 일 목록</b>으로 들어갑니다. 보유 업무문서 건수를 누르면 그 부서 문서를 봅니다.',
+        l2stage: '단계별 보기 — 한 할 일을 부서들이 얼마나 이행했는지 봅니다. 할 일 줄을 누르면 상세로 들어갑니다.',
+        fac: '관리대상별 보기 — 시설마다 적용 법령이 달라 적용 단계가 가변입니다. <b>적용 단계 칩을 누르면</b> 그 할 일 상세로 들어갑니다.',
+        l3stage: '단계별 보기 — 시설·공사에 적용되는 할 일을 이행항목별로 봅니다.',
+    };
+    function mini(k) { return '<p class="cmp-mini">' + MINI[k] + '</p>'; }
 
     /* ── 이행항목 그룹 표 (①) ───────────────────────────────────────────────
      * 그룹 기본 펼침 = 그룹 안에 지연·미이행이 있을 때(와이어프레임 동작).
@@ -309,7 +344,7 @@
                영영 못 연다. dropKey 가 Enter/Space 를 클릭으로 수렴시킨다. */
             var head = '<tr class="cmp-grp" role="button" tabindex="0" aria-expanded="' + (open ? 'true' : 'false') + '"' +
                 ' onclick="CMPST.toggleItem(\'' + esc(itemId) + '\')" onkeydown="DYV2.dropKey(event)">' +
-                '<td colspan="4"><span class="cmp-car" aria-hidden="true">' + (open ? '▾' : '▸') + '</span> ' +
+                '<td colspan="5"><span class="cmp-car" aria-hidden="true">' + (open ? '▾' : '▸') + '</span> ' +
                     esc(it.name) + ' <span class="cmp-gcode">' + esc(it.id) + '</span></td>' +
                 '<td class="cmp-num cmp-gm">충족 ' + ok + '/' + g.length + '</td>' +
                 '<td class="cmp-num cmp-gm">' + docs + '건</td>' +
@@ -319,8 +354,8 @@
             return head + g.map(stageRow).join('');
         }).join('');
         return '<div class="cmp-wrap"><table class="table-figma table-compact cmp-table"><thead><tr>' +
-            '<th>할 일(업무단계)</th><th class="cmp-c-cy">이행주기</th><th class="cmp-num cmp-c-rd">회차</th>' +
-            '<th class="cmp-c-st">이행상태</th><th class="cmp-c-ac">수행 주체</th>' +
+            '<th class="cmp-c-main">할 일(업무단계)</th><th class="cmp-c-cy">이행주기</th><th class="cmp-num cmp-c-rd">회차</th>' +
+            '<th class="cmp-c-st">이행상태</th><th class="cmp-c-way">수행 위치</th><th class="cmp-c-ac">수행 주체</th>' +
             '<th class="cmp-num cmp-c-dc">문서</th><th class="cmp-c-law">법령</th>' +
         '</tr></thead><tbody>' + rows + '</tbody></table></div>' + derivedCap();
     }
@@ -338,10 +373,24 @@
             '<td class="cmp-c-cy' + (cy.need ? '' : ' cmp-dim') + '">' + esc(cy.label) + '</td>' +
             '<td class="cmp-num">' + (j.round || '—') + '</td>' +
             '<td>' + chip(j) + '</td>' +
+            '<td class="cmp-c-way">' + wayChip(s) + '</td>' +
             '<td class="cmp-c-ac">' + esc(String(s.actor || '—').split('·')[0].trim()) + '</td>' +
             '<td class="cmp-num' + (j.docs ? '' : ' cmp-dim') + '">' + j.docs + '건</td>' +
             '<td class="cmp-c-law">' + lawBtn(s) + '</td>' +
         '</tr>' + lawRow(s);
+    }
+    /* 수행 위치 칩 — 어디서 하는 일인지 목록에서 바로 읽힌다.
+       초안(DRAFT)·미정(UNKNOWN)은 물음표를 달아 «확정 아님»을 숨기지 않는다. */
+    function wayChip(s) {
+        var t = C().typeOf(s), paths = C().pathsOf(s);
+        if (!paths.length) {
+            return '<span class="chip-status chip-sm warning" title="수행 위치가 아직 정해지지 않았습니다 — 발주처 확인 대상">확인 필요</span>';
+        }
+        var p = paths[0];
+        var name = (p.type === 'PROGRAM' && p.func) ? p.func.name : p.meta.label;
+        var more = paths.length > 1 ? ' <span class="cmp-dim">+' + (paths.length - 1) + '</span>' : '';
+        return '<span class="chip-status chip-sm ' + p.meta.tone + '" title="' + esc(p.meta.label) + '">' + esc(name) + '</span>' + more +
+               (C().needsConfirm(s) ? '<span class="cmp-draft" title="개발측 초안 — 발주처 확정 전">초안</span>' : '');
     }
     function chip(j) {
         if (!j) return '';
@@ -356,7 +405,7 @@
     function lawRow(s) {
         if (!S.law[s.id]) return '';
         var cy = C().cycleOf(s);
-        return '<tr class="cmp-lawrow"><td colspan="7">' +
+        return '<tr class="cmp-lawrow"><td colspan="8">' +
             '<div class="lawinfo-inline">' +
                 '<dl class="cmp-dl">' +
                     '<div><dt>법령근거</dt><dd>' + lawCell(s.law) + '</dd></div>' +
@@ -398,8 +447,14 @@
      * 데이터가 없다(doc-history-data 헤더 주석: sr 은 수발신 기관이지 부서가
      * 아니다). 부서별로 낼 수 있는 것은 ① 적용 단계 수(추정) ② 그 부서가 보유한
      * 업무문서 수뿐이고, 이행 칸은 '자료 미취합'으로 드러낸다(§9-1). */
+    /* 부서 문서 보유량 — 5개년 원장 실측(DYCMPDEPT)이 있으면 그것을, 없으면
+     * 이 화면에서 등록한 문서만 센다.
+     * ⚠ 두 수는 뜻이 다르다 — 실측은 «그 부서 문서 전체»(분류 이전 원장)이고
+     *   등록분은 «이 시스템에 올린 증빙»이다. 화면이 어느 쪽인지 밝힌다. */
     function deptDocCount(name) {
-        return D().allDocs().filter(function (d) { return d.dept === name; }).length;
+        var m = C().deptDocs(name);
+        if (m) return { n: m.total, real: true, byYear: m.byYear };
+        return { n: D().allDocs().filter(function (d) { return d.dept === name; }).length, real: false };
     }
     /* 부서 필터·검색을 **표에도** 건다 — 필터 바에는 조건이 걸린 것으로 표시되는데
      * 표가 전 부서를 그대로 내면 "걸었는데 안 걸린다"가 된다(검수 C-1). 부서
@@ -411,6 +466,18 @@
             return true;
         });
     }
+    /* 보유 문서 셀 — 실측(원장 집계)과 등록분을 구분해 보여준다.
+       실측은 «분류 이전 원장 전체»라 이행 증빙 수가 아니다. */
+    function docCell(name, d) {
+        if (!d.n) return '<span class="cmp-dim">0건</span>';
+        var yrs = d.byYear ? Object.keys(d.byYear).map(function (y) { return y + ' ' + d.byYear[y].toLocaleString(); }).join(' · ') : '';
+        if (d.real) {
+            return '<span class="cmp-real" title="5개년 원장 집계 — ' + esc(yrs) + '">' +
+                   d.n.toLocaleString() + '건</span>' +
+                   '<span class="cmp-dim cmp-real-tag">원장</span>';
+        }
+        return '<a href="cmp-docs.html?dept=' + encodeURIComponent(name) + '">' + d.n + '건</a>';
+    }
     function deptTable() {
         var stages = levelStages();
         var depts = deptRows();
@@ -418,12 +485,17 @@
         var rows = depts.map(function (dp) {
             var mine = stages.filter(function (s) { return D().stageDeptHit(s, dp.name); });
             var per = mine.filter(function (s) { return C().cycleOf(s).need > 0; }).length;
-            return '<tr class="cmp-stg"><td><b>' + esc(dp.name) + '</b></td>' +
+            var docs = deptDocCount(dp.name);
+            /* 행 클릭 → 그 부서의 할 일 목록(D-1). 와이어프레임이 표 위에 명시한
+               흐름이다. 적용 단계 N개를 보여주면서 그 N개를 못 여는 것이 막다른 길이었다. */
+            return '<tr class="cmp-stg cmp-rowlink" onclick="CMPST.openDept(event, \'' + esc(dp.name) + '\')">' +
+                '<td><button type="button" class="cmp-slink">' + esc(dp.name) + '</button></td>' +
                 '<td class="cmp-num">' + mine.length + '개</td>' +
                 '<td class="cmp-num">' + per + '개</td>' +
                 '<td class="cmp-num">' + (mine.length - per) + '개</td>' +
                 '<td><span class="chip-status chip-sm warning">자료 미취합</span></td>' +
-                '<td class="cmp-num">' + deptDocCount(dp.name) + '건</td></tr>';
+                /* 보유 문서는 이 화면 밖(문서 목록)이 답이다(D-5) */
+                '<td class="cmp-num">' + docCell(dp.name, docs) + '</td></tr>';
         }).join('');
         var reg = V().orgDepts().length;
         /* 명단 미확보 안내 행은 전체 보기에서만 — 한 부서로 거른 표 밑에 '나머지
@@ -431,13 +503,26 @@
         var missing = (S.dept || S.q) ? '' :
             '<tr class="cmp-missing"><td colspan="6">… 나머지 ' + (39 - reg) + '개 부서 — <b>명단 미확보</b> (대상 과·사업소 39개 중 ' + reg + '개 등록)</td></tr>';
         return '<div class="cmp-wrap"><table class="table-figma table-compact cmp-table"><thead><tr>' +
-            '<th>부서</th><th class="cmp-num">적용 단계(추정)</th><th class="cmp-num">정기</th>' +
-            '<th class="cmp-num">상시</th><th>정기 이행률</th><th class="cmp-num">보유 업무문서</th>' +
+            '<th class="cmp-c-dept">부서</th><th class="cmp-num cmp-c-n">적용 단계(추정)</th><th class="cmp-num cmp-c-n">정기</th>' +
+            '<th class="cmp-num cmp-c-n">상시</th><th class="cmp-c-rate">정기 이행률</th><th class="cmp-num cmp-c-n">보유 업무문서</th>' +
         '</tr></thead><tbody>' + rows + missing +
         '</tbody></table></div>' +
+        deptDocsNote() +
         '<p class="cmp-cap"><b>부서별 이행 판정은 아직 낼 수 없습니다.</b> 2025년 문서 원장이 재난안전과 소관이라 ' +
             '문서에 <b>담당부서 값이 없습니다</b>(수발신 기관은 부서가 아닙니다). 적용 단계 수는 적용대상 문구에서 부서 이름을 찾은 <b>추정</b>이고, ' +
             '담당부서 연계(새올·온나라)를 받으면 이 표가 실측으로 바뀝니다.</p>';
+    }
+    /* 실측 시드가 실린 경우에만 그 출처와 한계를 밝힌다 — 수치만 크게 보여주면
+       «이 부서는 이행을 많이 했다»로 읽힌다. */
+    function deptDocsNote() {
+        var m = C().deptDocsMeta();
+        if (!m) return '';
+        return '<p class="cmp-cap"><b>보유 업무문서는 5개년 원장 실측입니다</b>(' + esc(m.range) + ' · ' +
+            m.total.toLocaleString() + '건 · ' + m.depts + '개 부서). ' +
+            '다만 원장에 <b>업무단계 분류가 없어 이행 증빙 수가 아닙니다</b> — 그 부서에 문서가 몇 건 있는지까지만 말합니다. ' +
+            (m.excluded && m.excluded.length
+                ? '<b>' + esc(m.excluded.join('·')) + '</b>는 폴더 라벨과 실제 내용이 달라 <b>집계에서 뺐습니다</b>. ' : '') +
+            '나머지 부서는 이 화면에서 등록한 문서만 셉니다.</p>';
     }
     /* ── L2 단계별 보기 — 부서 이행 도트 ─────────────────────────────────── */
     function deptDotTable(list) {
@@ -446,9 +531,12 @@
         var rows = list.map(function (s) {
             var cy = C().cycleOf(s);
             var hit = depts.filter(function (dp) { return D().stageDeptHit(s, dp.name); });
+            /* 도트는 시각 요소다 — title 만 두면 스크린리더에 아무것도 읽히지 않는다(D-10).
+               클릭 목적지는 두지 않는다(부서별 판정이 자료 미취합이라 갈 곳이 없다). */
             var dots = depts.map(function (dp) {
                 var on = hit.indexOf(dp) >= 0;
-                return '<i class="' + (on ? 'na' : '') + '" title="' + esc(dp.name) + (on ? ' — 적용(추정) · 자료 미취합' : ' — 적용 대상 아님(추정)') + '"></i>';
+                var lab = dp.name + (on ? ' — 적용(추정) · 자료 미취합' : ' — 적용 대상 아님(추정)');
+                return '<i class="' + (on ? 'na' : '') + '" role="img" aria-label="' + esc(lab) + '" title="' + esc(lab) + '"></i>';
             }).join('');
             return '<tr class="cmp-stg cmp-rowlink" onclick="CMPST.rowOpen(event, \'' + esc(s.id) + '\')"><td class="cmp-c-main">' +
                     '<button type="button" class="cmp-slink" onclick="CMPST.openDetail(\'' + esc(s.id) + '\')">' + esc(s.name) + '</button>' +
@@ -459,8 +547,8 @@
                 '<td class="cmp-c-law">' + lawBtn(s) + '</td></tr>' + lawRowSpan(s, 5);
         }).join('');
         return '<div class="cmp-wrap"><table class="table-figma table-compact cmp-table"><thead><tr>' +
-            '<th>할 일(업무단계)</th><th class="cmp-c-cy">이행주기</th><th>부서 이행 현황</th>' +
-            '<th class="cmp-num">이행 부서</th><th class="cmp-c-law">법령</th>' +
+            '<th class="cmp-c-main">할 일(업무단계)</th><th class="cmp-c-cy">이행주기</th><th class="cmp-c-dots-h">부서 이행 현황</th>' +
+            '<th class="cmp-num cmp-c-n2">이행 부서</th><th class="cmp-c-law">법령</th>' +
         '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
         '<p class="cmp-legend cmp-cap"><span class="cmp-dot-k"><i class="ok"></i> 이행</span>' +
             '<span class="cmp-dot-k"><i></i> 적용 대상 아님(추정)</span>' +
@@ -527,8 +615,8 @@
                 '<td class="cmp-num">' + (st.length ? ok + '/' + st.length : '—') + '</td></tr>';
         }).join('');
         return '<div class="cmp-wrap"><table class="table-figma table-compact cmp-table"><thead><tr>' +
-            '<th>관리대상</th><th class="cmp-c-ac">소관부서</th><th class="cmp-c-cy">분류</th>' +
-            '<th>적용 단계 이행</th><th class="cmp-num">충족</th>' +
+            '<th class="cmp-c-fac">관리대상</th><th class="cmp-c-ac">소관부서</th><th class="cmp-c-cy">분류</th>' +
+            '<th class="cmp-c-fchips-h">적용 단계 이행</th><th class="cmp-num cmp-c-n2">충족</th>' +
         '</tr></thead><tbody>' + rows +
             (recs.length > show.length
                 ? '<tr class="cmp-missing"><td colspan="5">… 조건에 맞는 ' + recs.length + '개 중 ' + show.length + '개 표시 (FMS 연계 시드 ' + facRecs().length + '건)</td></tr>'
@@ -599,6 +687,7 @@
                     '<div><dt>적용대상</dt><dd>' + esc(s.target || '—') + '</dd></div>' +
                     '<div><dt>이행주체</dt><dd>' + esc(s.actor || '—') + '</dd></div>' +
                 '</dl>' +
+                typeBlock(s) +
                 '<div class="cmp-detail-sum">' +
                     '<dl class="cmp-dl">' +
                         '<div><dt>' + y + '년 이행상태</dt><dd>' + chip(j) +
@@ -606,7 +695,10 @@
                         '<div><dt>회차</dt><dd>' + (cy.need > 0
                             ? j.round + ' <span class="cmp-dim">(' + esc(cy.label) + ' · 기한은 달력 말일 추정)</span>'
                             : '<span class="cmp-dim">상시 — 정기 회차 없음</span>') + '</dd></div>' +
-                        (prev ? '<div><dt>' + prev + '년 실적</dt><dd>' + prevN + '건</dd></div>' : '') +
+                        /* 숫자만 보여주고 못 열면 셀렉터를 찾아 다시 골라야 한다(D-8) */
+                        (prev ? '<div><dt>' + prev + '년 실적</dt><dd>' + (prevN
+                            ? '<button type="button" class="du-link" onclick="CMPST.setDetailYear(' + prev + ')">' + prevN + '건 보기 →</button>'
+                            : '<span class="cmp-dim">0건</span>') + '</dd></div>' : '') +
                     '</dl>' +
                 '</div>' +
             '</div>' +
@@ -622,11 +714,9 @@
                         (canReg && prev && prevN > 0
                             ? '<button type="button" class="btn btn-outline btn-sm" onclick="CMPST.openPull()">📁 ' + prev + '년 문서 불러오기</button>'
                             : '') +
-                        /* 이 화면은 이미 어느 할 일인지 안다 — 마법사에 단계를 실어
-                           보내 168개 중에서 다시 찾게 하지 않는다 */
-                        (canReg
-                            ? '<button type="button" class="btn btn-primary btn-sm" onclick="CMPST.openReg(\'' + esc(s.id) + '\')">＋ 새 문서 등록</button>'
-                            : '') +
+                        /* 유형별 CTA — 발주측 §6.1(모든 업무를 «새 문서 등록»으로
+                           처리하지 않는다). 유형이 비어 있으면 종전 버튼 그대로다. */
+                        (canReg ? ctaButtons(s, y) : '') +
                     '</span>' +
                 '</div>' +
                 (live ? '' : '<p class="cmp-cap"><b>' + y + '년은 지난 연도입니다.</b> 소급 등록을 막기 위해 등록 버튼을 내지 않습니다 — 조회만 됩니다.</p>') +
@@ -641,6 +731,53 @@
                 naBox(s, y) +
             '</div>' +
         '</div>';
+    }
+    /* 유형별 수행 버튼 — 한 단계가 여러 경로를 가지면 **전부** 낸다(계획은 문서,
+     * 실시는 전용화면). 주 경로가 primary, 나머지는 outline 이다.
+     * 갈 수 없는 경로(메뉴 미구현·외부 시스템)는 버튼 대신 **어디서 하는지**를 밝힌다 —
+     * 없는 화면으로 보내는 버튼은 눌러 본 사람에게 배신이다. */
+    function ctaButtons(s, y) {
+        var paths = C().pathsOf(s);
+        if (!paths.length) {
+            /* UNKNOWN — 수행 위치가 아직 정해지지 않았다. 종전 동작을 유지하되
+               그 사실을 숨기지 않는다(§19: 임의로 정하지 않는다). */
+            return '<button type="button" class="btn btn-primary btn-sm" onclick="CMPST.openReg(\'' + esc(s.id) + '\')">＋ 새 문서 등록</button>';
+        }
+        return paths.map(function (p, i) {
+            var cls = 'btn btn-sm ' + (i === 0 ? 'btn-primary' : 'btn-outline');
+            if (p.type === 'PROGRAM') {
+                if (p.reachable) {
+                    return '<a class="' + cls + '" href="' + esc(p.func.href) + '">' + esc(p.func.name) + ' 바로가기 →</a>';
+                }
+                return '<span class="cmp-cta-off" title="연결할 화면이 아직 없습니다">' +
+                    esc((p.func && p.func.name) || '전용 화면') + ' — 연결 대기</span>';
+            }
+            if (p.type === 'ATTACHMENT') {
+                return '<button type="button" class="' + cls + '" onclick="CMPST.openReg(\'' + esc(s.id) + '\')">＋ 결과 등록</button>';
+            }
+            return '<button type="button" class="' + cls + '" onclick="CMPST.openReg(\'' + esc(s.id) + '\')">＋ 업무문서 작성</button>';
+        }).join(' ');
+    }
+    /* 상세 좌측에 붙는 «어디서 수행하나» 블록 — 유형·경로·확정 여부를 한자리에서.
+       DRAFT/UNKNOWN 이면 «우리 초안이지 발주처 확정이 아니다»를 반드시 밝힌다. */
+    function typeBlock(s) {
+        var t = C().typeOf(s), paths = C().pathsOf(s), draft = C().needsConfirm(s);
+        var where = paths.length
+            ? paths.map(function (p) {
+                var nm = p.func ? p.func.name : p.meta.label;
+                var st = (p.func && p.func.state === 'PLANNED') ? ' <span class="cmp-dim">(완료 판정 준비 중)</span>'
+                       : (p.func && p.func.state === 'NONE') ? ' <span class="cmp-dim">(연결 대기)</span>' : '';
+                return '<span class="chip-status chip-sm ' + p.meta.tone + '">' + esc(p.meta.label) + '</span> ' + esc(nm) + st;
+              }).join('<br>')
+            : '<span class="chip-status chip-sm warning">' + esc(t.label) + '</span>';
+        return '<div class="cmp-detail-sum">' +
+            '<dl class="cmp-dl"><div><dt>어디서 수행하나</dt><dd>' + where + '</dd></div>' +
+            (draft
+                ? '<div><dt>분류 상태</dt><dd><span class="chip-status chip-sm warning">확인 필요</span> ' +
+                  '<span class="cmp-dim">개발측이 메뉴를 대조해 만든 <b>초안</b>입니다 — 발주처 확정 전입니다.</span>' +
+                  (s.typeNote ? '<p class="cmp-cap">' + esc(s.typeNote) + '</p>' : '') + '</dd></div>'
+                : '') +
+            '</dl></div>';
     }
     function docTable(docs) {
         return '<div class="cmp-wrap"><table class="table-figma table-compact cmp-table"><thead><tr>' +
@@ -701,7 +838,11 @@
         if (!D().documentIdsOfStage(S.detail, from).length) {
             V().toast(from + '년에 이 할 일로 등록된 문서가 없습니다.'); return;
         }
-        P = { stageId: S.detail, from: from, to: y, q: '', sel: {}, fields: { title: true, sr: true, date: false } };
+        /* 복사 범위는 **전부**다(발주처 결정 2026-08-18, 참고문서 §11 의 5개 검토 항목 확정).
+           체크는 남겨 두되 기본값을 전부 켠다 — 끄고 싶은 담당자를 막을 이유는 없다.
+           결재문서 복제는 온나라 미연동이라 항목 자체를 두지 않는다(없는 기능을 약속하지 않는다). */
+        P = { stageId: S.detail, from: from, to: y, q: '', sel: {},
+              fields: { title: true, sr: true, date: true, stages: true, files: true } };
         renderPull();
     }
     function pullList() {
@@ -740,12 +881,14 @@
                         '</label>';
                     }).join('') : '<div class="v2-empty">조건에 맞는 문서가 없습니다.</div>') +
                 '</div>' +
-                '<p class="cmp-cap"><b>불러오는 것은 메타데이터뿐입니다.</b> ' + P.from + '년 분류 데이터에는 문서명·수발신자·보고일자·생산등록번호만 있고 ' +
-                    '본문과 결재 PDF 는 없습니다 — 결재 PDF 까지 불러오려면 온나라 연동이 필요합니다.</p>' +
+                '<p class="cmp-cap"><b>문서명·수발신자·보고일자·업무단계 매핑·첨부파일을 모두 복사합니다.</b> ' +
+                    '다만 ' + P.from + '년 원장 문서는 <b>메타데이터만</b> 보유해(문서명·수발신자·보고일자·생산등록번호) 복사할 첨부가 없습니다. ' +
+                    '<b>본문과 결재문서는 복제하지 않습니다</b> — 온나라 연동 전이라 원본 자체가 없고, 결재는 새로 받아야 합니다.</p>' +
             '</div>';
         var foot =
             '<span class="cmp-pull-fields">불러올 항목' +
                 fieldCk('title', '문서명') + fieldCk('sr', '수발신자') + fieldCk('date', '보고일자') +
+                fieldCk('stages', '업무단계 매핑') + fieldCk('files', '첨부파일') +
             '</span>' +
             '<button class="btn btn-outline" onclick="DYV2.closeModal()">취소</button>' +
             '<button class="btn btn-primary"' + (n ? '' : ' disabled') + ' onclick="CMPST.pullRun()">불러오기 (' + n + ')</button>';
@@ -775,15 +918,26 @@
             var src = D().docById(id); if (!src) return;
             if (pulledInto(id, P.to)) { skip++; return; }   /* 저장 직전에 한 번 더 — 모달이 열린 사이 생겼을 수 있다 */
             var title = String(src.title || '').split(String(P.from)).join(String(P.to));
+            /* 업무단계 매핑은 **원본이 걸려 있던 전부**를 물려받는다 — 한 문서가 여러
+               할 일의 증빙인데 지금 보고 있는 단계 하나만 남기면 나머지 연결이 끊긴다.
+               (참고문서 §7.3 «한 문서가 여러 업무단계에 해당하는 경우») */
+            var stages = (P.fields.stages && (src.stageIds || []).length)
+                ? src.stageIds.slice()
+                : [P.stageId];
+            if (stages.indexOf(P.stageId) < 0) stages.push(P.stageId);
+            var files = (P.fields.files && (src.files || []).length) ? src.files.slice() : [];
             var r = D().addDocument({
                 title: title,
                 sr: P.fields.sr ? src.sr : '',
                 date: P.fields.date && src.date ? String(src.date).replace(String(P.from), String(P.to)) : P.to + '-01-01',
                 year: P.to,
-                stageIds: [P.stageId],
+                stageIds: stages,
+                files: files,
                 src: 'upload',
                 dept: myDept(),
-                note: P.from + '년 문서(' + id + ') 메타데이터를 불러와 만든 문서 — 본문·결재 PDF 는 온나라 연동 전이라 없습니다.',
+                note: P.from + '년 문서(' + id + ')를 불러와 만든 문서 — 업무단계 ' + stages.length + '개' +
+                      (files.length ? ' · 첨부 ' + files.length + '건' : ' · 원본에 첨부 없음') +
+                      '. 본문·결재문서는 복제하지 않습니다(온나라 연동 전).',
                 presetOf: id,
             });
             if (r.ok) ok++; else fail = r.reason;
@@ -899,10 +1053,18 @@
         return order.map(function (itemId) {
             var it = D().item(itemId) || { id: itemId, name: itemId };
             var g = by[itemId];
+            /* 헤더 → 현황 탭의 그 이행항목(D-6). 누락만 보다가 그 항목의 전체 맥락
+               (충족한 단계까지)으로 나가는 길이다. 축 칩은 **축 세그먼트와 같은 상태**를
+               세팅한다 — 새 필터 축을 만들지 않는다(설계 §3-1). */
             return '<section class="cmp-gap-blk">' +
-                '<h3 class="cmp-gap-h">' + esc(it.name) + ' — ' + g.length + '개 단계 미이행' +
+                '<h3 class="cmp-gap-h">' +
+                    '<button type="button" class="cmp-gap-link" onclick="CMPST.openItem(\'' + esc(itemId) + '\')">' +
+                        esc(it.name) + ' — ' + g.length + '개 단계 미이행' +
+                        '<span class="cmp-gap-go">전체 보기 →</span></button>' +
                     '<span class="cmp-gap-ax">' + C().axesOf(itemId).map(function (a) {
-                        return '<span class="chip-mini wt">' + esc(C().axisLabel(a)) + '</span>';
+                        return '<button type="button" class="chip-mini wt cmp-ax-btn"' +
+                            ' title="' + esc(C().axisLabel(a)) + ' 축만 보기"' +
+                            ' onclick="CMPST.setF(\'axis\',\'' + a + '\')">' + esc(C().axisLabel(a)) + '</button>';
                     }).join('') + '</span></h3>' +
                 '<div class="cmp-wrap"><table class="table-figma table-compact cmp-table"><tbody>' +
                     g.map(function (s) { return gapRow(s, prev); }).join('') +
@@ -931,11 +1093,25 @@
             '<td class="cmp-c-act">' +
                 /* '해당'의 답은 문서다 — 상세를 거치지 않고 마법사를 바로 열되,
                    단계를 실어 보낸다(맥락은 행이 이미 보여주고 있다) */
-                (D().canUpload()
-                    ? '<button type="button" class="btn btn-primary btn-sm" onclick="CMPST.openReg(\'' + esc(s.id) + '\')">해당 — 문서 등록</button> '
-                    : '') +
+                (D().canUpload() ? gapCta(s) + ' ' : '') +
                 (can ? '<button type="button" class="btn btn-outline btn-sm" onclick="CMPST.openNA(\'' + esc(s.id) + '\')">비해당 — 사유 기재</button>' : '') +
             '</td></tr>';
+    }
+    /* 누락 점검 행의 «해당» 버튼 — 발주측 §12 는 [업무 수행]/[결과 등록]/[비해당]
+       3종을 요구한다. 유형이 정해진 단계는 그 유형의 말로 부른다. */
+    function gapCta(s) {
+        var paths = C().pathsOf(s);
+        var p = paths[0];
+        if (p && p.type === 'PROGRAM' && p.reachable) {
+            return '<a class="btn btn-primary btn-sm" href="' + esc(p.func.href) + '">해당 — ' + esc(p.func.name) + ' →</a>';
+        }
+        if (p && p.type === 'ATTACHMENT') {
+            return '<button type="button" class="btn btn-primary btn-sm" onclick="CMPST.openReg(\'' + esc(s.id) + '\')">해당 — 결과 등록</button>';
+        }
+        if (p && p.type === 'ELECTRONIC_DOC') {
+            return '<button type="button" class="btn btn-primary btn-sm" onclick="CMPST.openReg(\'' + esc(s.id) + '\')">해당 — 업무문서 작성</button>';
+        }
+        return '<button type="button" class="btn btn-primary btn-sm" onclick="CMPST.openReg(\'' + esc(s.id) + '\')">해당 — 문서 등록</button>';
     }
     function gapSel(id, on) { if (on) S.gapSel[id] = 1; else delete S.gapSel[id]; render(); }
     /* 일괄 처리는 **대상 목록과 건수를 반드시 명시**한다(CLAUDE.md §4 CRUD 기준) */
@@ -1002,7 +1178,7 @@
         else S[k] = v;
         rerender();
     }
-    function resetF() { S.q = ''; S.cycle = ''; S.st = ''; S.axis = ''; S.dept = ''; S.facCls = ''; rerender(); }
+    function resetF() { S.q = ''; S.cycle = ''; S.st = ''; S.axis = ''; S.dept = ''; S.facCls = ''; S.way = ''; rerender(); }
     function setTab(t) { S.tab = t; S.detail = ''; render(); }
     function setLevel(l) { S.level = l; S.st = ''; S.q = ''; render(); }
     function setSeg(k, v) { S[k] = v; render(); }
@@ -1025,8 +1201,40 @@
     }
     /* 행 클릭 — 행 안의 버튼·링크·체크박스가 눌린 것이면 양보한다 */
     function rowOpen(e, stageId) {
-        if (e && e.target && e.target.closest && e.target.closest('button, a, input, label')) return;
+        if (e && e.target && e.target.closest && e.target.closest('a, input, label')) return;
         openDetail(stageId);
+    }
+    /* 부서 행 → 그 부서의 할 일 목록(D-1). 부서명 셀의 버튼은 행과 같은 동작이라
+       양보하지 않는다(키보드 경로 역할) — 문서 건수 링크만 비켜 준다. */
+    /* 누락 점검 그룹 헤더 → 현황 탭에서 그 이행항목의 **전체 단계**로(D-6).
+     * 미이행만 보다가 충족한 것까지 함께 보는 맥락으로 나가는 길이다.
+     *
+     * 계층만 맞추면 안 된다 — L2·L3 는 보기(세그먼트)가 갈려 있어서 부서 표·시설
+     * 표가 그려지면 단계가 한 줄도 안 보인다(구현 중 실제로 낸 결함). 그래서
+     * ① 계층 ② 단계가 보이는 보기 ③ 그 항목만 남기는 조회 조건 셋을 함께 맞춘다.
+     *
+     * 조건은 **기존 검색창**에 항목 코드를 넣어 건다 — 새 필터 축을 만들지 않으면
+     * '무엇이 걸렸나'가 검색창에서 읽히고 지우면 전체로 돌아온다(설계 §3-1). */
+    function openItem(itemId) {
+        var first = D().stagesOfItem(itemId)[0];
+        var it = D().item(itemId) || { name: itemId };
+        if (first) S.level = C().levelOf(first).level;
+        S.tab = 'status';
+        S.seg2 = 'stage'; S.seg3 = 'stage';
+        S.open[itemId] = true;
+        S.q = itemId; S.st = '';
+        render();
+        try { window.scrollTo(0, 0); } catch (e) {}
+        V().toast(it.name + ' — 이 의무의 할 일 전체를 봅니다. 검색창을 비우면 전체 목록으로 돌아갑니다.');
+    }
+    function openDept(e, name) {
+        if (e && e.target && e.target.closest && e.target.closest('a')) return;
+        S.dept = name;
+        S.seg2 = 'stage';
+        S.q = '';
+        render();
+        try { window.scrollTo(0, 0); } catch (err) {}
+        V().toast(name + ' — 그 부서에 적용되는 할 일 목록입니다.');
     }
 
     function init(mount) {
@@ -1042,6 +1250,7 @@
         setF: setF, resetF: resetF, setTab: setTab, setLevel: setLevel, setSeg: setSeg,
         toggleItem: toggleItem, toggleLaw: toggleLaw,
         openDetail: openDetail, closeDetail: closeDetail, setDetailYear: setDetailYear, rowOpen: rowOpen,
+        openDept: openDept, openItem: openItem,
         openPull: openPull, pullQ: pullQ, pullSel: pullSel, pullAll: pullAll, pullNone: pullNone,
         pullField: pullField, pullRun: pullRun,
         openNA: openNA, saveNA: saveNA, clearNA: clearNA, openReg: openReg,

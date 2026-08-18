@@ -4113,23 +4113,37 @@ p > .dx-note-gap { display: inline; }
 /* ── 서브탭 · 계층탭 (표준 .sub-tabs / .tabs 위 modifier) ───────────────
    두 축을 **한 줄**에 둔다 — 각자 한 줄을 쓰면 첫 데이터 행이 900px 밖으로
    밀린다(§14-12 실측). 왼쪽이 화면 축(현황/누락), 오른쪽이 계층 축이다. */
-.cmp-tabbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
+.cmp-tabbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 2px; }
 /* 이 두 화면만의 밀도 조정 — 공용 컴포넌트의 기본 여백을 그대로 두면 1280×900 에서
    첫 데이터 행이 610px 로 밀린다(§14-12 는 600px 이내를 요구한다). 전역 값을 건드리면
    다른 화면이 함께 움직이므로 페이지 범위로만 좁힌다. */
-[data-dy-page^="cmp-"] .dy-notice { margin-bottom: 8px; }
+[data-dy-page^="cmp-"] .dy-notice { margin-bottom: 6px; }
 .cmp-subtabs { flex: 1 1 260px; }
 .cmp-lvtabs { flex: 0 0 auto; flex-wrap: wrap; }
 .cmp-lvtabs .tab { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; flex: 0 0 auto; }
 
 /* ── KPI (표준 .kpi-card 4장 그리드) ──────────────────────────────────── */
-.cmp-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 8px; }
-.cmp-kpis .kpi-card { padding: 9px 14px; gap: 3px; }
+/* 여백은 §14-12(1280×900 첫 데이터 행 600px 이내)를 맞추는 값이다 — 표 위 한 줄
+   안내(.cmp-mini)가 들어오면서 624px 로 밀렸고, 폰트를 줄이는 대신 여백만 깎았다.
+   더 늘리려면 첫 행 위치를 다시 재고 넘지 않는지 확인할 것. */
+.cmp-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 4px; }
+.cmp-kpis .kpi-card { padding: 6px 14px; gap: 0; }
 .cmp-kpis .kpi-card-title { font-size: var(--fs-12); }
-.cmp-kpis .kpi-card-value { font-size: var(--fs-22); }
-.cmp-kpis .kpi-card-foot { display: block; line-height: 1.45; font-size: var(--fs-12); }
+.cmp-kpis .kpi-card-value { font-size: var(--fs-22); line-height: 1.25; }
+.cmp-kpis .kpi-card-foot { display: block; line-height: 1.4; font-size: var(--fs-12); }
 .cmp-kpi-bad { color: var(--status-danger-fg); }
-.cmp-kpi-bar { height: 5px; margin-top: 6px; }
+.cmp-kpi-bar { height: 5px; margin-top: 4px; }
+/* 목적지가 하나로 정해지는 KPI 만 버튼이 된다(설계 §3-2) — 카드 시각은 그대로 두고
+   버튼 기본값만 지운다. 갈 곳을 라벨 옆에 밝혀 누를 수 있음을 알린다. */
+.cmp-kpi-btn { font-family: inherit; text-align: left; cursor: pointer; width: 100%; }
+.cmp-kpi-btn:hover { border-color: var(--main); }
+.cmp-kpi-btn:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
+.cmp-kpi-go { margin-left: auto; font-size: var(--fs-12); font-weight: var(--fw-semibold); color: var(--main-dark); white-space: nowrap; }
+.cmp-kpis .kpi-card-label { display: flex; align-items: center; gap: 6px; }
+
+/* 표 위 한 줄 — 무엇을 보는 표인지와 어디를 누르면 되는지(D-3) */
+.cmp-mini { margin: 0 0 2px; font-size: var(--fs-12); color: var(--text-gray); line-height: 1.5; }
+.cmp-mini b { color: var(--text-black); font-weight: var(--fw-semibold); }
 
 /* ── 세그먼트 토글 (기존 표준 없음 — 요소 자체가 신규) ───────────────── */
 .cmp-seg { display: inline-flex; flex-wrap: wrap; max-width: 100%; border: 1px solid var(--card-line); border-radius: var(--radius-md); overflow: hidden; }
@@ -4144,7 +4158,7 @@ p > .dx-note-gap { display: inline; }
 .cmp-seg-btn:focus-visible { outline: 2px solid var(--main); outline-offset: -2px; }
 
 /* ── 표 (표준 .table-figma 위 그룹/단계 행 modifier) ──────────────────── */
-.cmp-table { min-width: 720px; }
+.cmp-table { min-width: 820px; table-layout: fixed; }
 .cmp-table th { white-space: nowrap; }
 .cmp-table tr.cmp-grp { background: var(--surface-alt); cursor: pointer; }
 .cmp-table tr.cmp-grp:hover { background: var(--brand-50); }
@@ -4159,17 +4173,50 @@ p > .dx-note-gap { display: inline; }
 .cmp-car { display: inline-block; width: 14px; color: var(--text-gray); }
 .cmp-gcode { font-size: var(--fs-12); font-weight: var(--fw-regular); color: var(--text-gray); }
 .cmp-gm { font-weight: var(--fw-regular); font-size: var(--fs-12); color: var(--text-gray); }
-.cmp-c-main { min-width: 220px; }
+.cmp-c-main { width: 30%; min-width: 200px; }
 .cmp-c-cy { width: 132px; font-size: var(--fs-12); color: var(--text-gray); }
 .cmp-c-rd { width: 92px; }
 .cmp-c-st { width: 104px; }
 .cmp-c-ac { width: 140px; font-size: var(--fs-12); color: var(--text-gray); }
 .cmp-c-dc { width: 76px; }
 .cmp-c-law { width: 52px; text-align: center; }
+/* 수행 위치 열 — 업무유형 축(2026-08-18). 목록에서 «어디서 하는 일인지»를 읽는다 */
+.cmp-c-way { width: 14%; min-width: 96px; }
+/* 실측 원장 집계 — 등록분과 시각으로 구분한다(수치 뜻이 다르다) */
+.cmp-real { font-weight: var(--fw-semibold); color: var(--text-black); }
+.cmp-real-tag { display: inline-block; margin-left: 4px; font-size: var(--fs-12); }
+.cmp-c-way .chip-status { white-space: normal; text-align: left; }
+/* 초안 표시 — 발주처 확정이 아니라 개발측 대조 결과임을 숨기지 않는다(§19) */
+.cmp-draft {
+  display: inline-block; margin-left: 4px; padding: 1px 5px;
+  border: 1px dashed var(--status-warning-border); border-radius: var(--radius-xs);
+  font-size: var(--fs-12); color: var(--status-warning-fg); background: var(--status-warning-bg);
+}
+/* 갈 곳이 아직 없는 경로 — 버튼처럼 보이면 안 된다 */
+.cmp-cta-off {
+  display: inline-block; padding: 6px 12px;
+  border: 1px dashed var(--card-line); border-radius: var(--radius-button);
+  font-size: var(--fs-12); color: var(--text-gray); background: var(--surface-alt);
+}
+/* 고정 레이아웃(.cmp-table)의 열 폭 — **헤더(첫 행) 기준**으로 정해진다. 그래서
+   폭 클래스는 th 에도 붙여야 하고, 비율로 두어야 초광폭(1920)에서 남는 폭이
+   전 열에 비례 분배된다. 비율이 없으면 폭 미지정 열 하나가 다 먹어(첫 열 913px)
+   나머지 열이 오른쪽 끝에 몰린다. */
+.cmp-c-dept { width: 24%; }
+.cmp-c-rate { width: 20%; }
+.cmp-c-n { width: 13%; }
+.cmp-c-n2 { width: 96px; }
+.cmp-c-dots-h { width: 28%; }
+.cmp-c-fac { width: 24%; }
+.cmp-c-fchips-h { width: 34%; }
 .cmp-c-ck { width: 36px; text-align: center; }
 .cmp-c-act { width: 260px; text-align: right; white-space: nowrap; }
-.cmp-c-stg { min-width: 240px; }
+.cmp-c-stg { width: 32%; min-width: 240px; }
 .cmp-c-stg .chip-mini { margin: 1px 2px 1px 0; }
+/* 목록의 업무단계 칩도 링크다(D-7) — 밑줄은 hover 에서만 준다(칩이 시끄러워지지 않게) */
+.cmp-c-stg a.chip-mini { text-decoration: none; }
+.cmp-c-stg a.chip-mini:hover { text-decoration: underline; }
+.cmp-c-stg a.chip-mini:focus-visible { outline: 2px solid var(--main); outline-offset: 1px; }
 .cmp-slink {
   display: inline; padding: 0; border: 0; background: none; cursor: pointer;
   font-family: inherit; font-size: var(--fs-13); font-weight: var(--fw-semibold);
@@ -4185,6 +4232,9 @@ p > .dx-note-gap { display: inline; }
 }
 .cmp-law-btn:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
 .cmp-fchips .chip-status { margin: 1px 3px 1px 0; }
+/* 단계명이 긴 칩은 셀보다 길어진다 — nowrap 이면 셀 밖으로 넘쳐 잘린다(1024 실측).
+   칩 안에서 줄바꿈시켜 셀 폭 안에 담는다. */
+.cmp-fchips .chip-status { white-space: normal; text-align: left; }
 /* L3 단계 칩은 버튼이다(막다른 길 방지) — chip-status 시각은 그대로 쓰고 버튼 기본값만 지운다 */
 .cmp-fchips button.chip-status { cursor: pointer; font-family: inherit; }
 .cmp-fchips button.chip-status:hover { text-decoration: underline; }
@@ -4211,7 +4261,13 @@ p > .dx-note-gap { display: inline; }
 .cmp-legend > span { display: inline-flex; align-items: center; gap: 5px; }
 
 /* ── 2단 상세 (좌 340 고정 / 우 가변, lg 이하 1단) ─────────────────────── */
-.cmp-two { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 16px; align-items: start; }
+/* 좌측 정의 패널은 고정 340px 이 아니라 유동이다 — 초광폭(1920)에서 340px 에
+   묶어 두면 법령·적용대상 문장이 서너 줄로 접히고 우측만 과하게 넓어진다.
+   브레이크포인트를 새로 만들지 않고 clamp 로 처리한다(§8). */
+.cmp-two { display: grid; grid-template-columns: minmax(320px, 24%) minmax(0, 1fr); gap: 16px; align-items: start; }
+/* 2단 상세 안의 표는 목록 화면보다 좁은 칸에 들어간다 — 목록용 min-width(720px)를
+   그대로 쓰면 1024 에서 가로 스크롤이 생긴다. 열이 5개뿐이라 더 좁혀도 읽힌다. */
+.cmp-two .cmp-table { min-width: 520px; }
 .cmp-two-l { padding: 16px; background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); }
 .cmp-two-r { min-width: 0; }
 .cmp-two-doc { padding: 0; }
@@ -4295,6 +4351,18 @@ p > .dx-note-gap { display: inline; }
   font-size: var(--fs-13); font-weight: var(--fw-bold); color: var(--status-danger-fg);
 }
 .cmp-gap-ax { display: inline-flex; gap: 4px; margin-left: auto; }
+/* 헤더 → 그 이행항목의 전체 맥락 · 축 칩 → 축 필터(D-6) */
+.cmp-gap-link {
+  display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 0; border: 0; background: none; cursor: pointer;
+  font-family: inherit; font-size: var(--fs-13); font-weight: var(--fw-bold); color: inherit; text-align: left;
+}
+.cmp-gap-link:hover { text-decoration: underline; }
+.cmp-gap-link:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
+.cmp-gap-go { font-size: var(--fs-12); font-weight: var(--fw-regular); opacity: .85; white-space: nowrap; }
+.cmp-ax-btn { border: 0; cursor: pointer; font-family: inherit; }
+.cmp-ax-btn:hover { text-decoration: underline; }
+.cmp-ax-btn:focus-visible { outline: 2px solid var(--main); outline-offset: 1px; }
 .cmp-gap-yr { display: block; margin-top: 5px; }
 .cmp-gap-yr .chip-status { margin-right: 4px; }
 .cmp-gap-blk .cmp-table { min-width: 640px; }
@@ -4303,9 +4371,12 @@ p > .dx-note-gap { display: inline; }
 /* ── 반응형 — 표준 4단계 값만 (§8) ────────────────────────────────────── */
 @media (max-width: 1279px) {
   .cmp-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* 2단 상세는 xl 아래에서 1단으로 내린다 — 1024 에서 2단을 유지하면 우측 칸이
+     405px 밖에 안 남아 문서 표가 가로 스크롤된다(실측). 좌측 정의는 위, 문서는
+     아래로 쌓아 전폭을 쓴다. */
+  .cmp-two { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 1023px) {
-  .cmp-two { grid-template-columns: minmax(0, 1fr); }
   .cmp-c-act { width: auto; text-align: left; white-space: normal; }
 }
 @media (max-width: 767px) {

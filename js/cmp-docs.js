@@ -27,6 +27,7 @@
     var S = {
         mount: null,
         q: '', sr: '', year: '', status: '',
+        dept: '',            /* 이행 관리 L2 에서 넘어온 부서 조건 — 필터 UI 로는 내지 않는다(D-5) */
         stages: [],          /* 업무단계 다중 조건 (DYPICK) */
         page: 1,
         expand: {},          /* docId → 업무단계 칩 전부 펼침 */
@@ -53,6 +54,10 @@
         S.q = p.get('q') || '';
         S.sr = p.get('sr') || '';
         S.status = p.get('status') || '';
+        S.dept = p.get('dept') || '';
+        /* 부서로 들어오면 연도 기본값을 풀어 준다 — 그 부서 문서를 보러 온 것이지
+           특정 연도를 보러 온 것이 아니다(0건으로 맞이하지 않는다) */
+        if (S.dept && p.get('year') == null) S.year = '';
         var doc = p.get('doc');
         S.doc = (doc && D().docById(doc)) ? doc : '';   /* 없으면 상세도 없다 — 뒤로가기 닫힘의 전제 */
     }
@@ -63,6 +68,7 @@
         if (S.q) p.set('q', S.q);
         if (S.sr) p.set('sr', S.sr);
         if (S.status) p.set('status', S.status);
+        if (S.dept) p.set('dept', S.dept);
         if (S.doc) p.set('doc', S.doc);
         var qs = p.toString();
         return location.pathname + (qs ? '?' + qs : '');
@@ -77,6 +83,7 @@
      * ========================================================================= */
     function match(d) {
         if (S.year && String(d.year) !== String(S.year)) return false;
+        if (S.dept && d.dept !== S.dept) return false;
         if (S.status && d.status !== S.status) return false;
         if (S.sr && !F().match(S.sr, [d.sr])) return false;
         if (S.stages.length) {
@@ -91,7 +98,7 @@
             return String(b.date || '').localeCompare(String(a.date || ''));
         });
     }
-    function filtering() { return !!(S.q || S.sr || S.year || S.status || S.stages.length); }
+    function filtering() { return !!(S.q || S.sr || S.year || S.status || S.stages.length || S.dept); }
 
     function yearOptions() {
         return [['', '연도 전체']].concat(C().years().slice().reverse().map(function (y) { return [y, y + '년']; }));
@@ -145,16 +152,26 @@
         var bar = F().bar(fields, {
             count: list.length.toLocaleString(), unit: '건',
             reset: 'CMPDOC.resetF()',
-            extraActive: S.stages.length ? 1 : 0,
+            extraActive: (S.stages.length ? 1 : 0) + (S.dept ? 1 : 0),
             actions: '<button type="button" class="btn btn-outline btn-sm" onclick="CMPDOC.openPick()">업무단계 고르기' +
                 (S.stages.length ? ' <b>' + S.stages.length + '</b>' : '') + '</button>',
         });
 
-        return notice() + bar + stageCond() +
+        return notice() + bar + deptCond() + stageCond() +
             '<p class="cmp-cap">조건에 맞는 <b>문서 ' + list.length.toLocaleString() + '건</b> · 할 일 <b>연결 ' + lc.links.toLocaleString() + '건</b> — ' +
                 '한 문서가 여러 할 일에 걸리므로 두 수는 다릅니다.</p>' +
             (rows.length ? table(rows) : emptyBox()) +
             pager(pages, list.length);
+    }
+    /* 부서 조건은 **셀렉트로 내지 않는다**(D-5) — 원장 문서에 담당부서 값이 없어
+     * 드롭다운을 만들면 대부분 0건이 되고 "데이터가 없다"로 오독된다. 이행 관리에서
+     * 넘어와 걸린 경우에만 칩으로 보이고, 그 사실(원장 미보유)을 함께 밝힌다. */
+    function deptCond() {
+        if (!S.dept) return '';
+        var total = D().allDocs().filter(function (d) { return d.dept === S.dept; }).length;
+        return '<p class="cmp-cond"><span class="chip-mini wt-elec">' + esc(S.dept) + ' 문서 ' + total + '건' +
+            '<button type="button" class="cmp-cond-x" aria-label="부서 조건 해제" onclick="CMPDOC.setF(\'dept\',\'\')">×</button></span>' +
+            '<span class="cmp-dim">담당부서 값이 있는 문서만 셉니다 — 2025년 원장은 재난안전과 소관이라 부서 값이 없습니다.</span></p>';
     }
     function stageCond() {
         if (!S.stages.length) return '';
@@ -169,7 +186,7 @@
     }
     function table(rows) {
         return '<div class="cmp-wrap"><table class="table-figma table-compact cmp-table"><thead><tr>' +
-            '<th>문서명</th><th class="cmp-c-stg">업무단계</th><th class="cmp-c-ac">수발신자</th>' +
+            '<th class="cmp-c-main">문서명</th><th class="cmp-c-stg">업무단계</th><th class="cmp-c-ac">수발신자</th>' +
             '<th class="cmp-num cmp-c-rd">보고일자</th><th class="cmp-c-st">결재상태</th>' +
         '</tr></thead><tbody>' + rows.map(row).join('') + '</tbody></table></div>';
     }
@@ -187,15 +204,20 @@
        않는다(터치에서 열 방법이 없고 스크린리더가 읽지 못한다, §7). */
     function stageChips(d) {
         var st = (d.stageIds || []).map(D().stage).filter(Boolean);
+        /* 왜 비었는지 모르면 데이터 오류로 읽힌다 — 칩에 이유를 단다(D-11) */
         if (!st.length) {
             return d.origin === 'ledger'
-                ? '<span class="chip-status chip-sm warning">미분류</span>'
-                : '<span class="chip-mini wt">이 목록 밖 문서</span>';
+                ? '<span class="chip-status chip-sm warning" title="2025년 원장에 분류가 빠진 문서입니다. 원장 교정은 업무문서 &gt; 이행 목록에서 합니다.">미분류</span>'
+                : '<span class="chip-mini wt" title="이행항목 축이 없는 현행 업무문서입니다 — 전용 화면에서 관리하는 문서라 여기서는 연결된 할 일이 없습니다.">이 목록 밖 문서</span>';
         }
         var open = !!S.expand[d.id];
         var show = open ? st : st.slice(0, 2);
         var more = st.length - show.length;
-        return show.map(function (s) { return '<span class="chip-mini wt-elec">' + esc(s.name) + '</span>'; }).join(' ') +
+        /* 목록의 칩도 상세와 같이 눌린다(D-7) — 같은 칩이 자리에 따라 다르게 동작하면 안 된다 */
+        return show.map(function (s) {
+            return '<a class="chip-mini wt-elec" title="' + esc(s.name) + ' 이행 상세로"' +
+                ' href="cmp-status.html?stage=' + encodeURIComponent(s.id) + '&year=' + d.year + '">' + esc(s.name) + '</a>';
+        }).join(' ') +
             (more > 0
                 ? ' <button type="button" class="chip-mini wt cmp-more" onclick="CMPDOC.expand(\'' + esc(d.id) + '\')" aria-expanded="false">+' + more + '</button>'
                 : (open && st.length > 2
@@ -382,9 +404,11 @@
             (dup
                 ? '<p><span class="chip-status chip-sm success">이어받기 완료</span> 이 문서로 이미 <b>' + y + '년</b> 문서를 만들었습니다.</p>' +
                   '<button type="button" class="btn btn-outline" onclick="CMPDOC.openDoc(\'' + esc(dup.id) + '\')">만든 문서 보기</button>'
-                : '<p>이 문서를 바탕으로 <b>' + y + '년</b> 문서를 만듭니다. 업무단계' + (d.sr ? '·수발신자' : '') +
+                : '<p>이 문서를 바탕으로 <b>' + y + '년</b> 문서를 만듭니다. 업무단계 ' +
+                    ((d.stageIds || []).length || 0) + '개' + (d.sr ? '·수발신자' : '') +
+                    (( d.files || []).length ? '·첨부 ' + d.files.length + '건' : '') +
                     '가 그대로 채워지고 제목의 연도가 ' + y + '으로 바뀝니다.</p>' +
-                  '<p class="cmp-cap">복사되는 것은 <b>메타데이터뿐</b>입니다 — 본문·결재 PDF 는 온나라 연동 전이라 없습니다.' +
+                  '<p class="cmp-cap"><b>본문·결재문서는 복제하지 않습니다</b> — 온나라 연동 전이라 원본이 없고 결재는 새로 받습니다.' +
                     ((d.stageIds || []).length ? '' : ' 이 문서에는 연결된 할 일이 없어 등록 뒤 직접 골라야 합니다.') + '</p>' +
                   (can
                       ? '<button type="button" class="btn btn-primary" onclick="CMPDOC.carry(\'' + esc(d.id) + '\')">📄 올해 문서로 등록</button>'
@@ -421,15 +445,22 @@
             return;
         }
         var title = String(src.title || '').split(String(src.year)).join(String(y));
+        /* 복사 범위는 «전부»다(발주처 결정 2026-08-18) — 제목·수발신자·업무단계 매핑·첨부.
+           본문·결재문서는 온나라 연동 전이라 원본이 없고, 결재는 새로 받아야 한다. */
+        var files = (src.files || []).slice();
+        var stages = (src.stageIds || []).slice();
         var r = D().addDocument({
             title: title,
             sr: src.sr || '',
             date: y + '-' + String(V().today()).slice(5),
             year: y,
-            stageIds: (src.stageIds || []).slice(),
+            stageIds: stages,
+            files: files,
             src: 'upload',
             dept: myDept(),
-            note: src.year + '년 문서(' + src.id + ')를 이어받아 만든 문서 — 메타데이터만 복사되었고 본문·결재 PDF 는 없습니다.',
+            note: src.year + '년 문서(' + src.id + ')를 이어받아 만든 문서 — 업무단계 ' + stages.length + '개' +
+                  (files.length ? ' · 첨부 ' + files.length + '건' : ' · 원본에 첨부 없음') +
+                  '. 본문·결재문서는 복제하지 않습니다(온나라 연동 전).',
             presetOf: src.id,
         });
         if (!r.ok) { V().toast(r.reason); return; }
@@ -456,7 +487,7 @@
     function setF(k, v) { S[k] = v; S.page = 1; rerender(); }
     /* 초기화는 '연도 전체'가 아니라 **기본 연도**로 돌아간다 — 읽는 사람이 기대하는
        초기 상태가 처음 열었을 때의 화면이다. */
-    function resetF() { S.q = ''; S.sr = ''; S.year = String(D().defaultYear()); S.status = ''; S.stages = []; S.page = 1; rerender(); }
+    function resetF() { S.q = ''; S.sr = ''; S.year = String(D().defaultYear()); S.status = ''; S.stages = []; S.dept = ''; S.page = 1; rerender(); }
     function expand(id) { S.expand[id] = !S.expand[id]; render(); }
     function go(n) { S.page = n; render(); try { window.scrollTo(0, 0); } catch (e) {} }
 

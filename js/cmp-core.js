@@ -254,6 +254,84 @@
     }
 
     /* =========================================================================
+     * 4-1. 업무 유형 — 「어디서 수행하는가」 (2026-08-18 신설)
+     * -------------------------------------------------------------------------
+     * 발주측 구현참고 §6.1: "모든 업무를 단순히 «새 문서 등록»으로 처리하지 않는다."
+     * 데이터는 분류기준 CSV v3 의 `수행경로` 열 → DYDOCT.STAGES[].paths 다.
+     *
+     * [값이 비어 있어도 화면은 돈다 (MUST)]
+     * 열은 전부 override 다 — 채우지 않은 단계는 taskType='UNKNOWN' 이고 CTA 는
+     * 종전 «＋ 새 문서 등록» 그대로다. 그래야 177행을 다 채우기 전에도 배포된다.
+     *
+     * [UNKNOWN 을 숨기지 않는다]
+     * §19 가 임의 확정을 금지하므로 «아직 정하지 않았다»가 산출물이다. 화면은
+     * 그 사실과 `typeNote`(무엇을 확인해야 하는지)를 함께 보여준다.
+     *
+     * [연결메뉴는 여기서 해석한다]
+     * CSV 168행에는 기능코드(RSK_REGULAR)만 있고 메뉴 id 는 코드표 한 줄에만 있다.
+     * 프로토타입 메뉴가 개명·신설돼도 이 표만 고치면 된다.
+     * ========================================================================= */
+    var TASK_TYPE = {
+        PROGRAM:        { key: 'PROGRAM',        label: '전용 화면',   cta: '바로가기',        tone: 'info' },
+        ELECTRONIC_DOC: { key: 'ELECTRONIC_DOC', label: '공문·문서',   cta: '＋ 업무문서 작성', tone: 'neutral' },
+        ATTACHMENT:     { key: 'ATTACHMENT',     label: '결과 등록',   cta: '＋ 결과 등록',    tone: 'purple' },
+        UNKNOWN:        { key: 'UNKNOWN',        label: '수행 위치 확인 필요', cta: '＋ 새 문서 등록', tone: 'warning' },
+    };
+    /* 기능코드 → 실제 메뉴. CSV 가 아니라 여기(코드) 한 곳에서만 메뉴 id 를 안다.
+       상태 LIVE = 지금 갈 수 있다 / PLANNED = 화면은 있으나 완료판정 미작성 /
+       NONE = 아직 갈 곳이 없다(외부 시스템 포함). */
+    var FUNCS = {
+        RSK_REGULAR:    { name: '정기 위험성평가',   href: 'rsk-list.html',    state: 'LIVE' },
+        RSK_OCCASIONAL: { name: '수시 위험성평가',   href: 'rsk-occ.html',     state: 'PLANNED' },
+        EDU_STATUS:     { name: '교육 이수현황',     href: 'edu-status.html',  state: 'LIVE' },
+        EDU_ETC:        { name: '기타 교육',        href: 'edu-etc.html',     state: 'PLANNED' },
+        COMPLY_IND:     { name: '이행점검(산업)',    href: 'menu.html?m=comply', state: 'LIVE' },
+        COMPLY_CIT:     { name: '이행점검(시민)',    href: 'menu.html?m=comply', state: 'LIVE' },
+        POLICY_POST:    { name: '경영방침 게시',     href: 'menu.html?m=policy', state: 'LIVE' },
+        WORKENV:        { name: '작업환경측정',      href: 'work-env.html',    state: 'LIVE' },
+        HEALTH:         { name: '건강검진',         href: 'health-exam.html', state: 'PLANNED' },
+        BUDGET:         { name: '예산 총괄표',      href: 'bgt-main.html',    state: 'NONE' },
+        FACIL:          { name: '시설물 대장',      href: 'fac-list.html',    state: 'NONE' },
+        EXT_ELEV:       { name: '승강기안전종합정보망', href: '',              state: 'NONE' },
+        EXT_PLAY:       { name: '어린이놀이시설 안전관리시스템', href: '',      state: 'NONE' },
+        EXT_ONNARA:     { name: '온나라 전자결재',   href: '',                 state: 'NONE' },
+    };
+    function typeOf(stage) {
+        var s = (stage && stage.id) ? stage : D().stage(stage);
+        var t = (s && s.taskType) || 'UNKNOWN';
+        return TASK_TYPE[t] || TASK_TYPE.UNKNOWN;
+    }
+    /* 주 수행경로(첫 토큰)와 보조 경로를 함께 준다 — 한 단계가 두 형태를 갖는 경우
+       (계획은 문서, 실시는 전용화면) 보조를 버리면 절반이 사라진다. */
+    function pathsOf(stage) {
+        var s = (stage && stage.id) ? stage : D().stage(stage);
+        return ((s && s.paths) || []).map(function (p) {
+            var f = p.code ? FUNCS[p.code] : null;
+            return {
+                type: p.type, code: p.code || '',
+                meta: TASK_TYPE[p.type] || TASK_TYPE.UNKNOWN,
+                func: f || null,
+                /* 갈 수 있는가 — 메뉴가 실재하고 LIVE/PLANNED 인 경우만 */
+                reachable: !!(f && f.href),
+            };
+        });
+    }
+    function funcOf(code) { return FUNCS[code] || null; }
+    /* 확인 필요(초안·미확정) 인가 — 화면이 «우리가 정한 게 아니다»를 밝히는 근거 */
+    function needsConfirm(stage) {
+        var s = (stage && stage.id) ? stage : D().stage(stage);
+        return !s || (s.typeConf || 'UNKNOWN') !== 'CONFIRMED';
+    }
+    function typeCounts() {
+        var c = { PROGRAM: 0, ELECTRONIC_DOC: 0, ATTACHMENT: 0, UNKNOWN: 0, draft: 0, confirmed: 0 };
+        T().STAGES.forEach(function (s) {
+            c[(s.taskType || 'UNKNOWN')]++;
+            if ((s.typeConf || 'UNKNOWN') === 'CONFIRMED') c.confirmed++; else c.draft++;
+        });
+        return c;
+    }
+
+    /* =========================================================================
      * 5. 누락 점검 축 (§4-4) — lawBases 파생
      * -------------------------------------------------------------------------
      * 이행항목 id 접두만 보면 MGT-01(중대재해 예방 안전계획)처럼 두 축에 걸친
@@ -322,6 +400,17 @@
     /* =========================================================================
      * 7. 문서 조회 도우미
      * ========================================================================= */
+    /* 부서 문서 보유량 — 5개년 원장 집계(DYCMPDEPT). 시드가 없으면 null 이고
+     * 화면은 종전처럼 사용자 등록분만 센다.
+     * ⚠ 이행 판정이 아니다 — 원본에 업무단계 분류가 없어 «문서가 있다» 까지만 말한다. */
+    function deptDocs(name) {
+        var S = global.DYCMPDEPT;
+        if (!S || !S.DEPTS) return null;
+        var d = S.DEPTS[name];
+        return d ? { total: d.total, byYear: d.byYear || {}, byKind: d.byKind || {} } : null;
+    }
+    function deptDocsMeta() { var S = global.DYCMPDEPT; return (S && S.META) || null; }
+
     function docsOfStage(stageId, year) {
         return D().documentIdsOfStage(stageId, year).map(D().docById).filter(Boolean);
     }
@@ -342,6 +431,8 @@
         deadlineOf: deadlineOf, elapsedRounds: elapsedRounds,
         judge: judge, nextGap: nextGap,
         axesOf: axesOf, axisLabel: axisLabel,
-        kpiOf: kpiOf, docsOfStage: docsOfStage, linkCounts: linkCounts, years: years,
+        TASK_TYPE: TASK_TYPE, FUNCS: FUNCS,
+        typeOf: typeOf, pathsOf: pathsOf, funcOf: funcOf, needsConfirm: needsConfirm, typeCounts: typeCounts,
+        kpiOf: kpiOf, docsOfStage: docsOfStage, deptDocs: deptDocs, deptDocsMeta: deptDocsMeta, linkCounts: linkCounts, years: years,
     };
 }(window));
