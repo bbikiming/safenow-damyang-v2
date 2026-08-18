@@ -28,16 +28,24 @@ import sys
 from collections import Counter, OrderedDict, defaultdict
 
 # ── §9-3 변환 검증값 — 이 값이 안 나오면 조용히 진행하지 않는다 ──────────────
+# 2026-08-18 갱신 — 분류기준 CSV v2 반영(78→80 항목 / 168→177 단계).
+#   종전 값은 v2 이전 CSV 기준이라 **FAC-15(공중이용시설 개별 안전 관계 법령) 4단계 ·
+#   FAC-16(유해화학물질 취급시설 안전관리) 4단계 · OSH-11-03(MSDS) 1단계**가 통째로
+#   빠져 있었다. 하필 이 9개가 5개 부서 분류 1차 결과에서 «문서 0건 불이행 의심»·
+#   «근거 취약»으로 지목된 항목이라, 화면에 존재하지 않아 누락 점검에 뜨지 않았다.
+#   문서 원장 쪽 검증값 6종(history_rows·docs·dup_rows·multi_stage_docs·max_stages·
+#   unmapped_rows)은 **변화 없음** — 분류 축만 넓어진 안전한 확장이다.
+#   stages_no_doc 33→42 는 새로 들어온 9단계가 전부 2025 문서 0건이기 때문이다.
 EXPECT = {
-    'items': 78,            # 법정 이행항목
-    'stages': 168,          # 하위 업무단계
+    'items': 80,            # 법정 이행항목
+    'stages': 177,          # 하위 업무단계
     'history_rows': 4082,   # 2025 원본 매핑 행
     'docs': 3830,           # 복합키 기준 문서 엔터티
     'dup_rows': 24,         # 완전 중복 매핑 행
     'multi_stage_docs': 210,  # 여러 업무단계에 연결된 문서
     'max_stages': 11,       # 문서 1건의 최대 업무단계 수
     'unmapped_rows': 35,    # 이행항목·업무단계가 빈 원본 행
-    'stages_no_doc': 33,    # 2025 문서가 확인되지 않은 업무단계
+    'stages_no_doc': 42,    # 2025 문서가 확인되지 않은 업무단계
 }
 
 # 취합상태 → 2025년 업무단계 진행상태.
@@ -66,6 +74,59 @@ def norm(s):
     if s is None:
         return ''
     return re.sub(r'\s+', ' ', str(s)).strip()
+
+
+def parse_paths(raw):
+    """수행경로 문자열 → [{'type':..,'code':..}]. 빈 값이면 []."""
+    out = []
+    for tok in [t.strip() for t in norm(raw).split('|') if t.strip()]:
+        if ':' in tok:
+            t, c = tok.split(':', 1)
+        else:
+            t, c = tok, ''
+        t = t.strip().upper()
+        if t not in ('PROGRAM', 'ELECTRONIC_DOC', 'ATTACHMENT'):
+            continue
+        out.append({'type': t, 'code': c.strip()})
+    return out
+
+
+def parse_done(raw):
+    """완료판정 문자열 → {'kind':..,'key':..}. 빈 값이면 DOC_COUNT."""
+    v = norm(raw)
+    if not v:
+        return {'kind': 'DOC_COUNT', 'key': ''}
+    if ':' in v:
+        k, key = v.split(':', 1)
+        return {'kind': k.strip().upper(), 'key': key.strip()}
+    return {'kind': v.upper(), 'key': ''}
+
+
+def stage_type_fields(r):
+    """v3 추가 8열 → JS 필드. 열 자체가 없는 구버전 CSV 도 그대로 통과한다."""
+    g = lambda k: norm(r.get(k, ''))
+    paths = parse_paths(g('수행경로'))
+    conf = (g('분류확신도') or 'UNKNOWN').upper()
+    lvl = g('적용수준').upper()
+    dept = g('대상부서규칙')
+    out = {
+        'paths': paths,
+        'taskType': paths[0]['type'] if paths else 'UNKNOWN',
+        'doneRule': parse_done(g('완료판정')),
+        'typeConf': conf if conf in ('CONFIRMED', 'DRAFT', 'UNKNOWN') else 'UNKNOWN',
+        'typeNote': g('확인필요사유'),
+        'evidenceRequired': (g('증빙필수여부').upper() != 'N'),
+    }
+    if lvl in ('L1', 'L2', 'L3'):
+        out['levelSrc'] = lvl
+    if dept:
+        k, _, key = dept.partition(':')
+        out['deptRule'] = {'kind': k.strip().upper(), 'key': key.strip()}
+    y = g('주기적용시작연도')
+    if y.isdigit():
+        out['cycleFrom'] = int(y)
+    return out
+
 
 
 def norm_date(s):
@@ -154,6 +215,13 @@ def build_taxonomy(rows, report):
             'legalCycle': norm(r['법정주기']),
             'opCycle': op,
             'timing': norm(r['수행시점조건']),
+            # ── 업무유형 축(v3 추가 8열) — 전부 **override** 다. 비어 있으면 현행 동작 그대로.
+            #    근거: docs/planning/기획-업무유형-완료판정-그릇설계-v1.md
+            #    · paths[]  : 수행경로. 첫 토큰이 주 CTA. 빈 값이면 taskType='UNKNOWN'
+            #    · doneRule : 완료판정 키. 빈 값이면 DOC_COUNT(현행 문서수 판정)
+            #    · typeConf : CONFIRMED(발주처 확정) / DRAFT(개발측 초안) / UNKNOWN
+            #    · levelSrc : 적용수준이 채워지면 문자열 파생(levelOf) 대신 이 값을 쓴다
+            **stage_type_fields(r),
             'target': tgt,
             'actor': act,
             'ex': norm(r['증빙문서 예시(2025년 실제 문서명)']),
@@ -320,6 +388,7 @@ def main():
     ap.add_argument('--taxonomy', required=True, help='담양군_안전보건_문서분류기준_v2.csv')
     ap.add_argument('--history', required=True, help='2025년_재난안전과_문서목록.csv')
     ap.add_argument('--outdir', default='js')
+    ap.add_argument('--funcs', help='업무기능코드표 CSV(선택) — 없으면 수행경로의 기능코드를 그대로 둔다')
     ap.add_argument('--force', action='store_true', help='검증값 불일치여도 기록')
     a = ap.parse_args()
 

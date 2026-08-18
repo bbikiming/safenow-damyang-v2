@@ -310,7 +310,7 @@
     function grid(list) {
         if (!list.length) {
             return '<div class="v2-empty"><b>조건에 맞는 이행항목이 없습니다.</b><br>' +
-                '조회 조건을 지우면 78개 이행항목이 모두 나옵니다.' +
+                '조회 조건을 지우면 ' + D().items().length + '개 이행항목이 모두 나옵니다.' +
                 (filtering() ? '<div style="margin-top:10px;"><button class="btn btn-outline btn-sm" onclick="DOCEXEC.resetF()">조건 초기화</button></div>' : '') +
                 '</div>';
         }
