@@ -4108,7 +4108,7 @@ p > .dx-note-gap { display: inline; }
 .cmp-headact { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .cmp-yr { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-12); color: var(--text-gray); }
 .cmp-yr .form-select { min-width: 96px; }
-.cmp-back { margin-bottom: 10px; }
+.cmp-back { margin-bottom: 14px; }
 
 /* ── 서브탭 · 계층탭 (표준 .sub-tabs / .tabs 위 modifier) ───────────────
    두 축을 **한 줄**에 둔다 — 각자 한 줄을 쓰면 첫 데이터 행이 900px 밖으로
@@ -4323,38 +4323,43 @@ p > .dx-note-gap { display: inline; }
 /* 좌측 정의 패널은 고정 340px 이 아니라 유동이다 — 초광폭(1920)에서 340px 에
    묶어 두면 법령·적용대상 문장이 서너 줄로 접히고 우측만 과하게 넓어진다.
    브레이크포인트를 새로 만들지 않고 clamp 로 처리한다(§8). */
-.cmp-two { display: grid; grid-template-columns: minmax(320px, 24%) minmax(0, 1fr); gap: 20px; align-items: start; }
+/* 상세는 읽는 화면이라 폭을 묶는다 — 목록(전폭)과 다른 축이다.
+   좌측은 정의, 우측은 그 근거(문서)라 2:5 비율이 읽기에 맞는다. */
+.cmp-two { display: grid; grid-template-columns: minmax(300px, 2fr) minmax(0, 5fr); gap: 24px; align-items: start; max-width: 1400px; }
 /* 2단 상세 안의 표는 목록 화면보다 좁은 칸에 들어간다 — 목록용 min-width(720px)를
    그대로 쓰면 1024 에서 가로 스크롤이 생긴다. 열이 5개뿐이라 더 좁혀도 읽힌다. */
 .cmp-two .cmp-table { min-width: 520px; }
-.cmp-two-l { padding: 20px; background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); }
+.cmp-two-l { padding: 20px; background: var(--surface-alt); border: 1px solid var(--card-line); border-radius: var(--radius-card); }
+/* 문서 상세는 이미 카드 안이다 — 여기서 또 테두리를 두르면 3겹이 된다 */
+.cmp-two-doc .cmp-two-l { background: var(--surface-alt); border: 0; }
 .cmp-two-r { min-width: 0; }
-.cmp-two-doc { padding: 0; }
+.cmp-two-doc { padding: 20px 24px 24px; }
 .cmp-detail-code { display: block; margin-bottom: 2px; }
 .cmp-detail-h { font-size: var(--fs-20); font-weight: var(--fw-bold); color: var(--text-black); line-height: 1.4; margin: 4px 0 10px; }
 .cmp-detail-h3 { font-size: var(--fs-15); font-weight: var(--fw-bold); color: var(--text-black); margin: 0; }
 .cmp-detail-sum { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--card-line); }
 .cmp-detail-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
 .cmp-detail-act { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.cmp-detail-prev { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--card-line); }
-.cmp-gapbox { text-align: left; padding: 16px; border: 1px dashed var(--card-line); border-radius: var(--radius-button); margin-top: 12px; }
-.cmp-gapbox b { display: block; color: var(--text-black); font-size: var(--fs-13); margin-bottom: 4px; }
+.cmp-detail-prev { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--card-line); }
+.cmp-gapbox { text-align: left; padding: 18px 20px; border: 1px dashed var(--card-line); border-radius: var(--radius-card); margin-top: 16px; }
+.cmp-gapbox b { display: block; color: var(--text-black); font-size: var(--fs-14); margin-bottom: 6px; }
 .cmp-gapbox p { margin: 0; }
 
 /* ── 문서 상세 (cmp-docs ⑤) ───────────────────────────────────────────── */
 .cmp-doc-h { display: block; }
-.cmp-doc-tags { margin-top: 8px; display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+.cmp-doc-tags { margin-top: 12px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .cmp-doc-tags a { text-decoration: none; }
 .cmp-doc-tags a:hover { text-decoration: underline; }
-.cmp-pdf { text-align: left; padding: 20px; border: 1px dashed var(--card-line); border-radius: var(--radius-button); }
-.cmp-pdf b { display: block; color: var(--text-black); font-size: var(--fs-13); margin-bottom: 6px; }
-.cmp-pdf p { margin: 0; }
-.cmp-card { padding: 14px 16px; border: 1px solid var(--card-line); border-radius: var(--radius-button); background: var(--surface); font-size: var(--fs-13); color: var(--text-black); line-height: 1.6; }
-.cmp-card + .cmp-card { margin-top: 10px; }
+.cmp-pdf { text-align: left; padding: 18px; border: 1px dashed var(--card-line); border-radius: var(--radius-button); background: var(--surface); }
+.cmp-pdf b { display: block; color: var(--text-black); font-size: var(--fs-13); margin-bottom: 8px; }
+.cmp-pdf p { margin: 0; font-size: var(--fs-12); color: var(--text-gray); line-height: 1.7; }
+.cmp-card { padding: 18px 20px; border: 1px solid var(--card-line); border-radius: var(--radius-card); background: var(--surface); font-size: var(--fs-13); color: var(--text-black); line-height: 1.65; }
+.cmp-card + .cmp-card { margin-top: 16px; }
 .cmp-remove { margin-top: 14px; }
-.cmp-card p { margin: 6px 0 10px; }
-.cmp-yrlist { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.cmp-yrlist li { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: var(--fs-12); }
+.cmp-card p { margin: 8px 0 14px; }
+.cmp-yrlist { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.cmp-yrlist li { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: var(--fs-13); line-height: 1.6; padding-bottom: 10px; border-bottom: 1px solid var(--card-line); }
+.cmp-yrlist li:last-child { padding-bottom: 0; border-bottom: 0; }
 .cmp-cond { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; font-size: var(--fs-12); color: var(--text-gray); margin: 0 0 10px; }
 .cmp-cond-x { margin-left: 4px; border: 0; background: none; padding: 0; cursor: pointer; color: inherit; font-family: inherit; font-size: var(--fs-12); }
 .cmp-more { border: 0; cursor: pointer; font-family: inherit; }
@@ -4372,13 +4377,13 @@ p > .dx-note-gap { display: inline; }
 .cmp-pg:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
 
 /* ── 작년 문서 불러오기 모달 ──────────────────────────────────────────── */
-.cmp-pull-h { padding: 10px 12px; background: var(--surface-alt); border: 1px solid var(--card-line); border-radius: var(--radius-button); margin-bottom: 10px; }
+.cmp-pull-h { padding: 14px 16px; background: var(--surface-alt); border: 1px solid var(--card-line); border-radius: var(--radius-button); margin-bottom: 14px; }
 .cmp-pull-h p { margin: 0; }
-.cmp-pull-t { font-size: var(--fs-14); font-weight: var(--fw-bold); color: var(--text-black); }
-.cmp-pull-f { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.cmp-pull-t { font-size: var(--fs-14); font-weight: var(--fw-bold); color: var(--text-black); line-height: 1.5; margin-top: 4px; }
+.cmp-pull-f { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
 .cmp-pull-f .form-input { flex: 1 1 180px; min-width: 0; }
 .cmp-pull-b { max-height: 300px; overflow-y: auto; border: 1px solid var(--card-line); border-radius: var(--radius-button); }
-.cmp-pull-row { display: flex; gap: 9px; align-items: flex-start; padding: 9px 11px; border-bottom: 1px solid var(--card-line); cursor: pointer; font-size: var(--fs-13); }
+.cmp-pull-row { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-bottom: 1px solid var(--card-line); cursor: pointer; font-size: var(--fs-13); line-height: 1.55; }
 .cmp-pull-row:last-child { border-bottom: 0; }
 .cmp-pull-row:hover { background: var(--brand-50); }
 .cmp-pull-row input { margin-top: 3px; }
@@ -4386,22 +4391,22 @@ p > .dx-note-gap { display: inline; }
 .cmp-pull-row.is-pulled { cursor: default; }
 .cmp-pull-row.is-pulled:hover { background: var(--surface); }
 .cmp-pull-row.is-pulled .cmp-pull-n { color: var(--text-gray); }
-.cmp-pull-n { display: block; color: var(--text-black); line-height: 1.5; }
-.cmp-pull-row .cmp-dim { display: block; font-size: var(--fs-12); margin-top: 2px; }
-.cmp-pull-fields { margin-right: auto; display: inline-flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: var(--fs-12); color: var(--text-gray); }
-.cmp-pull-ck { display: inline-flex; gap: 4px; align-items: center; }
+.cmp-pull-n { display: block; color: var(--text-black); line-height: 1.55; }
+.cmp-pull-row .cmp-dim { display: block; font-size: var(--fs-12); margin-top: 4px; line-height: 1.5; }
+.cmp-pull-fields { margin-right: auto; display: inline-flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: var(--fs-12); color: var(--text-gray); line-height: 1.8; }
+.cmp-pull-ck { display: inline-flex; gap: 5px; align-items: center; }
 .cmp-pick .dyp { margin-bottom: 4px; }
 
 /* ── 비해당 모달 ──────────────────────────────────────────────────────── */
-.cmp-na p { font-size: var(--fs-13); color: var(--text-black); line-height: 1.6; }
-.cmp-bulk-list { list-style: none; margin: 10px 0; padding: 0; max-height: 200px; overflow-y: auto; border: 1px solid var(--card-line); border-radius: var(--radius-button); }
-.cmp-bulk-list li { padding: 8px 11px; border-bottom: 1px solid var(--card-line); font-size: var(--fs-13); }
+.cmp-na p { font-size: var(--fs-13); color: var(--text-black); line-height: 1.7; margin-bottom: 10px; }
+.cmp-bulk-list { list-style: none; margin: 12px 0 14px; padding: 0; max-height: 220px; overflow-y: auto; border: 1px solid var(--card-line); border-radius: var(--radius-button); }
+.cmp-bulk-list li { padding: 11px 14px; border-bottom: 1px solid var(--card-line); font-size: var(--fs-13); line-height: 1.55; }
 .cmp-bulk-list li:last-child { border-bottom: 0; }
-.cmp-bulk-list .cmp-dim { display: block; font-size: var(--fs-12); margin-top: 2px; }
+.cmp-bulk-list .cmp-dim { display: block; font-size: var(--fs-12); margin-top: 4px; }
 
 /* ── 누락 점검 ────────────────────────────────────────────────────────── */
 .cmp-gap-head { margin: 16px 0 14px; }
-.cmp-gap-n { font-size: var(--fs-16); font-weight: var(--fw-bold); color: var(--text-black); margin: 0 0 2px; }
+.cmp-gap-n { font-size: var(--fs-16); font-weight: var(--fw-bold); color: var(--text-black); margin: 0 0 6px; }
 .cmp-gap-blk { border: 1px solid var(--card-line); border-radius: var(--radius-button); overflow: hidden; margin-bottom: 16px; }
 .cmp-gap-h {
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
@@ -4426,6 +4431,7 @@ p > .dx-note-gap { display: inline; }
 .cmp-gap-yr .chip-status { margin-right: 4px; }
 .cmp-gap-blk .cmp-table { min-width: 640px; }
 .cmp-gap-blk .cmp-table tr:last-child td { border-bottom: 0; }
+.cmp-gap-blk .cmp-table td { padding-top: 14px; padding-bottom: 14px; }
 
 /* ── 반응형 — 표준 4단계 값만 (§8) ────────────────────────────────────── */
 @media (max-width: 1279px) {
