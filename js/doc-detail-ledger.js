@@ -69,7 +69,11 @@
                 '<dl class="dd-meta">' +
                     m('문서번호', d.origin === 'ledger' ? '<span class="dx-nodoc">원장 미보유</span>' : '<span class="dx-nodoc">(온나라에서 부여)</span>') +
                     m('보고일자', d.date || '<span class="dx-nodoc">미기재</span>') +
-                    m('수발신자', d.sr ? esc(d.sr) + srNote(d.sr) : '<span class="dx-nodoc">미기재</span>') +
+                    /* 방향이 있으면 «받음 · 기관» 으로 낸다. 옛 데이터는 방향이
+                       없어 기관명만 나온다 — 없는 값을 지어내지 않는다. */
+                    m('수발신', D().srText(d, true)
+                        ? esc(D().srText(d, true)) + (d.sr ? srNote(d.sr) : '')
+                        : '<span class="dx-nodoc">미기재</span>') +
                     /* 문구가 출처를 지목하므로 출처별로 갈린다 — 2026 예시 자료에
                        «2025년 원장에 없다»고 쓰면 그 화면에서 바로 어긋난다. */
                     m('담당부서 · 담당자', d.dept ? esc(d.dept) + (d.assignee ? ' / ' + esc(d.assignee) : '')

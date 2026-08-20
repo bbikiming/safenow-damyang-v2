@@ -921,6 +921,23 @@
     }
     /* 상세 좌측에 붙는 «어디서 수행하나» 블록 — 유형·경로·확정 여부를 한자리에서.
        DRAFT/UNKNOWN 이면 «우리 초안이지 발주처 확정이 아니다»를 반드시 밝힌다. */
+    /* ④ 전용 화면에서 수행하는 할 일(PROGRAM)이 **그 화면의 결과를 읽어 오는가**.
+       분류기준의 «완료판정» 열이 이 자리에서 처음으로 읽힌다 — 종전에는 채워도
+       아무도 안 봤다. 연결되지 않은 것을 «된다»고 말하지 않는 것이 이 줄의 일이다. */
+    function probeRow(s) {
+        var p = C().doneProbe(s);
+        if (!p || !p.program) return '';
+        var chip, note;
+        if (p.state === 'unmapped') {
+            chip = '<span class="chip-status chip-sm warning">판정 경로 없음</span>';
+            note = '이 할 일은 전용 화면에서 수행하는데 <b>어느 결과를 이행으로 볼지</b>가 정해지지 않았습니다 — 발주처 확인 대상입니다.';
+        } else {
+            chip = '<span class="chip-status chip-sm info">연결 대기</span>';
+            note = '전용 화면의 수행 결과를 이 화면이 읽어 오는 것은 <b>본개발 범위</b>입니다.';
+        }
+        return '<div><dt>이행 판정</dt><dd>' + chip +
+            ' <span class="cmp-dim">' + note + ' 지금은 <b>증빙 문서</b> 기준으로 판정합니다.</span></dd></div>';
+    }
     function typeBlock(s) {
         var t = C().typeOf(s), paths = C().pathsOf(s), draft = C().needsConfirm(s);
         var where = paths.length
@@ -933,10 +950,10 @@
             : '<span class="chip-status chip-sm warning">' + esc(t.label) + '</span>';
         return '<div class="cmp-detail-sum">' +
             '<dl class="cmp-dl"><div><dt>어디서 수행하나</dt><dd>' + where + '</dd></div>' +
+            probeRow(s) +
             (draft
                 ? '<div><dt>분류 상태</dt><dd><span class="chip-status chip-sm warning">확인 필요</span> ' +
-                  '<span class="cmp-dim">개발측이 메뉴를 대조해 만든 <b>초안</b>입니다 — 발주처 확정 전입니다.</span>' +
-                  (s.typeNote ? '<p class="cmp-cap">' + esc(s.typeNote) + '</p>' : '') + '</dd></div>'
+                  '<span class="cmp-dim">개발측이 메뉴를 대조해 만든 <b>초안</b>입니다 — 발주처 확정 전입니다.</span></dd></div>'
                 : '') +
             '</dl></div>';
     }

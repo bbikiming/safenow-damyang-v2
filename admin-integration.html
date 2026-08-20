@@ -152,12 +152,15 @@
                 if (s.log.length > 30) { s.log = s.log.slice(s.log.length - 30); }
                 try { sessionStorage.setItem(RKEY, JSON.stringify(s)); } catch (e) {}
             }
-            /* 재시도는 «지금» 일어난 행위라 실제 시각으로 남긴다 — 기준일(DYV2.today())은
-               시드 판정용 축이고, 사람이 방금 누른 기록까지 그 날짜로 적으면 이력이 거짓이 된다. */
+            /* 날짜는 기준일(DYV2.today())에서 받고 시·분만 실제 시각을 쓴다.
+               실제 날짜로 적으면 방금 누른 재시도가 시드보다 미래로 찍혀 연계 로그 맨 위가
+               «오늘»보다 뒤의 날짜가 된다 — 시연 중 그 자리에서 들킨다(CLAUDE.md §11).
+               같은 분에 연달아 누른 행이 뒤집히지 않게 초까지 남긴다. */
             function stampNow() {
                 var d = new Date(), p = function (n) { return (n < 10 ? '0' : '') + n; };
-                return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) +
-                    ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+                var day = (window.DYV2 && DYV2.today) ? DYV2.today()
+                    : d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+                return day + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
             }
 
             function setText(sel, txt) {
@@ -380,6 +383,7 @@
                     retry.disabled = !targets.length;
                     retry.title = targets.length
                         ? '실패한 연계 ' + failTotal + '건을 다시 시도합니다 (연계별 최대 ' + RETRY_MAX + '회).'
+                        : blocked.length ? '실패가 남아 있지만 재시도 수단을 거뒀습니다 — ' + blocked.join(' · ')
                         : derived.length ? '재시도할 실패 건이 없습니다.' : '실패 건을 확인할 원본 자료를 불러오지 못했습니다.';
                     retry.onclick = targets.length ? function () {
                         var s = loadRetry();
@@ -406,8 +410,12 @@
                 if (note) {
                     /* 셀 수 없었던 것을 「없다」고 단언하지 않는다 — 자료를 못 불러온 것과
                        실패가 0건인 것은 다른 상태다. */
+                    /* 실패가 남았는데 수단만 거둔 상태를 «없다»고 말하지 않는다 — 카드는
+                       «실패 N건이 남았습니다»라고 정확히 말하는데 버튼만 반대로 말하면
+                       담당자가 카드와 버튼 중 어느 쪽을 믿어야 할지 모른다. */
                     var msg = targets.length ? '재시도할 실패 건 ' + failTotal + '건이 있습니다.'
                         : !derived.length ? '재시도할 실패 건을 확인할 수 없습니다.'
+                        : blocked.length ? '실패가 남아 있지만 재시도 수단을 거뒀습니다 — ' + blocked.join(' · ') + '. 원인을 없앤 뒤 각 연계 화면에서 다시 받아야 합니다.'
                         : unavailable.length ? '지금 확인할 수 있는 범위에는 재시도할 실패 건이 없습니다.'
                         : '재시도할 실패 건이 없습니다.';
                     /* 대상 연계를 세어서 쓴다 — 문장에 개수를 박으면 연계가 늘거나 줄 때 여기만 옛말이 된다. */

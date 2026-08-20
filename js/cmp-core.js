@@ -60,6 +60,14 @@
         _lv = {};
         T().STAGES.forEach(function (s) {
             var t = String(s.target || '');
+            /* ① 분류기준 CSV 의 «적용수준» 이 채워져 있으면 **그 값이 이긴다.**
+               종전에는 이 분기가 없어, 발주처가 확정값을 채우고 재생성해도 화면은
+               계속 문자열 파생 추정을 썼다 — «자료를 줬는데 반영이 안 된다»가 된다.
+               그릇(CSV 열)만 만들고 뚜껑(읽는 코드)을 안 단 상태였다. */
+            if (s.levelSrc === 'L1' || s.levelSrc === 'L2' || s.levelSrc === 'L3') {
+                _lv[s.id] = { level: s.levelSrc, derived: false, by: 'confirmed' };
+                return;
+            }
             if (RE_L1.test(t)) { _lv[s.id] = { level: 'L1', derived: false, by: 'target' }; return; }
             if (RE_L3.test(t)) { _lv[s.id] = { level: 'L3', derived: false, by: 'target' }; return; }
             /* 이행항목 id 접두 FAC-* 는 시설 축이지만 target 에 '시설'이 없는 건이 있다
@@ -69,6 +77,26 @@
             _lv[s.id] = { level: 'L2', derived: true, by: 'fallback' };
         });
         return _lv;
+    }
+    /* ④ 완료 판정 경로 — CSV «완료판정»(doneRule)이 실제로 읽히는 유일한 창구.
+       PROGRAM 단계는 전용 화면에서 수행하는데, 그 화면의 결과를 이 화면이 읽어
+       오려면 판정 키가 있어야 한다. 키가 없으면 «연결 대기»다.
+       ⚠ 없는 판정을 지어내 채우지 않는다 — 키를 적어 두면 «연결됐다»고 말하는
+       것이고, 실제 연동은 본개발 범위다. 지금은 **사실을 드러내는 것**이 일이다. */
+    function doneProbe(stage) {
+        var s = (stage && stage.id) ? stage : D().stage(stage);
+        if (!s) return null;
+        var r = s.doneRule || {};
+        var isProgram = (s.taskType === 'PROGRAM');
+        var key = (r.kind === 'PROBE' && r.key) ? r.key : '';
+        return {
+            program: isProgram,
+            key: key,
+            /* 판정 키가 있어도 그 도메인 모듈이 이 화면에 로드돼 있어야 실제로 읽는다.
+               지금은 어느 쪽도 로드하지 않으므로 항상 false 다 — 감추지 않는다. */
+            wired: false,
+            state: !isProgram ? 'doc' : (key ? 'pending' : 'unmapped'),
+        };
     }
     function levelOf(stage) {
         var id = stage && stage.id ? stage.id : stage;
@@ -138,6 +166,13 @@
         if (/매년/.test(s)) return { cc: 'YEAR', need: 1, label: s, unparsed: false };
         return { cc: 'EVENT', need: 0, label: s, unparsed: true };
     }
+    /* 「법정주기」 칸에 **시간만** 든 값 — 회·년·월·분기·반기·주 가 하나도 없다.
+       실측 2건(OSH-03-04 «16시간 이상(단기간 작업 2시간 이상)» · OSH-03-05 «4시간»).
+       원본이 틀린 것이 아니라 칸 이름이 좁다 — 이 두 의무는 법이 «몇 번»이 아니라
+       «몇 시간»을 정한다(산안법 시행규칙 별표4 · 같은 법 §31). 수행 시점은 옆 칸
+       (수행시점조건)이 정확히 담고 있다(«배치 전»·«채용 시»). */
+    var RE_HOURS_ONLY = /\d+\s*시간/;
+    var RE_CYCLE_WORD = /회|년|개월|월|분기|반기|주/;
     function cycleOf(stage) {
         var s = (stage && stage.id) ? stage : D().stage(stage);
         if (!s) return { cc: 'EVENT', need: 0, label: '정기주기 없음', unparsed: false, src: 'none' };
@@ -146,6 +181,14 @@
         var src = s.opCycle ? 'op' : (s.legalCycle ? 'legal' : 'none');
         var r = parseCycle(s.opCycle || s.legalCycle);
         r.src = src;
+        /* 주기가 아닌 값을 «이행주기» 자리에 두면 「4시간」이 떠서 데이터 오류로
+           읽힌다. 표시용 라벨만 수행시점으로 바꾸고 **원문은 hoursOnly 에 남긴다**
+           — 상세의 «법정주기» 행은 s.legalCycle 을 직접 쓰므로 시간 요건을 잃지
+           않는다. 「5년마다 1회」처럼 주기를 말하는 값은 건드리지 않는다. */
+        if (r.unparsed && !r.need && RE_HOURS_ONLY.test(r.label) && !RE_CYCLE_WORD.test(r.label) && s.timing) {
+            r.hoursOnly = r.label;
+            r.label = s.timing;
+        }
         _cy[s.id] = r;
         return r;
     }
@@ -429,7 +472,7 @@
 
     global.DYCMP = {
         LEVELS: LEVELS, AXES: AXES, JUDGE: JUDGE,
-        levelOf: levelOf, stagesOfLevel: stagesOfLevel, levelCounts: levelCounts,
+        levelOf: levelOf, stagesOfLevel: stagesOfLevel, levelCounts: levelCounts, doneProbe: doneProbe,
         cycleOf: cycleOf, parseCycle: parseCycle, ccLabel: ccLabel, unparsedStages: unparsedStages,
         deadlineOf: deadlineOf, elapsedRounds: elapsedRounds,
         judge: judge, nextGap: nextGap,

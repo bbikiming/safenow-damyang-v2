@@ -74,6 +74,35 @@
         program:    { key: 'program',    label: '프로그램',   status: ['미시행', '진행', '완료'] },
     };
     var SRC_ORDER = ['onnara', 'electronic', 'upload', 'program'];
+
+    /* ── 문서가 오간 방향 ──────────────────────────────────────────────────
+     * [왜 필요한가] 원장의 `sr`(수발신자)은 «상대 기관» 하나로 부르기에는 세 가지가
+     * 섞여 있다 — 실측 3,830건 중 외부 기관, **담양군 내부 부서 895건(26%)**,
+     * 다중 수신 나열 231건, 그리고 뜻이 서지 않는 «노, 로, 도» 94건.
+     * 마지막 것이 증거다: 「대설·한파 대비 안전관리 철저」 같은 **내부 통보문**의
+     * 수신처가 «상대 기관» 칸에 억지로 들어가면서 깨진 값이 됐다. 방향을 먼저
+     * 물으면 내부 문서는 상대 기관 칸 자체가 사라져 그런 값이 생기지 않는다.
+     *
+     * [판정 축이 아니다] 부서별 이행 판정의 축은 `dept`(우리 쪽 담당)이고 방향은
+     * 그것을 대신하지 않는다. 여기는 «누구와 오간 문서인가»만 말한다.
+     *
+     * [옛 데이터는 미상이다] 원장·현행 업무문서·시연 시드에는 이 값이 없다.
+     * 없으면 `null` 이고 화면은 종전대로 기관명만 낸다 — 지어내지 않는다. */
+    var DIR = {
+        'in':       { key: 'in',       label: '받은 문서', verb: '받음', help: '외부에서 우리에게 온 공문' },
+        'out':      { key: 'out',      label: '보낸 문서', verb: '보냄', help: '우리가 외부로 내보낸 공문' },
+        'internal': { key: 'internal', label: '내부 문서', verb: '내부', help: '담양군 안에서 만들고 끝난 문서' },
+    };
+    var DIR_ORDER = ['in', 'out', 'internal'];
+    function dirOf(d) { return (d && DIR[d.dir]) || null; }
+    /* 수발신 표기 — 화면마다 조립하지 않는다. full=false 면 목록용(방향 접두 없음:
+       열 폭 안에서 기관명이 잘리는 비용이 방향 표시의 값보다 크다). */
+    function srText(d, full) {
+        var dir = dirOf(d);
+        if (dir && dir.key === 'internal') return '내부 문서';
+        if (!d || !d.sr) return '';
+        return (full && dir) ? (dir.verb + ' · ' + d.sr) : d.sr;
+    }
     /* DY_DOCS_V2 의 processType → 출처 */
     var PROC_SRC = { '전자문서': 'electronic', '첨부파일': 'upload', '프로그램': 'program' };
 
@@ -570,6 +599,8 @@
             stageIds: (d.stageIds || []).slice(),
             cycle: d.cycle || '',
             src: d.src || 'upload',
+            /* 방향 — 없으면 저장하지 않는다(옛 데이터와 같은 «미상»이 된다) */
+            dir: DIR[d.dir] ? d.dir : null,
             status: d.status || SRC[d.src || 'upload'].status[0],
             dept: d.dept || '', assignee: d.assignee || '',
             note: d.note || '',
@@ -750,6 +781,7 @@
     global.DYDOCS = {
         /* 상수 */
         ST: ST, ST_ORDER: ST_ORDER, SRC: SRC, SRC_ORDER: SRC_ORDER,
+        DIR: DIR, DIR_ORDER: DIR_ORDER, dirOf: dirOf, srText: srText,
         BASE_YEAR: BASE_YEAR, DEFAULT_YEAR: DEFAULT_YEAR, SKEY: SKEY, seedStale: seedStale,
         defaultYear: defaultYear, yearsWithData: yearsWithData, presetSourceYear: presetSourceYear,
         /* 소유권 */

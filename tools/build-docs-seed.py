@@ -115,8 +115,15 @@ def stage_type_fields(r):
         'doneRule': parse_done(g('완료판정')),
         'typeConf': conf if conf in ('CONFIRMED', 'DRAFT', 'UNKNOWN') else 'UNKNOWN',
         'typeNote': g('확인필요사유'),
-        'evidenceRequired': (g('증빙필수여부').upper() != 'N'),
     }
+    # ② 증빙 필수 여부는 **받은 값만** 싣는다.
+    #    종전에는 `!= 'N'` 이라 **빈값이 True** 가 됐다 — 177행 전부 빈 CSV 에서
+    #    «전건 증빙 필수»가 만들어진다. 같은 함수의 다른 세 열(적용수준·대상부서
+    #    규칙·주기적용시작연도)은 «없으면 필드를 안 만든다»로 처리하는데 이것만
+    #    비대칭이었다. 받지 않은 값을 단정하지 않는다.
+    ev = g('증빙필수여부').upper()
+    if ev in ('Y', 'N'):
+        out['evidenceRequired'] = (ev == 'Y')
     if lvl in ('L1', 'L2', 'L3'):
         out['levelSrc'] = lvl
     if dept:

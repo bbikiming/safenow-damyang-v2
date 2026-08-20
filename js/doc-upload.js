@@ -22,17 +22,26 @@
     /* 보고일자 기본값 — 기준연도가 올해가 아니면 오늘 날짜를 쓸 수 없다.
        2025년 화면에서 업로드를 열었는데 보고일이 2026-07-16 으로 채워지면
        저장되는 순간 연도와 날짜가 어긋난 문서가 된다(실제로 냈던 결함). */
-    function defaultDate(year) {
-        var t = D().today();
-        if (+year === +t.slice(0, 4)) return t;
-        return '';                       /* 다른 연도면 비워 두고 사용자가 고르게 한다 */
-    }
+    /* 보고일자는 **비워서 시작한다.**
+       공문의 보고일자는 대개 오늘이 아니다 — 며칠 전 문서를 올린다. 오늘로 채워
+       두면 안 보고 지나가 **틀린 날짜가 저장**된다. 같은 폼의 방향 세그먼트가
+       «기본 선택을 두지 않는다»(안 보고 지나간다)를 지키는데 날짜만 채워 두면
+       한 폼 안에서 원칙이 갈린다. 문서명은 파일명이라는 **근거**가 있어 채우지만
+       날짜는 근거가 없다. */
+    function defaultDate() { return ''; }
     function blankW(year) {
         year = year || D().defaultYear();
+        var mine = me();
         return {
             step: 1, year: year,
             files: [],
-            title: '', date: defaultDate(year), sr: '', dept: '', assignee: '', assigneeUid: '', src: 'upload', note: '',
+            title: '', date: defaultDate(), sr: '', dir: '',
+            /* 담당은 **본인으로 미리 채운다** — 대부분 올리는 사람이 담당자다.
+               시스템이 로그인 정보를 알면서 비워 두면 조직도를 세 번 눌러야 한다.
+               이 저장소에 이미 «내가 맡기»(§14-7) 선례가 있다. 날짜와 달리 근거가
+               있는 기본값이고, 한 번 눌러 바꿀 수 있다. */
+            dept: (mine.dept || ''), assignee: (mine.name || ''), assigneeUid: (mine.uid || ''),
+            src: 'upload', note: '',
             dupWith: null,          /* 중복 후보 문서 id */
             dupMode: '',            /* 'append' 기존 문서에 파일 추가 | 'new' 새 문서 */
             stageIds: [],
@@ -66,7 +75,10 @@
         if (!W) return;
         var m = { 'du-title': 'title', 'du-date': 'date', 'du-sr': 'sr', 'du-note': 'note' };
         Object.keys(m).forEach(function (id) { var v = val(id); if (v != null) W[m[id]] = v; });
-        var s = val('du-src'); if (s != null) W.src = s;
+        /* 출처(src)는 더 이상 묻지 않는다 — 아래 dirField() 주석 참고. 사람이 파일을
+           올리는 경로는 정의상 '직접 첨부'이고, 그래야 신규 문서의 상태가 항상
+           '검토대기'가 되어 «완료는 주관부서 확인 뒤에만»(§5)과 맞는다. */
+        W.src = 'upload';
     }
 
     /* =========================================================================
@@ -137,10 +149,30 @@
         return msg ? '<div class="du-err form-field-error" role="alert">' + esc(msg) + '</div>' : '';
     }
 
+    /* 시작 갈래 — «새로 올리기»와 «작년 것 가져오기»는 진입 시점의 선택이지
+       입력을 마친 뒤의 선택이 아니다. 파일을 이미 골랐으면 내지 않는다(그때는
+       이미 «새로 올리기»를 택한 것이고, 남겨 두면 소음이다). */
+    function startPaths() {
+        if (W.files.length || !prevYear()) return '';
+        return '<div class="du-start">' +
+            /* 한 줄에 들어가야 한다 — 접히면 상단이 두 배가 되어 «시작 시점에
+               보인다»는 이득을 밀도로 도로 내준다(모달 폭 452px 실측). */
+            '<span class="du-start-t">작년 것을 그대로 쓸 수 있습니다</span>' +
+            '<button type="button" class="btn btn-outline btn-sm" onclick="DOCUP.openPreset()">' +
+                prevYear() + '년 문서 가져오기</button>' +
+        '</div>';
+    }
+
     /* ── STEP 1 ── */
     function step1() {
         var dup = W.dupWith ? D().docById(W.dupWith) : null;
         return '<div class="form-section">' +
+            /* ① 대안 경로는 **시작 시점**에 낸다. 종전에는 폼 맨 아래(921px)에 있어
+                  스크롤해야 보였고, 다 채운 뒤에 알면 입력한 것을 버려야 했다. */
+            startPaths() +
+            /* ⑤ 첨부는 필수인데 종전에는 * 표시가 없었다 — 나머지 네 필드에는 있고
+                  유효성은 파일을 막는다. 라벨을 밖으로 빼 표시를 붙인다. */
+            '<label class="form-label" for="du-drop">증빙 파일 <span class="du-req">*</span></label>' +
             V().uploadDrop('서류 파일을 끌어다 놓거나 눌러서 고르세요', null,
                 { pick: 'DOCUP.addFiles', multiple: true, hint: true }) +
             fileList() +
@@ -152,28 +184,90 @@
                     '<input type="date" class="form-input" id="du-date" value="' + esc(W.date) + '" ' + inv('du-date') +
                     ' min="' + W.year + '-01-01" max="' + W.year + '-12-31">',
                     W.year + '년 업무이므로 ' + W.year + '년 안의 날짜만 받습니다') +
-                field('상대 기관', false, 'du-sr',
-                    '<input type="text" class="form-input" id="du-sr" value="' + esc(W.sr) + '" placeholder="주고받은 기관 (없으면 비워 두세요)">') +
-                field('어디서 온 서류인가요', false, 'du-src',
-                    '<select class="form-select" id="du-src">' +
-                        D().SRC_ORDER.filter(function (k) { return k !== 'program'; }).map(function (k) {
-                            return '<option value="' + k + '"' + (W.src === k ? ' selected' : '') + '>' + esc(D().SRC[k].label) + '</option>';
-                        }).join('') +
-                    '</select>') +
             '</div>' +
+            dirField() +
             ownerField() +
             field('비고', false, 'du-note', '<textarea class="form-input" id="du-note" rows="2">' + esc(W.note) + '</textarea>') +
             (dup ? dupBox(dup) : '') +
-            (prevYear()
-                ? '<p class="du-hint">' + prevYear() + '년에 낸 문서를 그대로 쓰려면 ' +
-                    '<button type="button" class="du-link" onclick="DOCUP.openPreset()">' + prevYear() + '년 문서에서 가져오기</button>' +
-                  '</p>'
-                : '') +
         '</div>';
     }
     /* 프리셋의 원본연도는 '기준연도 직전 연도'다 — 2025 로 하드코딩하면 2025년
        화면에서 "2025년 문서에서 가져오기"라는 말이 안 되는 안내가 나온다. */
     function prevYear() { return D().presetSourceYear(W ? W.year : D().defaultYear()); }
+
+    /* =========================================================================
+     * 이 문서가 어떻게 오간 건가 — 방향을 먼저 묻고 상대 기관을 뒤에 붙인다
+     * -------------------------------------------------------------------------
+     * [왜 두 칸을 하나로 합쳤나] 종전에는 «상대 기관»과 «어디서 온 서류인가요»가
+     * 나란히 있었다. 앞은 기관을, 뒤는 시스템 경로(온나라·전자문서·직접 첨부)를
+     * 묻는데 **같은 질문처럼 읽혀** 담당자가 «어디서 온»에 기관을 적으려 했다.
+     *
+     * [출처(src)를 왜 뺐나] 두 가지가 근거다.
+     *   ① 그 축은 원자료에 없다 — 원장 3,830건의 출처가 온나라 1,288 / 직접첨부
+     *      1,263 / 전자문서 1,279 로 거의 정확히 3등분인데, 이는 문서 ID 해시로
+     *      배정한 시연 보강값이다(doc-history-data.js 헤더).
+     *   ② 사람이 파일을 끌어다 놓는 경로는 정의상 «직접 첨부»다. 온나라·전자문서는
+     *      연계로 들어오는 경로이지 고르는 값이 아니다. 담당자가 «온나라»를 고르면
+     *      상태가 «결재중»이 되는데(SRC[].status[0]) 실제 결재 여부를 시스템은
+     *      모른다. upload 로 고정하면 상태가 «검토대기»가 되어 «완료는 주관부서
+     *      확인 뒤에만»(§5)과 정확히 맞는다.
+     *
+     * [왜 필수인가] 모든 문서는 받았거나 보냈거나 내부에서 끝난 것 셋 중 하나다 —
+     * 판단할 수 없는 경우가 없다. 기본 선택을 두지 않는 것은 «해당없음으로 빠져
+     * 나가기»를 막는 §4-2 와 같은 근거다(기본값이 있으면 안 보고 지나간다).
+     *
+     * [세그먼트 클래스] 이 저장소의 세그먼트 컨트롤은 .cmp-seg 하나뿐이라 그것을
+     * 쓴다. 접두어가 도메인을 가리킨다고 새 계열을 파지 않는다 — §7-1 이 기록한
+     * 사고(rskdoc- 를 «위험성평가 전용»으로 읽고 새 이름을 지어 12개 클래스가
+     * 무스타일로 떴다)의 교훈이 그것이다.
+     * ========================================================================= */
+    function dirField() {
+        var cur = W.dir;
+        var seg = '<div class="cmp-seg" role="radiogroup" aria-label="문서가 오간 방향"' +
+            (W.fieldErr['du-dir'] ? ' aria-describedby="du-dir-e"' : '') + '>' +
+            D().DIR_ORDER.map(function (k) {
+                var m = D().DIR[k], on = cur === k;
+                return '<button type="button" class="cmp-seg-btn' + (on ? ' is-on' : '') + '"' +
+                    ' role="radio" aria-checked="' + (on ? 'true' : 'false') + '"' +
+                    ' onclick="DOCUP.setDir(\'' + k + '\')">' + esc(m.label) + '</button>';
+            }).join('') + '</div>';
+        var help = cur ? D().DIR[cur].help : '받은 문서 · 보낸 문서 · 내부 문서 중 하나를 고르세요';
+
+        var out = '<div class="form-field du-dir-f' + (W.fieldErr['du-dir'] ? ' has-err' : '') + '" id="du-dir">' +
+            '<label class="form-label">이 문서는 어떻게 오간 건가요 <span class="du-req">*</span></label>' +
+            seg +
+            (W.fieldErr['du-dir']
+                ? '<p class="form-field-error" id="du-dir-e">' + esc(W.fieldErr['du-dir']) + '</p>'
+                : '<p class="form-field-help">' + esc(help) + '</p>') +
+        '</div>';
+
+        /* 내부 문서는 상대 기관 칸 자체가 없다 — 있으면 «노, 로, 도» 같은 값이
+           다시 생긴다(원장 94건이 그렇게 만들어졌다). */
+        /* ③ 상대 기관은 «방향»의 결과이므로 **같은 덩어리 안에** 둔다.
+              고르면 아래 필드가 122px 밀리는데, 그것을 없앨 수는 없다(progressive
+              disclosure 의 정상 동작이다). 대신 두 칸을 한 테두리로 묶어 **방금 누른
+              질문의 결과**임이 보이게 한다 — 사용자가 «왜 화면이 움직였나»가 아니라
+              «다음 칸이 열렸구나»로 읽는다. */
+        if (cur === 'internal') {
+            return wrapDir(out + '<p class="du-dir-note">담양군 안에서 만들고 끝난 문서라 상대 기관은 받지 않습니다.</p>');
+        }
+        if (!cur) return wrapDir(out);
+        return wrapDir(out + field('상대 기관', true, 'du-sr',
+            '<input type="text" class="form-input" id="du-sr" value="' + esc(W.sr) + '" ' + inv('du-sr') +
+            ' placeholder="' + (cur === 'in' ? '예: 전라남도 자연재난과' : '예: 전라남도지사(사회재난과장)') + '">',
+            cur === 'in' ? '이 문서를 보낸 기관·부서입니다' : '이 문서를 받은 기관·부서입니다'));
+    }
+    function wrapDir(inner) { return '<div class="du-dirblock">' + inner + '</div>'; }
+    function setDir(k) {
+        if (!W || !D().DIR[k]) return;
+        captureStep1();
+        W.dir = k;
+        /* 내부로 바꾸면 적어 두었던 상대 기관을 비운다 — 남겨 두면 화면에는 없는
+           값이 저장돼 «내부 문서인데 상대 기관이 있다»가 된다. */
+        if (k === 'internal') W.sr = '';
+        delete W.fieldErr['du-dir']; delete W.fieldErr['du-sr'];
+        renderW();
+    }
 
     /* 담당부서·담당자 — 공용 인라인 조직도로만 받는다(CLAUDE.md §3).
      * rootId 로 **고를 수 있는 범위 자체를 좁힌다** — 조회 범위 밖 사람 이름을
@@ -285,9 +379,8 @@
                 row('문서명', W.title) +
                 row('파일', W.files.map(function (f) { return f.name; }).join(', ') || '—') +
                 row('보고일자', W.date) +
-                row('상대 기관', W.sr || '—') +
+                row('수발신', D().srText({ sr: W.sr, dir: W.dir }, true) || '—') +
                 row('담당', W.dept + ' / ' + W.assignee) +
-                row('어디서 온 서류', D().SRC[W.src] ? D().SRC[W.src].label : W.src) +
                 row('기준연도', W.year + '년') +
             '</dl>' +
             (reverting.length
@@ -379,6 +472,13 @@
             else if (String(W.date).slice(0, 4) !== String(W.year)) {
                 W.fieldErr['du-date'] = '기준연도(' + W.year + '년)와 보고일자의 연도가 다릅니다.'; miss.push('보고일자');
             }
+            if (!W.dir) { W.fieldErr['du-dir'] = '이 문서가 어떻게 오간 건지 골라 주세요.'; miss.push('오간 방향'); }
+            else if (W.dir !== 'internal' && !String(W.sr).trim()) {
+                /* 받은·보낸 문서인데 상대가 없다는 것은 성립하지 않는다. 여기를
+                   비워 두면 원장의 «노, 로, 도» 같은 값이 다시 쌓인다. */
+                W.fieldErr['du-sr'] = (W.dir === 'in' ? '이 문서를 보낸' : '이 문서를 받은') + ' 기관·부서를 적어 주세요.';
+                miss.push('상대 기관');
+            }
             if (!W.assignee) { W.fieldErr['du-org'] = '담당부서·담당자를 조직도에서 고르세요.'; miss.push('담당부서·담당자'); }
             else {
                 var own = D().assertOwn(W.dept);
@@ -452,7 +552,7 @@
     }
     function payload() {
         return {
-            title: String(W.title).trim(), sr: W.sr, date: W.date, year: W.year,
+            title: String(W.title).trim(), sr: W.sr, dir: W.dir, date: W.date, year: W.year,
             stageIds: W.stageIds.slice(), src: W.src,
             dept: W.dept, assignee: W.assignee, assigneeUid: W.assigneeUid, note: W.note,
             files: W.files.map(function (f) { return { id: fileId(), name: f.name, size: f.size, at: D().today() }; }),
@@ -687,7 +787,10 @@
                 });
             }
             var res = D().addDocument({
-                title: title, sr: '', date: '', year: TO,   /* 보고일자·문서번호는 복제하지 않는다 */
+                title: title, sr: src.sr || '', dir: src.dir || null,
+                date: '', year: TO,   /* 보고일자·문서번호는 복제하지 않는다 */
+                /* 방향·상대 기관은 이어받는다 — 같은 업무를 같은 곳과 다시
+                   주고받는 것이 프리셋의 전제다. 원본에 없으면 미상 그대로. */
                 stageIds: src.stageIds.slice(),
                 src: 'upload', dept: OWNER.dept, assignee: OWNER.name, assigneeUid: OWNER.uid,
                 files: files, presetOf: id,
@@ -714,6 +817,7 @@
     }
 
     global.DOCUP = {
+        setDir: setDir,
         open: open, cancel: cancel, next: next, prev: prev, submit: submit,
         addFiles: addFiles, delFile: delFile, onTitle: onTitle, pickOwner: pickOwner, setDup: setDup,
         onPick: onPick, clearStages: clearStages,

@@ -231,7 +231,9 @@
                     : '') +
                 '<span class="cmp-scode">' + esc(d.id) + ' · ' + esc(d.year) + '년</span></td>' +
             '<td class="cmp-c-stg">' + stageChips(d) + '</td>' +
-            '<td class="cmp-c-ac">' + (d.sr ? esc(d.sr) : '<span class="cmp-dim">—</span>') + '</td>' +
+            /* 목록은 방향 접두를 붙이지 않는다 — 이 열이 159px 이라 «받음 · »가
+               붙으면 기관명이 잘린다. 내부 문서만 그 사실을 낸다(값이 비므로). */
+            '<td class="cmp-c-ac">' + (D().srText(d) ? esc(D().srText(d)) : '<span class="cmp-dim">—</span>') + '</td>' +
             '<td class="cmp-num">' + esc(d.date || '—') + '</td>' +
             '<td><span class="chip-status chip-sm ' + V().toneOf(d.status) + '">' + esc(d.status || '—') + '</span></td></tr>';
     }
@@ -362,7 +364,7 @@
                 '<h2 class="cmp-detail-h">' + esc(d.title) + '</h2>' +
                 '<p class="cmp-dim">' + esc((D().SRC[d.src] || {}).label || d.src || '') +
                     ' · ' + esc(d.date || '일자 미기재') + ' · ' + esc(d.id) +
-                    (d.sr ? ' · ' + esc(d.sr) : '') + '</p>' +
+                    (D().srText(d, true) ? ' · ' + esc(D().srText(d, true)) : '') + '</p>' +
                 '<p class="cmp-doc-tags">' +
                     (st.length
                         ? st.map(function (s) {

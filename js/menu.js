@@ -751,11 +751,30 @@
                 ];
             }
             const construction = window.ORG_CONSTRUCTION_STATE;
+            /* 선임 현황도 공사 목록과 같이 상태 배열로 둔다 — 종전에는 표가 하드코딩이라
+               [선임 등록]을 눌러 저장해도 표가 그대로였고 «선임 등록 완료» 알림만 떴다.
+               선임 공백은 그 자체가 법정 의무 미이행이라, 등록했는데 반영되지 않으면
+               담당자는 선임이 끝난 줄 알고 공백을 그대로 둔다. */
+            if (!window.ORG_APPOINT_STATE) {
+                window.ORG_APPOINT_STATE = [
+                    { kind: '안전관리자', name: '김안전', date: '2025-03-02', cert: '산업안전기사', paper: true },
+                    { kind: '보건관리자', name: '이보건', date: '2025-03-02', cert: '간호사', paper: true },
+                    { kind: '안전보건관리책임자', name: '박과장', date: '2025-01-02', cert: '재난안전과장', paper: false },
+                    { kind: '관리감독자 (도시과)', name: '', date: '', cert: '', paper: false },
+                ];
+            }
+            const appoint = window.ORG_APPOINT_STATE;
             const staffing = [
-                { role: '안전관리자', required: 1, current: 1, note: '예시 기준값' },
-                { role: '보건관리자', required: 1, current: 1, note: '예시 기준값' },
-                { role: '산업보건의', required: null, current: 0, note: '법령 배치 기준 미등록' },
+                { role: '안전관리자', required: 1, note: '예시 기준값' },
+                { role: '보건관리자', required: 1, note: '예시 기준값' },
+                { role: '산업보건의', required: null, note: '법령 배치 기준 미등록' },
             ];
+            /* 현재 선임 인원은 선임 현황에서 센다 — 상수로 두면 선임을 등록해도 배치 점검이
+               움직이지 않아, 같은 화면의 두 표가 서로 다른 현황을 주장한다. 판정(미달·완료)이
+               그 수치에 걸려 있으므로 어긋나면 «미달인데 완료»가 생긴다. */
+            staffing.forEach(x => {
+                x.current = appoint.filter(a => a.name && a.kind.indexOf(x.role) === 0).length;
+            });
             const staffShort = staffing.filter(x => x.required != null && x.current < x.required).length;
             const staffPending = staffing.filter(x => x.required == null).length;
             /* 담당자는 이 화면의 명단이 아니라 조직도(DYV2.ORG 단일 출처)에서 고른다 — 직접 입력하면
@@ -770,9 +789,23 @@
                 if (window.ORGPICK) ORGPICK.toggle('org-ap-field', 'member', 'PG.orgAppointPick');
                 else E.openOrgTree('org-ap-name');
             };
+            /* 프로토타입은 파일 실물을 저장하지 않는다 — 첨부했다는 «사실»만 잡는다.
+               DOM 클래스로 판정하면 그 클래스가 실재하는지에 기대게 되고, 없으면 조용히
+               항상 미첨부가 된다(CLAUDE.md §7-1 — 없는 클래스는 오류 없이 그냥 넘어간다). */
+            PG.orgApPaper = () => {
+                PG._apPaper = true;
+                const box = document.getElementById('org-ap-paper');
+                if (box) box.innerHTML = '<span class="chip-status success chip-sm">선임계 첨부됨</span>' +
+                    ' <span class="rl-ro-none">파일 실물은 파일관리 연계 후 보관됩니다</span>';
+                V.toast('선임계를 첨부했습니다 — 파일 실물은 연계 후 보관됩니다.');
+            };
             PG.orgAppointPick = label => { const el = document.getElementById('org-ap-name'); if (el) el.value = label; };
-            PG.orgAppoint = () => {
+            /* 버튼만 감추면 전역 호출로 뚫린다 — 저장 경로에도 같은 가드를 둔다(CLAUDE.md §12). */
+            PG.orgAppoint = (kind) => {
+                if (actGate('선임 등록')) return;
                 const today = DYV2.today();
+                PG._apKind = kind || '';
+                PG._apPaper = false;
                 V.openModal('안전·보건관리자 선임 등록',
                     '<div class="preset-form-grid">' +
                     '<span class="k">구분 <span class="req">*</span></span><select class="form-select" id="org-ap-kind"><option value="">선택하세요</option><option>안전관리자</option><option>보건관리자</option><option>안전보건관리책임자</option><option>관리감독자</option></select>' +
@@ -784,7 +817,10 @@
                     /* 선임일 기본값을 특정 날짜로 박아 두면 기준일이 움직일 때 미래 날짜가 기본이 된다. */
                     '<span class="k">선임일 <span class="req">*</span></span><input type="date" id="org-ap-date" value="' + today + '" max="' + today + '">' +
                     '<span class="k">자격</span><input type="text" id="org-ap-cert" placeholder="예: 산업안전기사">' +
-                    '<span class="k">선임계 첨부</span>' + DYV2.uploadDrop('선임 신고서·자격증 사본 첨부', null, { style: 'padding:14px;' }) + '</div>',
+                    '<span class="k">선임계 첨부</span>' +
+                    '<div><div id="org-ap-paper">' +
+                    DYV2.uploadDrop('선임 신고서·자격증 사본 첨부', 'PG.orgApPaper()', { style: 'padding:14px;' }) +
+                    '</div></div></div>',
                     '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
                     '<button class="btn btn-primary" onclick="PG.orgAppointSave()">등록</button>');
             };
@@ -798,8 +834,17 @@
                 if (!date) { V.toast('선임일을 입력하세요.'); return; }
                 /* 아직 오지 않은 날로 선임할 수 없다 — 미래 선임을 허용하면 «지금 선임돼 있다»가 거짓이 된다. */
                 if (date > DYV2.today()) { V.toast('아직 오지 않은 날로 선임할 수 없습니다.'); return; }
+                /* 현황에 반영하고 나서 알린다 — 알림만 내고 표가 그대로면 «등록했다»가 거짓이 된다
+                   (조직 화면 정의서 §4-2 «현황에 반영하고 신고 안내를 낸다»). */
+                const slot = appoint.find(a => a.kind === kind) || appoint.find(a => !a.name && a.kind.indexOf(kind) === 0);
+                /* 선임계는 파일 연계 전이라 실물을 보관하지 않는다 — 첨부했다는 사실만 남기고
+                   미첨부는 현황에 그대로 드러낸다. 첨부 여부를 안 남기면 «미첨부»가 영원히 미첨부다. */
+                const paper = !!PG._apPaper;
+                if (slot) { slot.name = name; slot.date = date; slot.cert = val('org-ap-cert'); slot.paper = paper; }
+                else { appoint.push({ kind: kind, name: name, date: date, cert: val('org-ap-cert'), paper: paper }); }
                 V.closeModal();
                 E.notify('선임 등록 완료 — 고용노동부 선임 신고 안내', '메일');
+                render();
             };
             PG.orgEval = () => actGate('수행평가 작성') ? null : E.openForm({
                 id: 'EDOC-수행평가-2026H1', title: '2026 상반기 안전보건관리책임자등 수행평가', form: 'F6',
@@ -811,11 +856,13 @@
                 fields: { source: '수행평가: 예산·인력 지원의 충분성 — 보완 판정' }, onChange: render,
             });
             PG.orgStaffComplete = () => {
+                if (actGate('선임 현황 점검 완료')) return;
                 if (staffShort) { V.toast('법정 배치 기준 미달 ' + staffShort + '건으로 선임 현황 점검을 완료할 수 없습니다.'); return; }
                 if (staffPending) { V.toast('배치 기준 미등록 ' + staffPending + '건이 있어 완료 확정할 수 없습니다.'); return; }
                 V.toast('선임 현황 점검을 완료했습니다.');
             };
             PG.orgConstForm = id => {
+                if (actGate('공사 등록·수정')) return;
                 const row = construction.find(x => x.id === id);
                 V.openModal(row ? '공사별 안전관리자 현황 수정' : '공사 직접 등록',
                     '<div class="preset-form-grid">' +
@@ -829,6 +876,7 @@
                     '<button class="btn btn-primary" onclick="PG.orgConstSave(\'' + (id || '') + '\')">저장</button>');
             };
             PG.orgConstSave = id => {
+                if (actGate('공사 등록·수정')) return;
                 const val = key => (document.getElementById(key).value || '').trim();
                 const name = val('org-c-name'), from = val('org-c-from'), to = val('org-c-to');
                 if (!name) { V.toast('공사명을 입력하세요.'); return; }
@@ -840,6 +888,7 @@
                 V.closeModal(); V.toast(row ? '공사 현황을 수정했습니다.' : '공사를 직접 등록했습니다.'); render();
             };
             PG.orgConstCheck = id => {
+                if (actGate('공사 점검')) return;
                 const row = construction.find(x => x.id === id); if (!row) return;
                 if (row.status === '미시행') { row.status = '진행'; V.toast('공사별 선임 점검을 시작했습니다.'); render(); return; }
                 if (row.status === '진행' && !row.manager) { V.toast('안전관리자가 미선임이므로 점검을 완료할 수 없습니다.'); return; }
@@ -871,12 +920,21 @@
                 '<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; width:100%; margin-top:4px;">' +
                 deptCards + '</div></div>') +
             sectionCard('안전관리자·보건관리자 선임 현황',
-                tbl(['구분', '성명', '선임일', '자격', '상태'], [
-                    ['안전관리자', '김안전', '2025-03-02', '산업안전기사', ST('완료')],
-                    ['보건관리자', '이보건', '2025-03-02', '간호사', ST('완료')],
-                    ['안전보건관리책임자', '박과장', '2025-01-02', '재난안전과장', ST('완료')],
-                    ['관리감독자 (도시과)', '<span class="badge-unassigned">미선임</span>', '-', '-', '<button class="btn btn-sm btn-primary" onclick="PG.orgAppoint()">선임 등록</button>'],
-                ])) +
+                tbl(['구분', '성명', '자격', '선임일', '선임계', '상태'], appoint.map(x => [
+                    esc(x.kind), x.name ? esc(x.name) : '<span class="badge-unassigned">미선임</span>',
+                    x.cert ? esc(x.cert) : '-', x.date || '-',
+                    /* 첨부 없는 선임을 그대로 드러낸다 — 감추면 서류가 영영 오지 않는다(정의서 §6). */
+                    /* 표준 배지(chip-status + toneOf)를 직접 쓴다 — 이 화면이 두루 쓰는 ST()는
+                       완료/진행/그 밖 셋만 아는 옛 헬퍼라 첨부와 미첨부가 같은 색으로 나온다.
+                       서류 공백을 색으로 구분하지 못하면 열을 만든 이유가 없어진다. */
+                    !x.name ? '-' : (function (lb) {
+                        return '<span class="chip-status ' + DYV2.toneOf(lb) + ' chip-sm">' + lb + '</span>';
+                    })(x.paper ? '첨부' : '미첨부'),
+                    x.name ? ST('완료')
+                        : (canAct() ? '<button class="btn btn-sm btn-primary" onclick="PG.orgAppoint(\'' + x.kind + '\')">선임 등록</button>'
+                                    : '<span class="rl-ro-none">조회</span>'),
+                ])),
+                canAct() ? '' : '<p class="rl-ro-none">' + DYROLE.readOnlyNote('선임 등록') + '</p>') +
             sectionCard('법정 배치인원 자동 점검',
                 '<div class="check-notice" style="margin-bottom:10px;">법령 배치 기준과 현재 선임 인원을 직역별로 비교합니다. 미달이거나 기준이 미등록된 경우 이 점검의 <b>완료 확정만</b> 차단하고 다른 업무는 막지 않습니다.</div>' +
                 tbl(['직역', '법정 기준', '현재 선임', '판정', '기준 출처'], staffing.map(x => [
@@ -886,22 +944,26 @@
                     x.required == null ? '<span class="chip-status warning">판정 대기</span>' : (x.current >= x.required ? ST('완료') : '<span class="chip-status danger">미달</span>'),
                     x.note,
                 ])),
-                '<button class="btn btn-sm btn-primary" onclick="PG.orgStaffComplete()"' + ((staffShort || staffPending) ? ' disabled title="미달·기준 미등록을 해소한 뒤 완료할 수 있습니다"' : '') + '>점검 완료 확정</button>') +
+                (!canAct() ? '' : '<button class="btn btn-sm btn-primary" onclick="PG.orgStaffComplete()"' + ((staffShort || staffPending) ? ' disabled title="미달·기준 미등록을 해소한 뒤 완료할 수 있습니다"' : '') + '>점검 완료 확정</button>')) +
             sectionCard('공사별 안전관리자 선임 현황',
                 '<div class="check-notice" style="margin-bottom:10px;">공사 자료는 담당자가 직접 등록한 것만 표시합니다. 계약 시스템에서 자동으로 들어오는 경로가 없으므로 등록하지 않은 공사는 이 목록에 나타나지 않습니다 — 대상 공사를 먼저 확인해 등록해야 합니다. 안전관리자 미선임 공사는 점검을 완료할 수 없습니다.</div>' +
                 tbl(['발주처', '공사명', '공사기간', '공사금액', '안전관리자', '점검', '관리'], construction.map(x => [
                     x.owner, x.name, x.from + '<br>~ ' + x.to, x.amount || '-',
                     x.manager || '<span class="badge-unassigned">미선임</span>',
                     ST(x.status),
-                    '<button class="btn btn-sm btn-outline" onclick="PG.orgConstForm(\'' + x.id + '\')">수정</button> ' +
-                    '<button class="btn btn-sm btn-primary" onclick="PG.orgConstCheck(\'' + x.id + '\')">' + (x.status === '미시행' ? '점검 시작' : x.status === '진행' ? '완료' : '확인') + '</button>',
+                    (canAct()
+                        ? '<button class="btn btn-sm btn-outline" onclick="PG.orgConstForm(\'' + x.id + '\')">수정</button> ' +
+                          '<button class="btn btn-sm btn-primary" onclick="PG.orgConstCheck(\'' + x.id + '\')">' + (x.status === '미시행' ? '점검 시작' : x.status === '진행' ? '완료' : '확인') + '</button>'
+                        : '<span class="rl-ro-none">조회</span>'),
                 ])),
-                '<button class="btn btn-sm btn-primary" onclick="PG.orgConstForm()">+ 공사 직접 등록</button>') +
+                (canAct() ? '<button class="btn btn-sm btn-primary" onclick="PG.orgConstForm()">+ 공사 직접 등록</button>' : '')) +
             sectionCard('수행평가 · 후속조치 (반기) ' + docStChip('EDOC-수행평가-2026H1'),
                 '<p style="font-size:12px; color:var(--text-gray);">경영책임자가 안전보건관리책임자등의 업무 수행을 반기 1회 평가하고, 미흡 판정은 후속 조치(포상·인사)로 이어집니다.</p>',
-                '<div style="display:flex; gap:6px;">' +
-                '<button class="btn btn-sm btn-primary" onclick="PG.orgEval()">수행평가 작성</button>' +
-                '<button class="btn btn-sm btn-outline" onclick="PG.orgFollow()">후속조치 등록</button></div>');
+                (canAct()
+                    ? '<div style="display:flex; gap:6px;">' +
+                      '<button class="btn btn-sm btn-primary" onclick="PG.orgEval()">수행평가 작성</button>' +
+                      '<button class="btn btn-sm btn-outline" onclick="PG.orgFollow()">후속조치 등록</button></div>'
+                    : '<p class="rl-ro-none">' + DYROLE.readOnlyNote('수행평가·후속조치 작성') + '</p>'));
         },
 
         /* ── 의견청취 [SFR-011]: 1메뉴 3탭(의견청취·건의함 / 산업안전보건위원회 / 협의체·점검표) — 기획 v0.1 + RFP 보완(접수경로·부서별·안건이행·점검결과지 CRUD) ── */
