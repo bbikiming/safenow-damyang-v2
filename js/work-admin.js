@@ -40,7 +40,7 @@
         state.mount = document.getElementById(mountId);
         state.year = +W().today().slice(0, 4);
         /* 자동발행 8종만 **스스로** 나간다 — 사람이 누르지 않는다.
-           실 개발에서는 배치 스케줄러가, 프로토타입에서는 화면 진입이 트리거다. */
+           연계 후에는 배치 스케줄러가, 지금은 화면 진입이 트리거다. */
         state.autoFired = W().autoIssue();
         render();
         if (state.autoFired.length) {
@@ -90,7 +90,7 @@
         wrap.className = 'page-head-action';
         wrap.innerHTML =
             (canIssue() ? '<button class="btn btn-primary btn-sm" onclick="WKADM.openIssue()">＋ 발생시 업무</button> ' : '') +
-            '<button class="btn btn-outline btn-sm" onclick="WKADM.confirmReset()">시연 초기화</button>';
+            '';   /* 되돌리기는 도움말 시트(헤더 [?]) 안으로 내렸다 */
         host.appendChild(wrap);
     }
 
@@ -171,7 +171,7 @@
         V().openModal('자동 발행이 도는 방식',
             '<div class="wka-sum">' +
                 row('대상', '주기가 있는 업무 <b>' + T().scheduled().length + '종</b> — 월·분기·반기·연') +
-                row('트리거', '<b>프로토타입</b>은 이 화면을 열 때 실행합니다.<br><b>실제 시스템</b>은 배치가 새벽에 실행합니다 — 구조는 같고 트리거만 다릅니다.') +
+                row('트리거', '<b>지금</b>은 이 화면을 열 때 실행합니다.<br><b>배치 연계 후</b>에는 스케줄러가 새벽에 실행합니다 — 구조는 같고 트리거만 다릅니다.') +
                 row('발행 주체', '시스템(<code class="wk-code">시스템 자동발행</code>) — 화면을 연 사람이 아닙니다') +
                 row('소급 범위', '발행일 기준 <b>최근 30일</b>까지만. 지나간 회차는 발행하지 않습니다') +
                 row('중복 방지', '같은 업무·같은 회차는 두 번 발행되지 않습니다') +
@@ -651,11 +651,11 @@
         W().returnTask(rc.id, rc.deptId, rc.reason.trim());
         var id = rc.id; toast('반려했습니다'); detail(id);
     }
-    function remindOne(id, deptId) { W().remind(id, deptId); toast(W().deptName(deptId) + ' 담당자·부서장에게 재촉 알림 발송 (프로토타입)'); detail(id); }
+    function remindOne(id, deptId) { W().remind(id, deptId); toast(W().deptName(deptId) + ' 담당자·부서장에게 재촉 알림을 발송했습니다'); detail(id); }
     function remindAll(id) {
         var n = 0;
         W().tasksOf(id).forEach(function (t) { if (!W().deptDone(t)) { W().remind(id, t.deptId); n++; } });
-        toast('미제출 ' + n + '개 부서에 재촉 알림 발송 (프로토타입)');
+        toast('미제출 ' + n + '개 부서에 재촉 알림을 발송했습니다');
         render();
     }
     function remindDept(deptId) {
@@ -665,7 +665,7 @@
             var t = W().taskOf(i.id, deptId);
             if (t && !W().deptDone(t)) { W().remind(i.id, deptId); n++; }
         });
-        toast(W().deptName(deptId) + ' — 미완료 ' + n + '건 독촉 (프로토타입)');
+        toast(W().deptName(deptId) + ' — 미완료 ' + n + '건 독촉');
         render();
     }
     function confirmCancel(id) {
@@ -692,12 +692,12 @@
 
     function confirmReset() {
         if (!canIssue()) { denyIssue(); return; }
-        V().openModal('시연 초기화',
+        V().openModal('예시 데이터 되돌리기',
             '<p class="wka-note">발행 배치·배정·제출 기록을 <b>시드 상태로</b> 되돌립니다. 이행점검·교육 등 다른 화면의 데이터는 그대로입니다.</p>',
             '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button class="btn btn-primary" onclick="WKADM.doReset()">초기화</button>');
     }
-    function doReset() { W().reset(); V().closeModal(); toast('시연 데이터를 초기화했습니다'); render(); }
+    function doReset() { W().reset(); V().closeModal(); toast('예시 데이터를 처음 상태로 되돌렸습니다'); render(); }
 
     global.WKADM = {
         init: init, setTab: setTab, setYear: setYear, setF: setF, toggleOpen: toggleOpen,

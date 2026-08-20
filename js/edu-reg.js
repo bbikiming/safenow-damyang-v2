@@ -6,7 +6,7 @@
    · 자체교육: 부서 등록 → 대상자 선택 → 진행 처리 = 즉시 완료·카운트
    · 정원·마감·불참 개념 없음.
    표준: 탭 .sub-tabs · 배지 chip-status+DYV2.toneOf · 표 .table-figma ·
-        빈상태 .v2-empty · 부서 선택 ORGPICK('deptId') · 시연 훅 EDUTOUR.onEvent
+        빈상태 .v2-empty · 부서 선택 ORGPICK('deptId') · 안내 훅 EDUTOUR.onEvent
    ===================================================================== */
 (function (global) {
     'use strict';
@@ -377,7 +377,7 @@
                 (G.signFile
                     ? '<span style="color:var(--main-dark);font-weight:var(--fw-bold);font-size:var(--fs-12);">' + esc(G.signFile) + '</span> ' +
                       '<button type="button" class="btn btn-sm btn-outline" onclick="EDUR.applyClearSign()">×</button>'
-                    : '<button type="button" class="btn btn-sm btn-outline" onclick="EDUR.applyAttachSign()">＋ 서명파일 첨부 (프로토타입)</button>') +
+                    : '<button type="button" class="btn btn-sm btn-outline" onclick="EDUR.applyAttachSign()">＋ 서명파일 첨부</button>') +
                 V().fileHint() +
             '</div>';
         V().openModal('참석자 등록부 등록 · ' + esc(E().deptName(G.deptId)), body,

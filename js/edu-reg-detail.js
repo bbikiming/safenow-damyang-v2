@@ -6,7 +6,7 @@
    · 신청현황 테이블: 부서 · 신청자 명단 · 인원 · 서명파일 · 신청일 (전체 노출)
    · [참석자 등록부 등록] · [교육 종료 처리] · 이력
    표준: 배지 chip-status+DYV2.toneOf · 표 .table-figma · 부서 선택 ORGPICK ·
-        시연 훅 EDUTOUR.onEvent('applied'|'closed')
+        안내 훅 EDUTOUR.onEvent('applied'|'closed')
    ===================================================================== */
 (function (global) {
     'use strict';
@@ -164,7 +164,7 @@
                 (G.signFile
                     ? '<span style="color:var(--main-dark);font-weight:var(--fw-bold);font-size:var(--fs-12);">' + esc(G.signFile) + '</span> ' +
                       '<button type="button" class="btn btn-sm btn-outline" onclick="EDURD.applyClearSign()">×</button>'
-                    : '<button type="button" class="btn btn-sm btn-outline" onclick="EDURD.applyAttachSign()">＋ 서명파일 첨부 (프로토타입)</button>') +
+                    : '<button type="button" class="btn btn-sm btn-outline" onclick="EDURD.applyAttachSign()">＋ 서명파일 첨부</button>') +
                 V().fileHint() +
             '</div>';
         V().openModal('참석자 등록부 등록 · ' + esc(E().deptName(G.deptId)), body,

@@ -226,6 +226,9 @@
         /* 행 전체가 진입 타깃(와이어프레임 tr.stg) — 칩·버튼 클릭에는 양보한다 */
         return '<tr class="cmp-stg cmp-rowlink" onclick="CMPDOC.rowOpen(event, \'' + esc(d.id) + '\')"><td class="cmp-c-main">' +
                 '<button type="button" class="cmp-slink" onclick="CMPDOC.openDoc(\'' + esc(d.id) + '\')">' + esc(d.title) + '</button>' +
+                (d.origin === 'seed26'
+                    ? ' <span class="chip-mini wt" title="2026년 실적은 2025년 실측 패턴에서 규칙으로 만든 예시 자료입니다. 실제 제출 기록이 아닙니다.">예시 자료</span>'
+                    : '') +
                 '<span class="cmp-scode">' + esc(d.id) + ' · ' + esc(d.year) + '년</span></td>' +
             '<td class="cmp-c-stg">' + stageChips(d) + '</td>' +
             '<td class="cmp-c-ac">' + (d.sr ? esc(d.sr) : '<span class="cmp-dim">—</span>') + '</td>' +
@@ -354,6 +357,8 @@
         '<section class="card">' +
             '<header class="card-header cmp-doc-h">' +
                 '<span class="chip-mini wt">' + esc(d.year) + '년 문서</span>' +
+                /* 시드 표시는 아래 업무단계 줄의 mapChip 이 이미 낸다 — 여기 또
+                   부르면 같은 칩이 한 헤더에 두 번 뜬다. */
                 '<h2 class="cmp-detail-h">' + esc(d.title) + '</h2>' +
                 '<p class="cmp-dim">' + esc((D().SRC[d.src] || {}).label || d.src || '') +
                     ' · ' + esc(d.date || '일자 미기재') + ' · ' + esc(d.id) +
@@ -416,6 +421,12 @@
         V().toast('문서를 삭제했습니다 — 할 일 연결 ' + r.doc.stageIds.length + '건이 함께 회수되었습니다.');
     }
     function mapChip(d) {
+        /* 2026 실적은 규칙으로 만든 예시 자료다 — 실제 제출 기록과 구분되지 않으면
+           보는 사람이 «담양군이 올해 이만큼 했다»로 읽는다(CLAUDE.md: 그럴듯하게
+           채우지 말고 드러낸다). */
+        if (d.origin === 'seed26') {
+            return '<span class="chip-mini wt" title="2026년 실적은 2025년 실측 패턴에서 규칙으로 만든 예시 자료입니다. 실제 제출 기록이 아닙니다.">예시 자료</span>';
+        }
         if (d.origin === 'ledger') {
             return d.mapped
                 ? '<span class="chip-status chip-sm success">분류완료</span>'
@@ -428,13 +439,19 @@
     function carryCard(d) {
         var y = liveYear();
         var can = D().canUpload();
-        /* 이미 이어받은 원본이면 등록 버튼 대신 그 문서를 가리킨다(검수 C-2) */
+        /* 이미 이어받은 원본이면 등록 버튼 대신 그 문서를 가리킨다(검수 C-2)
+           — 다만 **누가 옮겼는지**는 사실대로 적는다. 예시 자료가 옮겨 둔 것을
+           «내가 만들었습니다»로 쓰면 담당자가 자기 기억을 의심하게 된다. */
         var dup = null;
         D().allDocs().some(function (x) { if (x.presetOf === d.id && +x.year === y) { dup = x; return true; } return false; });
+        var seeded = dup && dup.origin === 'seed26';
         return '<div class="cmp-card">' +
             '<h3 class="cmp-detail-h3">올해 이어받기</h3>' +
             (dup
-                ? '<p><span class="chip-status chip-sm success">이어받기 완료</span> 이 문서로 이미 <b>' + y + '년</b> 문서를 만들었습니다.</p>' +
+                ? (seeded
+                    ? '<p><span class="chip-status chip-sm neutral">시드가 이미 옮김</span> ' + y +
+                      '년 예시 자료가 이 문서를 이미 올해로 옮겨 두었습니다 — 또 만들면 회차를 넘습니다.</p>'
+                    : '<p><span class="chip-status chip-sm success">이어받기 완료</span> 이 문서로 이미 <b>' + y + '년</b> 문서를 만들었습니다.</p>') +
                   '<button type="button" class="btn btn-outline" onclick="CMPDOC.openDoc(\'' + esc(dup.id) + '\')">만든 문서 보기</button>'
                 : '<p>이 문서를 바탕으로 <b>' + y + '년</b> 문서를 만듭니다. 업무단계 ' +
                     ((d.stageIds || []).length || 0) + '개' + (d.sr ? '·수발신자' : '') +

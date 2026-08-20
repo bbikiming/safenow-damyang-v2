@@ -14,7 +14,7 @@
         <div class="v2-toolbar">
             <div class="search-bar" style="flex:1; max-width:520px;">
                 <input class="search-input" type="text" placeholder="통합검색 — 공지·자료·우수사례·문서명">
-                <button class="search-submit" type="button" onclick="DYV2.toast('통합검색 (프로토타입)')">검색</button>
+                <button class="search-submit" type="button" onclick="DYV2.notReady('통합검색', '자료 색인 구축')">검색</button>
             </div>
         </div>
 
@@ -42,9 +42,9 @@
                 <table class="table-figma">
                     <thead><tr><th>자료명</th><th>구분</th><th>등록일</th><th></th></tr></thead>
                     <tbody>
-                        <tr><td style="font-weight:600;">중대재해처벌법 해설서 (고용노동부)</td><td>법령</td><td>2026-03-02</td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('다운로드 (프로토타입)')">다운로드</button></td></tr>
-                        <tr><td style="font-weight:600;">지자체 위험성평가 실무 가이드</td><td>지침</td><td>2026-02-14</td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('다운로드 (프로토타입)')">다운로드</button></td></tr>
-                        <tr><td style="font-weight:600;">TBM(작업 전 안전점검회의) 표준 양식</td><td>양식</td><td>2026-01-30</td><td><button class="btn btn-sm btn-outline" onclick="DYV2.toast('다운로드 (프로토타입)')">다운로드</button></td></tr>
+                        <tr><td style="font-weight:600;">중대재해처벌법 해설서 (고용노동부)</td><td>법령</td><td>2026-03-02</td><td><button class="btn btn-sm btn-outline" onclick="DYV2.notReady('자료 내려받기', '자료실 파일 등록')">다운로드</button></td></tr>
+                        <tr><td style="font-weight:600;">지자체 위험성평가 실무 가이드</td><td>지침</td><td>2026-02-14</td><td><button class="btn btn-sm btn-outline" onclick="DYV2.notReady('자료 내려받기', '자료실 파일 등록')">다운로드</button></td></tr>
+                        <tr><td style="font-weight:600;">TBM(작업 전 안전점검회의) 표준 양식</td><td>양식</td><td>2026-01-30</td><td><button class="btn btn-sm btn-outline" onclick="DYV2.notReady('자료 내려받기', '자료실 파일 등록')">다운로드</button></td></tr>
                     </tbody>
                 </table>
             </div></div>
@@ -67,6 +67,7 @@
 
     <script src="./js/layout.js"></script>
     <script src="./js/law-map.js"></script>
+    <script src="./js/help-center.js"></script><!-- DYHELP: 화면 도움말 -->
     <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
     <script src="./js/data.js"></script>
     <script src="./js/common.js"></script>

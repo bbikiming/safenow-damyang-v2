@@ -268,7 +268,7 @@
             var w = E().workerOf(wid); if (!w) return;
             (byDept[w.deptId] = byDept[w.deptId] || []).push(wid);
         });
-        var body = '<div class="check-notice" style="margin-bottom:10px;"><b>프로토타입 내부 알림 기록</b> — 실제 문자·메일은 발송하지 않습니다.</div>' +
+        var body = '<div class="check-notice" style="margin-bottom:10px;"><b>내부 알림 기록</b> — 문자·메일 발송은 외부 채널 연계 후 적용됩니다.</div>' +
             '<p style="font-size:var(--fs-13);">선택한 <b>' + ids.length + '명</b>의 미이수 상태를 부서 담당자 알림 이력으로 남깁니다.</p>' +
             '<div style="max-height:200px;overflow-y:auto;margin-top:8px;">' +
             Object.keys(byDept).map(function (dId) {

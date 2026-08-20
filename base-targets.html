@@ -84,6 +84,7 @@
 
     <script src="./js/layout.js"></script>
     <script src="./js/law-map.js"></script>
+    <script src="./js/help-center.js"></script><!-- DYHELP: 화면 도움말 -->
     <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
     <script src="./js/data.js"></script>
     <script src="./js/common.js"></script>
@@ -239,7 +240,7 @@
             function setDocState(k) { cap(); F.safetyDocState = k; if (k !== '보유') F.msdsName = ''; if (k !== '해당 없음') F.msdsReason = ''; draw(); }
             function addDept(nm) { cap(); if (nm && F.depts.indexOf(nm) < 0) F.depts.push(nm); draw(); }
             function delDept(i) { cap(); F.depts.splice(i, 1); draw(); }
-            function pickFile() { cap(); F.msdsName = '물질안전보건자료.pdf'; draw(); DYV2.toast('자료를 선택했습니다 (프로토타입)'); }
+            function pickFile() { cap(); F.msdsName = '물질안전보건자료.pdf'; draw(); DYV2.toast('물질안전보건자료.pdf 를 선택했습니다 — 파일 저장은 문서관리 연계 후 적용됩니다'); }
             function save() {
                 cap();
                 if (!F.name.trim()) { DYV2.toast('품목명을 입력하세요.'); return; }

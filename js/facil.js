@@ -20,8 +20,23 @@
     const esc = s => (window.DYV2 && DYV2.esc) ? DYV2.esc(s)
         : String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     const V = () => window.DYV2;
-    const now = () => new Date().toISOString().slice(0, 16).replace('T', ' ');
-    const THIS_YEAR = 2026;
+    /* 연계 이력·보완입력 타임스탬프 — **날짜는 기준일(§11), 시각만 실제 시계**다.
+       종전에는 통째로 실제 시각이라, 수신·전송이 한 번만 일어나도 연계 관리의
+       「마지막 수신」이 기준일보다 미래 날짜로 뜨고 연계 로그가 법제처 수집 배치
+       위로 올라갔다 — 화면들이 서로 다른 '오늘'을 말하는 것이 §11 이 없애려던 결함이다.
+       시각까지 기준일로 굳히지 않는 이유는 정렬이다. 같은 날 연달아 한 작업이 모두
+       같은 문자열이 되면 연계 로그의 최신 순 정렬이 무너져 방금 한 일을 찾을 수 없다.
+       DYV2 부재를 전제한 이 파일의 지연 접근 관례(V()·esc·thisYear)를 여기도 따른다. */
+    const now = () => {
+        const d = (window.DYV2 && DYV2.today) ? DYV2.today() : new Date().toISOString().slice(0, 10);
+        const t = new Date();
+        const p = n => (n < 10 ? '0' : '') + n;
+        return d + ' ' + p(t.getHours()) + ':' + p(t.getMinutes());
+    };
+    /* 기준일 단일 출처(§11) — 상수로 박아 두면 DEMO_TODAY 를 옮겼을 때
+       «준공 경과 N년»만 옛 해를 기준으로 남는다. 이 파일은 DYV2 부재를 전제한
+       지연 접근 관례를 쓰므로(V()·esc) 여기도 호출 시점에 읽는다. */
+    const thisYear = () => +String((window.DYV2 && DYV2.today) ? DYV2.today() : new Date().toISOString()).slice(0, 4);
 
     /* ── 코드 라벨 (보유 가이드 기준 — FMS 최신 공통코드 규격 미수신, PRD §9-2) ── */
     const CLASS_NM = { '1': '1종', '2': '2종', '3': '3종' };
@@ -102,7 +117,7 @@
     /* ── 파생·조회 ── */
     function recOf(no) { return DB.recs.find(r => r.facilNo === no) || null; }
     function extOf(no) { return DB.ext[no] || {}; }
-    function ageOf(r) { const y = (r.cplYmd || '').slice(0, 4); return /^\d{4}$/.test(y) ? (THIS_YEAR - +y) : null; }
+    function ageOf(r) { const y = (r.cplYmd || '').slice(0, 4); return /^\d{4}$/.test(y) ? (thisYear() - +y) : null; }
     function addrOf(r) { return [r.addrSido, r.addrGugun, r.addrDong, r.addrDetail].filter(x => x && x.trim()).join(' '); }
     /* 법정 점검주기 초과 개월 수 — 시행령 별표3. 등급별 주기(개월)를 기준으로 잰다.
        반환이 null 이면 판정 불가(점검일 없음). 양수면 초과 개월. */
@@ -809,7 +824,13 @@
         const page = document.body.dataset.dyPage;
         const app = document.getElementById('fac-app');
         if (!app) return;
-        if (page === 'fac-list') { window.__facRerender = () => mountList(app); mountList(app); }
+        if (page === 'fac-list') {
+            window.__facRerender = () => mountList(app); mountList(app);
+            /* 딥링크 ?no=시설물번호 — 이행 관리의 시설 상세가 «시설물 대장에서 열기»로
+               넘길 때 쓴다. 없으면 그 버튼이 목록만 열고 끝나 막다른 길이 된다. */
+            const no = new URLSearchParams(location.search).get('no');
+            if (no && recOf(no)) openDetail(no);
+        }
         else if (page === 'fac-risk') mountRisk(app);
         else if (page === 'fac-sync') mountSync(app);
         else if (page === 'fac-settings') mountSettings(app);

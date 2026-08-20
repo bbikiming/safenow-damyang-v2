@@ -6,7 +6,7 @@
     'use strict';
 
     /* =========================================================================
-     * ★ 시연 기준일 (DEMO_TODAY) — **시연 당일에 이 한 줄만 바꾼다** ★
+     * ★ 기준일 (DEMO_TODAY) — **시연 당일에 이 한 줄만 바꾼다** ★
      * -------------------------------------------------------------------------
      * 프로토타입은 시드 날짜가 고정이라 '오늘'도 고정해야 D-day·기한초과·이수 판정이
      * 서로 맞는다. 종전에는 하드코딩 4곳(2026-07-16 ×3 · 2026-07-14 ×1)과
@@ -36,7 +36,7 @@
     }
 
     /* 안전보건관리체계 9개 대메뉴 메타 (재구축 프롬프트 §3 — 명칭 문자열 고정)
-     * href — 대메뉴 진입 화면. 위험성평가·유해·위험요인 관리는 기존 프로토타입 UX 전용 화면 직결. */
+     * href — 대메뉴 진입 화면. 위험성평가·유해·위험요인 관리는 기존 전용 화면 직결. */
     const MENUS = {
         policy:   { label: '경영방침',           sfr: 'SFR-005',          dept: '재난안전과 중대재해팀', href: 'menu.html?m=policy' },
         org:      { label: '조직',               sfr: 'SFR-006·009·010',  dept: '행정과·재난안전과',     href: 'menu.html?m=org' },
@@ -124,7 +124,7 @@
                         { id: 'water', name: '물순환사업소', type: 'office', attrs: { fieldWorker: true, publicFacility: true, chemical: true, hazard: true, riskSite: true }, members: [
                             { uid: 'u_wat1', name: '오순환', role: '물순환사업소장', lead: true },
                             { uid: 'u_wat2', name: '서담당', role: '시설 담당' },
-                            /* 팀장 — **시연용 시드**다(2026-08-11). 담양군 실제 팀 편제 자료를
+                            /* 팀장 — **예시 자료**다(2026-08-11). 담양군 실제 팀 편제 자료를
                                받으면 통째로 교체한다. teamLead:true 인 사람만 그 팀 배정 권한을
                                갖는다(DYROLE.assignKind → 'team'). */
                             { uid: 'u_wat5', name: '문정수', role: '정수팀장', team: '정수팀', teamLead: true },
@@ -284,10 +284,15 @@
         /* 경영방침 버전 — 현행이 아닌 것은 '아직 결재 못 받은 신규본'과 '지나간 이력'으로 갈린다.
            둘을 같은 색으로 두면 방금 만든 방침이 과거 것으로 읽힌다. */
         '결재 대기': 'warning', '이력': 'neutral',
-        /* 법령 관리 (admin-law·admin-law-map) — 조문 생애주기·수집·매핑 판정 */
+        /* 법령 관리 (admin-law·admin-law-map) — 조문 생애주기·수집·매핑 판정.
+         * 수집 결과 검토의 짝은 '승인'·'보류' 지만 **'승인' 은 맨 위 공통 어휘에만 둔다** —
+         * 업무 발행 확인(work-admin)·위험성평가 이력(rsk-data)도 같은 말을 쓰므로 도메인
+         * 구획에 두면 그 도메인 전용 어휘로 읽힌다. 종전에는 위와 여기 두 번 선언돼
+         * 있었고 값이 같아 증상이 없었을 뿐이다 — 한쪽만 고치면 **뒤에 선언된 쪽이
+         * 조용히 이기고** 앞의 주석 맥락은 그대로 남아 다음 사람이 안 먹는 줄을 고친다. */
         '현행': 'success', '보관': 'neutral', '대체됨': 'purple', '시행 전': 'info',
         '신규': 'purple', '내용 변경': 'warning', '시행일 변경': 'warning', '변경 없음': 'neutral',
-        '수집 실패': 'danger', '승인': 'success', '보류': 'warning',
+        '수집 실패': 'danger', '보류': 'warning',
         '근거 있음': 'success', '근거 없음(확정)': 'neutral', '미판단': 'warning',
         '반영 안 됨': 'danger', '개발 수정 필요': 'danger',
         '법령 매핑 대기': 'warning', '검증 기록 없음': 'warning',
@@ -314,6 +319,29 @@
          *  · 충족  = 도래 회차를 전부 채웠다('완료'와 다르다 — 완료는 재난안전과 확인까지 끝난 것)
          *  · 비해당 = 저장값은 DYDOCS 의 '해당없음'이고 화면 표기만 비해당이다 */
         '충족': 'success', '비해당': 'neutral',
+        /* 연계 관리 (admin-integration) — 연계 실행 결과와, 결과를 낼 수 없는 상태.
+         * '성공'은 위 '정상'(success)과, '실패'는 '수집 실패'(danger)와 같은 축이다.
+         *  · 지연·주의 = 예정 주기를 넘겼으나 실패는 아니다 → warning. 카드 단계상태
+         *               (정상 → 지연·주의 → 실패 → 점검 필요) 중 **유일한 경고 단계**다.
+         *               위에 '지연'·'주의' 가 따로 있어도 이 라벨은 걸리지 않는다 —
+         *               합성어가 아니라 한 어휘이고 이 표는 정확 일치로만 찾는다.
+         *               빠뜨리면 neutral 로 떨어져 «예정 주기를 넘긴 연계»와 «연계 이력
+         *               미구현» 카드가 픽셀 단위로 같아지고, 경고 단계가 화면에서 사라진다.
+         *  · 부분 실패 = 일부 건만 실패했다. 전건 실패와 같은 색으로 두면 담당자가
+         *               이미 넘어간 성공분까지 다시 보낸다 → warning.
+         *               ※ 지금 이 라벨을 만드는 코드는 없다(연계 로그는 성공·실패·수집
+         *                 실패만 낸다). 정의서가 약속한 로그 상태라 자리를 비워 두지
+         *                 않을 뿐이니, **있는 상태로 오해하지 말 것.**
+         *  · 점검 필요 = 세 번 연속 실패라 재시도로 풀리지 않는다. 사람이 원인을
+         *               없애야 하므로 warning 이 아니라 danger 다.
+         * 아래 셋은 비슷해 보이지만 «아직 없는 것»과 «잘못된 것»으로 갈린다 — 합치지 말 것.
+         * 셋을 한 색으로 뭉치면 화면이 정상 상태를 장애로, 장애를 정상으로 말하게 된다.
+         *  · 연계 이력 미구현 = 상태를 파생할 원본(연계 기록) 자체가 없다 → neutral
+         *  · 수신 기록 없음   = 연계는 붙었는데 아직 한 건도 안 받았다   → neutral
+         *  · 자료 미확보     = 판단할 자료를 못 불러왔다 — 뭔가 잘못됐다 → warning */
+        '성공': 'success', '지연·주의': 'warning', '실패': 'danger',
+        '부분 실패': 'warning', '점검 필요': 'danger',
+        '연계 이력 미구현': 'neutral', '수신 기록 없음': 'neutral', '자료 미확보': 'warning',
     };
     /* 매핑에 없는 라벨은 neutral 로 수렴(색을 임의로 만들지 않는다). */
     function toneOf(label) { return STATUS_TONE[String(label || '').trim()] || 'neutral'; }
@@ -440,7 +468,7 @@
     function uploadDrop(labelHtml, onAct, opts) {
         opts = opts || {};
         const style = opts.style ? ' style="' + opts.style + '"' : '';
-        let desc = '', hint = '', input = '', act = onAct || "DYV2.toast('파일 선택 (프로토타입)')";
+        let desc = '', hint = '', input = '', act = onAct || "DYV2.notReady('파일 선택', '문서관리 연계')";
         let dnd = '';
         if (opts.pick) {
             const fid = 'updrop-file-' + (++_dropSeq);
@@ -516,7 +544,7 @@
         opts = opts || {};
         const wrap = document.createElement('div');
         /* opts.chrome — 셸(헤더) 크롬 모달임을 표시한다. 업무 흐름의 일부가 아니므로
-           시연 투어가 여기에 '시연 포인트' 안내를 주입하지 않는다(DYTOUR.syncModalState).
+           단계별 안내가 여기에 '입력 도움말' 안내를 주입하지 않는다(DYTOUR.syncModalState).
            표시가 없으면 투어가 떠 있을 때 자료 준비 모달 위에 엉뚱한 단계 안내가 붙었다. */
         wrap.className = 'modal' + (opts.variant ? ' modal-' + opts.variant : '') +
             (opts.chrome ? ' dy-modal-chrome' : '');
@@ -604,7 +632,7 @@
             '<p style="font-size:13px; font-weight:600; margin-bottom:12px;">' + esc(d.name) + '</p>' +
             uploadDrop('파일을 끌어다 놓거나 클릭하여 업로드<br><span style="font-size:12px;">다중 첨부 가능 · 업로드 시 버전 이력이 자동 기록됩니다</span>', null, { hint: true }),
             '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-            '<button class="btn btn-primary" onclick="DYV2.closeModal(); DYV2.toast(\'업로드되었습니다 (프로토타입)\')">업로드</button>'
+            '<button class="btn btn-primary" onclick="DYV2.closeModal(); DYV2.notReady(\'파일 업로드\', \'문서관리 연계\')">업로드</button>'
         );
     }
 
@@ -642,7 +670,7 @@
     /* lead: 접혔을 때도 남는 한 줄 · rest: 접히는 본문
      * opts.foldedByDefault — 사용자가 한 번도 손대지 않았을 때의 기본을 '접힘'으로.
      *   §14-12 의 "기본은 펼침(처음 오는 사람이 놓치면 안 된다)" 은 그 화면에 **다른
-     *   안내 장치가 없을 때**의 규칙이다. 시연 가이드 바가 흐름을 이미 설명하는
+     *   안내 장치가 없을 때**의 규칙이다. 단계별 안내 바가 흐름을 이미 설명하는
      *   화면에서는 안내가 같은 말을 반복하며 목록만 아래로 민다.
      *   한 번이라도 여닫으면 그 선택을 따른다(노출/접힘 둘 다 명시 저장). */
     function notice(id, lead, rest, opts) {
@@ -673,6 +701,94 @@
         return has ? withJong : withoutJong;
     }
 
+    /* =========================================================================
+     * 표 내려받기 (DYV2.tableFile) — 화면에서 보고 있는 표를 파일로
+     * -------------------------------------------------------------------------
+     * [형식이 CSV 인 이유] 이 프로토타입은 빌드도 외부 라이브러리도 없다.
+     * 진짜 .xlsx 는 ZIP 컨테이너라 라이브러리 없이 만들 수 없다. 그래서 UTF-8
+     * BOM 을 붙인 CSV 로 낸다 — 엑셀이 바로 열고 한글이 깨지지 않는다.
+     *   · BOM 이 없으면 엑셀(Windows)이 CP949 로 읽어 전부 깨진다. 빼지 말 것.
+     *   · 버튼 라벨에 «엑셀»만 쓰고 CSV 를 주면 거짓말이 된다. 라벨은 호출부가
+     *     «엑셀 내려받기»로 쓰되 확장자와 형식을 화면 문구로 함께 밝힌다.
+     *
+     * [수식 인젝션 방어 (MUST)] = + - @ 로 시작하는 값은 엑셀이 **수식으로 실행**
+     * 한다. 문서 제목에 그런 글자가 들어오면 남의 파일에서 코드가 도는 셈이라,
+     * 앞에 작은따옴표를 붙여 문자열로 고정한다(CSV Injection).
+     *
+     * [앞자리 0] 문서번호·전화번호가 «0123» 이면 엑셀이 123 으로 바꾼다. 숫자만
+     * 으로 이루어졌고 0 으로 시작하면 따옴표로 감싸도 소용없어 = 수식 표기를
+     * 쓴다 — 여기서는 값 앞에 작은따옴표를 붙이는 같은 방법으로 처리한다.
+     * ========================================================================= */
+    function csvCell(v) {
+        var t = (v == null) ? '' : String(v);
+        t = t.replace(/\r\n|\r|\n/g, ' ');                  /* 줄바꿈은 칸을 깨뜨린다 */
+        if (/^[=+@\t]/.test(t)) t = "'" + t;                  /* 수식 인젝션 차단 */
+        else if (/^-/.test(t) && !/^-?\d+(\.\d+)?$/.test(t)) t = "'" + t;
+        else if (/^0\d+$/.test(t)) t = "'" + t;               /* 앞자리 0 보존 */
+        return /[",;]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+    }
+    /* head: ['열1','열2'] · rows: [['a','b'], ...] */
+    function csvText(head, rows) {
+        var lines = [];
+        if (head && head.length) lines.push(head.map(csvCell).join(','));
+        (rows || []).forEach(function (r) { lines.push((r || []).map(csvCell).join(',')); });
+        return '\uFEFF' + lines.join('\r\n') + '\r\n';     /* BOM + CRLF */
+    }
+    /* 파일명 — 공백·경로문자를 지우고 날짜를 붙인다. 같은 표를 두 번 받아도
+       어느 시점 것인지 파일명만으로 구분된다. */
+    function fileStamp(parts) {
+        var t = (parts || []).filter(Boolean).join('_')
+            .replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '');
+        return t + '_' + today().replace(/-/g, '') + '.csv';
+    }
+    function download(filename, blob) {
+        var a = document.createElement('a');
+        var url = URL.createObjectURL(blob);
+        a.href = url; a.download = filename; a.style.display = 'none';
+        document.body.appendChild(a); a.click();
+        setTimeout(function () {
+            try { document.body.removeChild(a); URL.revokeObjectURL(url); } catch (e) {}
+        }, 100);
+    }
+    /* 화면이 부르는 단 하나의 창구. 0건이면 내보내지 않고 그 사실을 말한다 —
+       빈 파일을 주면 «받았는데 비었다»를 사용자가 열어 본 뒤에야 안다. */
+    function tableFile(nameParts, head, rows, note) {
+        if (!rows || !rows.length) { toast('내보낼 자료가 없습니다 — 조건에 맞는 행이 0건입니다.'); return false; }
+        var name = fileStamp(nameParts);
+        var text = csvText(head, rows);
+        /* 꼬리말 — 파일 한 장만 봐도 «무엇을 언제 어떤 조건으로 뽑았는지»가 남는다.
+           표에서 두 줄 떨어뜨려 붙이므로 엑셀에서 표 영역과 섞이지 않는다.
+           note: [['항목','값'], ...] */
+        if (note && note.length) {
+            text += '\r\n' + csvText(null, [['— 내려받기 정보 —']].concat(note))
+                .replace(/^\uFEFF/, '');
+        }
+        download(name, new Blob([text], { type: 'text/csv;charset=utf-8' }));
+        toast(name + ' 내려받기 (' + rows.length + '행)');
+        return true;
+    }
+
+
+    /* =========================================================================
+     * 아직 동작하지 않는 것 — 성공한 것처럼 말하지 않는다 (DYV2.notReady)
+     * -------------------------------------------------------------------------
+     * 파일 실물·외부 연계가 없어 누르면 아무 일도 일어나지 않는 자리가 있다.
+     * 「저장했습니다」라고 말하면 저장하지 않고 저장했다고 하는 것이고,
+     * 문구를 자리마다 손으로 쓰면 표현이 갈린다. 창구를 하나로 둔다.
+     *   notReady('문서 뷰어')                → 문서 뷰어는 전자문서 연계 적용 후 제공됩니다
+     *   notReady('서식 내려받기', '파일 등록') → …는 파일 등록 후 제공됩니다
+     * ========================================================================= */
+    function notReady(what, after) {
+        toast(String(what) + josa(what, '은', '는') + ' ' + (after || '연계 적용') + ' 후 제공됩니다');
+    }
+
+    /* 예시 자료 칩 — 실제 기록이 아닌 값에 붙인다(§ 자료 출처 표기 단일 출처).
+       칩을 지우는 것이 아니라 어휘만 바꾼 것이다 — 없애면 실적으로 읽힌다. */
+    function sampleChip(note) {
+        return '<span class="chip-mini wt" title="' +
+            esc(note || '실제 제출·접수 기록이 아닌 예시 자료입니다.') + '">예시 자료</span>';
+    }
+
     window.DYV2 = {
         MENUS, byMenu, complianceRate, dueCount,
         esc, josa, statusChip, workTypeChip, processTypeChip, pdcaChip, lawChip,
@@ -683,7 +799,9 @@
         TODAY: DEMO_TODAY, today, daysTo, realToday,
         acceptFiles, dropFiles, dropOver, isImageFile,
         BP, below, STATUS_TONE, toneOf,
-        notice, noticeToggle,
+        notice, noticeToggle, notReady, sampleChip,
+        /* 표 내려받기 — 엑셀이 여는 UTF-8 BOM CSV (§7 단일 창구) */
+        tableFile, csvText, csvCell, fileStamp, download,
         ORG, orgFlat, orgNode, orgCount, orgTotal, orgWalk, deptNames, orgDepts, deptIdOf,
         /* 업무 배정용 파생 — uid 를 살린다(orgFlat 은 EDOC 호환으로 uid 를 버린다) */
         orgMembers, orgTeams, orgAttrs, orgHasAttr,

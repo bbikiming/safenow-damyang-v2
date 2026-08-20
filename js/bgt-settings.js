@@ -90,7 +90,7 @@
             '</div>' +
             '<div style="margin-top:14px;">' +
                 '<div style="font-size:13px; font-weight:600; margin-bottom:6px;">첨부파일</div>' +
-                V.uploadDrop('파일을 끌어다 놓거나 클릭하여 업로드', "DYV2.toast('파일 첨부 (프로토타입)')", { hint: true }) +
+                V.uploadDrop('파일을 끌어다 놓거나 클릭하여 업로드', "DYV2.toast('파일 첨부')", { hint: true }) +
                 (files.length ? '<div class="bgt-file-chips" style="margin-top:8px;">' + files.map(f => '<span class="chip-mini wt">' + esc(f) + '</span>').join('') + '</div>' : '') +
             '</div>';
 
@@ -125,7 +125,7 @@
 
     function removePolicy(id) {
         window.DYBGT.removePolicy(id);
-        V.toast('원칙 문서가 삭제되었습니다. (프로토타입)');
+        V.toast('원칙 문서가 삭제되었습니다.');
         renderAll();
     }
 
@@ -305,7 +305,7 @@
                 '<div class="card-body">' +
                     '<div class="bgt-note">' +
                         '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
-                        '<span>점검 대상은 조직도(기관)와 시설물 대장(시설)에서 선택해 추가합니다. FMS 실데이터가 없으면 시설물 대장의 시연자료임을 표시하며, 점검표에서 사용 중인 대상은 삭제할 수 없습니다.</span>' +
+                        '<span>점검 대상은 조직도(기관)와 시설물 대장(시설)에서 선택해 추가합니다. FMS 실데이터가 없으면 시설물 대장의 예시 자료임을 표시하며, 점검표에서 사용 중인 대상은 삭제할 수 없습니다.</span>' +
                     '</div>' +
                     '<div class="bgt-target-grid">' +
                         renderTargetBlock('기관') +

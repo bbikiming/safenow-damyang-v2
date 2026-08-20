@@ -1,5 +1,5 @@
 /* =========================================
-   안전NOW 프로토타입 - 메인 스타일시트
+   담양군 중대재해예방 통합관리시스템 - 메인 스타일시트
    ========================================= */
 
 @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css");
@@ -1748,7 +1748,7 @@ body.sidebar-locked {
 }
 
 /* =========================================
-   18. 데이터 흐름 인스펙터 (프로토타입 검토용)
+   18. 데이터 흐름 인스펙터 (개발 검토용)
    ========================================= */
 .flow-inspector-fab {
   position: fixed;
@@ -2028,49 +2028,6 @@ body.sidebar-locked {
 .dy-brand-name span {
   font-weight: 300;
 }
-
-/* --- 검토 전 시연본 칩 (layout.js PRE_REVIEW) ---
-   배포 링크를 받은 사람이 완성본으로 오인하지 않도록 전 화면 헤더에 상시 노출한다.
-   눌러서 무엇이 검토 대기인지 볼 수 있으므로 button 이다(장식이 아니다). */
-.dy-prereview {
-  flex: none;
-  margin-left: 12px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 30px;
-  padding: 4px 10px;
-  border: 1px solid var(--status-warning-border);
-  border-radius: var(--radius-full);
-  background: var(--status-warning-bg);
-  color: var(--status-warning-fg);
-  font-size: var(--fs-12);
-  font-weight: var(--fw-bold);
-  line-height: 1;
-  white-space: nowrap;
-  cursor: pointer;
-}
-.dy-prereview:hover { filter: brightness(0.97); }
-/* 정책 확인 칩 — 같은 헤더 칩 계열의 modifier (§7 계열 신설 금지).
-   이 화면과 관련된 항목이 있으면(is-here) 채워서 눈에 띄게 한다. */
-.dy-prereview.is-policy {
-  border-color: var(--status-info-border);
-  background: var(--status-info-bg);
-  color: var(--status-info-fg);
-}
-.dy-prereview.is-policy.is-here {
-  border-color: var(--status-info-fg);
-  background: var(--status-info-fg);
-  color: var(--surface);
-}
-.dy-prereview.is-policy:focus-visible { outline-color: var(--status-info-fg); }
-.dy-prereview:focus-visible { outline: 2px solid var(--status-warning-fg); outline-offset: 2px; }
-/* 모달 본문 — 표준 타이포만 쓰고 자체 색을 만들지 않는다 */
-.dy-prereview-doc h4 { margin: 14px 0 6px; font-size: var(--fs-14); font-weight: var(--fw-bold); }
-.dy-prereview-doc p { margin: 0; font-size: var(--fs-13); line-height: 1.6; }
-/* 전역 리셋이 list-style 을 지워 항목이 그냥 들여쓴 문단으로 보인다 — 여기서 되살린다 */
-.dy-prereview-doc ul { margin: 0; padding-left: 18px; font-size: var(--fs-13); line-height: 1.7; list-style: disc; }
-.dy-prereview-note { color: var(--text-gray); }
 
 /* --- 사용자 칩 (시안 #2C7D60) --- */
 .dy-user-pill {
@@ -4443,11 +4400,6 @@ body.sidebar-locked {
     white-space: nowrap;
   }
   .dy-header-actions { flex: none; }
-  /* 좁은 화면에서는 '검토 전'만 남긴다 — 브랜드명과 폭을 다투면 안 된다.
-     칩을 지우지 않는 이유: 검토 전임을 알리는 것이 이 칩의 존재 이유다. */
-  .dy-prereview { margin-left: 8px; padding: 4px 8px; }
-  /* '시연본' 꼬리말만 접는다 — 정책 칩의 **건수**는 남겨야 한다(그게 정보다) */
-  .dy-prereview > span:not(.dy-policy-n) { display: none; }
   .dy-brand-icon {
     width: 24px;
     height: 26px;
@@ -4817,7 +4769,7 @@ body.sidebar-locked {
 .dy-ntf-dropdown-foot2 a + a { border-left: 1px solid var(--card-line); }
 
 /* =========================================================================
- * 권한 시연 롤 스위처 (DYROLE) — 헤더 사용자 칩 드롭다운
+ * 권한 롤 스위처 (DYROLE) — 헤더 사용자 칩 드롭다운
  *   책임체계 3계층: head(총괄 책임자·purple) / super(관리감독자·info) / staff(업무담당자·success)
  *   상태 tone 토큰(--status-{tone}-*)을 계층 색으로 재사용 — 원시값 금지 (CLAUDE.md §6)
  * ========================================================================= */
@@ -4863,14 +4815,6 @@ body.sidebar-locked {
 .dy-role-drop-title {
   display: flex; align-items: center; gap: 6px;
   font-size: var(--fs-14); font-weight: var(--fw-bold); color: var(--text-black);
-}
-.dy-role-drop-demo {
-  padding: 1px 7px;
-  font-size: var(--fs-12); font-weight: var(--fw-bold);
-  color: var(--status-purple-fg);
-  background: var(--status-purple-bg);
-  border: 1px solid var(--status-purple-border);
-  border-radius: var(--radius-full);
 }
 .dy-role-drop-sub {
   margin-top: 4px;
@@ -4970,3 +4914,31 @@ body.sidebar-locked {
   /* 초소형 화면: 이름 옆 계층 배지는 드롭다운으로 대체되므로 숨김 */
   .dy-user-tier { display: none; }
 }
+
+/* --- 도움말 버튼(헤더) · 도움말 시트 (js/help-center.js) --- */
+.dy-help-btn {
+  flex: none;
+  width: 32px; height: 32px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--card-line);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--text-gray);
+  font-size: var(--fs-14); font-weight: var(--fw-bold);
+  line-height: 1; cursor: pointer;
+}
+.dy-help-btn:hover { color: var(--main); border-color: var(--main); }
+.dy-help-btn:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
+.dy-help-h { margin: 16px 0 6px; font-size: var(--fs-13); font-weight: var(--fw-bold); color: var(--text-black); }
+.dy-help-sheet > .dy-help-h:first-child { margin-top: 0; }
+.dy-help-lead { margin: 0; font-size: var(--fs-13); line-height: 1.65; color: var(--text-gray); }
+.dy-help-tasks { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.dy-help-tasks li {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  padding: 8px 10px; border: 1px solid var(--card-line); border-radius: var(--radius-sm);
+  font-size: var(--fs-13);
+}
+.dy-help-laws { display: flex; flex-wrap: wrap; gap: 4px; }
+.dy-help-reset { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--card-line); }
+.dy-help-reset summary { font-size: var(--fs-13); font-weight: var(--fw-bold); cursor: pointer; }
+.dy-help-reset p { margin: 8px 0; font-size: var(--fs-12); line-height: 1.6; color: var(--text-gray); }

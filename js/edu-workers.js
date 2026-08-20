@@ -229,7 +229,7 @@
                     '<button type="button" class="btn btn-sm btn-outline" onclick="ORGPICK.toggle(\'ew-xls-deptfield\',\'deptId\',\'EDUW.pickExcelDept\')">조직도</button>' +
                 '</div></div></div>' +
             '<div class="edu-modal-row"><label class="form-label">파일</label>' +
-                '<button type="button" class="btn btn-sm btn-outline" onclick="DYV2.toast(\'엑셀 첨부됨 (프로토타입)\')">＋ 파일 선택</button></div>' +
+                '<button type="button" class="btn btn-sm btn-outline" onclick="DYV2.notReady(\'엑셀 파일 선택\', \'문서관리 연계\')">＋ 파일 선택</button></div>' +
             V().fileHint(),
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="EDUW.doExcel()">업로드</button>');

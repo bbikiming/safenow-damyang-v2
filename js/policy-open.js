@@ -17,13 +17,13 @@
         {
             id: 'doc-org', kind: 'data', menu: '공문·보고서',
             title: '담양군 기관정보·관인 자료',
-            now: '처리과 기호·주소·전화·팩스·관인이 아직 없습니다. 미수신 동안 지면의 그 칸을 미등록으로 표시하고 문서번호에 임시 채번임을 밝힙니다. 상신 자체를 막지는 않습니다 — 막으면 공문 흐름을 시연할 수 없고, 무엇이 비었는지는 지면이 드러냅니다.',
+            now: '처리과 기호·주소·전화·팩스·관인이 아직 없습니다. 미수신 동안 지면의 그 칸을 미등록으로 표시하고 문서번호에 임시 채번임을 밝힙니다. 상신 자체를 막지는 않습니다 — 막으면 공문 흐름 자체가 막히고, 무엇이 비었는지는 지면이 드러냅니다.',
             options: [{ k: 'waiting', label: '자료 대기' }, { k: 'received', label: '수신 완료' }]
         },
         {
             id: 'dept-list', kind: 'data', menu: '조직·업무 발행',
             title: '담양군 전체 부서·인원 명단',
-            now: '현재 일부 시연 명단만 있습니다. 행정포털 조직도를 단일 출처로 쓰고, 미수신 부서는 미등록으로 표시하며 없는 부서로 업무를 자동 발행하지 않습니다.',
+            now: '현재 일부 예시 명단만 있습니다. 행정포털 조직도를 단일 출처로 쓰고, 미수신 부서는 미등록으로 표시하며 없는 부서로 업무를 자동 발행하지 않습니다.',
             options: [{ k: 'partial', label: '부분 자료' }, { k: 'received', label: '전체 수신' }]
         },
         {
@@ -35,13 +35,26 @@
         {
             id: 'fms-data', kind: 'integration', menu: '시설물 안전관리',
             title: 'FMS 실데이터·코드·연계 규격',
-            now: '실데이터가 없습니다. 수신 전에는 시연 자료임을 표시하고 동기화 성공으로 기록하지 않으며, 시설물번호를 기준으로 한 검증용 파일 반입만 허용합니다.',
+            now: '실데이터가 없습니다. 수신 전에는 예시 자료임을 표시하고 동기화 성공으로 기록하지 않으며, 시설물번호를 기준으로 한 검증용 파일 반입만 허용합니다.',
             options: [{ k: 'waiting', label: '자료 대기' }, { k: 'received', label: '수신 완료' }]
         },
         {
             id: 'hr-sync', kind: 'integration', menu: '조직·안전보건교육',
             title: '행정포털·인사 연계 규격',
             now: '연계 전에는 엑셀 반입과 직접 등록을 사용하고 출처를 구분합니다. 관리감독자 지정일은 재난안전과가 별도로 등록하며 인사 기본정보와 섞지 않습니다.',
+            options: [{ k: 'waiting', label: '규격 대기' }, { k: 'received', label: '규격 수신' }]
+        },
+        {
+            /* 법제처 — 이 창구에 «받을 자료» 는 없다. 조문 원문은 공개 API 라 담양군이 줄 것이
+               아니고, 담양군 적용 관계 법령 목록은 아래 law-list 가 이미 맡는다. 그런데도 항목을
+               두는 이유는 **연계를 여는 접속 조건**이 외부 입력이기 때문이다 — 인증키(OC)는
+               법제처가 발급하고 아웃바운드 개방은 담양군 정보통신 소관이라 시스템이 만들 수 없다.
+               이 항목이 없으면 연계 관리 화면이 카드를 넷(온나라·FMS·법제처·행정포털) 그리는데
+               준비 목록에는 셋만 떠, 다음 작업자가 «법제처만 빠졌다» 로 읽는다(실제로 그렇게 읽혔다).
+               반대로 «받을 자료가 없다» 를 아무 데도 안 적어 두면 같은 오독이 영영 반복된다. */
+            id: 'law-api', kind: 'integration', menu: '법령 관리·연계 관리',
+            title: '법제처 국가법령정보 OPEN API 인증키(OC)·아웃바운드 방화벽 개방',
+            now: '조문 원문은 공개 API 라 담양군이 제공할 자료가 없습니다 — 필요한 것은 담양군 명의 인증키와 배치 서버 1대의 아웃바운드 개방 둘뿐입니다. 그 전까지 조문은 수집일이 고정된 스냅샷이라 개정이 저절로 들어오지 않으며, 조문을 펼칠 때 수집일을 함께 찍어 최신본이라고 말하지 않습니다. 화면이 법제처를 직접 호출하는 경로는 만들지 않습니다 — 만들면 보안 심의에 낸 «배치 서버 단독 아웃바운드» 명세와 실물이 어긋납니다.',
             options: [{ k: 'waiting', label: '규격 대기' }, { k: 'received', label: '규격 수신' }]
         },
         {
@@ -79,7 +92,7 @@
         {
             id: 'material-scope', kind: 'data', menu: '관리대상 현황',
             title: '담양군 원료·제조물 생산·판매·유통·관리 실태와 적용 대상 품목 목록',
-            now: '실목록 수신 전에는 등록된 시연자료를 확인 전 자료로 표시하고 현재 건수를 법정 적용 대상 수로 사용하지 않습니다. 0건도 해당 없음으로 단정하지 않으며 개별 등록만 허용합니다.',
+            now: '실목록 수신 전에는 등록된 예시 자료를 확인 전 자료로 표시하고 현재 건수를 법정 적용 대상 수로 사용하지 않습니다. 0건도 해당 없음으로 단정하지 않으며 개별 등록만 허용합니다.',
             options: [{ k: 'waiting', label: '자료 대기' }, { k: 'received', label: '수신 완료' }]
         }
     ];
@@ -89,7 +102,8 @@
         'rsk-occ': ['doc-org', 'onnara', 'official-letter'],
         'rsk-imp': ['doc-org', 'onnara', 'official-letter'],
         'reports': ['doc-org', 'onnara'],
-        'admin-integration': ['onnara', 'fms-data', 'hr-sync'],
+        /* 카드 넷과 항목 넷이 같은 순서로 맞물린다 — 셋만 뜨면 «하나 빠졌다» 로 읽힌다. */
+        'admin-integration': ['onnara', 'fms-data', 'law-api', 'hr-sync'],
         'fac-list': ['fms-data'], 'fac-risk': ['fms-data'], 'fac-sync': ['fms-data'], 'fac-settings': ['fms-data'],
         'base-targets': ['fms-data', 'public-transport', 'material-scope'],
         'sbm-org': ['dept-list', 'hr-sync'], 'sbm-comply': ['dept-list', 'law-list'], 'sbm-policy': ['dept-list'],
@@ -107,7 +121,7 @@
         'edu-sup-etc': ['hr-sync', 'doc-org', 'onnara', 'official-letter'],
         'edu-approval': ['doc-org', 'onnara', 'official-letter'],
         'edu-workers': ['hr-sync'], 'edu-status': ['hr-sync'],
-        'admin-law': ['law-list'],
+        'admin-law': ['law-list', 'law-api'],
         'docs-archive': ['doc-retain'],
         'docs-preset': ['doc-retain', 'doc-dept-src', 'onnara'],
         'docs-exec': ['doc-retain', 'doc-dept-src']

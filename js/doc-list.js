@@ -153,7 +153,7 @@
     }
 
     /* 온나라 PDF — 실제 상신 산출물이 있을 때만 연다.
-     * 시연 상태가 '온나라'라는 이유만으로 가짜 링크를 만들지 않는다(§8-8). */
+     * 예시 상태가 '온나라'라는 이유만으로 가짜 링크를 만들지 않는다(§8-8). */
     function pdfOf(d) {
         if (d.src !== 'onnara') return null;
         if (d.onnaraSid) return d.onnaraSid;                 /* 사용자 상신분 */
@@ -178,7 +178,9 @@
         var docs = D().allDocs();
         var led = docs.filter(function (d) { return d.origin === 'ledger'; }).length;
         var v2 = docs.filter(function (d) { return d.origin === 'v2'; }).length;
-        var user = docs.length - led - v2;
+        /* 뺄셈으로 세지 않는다 — 출처가 하나 늘 때마다(2026 예시 자료) 그 수가
+           조용히 «내가 올린 것»으로 잡힌다. 실제로 그렇게 어긋났다. */
+        var user = docs.filter(function (d) { return d.origin === 'user'; }).length;
         var lead = '<b>문서 ' + docs.length.toLocaleString() + '건</b>' +
             (user ? ' · 내가 올린 것 ' + user + '건' : '') +
             ' <span class="dx-lead-dim">— 조건으로 좁혀 찾습니다</span>';
@@ -188,7 +190,8 @@
             '<p>문서를 <b>찾는</b> 화면입니다. 어느 의무가 아직 안 됐는지는 ' +
             '<a href="docs-exec.html">이행 목록</a>에서 봅니다. ' +
             '<span class="dx-note-gap">2025년 자료는 재난안전과가 주고받은 공문 기록이라 담당 칸이 비어 있고, ' +
-            '출처·상태는 시연용 값입니다.</span></p>';
+            '출처·상태는 예시 값입니다. <b>2026년 실적은 규칙으로 만든 예시 자료</b>라 ' +
+            '「예시 자료」 표시를 함께 답니다 — 실제 제출 기록이 아닙니다.</span></p>';
         return V().notice('docs-preset', lead, rest, { foldedByDefault: true });
     }
 
@@ -377,6 +380,9 @@
                 /* 현행 업무문서(v2)는 세트 축이라 이행항목 매핑이 애초에 없다 —
                    '미분류' 배지를 붙이면 교정해야 할 것처럼 읽힌다 */
                 (d.origin === 'ledger' && !d.mapped ? ' <span class="chip-status chip-sm warning">의무 연결 필요</span>' : '') +
+                /* 2026 실적은 규칙으로 만든 예시 자료다 — 표시가 없으면 실측 원장과
+                   같은 줄에서 실제 제출 기록으로 읽힌다(정렬이 최신순이라 위에 온다) */
+                (d.origin === 'seed26' ? ' <span class="chip-mini wt" title="2026년 실적은 2025년 실측 패턴에서 규칙으로 만든 예시 자료입니다. 실제 제출 기록이 아닙니다.">예시 자료</span>' : '') +
                 '<span class="dl-sr">' + (d.sr ? esc(d.sr) : '<span class="dx-nodoc">상대 기관 미기재</span>') + '</span>' +
             '</td>' +
             '<td><span class="chip-status chip-sm ' + V().toneOf(D().SRC[d.src] ? D().SRC[d.src].label : '') + '">' +

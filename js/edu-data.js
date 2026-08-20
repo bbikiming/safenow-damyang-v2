@@ -735,7 +735,7 @@
 
     /* ================= 헬퍼 ================= */
     /* today()/realToday() 는 파일 상단에 정의 — 오늘 기준 단일 출처(DYV2.today()) */
-    /* 날짜는 시연 기준일(DYV2.today) · 시각만 실제 시계 — rsk-data.js 와 같은 이유(§11) */
+    /* 날짜는 기준일(DYV2.today) · 시각만 실제 시계 — rsk-data.js 와 같은 이유(§11) */
     function nowTs() {
         var t = new Date(), pad = function (n) { return (n < 10 ? '0' : '') + n; };
         return today() + ' ' + pad(t.getHours()) + ':' + pad(t.getMinutes());

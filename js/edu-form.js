@@ -168,7 +168,7 @@
         return slots.map(function (s) {
             return '<div class="edu-modal-row"><label class="form-label">' + s.label + '</label>' +
                 V().uploadDrop(
-                    '<b>' + s.label + '</b> <span class="edu-drop-sub">' + s.sub + ' (클릭 또는 끌어놓기 · 프로토타입)</span>',
+                    '<b>' + s.label + '</b> <span class="edu-drop-sub">' + s.sub + ' (클릭 또는 끌어놓기)</span>',
                     ns + '.addFile(\'' + s.key + '\')', { hint: true, style: 'padding:12px;' }) +
                 fileListHtml(F.files, ns, s.key, slots) +
             '</div>';

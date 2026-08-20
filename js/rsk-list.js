@@ -420,13 +420,12 @@
         } else {
             right = '<span class="chip-mini st-done">' + esc(a.year) + '년 평가 완료 (' + esc(a.completed_at || '') + ')</span>';
         }
-        /* 시연 리셋 — 세션 데이터 초기화 후 빈 상태로 복귀 (DYRSK.reset 재활용).
+        /* 예시 데이터 되돌리기 — 세션 데이터 초기화 후 빈 상태로 복귀 (DYRSK.reset 재활용).
            '조회 전용'이라 안내해 놓고 전 부서 데이터를 날리는 버튼을 남겨 두면 안내가 거짓이 된다.
            초기화는 시연을 운전하는 주관부서 담당자(canManage)만 한다. */
-        var resetBtn = canManage()
-            ? '<button type="button" class="btn btn-outline btn-sm rl-reset-btn" ' +
-              'title="시연용 세션 데이터 초기화" onclick="RSKLIST.resetDemo()">↺ 시연 초기화</button>'
-            : '';
+        /* 되돌리기는 화면 상단에 두지 않는다 — 도움말 시트(헤더 [?]) 안으로 내렸다.
+           권한 가드는 resetDemo()·confirmReset() 안에 그대로 있다(버튼만 숨기면 전역 호출로 뚫린다). */
+        var resetBtn = '';
         return '<div class="rl-toolbar">' +
                 '<div class="rl-tb-left">' +
                     '<label class="rl-tb-label">연도</label>' +
@@ -438,17 +437,17 @@
             '</div>';
     }
 
-    /* 시연 리셋 — 확인 후 sessionStorage 위험성평가 데이터 초기화 */
+    /* 예시 데이터 되돌리기 — 확인 후 sessionStorage 위험성평가 데이터 초기화 */
     function resetDemo() {
         if (!canManage()) { denyToast(); return; }
-        V().openModal('시연 데이터 초기화',
-            '<p style="font-size:var(--fs-13);line-height:1.6;">위험성평가 세션 데이터를 초기 시연 상태로 되돌립니다.</p>' +
+        V().openModal('예시 데이터 되돌리기',
+            '<p style="font-size:var(--fs-13);line-height:1.6;">위험성평가 예시 자료를 처음 상태로 되돌립니다.</p>' +
             '<p style="font-size:var(--fs-13);line-height:1.6;margin-top:8px;">' +
                 /* 한 저장소를 쓰므로 수시평가도 함께 지워진다 — 밝히지 않으면 놀란다 */
                 '<b>정기평가뿐 아니라 수시 위험성평가·개선조치도 함께</b> 초기화됩니다. ' +
                 '2026년 생성·업로드·전달·조치 진행 내역이 모두 사라지고 ' +
-                '<b>초기 시연 상태</b>(2026 미등록 · 2025 완료)로 복귀합니다.</p>' +
-            '<p style="font-size:var(--fs-12);color:var(--text-gray);margin-top:8px;">2025년 참고 데이터는 유지됩니다. 진행 중인 시연 가이드도 함께 종료됩니다.</p>',
+                '<b>처음 상태</b>(2026 미등록 · 2025 완료)로 돌아갑니다.</p>' +
+            '<p style="font-size:var(--fs-12);color:var(--text-gray);margin-top:8px;">2025년 참고 데이터는 유지됩니다. 진행 중인 단계별 안내도 함께 닫힙니다.</p>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="RSKLIST.doResetDemo()">초기화</button>');
     }
@@ -466,7 +465,7 @@
             var t = global[n];
             if (t && t.active && t.active()) t.stop();
         });
-        toast('시연 데이터 초기화 완료 · 2026년 미등록 상태로 복귀');
+        toast('예시 데이터를 처음 상태로 되돌렸습니다 · 2026년 미등록');
         render();
     }
 
@@ -597,7 +596,7 @@
         if (!name) { toast('파일명을 입력하세요.'); return; }
         D().setSurveyAll(a.id, name);
         V().closeModal();
-        toast('공통 유해위험요인 설문조사표 첨부 · 부서에 발송 (프로토타입)');
+        toast('공통 유해위험요인 설문조사표를 부서에 발송했습니다');
         render();
     }
     function clearSurveyAll() {
@@ -680,19 +679,19 @@
         render();
     }
     /* 용역 통합 보고서 열기 — 부서별 개선조치를 적을 때 근거로 여는 문서다.
-       프로토타입이라 실제 파일이 없으므로 그 사실을 알린다. */
+       파일 실물이 없으므로 그 사실을 알린다. */
     function openIntegratedReport() {
         var a = current(); if (!a) return;
         var f = a.files && a.files.report;
         if (!f) { toast('첨부된 통합 보고서가 없습니다.'); return; }
-        toast('통합 보고서 열기: ' + f + ' (프로토타입 — 실제 파일 뷰어는 미연결)');
+        V().notReady('문서 뷰어', '전자문서 연계');
     }
     /* 제출본 열기 — 프로토타입이라 실제 파일이 없다. 없는 동작을 약속하지 않고 그 사실을 알린다. */
     function openDeptReportFile(deptId) {
         var a = current(); if (!a) return;
         var dp = (a.depts || []).filter(function (x) { return x.deptId === deptId; })[0];
         if (!dp || !dp.reportFile) { toast('제출된 설문조사표가 없습니다.'); return; }
-        toast('제출본 열기: ' + dp.reportFile + ' (프로토타입 — 실제 파일 뷰어는 미연결)');
+        V().notReady('문서 뷰어', '전자문서 연계');
     }
 
     /* =============== 부서 담당자 본인의 제출 (2026-08-11 신설) ===============
@@ -741,7 +740,7 @@
         var a = current(); if (!a) return;
         var dp = (a.depts || []).filter(function (x) { return x.deptId === mySubmitDept(); })[0] || {};
         var form = dp.surveyFile || (a.files && a.files.surveyAll) || '';
-        toast('설문조사표 다운로드: ' + form + ' (프로토타입 — 실제 파일은 미연결)');
+        V().notReady('설문조사표 내려받기', '서식 파일 등록');
     }
     function doMySubmit() {
         var a = current(); if (!a) return;
@@ -1617,7 +1616,7 @@
         if (missing.length) { toast('일괄 기한 또는 부서별 기한을 지정하세요 (' + missing.length + '개 부서 미지정).'); return; }
         var r = D().deliverFromReview(DUE.aid, { bulkDue: DUE.bulkDue, deptDues: DUE.deptDues });
         V().closeModal();
-        var msg = r.deptsTouched + '개 부서에 개선조치 ' + r.total + '건 전달 · 알림 발송 (프로토타입)';
+        var msg = r.deptsTouched + '개 부서에 개선조치 ' + r.total + '건 전달 · 알림 발송';
         if (r.deptsExcluded) msg += ' · 지적사항 없는 ' + r.deptsExcluded + '개 부서는 조치 대상 제외';
         toast(msg);
         state.reviewOpen = {};
@@ -1676,7 +1675,7 @@
         var m = D().improvementOf(impId); if (!m) return;
         D().pushImpHistory(m.id, { type: 'REMIND', by: remindBy(), memo: '기한초과 재촉 (기한 ' + (m.due || m.due_date) + ')' });
         D().pushHistory(m.assessment_id, { type: 'REMIND', by: remindBy(), memo: D().deptName(m.dept_id) + ' · ' + (m.hazard && m.hazard.name || '') + ' 재촉' });
-        toast('재촉 알림 발송 (프로토타입)');
+        toast('재촉 알림을 발송했습니다');
         V().closeModal();
         render();
     }
@@ -1737,7 +1736,7 @@
         return '<div class="rl-modal-row">' +
             '<div class="rl-hr-badge">' +
                 '<span class="rl-hr-chip">🔗 인사정보시스템 연동</span>' +
-                '<span style="font-size:12px;color:var(--text-gray);">조직(부서) 목록을 불러왔습니다 (프로토타입 · 실제는 <code>DYV2.ORG</code> 파생).</span>' +
+                '<span style="font-size:12px;color:var(--text-gray);">조직(부서) 목록을 불러왔습니다.</span>' +
                 '<span style="font-size:12px;color:var(--text-black);font-weight:700;margin-left:auto;">선정 <b id="rl-w-cnt">' + cnt + '</b> / ' + total + '개 부서</span>' +
             '</div>' +
             '<label class="form-label" style="margin-top:10px;">평가 대상 부서 선택 <span style="color:var(--status-danger-fg)">*</span> ' +

@@ -99,7 +99,7 @@
             case 'file': {
                 const drop = V().uploadDrop(
                     (v ? esc(v) : '파일을 끌어다 놓거나 클릭하여 첨부 (다중 가능)'),
-                    "DYV2.toast('파일 첨부 (프로토타입 — 다중 가능)')",
+                    "DYV2.notReady('파일 첨부', '문서관리 연계')",
                     { style: 'padding:14px;', hint: true });
                 /* SFR-005: 파일별 설명·관리 목록 (ctx.attachList 제공 시) */
                 let list = '';
@@ -107,8 +107,8 @@
                     list = '<div class="attach-list"><div class="attach-list-head">첨부파일 목록</div>' +
                         '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>파일명</th><th>파일 설명</th><th>등록일</th><th>관리</th></tr></thead><tbody>' +
                         ctx.attachList.map(a => '<tr><td>' + esc(a.name) + '</td><td>' + esc(a.desc || '') + '</td><td>' + esc(a.date || '') + '</td>' +
-                            '<td><button type="button" class="btn btn-sm btn-outline" onclick="DYV2.toast(\'파일 설명 수정 (프로토타입)\')">설명 수정</button> ' +
-                            '<button type="button" class="btn btn-sm btn-outline" onclick="DYV2.toast(\'파일 삭제 (프로토타입)\')">삭제</button></td></tr>').join('') +
+                            '<td><button type="button" class="btn btn-sm btn-outline" onclick="DYV2.notReady(\'파일 설명 수정\', \'문서관리 연계\')">설명 수정</button> ' +
+                            '<button type="button" class="btn btn-sm btn-outline" onclick="DYV2.notReady(\'파일 삭제\', \'문서관리 연계\')">삭제</button></td></tr>').join('') +
                         '</tbody></table></div></div>';
                 }
                 return drop + list;
@@ -243,7 +243,7 @@
 
         const foot = fixed
             ? '<button class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
-              '<button class="btn btn-outline" onclick="DYV2.toast(\'개정 — 새 버전이 작성중 상태로 생성됩니다 (프로토타입)\')">개정</button>'
+              '<button class="btn btn-outline" onclick="DYV2.notReady(\'문서 개정\', \'문서관리 연계\')">개정</button>'
             : '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
               '<button class="btn btn-outline" id="edoc-save">임시저장</button>' +
               (saved.status === '작성중'
@@ -368,7 +368,7 @@
         const act = a => container.querySelector('[data-act="' + a + '"]');
         if (act('save')) act('save').addEventListener('click', () => { persist(saved.status, '임시저장'); V().toast('임시저장되었습니다'); rerender(); });
         if (act('submit')) act('submit').addEventListener('click', () => { persist('등록완료', '등록 (작성자: 박안전)'); V().toast('등록되었습니다 — 확정 전까지 수정 가능'); rerender(); });
-        if (act('revise')) act('revise').addEventListener('click', () => V().toast('개정 — 새 버전이 작성중 상태로 생성됩니다 (프로토타입)'));
+        if (act('revise')) act('revise').addEventListener('click', () => V().notReady('문서 개정', '문서관리 연계'));
         if (act('fix')) act('fix').addEventListener('click', () => {
             persist('확정', '확정 · 온나라 결재 상신');
             let created = 0;

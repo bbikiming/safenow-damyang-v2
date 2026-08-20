@@ -1,5 +1,5 @@
 /* =====================================================================
-   edu-tour.js · 안전보건교육 시연 투어 (전역 EDUTOUR)
+   edu-tour.js · 안전보건교육 단계별 안내 (전역 EDUTOUR)
 
    ⚠ CLAUDE.md §4 — **발표용 핵심 자산 · 제거 금지.**
    2026-08-04 에 엔진을 js/tour-core.js(DYTOUR)로 이관했다. 이 파일은
@@ -214,24 +214,24 @@
     var T = global.DYTOUR.define({
         key: 'edu', ns: 'EDUTOUR', skey: 'dy-edu-tour-v1', steps: STEPS, ownerPersona: 'staff', pageLabels: { 'edu-reg.html': '정기교육', 'edu-reg-detail.html': '정기교육 상세', 'edu-status.html': '이수현황' },
         stepsClass: '',                /* 5단계가 되어 4열 고정을 푼다(위험성평가와 같은 유연 배치) */
-        resetLabel: '시연 초기화',
-        kicker: function () { return '안전보건교육 시연'; },
-        flowTitle: function () { return '안전보건교육 핵심 업무 — 전체 흐름 ' + STEPS.length + '단계'; },
+        
+        kicker: function () { return '안전보건교육'; },
+        flowTitle: function () { return '안전보건교육 — 전체 흐름 ' + STEPS.length + '걸음'; },
         flowNote: function () {
             return '추적 중인 교육: <b>' + V().esc(courseLabel()) + '</b>' +
                 ' — 새로 등록하면 그 교육을 따라갑니다.<br>' +
-                '교육은 재난안전과 담당자가 전 과정을 운전합니다 — 부서 신청도 조직도에서 부서를 골라 이 화면에서 시연합니다.';
+                '교육은 재난안전과 담당자가 전 과정을 운전합니다 — 부서 신청도 조직도에서 부서를 골라 이 화면에서 처리합니다.';
         },
-        barTitle: function () { return '안전보건교육 핵심 업무 시연 — ' + STEPS.length + '단계'; },
+        barTitle: function () { return '안전보건교육 사용법 — ' + STEPS.length + '걸음'; },
         barDesc: function () {
             return '집합교육 등록 → 참석자 등록부 등록(서명 업로드) → 교육 종료 처리 → 이수현황 반영까지 ' +
-                '실제 화면 흐름으로 시연합니다. 가이드가 <b>어디를 누를지</b> 짚어 줍니다.';
+                '실제 화면 흐름 그대로 안내합니다. <b>어디를 누를지</b> 짚어 드립니다.';
         }
     });
 
     /* ── 계약 보존 ──
        edu 화면 HTML 9곳이 `EDUTOUR.boot()` 를 **인자 없이** 부른다. 종전 boot() 는
-       무조건 시연 바를 그렸으므로 기본값을 { bar: true } 로 맞춘다.
+       무조건 첫 방문 배너를 그렸으므로 기본값을 { bar: true } 로 맞춘다.
        (DYTOUR 기본은 바 없음 — my-work 처럼 남의 도메인 화면을 위한 값이다.) */
     var baseBoot = T.boot;
     T.boot = function (opts) { baseBoot(opts || { bar: true }); };
@@ -244,11 +244,11 @@
         V().closeModal();
         /* 접수 중 집합교육이 하나도 없으면 2·3단계를 돌 수 없다 — 종전 게이트 그대로 */
         if (!openCourse()) {
-            V().openModal('시연 데이터 준비',
-                '<p style="font-size:var(--fs-13);line-height:1.65;">이전 시연에서 접수 중인 집합교육이 모두 종료되었습니다. ' +
-                '교육 시연 데이터를 처음 상태로 복원한 뒤 시작합니다.</p>',
+            V().openModal('예시 데이터 복원',
+                '<p style="font-size:var(--fs-13);line-height:1.65;">접수 중인 집합교육이 모두 종료되어 신청 단계를 따라갈 수 없습니다. ' +
+                '교육 예시 자료를 처음 상태로 복원한 뒤 시작합니다.</p>',
                 '<button class="btn btn-secondary" type="button" onclick="DYV2.closeModal()">취소</button>' +
-                '<button class="btn btn-primary" type="button" onclick="EDUTOUR.restoreAndStart()">복원 후 시연 시작</button>');
+                '<button class="btn btn-primary" type="button" onclick="EDUTOUR.restoreAndStart()">복원 후 시작</button>');
             return;
         }
         /* 종전과 같이 **항상 1단계부터** 시작한다 — 발표자가 아는 흐름을 바꾸지 않는다.
@@ -263,15 +263,15 @@
     };
     T.resetDemo = function () {
         /* 버튼을 숨기는 것만으로는 전역 호출로 뚫린다 (§12 와 같은 원칙) */
-        if (T.view() === 'read') { toast('조회 전용 관점에서는 시연 데이터를 초기화할 수 없습니다.'); return; }
+        if (T.view() === 'read') { toast('조회 전용 관점에서는 예시 데이터를 되돌릴 수 없습니다.'); return; }
         T.stop();
-        V().openModal('시연 상태 초기화',
+        V().openModal('예시 데이터 되돌리기',
             '<p style="font-size:var(--fs-13);line-height:1.6;">교육 등록·신청·종료 처리와 근로자 명단·독촉 이력 데이터를 처음 상태로 되돌립니다.</p>',
             '<button class="btn btn-secondary" type="button" onclick="DYV2.closeModal()">취소</button>' +
-            '<button class="btn btn-primary" type="button" onclick="EDUTOUR.confirmReset()">초기화</button>');
+            '<button class="btn btn-primary" type="button" onclick="EDUTOUR.confirmReset()">되돌리기</button>');
     };
     T.confirmReset = function () {
-        if (T.view() === 'read') { toast('조회 전용 관점에서는 시연 데이터를 초기화할 수 없습니다.'); return; }
+        if (T.view() === 'read') { toast('조회 전용 관점에서는 예시 데이터를 되돌릴 수 없습니다.'); return; }
         E().reset();
         T.stop();
         location.reload();

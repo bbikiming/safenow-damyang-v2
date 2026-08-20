@@ -11,16 +11,6 @@
 (function () {
     'use strict';
 
-    /* =========================================================================
-     * ★ 검토 전 표시 (PRE_REVIEW) — **검토가 끝나면 이 한 줄만 false 로 바꾼다** ★
-     * -------------------------------------------------------------------------
-     * 배포 링크를 받아 여는 사람에게는 이 화면이 완성본으로 보인다. README·배포 안내에
-     * 적어 둔 "검토 전" 고지는 저장소를 여는 사람만 보므로, 화면 자체에도 표시한다.
-     * 헤더 셸 한 곳에서 렌더하므로 전 화면(54개)에 한 번에 붙고 한 번에 걷힌다
-     * (도달할 수 없는 수단을 화면에 남기지 않는다는 같은 원칙).
-     * 걷어낼 때 함께 정리할 것 — README.md 상단 안내 블록 · 배포본의 배포-안내.md
-     * ========================================================================= */
-    const PRE_REVIEW = true;
 
     /* --- 아이콘 (Lucide 스타일, stroke 1.75) --- */
     const ICON = {
@@ -48,7 +38,7 @@
     };
 
     /* =========================================================================
-     * 권한 시연 (DYROLE) — 중대재해처벌법 책임체계 3계층 롤 스위처
+     * 권한 전환 (DYROLE) — 중대재해처벌법 책임체계 3계층 롤 스위처
      *   군수(총괄 책임자) – 실과장·사업소장·읍면장(관리감독자) – 업무담당자(실무 수행자)
      *   우측 상단 사용자 칩 클릭 → 페르소나 전환 → 전 화면(헤더·GNB·대시보드)이
      *   선택한 직위 관점으로 다시 렌더된다. 저장: localStorage(dy-role-sim-v1).
@@ -294,7 +284,7 @@
             window.location.reload();
         }
     }
-    /* 헤더 드롭다운이 열리면 시연 투어 패널을 접는다 — 패널은 --z-fab(90),
+    /* 헤더 드롭다운이 열리면 단계별 안내 패널을 접는다 — 패널은 --z-fab(90),
        드롭다운은 --z-nav+2(32) 라 패널이 알림 목록의 오른쪽을 가렸다.
        레이어를 뒤집는 대신 '셸 크롬이 뜨면 패널이 접힌다'는 모달과 같은 규칙을 쓴다.
        class 토글이라 투어의 MutationObserver(childList only)가 못 잡으므로 명시 호출. */
@@ -538,7 +528,7 @@
 
         // GNB. 안전보건교육 — 재설계 v1 §8.5 (SNB 3뎁스, 2026-07-20 적용)
         //   item.section 값이 바뀌면 헤더 삽입, undefined 면 직속(top-level) — renderSidebar 참고.
-        //   대표 진입: edu-status.html(이수현황) — edu.html 은 리다이렉트 스텁. 시연 투어는 js/edu-tour.js(EDUTOUR).
+        //   대표 진입: edu-status.html(이수현황) — edu.html 은 리다이렉트 스텁. 단계별 안내는 js/edu-tour.js(EDUTOUR).
         { id: 'edu', label: '안전보건교육', icon: 'user', items: [
             /* 현업근로자 3종 */
             { id: 'edu-reg',     section: '현업근로자',  label: '정기교육',   icon: 'user',  href: 'edu-reg.html',     screen: 'EDU-REG / SFR-004·010' },
@@ -658,13 +648,10 @@
                         <span class="dy-brand-icon">${ICON.pocket}</span>
                         <span class="dy-brand-name"><strong>담양군</strong><span>중대재해예방 시스템</span></span>
                     </a>
-                    ${PRE_REVIEW ? `<button type="button" class="dy-prereview" onclick="window.DYLayout.preReviewInfo()"
-                        title="담양군 주무관님 검토 전 시연본입니다 — 눌러서 상세 보기">검토 전<span> 시연본</span></button>` : ''}
-                    ${PRE_REVIEW ? `<button type="button" class="dy-prereview is-policy" id="dy-policy-chip"
-                        onclick="window.DYPOLICY && window.DYPOLICY.open()"
-                        title="외부 자료·연계 준비사항">자료 준비 <span class="dy-policy-n">·</span></button>` : ''}
                 </div>
                 <div class="dy-header-actions" style="display:flex; align-items:center; gap:6px;">
+                    <button class="dy-help-btn" id="dy-help-btn" type="button" hidden
+                            aria-label="도움말" title="이 화면 사용법">?</button>
                     <div class="dy-ntf-wrap" id="dy-ntf-wrap" style="position:relative;">
                         <button class="dy-ntf-btn" id="dy-ntf-btn" type="button" aria-label="알림">
                             ${ICON.bell}
@@ -687,7 +674,7 @@
         const t = roleTier(p);
         return html`
             <button class="dy-user-pill" id="dy-role-btn" type="button"
-                    aria-haspopup="dialog" aria-expanded="false" aria-label="사용자 메뉴 — 권한 전환 (시연)">
+                    aria-haspopup="dialog" aria-expanded="false" aria-label="사용자 메뉴 — 권한 전환">
                 <span class="dy-user-avatar">${p.name.charAt(0)}</span>
                 <span class="dy-user-text">
                     <span class="dy-user-name">${p.name} 님 <span class="dy-user-tier">${t.label}</span></span>
@@ -731,7 +718,7 @@
         return html`
             <div class="dy-role-dropdown" id="dy-role-dropdown" role="dialog" aria-hidden="true" aria-label="권한 전환">
                 <div class="dy-role-drop-head">
-                    <span class="dy-role-drop-title">권한 전환 <span class="dy-role-drop-demo">시연</span></span>
+                    <span class="dy-role-drop-title">권한 전환</span>
                     <p class="dy-role-drop-sub">선택한 직위 관점으로 대시보드·메뉴가 전환됩니다</p>
                 </div>
                 <div class="dy-role-drop-list">${groups}</div>
@@ -900,6 +887,7 @@
                 // id 는 DYLAW 가 직접 해석한다 (menu.html 의 ?m=·?sub= 까지 반영)
                 if (window.DYLAW) window.DYLAW.inject(main);
 
+
                 // [data-pagination] 마커 자동 렌더
                 renderPaginationMarkers(main);
 
@@ -920,10 +908,18 @@
             wireMobileMenu();
             wireNotification();
             wireRoleSwitcher();
+
+            /* 도움말 버튼 — DYHELP.MAP 에 있는 화면에서만 낸다(자체 <main> 을 쓰는
+               화면도 있으므로 본문 분기 밖에서 배선한다). 열어 봐야 "준비 중"이라고
+               말하는 버튼은 도달할 수 없는 수단이므로 매핑이 없으면 아예 숨긴다. */
+            const hb = document.getElementById('dy-help-btn');
+            if (hb && window.DYHELP && window.DYHELP.has()) {
+                hb.hidden = false;
+                hb.addEventListener('click', function () { window.DYHELP.open(); });
+            }
             wireGnbOverflow();
             /* 외부 자료·연계 준비사항 — 헤더 칩 카운트 동기화 (DYPOLICY / js/policy-open.js).
                칩이 DOM 에 붙은 **뒤** 불러야 한다. 이 화면 관련 항목이 있으면 칩이 강조된다. */
-            if (window.DYPOLICY) window.DYPOLICY.syncChip();
 
 
             /* 권한 전환 직후 도착 토스트 (DYROLE) */
@@ -1194,41 +1190,9 @@
         return html;
     }
 
-    /* 검토 전 칩 클릭 — 무엇이 내부 검토 전이고 무엇이 외부 자료 대기인지 밝힌다.
-       칩만 띄우고 설명이 없으면 "왜 검토 전인지"를 아무도 알 수 없다.
-       모달은 공용 헬퍼만 쓴다 (CLAUDE.md §1). */
-    function preReviewInfo() {
-        const V = window.DYV2;
-        if (!V || !V.openModal) return;
-        V.openModal('검토 전 시연본입니다',   /* 셸 크롬 — 투어 안내 주입 대상 아님({chrome:true}) */
-            '<div class="dy-prereview-doc">' +
-              '<p><b>이 화면은 담양군 주무관님 최종 검토 전 상태입니다.</b> 자체 기획으로 결정 가능한 기능·UX는 화면 정의서에서 확정해 개발할 수 있습니다. ' +
-                '외부 자료가 들어오면 실제 기관정보·명단·연계값만 교체합니다.</p>' +
-              '<h4>검토 대기 중인 변경</h4>' +
-              '<ul>' +
-                '<li>2026-07-30 회의 반영 — 안전보건교육 첨부·탭 구성, 이행관리 → <b>이행점검</b> 개칭과 부서 전수 체크리스트, 경영방침 게시 현황</li>' +
-                '<li>개선조치 완료 확인 → <b>공문 기안</b> → 온나라 이관 (신설)</li>' +
-                '<li>권한 계층별 초기 조작 권한·조회 범위 확정 — 운영 변경은 시스템 관리에서 처리</li>' +
-              '</ul>' +
-              '<h4>담양군·외부기관 자료가 필요한 항목</h4>' +
-              '<p class="dy-prereview-note">아래는 화면에서 <b>“미등록”</b>으로 드러나며, 미수신 대체 동작도 정의돼 있습니다.</p>' +
-              '<ul>' +
-                '<li>공문 기관정보 — 처리과 기호·주소·전화·팩스·전자우편·공개구분·관인</li>' +
-                '<li>부서 명단 — 현재 11개 등록 / 회의에서 확인된 대상 39개</li>' +
-                '<li>문서대장 5년치 · 담양군 적용 관계 법령 목록 · 기록관리 기준</li>' +
-                '<li>온나라·FMS·행정포털·인사 실연계 규격</li>' +
-              '</ul>' +
-              '<p class="dy-prereview-note">시연 기준일은 <b>2026-07-16</b>으로 고정되어 있습니다.</p>' +
-            '</div>',
-            '<button type="button" class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>',
-            { chrome: true });
-    }
-
     /* 외부 노출 */
     window.DYLayout = {
         mount,
-        PRE_REVIEW,
-        preReviewInfo,
         _soon: showComingSoon,
         renderPagination,
         renderFilterRow,
@@ -1239,7 +1203,7 @@
         _ntfRead: ntfMarkRead,
     };
 
-    /* 권한 시연 API — 대시보드(js/dashboard.js) 등 화면 모듈이 참조 */
+    /* 권한 API — 대시보드(js/dashboard.js) 등 화면 모듈이 참조 */
     /* 로그인한 사람의 소속 부서 — 화면이 '내 부서 관점'의 기본값으로 쓴다.
        군수·주관부서처럼 전 부서를 보는 자리는 부서가 없으므로 '' 를 돌려준다. */
     function roleDeptId() { const p = rolePersona(); return p && p.deptId ? p.deptId : ''; }
@@ -1283,20 +1247,23 @@
 })();
 
 /* =========================================================================
- * 화면 정의서 빠른 진입 — 모든 페이지 우측 하단에 항상 표시되는 플로팅 버튼.
+ * 화면 정의서 빠른 진입 — 기획자용 플로팅 버튼. **기본 숨김**(?screendef=on 으로 노출).
  *   · URL 수정 없이 각 페이지에서 바로 그 화면의 정의서를 새 탭으로 연다.
  *   · 클릭 → screen-definitions.html?from=<현재파일+쿼리> (현재 화면 자동 선택).
- *   · 숨기기: ?screendef=off (이후 유지) / 다시 표시: ?screendef=on
+ *   · 표시: ?screendef=on (이후 유지) / 다시 숨기기: ?screendef=off
  *   · 뷰어(screen-definitions.html) 자신에는 표시하지 않음. 기존 기능에는 영향 없음.
  * ========================================================================= */
 (function () {
     'use strict';
     try {
         var p = new URLSearchParams(location.search);
-        if (p.get('screendef') === 'off') { try { localStorage.setItem('dy-screendef-hide', '1'); } catch (e) {} }
-        if (p.get('screendef') === 'on') { try { localStorage.removeItem('dy-screendef-hide'); } catch (e) {} }
-        var hidden = false; try { hidden = localStorage.getItem('dy-screendef-hide') === '1'; } catch (e) {}
-        if (hidden) return;
+        if (p.get('screendef') === 'on') { try { localStorage.setItem('dy-screendef-show', '1'); } catch (e) {} }
+        if (p.get('screendef') === 'off') { try { localStorage.removeItem('dy-screendef-show'); } catch (e) {} }
+        /* 기본 숨김 — 업무 화면에 제작용 진입점을 상시 노출하지 않는다.
+           기획자는 아무 화면에서 ?screendef=on 을 한 번 붙이면 그 브라우저에서 계속 보인다.
+           정의서 문서·뷰어(screen-definitions.html)는 그대로이며 직접 열면 동작한다. */
+        var shown = false; try { shown = localStorage.getItem('dy-screendef-show') === '1'; } catch (e) {}
+        if (!shown) return;
 
         var base = (location.pathname.split('/').pop() || '').toLowerCase();
         if (base === 'screen-definitions.html') return; /* 뷰어 자신에는 표시 안 함 */

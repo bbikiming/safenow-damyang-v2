@@ -129,9 +129,9 @@
         toast('개선 후 사진 첨부');
     }
     function clearPhoto() { capture(); state.photo = ''; state.photoFile = null; render(); }
-    /* 시연용 사진 — 무대에서 OS 파일 대화상자를 여는 건 느리고 위험하다(발표자의 개인
+    /* 예시 사진 — 무대에서 OS 파일 대화상자를 여는 건 느리고 위험하다(발표자의 개인
        파일 목록이 그대로 노출된다). 시드가 이미 쓰는 썸네일을 그대로 넣어 증빙 화면까지
-       보여준다. 시연 투어 6단계의 [시연용 사진 넣기] 가 부른다 — 실제 입력란은 그대로
+       보여준다. 단계별 안내 6단계의 [예시 사진 넣기] 가 부른다 — 실제 입력란은 그대로
        남으므로 증빙 요건을 낮추는 것이 아니다(my-work pickAfterDemo 와 같은 원칙). */
     function pickAfterDemo() {
         var m = D().improvementOf(state.id) || {};

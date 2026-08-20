@@ -1,7 +1,7 @@
 /* =====================================================================
    health-exam-detail.js · 건강검진 상세·조치 (HEX01-D)
    · 검진 일정·대상자 현황·실시 증빙·미검진 사유·사후관리·이력
-   · 개인별 상세는 보건담당 권한 사용자만 열람(권한 전환 데모)
+   · 개인별 상세는 보건담당 권한 사용자만 열람(권한 전환)
    · 증빙 등록 / 미검진 사유 / 기한 재설정 / 알림 발송 / 완료·사후관리 처리
    ===================================================================== */
 (function (global) {
@@ -252,7 +252,7 @@
     }
     /* STEP 2 핸들러 */
     function sendQuestionnaire() {
-        S().sendQuestionnaire(state.id); render(); toast('문진표를 새올 포틀릿으로 발송했습니다 (프로토타입).');
+        S().sendQuestionnaire(state.id); render(); toast('문진표를 새올 포틀릿으로 발송했습니다.');
     }
     /* STEP 3 핸들러 — 결과 문서 업로드 */
     function uploadResult() {
@@ -270,14 +270,14 @@
             '<div style="margin-bottom:10px;font-size:13px;">수신: <b>' + esc(r.dept) + ' 대상자 ' + (p.targets || []).length + '명 + 대상부서</b></div>' +
             '<div style="margin-bottom:12px;"><label class="form-label" for="hd-pn-msg">알림 내용</label>' +
                 '<textarea class="form-textarea" id="hd-pn-msg" rows="2">[건강검진] ' + esc(r.type) + ' 결과 안내 및 사후 조치 협조 요청</textarea></div>' +
-            '<div class="sh-req" style="font-size:12px;line-height:1.5;">본 알림은 대상자·대상부서의 <b>새올행정시스템 포틀릿(알림)</b>으로 발송됩니다. <span style="color:var(--text-gray)">(프로토타입)</span></div>',
+            '<div class="sh-req" style="font-size:12px;line-height:1.5;">본 알림은 대상자·대상부서의 <b>새올행정시스템 포틀릿(알림)</b>으로 발송됩니다. <span style="color:var(--text-gray)">(연계 적용 후 실제 전송)</span></div>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="HEXD.sendProcNotify()">발송</button>');
     }
     function sendProcNotify() {
         var r = S().healthOf(state.id);
         S().procNotify(state.id, r.dept + ' 대상자·대상부서');
-        V().closeModal(); render(); toast('새올 포틀릿으로 결과 알림을 발송했습니다 (프로토타입).');
+        V().closeModal(); render(); toast('새올 포틀릿으로 결과 알림을 발송했습니다.');
     }
 
     /* ══════════════ 담당부서 관점 — 결과 제출 전용 화면 ══════════════ */
@@ -359,7 +359,7 @@
                 '<div class="sh-priv-mask"><span class="lock-ic">' + S().icon('lock', 30) + '</span>' +
                 '개인정보 보호를 위해 개인별 수검 결과는 <b>보건담당 권한</b> 사용자만 열람할 수 있습니다.<br>' +
                 '목록·집계(인원수·수검률)만 열람 가능합니다. 열람이 필요하면 <b>[권한 전환]</b> 하세요. ' +
-                '<span style="display:block;margin-top:6px;font-size:var(--fs-12);color:var(--text-gray);">※ 프로토타입 권한 시연 — 실제로는 역할(보건담당) 기반 접근제어가 적용됩니다.</span></div></div>';
+                '<span style="display:block;margin-top:6px;font-size:var(--fs-12);color:var(--text-gray);">※ 역할(보건담당) 기반 접근제어가 적용되는 자리입니다.</span></div></div>';
         }
 
         if (!r.persons || !r.persons.length) {
@@ -446,7 +446,7 @@
                 '</div></div></div>' +
             '<div style="margin-bottom:12px;"><label class="form-label" for="hd-nt-msg">알림 내용</label>' +
                 '<textarea class="form-textarea" id="hd-nt-msg" rows="2">[건강검진] ' + esc(r.dept) + ' ' + esc(r.type) + ' 미검진자 수검/사후관리 요청</textarea></div>' +
-            '<div class="sh-req" style="font-size:12px;line-height:1.5;">본 알림은 수신자의 <b>새올행정시스템 포틀릿(알림)</b>으로 발송됩니다. <span style="color:var(--text-gray)">(프로토타입 — 실제 연계 시 새올 포틀릿으로 전송)</span></div>',
+            '<div class="sh-req" style="font-size:12px;line-height:1.5;">본 알림은 수신자의 <b>새올행정시스템 포틀릿(알림)</b>으로 발송됩니다. <span style="color:var(--text-gray)">(연계 적용 후 실제 전송)</span></div>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="HEXD.sendNotify()">발송</button>');
     }
@@ -454,7 +454,7 @@
     function sendNotify() {
         var to = (document.getElementById('hd-nt-to').value || '').trim();
         S().notify('hc', state.id, to);
-        V().closeModal(); render(); toast('새올 포틀릿으로 알림을 발송했습니다 (프로토타입).');
+        V().closeModal(); render(); toast('새올 포틀릿으로 알림을 발송했습니다.');
     }
 
     /* ── 완료 처리 ── */

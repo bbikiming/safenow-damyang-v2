@@ -273,7 +273,7 @@
                 '<span class="spacer"></span>' +
                 '<span id="sl-summary" style="font-size:12px; color:var(--text-gray); font-weight:600;"></span>' +
                 (isV2 ? '<button class="btn btn-sm btn-primary" id="sl-add">+ 업무 등록</button>' : '') +
-                '<button class="btn btn-sm btn-secondary" onclick="DYV2.toast(\'목록 다운로드 — 업무목록_2026-06-11.xlsx (프로토타입)\')">목록 다운로드</button>' +
+                '<button class="btn btn-sm btn-secondary" onclick="DYV2.notReady(\'업무목록 내려받기\', \'목록 파일 생성\')">목록 다운로드</button>' +
             '</div>' +
             '<div id="sl-body"></div>';
 

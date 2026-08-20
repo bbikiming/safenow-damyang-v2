@@ -1,5 +1,5 @@
 /* =====================================================================
-   tour-core.js · 시연 투어 공용 엔진 (전역 DYTOUR)
+   tour-core.js · 단계별 안내 공용 엔진 (전역 DYTOUR)
 
    위험성평가 정기(RSKTOUR)·수시(OCCTOUR) 두 투어가 같은 엔진을 쓴다.
    화면·단계만 다르고 동작은 같으므로 엔진을 두 번 쓰지 않는다.
@@ -318,7 +318,7 @@
 
             /* 관점 토글 — 주체가 둘 이상인 투어에서만 의미가 있다 */
             var viewSwitch = multiPersona()
-                ? '<div class="dy-tour-view" role="group" aria-label="시연 관점">' +
+                ? '<div class="dy-tour-view" role="group" aria-label="보는 관점">' +
                     ['mine', 'all'].map(function (v) {
                         return '<button type="button" class="dy-tour-viewbtn' + (view === v ? ' on' : '') + '"' +
                             (view === v ? ' aria-pressed="true"' : ' aria-pressed="false"') +
@@ -338,11 +338,11 @@
                     '<div class="dy-tour-kicker">' + esc(safeCall(cfg.kicker, '') || '') + ' · ' + esc(scopeLabel) + ' ' +
                         myDone + ' / ' + order.length + '단계' + (done ? ' · <b>이 단계 완료</b>' : '') + '</div>' +
                     '<div class="dy-tour-title" id="' + TITLE_ID + '" tabindex="-1">' + (idx + 1) + '. ' + esc(s.title) + '</div></div>' +
-                    '<button class="dy-tour-close" type="button" onclick="' + NS + '.stop()">가이드 종료</button></div>' +
+                    '<button class="dy-tour-close" type="button" onclick="' + NS + '.stop()">안내 닫기</button></div>' +
                 viewSwitch +
                 /* 남의 단계도 **지우지 않고** 흐린 칩으로 남긴다 — 지우면 전체 그림과
                    '내가 왜 기다리는지'를 잃는다. 다만 커서는 옮기지 않는다. */
-                '<div class="dy-tour-steps' + (cfg.stepsClass ? ' ' + cfg.stepsClass : '') + '" aria-label="시연 단계">' + STEPS.map(function (x, i) {
+                '<div class="dy-tour-steps' + (cfg.stepsClass ? ' ' + cfg.stepsClass : '') + '" aria-label="진행 단계">' + STEPS.map(function (x, i) {
                     var out = order.indexOf(i) < 0;
                     return '<button type="button" class="dy-tour-step' + (safeDone(x) ? ' done' : '') +
                         (i === idx ? ' active' : '') + (out ? ' other' : '') + (x.planned ? ' planned' : '') + '"' +
@@ -362,7 +362,7 @@
                 }).join('') + '</ol>') +
                 '<div class="dy-tour-desc" id="' + DESC_ID + '">' + esc(s.desc) + '</div>' +
                 '<div class="dy-tour-why" id="' + WHY_ID + '" hidden></div>' +
-                '<div class="dy-tour-script"><b>시연 멘트</b>' + esc(s.script) + '</div>' +
+                '<div class="dy-tour-script"><b>이 단계에서 하는 일</b>' + esc(s.script) + '</div>' +
                 actionBtn +
                 '<div class="dy-tour-foot"><span class="dy-tour-progress">' + (pos + 1) + ' / ' + order.length + '</span>' +
                     '<button class="btn btn-secondary btn-sm" type="button" onclick="' + NS + '.openFlow()">전체 흐름</button>' +
@@ -380,7 +380,7 @@
             }, 0);
         }
 
-        /* 모달이 뜨면 패널을 숨기고, 모달 본문 맨 위에 그 단계의 시연 포인트를 넣는다 (§1)
+        /* 모달이 뜨면 패널을 숨기고, 모달 본문 맨 위에 그 단계의 입력 도움말를 넣는다 (§1)
 
            헤더 드롭다운(알림·권한 전환)도 같이 본다 — 패널은 --z-fab(90),
            드롭다운은 --z-nav+2(32) 라 패널이 위에 있고, 실제로 알림 목록의
@@ -410,7 +410,7 @@
                 if (s && s.modalGuide && body && !body.querySelector('.dy-tour-inline')) {
                     var g = document.createElement('div');
                     g.className = 'dy-tour-inline';
-                    g.innerHTML = '<b>시연 포인트</b>' + s.modalGuide +
+                    g.innerHTML = '<b>입력 도움말</b>' + s.modalGuide +
                         /* modalAction.when — 그 필드가 있는 모달에서만 버튼을 낸다.
                            한 단계가 모달을 두 번 여는 흐름(카드 → 완료 처리)에서, 대상 행이
                            정해지기 전 모달에 시연 버튼을 내면 어느 건에 넣는지 알 수 없다. */
@@ -490,7 +490,7 @@
             var scope = vmode === 'mine' ? '내 역할 ' : (vmode === 'read' ? '조회 ' : '');
             V().openModal(safeCall(cfg.flowTitle, '전체 흐름') || '전체 흐름',
                 '<div class="dy-tour-flow">' +
-                    '<p class="dy-tour-flow-lead">체크는 <b>실제 데이터로 판정</b>합니다 — 가이드를 껐다 켜도, 손으로 먼저 처리해도 그대로 맞습니다.</p>' +
+                    '<p class="dy-tour-flow-lead">체크는 <b>실제 데이터로 판정</b>합니다 — 안내를 껐다 켜도, 손으로 먼저 처리해도 그대로 맞습니다.</p>' +
                     '<div class="progress" role="img" aria-label="진행 ' + pct + '퍼센트">' +
                         '<div class="progress-bar green" style="width:' + pct + '%;"></div></div>' +
                     '<p class="dy-tour-flow-lead"><b>' + esc(scope) + n + ' / ' + vorder.length + '단계</b> 완료' +
@@ -503,7 +503,7 @@
                 '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
                 '<button type="button" class="btn btn-primary" onclick="' + NS + '.goFromFlow(' +
                     (cur >= STEPS.length ? 0 : cur) + ')">' +
-                    (cur >= STEPS.length ? '처음부터 다시 →' : (active() ? '이어서 진행 →' : '가이드 시작 →')) + '</button>');
+                    (cur >= STEPS.length ? '처음부터 다시 →' : (active() ? '이어서 진행 →' : '단계별 안내 시작 →')) + '</button>');
         }
         function goFromFlow(i) { V().closeModal(); go(i); }
 
@@ -604,9 +604,15 @@
             return multiPersona() ? ' 담당자 차례가 오면 <b>관점도 알아서 바꿔</b> 줍니다.' : '';
         }
 
-        /* ── 진입 바 ── */
+        /* ── 첫 방문 배너 ──
+           종전에는 이 자리에 상시 진입 바가 있었다. 도움말은 필요할 때 부르는 것이지
+           매일 보는 것이 아니라(§14-12 첫 데이터까지의 거리), **그 화면 최초 1회**만
+           내고 닫으면 기억한다. 다시 열 자리는 헤더 [?] 버튼이다.
+           되돌리기 버튼도 여기서 뺐다 — 도움말 시트 안으로 내렸다(DYHELP). */
         function insertBar() {
             if (document.getElementById(BAR_ID)) return;
+            var H = global.DYHELP;
+            if (H && H.seen && H.seen(H.pageId())) return;   /* 이미 본 화면 */
             var main = document.querySelector('main');
             if (!main) return;
             var bar = document.createElement('div');
@@ -619,18 +625,18 @@
                 '</div>' +
                 '<div class="dy-demo-actions">' +
                     '<button class="btn btn-primary" type="button" onclick="' + NS + '.start()">' +
-                        (viewMode() === 'read' ? '흐름 따라보기' : '시연 가이드 시작') + '</button>' +
+                        (viewMode() === 'read' ? '흐름 따라보기' : '단계별 안내 시작') + '</button>' +
                     '<button class="btn btn-outline" type="button" onclick="' + NS + '.openFlow()">전체 흐름 보기</button>' +
-                    /* 시연 데이터를 되돌릴 수단이 있는 도메인만 (교육).
-                       조회 전용 계층에는 내지 않는다 — '조회만 합니다'라고 해 놓고
-                       전 부서 데이터를 날리는 버튼을 남기면 그 안내가 거짓이 된다
-                       (rsk-list 의 [↺ 시연 초기화] 를 canManage() 로 막은 것과 같은 원칙). */
-                    (cfg.resetLabel && viewMode() !== 'read'
-                        ? '<button class="btn btn-secondary" type="button" onclick="' + NS + '.resetDemo()">' +
-                          esc(cfg.resetLabel) + '</button>'
-                        : '') +
+                    '<button class="btn btn-secondary" type="button" onclick="' + NS + '.dismissBar()">닫기</button>' +
                 '</div>';
             main.insertBefore(bar, main.firstChild);
+        }
+        /* 닫으면 그 화면에서는 다시 뜨지 않는다 — 헤더 [?] 로 언제든 다시 연다 */
+        function dismissBar() {
+            var H = global.DYHELP;
+            if (H && H.markSeen) H.markSeen(H.pageId());
+            var el = document.getElementById(BAR_ID);
+            if (el && el.parentNode) el.parentNode.removeChild(el);
         }
 
         /* ── 키보드 ── */
@@ -660,7 +666,7 @@
 
         var inst = {
             boot: boot, start: start, stop: stop, openFlow: openFlow, goFromFlow: goFromFlow,
-            go: go, next: next, prev: prev, action: action,
+            go: go, next: next, prev: prev, action: action, dismissBar: dismissBar,
             setView: setView, view: viewMode,
             active: active, STEPS: STEPS,
             /* 셸(layout.js)이 드롭다운을 여닫을 때 부른다 — 드롭다운은 class 토글이라

@@ -130,7 +130,7 @@
                     '<input type="date" class="form-input" id="re-due" value="2026-09-30"></div>' +
             '</div>' +
             '<div class="re-prow"><label class="form-label">조치 전 사진</label>' +
-                '<button type="button" class="btn btn-outline btn-sm" onclick="DYV2.toast(\'프로토타입: 업로드 생략\')">사진 업로드</button>' +
+                '<button type="button" class="btn btn-outline btn-sm" onclick="DYV2.notReady(\'사진 업로드\', \'문서관리 연계\')">사진 업로드</button>' +
                 '<div class="re-uploadhint">' + (V().fileHint ? V().fileHint() : '') + '</div></div>' +
             '<div class="re-foot"><button type="button" class="btn btn-secondary btn-sm" onclick="RSKEXEC.closeMeasure()">취소</button>' +
                 '<button type="button" class="btn btn-primary btn-sm" onclick="RSKEXEC.saveMeasure(' + i + ')">개선조치 생성</button></div>' +

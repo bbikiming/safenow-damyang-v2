@@ -31,6 +31,7 @@
         level: 'L1',
         seg2: 'dept',           /* L2 — dept | stage */
         seg3: 'fac',            /* L3 — fac | stage */
+        fac: '',                /* 시설 1건 상세(CMP03-F) — 시설물번호 */
         year: 0,
         q: '', cycle: '', st: '', axis: '', dept: '', facCls: '', way: '',
         adv: false,           /* 상세 조건 펼침 — 값이 걸리면 advOpen() 이 자동 true */
@@ -72,6 +73,8 @@
         var st = p.get('stage');
         if (st && D().stage(st)) { S.detail = st; S.dyear = +p.get('dyear') || S.year; }
         else S.detail = '';                    /* 파라미터가 없으면 상세도 없다 — 남겨두면 뒤로가기가 닫히지 않는다 */
+        var fc = p.get('fac');
+        S.fac = (fc && facRec(fc)) ? fc : '';  /* 같은 근거 — 없는 시설번호로는 열지 않는다 */
     }
     function urlOf() {
         var p = new URLSearchParams();
@@ -79,6 +82,7 @@
         if (S.tab !== 'status') p.set('tab', S.tab);
         if (S.level !== 'L1') p.set('level', S.level);
         if (S.detail) { p.set('stage', S.detail); if (S.dyear !== S.year) p.set('dyear', S.dyear); }
+        if (S.fac) p.set('fac', S.fac);
         if (S.q) p.set('q', S.q);
         if (S.axis) p.set('axis', S.axis);
         if (S.dept) p.set('dept', S.dept);
@@ -119,6 +123,7 @@
         syncURL();
         injectHead();
         if (S.detail) { S.mount.innerHTML = detailPane(); return; }
+        if (S.fac) { S.mount.innerHTML = facPane(); return; }
         S.mount.innerHTML =
             notice() +
             '<div class="cmp-tabbar">' + subTabs() + (S.tab === 'status' ? levelTabs() : '') + '</div>' +
@@ -130,6 +135,26 @@
      * 와이어프레임의 스코프 바를 별도 띠로 두지 않고 이 lead 로 합쳤다 — 두 띠가
      * 각자 한 줄을 쓰면 첫 데이터 행이 656px 로 밀린다(실측). 합치면 계층을 바꿀
      * 때마다 이 줄이 따라 바뀌므로 정보는 그대로 남는다. */
+    /* 연도별 자료의 성격 — 두 해가 전혀 다른 자료라 같은 화면에서 나란히 보인다.
+       2025 는 실측, 2026 은 규칙으로 만든 예시 자료다. 밝히지 않으면 «담양군이
+       올해 이만큼 했다»로 읽힌다. */
+    function seedNote() {
+        var sd = global.DYDOC2026;
+        if (!sd || !sd.META) return '';
+        if (S.year === +sd.META.year) {
+            return '<p><b>' + S.year + '년 실적은 예시 자료입니다.</b> 2025년 실측 문서 원장에서 ' +
+                '«작년에 실적이 있던 할 일만, 도래한 회차 안에서» 규칙으로 만든 자료이고(단계 ' +
+                sd.META.stagesSeeded + '개 · 문서 ' + sd.META.docs + '건) 실제 제출 기록이 아닙니다. ' +
+                '<b>' + D().BASE_YEAR + '년으로 바꾸면</b> 재난안전과 문서 원장 실측(문서 ' +
+                D().summary(D().BASE_YEAR).docsOfYear.toLocaleString() + '건)을 봅니다.</p>';
+        }
+        if (S.year === D().BASE_YEAR) {
+            return '<p><b>' + S.year + '년은 재난안전과 문서 원장 실측</b>입니다(문서 ' +
+                D().summary(S.year).docsOfYear.toLocaleString() + '건). ' +
+                sd.META.year + '년으로 바꾸면 예시 자료로 만든 올해 진행 상황을 봅니다.</p>';
+        }
+        return '';
+    }
     function notice() {
         var c = C().levelCounts();
         var un = C().unparsedStages().length;
@@ -144,6 +169,10 @@
             c.byItemId + '개 단계는 문구에 시설 표현이 없어 이행항목 번호(FAC-*)로, ' +
             c.fallback + '개 단계는 어느 쪽으로도 가릴 수 없어 부서 단위로 수렴시켰습니다. 발주처 확정 대상입니다.</p>' +
             (un ? '<p>주기 문구를 회차로 옮기지 못한 단계 <b>' + un + '개</b>는 <b>상시</b>로 분류했습니다 — 없는 회차를 지어내지 않습니다.</p>' : '') +
+            seedNote() +
+            '<p><b>[엑셀 내려받기]</b>는 지금 조회 조건에 맞는 결과 전건을 <b>CSV 파일(.csv)</b>로 냅니다 — ' +
+            '엑셀에서 바로 열리고 한글이 깨지지 않습니다. 표에 25행만 보이더라도 조건에 맞는 행은 전부 담기며, ' +
+            '파일 끝에 화면·기준연도·조회 조건·기준일이 함께 적힙니다.</p>' +
             '<p>비슷해 보이는 다른 메뉴 — 같은 데이터를 종전 방식으로 보는 화면은 ' +
             '<a href="docs-exec.html">업무문서 &gt; 이행 목록</a>, 부서 반기 점검은 ' +
             '<a href="menu.html?m=comply">이행점검</a>입니다. 여기는 <b>서류</b>를 봅니다.</p>' +
@@ -270,6 +299,25 @@
      *              값이 걸려 있으면 자동으로 펼친다 — 숨은 조건 때문에 결과가
      *              이상해 보이는 일을 막는다(업무 목록 `.dl-adv` 선례).
      */
+    /* =========================================================================
+     * 그 보기가 **실제로 거는 축**만 한 곳에서 정한다
+     * -------------------------------------------------------------------------
+     * 표를 만드는 함수마다 거르는 축이 다르다 — 단계 표는 전부, 부서별 보기는
+     * 검색·부서, 관리대상별 보기는 검색·시설분류, 누락 점검은 검색·부서·법령축.
+     * 그런데 필터 UI 는 어느 보기에서나 같은 컨트롤을 그리고 있었다. 그래서
+     *   · 관리대상별 보기에서 «충족» 칩을 눌러도 아무 일이 없고(죽은 어포던스)
+     *   · 그 상태로 내려받으면 파일명·꼬리말이 «조회 조건 = 충족» 이라 **거짓말**을
+     *     한다(파일 한 장만 봐도 조건을 알게 하려고 만든 장치가 무효가 된다)
+     * 축 목록을 한 곳에서 내고 UI·집계·내려받기가 모두 이것을 본다.
+     * ========================================================================= */
+    var AX_ALL = ['q', 'st', 'axis', 'cycle', 'way', 'dept'];
+    function axesOfView() {
+        if (S.tab === 'gap') return ['q', 'axis', 'dept'];              /* gapList */
+        if (S.level === 'L2' && S.seg2 === 'dept') return ['q', 'dept']; /* deptRows */
+        if (S.level === 'L3' && S.seg3 === 'fac') return ['q', 'facCls']; /* facList */
+        return AX_ALL.concat(S.level === 'L3' ? ['facCls'] : []);        /* stageMatch */
+    }
+    function axOn(k) { return axesOfView().indexOf(k) >= 0; }
     function filterBar(list) {
         var deptSeg = (S.level === 'L2' && S.seg2 === 'dept');
         var facSeg = (S.level === 'L3' && S.seg3 === 'fac');
@@ -284,14 +332,17 @@
         var bar = F().bar(
             [{ type: 'search', id: 'cs-q', value: S.q, placeholder: ph, on: "CMPST.setF('q', this.value)" }],
             {
-                count: deptSeg ? deptRows().length : list.length,
-                unit: deptSeg ? '개 부서' : '개 할 일',
+                /* 세는 단위는 **그 표의 행**이다 — 관리대상별 보기는 표가 시설인데
+                   할 일 수를 세고 있었다(«49개 할 일»인데 표에는 시설 80행).
+                   내려받기가 붙으면서 드러났다: 파일 행 수와 이 수가 달라진다. */
+                count: deptSeg ? deptRows().length : facSeg ? facList().length : list.length,
+                unit: deptSeg ? '개 부서' : facSeg ? '개 관리대상' : '개 할 일',
                 reset: 'CMPST.resetF()',
-                extraActive: advN + (S.st ? 1 : 0),
+                extraActive: advN + ((axOn('st') && S.st) ? 1 : 0),
                 actions: seg +
                     '<button type="button" class="btn btn-outline btn-sm" aria-expanded="' + (advOpen() ? 'true' : 'false') +
                         '" aria-controls="cs-adv" onclick="CMPST.toggleAdv()">상세 조건 ' + (advOpen() ? '▴' : '▾') +
-                        (advN ? ' <b>' + advN + '</b>' : '') + '</button>',
+                        (advN ? ' <b>' + advN + '</b>' : '') + '</button>' + expBtn(),
             });
         return bar + statusChips() + advPanel();
     }
@@ -299,7 +350,9 @@
     /* 상태 칩 — 필터이자 요약이다. 건수는 **그 계층·검색어까지 반영한** 실제 수라
        고르기 전에 몇 건인지 알 수 있다. */
     function statusChips() {
-        if (deptSegOn()) return '';        /* 부서별 보기는 표 단위가 부서라 상태 축이 없다 */
+        /* 표 단위가 «할 일»이 아닌 보기(부서·관리대상)는 이행상태 축이 성립하지
+           않는다 — 눌러도 안 걸리는 칩을 두면 «왜 안 되지»를 묻게 된다. */
+        if (!axOn('st')) return '';
         var base = levelStages().filter(function (s2) {
             if (S.q && !F().match(S.q, [s2.id, s2.name, s2.law, s2.target, s2.actor])) return false;
             if (S.cycle) { var cy = C().cycleOf(s2); if (S.cycle === '__ev' ? cy.need > 0 : cy.cc !== S.cycle) return false; }
@@ -329,25 +382,26 @@
 
     /* 상세 조건 — 값이 걸려 있으면 접혀 있어도 자동으로 펼친다 */
     function advCount() {
-        return [S.axis, S.cycle, S.way, (S.level === 'L2' ? S.dept : ''), (S.level === 'L3' ? S.facCls : '')]
+        /* 그 보기가 실제로 거는 축만 센다 — 안 걸리는 값을 세면 «상세 조건 2»
+           라고 해 놓고 결과가 그대로다. */
+        return [axOn('axis') ? S.axis : '', axOn('cycle') ? S.cycle : '', axOn('way') ? S.way : '',
+            (axOn('dept') && S.level === 'L2') ? S.dept : '', axOn('facCls') ? S.facCls : '']
             .filter(Boolean).length;
     }
     function advOpen() { return S.adv || advCount() > 0; }
     function advPanel() {
         if (!advOpen()) return '';
         var rows = '';
-        if (S.level === 'L1' || (S.level !== 'L2' && S.level !== 'L3') || S.level === 'L3') {
-            rows += chipRow('법령 축', 'axis', C().AXES.map(function (a) { return [a.id, a.id ? a.label : '전체']; }));
-            rows += chipRow('수행 위치', 'way', wayOptions());
-        }
+        if (axOn('axis')) rows += chipRow('법령 축', 'axis', C().AXES.map(function (a) { return [a.id, a.id ? a.label : '전체']; }));
+        if (axOn('way')) rows += chipRow('수행 위치', 'way', wayOptions());
         var sel = '';
-        if (S.level === 'L2') {
+        if (S.level === 'L2' && axOn('dept')) {
             sel += fld('부서', selHtml('cs-dp', S.dept, deptOptions(), "CMPST.setF('dept', this.value)"));
         }
-        if (S.level === 'L3') {
+        if (axOn('facCls')) {
             sel += fld('시설 분류', selHtml('cs-fc', S.facCls, facClsOptions(), "CMPST.setF('facCls', this.value)"));
         }
-        sel += fld('이행주기', selHtml('cs-cy', S.cycle, cycleOptions(), "CMPST.setF('cycle', this.value)"));
+        if (axOn('cycle')) sel += fld('이행주기', selHtml('cs-cy', S.cycle, cycleOptions(), "CMPST.setF('cycle', this.value)"));
         return '<div class="dl-adv cmp-adv" id="cs-adv">' + rows +
             '<div class="dl-adv-grid">' + sel + '</div></div>';
     }
@@ -389,7 +443,7 @@
         l1: '이행항목을 누르면 하위 할 일이 펼쳐지고, 할 일 줄을 누르면 상세로 들어갑니다.',
         dept: '부서별 보기 — <b>부서 줄을 누르면 그 부서의 할 일 목록</b>으로 들어갑니다. 보유 업무문서 건수를 누르면 그 부서 문서를 봅니다.',
         l2stage: '단계별 보기 — 한 할 일을 부서들이 얼마나 이행했는지 봅니다. 할 일 줄을 누르면 상세로 들어갑니다.',
-        fac: '관리대상별 보기 — 시설마다 적용 법령이 달라 적용 단계가 가변입니다. <b>적용 단계 칩을 누르면</b> 그 할 일 상세로 들어갑니다.',
+        fac: '관리대상별 보기 — 시설마다 적용 법령이 달라 적용 단계가 가변입니다. <b>행을 누르면</b> 그 시설 상세로, <b>적용 단계 칩을 누르면</b> 그 할 일 상세로 들어갑니다.',
         l3stage: '단계별 보기 — 시설·공사에 적용되는 할 일을 이행항목별로 봅니다.',
     };
     function mini(k) { return '<p class="cmp-mini">' + MINI[k] + '</p>'; }
@@ -642,7 +696,11 @@
         var seed = global.DY_FACIL_SEED;
         return (seed && seed.recs) ? seed.recs : [];
     }
-    function facExt(no) {
+    /* ⚠ 시드 원본 전용 — **화면이 직접 부르지 않는다.** 담양군이 시설물 대장에서
+       채운 보완입력은 저장소에 있어 이 함수로는 안 보인다. 한 화면에서 목록은
+       «소관부서 미등록», 상세는 실제 부서명이 뜨는 어긋남이 실제로 났다.
+       화면·내려받기는 전부 facExtOf() 를 쓰고 여기는 그 폴백이다. */
+    function facExtSeed(no) {
         var seed = global.DY_FACIL_SEED;
         return (seed && seed.ext && seed.ext[no]) ? seed.ext[no] : null;
     }
@@ -655,22 +713,41 @@
         '기타': ['FAC-02'],
     };
     function facStages(rec) {
-        var ids = FAC_MAP[rec.gbnNm] || [];
-        var out = [];
+        return stagesOfItems(FAC_MAP[rec.gbnNm] || []);
+    }
+    function stagesOfItems(ids) {
+        var out = [], seen = {};
         ids.forEach(function (id) {
             D().stagesOfItem(id).forEach(function (s) {
-                if (C().levelOf(s).level === 'L3') out.push(s);
+                if (C().levelOf(s).level === 'L3' && !seen[s.id]) { seen[s.id] = 1; out.push(s); }
             });
         });
         return out;
     }
-    function facTable() {
-        var recs = facRecs().filter(function (r) { return !S.facCls || r.gbnNm === S.facCls; })
+    /* **어느 분류에도** 걸리지 않는 관리대상 단계 — 시설 상세가 «담양군 확인 대상»
+       이라 부르는 것이 이 수다. 종전에는 «전체 − 이 시설» 을 세어, 다른 분류에
+       이미 매핑된 단계까지 미매핑으로 잡아 규모를 부풀렸다(교량에서 45 vs 실제 36). */
+    var _facUnmapped = null;
+    function facUnmappedCount() {
+        if (_facUnmapped != null) return _facUnmapped;
+        var ids = [];
+        Object.keys(FAC_MAP).forEach(function (k) {
+            FAC_MAP[k].forEach(function (id) { if (ids.indexOf(id) < 0) ids.push(id); });
+        });
+        _facUnmapped = C().stagesOfLevel('L3').length - stagesOfItems(ids).length;
+        return _facUnmapped;
+    }
+    /* 같은 근거로 조건을 한 곳에 둔다(gapList 와 같다) */
+    function facList() {
+        return facRecs().filter(function (r) { return !S.facCls || r.gbnNm === S.facCls; })
             .filter(function (r) { return !S.q || F().match(S.q, [r.facilNm, r.gbnNm, r.kindNm, r.addrDong]); });
+    }
+    function facTable() {
+        var recs = facList();
         if (!recs.length) return emptyBox();
         var show = recs.slice(0, 25);
         var rows = show.map(function (r) {
-            var ex = facExt(r.facilNo);
+            var ex = facExtOf(r.facilNo);
             var st = facStages(r);
             var ok = 0;
             /* 칩이 곧 진입점이다 — 상태만 보여주고 눌리지 않으면 L3 에서 그 단계의
@@ -679,10 +756,20 @@
                 var j = C().judge(s, S.year);
                 if (j.key === 'ok') ok++;
                 return '<button type="button" class="chip-status chip-sm ' + j.tone + '" ' +
-                    'title="' + esc(s.name) + ' 상세로" onclick="CMPST.openDetail(\'' + esc(s.id) + '\')">' +
+                    'title="' + esc(s.name) + ' 상세로" onclick="event.stopPropagation(); CMPST.openDetail(\'' + esc(s.id) + '\')">' +
                     j.glyph + ' ' + esc(s.name) + '</button>';
             }).join('');
-            return '<tr class="cmp-stg"><td><b>' + esc(r.facilNm) + '</b><span class="cmp-scode">' + esc(r.facilNo) + '</span></td>' +
+            /* 행 = 이 시설 1건의 상세 · 칩 = 그 할 일의 상세. 역할이 갈린다.
+               ⚠ 행에 role="button"+tabindex+dropKey 를 걸지 않는다 — 그렇게 하면
+               (a) 안의 칩에서 올라온 Enter/Space 를 dropKey 가 가로채 currentTarget
+               (=행)을 눌러 **키보드로는 칩이 영영 안 열리고**, (b) role="button"
+               안의 버튼은 ARIA presentational-children 위반이다. 같은 파일의
+               stageRow·deptTable 이 이미 쓰는 패턴대로 **키보드 진입점은 첫 칸의
+               이름 버튼**이 갖고, 행은 마우스 편의만 담당한다. */
+            return '<tr class="cmp-stg cmp-rowlink"' +
+                ' onclick="CMPST.rowOpenFac(event, \'' + esc(r.facilNo) + '\')">' +
+                '<td><button type="button" class="cmp-slink" onclick="CMPST.openFac(\'' + esc(r.facilNo) + '\')">' +
+                    esc(r.facilNm) + '</button><span class="cmp-scode">' + esc(r.facilNo) + '</span></td>' +
                 '<td>' + (ex && ex.deptNm ? esc(ex.deptNm) : '<span class="chip-status chip-sm warning">소관부서 미등록</span>') + '</td>' +
                 '<td class="cmp-dim">' + esc(r.gbnNm || '—') + (r.kindNm ? ' · ' + esc(r.kindNm) : '') + '</td>' +
                 '<td class="cmp-fchips">' + (chips || '<span class="cmp-dim">적용 단계 매핑 없음</span>') + '</td>' +
@@ -858,7 +945,12 @@
             '<th>문서명</th><th class="cmp-c-cy">구분</th><th class="cmp-c-ac">수발신자</th>' +
             '<th class="cmp-num cmp-c-rd">보고일자</th><th class="cmp-c-st">결재상태</th>' +
         '</tr></thead><tbody>' + docs.map(function (d) {
-            return '<tr class="cmp-stg"><td><a href="cmp-docs.html?doc=' + encodeURIComponent(d.id) + '">' + esc(d.title) + '</a></td>' +
+            /* 상세로 한 단계 들어가면 화면 안내(seedNote)가 사라진다 — 문서 줄
+               자체가 출처를 말해야 «올해 이만큼 했다»로 읽히지 않는다. */
+            return '<tr class="cmp-stg"><td><a href="cmp-docs.html?doc=' + encodeURIComponent(d.id) + '">' + esc(d.title) + '</a>' +
+                (d.origin === 'seed26'
+                    ? ' <span class="chip-mini wt" title="2026년 실적은 2025년 실측 패턴에서 규칙으로 만든 예시 자료입니다. 실제 제출 기록이 아닙니다.">예시 자료</span>'
+                    : '') + '</td>' +
                 '<td class="cmp-dim">' + esc((D().SRC[d.src] || {}).label || d.src || '—') + '</td>' +
                 '<td class="cmp-c-ac">' + (d.sr ? esc(d.sr) : '<span class="cmp-dim">—</span>') + '</td>' +
                 '<td class="cmp-num">' + esc(d.date || '—') + '</td>' +
@@ -899,8 +991,18 @@
     var P = null;   /* {stageId, from, to, q, sel:{docId:1}, fields:{title,sr,date}} */
     /* 같은 원본을 두 번 불러오지 않는다 — presetOf 를 저장만 하고 검사하지 않으면
      * 시연을 반복할수록 사본이 쌓인다(검수 C-2). 판정 근거는 그 저장값 하나다. */
-    function pulledInto(srcId, toYear) {
-        return D().allDocs().some(function (d) { return d.presetOf === srcId && +d.year === +toYear; });
+    /* 이미 그 해로 옮겨진 원본인가 — 옮긴 주체까지 돌려준다.
+       ⚠ '이미 불러옴'이라고만 쓰면 예시 자료가 옮겨 둔 것을 **담당자가 한 일로**
+       말하게 된다. 막는 것은 맞다(또 옮기면 회차를 넘어 잘못 «충족»이 뜬다) —
+       다만 누가 옮겼는지는 사실대로 적는다. */
+    function pulledInto(srcId, toYear) { return !!pulledBy(srcId, toYear); }
+    function pulledBy(srcId, toYear) {
+        var hit = null;
+        D().allDocs().some(function (d) {
+            if (d.presetOf === srcId && +d.year === +toYear) { hit = d; return true; }
+            return false;
+        });
+        return hit;
     }
     function openPull() {
         if (!S.detail) return;
@@ -944,12 +1046,16 @@
                 '</div>' +
                 '<div class="cmp-pull-b">' +
                     (list.length ? list.map(function (d) {
-                        var dup = pulledInto(d.id, P.to);
+                        var dup = pulledBy(d.id, P.to);
+                        var seeded = dup && dup.origin === 'seed26';
                         return '<label class="cmp-pull-row' + (dup ? ' is-pulled' : '') + '">' +
                             '<input type="checkbox"' + (dup ? ' disabled' : (P.sel[d.id] ? ' checked' : '')) +
                                 ' onchange="CMPST.pullSel(\'' + esc(d.id) + '\', this.checked)">' +
                             '<span><span class="cmp-pull-n">' + esc(d.title) +
-                                (dup ? ' <span class="chip-status chip-sm neutral">이미 불러옴</span>' : '') + '</span>' +
+                                (dup ? ' <span class="chip-status chip-sm neutral" title="' +
+                                    (seeded ? P.to + '년 예시 자료가 이 문서를 이미 올해로 옮겨 두었습니다. 또 옮기면 회차를 넘습니다.'
+                                            : '이미 ' + P.to + '년으로 불러온 문서입니다.') + '">' +
+                                    (seeded ? '시드가 이미 옮김' : '이미 불러옴') + '</span>' : '') + '</span>' +
                                 '<span class="cmp-dim">' + esc((D().SRC[d.src] || {}).label || d.src || '') +
                                 ' · ' + esc(d.date || '') + (d.sr ? ' · ' + esc(d.sr) : '') + '</span></span>' +
                         '</label>';
@@ -1073,13 +1179,17 @@
             return j && (j.key === 'no' || j.key === 'late');
         });
     }
-    function gapPane() {
-        var list = gapStages().filter(function (s) {
+    /* 표와 내려받기가 **같은 목록**을 봐야 한다 — 필터를 두 곳에 적으면 반드시 갈린다 */
+    function gapList() {
+        return gapStages().filter(function (s) {
             if (S.axis && C().axesOf(s.itemId).indexOf(S.axis) < 0) return false;
             if (S.dept && !D().stageDeptHit(s, S.dept)) return false;
             if (S.q && !F().match(S.q, [s.id, s.name, s.law, s.target])) return false;
             return true;
         });
+    }
+    function gapPane() {
+        var list = gapList();
         var per = list.filter(function (s) { return C().cycleOf(s).need > 0; }).length;
         var prev = D().presetSourceYear(S.year);
         var twice = prev ? list.filter(function (s) { return D().documentIdsOfStage(s.id, prev).length === 0; }).length : 0;
@@ -1092,7 +1202,8 @@
         var bar = F().bar(fields, {
             count: list.length, unit: '개 단계',
             reset: 'CMPST.resetF()',
-            actions: axisSeg() +
+            extraActive: (S.axis ? 1 : 0),
+            actions: axisSeg() + expBtn() +
                 (D().canSetNA()
                     ? '<button type="button" class="btn btn-outline btn-sm"' + (selN ? '' : ' disabled') +
                       ' onclick="CMPST.openBulkNA()">일괄 비해당 처리' + (selN ? ' (' + selN + ')' : '') + '</button>'
@@ -1312,6 +1423,305 @@
         V().toast(name + ' — 그 부서에 적용되는 할 일 목록입니다.');
     }
 
+    /* =========================================================================
+     * 시설 1건 상세 (CMP03-F) — 관리대상 행을 눌렀을 때
+     * -------------------------------------------------------------------------
+     * 발주처 확정(2026-08-18): "시설 1건에 대한 상세 화면이 나오면 돼, 이건 fms
+     * 정보 기준이야". 와이어프레임은 L3 행을 눌리게(cursor:pointer) 두었지만
+     * 목적지를 정의하지 않았다(검수 W-2).
+     *
+     * [새 화면을 만들지 않는다] 이행 상세(detailPane)와 **같은 자리·같은 골격**
+     * (.cmp-two 2:5)을 쓰는 인페이지 패널이다. 새 HTML·새 page id·새 CSS 계열이
+     * 없다(§7). 모달로 만들지 않는 이유는 이 화면의 «한 단계 들어가기»가 이미
+     * 인페이지 + pushState 로 정해져 있고, 상세 안에서 법령을 인라인으로 펼쳐야
+     * 하기 때문이다(§1 — 모달 위 모달 금지).
+     *
+     * [기존 시설물 상세(FAC02-D)를 끌어오지 않는다] 그 모달은 보완입력 저장·FMS
+     * 전송·위험성평가 착수라는 **쓰기 동사**를 갖는데 권한 게이트가 없다. 조회는
+     * 열고 조작만 막는 이 화면(§12)에 그대로 들이면 조회 전용 계층이 FMS 전송을
+     * 누를 수 있게 된다. 그래서 이 패널은 **읽기 전용**이고, 편집은 시설물 대장
+     * 한 곳에만 남긴다([시설물 대장에서 열기]).
+     *
+     * [좌우로 소유권을 가른다] 좌 = FMS 가 주는 값(우리가 못 고친다) ·
+     * 우 = 담양군이 만드는 값(이 시설에 걸린 할 일과 그 이행). 발주처의 «FMS 정보
+     * 기준»과 이 화면의 축(이행 관리)을 한 지면에서 둘 다 만족시키는 배치다.
+     * ========================================================================= */
+    function FAC() { return global.DYFACIL || null; }
+    function facRec(no) {
+        var f = FAC();
+        if (f && f.rec) { var r = f.rec(no); if (r) return r; }
+        var hit = facRecs().filter(function (r) { return r.facilNo === no; });
+        return hit[0] || null;
+    }
+    /* 보완입력은 **저장분까지** 본다 — 시드만 읽으면 담양군이 채운 값이 안 보인다 */
+    function facExtOf(no) {
+        var f = FAC();
+        if (f && f.ext) { var e = f.ext(no); if (e) return e; }
+        return facExtSeed(no) || {};
+    }
+    var FMS_FULL = [
+        ['관리번호', 'mngNo'], ['관리주체코드', 'mngMainCd'], ['인허가기관코드', 'permitOrgCd'],
+        ['노선구분', 'routeClass'], ['노선상세', 'routeDetail'], ['시설물설명코드', 'facilDescCd'],
+        ['설계자', 'designerNm'], ['착공일자', 'constYmdFrom'], ['준공일자', 'constYmdTo'],
+        ['시공자', 'constractorNm'], ['공사비(백만원)', 'constAmt'], ['감리자', 'supervisorNm'],
+        ['발주청', 'constOrderNm'], ['공사명', 'constNm'], ['공사감독', 'constSpvsrNm'],
+        ['설계도서보관', 'dsnKeepStatus'], ['상위시설물번호', 'upperNo'], ['비고', 'etcRemark'],
+    ];
+    function fmsVal(v) {
+        return (v != null && String(v).trim())
+            ? esc(String(v))
+            : '<span class="cmp-dim">FMS 미제공</span>';
+    }
+    function ymd(v) {
+        var t = String(v || '');
+        return /^\d{8}$/.test(t) ? t.slice(0, 4) + '-' + t.slice(4, 6) + '-' + t.slice(6) : (t || '');
+    }
+    /* 보완입력이 몇 건 채워졌는지는 **세어서** 쓴다 — 바로 위 칸이 저장분을 읽고
+       있는데 문장만 시드 건수를 박아 두면 담당자가 값을 채운 그 자리에서 어긋난다. */
+    function extFilled() {
+        var recs = facRecs();
+        var n = recs.filter(function (r) { return !!facExtOf(r.facilNo).safetyGrade; }).length;
+        return recs.length + '건 중 ' + n + '건 입력돼 있습니다';
+    }
+    function facPane() {
+        var r = facRec(S.fac);
+        if (!r) { S.fac = ''; return statusPane(); }
+        var y = S.year;
+        var ex = facExtOf(r.facilNo);
+        var st = facStages(r);
+        var ok = st.filter(function (x) { return C().judge(x, y).key === 'ok'; }).length;
+        var f = FAC();
+        var age = (f && f.age) ? f.age(r) : null;
+        var addr = (f && f.addr) ? f.addr(r) : [r.addrSido, r.addrGugun, r.addrDong, r.addrDetail].filter(Boolean).join(' ');
+
+        /* 어느 분류에도 연결되지 않은 L3 할 일이 몇 개인지 — 이 화면이 낼 수 있는
+           가장 값진 사실이다. 매핑이 추정이라는 말만 하고 규모를 안 밝히면
+           "몇 개가 빠졌나"를 아무도 모른다. */
+        var allL3 = C().stagesOfLevel('L3');
+        var unmapped = facUnmappedCount();
+
+        return '<p class="cmp-back"><button type="button" class="du-link" onclick="CMPST.closeFac()">‹ 관리대상 목록으로</button></p>' +
+        '<div class="cmp-two">' +
+            '<div class="cmp-two-l">' +
+                '<p class="cmp-scode cmp-detail-code">' + esc(r.facilNo) + '</p>' +
+                '<h2 class="cmp-detail-h">' + esc(r.facilNm) + '</h2>' +
+                '<p class="cmp-cap">' + esc(r.gbnNm || '') + (r.kindNm ? ' · ' + esc(r.kindNm) : '') +
+                    ' <b>' + esc(CLASS_NM(r.facilClass)) + '</b> · 관할 ' + esc(r.jur || '미상') + '</p>' +
+                '<dl class="cmp-dl">' +
+                    '<div><dt>소재지</dt><dd>' + fmsVal(addr) + '</dd></div>' +
+                    '<div><dt>소유자</dt><dd>' + fmsVal(r.facilOwner) + '</dd></div>' +
+                    '<div><dt>준공</dt><dd>' + fmsVal(ymd(r.cplYmd)) +
+                        (age != null ? ' <span class="cmp-dim">(경과 ' + age + '년)</span>' : '') + '</dd></div>' +
+                    '<div><dt>내진설계</dt><dd>' + (r.eqDsnAppYn === 'Y' ? '적용'
+                        : r.eqDsnAppYn === 'N' ? '미적용' : '<span class="cmp-dim">FMS 미제공</span>') + '</dd></div>' +
+                    '<div><dt>소관부서</dt><dd>' + (ex.deptNm ? esc(ex.deptNm)
+                        : '<span class="chip-status chip-sm warning">미등록</span>') + '</dd></div>' +
+                '</dl>' +
+                /* FMS 표준연계 규격 밖의 값 — 담양군이 채워야 하는 자리다 */
+                '<div class="cmp-card">' +
+                    '<b>안전관리 보완입력</b>' +
+                    '<dl class="cmp-dl">' +
+                        '<div><dt>안전등급</dt><dd>' + (ex.safetyGrade ? esc(ex.safetyGrade) + '등급'
+                            : '<span class="cmp-dim">미입력</span>') + '</dd></div>' +
+                        '<div><dt>최근 점검</dt><dd>' + (ex.lastInspectYmd ? esc(ex.lastInspectYmd)
+                            : '<span class="cmp-dim">미입력</span>') + '</dd></div>' +
+                        '<div><dt>중대결함</dt><dd>' + (ex.defectYn ? (ex.defectYn === 'Y' ? '있음' : '없음')
+                            : '<span class="cmp-dim">미확인</span>') + '</dd></div>' +
+                    '</dl>' +
+                    '<p class="cmp-cap">안전등급·점검일·중대결함은 <b>FMS 표준연계 규격(시설물관리대장 기본현황)에 없는 값</b>이라 ' +
+                        '담양군이 직접 입력합니다. ' + extFilled() + ' — 입력은 시설물 대장에서 합니다.</p>' +
+                '</div>' +
+                '<details class="cmp-detail-prev"><summary class="du-link">FMS 원본 전체 보기</summary>' +
+                    '<dl class="cmp-dl">' + FMS_FULL.map(function (p2) {
+                        var v = r[p2[1]];
+                        if (/Ymd/.test(p2[1])) v = ymd(v);
+                        return '<div><dt>' + esc(p2[0]) + '</dt><dd>' + fmsVal(v) + '</dd></div>';
+                    }).join('') + '</dl>' +
+                '</details>' +
+            '</div>' +
+            '<div class="cmp-two-r">' +
+                '<div class="cmp-detail-bar">' +
+                    '<h3 class="cmp-detail-h3">이 시설에 적용되는 할 일 <span class="cmp-dim">(' + st.length + ')</span></h3>' +
+                    '<span class="cmp-detail-act">' +
+                        '<span class="cmp-dim">' + y + '년 충족 ' + ok + '/' + st.length + '</span>' +
+                        '<a class="btn btn-outline btn-sm" href="fac-list.html?no=' + encodeURIComponent(r.facilNo) + '">시설물 대장에서 열기 →</a>' +
+                    '</span>' +
+                '</div>' +
+                (st.length ? facStageTable(st, y)
+                    : '<div class="v2-empty"><b>연결된 할 일이 없습니다.</b><br>' +
+                        esc(r.gbnNm || '이 분류') + '에 적용되는 업무단계가 아직 매핑되지 않았습니다.</div>') +
+                '<p class="cmp-cap"><b>이행상태는 이 시설 1건의 판정이 아니라 그 할 일의 «군 단위» 판정입니다.</b> ' +
+                    '시설 건별 회차 기록은 자료가 없어 지어내지 않습니다 — 회차 전수 관리는 Phase 2 입니다.</p>' +
+                '<p class="cmp-cap"><b>적용 할 일은 시설 분류에서 파생한 추정</b>입니다. 관리대상 계층의 할 일 ' +
+                    allL3.length + '개 중 이 시설에 연결된 것은 ' + st.length + '개이고, ' +
+                    '그중 <b>' + unmapped + '개</b>는 아직 <b>어느 시설 분류에도 연결되지 않아</b> 담양군 확인 대상입니다' +
+                    '(공중이용시설 개별 법령·유해화학물질 취급시설 등).</p>' +
+            '</div>' +
+        '</div>';
+    }
+    function CLASS_NM(c) { return c === '1' ? '제1종' : c === '2' ? '제2종' : c === '3' ? '제3종' : '종별 미상'; }
+    function facStageTable(st, y) {
+        var rows = st.map(function (s) {
+            var j = C().judge(s, y), cy = C().cycleOf(s);
+            var it = D().item(s.itemId) || {};
+            return '<tr class="cmp-stg" role="button" tabindex="0" onclick="CMPST.openDetail(\'' + esc(s.id) + '\')"' +
+                ' onkeydown="DYV2.dropKey(event)">' +
+                '<td><b>' + esc(s.name) + '</b><span class="cmp-scode">' + esc(it.name || s.itemId) + '</span></td>' +
+                '<td class="cmp-dim">' + esc(cy.label || '') + '</td>' +
+                '<td>' + chip(j) + '</td>' +
+                '<td class="cmp-num">' + j.docs + '</td>' +
+            '</tr>';
+        }).join('');
+        return '<div class="cmp-wrap"><table class="table-figma table-compact cmp-table"><thead><tr>' +
+            '<th class="cmp-c-main">할 일(업무단계)</th><th class="cmp-c-cy">이행주기</th>' +
+            '<th class="cmp-c-st">이행상태</th><th class="cmp-num cmp-c-dc">문서</th>' +
+        '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+    }
+    /* 행 클릭 — 안의 버튼·링크를 눌렀을 때는 양보한다(rowOpen 과 같은 가드) */
+    function rowOpenFac(e, no) {
+        if (e && e.target && e.target.closest && e.target.closest('a, button, input, label')) return;
+        openFac(no);
+    }
+    function openFac(no) {
+        if (!facRec(no)) return;
+        S.fac = no;
+        try { history.pushState({ cmp: 'fac' }, '', urlOf()); } catch (e) {}
+        render();
+        try { window.scrollTo(0, 0); } catch (e) {}
+    }
+    function closeFac() {
+        if (history.state && history.state.cmp === 'fac') { history.back(); return; }
+        S.fac = '';
+        render();
+    }
+
+    /* =========================================================================
+     * 엑셀(CSV) 내려받기 — 와이어프레임 4곳(L1·L2·L3·누락 점검)
+     * -------------------------------------------------------------------------
+     * [내보내는 것은 «지금 보고 있는 표»다] 화면과 파일이 다르면 어느 쪽이 맞는지
+     * 알 수 없다. 계층·세그먼트·검색어·상태·상세조건이 그대로 반영되고, 어떤
+     * 조건으로 뽑았는지가 **파일명에도** 실린다.
+     *
+     * [화면이 25행에서 끊어도 파일은 전건이다] L3 관리대상 표는 25개만 그리고
+     * "N개 중 25개 표시"를 밝힌다. 그건 **표시 한도**이지 조건이 아니라, 파일까지
+     * 25행으로 자르면 조건에 맞는 자료를 조용히 버리는 것이 된다(§14-12 "no
+     * silent caps"). 대신 몇 행을 냈는지 토스트로 말한다.
+     *
+     * [형식] DYV2.tableFile — UTF-8 BOM CSV. 라이브러리 없이 진짜 .xlsx 는 만들 수
+     * 없어서이고, 버튼 옆 문구가 그 사실을 밝힌다(없는 것을 약속하지 않는다).
+     * ========================================================================= */
+    function expBtn() {
+        return '<button type="button" class="btn btn-outline btn-sm" onclick="CMPST.exportCsv()"' +
+            ' title="지금 보고 있는 표를 CSV 파일로 내려받습니다 — 엑셀에서 바로 열립니다">엑셀 내려받기</button>';
+    }
+    /* 조건 꼬리표 — 파일명과 안내에 함께 쓴다 */
+    function expCond() {
+        var t = [];
+        if (axOn('q') && S.q) t.push('검색' + S.q);
+        if (axOn('st') && S.st) t.push(C().JUDGE[S.st] ? C().JUDGE[S.st].label : S.st);
+        if (axOn('axis') && S.axis) { var a = C().AXES.filter(function (x) { return x.id === S.axis; })[0]; if (a) t.push(a.label); }
+        if (axOn('cycle') && S.cycle) t.push('주기' + S.cycle);
+        if (axOn('way') && S.way) t.push(C().TASK_TYPE[S.way] ? C().TASK_TYPE[S.way].label : S.way);
+        if (axOn('dept') && S.dept) t.push(S.dept);
+        if (axOn('facCls') && S.facCls) t.push(S.facCls);
+        return t;
+    }
+    function typeLabel(s) {
+        var t = C().TASK_TYPE[s.taskType || 'UNKNOWN'];
+        return t ? t.label : '';
+    }
+    /* 단계 표(L1 · L2 단계별 · L3 단계별 · 누락 점검) 공통 행 */
+    var STAGE_HEAD = ['이행항목코드', '이행항목', '단계코드', '할 일(업무단계)', '계층',
+        '이행주기', '회차', '이행상태', '문서 수', '수행 위치', '수행 주체', '적용대상', '법령'];
+    function stageCells(s) {
+        var j = C().judge(s, S.year), cy = C().cycleOf(s), it = D().item(s.itemId);
+        var lv = C().levelOf(s);
+        var lvl = C().LEVELS.filter(function (l) { return l.id === lv.level; })[0];
+        return [s.itemId, it ? it.name : '', s.id, s.name, lvl ? lvl.label : lv.level,
+            cy.label || '', j.round || '', j.label, j.docs,
+            typeLabel(s), s.actor || '', s.target || '', s.law || ''];
+    }
+    /* 파일 꼬리말 — 화면이 캡션으로 말하고 있는 «자료의 한계»를 파일에도 싣는다.
+       표만 떼어 돌려 보는 사람에게 추정과 실측이 구분되지 않으면 그게 더 위험하다. */
+    /* 원자료 구성은 세어서 쓴다 — 문장에 건수를 박으면 출처가 하나 늘 때마다
+       (2026 예시 자료가 그랬다) 파일 꼬리말만 옛 수치로 남는다. */
+    function srcBreakdown() {
+        var by = {};
+        D().allDocs().forEach(function (d) { by[d.origin] = (by[d.origin] || 0) + 1; });
+        var L = { ledger: '2025년 재난안전과 문서 원장', v2: '현행 업무문서', seed26: '2026년 예시 자료', user: '이 시스템 등록분' };
+        return Object.keys(L).filter(function (k) { return by[k]; })
+            .map(function (k) { return L[k] + ' ' + by[k].toLocaleString() + '건'; }).join(' + ');
+    }
+    function expNote(view, rowN) {
+        var cond = expCond();
+        var n = [
+            ['화면', '업무 관리 > 이행 관리 — ' + view],
+            ['기준연도', S.year + '년'],
+            ['조회 조건', cond.length ? cond.join(' · ') : '전체'],
+            ['행 수', rowN + '행'],
+            ['판정 기준일', V().today()],
+            ['내려받은 사람', (global.DYROLE && DYROLE.actorLabel) ? DYROLE.actorLabel() : ''],
+            ['원자료', srcBreakdown()],
+        ];
+        if (D().seedStale && S.year === 2026) {
+            n.push(['자료 성격', '2026년 실적은 예시 자료입니다(규칙 생성) — 2025년은 재난안전과 문서 원장 실측입니다.']);
+        }
+        if (S.level === 'L3') {
+            n.push(['자료 한계', '시설↔할 일 매핑은 시설 분류에서 파생한 추정이고, 이행상태는 시설 건별이 아니라 그 할 일의 군 단위 판정입니다.']);
+        }
+        if (S.level === 'L2') {
+            n.push(['자료 한계', '부서별 이행률은 적용 단계 추정 기준이며, 보유 업무문서의 «원장» 값은 분류 이전 5개년 원장 집계라 이행 증빙 수가 아닙니다.']);
+        }
+        return n;
+    }
+    function exportCsv() {
+        var y = S.year;
+        if (S.tab === 'gap') {
+            var prev = D().presetSourceYear(y);
+            var list = gapList();
+            var head = STAGE_HEAD.concat([prev ? prev + '년 문서' : '지난연도 문서']);
+            var rows = list.map(function (s) {
+                return stageCells(s).concat([prev ? D().documentIdsOfStage(s.id, prev).length : '']);
+            });
+            return V().tableFile(['이행관리', '누락점검', y + '년'].concat(expCond()), head, rows, expNote('누락 점검', rows.length));
+        }
+        if (S.level === 'L2' && S.seg2 === 'dept') {
+            var stages = levelStages();
+            /* 화면이 «자료 미취합»이라 말하는 값을 파일에서 백분율로 찍지 않는다.
+               부서 귀속 자료가 없어(원장이 재난안전과 문서다) 부서별 이행 판정은
+               성립하지 않는데, 파일만 87% 를 내면 표를 떼어 본 사람에게는 그것이
+               측정값이 된다 — 파일이 화면보다 더 아는 척하면 안 된다. */
+            var head2 = ['부서', '적용 단계(추정)', '정기', '상시', '정기 이행률', '보유 업무문서', '문서 출처'];
+            var rows2 = deptRows().map(function (dp) {
+                var mine = stages.filter(function (s) { return D().stageDeptHit(s, dp.name); });
+                var per = mine.filter(function (s) { return C().cycleOf(s).need > 0; });
+                var dc = deptDocCount(dp.name);
+                return [dp.name, mine.length, per.length, mine.length - per.length,
+                    '자료 미취합',
+                    dc.n, dc.real ? '5개년 원장 집계' : '이 시스템 등록분'];
+            });
+            return V().tableFile(['이행관리', '부서단위', y + '년'].concat(expCond()), head2, rows2, expNote('부서 단위 — 부서별 보기', rows2.length));
+        }
+        if (S.level === 'L3' && S.seg3 === 'fac') {
+            var head3 = ['관리대상', '시설물번호', '소관부서', '구분', '종류', '시설물종별', '소재지',
+                '적용 단계 수', '충족', '적용 단계'];
+            var rows3 = facList().map(function (r) {
+                var ex = facExtOf(r.facilNo), st = facStages(r);
+                var ok = st.filter(function (s) { return C().judge(s, y).key === 'ok'; }).length;
+                return [r.facilNm, r.facilNo, (ex && ex.deptNm) ? ex.deptNm : '미등록',
+                    r.gbnNm || '', r.kindNm || '', r.facilClass ? r.facilClass + '종' : '',
+                    [r.addrSido, r.addrGugun, r.addrDong, r.addrDetail].filter(Boolean).join(' '),
+                    st.length, st.length ? ok + '/' + st.length : '',
+                    st.map(function (s) { return s.name; }).join(' | ')];
+            });
+            return V().tableFile(['이행관리', '관리대상단위', y + '년'].concat(expCond()), head3, rows3, expNote('관리대상 단위 — 관리대상별 보기', rows3.length));
+        }
+        var lvId = C().LEVELS.filter(function (l) { return l.id === S.level; })[0];
+        var vs = viewStages();
+        return V().tableFile(['이행관리', lvId ? lvId.short : S.level, y + '년'].concat(expCond()),
+            STAGE_HEAD, vs.map(stageCells), expNote((lvId ? lvId.label : S.level) + ' — 단계별 보기', vs.length));
+    }
+
     function init(mount) {
         S.mount = mount;
         readURL();
@@ -1330,6 +1740,8 @@
         pullField: pullField, pullRun: pullRun,
         openNA: openNA, saveNA: saveNA, clearNA: clearNA, openReg: openReg,
         gapSel: gapSel, openBulkNA: openBulkNA, saveBulkNA: saveBulkNA,
+        exportCsv: exportCsv,
+        openFac: openFac, closeFac: closeFac, rowOpenFac: rowOpenFac,
         state: S,
     };
 }(window));

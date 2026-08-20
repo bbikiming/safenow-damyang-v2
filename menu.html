@@ -12,7 +12,7 @@
 <body data-dy-page="sbm-policy">
     <script>
         /* 공통 레이아웃 1개를 대메뉴들이 공유 — ?m= 파라미터로 데이터만 주입.
-           위험성평가(risk)·유해·위험요인 관리(hazard)는 기존 프로토타입 UX 전용 화면으로 리다이렉트. */
+           위험성평가(risk)·유해·위험요인 관리(hazard)는 기존 전용 화면으로 리다이렉트. */
         (function () {
             var p = new URLSearchParams(location.search);
             var m = p.get('m') || 'policy';
@@ -36,6 +36,7 @@
 
     <script src="./js/layout.js"></script>
     <script src="./js/law-map.js"></script>
+    <script src="./js/help-center.js"></script><!-- DYHELP: 화면 도움말 -->
     <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
     <script src="./js/data.js"></script>
     <script src="./js/common.js"></script>

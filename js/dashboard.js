@@ -1,6 +1,6 @@
 /* =========================================================================
  * 담양군 중대재해예방 통합관리시스템 v2 — 통합 현황 대시보드 (DYDSH)
- *   권한 시연(DYROLE, js/layout.js) 3계층에 따라 서로 다른 대시보드를 렌더한다.
+ *   권한 전환(DYROLE, js/layout.js) 3계층에 따라 서로 다른 대시보드를 렌더한다.
  *     head  — 군수(총괄 책임자): 군 전체 거버넌스 뷰 (종합 이행률·책임체계·결재 대기)
  *     super — 실과장·사업소장·읍면장(관리감독자): 소관 부서 스코프 뷰
  *     staff — 업무담당자(실무 수행자): 내 할일·시기도래 중심 실무 뷰
@@ -113,7 +113,7 @@
             : '<div class="dsh-rate-row">' + inner + '</div>';
     }
 
-    /* ── 시연 시드 — 부서별 이행 현황 (head 뷰) · deptId 는 DYV2.ORG 와 동일 ── */
+    /* ── 예시 자료 — 부서별 이행 현황 (head 뷰) · deptId 는 DYV2.ORG 와 동일 ── */
     const DEPT_RATES = [
         { id: 'safety',       name: '재난안전과',     rate: 92, overdue: 0 },
         { id: 'env',          name: '환경과',         rate: 81, overdue: 1 },
@@ -128,7 +128,7 @@
         { id: 'water',        name: '물순환사업소',   rate: 45, overdue: 4 },
     ];
 
-    /* ── 시연 시드 — 관리감독자 부서 스코프 (deptId 키) ── */
+    /* ── 예시 자료 — 관리감독자 부서 스코프 (deptId 키) ── */
     /* 시각화 시드 필드 — funnel: 위험성평가 파이프라인 {t 대상, a 평가완료, i 개선 발행, d 개선 완료}
      *   aging: 개선조치 미완료 경과 구간 [1주 미만, 1~4주, 1개월 이상]
      *   hazards: 부서 위험요인 유형 TOP [이름, 건수] · eduHours: 반기 필요/인정 시간
@@ -220,7 +220,7 @@
         const hero =
             '<div class="dsh-hero">' +
               '<div class="dsh-hero-main">' +
-                '<div class="dsh-hero-label">담양군 전체 안전관리 이행률 <span class="dsh-seed-note">시연 시드</span></div>' +
+                '<div class="dsh-hero-label">담양군 전체 안전관리 이행률 <span class="dsh-seed-note">예시 자료</span></div>' +
                 '<div class="dsh-hero-num">72<em>%</em></div>' +
                 '<div class="progress"><div class="progress-bar" style="width:72%"></div></div>' +
                 sparkline([58, 60, 61, 63, 64, 66, 68, 67, 69, 70, 68, 72], '최근 12개월 추이') +
@@ -257,7 +257,7 @@
               '<div class="card-body">' +
                 '<div class="statbox-grid cols-3">' +
                   '<a class="statbox info" href="base-targets.html?tab=facility" style="text-decoration:none;"><div class="statbox-num" style="font-size:22px;">판정 전</div><div class="statbox-label">공중이용시설 · FMS 후보</div></a>' +
-                  '<a class="statbox warning" href="base-targets.html?tab=material" style="text-decoration:none;"><div class="statbox-num">4<em style="font-size:12px;">건</em></div><div class="statbox-label">원료·제조물 · 확인 전 시연자료</div></a>' +
+                  '<a class="statbox warning" href="base-targets.html?tab=material" style="text-decoration:none;"><div class="statbox-num">4<em style="font-size:12px;">건</em></div><div class="statbox-label">원료·제조물 · 확인 전 예시 자료</div></a>' +
                   '<div class="statbox neutral"><div class="statbox-num" style="font-size:22px;">자료 미수신</div><div class="statbox-label">공중교통수단 · 0건으로 단정하지 않음</div></div>' +
                 '</div>' +
                 '<p style="font-size:12px;color:var(--text-gray);margin-top:10px;">세 축은 각 관리대상 화면과 같은 모집단을 사용합니다. 확인 전 자료를 0개소로 표시하지 않습니다.</p>' +
@@ -275,7 +275,7 @@
         const deptCard =
             '<div class="card">' +
               '<div class="card-header"><span class="card-title">부서별 안전관리 이행 현황</span>' +
-                '<span class="dsh-seed-note">이행률·기한 초과는 시연 시드</span>' +
+                '<span class="dsh-seed-note">이행률·기한 초과는 예시 자료</span>' +
                 '<a class="btn btn-sm btn-secondary" href="stats.html">현황 통계</a></div>' +
               '<div class="card-body"><div style="overflow-x:auto;"><table class="table-figma">' +
                 '<thead><tr><th>부서</th><th>이행률</th><th style="text-align:center;">기한 초과</th><th>상태</th></tr></thead>' +
@@ -323,7 +323,7 @@
             '</div>';
 
         /* 부서 × 9개 의무 히트맵 — "어느 부서의 어느 의무가 구멍인가"를 한 눈에.
-         *   시연 시드: 부서 이행률(DEPT_RATES)에서 결정적으로 파생 (9호 도급은 전반 취약). */
+         *   예시 자료: 부서 이행률(DEPT_RATES)에서 결정적으로 파생 (9호 도급은 전반 취약). */
         const heatHead = duties.map((d, j) =>
             '<th title="' + E(d.name) + '">' + (j + 1) + '호</th>').join('');
         const heatRows = DEPT_RATES.map((dep, i) => {
@@ -537,7 +537,7 @@
         const rskCard =
             '<div class="card">' +
               '<div class="card-header"><span class="card-title">위험성평가 · 개선조치</span>' +
-                '<span class="dsh-seed-note">개선조치 지연 = 실데이터 · 평가 건수는 시연 시드</span>' +
+                '<span class="dsh-seed-note">개선조치 지연 = 실데이터 · 평가 건수는 예시 자료</span>' +
                 '<a class="btn btn-sm btn-secondary" href="rsk-list.html">위험성평가</a></div>' +
               '<div class="card-body"><div class="statbox-grid cols-3">' +
                 '<div class="statbox info"><div class="statbox-num">' + seed.rsk.done + '/' + seed.rsk.total + '</div><div class="statbox-label">평가 완료 (건)</div></div>' +
@@ -567,7 +567,7 @@
               '<div class="card-header"><span class="card-title">개선조치 미완료 ' + seed.imp.open + '건 — 경과 기간</span>' +
                 /* 이 카드는 전부 시드다 — 위 statbox 는 실집계라 숫자가 다르다. 밝히지 않으면
                    '어느 쪽이 맞느냐'가 되고, 그 순간 두 숫자 다 못 믿게 된다. */
-                '<span class="dsh-seed-note">시연 시드 — 실집계는 위 개선조치 지연</span>' +
+                '<span class="dsh-seed-note">예시 자료 — 실집계는 위 개선조치 지연</span>' +
                 '<a class="btn btn-sm btn-secondary" href="rsk-imp.html">개선조치</a></div>' +
               '<div class="card-body">' +
                 hbarRow('1주 미만',   seed.aging[0], agMax, 'green',   'rsk-imp.html') +
@@ -579,7 +579,7 @@
 
         const confirmRows = seed.confirms.map(c =>
             '<div class="dsh-approve-row"><div><b>' + E(c.title) + '</b><span>' + E(c.by) + ' 제출 · ' + E(c.when) + '</span></div>' +
-            '<button class="btn btn-sm btn-primary" type="button" onclick="DYV2.toast(\'확인 처리되었습니다 (프로토타입)\')">확인</button></div>').join('');
+            '<button class="btn btn-sm btn-primary" type="button" onclick="DYV2.toast(\'확인 처리되었습니다\')">확인</button></div>').join('');
         const confirmCard =
             '<div class="card">' +
               '<div class="card-header"><span class="card-title">담당자 제출 확인 대기</span>' +
@@ -817,7 +817,7 @@
         const catCard =
             '<div class="card">' +
               '<div class="card-header"><span class="card-title">카테고리별 잔여 업무</span>' +
-                '<span class="dsh-seed-note">개선 = 실데이터 · 그 외 시연 시드</span>' +
+                '<span class="dsh-seed-note">개선 = 실데이터 · 그 외 예시 자료</span>' +
                 '<a class="btn btn-sm btn-secondary" href="my-work.html">내 할일</a></div>' +
               '<div class="card-body">' +
                 catSeed.map(c => hbarRow(c[0], c[2], catMax, 'blue', 'my-work.html?cat=' + c[1])).join('') +
@@ -829,7 +829,7 @@
               catCard +
               '<div class="card">' +
                 '<div class="card-header"><span class="card-title">예방활동 요약</span>' +
-                    '<span class="dsh-seed-note">시연 시드</span></div>' +
+                    '<span class="dsh-seed-note">예시 자료</span></div>' +
                 '<div class="card-body">' +
                   '<div class="dsh-feed-item"><span class="dsh-feed-time">오늘 10:20</span><span>수시 위험성평가 완료 — 하수처리장 설비 변경 <a href="rsk-list.html" style="color:var(--main-dark); font-weight:700;">보기</a></span></div>' +
                   '<div class="dsh-feed-item"><span class="dsh-feed-time">오늘 09:05</span><span>종사자 신고 1건 접수 — 보도블록 침하 <a href="rsk-occ.html" style="color:var(--main-dark); font-weight:700;">보기</a></span></div>' +

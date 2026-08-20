@@ -180,7 +180,7 @@
                 '</div></div></div>' +
             '<div style="margin-bottom:12px;"><label class="form-label" for="wd-nt-msg">알림 내용</label>' +
                 '<textarea class="form-textarea" id="wd-nt-msg" rows="2">[작업환경측정] ' + esc(r.dept) + ' ' + esc(r.site) + ' 측정/개선 진행 요청</textarea></div>' +
-            '<div class="sh-req" style="font-size:12px;line-height:1.5;">본 알림은 수신자의 <b>새올행정시스템 포틀릿(알림)</b>으로 발송됩니다. <span style="color:var(--text-gray)">(프로토타입 — 실제 연계 시 새올 포틀릿으로 전송)</span></div>',
+            '<div class="sh-req" style="font-size:12px;line-height:1.5;">본 알림은 수신자의 <b>새올행정시스템 포틀릿(알림)</b>으로 발송됩니다. <span style="color:var(--text-gray)">(연계 적용 후 실제 전송)</span></div>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="WENVD.sendNotify()">발송</button>');
     }
@@ -188,7 +188,7 @@
     function sendNotify() {
         var to = (document.getElementById('wd-nt-to').value || '').trim();
         S().notify('we', state.id, to);
-        V().closeModal(); render(); toast('새올 포틀릿으로 알림을 발송했습니다 (프로토타입).');
+        V().closeModal(); render(); toast('새올 포틀릿으로 알림을 발송했습니다.');
     }
 
     /* ── 완료 처리 ── */

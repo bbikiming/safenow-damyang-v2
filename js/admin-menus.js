@@ -170,7 +170,7 @@
                 infoRow('연결 화면 코드', m.screen ? '<span class="chip-mini wt">' + esc(m.screen) + '</span>' : '-') +
                 '<span class="admm-info-k">사용 여부</span><span class="admm-info-v">' +
                     '<label class="toggle-switch"><input type="checkbox"' + (usage ? ' checked' : '') + ' onchange="DYADMENU.toggleUsage(\'' + id + '\',this.checked)"><span class="toggle-switch-slider"></span></label>' +
-                    ' <span class="admm-usage-txt">' + (usage ? '사용' : '사용 안 함 (메뉴 숨김 대상 — 프로토타입은 표시만)') + '</span>' +
+                    ' <span class="admm-usage-txt">' + (usage ? '사용' : '사용 안 함 (메뉴 숨김 대상 — 노출 반영은 권한 연계 후)') + '</span>' +
                 '</span>' +
             '</div></div></div>';
 
@@ -304,7 +304,7 @@
     }
     function toggleUsage(id, on) {
         A.setUsage(id, on); renderTree(); renderPanel();
-        V().toast(on ? '메뉴 사용으로 설정되었습니다.' : '메뉴 사용 안 함으로 설정되었습니다. (프로토타입 — 실제 내비게이션에는 영향 없음)');
+        V().toast(on ? '메뉴 사용으로 설정되었습니다.' : '메뉴 사용 안 함으로 설정되었습니다 — 실제 메뉴 노출 반영은 권한 연계 후 적용됩니다');
     }
 
     /* 다른 메뉴 설정 복사 (단일 모달) */
@@ -345,7 +345,7 @@
 
     /* 데모 초기화 */
     function resetDemo() {
-        if (!confirm('메뉴·권한 데모 데이터를 초기 시드로 되돌립니다. 이 화면에서 변경한 내용이 모두 사라집니다. 계속하시겠습니까?')) return;
+        if (!confirm('메뉴·권한 예시 자료를 처음 상태로 되돌립니다. 이 화면에서 변경한 내용이 모두 사라집니다. 계속하시겠습니까?')) return;
         A.resetDemo();
         MUI.sel = null; MUI.draft = null; MUI.dirty = false; MUI.expanded = {};
         renderTree(); renderPanel(); renderUsageStats();

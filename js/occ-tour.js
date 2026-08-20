@@ -1,5 +1,5 @@
 /* =====================================================================
-   occ-tour.js · 수시 위험성평가 시연 투어 (전역 OCCTOUR)
+   occ-tour.js · 수시 위험성평가 단계별 안내 (전역 OCCTOUR)
 
    엔진은 js/tour-core.js(DYTOUR) 와 공유한다 — 이 파일은 **단계 정의**만 한다.
 
@@ -154,7 +154,7 @@
             script: '부서 담당자는 정기든 수시든 내 할일 한 곳에서 끝냅니다 — 어디서 온 일인지 찾아다닐 필요가 없습니다.',
             modalGuide: '조치 내용을 적고 사진을 올리세요 — <b>사진과 서명이 모두 있어야</b> 저장됩니다.',
             /* 정기 6단계와 같은 모달·같은 이유 — 무대에서 OS 파일 대화상자를 열지 않는다 */
-            modalAction: { label: '시연용 사진 넣기', fn: 'MYWORK.pickAfterDemo()' },
+            modalAction: { label: '예시 사진 넣기', fn: 'MYWORK.pickAfterDemo()' },
             actionLabel: '내 할일에서 개선조치 보기',
             action: function () { location.href = 'my-work.html?dept=' + demoDept() + '&cat=improve'; },
             done: function () { var c = impCount(); return c.total > 0 && c.done === c.total; },
@@ -205,7 +205,7 @@
                 (o ? ' — 새로 등록하면 그 건을 따라갑니다.' : ' — 1단계에서 등록하면 그 건을 따라갑니다.') +
                 '<br>수시평가는 <b>부서가 사유가 생겨 올리는</b> 흐름이라 1단계 주체가 부서 담당자입니다.';
         },
-        barTitle: function () { return '수시 위험성평가 흐름 시연 — ' + STEPS.length + '단계'; },
+        barTitle: function () { return '수시 위험성평가는 이렇게 진행합니다 — ' + STEPS.length + '걸음'; },
         barDesc: function () {
             return '실시 사유 선택·등록 → 감소대책 배분 → 안전관리자 검토 → 부서 조치 완료 → 결과 확인. ' +
                 '정기평가와 반대로 <b>부서가 올리고 주관부서가 검토</b>합니다.';

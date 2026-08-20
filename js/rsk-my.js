@@ -1,6 +1,6 @@
 /* =====================================================================
    rsk-my.js · 내 할일 (RSK04-L, 신규 · 부서 담당자 관점)
-   · 상단 부서 셀렉트 (프로토타입 관점 전환)
+   · 상단 부서 셀렉트 (관점 전환)
    · 점검 예정 카드 · 조치할 사항 카드(N/M · 완료 처리)
    · 재촉받은 건 강조 → 인라인 폼(사유 + 처리기한 수정) → history 기록
    · 수시평가 등록 진입 버튼 (부서 프리필 → rsk-occ)
@@ -81,7 +81,7 @@
                             '</div>' +
                         '</div>' +
                         '<div class="my-item-actions">' +
-                            (f ? '<button type="button" class="btn btn-outline btn-sm" onclick="DYV2.toast(\'설문조사표 다운로드: ' + esc(f) + ' (프로토타입)\')">📥 유해위험요인 설문조사표 다운로드</button>' : '<span style="font-size:12px;color:var(--text-gray);">설문조사표 없음</span>') +
+                            (f ? '<button type="button" class="btn btn-outline btn-sm" onclick="DYV2.toast(\'설문조사표 내려받기\', \'서식 파일 등록\')">📥 유해위험요인 설문조사표 다운로드</button>' : '<span style="font-size:12px;color:var(--text-gray);">설문조사표 없음</span>') +
                         '</div>' +
                     '</div>' +
                 '</div>';
@@ -218,7 +218,7 @@
         var d = document.getElementById('my-cmpl-desc'); if (d) state.cmplDesc = d.value;
         var s = document.getElementById('my-cmpl-sign'); if (s) state.cmplSign = s.value;
         complete(state.cmplId);
-        V().toast('개선 후 사진 첨부 (프로토타입)');
+        V().toast('목록에 추가했습니다 — 파일 저장은 문서관리 연계 후 적용됩니다');
     }
 
     function complete(id) {

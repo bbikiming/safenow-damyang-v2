@@ -243,7 +243,7 @@
             '<p class="reg-lab">법적 근거</p>' +
             '<input type="text" data-k="legalBasis" value="' + esc(S.f.legalBasis) + '" placeholder="예: 중처법 시행령 제4조제1호">' +
             '<div class="reg-branch"><p class="bh">파일 첨부</p>' +
-                V().uploadDrop('파일을 끌어다 놓거나 클릭하여 선택', "DYV2.toast('파일 선택 (프로토타입) — 아래에 파일명·설명을 입력하고 [파일 추가]를 누르세요')", { style: 'padding:14px;', hint: true }) +
+                V().uploadDrop('파일을 끌어다 놓거나 클릭하여 선택', "DYV2.toast('파일을 선택했습니다 — 아래에 파일명·설명을 입력하고 [파일 추가]를 누르세요')", { style: 'padding:14px;', hint: true }) +
                 '<div class="reg-grid2" style="margin-top:10px;">' +
                     '<div><input type="text" id="reg-fname" placeholder="파일명 (예: 경영방침_2026.pdf)"></div>' +
                     '<div><input type="text" id="reg-fdesc" placeholder="파일 설명 (선택)"></div>' +
@@ -362,7 +362,7 @@
         if (S.pt === '첨부파일') rows.push(['담당', (S.f.assignee || '-') + ' · ' + (S.f.dept || '-')]);
         return '<p class="reg-lab">등록 내용 확인</p>' +
             rows.map(r => '<div class="reg-sum-row"><span>' + esc(r[0]) + '</span><span>' + esc(r[1]) + '</span></div>').join('') +
-            '<p class="reg-sub" style="margin-top:14px;">저장 시 목록의 해당 위치에 즉시 추가되며, 새로고침 후에도 유지됩니다 (프로토타입 — localStorage).</p>';
+            '<p class="reg-sub" style="margin-top:14px;">저장 시 목록의 해당 위치에 즉시 추가되며, 새로고침 후에도 유지됩니다.</p>';
     }
 
     const STEPS = [step1, step2, step3, step4];

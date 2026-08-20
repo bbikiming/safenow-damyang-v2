@@ -70,12 +70,18 @@
                     m('문서번호', d.origin === 'ledger' ? '<span class="dx-nodoc">원장 미보유</span>' : '<span class="dx-nodoc">(온나라에서 부여)</span>') +
                     m('보고일자', d.date || '<span class="dx-nodoc">미기재</span>') +
                     m('수발신자', d.sr ? esc(d.sr) + srNote(d.sr) : '<span class="dx-nodoc">미기재</span>') +
+                    /* 문구가 출처를 지목하므로 출처별로 갈린다 — 2026 예시 자료에
+                       «2025년 원장에 없다»고 쓰면 그 화면에서 바로 어긋난다. */
                     m('담당부서 · 담당자', d.dept ? esc(d.dept) + (d.assignee ? ' / ' + esc(d.assignee) : '')
-                        : '<span class="dx-nodoc">원장 미보유 — 2025년 재난안전과 문서 원장에는 담당 정보가 없습니다</span>') +
+                        : (d.origin === 'seed26'
+                            ? '<span class="dx-nodoc">예시 자료에는 담당 정보가 없습니다 — 원본인 문서 원장이 담당 축을 갖고 있지 않습니다</span>'
+                            : '<span class="dx-nodoc">원장 미보유 — 2025년 재난안전과 문서 원장에는 담당 정보가 없습니다</span>')) +
                     m('기준연도', d.year + '년') +
                     m('운영주기', d.cycle ? esc(d.cycle) : '<span class="dx-nodoc">미기재</span>') +
-                    m('데이터 구분', d.dataMode === 'demo'
-                        ? '시연값 <span class="dx-nodoc">— 출처·상태는 문서 ID 해시로 고정 배정된 값이며 실서비스에서는 온나라·전자문서·파일관리 어댑터의 원천 상태로 대체됩니다</span>'
+                    m('데이터 구분', d.origin === 'seed26'
+                        ? '<b>예시 자료</b> <span class="dx-nodoc">— 2026년 실적은 2025년 실측 패턴에서 규칙으로 만든 자료입니다(tools/build-doc-seed-2026.py). 실제 제출 기록이 아닙니다.</span>'
+                        : d.dataMode === 'demo'
+                        ? '예시 값 <span class="dx-nodoc">— 출처·상태는 문서 ID 해시로 고정 배정된 값이며 실서비스에서는 온나라·전자문서·파일관리 어댑터의 원천 상태로 대체됩니다</span>'
                         : '사용자 등록') +
                 '</dl>' +
                 (d.note ? '<p class="dd-note">' + esc(d.note) + '</p>' : '') +
@@ -153,10 +159,10 @@
                 return '<li><span class="dd-f-name">' + esc(f.name) + '</span>' +
                     '<span class="dd-f-meta">' + (f.size ? Math.max(1, Math.round(f.size / 1024)) + ' KB · ' : '') + esc(f.at || '') +
                     (copied ? ' · <span class="chip-status chip-sm purple">' + esc(f.sourceYear) + '년에서 복사</span>' : '') + '</span>' +
-                    '<span class="dx-nodoc dd-f-note">시연 환경 — 파일 실물은 저장하지 않습니다</span></li>';
+                    '<span class="dx-nodoc dd-f-note">파일 실물 저장은 문서관리 연계 후 적용됩니다</span></li>';
             }).join('') + '</ul>';
         }
-        /* 온나라 PDF — 시연 상태가 '온나라'라는 이유만으로 가짜 링크를 만들지 않는다 */
+        /* 온나라 PDF — 예시 상태가 '온나라'라는 이유만으로 가짜 링크를 만들지 않는다 */
         out += '<div class="dd-pdf">' +
             (d.src === 'onnara'
                 ? '<b>온나라 PDF</b> <span class="dx-nodoc">원본 PDF 미연계 — 온나라 연동 후 제공됩니다. ' +

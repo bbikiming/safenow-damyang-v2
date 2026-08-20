@@ -141,7 +141,7 @@
         return '<div class="card" style="margin-top:16px;">' +
             '<div class="card-header"><span class="card-title">문서 미리보기</span>' +
                 '<div style="display:flex; gap:8px;">' +
-                    '<button class="btn btn-sm btn-outline" onclick="DYV2.toast(\'다운로드 — ' + esc(docNo(d)) + '.pdf (프로토타입)\')">다운로드</button>' +
+                    '<button class="btn btn-sm btn-outline" onclick="DYV2.notReady(\'문서 내려받기\', \'전자문서 연계\')">다운로드</button>' +
                     '<button class="btn btn-sm btn-secondary" onclick="DYV2.openDoc(\'' + d.id + '\')">새 버전 업로드</button>' +
                 '</div></div>' +
             '<div class="card-body">' +
@@ -156,14 +156,14 @@
                         '<h3 class="dd-pv-h">2. 주요 내용</h3>' +
                         '<ul class="dd-pv-ul"><li>책임과 권한의 명확화 및 수행 주체 지정</li><li>주기적 점검·평가 및 기록 보존 절차</li><li>미흡 사항에 대한 개선조치 및 사후 확인</li></ul>' +
                         '<div class="dd-pv-alert"><b>중요 알림</b><br>' + (isV2 && d.legalBasis ? '법적 근거: ' + esc(d.legalBasis) + '. ' : '') + '본 문서는 ' + esc(set ? set.name : menu.label) + ' 이행의 ' + esc(isV2 ? (d.docRole || '근거') : '기준') + ' 문서이다.</div>' +
-                        '<p class="dd-pv-foot">※ 본 미리보기는 프로토타입 더미입니다. 실제 첨부 원본(PDF·HWP)으로 대체됩니다.</p>' +
+                        '<p class="dd-pv-foot">※ 본 미리보기는 예시 화면입니다. 실제 첨부 원본(PDF·HWP)으로 대체됩니다.</p>' +
                     '</div>' +
                 '</div>' +
                 (d.files && d.files.length
                     ? '<div class="attach-list" style="margin-top:16px;"><div class="attach-list-head">첨부파일 목록 (' + d.files.length + '건)</div>' +
                       '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>파일명</th><th>설명</th><th>등록일</th><th>관리</th></tr></thead><tbody>' +
                       d.files.map(f => '<tr><td>' + esc(f.name) + '</td><td>' + esc(f.desc || '') + '</td><td>' + esc(f.date || d.updated) + '</td>' +
-                        '<td><button class="btn btn-sm btn-outline" onclick="DYV2.toast(\'다운로드 — ' + esc(f.name) + ' (프로토타입)\')">다운로드</button></td></tr>').join('') +
+                        '<td><button class="btn btn-sm btn-outline" onclick="DYV2.notReady(\'파일 내려받기\', \'문서관리 연계\')">다운로드</button></td></tr>').join('') +
                       '</tbody></table></div></div>'
                     : '') +
                 '<div class="dd-ver-hist">' +
@@ -227,7 +227,7 @@
             '<span class="dd-rel-no">' + esc(docNo(doc)) + ' · ' + esc(sub || doc.dept) + '</span></span></a>';
     }
     function lawItem(name, code) {
-        return '<a class="dd-rel-item" href="docs-archive.html" onclick="DYV2.toast(\'법령 원문 연계 (프로토타입)\'); return false;">' +
+        return '<a class="dd-rel-item" href="docs-archive.html" onclick="DYV2.notReady(\'법령 원문 열기\', \'법제처 연계\'); return false;">' +
             '<span class="dd-rel-ico">법령</span>' +
             '<span class="dd-rel-body"><span class="dd-rel-name">' + esc(name) + '</span>' +
             '<span class="dd-rel-no">' + esc(code) + ' · 외부 법령</span></span></a>';

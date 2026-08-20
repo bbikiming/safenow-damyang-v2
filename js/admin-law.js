@@ -346,7 +346,7 @@
             '<div class="adml-tablewrap"><table class="table-figma table-compact">' +
                 '<thead><tr><th>일시</th><th>결과</th><th>대상</th><th>변경 감지</th><th>비고</th></tr></thead>' +
                 '<tbody>' + runRows + '</tbody></table></div>' +
-            '<div class="adml-hint" style="margin-top:8px;">각 행의 [실측]/[시연 구성] 표기는 관측 출처입니다. ' +
+            '<div class="adml-hint" style="margin-top:8px;">각 행의 [실측]/[예시 구성] 표기는 관측 출처입니다. ' +
                 '수집 실패 알림·재시도는 <a class="adml-jump" href="admin-integration.html">연계 관리</a>가 단일 창구입니다.</div>' +
         '</div></div>';
     }
@@ -473,7 +473,7 @@
         if (!st) {
             return '<div class="card"><div class="card-body"><div class="v2-empty">' +
                 '<div class="v2-empty-title">수집 결과가 없습니다</div>' +
-                '<div class="v2-empty-sub">[수집 요청 등록]을 누르면 배치가 받아온 결과를 검토하는 흐름을 시연합니다.</div>' +
+                '<div class="v2-empty-sub">[수집 요청 등록]을 누르면 배치가 받아온 결과를 검토하는 흐름을 확인할 수 있습니다.</div>' +
             '</div></div></div>';
         }
         var rows = st.rows.map(function (r, i) {
@@ -501,7 +501,7 @@
             '화면의 역할은 조회가 아니라 <b>검토·승인</b>입니다. (배치 기준 ' + esc((global.DYLAWSYNC || {}).batchAt || '-') + ')</div>' +
             '<div class="adml-tablewrap"><table class="table-figma table-compact">' +
             '<thead><tr><th>조문</th><th>변화</th><th>내용</th><th>처리</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
-            '<div class="adml-notice">승인해도 <b>이 프로토타입은 조문 원문을 바꾸지 않습니다</b> — 실제 반영은 law-map.js 재생성(배치)이 합니다. ' +
+            '<div class="adml-notice">승인해도 <b>이 화면은 조문 원문을 바꾸지 않습니다</b> — 실제 반영은 law-map.js 재생성(배치)이 합니다. ' +
             '여기서는 결정을 이력에 남기고 내보내기로 전달합니다.</div>' +
         '</div></div>';
     }
@@ -575,7 +575,7 @@
     function sync() {
         if (!A().stageLoad()) {
             A().runSync();
-            toast('수집 요청을 등록했습니다 — 프로토타입은 실제 API 를 호출하지 않습니다.');
+            toast('수집 요청을 등록했습니다 — 법제처 API 호출은 배치 연계 후 적용됩니다.');
         }
         sel('sync', '');
     }

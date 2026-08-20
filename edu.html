@@ -7,7 +7,7 @@
     <script>
         /* 안전보건교육 재설계 v1 구조 적용 (2026-07-20): 단일 화면 3탭 → 7개 메뉴로 분리.
          *   대표 진입: edu-status.html (이수현황). 기존 링크는 그대로 이관.
-         *   시연 투어는 js/edu-tour.js(EDUTOUR) — 각 edu-* 화면 상단 [시연] 버튼. */
+         *   단계별 안내는 js/edu-tour.js(EDUTOUR) — 각 edu-* 화면 첫 방문 배너. */
         (function () {
             location.replace('edu-status.html' + (location.search || ''));
         })();

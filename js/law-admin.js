@@ -60,7 +60,7 @@
             verify: {},        /* pageId|articleKey → [{answers, reason, at, by, againstTitle}] */
             articleAdmin: {},  /* articleKey → { axis, lifecycle, replacedBy, note, at, by } */
             basisTriage: {},   /* 원문표기 → { verdict, note, at, by } */
-            log: []            /* append-only. 프로토타입 상한 LOG_MAX */
+            log: []            /* append-only. 보관 상한 LOG_MAX */
         };
         /* 검증 기록 시드 — answers(6문 전부 예)·검증 당시 조문 제목은 여기서 파생.
          * againstTitle 을 현재 조문 제목으로 굳혀 두면, 이후 재수집으로 제목이
@@ -112,8 +112,8 @@
 
     function today() { return '2026-07-30'; }
     function nowTs() { return today() + ' ' + new Date().toTimeString().slice(0, 5); }
-    /* 프로토타입에 로그인이 없다. 실 개발에서 로그인 사용자로 대체된다. */
-    function actor() { return '시연 계정'; }
+    /* 로그인 축이 아직 없다. 연계 후 로그인 사용자로 대체된다. */
+    function actor() { return '담당자'; }
 
     /* ── 이력 ─────────────────────────────────────────────────────────────
      *  전/후 값을 구조화해 남긴다. 없으면 되돌리기도 소명도 불가능하다.
@@ -622,7 +622,7 @@
     }
     function stageClear() { try { global.sessionStorage.removeItem(STAGE_KEY); } catch (e) {} }
 
-    /* 시연용 수집 결과 — 시드는 js/law-sync-seed.js(생성물 아님)에서 온다 */
+    /* 예시 수집 결과 — 시드는 js/law-sync-seed.js(생성물 아님)에서 온다 */
     function runSync() {
         var seed = global.DYLAWSYNC || { rows: [] };
         var rows = seed.rows.map(function (r) { return Object.assign({}, r, { decision: '' }); });

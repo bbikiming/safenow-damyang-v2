@@ -468,6 +468,7 @@
 
     <script src="./js/layout.js"></script>
     <script src="./js/law-map.js"></script>
+    <script src="./js/help-center.js"></script><!-- DYHELP: 화면 도움말 -->
     <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
     <script src="./js/common.js"></script>
     <script src="./js/sh-data.js"></script>
@@ -513,7 +514,7 @@
         }
         const DEPTS = buildDepts();
 
-        /* 데모 시드: 조직도 파생 위에 평가자 지정·임시저장 상태만 덧입힘(목업 시연용) */
+        /* 예시 시드: 조직도 파생 위에 평가자 지정·임시저장 상태만 덧입힘(목업 시연용) */
         function seedCell(dept, name, half, patch) {
             const rows = DEPTS[dept]; if (!rows) return;
             const row = rows.find(r => r.name === name); if (!row) return;
@@ -1099,7 +1100,7 @@
             /* 온나라 결재결과 회신 등록(1단계 연계) — 상신 후 결재 완료 시 부여되는 문서등록번호·결재일을 시스템에 회신 저장 */
             const mockNo = '재난안전과-' + Math.floor(1000 + Math.random() * 9000);
             DYV2.openModal('온나라 결재결과 회신 등록',
-                '<p style="font-size:13px;line-height:1.6;margin-bottom:12px;color:var(--text-gray);">규격 기안문이 온나라로 상신되었습니다. 온나라에서 <b>결재 완료</b> 시 부여되는 <b>문서등록번호</b>·결재일을 등록하면 평가 이력과 연결됩니다. <span style="color:var(--text-gray);">(프로토타입 — 실제 연계 시 온나라가 자동 회신)</span></p>' +
+                '<p style="font-size:13px;line-height:1.6;margin-bottom:12px;color:var(--text-gray);">규격 기안문이 온나라로 상신되었습니다. 온나라에서 <b>결재 완료</b> 시 부여되는 <b>문서등록번호</b>·결재일을 등록하면 평가 이력과 연결됩니다. <span style="color:var(--text-gray);">(연계 적용 후 온나라가 결과를 자동 회신)</span></p>' +
                 '<div style="margin-bottom:12px;"><label class="form-label" for="onnara-docno">문서등록번호 <span style="color:var(--text-gray);font-weight:400;">(온나라 부여)</span></label>' +
                     '<input type="text" class="form-input" id="onnara-docno" value="' + mockNo + '"></div>' +
                 '<div><label class="form-label" for="onnara-date">결재일</label>' +

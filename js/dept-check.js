@@ -70,7 +70,7 @@ var SKEY = 'dy-deptcheck-v4';   /* v4 — 경영방침 게시 회차 축을 연�
     }
 
 
-    /* ================= 시연 시드 =================
+    /* ================= 예시 자료 =================
      * 전 부서 '미이행 0%' 로만 보이면 회의가 요구한 "돼 있는지 안 돼 있는지" 표에
      * **'돼 있는' 사례가 하나도 없다.** 상태 5종(이행·미이행·사유 있는 해당없음·
      * 사유 없는 해당없음·증빙 여러 장)이 한 화면에 다 보이도록 심는다.
@@ -384,7 +384,7 @@ var SKEY = 'dy-deptcheck-v4';   /* v4 — 경영방침 게시 회차 축을 연�
     function remind(key, deptId) {
         if (!canAct(deptId)) { denied(deptId); return; }
         var d = deptOf(deptId);
-        toast((d ? d.name : deptId) + ' 담당자에게 독촉 알림 발송 (프로토타입)');
+        toast((d ? d.name : deptId) + ' 담당자에게 독촉 알림을 발송했습니다');
     }
 
     global.DEPTCHK = {

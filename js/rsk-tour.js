@@ -1,5 +1,5 @@
 /* =====================================================================
-   rsk-tour.js · 정기 위험성평가 시연 투어 (전역 RSKTOUR)
+   rsk-tour.js · 정기 위험성평가 단계별 안내 (전역 RSKTOUR)
 
    엔진은 js/tour-core.js(DYTOUR) 와 공유한다 — 이 파일은 **단계 정의**만 한다.
    생성부터 온나라 이관까지 9단계. 주관부서(박안전)와 부서 담당자를 오가는
@@ -82,13 +82,13 @@
             where: '화면 오른쪽 위 <b>[＋ 정기평가 생성]</b>',
             clickPath: [
                 '[＋ 정기평가 생성] — 마법사가 열립니다',
-                'STEP1 조직도에서 대상 부서 선택 — 시연은 한 곳만 남기세요',
+                'STEP1 조직도에서 대상 부서 선택 — 연습은 한 곳만 남기세요',
                 'STEP2 점검일자 [일괄 적용] → [생성]'
             ],
             desc: '대상 부서를 고르고 부서별 점검일자를 정하면, 그 부서들에 점검예정일이 통보됩니다.',
             script: '연 1회 정기 위험성평가를 시스템에서 한 건으로 엽니다. 종전에는 부서별로 공문과 엑셀을 따로 돌렸습니다.',
-            modalGuide: '대상 부서가 많으면 뒤에서 <b>공문 기안 조건(전 부서 확인 완료)</b>을 채우느라 시연이 끝나지 않습니다. 한 곳만 남기세요.',
-            modalAction: { label: '시연용으로 물순환사업소만 선택', fn: 'RSKTOUR.pickDemoDept()' },
+            modalGuide: '대상 부서가 많으면 뒤에서 <b>공문 기안 조건(전 부서 확인 완료)</b>을 채우느라 끝까지 가지 못합니다. 한 곳만 남기세요.',
+            modalAction: { label: '연습용으로 물순환사업소만 선택', fn: 'RSKTOUR.pickDemoDept()' },
             actionLabel: '정기평가 생성 열기',
             action: function () { global.RSKLIST.openWizard(); },
             done: function () { return !!A(); },
@@ -102,7 +102,7 @@
             where: '요약 카드 안 <b>“공통 유해위험요인 설문조사표”</b> 줄의 <b>[＋ 첨부]</b>',
             clickPath: [
                 '요약 카드의 [＋ 첨부]',
-                '파일명을 그대로 두고 [첨부] — 프로토타입이라 실제 파일은 올라가지 않습니다'
+                '파일명을 그대로 두고 [첨부] — 파일 실물 저장은 문서관리 연계 후 적용됩니다'
             ],
             desc: '전 부서가 같은 서식을 쓰도록 공통본을 답니다. 부서별로 다른 서식이 필요하면 표에서 부서별로 덮어씁니다.',
             script: '서식을 시스템이 배포하므로 부서가 옛 버전을 쓰거나 서식을 찾아 헤매는 일이 없어집니다.',
@@ -238,7 +238,7 @@
                완료 모달을 그리는 주체가 MYWORK 이므로 그쪽 도우미를 쓴다. */
             /* when — 이 필드가 있는 모달에서만 버튼을 낸다. 앞서 열리는 조치 상세 카드에는
                대상 행(cmplId)이 정해지지 않아, 거기서 누르면 어느 건의 사진인지 알 수 없다. */
-            modalAction: { label: '시연용 사진 넣기', fn: 'MYWORK.pickAfterDemo()', when: '#mw-cmpl-desc' },
+            modalAction: { label: '예시 사진 넣기', fn: 'MYWORK.pickAfterDemo()', when: '#mw-cmpl-desc' },
             actionLabel: '개선조치 카드 열기',
             action: function () { if (global.RSKLIST) global.RSKLIST.openDept(demoDept()); },
             done: function () {
@@ -306,14 +306,14 @@
             key: 'receive', label: '결재회신', page: 'rsk-list.html',
             persona: ownerP, href: function () { return 'rsk-list.html'; },
             selector: '[data-tour="rsk-doc"]',
-            title: '온나라 결재 결과 수신 (시연)',
+            title: '온나라 결재 결과 수신',
             where: '<b>온나라 이관</b> 띠의 <b>[결재 상태]</b>',
             clickPath: [
                 '[결재 상태]',
-                '시연용 [결재 완료 회신] — 실제로는 온나라가 결과를 보내옵니다'
+                '[결재 완료 회신] — 연계 적용 후에는 온나라가 결과를 보내옵니다'
             ],
             desc: '우리 시스템은 온나라에 요청하고 결재값을 받아오기만 합니다. 반려되면 문서를 새로 만들어 다시 올립니다.',
-            script: '온나라 연동은 아직 시연용 시뮬레이션입니다. 실연계 전에는 파일 내려받기와 수동 결과 기록을 사용합니다.',
+            script: '온나라 연동은 아직 적용 전입니다. 그때까지는 파일 내려받기와 수동 결과 기록을 사용합니다.',
             actionLabel: '결재 상태 열기',
             action: function () {
                 var a = A(); if (!a) return;
@@ -332,14 +332,14 @@
         flowNote: function () {
             var R = global.DYROLE;
             if (R && R.inScope && !R.inScope(demoDept())) {
-                return '시연 대상 부서가 <b>조회 범위 밖</b>이라 부서 단계의 진행은 표시하지 않습니다. ' +
+                return '대상 부서가 <b>조회 범위 밖</b>이라 부서 단계의 진행은 표시하지 않습니다. ' +
                     '소속 부서 몫만 보려면 그 부서 담당자 관점으로 접속하세요.';
             }
-            return '시연 대상 부서는 <b>' + V().esc(deptNm()) + '</b> 기준입니다. ' +
-                '대상 부서가 많으면 공문 기안 조건(전 부서 확인 완료)을 채우느라 시연이 끝나지 않으니, ' +
+            return '대상 부서는 <b>' + V().esc(deptNm()) + '</b> 기준입니다. ' +
+                '대상 부서가 많으면 공문 기안 조건(전 부서 확인 완료)을 채우느라 끝까지 가지 못하니, ' +
                 '생성 단계에서 한 곳만 고르세요.';
         },
-        barTitle: function () { return '정기 위험성평가 흐름 시연 — ' + STEPS.length + '단계'; },
+        barTitle: function () { return '정기 위험성평가는 이렇게 진행합니다 — ' + STEPS.length + '걸음'; },
         barDesc: function () {
             return '생성 → 설문조사표 → 부서 제출 → 보고서 검수 → 전달 → 조치 완료 → 완료 확인 → 공문 기안 → 결재 회신. ' +
                 '가이드가 <b>어디를 누를지</b> 짚어 줍니다.';

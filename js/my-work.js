@@ -3,7 +3,7 @@
    ---------------------------------------------------------------------
    부서 담당자 관점의 전 업무 통합 내 할일. 위험성평가 전용이었던 rsk-my를
    승격해 결재·위험·개선·점검·의견·이행·도급·평가·교육 도메인을 한 화면에.
-   레퍼런스: v1 프로토타입 myw01-v.
+   레퍼런스: v1 myw01-v.
 
    [화면 구조]
    · 상단: "내 할일" · 최종 동기화 시각 · [동기화]
@@ -16,13 +16,13 @@
    · 처리 유형(atype)별 액션 — "지금 할 수 있는 건 여기서 끝낸다":
        attach   → 팝업(단일 모달 DYV2.openModal)에서 파일 첨부 후 완료
        menu     → 해당 메뉴로 딥링크 (처리 위치 라벨 함께 표기)
-       download → 설문조사표 등 즉시 다운로드 (프로토타입 토스트)
+       download → 설문조사표 등 즉시 내려받기
        inline   → 재촉 응답·완료 처리 등 기존 인라인 폼/모달
    · 카드 자체 클릭 = 대표 액션 실행 (menu형 이동 / attach형 첨부 팝업) —
      알림에서 넘어와 "누르면 바로 진행"되는 흐름 (버튼·링크 클릭은 제외)
    · 발행된 업무의 처리유형 매핑: 첨부파일=attach / 전자문서·프로그램=menu
    · 위험성평가·안전보건교육 실데이터 편입 + 타 카테고리 목업 시드
-   · 상단 부서 셀렉트로 관점 전환 (프로토타입용) — DYV2.ORG 파생
+   · 상단 부서 셀렉트로 관점 전환 — DYV2.ORG 파생
    ===================================================================== */
 (function (global) {
     'use strict';
@@ -1272,7 +1272,7 @@
                 ' onclick="MYWORK.delBefore(' + n + ')">×</button></span>';
         }).join('') + '</div>';
     }
-    /* 시연용 개선 전 사진 — '후' 와 같은 이유(무대에서 OS 대화상자를 열지 않는다) */
+    /* 예시 개선 전 사진 — '후' 와 같은 이유(무대에서 OS 대화상자를 열지 않는다) */
     function pickBeforeDemo() {
         captureCmpl();
         var thumb = D().demoShot ? D().demoShot('before') : '';
@@ -1286,10 +1286,10 @@
         state.cmplPhoto = (state.cmplPhotos || []).map(function (f) { return f.name; }).join(', ');
         complete(state.cmplId);
     }
-    /* 시연용 개선 후 사진 — 위 주석대로 실사용은 실제 파일이 맞다. 다만 무대에서
+    /* 예시 개선 후 사진 — 위 주석대로 실사용은 실제 파일이 맞다. 다만 무대에서
        OS 파일 대화상자를 열면 느리고 발표자 개인 파일이 그대로 노출된다.
        시드가 이미 쓰는 썸네일(DYRSK.demoShot)을 그대로 넣어 증빙 화면까지 보여준다.
-       시연 투어 6단계의 [시연용 사진 넣기] 가 부른다 — 실제 입력란은 그대로 남는다. */
+       단계별 안내 6단계의 [예시 사진 넣기] 가 부른다 — 실제 입력란은 그대로 남는다. */
     function pickAfterDemo() {
         captureCmpl();
         var thumb = D().demoShot ? D().demoShot('after') : '';
@@ -1416,13 +1416,13 @@
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="MYWORK.doReport()">제출</button>');
     }
-    function dlForm(name) { toast('설문조사표 다운로드: ' + name + ' (프로토타입 — 실제 파일은 미연결)'); }
+    function dlForm(name) { V().notReady('설문조사표 내려받기', '서식 파일 등록'); }
     function onPickReport(files) { RPT.files = files.slice(0, 1); renderReport(); }
     function delReport(n) { RPT.files.splice(n, 1); renderReport(); }
-    /* 시연용 파일 이름 — 무대에서 OS 파일 대화상자를 여는 건 느리고 위험하다
+    /* 예시 파일명 — 무대에서 OS 파일 대화상자를 여는 건 느리고 위험하다
        (발표자의 개인 파일 목록이 그대로 노출된다). 개선 후 '사진'과 달리 작성본은
        파일 자체가 증빙이 아니라 제출 사실이 증빙이라 이름만으로도 흐름이 성립한다.
-       시연 투어 3단계의 [시연용 파일 이름 넣기] 가 부른다. */
+       단계별 안내 3단계의 [예시 파일명 넣기] 가 부른다. */
     function pickReportDemo() {
         if (!RPT) return;
         var a = D().assessmentOf(RPT.aid);

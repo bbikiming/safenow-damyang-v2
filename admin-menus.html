@@ -12,14 +12,14 @@
 <body data-dy-page="admin-menus" data-page-title="메뉴 관리" data-page-subtitle="시스템 관리 > 메뉴 관리 — 메뉴별 접근 권한 설정 (ADM01-S)">
     <main>
         <div class="admp-topbar">
-            <span class="admp-topbar-hint">메뉴별 접근 권한을 설정합니다. 미설정 메뉴는 기본 차단(시스템 관리자 제외)이며, 실제 내비게이션 노출에는 영향을 주지 않습니다(프로토타입).</span>
+            <span class="admp-topbar-hint">메뉴별 접근 권한을 설정합니다. 미설정 메뉴는 기본 차단(시스템 관리자 제외)이며, 실제 메뉴 노출 반영은 권한 연계 후 적용됩니다.</span>
             <span class="spacer" style="flex:1;"></span>
             <button class="btn btn-outline btn-sm" onclick="DYADMENU.resetDemo()">데모 데이터 초기화</button>
         </div>
 
         <div class="card" style="margin-bottom:16px;">
             <div class="card-header" style="gap:10px; flex-wrap:wrap;">
-                <span class="card-title">메뉴 이용 현황 <span class="chip-mini wt" style="margin-left:6px;">시연용 접속 기록</span></span>
+                <span class="card-title">메뉴 이용 현황 <span class="chip-mini wt" style="margin-left:6px;">예시 자료</span></span>
                 <span class="spacer" style="flex:1;"></span>
                 <label style="display:flex;align-items:center;gap:6px;font-size:12px;">조회 기간
                     <select class="select" id="admm-usage-period" onchange="DYADMENU.setUsagePeriod(this.value)">
@@ -60,6 +60,7 @@
 
     <script src="./js/layout.js"></script>
     <script src="./js/law-map.js"></script>
+    <script src="./js/help-center.js"></script><!-- DYHELP: 화면 도움말 -->
     <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
     <script src="./js/common.js"></script>
     <script src="./js/adm-perm.js"></script>

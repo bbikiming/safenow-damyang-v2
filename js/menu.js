@@ -453,7 +453,7 @@
                 '<div class="pdf-sec">세부 방침</div><ol class="pdf-list">' + (v.details || []).map(d => '<li>' + V.esc(d) + '</li>').join('') + '</ol>' +
                 '<div class="pdf-sign">시행일 ' + (v.effDate || '-') + '<br><br><b>' + (v.pdf.signer || '담양군수') + '</b> (직인)</div>' +
                 '</div>';
-            PG.polPdfDownload = () => V.toast('PDF 다운로드 (프로토타입)');
+            PG.polPdfDownload = () => V.notReady('PDF 내려받기', '문서 출력 연계');
             PG.polPdfClose = () => V.closeModal();
             /* 문서 미리보기 — 공용 모달 'wide' 변형(자작 오버레이 폐지, 단일 모달 규칙 §1). */
             PG.polPdfFull = ver => {
@@ -601,8 +601,8 @@
                     (unfit ? '<p style="font-size:12px; color:var(--status-danger-fg); margin-top:12px;">부적합 ' + unfit + '건은 개선조치(IMP)로 자동 등록되었습니다.</p>' : '');
                 V.openModal('이행 점검표 — v' + ver + ' · ' + ins.half, body,
                     '<button class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
-                    '<button class="btn btn-outline" onclick="DYV2.toast(\'인쇄 (프로토타입)\')">인쇄</button>' +
-                    '<button class="btn btn-primary" onclick="DYV2.toast(\'PDF 다운로드 (프로토타입)\')">PDF 다운로드</button>');
+                    '<button class="btn btn-outline" onclick="window.print()">인쇄</button>' +
+                    '<button class="btn btn-primary" onclick="DYV2.notReady(\'PDF 내려받기\', \'문서 출력 연계\')">PDF 다운로드</button>');
             };
 
             /* ===== 서브탭 바 ===== */
@@ -740,30 +740,66 @@
 
         /* ── 조직 [SFR-006·009·010]: 선임 등록 → 수행평가(F6) → 후속조치(F7) ── */
         org() {
+            /* `source` 는 표에서 열을 지운 뒤 아무도 읽지 않지만 남겨 둔다 — 공사가 들어오는 갈래가
+               직접 등록 하나뿐이라 지금은 모든 행이 같은 값이어서 보여줄 값이 없을 뿐, 출처를 구분해야
+               한다는 축 자체는 옳다. 나중에 공사정보 연계가 붙으면 두 경로의 자료를 출처 없이 섞지
+               않도록 이 자리에서 축을 되살린다(조직 화면 정의서 §6). */
             if (!window.ORG_CONSTRUCTION_STATE) {
                 window.ORG_CONSTRUCTION_STATE = [
-                    { id: 'CONST-01', owner: '담양군', name: '군도 5호선 정비공사', from: '2026-03-02', to: '2026-10-30', amount: '12.4억 원', manager: '김안전', status: '완료', source: '차세대 e호조 시연' },
+                    { id: 'CONST-01', owner: '담양군', name: '군도 5호선 정비공사', from: '2026-03-02', to: '2026-10-30', amount: '12.4억 원', manager: '김안전', status: '완료', source: '직접 등록' },
                     { id: 'CONST-02', owner: '담양군', name: '정수장 내진보강 공사', from: '2026-06-01', to: '2026-12-20', amount: '8.7억 원', manager: '', status: '미시행', source: '직접 등록' },
                 ];
             }
             const construction = window.ORG_CONSTRUCTION_STATE;
             const staffing = [
-                { role: '안전관리자', required: 1, current: 1, note: '시연용 기준값' },
-                { role: '보건관리자', required: 1, current: 1, note: '시연용 기준값' },
+                { role: '안전관리자', required: 1, current: 1, note: '예시 기준값' },
+                { role: '보건관리자', required: 1, current: 1, note: '예시 기준값' },
                 { role: '산업보건의', required: null, current: 0, note: '법령 배치 기준 미등록' },
             ];
             const staffShort = staffing.filter(x => x.required != null && x.current < x.required).length;
             const staffPending = staffing.filter(x => x.required == null).length;
+            /* 담당자는 이 화면의 명단이 아니라 조직도(DYV2.ORG 단일 출처)에서 고른다 — 직접 입력하면
+               같은 사람이 여러 표기로 쌓여 부서별 집계가 어긋난다(조직 화면 정의서 §6). 종전에는
+               placeholder 만 「조직도에서 선택」이라 적어 두고 실제로는 자유 입력이라, 없는 동작을
+               문구로 약속하고 있었다.
+               ※ 트리는 모달 본문 안 인라인 패널(.org-inline)로 펼친다 — 새 모달을 쌓지 않는다.
+                 menu.html 은 js/org-pick.js 를 싣지 않아 ORGPICK 전역이 없는 페이지이므로, 같은
+                 DYV2.orgFlat() 파생·같은 트리 마크업을 쓰는 EDOC.openOrgTree 로 떨어진다. 없는
+                 전역을 부르면 버튼이 조용히 죽어 «조직도에서 선택»이 다시 빈 약속이 된다. */
+            PG.orgPickName = () => {
+                if (window.ORGPICK) ORGPICK.toggle('org-ap-field', 'member', 'PG.orgAppointPick');
+                else E.openOrgTree('org-ap-name');
+            };
+            PG.orgAppointPick = label => { const el = document.getElementById('org-ap-name'); if (el) el.value = label; };
             PG.orgAppoint = () => {
+                const today = DYV2.today();
                 V.openModal('안전·보건관리자 선임 등록',
                     '<div class="preset-form-grid">' +
-                    '<span class="k">구분</span><select><option>안전관리자</option><option>보건관리자</option><option>안전보건관리책임자</option><option>관리감독자</option></select>' +
-                    '<span class="k">성명 (조직도 선택)</span><input type="text" placeholder="행정포털 조직도에서 선택">' +
-                    '<span class="k">선임일</span><input type="date" value="2026-06-11">' +
-                    '<span class="k">자격</span><input type="text" placeholder="예: 산업안전기사">' +
+                    '<span class="k">구분 <span class="req">*</span></span><select class="form-select" id="org-ap-kind"><option value="">선택하세요</option><option>안전관리자</option><option>보건관리자</option><option>안전보건관리책임자</option><option>관리감독자</option></select>' +
+                    '<span class="k">성명 <span class="req">*</span></span>' +
+                    '<div class="orgpick-field" id="org-ap-field"><div style="display:flex; gap:8px; align-items:center;">' +
+                        '<input type="text" id="org-ap-name" readonly placeholder="[조직도]에서 대상자를 고르세요" style="flex:1; background:var(--surface-alt);">' +
+                        '<button type="button" class="btn btn-sm btn-outline" onclick="PG.orgPickName()">조직도</button>' +
+                    '</div></div>' +
+                    /* 선임일 기본값을 특정 날짜로 박아 두면 기준일이 움직일 때 미래 날짜가 기본이 된다. */
+                    '<span class="k">선임일 <span class="req">*</span></span><input type="date" id="org-ap-date" value="' + today + '" max="' + today + '">' +
+                    '<span class="k">자격</span><input type="text" id="org-ap-cert" placeholder="예: 산업안전기사">' +
                     '<span class="k">선임계 첨부</span>' + DYV2.uploadDrop('선임 신고서·자격증 사본 첨부', null, { style: 'padding:14px;' }) + '</div>',
                     '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-                    '<button class="btn btn-primary" onclick="DYV2.closeModal(); EDOC.notify(\'선임 등록 완료 — 고용노동부 선임 신고 안내\', \'메일\')">등록</button>');
+                    '<button class="btn btn-primary" onclick="PG.orgAppointSave()">등록</button>');
+            };
+            /* 필수값 검증 — 종전에는 [등록]이 곧바로 «선임 등록 완료» 알림을 띄워, 아무것도 고르지 않아도
+               선임을 마친 것처럼 말했다. 선임 공백은 그 자체가 법정 의무 미이행이라 빈 등록이 그것을 덮는다. */
+            PG.orgAppointSave = () => {
+                const val = k => ((document.getElementById(k) || {}).value || '').trim();
+                const kind = val('org-ap-kind'), name = val('org-ap-name'), date = val('org-ap-date');
+                if (!kind) { V.toast('구분을 고르세요.'); return; }
+                if (!name) { V.toast('조직도에서 대상자를 고르세요.'); return; }
+                if (!date) { V.toast('선임일을 입력하세요.'); return; }
+                /* 아직 오지 않은 날로 선임할 수 없다 — 미래 선임을 허용하면 «지금 선임돼 있다»가 거짓이 된다. */
+                if (date > DYV2.today()) { V.toast('아직 오지 않은 날로 선임할 수 없습니다.'); return; }
+                V.closeModal();
+                E.notify('선임 등록 완료 — 고용노동부 선임 신고 안내', '메일');
             };
             PG.orgEval = () => actGate('수행평가 작성') ? null : E.openForm({
                 id: 'EDOC-수행평가-2026H1', title: '2026 상반기 안전보건관리책임자등 수행평가', form: 'F6',
@@ -811,20 +847,29 @@
                 V.toast('이미 완료된 점검입니다.');
             };
             const team = (name, n) => '<div style="border:1px solid var(--card-line); border-radius:var(--radius-md); padding:10px 14px; text-align:center; background:var(--surface);"><div style="font-size:12px; font-weight:700;">' + name + '</div><div style="font-size:12px; color:var(--text-gray);">' + n + '명</div></div>';
-            /* 조직도 요약 — 단일 출처(DYV2.ORG) 파생 실인원 */
+            /* 조직도 요약 — 단일 출처(DYV2.ORG) 파생 실인원 · 조회 전용 */
             const orgTotal = (V.orgTotal ? V.orgTotal() : 0);
             const jjtN = (V.orgCount ? V.orgCount('jjt', false) : 0);
             const mayorN = (V.orgCount ? V.orgCount('n_mayor', false) : 1);
             const deptCards = (V.orgFlat ? V.orgFlat() : [])
                 .map(d => team(d.dept, d.members.length)).join('');
-            return sectionCard('조직도 (행정포털 연계)',
+            /* 부서 등록 갭은 감추지 않는다 — 명단이 다 확보되지 않은 것과 조직이 그만큼인 것은 다르다. */
+            const orgGap = (window.DEPTCHK && DEPTCHK.gap) ? DEPTCHK.gap() : null;
+            /* [조직도 동기화] 버튼을 제거했다 — 행정포털 조직도 연계는 아직 구현돼 있지 않아
+               «동기화 완료» 알림은 일어나지 않은 일을 알린 것이다. 연계 관리 화면이 같은 시스템을
+               «연계 이력 미구현»으로 밝히고 있어 두 화면이 반대를 말하고 있었고, 조직 화면 정의서도
+               조직도 현황을 조회 전용으로 정한다. 조직도 데이터 자체는 그대로이며 바뀐 것은
+               «밖에서 동기화된다»는 주장뿐이다. */
+            return sectionCard('조직도 현황',
+                '<div class="check-notice" style="margin-bottom:10px;">조직도는 이 시스템의 사용자·조직 관리에 등록된 명단(현재 ' + orgTotal + '명' +
+                (orgGap ? ' · 부서 ' + orgGap.registered + ' / ' + orgGap.expected + '개 등록' : '') +
+                ')에서 그대로 파생합니다. <b>행정포털 조직도 연계는 아직 구현되지 않아</b> 밖에서 명단이 자동으로 들어오거나 맞춰지는 경로가 없습니다 — 조직이 개편되면 사용자·조직 관리에서 먼저 반영해야 이 화면이 따라옵니다.</div>' +
                 '<div style="display:flex; flex-direction:column; align-items:center; gap:10px;">' +
                 team('군수 (경영책임자)', mayorN) +
                 '<div style="width:1px; height:14px; background:var(--card-line);"></div>' +
                 team('재난안전과 중대재해팀 (전담조직)', jjtN) +
                 '<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; width:100%; margin-top:4px;">' +
-                deptCards + '</div></div>',
-                '<button class="btn btn-sm btn-secondary" onclick="EDOC.notify(\'행정포털 조직도 동기화 완료 — ' + orgTotal + '명\', \'시스템\')">조직도 동기화</button>') +
+                deptCards + '</div></div>') +
             sectionCard('안전관리자·보건관리자 선임 현황',
                 tbl(['구분', '성명', '선임일', '자격', '상태'], [
                     ['안전관리자', '김안전', '2025-03-02', '산업안전기사', ST('완료')],
@@ -843,11 +888,10 @@
                 ])),
                 '<button class="btn btn-sm btn-primary" onclick="PG.orgStaffComplete()"' + ((staffShort || staffPending) ? ' disabled title="미달·기준 미등록을 해소한 뒤 완료할 수 있습니다"' : '') + '>점검 완료 확정</button>') +
             sectionCard('공사별 안전관리자 선임 현황',
-                '<div class="check-notice" style="margin-bottom:10px;">차세대 e호조 연계 전에는 직접 등록과 시연용 자료를 구분해 표시합니다. 안전관리자 미선임 공사는 점검을 완료할 수 없습니다.</div>' +
-                tbl(['발주처', '공사명', '공사기간', '공사금액', '안전관리자', '출처', '점검', '관리'], construction.map(x => [
+                '<div class="check-notice" style="margin-bottom:10px;">공사 자료는 담당자가 직접 등록한 것만 표시합니다. 계약 시스템에서 자동으로 들어오는 경로가 없으므로 등록하지 않은 공사는 이 목록에 나타나지 않습니다 — 대상 공사를 먼저 확인해 등록해야 합니다. 안전관리자 미선임 공사는 점검을 완료할 수 없습니다.</div>' +
+                tbl(['발주처', '공사명', '공사기간', '공사금액', '안전관리자', '점검', '관리'], construction.map(x => [
                     x.owner, x.name, x.from + '<br>~ ' + x.to, x.amount || '-',
                     x.manager || '<span class="badge-unassigned">미선임</span>',
-                    '<span class="chip-mini ' + (x.source === '직접 등록' ? 'pdca' : 'wt-elec') + '">' + x.source + '</span>',
                     ST(x.status),
                     '<button class="btn btn-sm btn-outline" onclick="PG.orgConstForm(\'' + x.id + '\')">수정</button> ' +
                     '<button class="btn btn-sm btn-primary" onclick="PG.orgConstCheck(\'' + x.id + '\')">' + (x.status === '미시행' ? '점검 시작' : x.status === '진행' ? '완료' : '확인') + '</button>',
@@ -862,7 +906,7 @@
 
         /* ── 의견청취 [SFR-011]: 1메뉴 3탭(의견청취·건의함 / 산업안전보건위원회 / 협의체·점검표) — 기획 v0.1 + RFP 보완(접수경로·부서별·안건이행·점검결과지 CRUD) ── */
         opinion() {
-            /* ===== 프로토타입 시각/이력 헬퍼 ===== */
+            /* ===== 시각/이력 헬퍼 ===== */
             const PROTO_TODAY = DYV2.today();  /* 오늘 단일 출처 (구 '2026-07-02' 하드코딩 제거) */
             const pad2 = n => String(n).padStart(2, '0');
             const nowStamp = () => { const d = new Date(); return PROTO_TODAY + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()); };
@@ -1353,7 +1397,7 @@
                 V.openModal('온나라 결재 이력' + (c ? ' — ' + c.id : ''), body,
                     '<button class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
             };
-            PG.opnChkPdfDownload = () => V.toast('PDF 다운로드 (프로토타입)');
+            PG.opnChkPdfDownload = () => V.notReady('PDF 내려받기', '문서 출력 연계');
             PG.opnChkPdfClose = () => V.closeModal();
             /* 문서 미리보기 — polPdfFull 과 동일 패턴(2-4: 미리보기 UI 1패턴 통일). */
             PG.opnChkPdfFull = id => {
@@ -1449,7 +1493,7 @@
                         '<div class="dz-title">첨부할 파일을 여기에 끌어다 놓거나 파일 선택 버튼을 클릭하세요</div>' +
                         '<button type="button" class="btn btn-sm btn-outline">파일 선택</button>' +
                         '<div class="dz-hint">JPG, PNG, GIF 파일만 업로드 가능합니다 (최대 10MB · 최대 5장)</div>',
-                        "DYV2.toast('사진 첨부 (프로토타입)')"), '');
+                        "DYV2.notReady('사진 첨부', '문서관리 연계')"), '');
                 const bar = '<div class="opn-formbar"><button class="btn btn-outline" onclick="PG.opnBack()">취소</button><button class="btn btn-primary" onclick="PG.opnSave()">등록하기</button></div>';
                 return head + writer + info + detail + photo + bar;
             }
@@ -1471,7 +1515,7 @@
                     '<span class="k">담당부서</span><div>' + (o.owner ? V.esc(o.owner) : '<span class="opn-muted">미배정</span>') + '</div>' +
                     '<span class="k">발생장소</span><div>' + V.esc(o.location || '-') + '</div>' +
                     '<span class="k">상세내용</span><div>' + V.esc(o.content || '-') + '</div>' +
-                    '<span class="k">첨부 사진</span><div><span class="opn-muted">첨부된 사진이 없습니다 (프로토타입)</span></div>' +
+                    '<span class="k">첨부 사진</span><div><span class="opn-muted">첨부된 사진이 없습니다</span></div>' +
                     '</div>', '');
                 /* ② 처리 카드 (상태별 5-view) */
                 const procHead = '<div class="opn-proc-head"><span class="opn-proc-title">처리</span><span class="opn-proc-status">현재 상태 ' + stChip(o.status) + '</span></div>';
@@ -1505,7 +1549,7 @@
                         '<div class="opn-linkcard"><div class="opn-linkcard-badges"><span class="chip-mini wt-elec">안전점검 연동</span> <span class="chip-mini wt">점검예정</span></div>' +
                         '<div class="opn-linkcard-title">[의견청취] ' + V.esc(o.title) + '</div>' +
                         '<div class="opn-linkcard-meta">' + V.esc(ins.kind || '특별점검') + ' · 담당 ' + V.esc(ins.owner || o.owner || '-') + ' · 예정 ' + (ins.date || '-') + '</div>' +
-                        '<button class="btn btn-sm btn-outline" onclick="DYV2.toast(\'안전점검 메뉴 연동 (프로토타입)\')">점검 상세 보기</button></div>' +
+                        '<button class="btn btn-sm btn-outline" onclick="DYV2.notReady(\'점검 상세 보기\', \'안전점검 메뉴 연동\')">점검 상세 보기</button></div>' +
                         '<div class="opn-proc-foot"><button class="btn btn-outline" onclick="PG.opnProgress(\'' + o.id + '\')">경과 추가</button><button class="btn btn-primary" onclick="PG.opnComplete(\'' + o.id + '\')">완료 처리</button></div>';
                 } else if (o.status === '개선조치중') {
                     const imp = E.improvements().find(x => x.id === o.link) || {};
@@ -1538,7 +1582,7 @@
                     linkInner = '<div class="opn-linkempty"><span>조치 선택 후 연동 정보가 표시됩니다</span></div>';
                 } else {
                     linkInner = '';
-                    if (o.inspectLink) { const ins = o.inspect || {}; linkInner += '<div class="opn-mini"><div class="opn-mini-badges"><span class="chip-mini wt-elec">안전점검</span> <span class="chip-mini wt">점검예정</span></div><div class="opn-mini-title">[의견청취] ' + V.esc(o.title) + '</div><div class="opn-mini-meta">담당 ' + V.esc(ins.owner || o.owner || '-') + ' · 예정 ' + (ins.date || '-') + '</div><button class="btn btn-sm btn-outline" onclick="DYV2.toast(\'안전점검 메뉴 연동 (프로토타입)\')">바로가기</button></div>'; }
+                    if (o.inspectLink) { const ins = o.inspect || {}; linkInner += '<div class="opn-mini"><div class="opn-mini-badges"><span class="chip-mini wt-elec">안전점검</span> <span class="chip-mini wt">점검예정</span></div><div class="opn-mini-title">[의견청취] ' + V.esc(o.title) + '</div><div class="opn-mini-meta">담당 ' + V.esc(ins.owner || o.owner || '-') + ' · 예정 ' + (ins.date || '-') + '</div><button class="btn btn-sm btn-outline" onclick="DYV2.notReady(\'점검 상세 보기\', \'안전점검 메뉴 연동\')">바로가기</button></div>'; }
                     if (o.link) { const imp = E.improvements().find(x => x.id === o.link) || {}; linkInner += '<div class="opn-mini"><div class="opn-mini-badges"><span class="chip-mini pdca">개선조치</span> <span class="chip-mini wt-attach">' + (imp.status === '종결' ? '종결' : '조치중') + '</span></div><div class="opn-mini-title">' + V.esc(imp.title || o.title) + '</div><div class="opn-mini-meta">' + V.esc(o.link) + ' · 예정 ' + (imp.due || '-') + '</div><button class="btn btn-sm btn-outline" onclick="location.href=\'rsk-imp.html\'">바로가기</button></div>'; }
                 }
                 const linkCard = sectionCard('연동 정보', linkInner, '');
@@ -1680,64 +1724,182 @@
             return voiceCountBar() + renderVoiceList();
         },
 
-        /* ── 도급관리 [SFR-013]: e호조 불러오기 → 적격 평가 → 점검표 → 수급인 평가 ── */
+        /* ── 도급관리 [SFR-013]: 사업 직접 등록 → 적격 평가 → 점검표 → 수급인 평가 ── */
         contract() {
+            /* 사업 목록을 모듈 전역 상태로 올린다 — 조직 화면의 «공사 직접 등록»과 같은 방식이다.
+               계약 시스템에서 사업 정보를 받아오는 경로가 없어 직접 등록이 사업이 들어오는 유일한
+               경로인데, 목록이 하드코딩 배열이면 [등록]을 눌러도 목록이 그대로다. 그러면 «있다고
+               선언한 유일한 경로»가 죽은 채로 남아, 없는 기능을 있는 것처럼 말하게 된다. */
+            /* 시드의 계약기간도 등록 폼과 같은 «시작일 ~ 종료일» 표기다 — 한 열에 월 단위와 일 단위가
+               섞이면 읽는 사람이 형식 차이를 자료의 차이로 읽고, 중복 확인(사업명·업체·기간)도 표기가
+               갈린 행끼리는 영영 맞지 않는다. */
+            if (!window.CONTRACT_BIZ_STATE) {
+                window.CONTRACT_BIZ_STATE = [
+                    { id: 'CON-01', name: '군도 5호선 포장공사', cat: '공사', co: '○○건설', period: '2026-03-02 ~ 2026-11-30', amount: '' },
+                    { id: 'CON-02', name: '청사 경비·미화 용역', cat: '용역', co: '△△서비스', period: '2026-01-01 ~ 2026-12-31', amount: '' },
+                    { id: 'CON-03', name: 'CCTV 설치 (구매설치)', cat: '구매설치', co: '□□시스템', period: '2026-05-11 ~ 2026-07-31', amount: '' },
+                    { id: 'CON-04', name: '생활폐기물 수집·운반 위탁', cat: '위탁', co: '◇◇환경', period: '2026-01-01 ~ 2026-12-31', amount: '' },
+                ];
+            }
+            const biz = window.CONTRACT_BIZ_STATE;
+
+            /* 수급인 평가 목록은 등록된 사업의 수급업체에서 파생한다.
+               ① 평가는 업체 단위로 묶는다 — 사업마다 다시 평가하면 같은 업체의 점수가 여러 개가 되어
+                  어느 것이 그 업체의 수준인지 알 수 없다.
+               ② 목록을 따로 하드코딩해 두면 새로 등록한 사업의 업체가 평가 목록에 영영 나타나지 않아
+                  등록 직후의 «평가를 진행하세요» 안내가 다시 죽은 경로가 된다. */
+            const vendorList = () => {
+                const out = [];
+                biz.forEach(b => {
+                    if (!b.co) return;   /* 업체 미상은 지어내지 않는다 — 사업만 목록에 남는다 */
+                    const v = out.find(x => x.co === b.co);
+                    if (v) v.biz.push(b.name); else out.push({ co: b.co, biz: [b.name] });
+                });
+                return out;
+            };
+
             PG.conAdd = () => {
                 if (actGate('도급사업 등록')) return;
                 V.openModal('도급·용역·위탁 사업 등록',
-                    '<div class="edoc-linkcard"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:3px;" aria-hidden="true"><path d="M9 15a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M15 9a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/></svg>차세대 e호조 연계 — 계약 정보를 불러오면 항목이 자동 입력됩니다 (연계 61건)</div>' +
+                    '<div class="edoc-linkcard"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:3px;" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>계약 시스템에서 사업 정보를 받아오는 경로가 없습니다. 아래 항목을 직접 입력해 등록하세요.</div>' +
                     '<div class="preset-form-grid">' +
-                    '<span class="k">e호조 계약</span><div style="display:flex; gap:6px;"><input type="text" id="cn-no" placeholder="계약번호 검색" style="flex:1;"><button class="btn btn-sm btn-secondary" id="cn-load">불러오기</button></div>' +
-                    '<span class="k">사업명</span><input type="text" id="cn-name">' +
-                    '<span class="k">구분</span><select id="cn-cat"><option>공사</option><option>용역</option><option>구매설치</option><option>위탁</option><option>기타</option></select>' +
-                    '<span class="k">수급업체</span><input type="text" id="cn-co">' +
-                    '<span class="k">기간</span><input type="text" id="cn-period">' +
-                    '<span class="k">계약금액</span><input type="text" id="cn-amt"></div>',
+                    '<span class="k">사업명 <span class="req">*</span></span><input type="text" id="cn-name" placeholder="계약 건명 그대로 입력">' +
+                    /* 구분 기본값을 «공사»로 열어 두면 아무것도 고르지 않은 사람의 사업이 조용히 공사가 된다.
+                       사업 성격에 따라 점검 항목의 무게가 달라지므로(정의서 §4-1) 고르게 하고 비면 막는다. */
+                    '<span class="k">구분 <span class="req">*</span></span><select class="form-select" id="cn-cat"><option value="">선택하세요</option><option>공사</option><option>용역</option><option>구매설치</option><option>위탁</option><option>기타</option></select>' +
+                    '<span class="k">수급업체 <span class="req">*</span></span><input type="text" id="cn-co" placeholder="계약 상대자">' +
+                    /* 계약기간을 «2026-03 ~ 2026-11» 한 칸으로 받으면 «시작이 종료보다 늦을 수 없다»(정의서 §5-1)를
+                       확인할 방법이 없다. 같은 파일의 공사 직접 등록(조직 화면)처럼 시작·종료를 나눠 받는다. */
+                    '<span class="k">계약기간 <span class="req">*</span></span><div style="display:flex; gap:6px;"><input type="date" id="cn-from" aria-label="계약 시작일"><input type="date" id="cn-to" aria-label="계약 종료일"></div>' +
+                    /* 정의서 §5-1 은 계약금액을 «숫자만 · 음수 불가»로 정한다. «5.2억 원» 같은 자유 문자열로 받으면
+                       음수인지조차 판정할 수 없어 그 검증이 죽는다 — 원 단위 숫자로 받고 표시할 때 자릿수를 넣는다. */
+                    '<span class="k">계약금액</span><input type="text" id="cn-amt" inputmode="numeric" placeholder="예: 520000000 (원 단위 숫자)"></div>',
                     '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-                    '<button class="btn btn-primary" onclick="DYV2.closeModal(); DYV2.toast(\'사업이 등록되었습니다 — 적격 수급인 평가를 진행하세요\')">등록</button>');
-                document.getElementById('cn-load').addEventListener('click', () => {
-                    document.getElementById('cn-name').value = '농로 확포장 공사 (2026-공사-0142)';
-                    document.getElementById('cn-co').value = '☆☆종합건설';
-                    document.getElementById('cn-period').value = '2026-07-01 ~ 2026-12-20';
-                    document.getElementById('cn-amt').value = '742,000천원';
-                    V.toast('e호조에서 계약 정보를 불러왔습니다');
+                    '<button class="btn btn-primary" onclick="PG.conSave()">등록</button>');
+            };
+            /* 등록 폼 검증 — 정의서 §5-1. 직접 등록이 사업이 들어오는 유일한 경로라 여기서 걸러
+               내지 못한 값은 대조할 원본 없이 그대로 목록에 남는다. 종전에는 필수 세 개만 보고 통과시켜
+               시작일이 종료일보다 늦어도, 계약금액이 음수여도 «사업을 등록했습니다»가 떴다. */
+            const NAME_MAX = 100;
+            PG.conSave = () => conSaveDo(false);
+            PG.conSaveForce = () => conSaveDo(true);
+            PG.conDupClose = () => { const p = document.getElementById('cn-dup'); if (p) p.remove(); };
+            function conSaveDo(force) {
+                PG.conDupClose();
+                const val = k => ((document.getElementById(k) || {}).value || '').trim();
+                const name = val('cn-name'), cat = val('cn-cat'), co = val('cn-co');
+                const from = val('cn-from'), to = val('cn-to'), amt = val('cn-amt').replace(/,/g, '');
+                if (!name) { V.toast('사업명을 입력하세요.'); return; }
+                if (name.length > NAME_MAX) { V.toast('사업명은 ' + NAME_MAX + '자 이내로 입력하세요.'); return; }
+                if (!cat) { V.toast('사업 구분을 고르세요.'); return; }
+                if (!co) { V.toast('수급업체명을 입력하세요.'); return; }
+                if (co.length > NAME_MAX) { V.toast('수급업체명은 ' + NAME_MAX + '자 이내로 입력하세요.'); return; }
+                if (!from || !to) { V.toast('계약 기간을 확인하세요 — 시작일과 종료일을 모두 입력하세요.'); return; }
+                if (from > to) { V.toast('계약 기간을 확인하세요 — 시작일이 종료일보다 늦습니다.'); return; }
+                if (amt && !/^\d+$/.test(amt)) { V.toast('계약금액은 숫자로 입력하세요.'); return; }
+                const period = from + ' ~ ' + to;
+                /* 중복은 막지 않고 확인을 받는다(정의서 §5-1). 판정 축도 사업명 하나가 아니라
+                   «사업명·수급업체·기간» 셋이다. 이름만 보고 거부하면 해마다 같은 이름으로 다시
+                   계약하는 사업(청사 경비·미화 용역 등)을 두 번째 해부터 등록할 수 없고, 직접 등록이
+                   유일한 경로라 그 사업이 화면에서 통째 사라진다 — 점검하지 않은 현장이 없는 현장이 된다. */
+                if (!force && biz.some(b => b.name === name && b.co === co && b.period === period)) { conDupAsk(); return; }
+                biz.push({
+                    id: 'CON-' + String(biz.length + 1).padStart(2, '0'),
+                    name: name, cat: cat, co: co, period: period, amount: amt,
+                });
+                V.closeModal(); V.toast('사업을 등록했습니다 — 수급인 안전보건 수준 평가를 진행하세요'); render();
+            }
+            /* 확인은 새 모달이 아니라 등록 모달 본문 안 인라인 패널이다(단일 모달 규칙).
+               모달 위에 모달을 쌓으면 닫기·ESC·백드롭의 대상이 모호해지고 부모 모달이 가려
+               «무엇을 그대로 등록하는지» 맥락을 잃는다. */
+            function conDupAsk() {
+                const host = document.querySelector('#v2-modal .modal-body');
+                if (!host) { conSaveDo(true); return; }
+                const panel = document.createElement('div');
+                panel.id = 'cn-dup'; panel.className = 'stack-inline';
+                panel.innerHTML =
+                    '<div class="stack-inline-head"><span>같은 사업이 이미 등록되어 있습니다</span>' +
+                    '<button type="button" class="modal-close" onclick="PG.conDupClose()" aria-label="닫기">&times;</button></div>' +
+                    '<div class="stack-inline-body">사업명·수급업체·계약기간이 모두 같은 사업이 이미 목록에 있습니다. 그대로 등록할까요?' +
+                        '<p style="font-size:var(--fs-12); color:var(--text-gray); margin:8px 0 0;">계약 자료를 받아오는 경로가 없어 같은 계약이 두 번 들어와도 막아 줄 다른 수단이 없습니다. 실제로 두 건이면 그대로 등록하고, 아니면 취소하고 기간·업체를 확인하세요.</p></div>' +
+                    '<div class="stack-inline-foot"><button class="btn btn-sm btn-secondary" onclick="PG.conDupClose()">취소</button>' +
+                        '<button class="btn btn-sm btn-primary" onclick="PG.conSaveForce()">그대로 등록</button></div>';
+                host.appendChild(panel);
+                panel.scrollIntoView({ block: 'nearest' });
+            }
+            /* 사업명·업체명은 담당자가 직접 입력한 값이라 따옴표가 섞일 수 있다.
+               onclick 에 이름을 실어 보내지 않고 행 id·업체 순번만 넘긴다. */
+            PG.conCheck = id => {
+                const row = biz.find(x => x.id === id); if (!row) return;
+                if (actGate('도급 점검표 작성')) return;
+                /* 점검표를 사업명으로 식별하면 «같은 이름 다른 계약»(해마다 다시 계약하는 용역) 두 건이
+                   한 점검표를 나눠 쓰게 된다 — 올해 점검표를 쓰면 작년 행까지 작성완료로 보인다.
+                   등록 행 id 는 재사용되지 않으므로 문서를 사업 1건에 고정할 수 있다. */
+                E.openForm({
+                    id: 'EDOC-도급점검-' + row.id, title: '도급사업 안전보건 점검표 — ' + row.name, form: 'F5',
+                    ctx: { menuLabel: '도급관리 · 반기', checklist: T.CHECKLIST_PRESETS.contract }, onChange: render,
                 });
             };
-            PG.conCheck = name => actGate('도급 점검표 작성') ? null : E.openForm({
-                id: 'EDOC-도급점검-' + name, title: '도급사업 안전보건 점검표 — ' + name, form: 'F5',
-                ctx: { menuLabel: '도급관리 · 반기', checklist: T.CHECKLIST_PRESETS.contract }, onChange: render,
-            });
-            PG.conEval = co => actGate('수급인 평가 작성') ? null : E.openForm({
-                id: 'EDOC-수급인평가-' + co, title: '수급인 안전보건 수준 평가 — ' + co, form: 'F6',
-                ctx: { menuLabel: '도급관리', scorelist: T.SCORE_PRESETS.contract }, onChange: render,
-            });
+            PG.conEval = ix => {
+                const v = vendorList()[ix]; if (!v) return;
+                if (actGate('수급인 평가 작성')) return;
+                E.openForm({
+                    id: 'EDOC-수급인평가-' + v.co, title: '수급인 안전보건 수준 평가 — ' + v.co, form: 'F6',
+                    ctx: { menuLabel: '도급관리', scorelist: T.SCORE_PRESETS.contract }, onChange: render,
+                });
+            };
             PG.conPledge = () => actGate('안전보건 서약서 첨부') ? null : V.openModal('안전보건 서약서 첨부',
                 DYV2.uploadDrop('서약서·계약서 사본을 첨부하세요 (다중 가능)', null, { hint: true }),
                 '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
                 '<button class="btn btn-primary" onclick="DYV2.closeModal(); DYV2.toast(\'서약서가 첨부되었습니다\')">업로드</button>');
 
-            const cat = c => '<span class="chip-mini pdca">' + c + '</span>';
-            const biz = [
-                ['군도 5호선 포장공사', '공사', '○○건설', '2026-03 ~ 11'],
-                ['청사 경비·미화 용역', '용역', '△△서비스', '2026-01 ~ 12'],
-                ['CCTV 설치 (구매설치)', '구매설치', '□□시스템', '2026-05 ~ 07'],
-                ['생활폐기물 수집·운반 위탁', '위탁', '◇◇환경', '2026-01 ~ 12'],
-            ];
-            return statboxes([['info', 12, '진행 사업'], ['success', 9, '평가 완료'], ['warning', 3, '점검 예정'], ['neutral', 41, '연간 누계']]) +
-            sectionCard('도급·용역·위탁 사업 목록 (e호조 연계)',
-                tbl(['사업명', '구분', '수급업체', '기간', '점검표', '서약서'],
-                    biz.map(b => [
-                        '<b>' + b[0] + '</b> ' + docStChip('EDOC-도급점검-' + b[0]), cat(b[1]), b[2], b[3],
-                        '<button class="btn btn-sm btn-primary" onclick="PG.conCheck(\'' + b[0] + '\')">점검표 작성</button>',
-                        (canAct() ? '<button class="btn btn-sm btn-secondary" onclick="PG.conPledge()">첨부</button>' : '<span class="rl-ro-none">조회</span>'),
-                    ])),
-                (canAct() ? '<button class="btn btn-sm btn-primary" onclick="PG.conAdd()">+ 사업 등록 (e호조)</button>' : '')) +
+            const cat = c => '<span class="chip-mini pdca">' + esc(c) + '</span>';
+            /* 계약금액은 원 단위 숫자로 저장한다(정의서 §5-1). 표시할 때만 자릿수를 넣고, 숫자가 아닌
+               옛 값이 남아 있으면 고쳐 쓰지 않고 그대로 보여 준다 — 지어낸 해석을 붙이지 않는다. */
+            const amtText = a => {
+                const v = String(a == null ? '' : a).trim();
+                if (!v) return '-';
+                return /^\d+$/.test(v) ? Number(v).toLocaleString('ko-KR') + '원' : esc(v);
+            };
+            const vendors = vendorList();
+            const checkTodo = biz.filter(b => !E.statusOf('EDOC-도급점검-' + b.id)).length;
+            const evalTodo = vendors.filter(v => !E.statusOf('EDOC-수급인평가-' + v.co)).length;
+            /* 요약 수치는 전부 아래 목록에서 센다. 사업이 들어오는 경로가 직접 등록 하나뿐인데 고정값을
+               쓰면 요약과 목록이 영원히 다른 현황을 주장한다(종전: 목록 4건 옆에 «진행 사업 12»).
+               «연간 누계»·«진행/종료» 축은 계약 이력을 넘겨주는 연계가 없어 어디에서도 셀 수 없으므로
+               지어내지 않고 뺀다. 미작성·미평가는 감추지 않고 그대로 센다 — 남은 일이기 때문이다. */
+            return statboxes([
+                ['info', biz.length, '등록 사업'],
+                ['neutral', vendors.length, '수급업체'],
+                [checkTodo ? 'warning' : 'success', checkTodo, '점검표 미작성'],
+                [evalTodo ? 'danger' : 'success', evalTodo, '수급인 미평가'],
+            ]) +
+            sectionCard('도급·용역·위탁 사업 목록',
+                '<div class="check-notice" style="margin-bottom:10px;">사업 자료는 담당자가 직접 등록한 것만 표시합니다. 계약 시스템에서 사업 정보를 받아오는 경로가 없으므로 등록하지 않은 사업은 이 목록에도, 위 요약에도 잡히지 않습니다 — <b>위 수치는 모두 이 목록에서 센 값</b>입니다.</div>' +
+                (biz.length
+                    ? tbl(['사업명', '구분', '수급업체', '계약기간', '계약금액', '점검표', '서약서'],
+                        biz.map(b => [
+                            '<b>' + esc(b.name) + '</b> ' + docStChip('EDOC-도급점검-' + b.id),
+                            /* 기간은 한 값이다 — 줄이 갈리면 «2026-03-02»와 «2026-11-30» 두 날짜로 읽힌다.
+                               표는 이미 가로 스크롤 래퍼 안이라 줄바꿈을 막아도 본문이 밀리지 않는다. */
+                            cat(b.cat), esc(b.co), '<span style="white-space:nowrap;">' + esc(b.period) + '</span>', amtText(b.amount),
+                            /* 같은 행의 [첨부]·[평가 작성]과 같은 기준으로 건다 — 여기만 무조건 그리면
+                               군수·과장에게 활성 버튼이 보이고 «눌러야 거절»한다. 한 행 안에서 기준이
+                               갈리면 무엇이 내 권한인지 표가 알려주지 못한다. */
+                            (canAct() ? '<button class="btn btn-sm btn-primary" onclick="PG.conCheck(\'' + b.id + '\')">점검표 작성</button>' : '<span class="rl-ro-none">조회</span>'),
+                            (canAct() ? '<button class="btn btn-sm btn-secondary" onclick="PG.conPledge()">첨부</button>' : '<span class="rl-ro-none">조회</span>'),
+                        ]))
+                    : '<div class="v2-empty">등록된 도급·용역·위탁 사업이 없습니다.<br><span style="font-size:var(--fs-12);">목록이 비어 있는 것은 사업이 없다는 뜻이 아니라 아직 등록하지 않았다는 뜻입니다.</span></div>'),
+                (canAct() ? '<button class="btn btn-sm btn-primary" onclick="PG.conAdd()">+ 사업 등록</button>' : '')) +
             sectionCard('수급인 안전보건 수준 평가',
-                tbl(['업체', '시점', '상태', ''], [
-                    ['○○건설', '계약 전 적격심사 + 반기', docStChip('EDOC-수급인평가-○○건설'), (canAct() ? '<button class="btn btn-sm btn-primary" onclick="PG.conEval(\'○○건설\')">평가 작성</button>' : '<span class="rl-ro-none">조회</span>')],
-                    ['△△서비스', '계약 전 적격심사 + 반기', docStChip('EDOC-수급인평가-△△서비스'), (canAct() ? '<button class="btn btn-sm btn-primary" onclick="PG.conEval(\'△△서비스\')">평가 작성</button>' : '<span class="rl-ro-none">조회</span>')],
-                    ['☆☆종합건설', '계약 전 적격심사 (신규)', docStChip('EDOC-수급인평가-☆☆종합건설'), (canAct() ? '<button class="btn btn-sm btn-primary" onclick="PG.conEval(\'☆☆종합건설\')">평가 작성</button>' : '<span class="rl-ro-none">조회</span>')],
-                ]));
+                (vendors.length
+                    ? tbl(['업체', '대상 사업', '평가 시점', '상태', ''], vendors.map((v, ix) => [
+                        esc(v.co), v.biz.map(esc).join('<br>'), '계약 전 적격심사 + 반기',
+                        docStChip('EDOC-수급인평가-' + v.co),
+                        (canAct() ? '<button class="btn btn-sm btn-primary" onclick="PG.conEval(' + ix + ')">평가 작성</button>' : '<span class="rl-ro-none">조회</span>'),
+                    ]))
+                    : '<div class="v2-empty">평가 대상 업체가 없습니다.<br><span style="font-size:var(--fs-12);">사업을 등록하면 그 수급업체가 평가 대상으로 올라옵니다.</span></div>') +
+                '<p style="font-size:var(--fs-12); color:var(--text-gray); margin-top:8px;">평가는 <b>업체 단위</b>로 묶습니다 — 사업마다 다시 평가하면 같은 업체의 점수가 여러 개가 되어 어느 것이 그 업체의 수준인지 알 수 없습니다. 아직 평가하지 않은 업체도 목록에 그대로 두어 남은 일이 드러나게 합니다.</p>');
         },
 
         /* ── 개선조치 [SFR-003]: 전 메뉴 자동 유입 → 담당 지정 → 계획 → 완료 보고 → 확인 → 종결 ── */

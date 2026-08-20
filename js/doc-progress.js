@@ -21,9 +21,34 @@
     var SKEY = 'dy-docs-v1';          /* 저장 키는 하나 — reset() 이 새는 곳을 만들지 않는다 */
     var BASE_YEAR = 2025;             /* 원장 연도 */
     var DEFAULT_YEAR = 2026;          /* 기준연도 기본값 (지시서 §5-2) */
+    /* ── 시연 기준연도 — 발주처 확정 2026-08-18 ──────────────────────────────
+     * "기준 연도는 실제처럼 2025년으로 채워주고 2026년은 대부분 미이행으로 해줘"
+     *
+     * 아래 defaultYear() 는 «진행이 있는 최신 연도»를 파생한다. 2026 예시 자료가
+     * 붙으면서 그 규칙이 2026 을 돌려주게 됐는데, 그러면 화면 5곳(이행 관리·문서
+     * 목록·이행 목록·업무 업로드·업무문서 투어)의 기본 연도가 **한꺼번에** 2026
+     * 으로 움직인다. 시연 서사는 «작년 실적(실측)을 먼저 보고, 올해로 바꾸면
+     * 아직 대부분 미이행»이라 기본값은 2025 다.
+     *
+     * DEMO_TODAY(§11) 와 같은 자리다 — 시연일에 이 한 줄만 바꾼다. 0 으로 두면
+     * 파생 규칙(실서비스 동작)으로 돌아간다. */
+    var DEMO_YEAR = 2025;
 
     var T = function () { return global.DYDOCT || { ITEMS: [], STAGES: [] }; };
     var H = function () { return global.DYDOCH || { DOCS: [], META: {} }; };
+    /* 2026 예시 자료(생성물, js/doc-seed-2026.js). **없어도 돌아간다** — 로드하지
+       않은 화면·실서비스에서는 빈 값이라 종전 동작 그대로다. */
+    var Y26 = function () { return global.DYDOC2026 || null; };
+    /* 시드는 «오늘»을 박아 두고 만들어졌다. DEMO_TODAY(§11)를 옮기면 회차 기한과
+       지연 판정만 다시 계산되고 시드 문서 수는 그대로라 진행이 실제보다 뒤처져
+       보인다. 자동 보정은 하지 않는다(그러면 시드가 규칙 밖에서 움직인다) —
+       대신 어긋난 사실을 콘솔에 남겨 «시드를 다시 생성하라»를 알린다. */
+    var _staleWarned = false;
+    function seedStale() {
+        var sd = Y26();
+        if (!sd || !sd.META) return false;
+        return sd.META.today !== today();
+    }
     var V = function () { return global.DYV2; };
     var R = function () { return global.DYROLE; };
 
@@ -39,7 +64,7 @@
     var ST_ORDER = [ST.NONE, ST.WIP, ST.DONE, ST.NA];
 
     /* ── 문서 출처 4종 ──────────────────────────────────────────────────────
-     * 지시서 §8-4 는 3종을 열거했지만, 현행 429문서의 '프로그램' 174건(전용
+     * 지시서 §8-4 는 3종을 열거했지만, 현행 426문서의 '프로그램' 174건(전용
      * 화면에서 처리하는 업무)이 셋 중 어디에도 안 들어간다. 빼면 my-work·stats
      * 의 진입점이 끊긴다 — 네 번째로 세운다(UX설계 §5-3). */
     var SRC = {
@@ -98,12 +123,20 @@
 
     /* =========================================================================
      * 문서 축 — 세 출처를 하나의 배열로 (UX설계 §5-3)
-     *   2025 원장 3,830 + DY_DOCS_V2 429 + 사용자 등록분
+     *   2025 원장 3,830 + DY_DOCS_V2 426 + 2026 예시 자료 + 사용자 등록분
      *   4,000행이 넘으므로 파생 인덱스까지 한 번에 만들고 캐시한다.
      * ========================================================================= */
     var _cache = null;
     function build() {
         if (_cache) return _cache;
+        if (!_staleWarned && seedStale()) {
+            _staleWarned = true;
+            try {
+                console.warn('[DYDOCS] 2026 예시 자료의 기준일(' + Y26().META.today +
+                    ')이 DEMO_TODAY(' + today() + ')와 다릅니다 — ' +
+                    'python3 tools/build-doc-seed-2026.py 로 다시 생성하세요.');
+            } catch (e) {}
+        }
         var docs = [];
 
         /* (1) 2025 재난안전과 문서 원장 — 생성물, 부서 축 없음.
@@ -124,7 +157,7 @@
             });
         });
 
-        /* (2) 현행 업무문서 429 — 전자문서 폼·전용화면 진입점을 보존한다 */
+        /* (2) 현행 업무문서 426 — 전자문서 폼·전용화면 진입점을 보존한다 */
         (global.DY_DOCS_V2 || []).forEach(function (d) {
             docs.push({
                 id: d.id, title: d.name, sr: '', date: d.updated || '',
@@ -139,7 +172,30 @@
             });
         });
 
-        /* (3) 사용자 등록분 (업로드·프리셋) */
+        /* (3) 2026 예시 자료 — 규칙으로 만든 올해 실적(tools/build-doc-seed-2026.py).
+               2025 원장(1)과 섞이지 않게 origin·dataMode 로 구분한다. 파일을 로드
+               하지 않으면 이 블록은 통째로 건너뛴다. */
+        var sd = Y26();
+        if (sd && sd.DOCS) {
+            sd.DOCS.forEach(function (d) {
+                docs.push({
+                    id: d.id, title: d.title, sr: d.sr || '', date: d.date, year: +sd.META.year,
+                    stageIds: (d.stageIds || []).slice(), cycle: d.cycle || '',
+                    src: d.src || 'onnara', status: d.st || '',
+                    dept: '', assignee: '',        /* 원장과 같은 이유로 부서 축이 없다 */
+                    origin: 'seed26', dataMode: 'demo', statusSource: 'demo-seed-2026',
+                    nearDup: null, mapped: (d.stageIds || []).length > 0,
+                    /* 어느 2025 문서에서 왔는지를 **presetOf 로 투영**한다. 화면의
+                       «전년도 불러오기»·«올해 이어받기» 중복 검사가 이 필드를 보고
+                       있어(cmp-status pulledInto · cmp-docs carry), 여기 실어 두면
+                       두 화면을 고치지 않고도 «시드가 이미 옮긴 문서»를 또 옮기는
+                       일이 막힌다. 안 막으면 그 단계만 회차를 넘어 «충족»이 뜬다. */
+                    presetOf: d.seedOf || null,
+                });
+            });
+        }
+
+        /* (4) 사용자 등록분 (업로드·프리셋) */
         store().docs.forEach(function (d) { docs.push(d); });
 
         /* 파생 인덱스 */
@@ -159,7 +215,7 @@
     /* =========================================================================
      * 기준연도 기본값 — 하드코딩하지 않고 **데이터가 있는 최신 연도**로 파생한다.
      * -------------------------------------------------------------------------
-     * 2026 을 고정하면 시연 첫 화면이 78개 카드 전부 0% 라 "고장난 화면"으로 읽히고,
+     * 2026 을 고정하면 시연 첫 화면이 이행항목 카드 전부 0% 라 "고장난 화면"으로 읽히고,
      * 2025 를 고정하면 실서비스에서 지난 해를 기본으로 보게 된다. 규칙으로 두면
      * 2026 에 실적이 쌓이는 순간 자동으로 2026 이 된다.
      *   · '데이터가 있다' = 그 연도의 업무단계 진행상태가 하나라도 미이행이 아니다
@@ -175,6 +231,7 @@
         return T().STAGES.some(function (s) { return statusOfStage(s.id, year) !== ST.NONE; });
     }
     function defaultYear() {
+        if (DEMO_YEAR) return DEMO_YEAR;          /* 고정 기준연도 — 위 주석 참고 */
         var ys = yearsWithData().slice().reverse();
         for (var i = 0; i < ys.length; i++) { if (hasProgress(ys[i])) return ys[i]; }
         return DEFAULT_YEAR;
@@ -226,6 +283,10 @@
             var s = stage(stageId);
             return (s && s.st2025) || ST.NONE;
         }
+        /* 2026 예시 자료 — st2025 와 **같은 방식**의 폴백이다. 저장소 override 가
+           있으면 그쪽이 이기므로(위) 사용자가 바꾼 값은 시드가 덮지 않는다. */
+        var sd = Y26();
+        if (sd && sd.ST && year === +sd.META.year && sd.ST[stageId]) return sd.ST[stageId];
         return ST.NONE;
     }
     function statusLabel(code) { return ST_LABEL[code] || ST_LABEL[ST.NONE]; }
@@ -640,7 +701,7 @@
             items: T().ITEMS.length,
             stages: T().STAGES.length,
             counts: c,
-            /* 반려는 status 축이 아니므로 counts 안에 넣지 않는다 — 넣으면 합이 168 을 넘는다 */
+            /* 반려는 status 축이 아니므로 counts 안에 넣지 않는다 — 넣으면 합이 업무단계 수를 넘는다 */
             returned: returned,
             unmapped: docs.filter(function (d) { return d.origin === 'ledger' && !d.mapped; }).length,
             nearDup: docs.filter(function (d) { return d.nearDup; }).length,
@@ -689,7 +750,7 @@
     global.DYDOCS = {
         /* 상수 */
         ST: ST, ST_ORDER: ST_ORDER, SRC: SRC, SRC_ORDER: SRC_ORDER,
-        BASE_YEAR: BASE_YEAR, DEFAULT_YEAR: DEFAULT_YEAR, SKEY: SKEY,
+        BASE_YEAR: BASE_YEAR, DEFAULT_YEAR: DEFAULT_YEAR, SKEY: SKEY, seedStale: seedStale,
         defaultYear: defaultYear, yearsWithData: yearsWithData, presetSourceYear: presetSourceYear,
         /* 소유권 */
         canOwn: canOwn, ownerRootId: ownerRootId, assertOwn: assertOwn,

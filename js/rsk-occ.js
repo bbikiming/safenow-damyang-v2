@@ -76,12 +76,8 @@
                     (canRegister()
                         ? '<button type="button" class="btn btn-primary" data-tour="occ-create" onclick="RSKOCC.openReasonGate()">＋ 수시평가 등록</button> '
                         : '') +
-                    /* 시연 초기화 — 정기(rsk-list)에만 있어 수시를 반복 시연할 수 없었다.
-                       초기화는 시연을 운전하는 주관부서 담당자만 한다(정기와 같은 원칙). */
-                    (canReview()
-                        ? '<button type="button" class="btn btn-outline btn-sm rl-reset-btn"' +
-                          ' title="시연용 세션 데이터 초기화" onclick="RSKOCC.resetDemo()">↺ 시연 초기화</button>'
-                        : '') +
+                    /* 되돌리기는 도움말 시트(헤더 [?]) 안에 있다 — 정기와 같다.
+                       권한 가드는 resetDemo() 안에 그대로 있다. */
                 '</div>' +
             '</div>' +
             reasonGuideHtml();
@@ -239,26 +235,26 @@
     }
     /* 양식 다운로드 — HWPX. 양식 안에 안전관리자 확인·서명란이 들어 있다. */
     function downloadForm() {
-        toast('양식 다운로드: ' + D().OCC_FORM_FILE + ' (프로토타입 — 실제 파일은 미연결)');
+        V().notReady('양식 내려받기', '서식 파일 등록');
     }
 
-    /* ===== 시연 초기화 =====
+    /* ===== 예시 데이터 되돌리기 =====
      * DYRSK.reset() 은 **정기·수시·개선조치를 한 저장소에서 함께** 되돌린다.
      * 수시 화면에서 눌렀는데 정기 진행분까지 사라지면 놀라므로 미리 밝힌다. */
     function resetDemo() {
-        if (!canReview()) { toast('시연 초기화는 주관부서(재난안전과) 담당자만 수행합니다.'); return; }
-        V().openModal('시연 데이터 초기화',
-            '<p style="font-size:var(--fs-13);line-height:1.6;">위험성평가 세션 데이터를 초기 시연 상태로 되돌립니다.</p>' +
+        if (!canReview()) { toast('예시 데이터 되돌리기는 주관부서(재난안전과) 담당자만 할 수 있습니다.'); return; }
+        V().openModal('예시 데이터 되돌리기',
+            '<p style="font-size:var(--fs-13);line-height:1.6;">위험성평가 예시 자료를 처음 상태로 되돌립니다.</p>' +
             '<p style="font-size:var(--fs-13);line-height:1.6;margin-top:8px;">' +
                 '<b>수시평가뿐 아니라 정기 위험성평가·개선조치도 함께</b> 초기화됩니다 — ' +
                 '한 저장소를 쓰기 때문입니다. 2026년 진행 내역이 모두 사라지고 ' +
-                '<b>초기 시연 상태</b>(2026 미등록 · 2025 완료)로 복귀합니다.</p>' +
-            '<p style="font-size:var(--fs-12);color:var(--text-gray);margin-top:8px;">진행 중인 시연 가이드도 함께 종료됩니다.</p>',
+                '<b>처음 상태</b>(2026 미등록 · 2025 완료)로 돌아갑니다.</p>' +
+            '<p style="font-size:var(--fs-12);color:var(--text-gray);margin-top:8px;">진행 중인 단계별 안내도 함께 닫힙니다.</p>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="RSKOCC.doResetDemo()">초기화</button>');
     }
     function doResetDemo() {
-        if (!canReview()) { toast('시연 초기화는 주관부서(재난안전과) 담당자만 수행합니다.'); return; }
+        if (!canReview()) { toast('예시 데이터 되돌리기는 주관부서(재난안전과) 담당자만 할 수 있습니다.'); return; }
         D().reset();
         V().closeModal();
         state.fReason = '';
@@ -268,7 +264,7 @@
             var t = global[n];
             if (t && t.active && t.active()) t.stop();
         });
-        toast('시연 데이터 초기화 완료 · 2026년 미등록 상태로 복귀');
+        toast('예시 데이터를 처음 상태로 되돌렸습니다 · 2026년 미등록');
         render();
     }
 
@@ -407,7 +403,7 @@
             accidentRowsHtml() +
             '<div class="roc-modal-row"><label class="form-label">첨부파일</label>' +
                 '<div>' + fileList + '</div>' +
-                '<button type="button" class="btn btn-outline btn-sm" style="margin-top:6px;" onclick="RSKOCC.regAddFile()">＋ 파일 첨부 (프로토타입)</button>' +
+                '<button type="button" class="btn btn-outline btn-sm" style="margin-top:6px;" onclick="RSKOCC.regAddFile()">＋ 파일 첨부</button>' +
                 V().fileHint() +
             '</div>' +
             /* 수시평가는 '실시했다'로 끝나지 않는다 — 감소대책을 수립·실행해야 완결된다.
@@ -428,7 +424,7 @@
     }
     function regAddFile() {
         F.files.push({ name: '첨부_' + (F.files.length + 1) + '.pdf' });
-        toast('파일 첨부 (프로토타입)'); renderRegister();
+        toast('목록에 추가했습니다 — 파일 저장은 문서관리 연계 후 적용됩니다'); renderRegister();
     }
     function regDelFile(i) { F.files.splice(i, 1); renderRegister(); }
     /* 조직도(ORGPICK 'deptId' 모드)에서 호출 — 표시는 부서명, 저장은 deptId */

@@ -675,7 +675,7 @@
                       : c.titleMode === 'year' ? String(src.title).split(FROM).join(TO)
                       : src.title;
             /* 첨부 '그대로 사용' = 원본 파일 ID 참조가 아니라 **새 파일 ID 발급**(D-04).
-               프로토타입엔 바이너리가 없으므로 메타데이터 이력만 재현하고,
+               파일 바이너리를 보관하지 않으므로 메타데이터 이력만 재현하고,
                원본 파일 정보가 없으면 깨진 링크를 만들지 않고 사실을 남긴다. */
             var files = [];
             if (c.fileMode === 'keep') {

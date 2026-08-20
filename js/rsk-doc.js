@@ -586,7 +586,7 @@
                 '<span class="edu-hist-body">' + esc(l.memo || '') + '</span></div>';
         }).join('');
         var demo = isLatest && doc.status === '결재중'
-            ? '<div class="rskdoc-demo"><b>결재 결과 수신 (시연)</b>' +
+            ? '<div class="rskdoc-demo"><b>결재 결과 수신 — 연계 전 수동 기록</b>' +
                 '<p class="pdf-note">시스템이 스스로 결재하지 않습니다 — 온나라가 보낸 결과를 받는 자리입니다.</p>' +
                 '<div class="rskdoc-demo-btns">' +
                     '<button type="button" class="btn btn-primary btn-sm" onclick="DYRSKDOC.receive(\'' + esc(sid) + '\',\'결재완료\')">결재 완료 회신</button>' +
@@ -619,7 +619,7 @@
     }
     function receiveReject(sid) {
         var doc = D().docs().filter(function (x) { return x.sid === sid; })[0]; if (!doc) return;
-        V().openModal('반려 회신 (시연)',
+        V().openModal('반려 회신 — 연계 전 수동 기록',
             '<div class="rskdoc-block"><label class="form-label" for="rskdoc-rj">반려 사유 <span class="rskdoc-req">*</span></label>' +
             '<textarea class="form-textarea" id="rskdoc-rj" rows="3" placeholder="온나라 결재자가 보낸 반려 사유"></textarea></div>',
             '<button type="button" class="btn btn-secondary" onclick="DYRSKDOC.renderStatus(\'' + esc(sid) + '\')">취소</button>' +

@@ -5,7 +5,7 @@
    ① 작업환경측정  ② 건강검진(일반·특수) 의 계획·실시·증빙·후속조치를 관리.
    완료 결과·증빙은 인력평가(안전보건관리책임자 평가) 항목에 자동 연계된다.
 
-   · 백엔드 없는 정적 프로토타입 — sessionStorage 로 화면 간 상태 유지.
+   · 백엔드 없는 정적 구성 — sessionStorage 로 화면 간 상태 유지.
    · 공용 상태 모델: 완료 / 미완료 / 보완 필요 / 기한 초과 (effWorkEnv·effHealth)
    · 전역: DYSH.*  (js/common.js 뒤에 로드 — DYV2.ORG 파생 부서 사용)
    ===================================================================== */
@@ -117,7 +117,7 @@
                 { at: '2026-06-12', actor: '(주)한국산업보건환경연구원', event: '측정 실시 완료' },
                 { at: '2026-06-18', actor: '한담당', event: '결과보고서 접수 · 결과 「개선 필요」 · 개선기한 2026-06-30 설정' }
               ] },
-            /* 전년도(2025 하반기) — 연도 필터 시연용 */
+            /* 전년도(2025 하반기) — 연도 필터 확인용 */
             { id: 'WE-2025-01', year: 2025, half: 'H2', dept: '물순환사업소', site: '정수장 약품동',
               subject: '소음·분진·염소가스 등 12종', vendor: '(주)한국산업보건환경연구원',
               planned: '2025-11-18', done: '2025-11-20', report: true,
@@ -209,7 +209,7 @@
                 { at: '2026-05-28', actor: '(주)녹십자헬스케어', event: '특수검진 실시(수검 8/8) · 사후관리 대상 없음' },
                 { at: '2026-06-05', actor: '박현장', event: '실시 증빙 등록' }
               ] },
-            /* 전년도(2025) — 연도 필터 시연용 */
+            /* 전년도(2025) — 연도 필터 확인용 */
             { id: 'HC-2025-01', year: 2025, type: '일반건강검진', dept: '건설과',
               agency: '담양군보건소', planned: '2025-04-12', done: '2025-04-16',
               targetCount: 22, examinedCount: 21, evidence: true,
@@ -500,7 +500,7 @@
         pushHist(r, '기한 재설정 (' + field + ') ' + old + ' → ' + value);
         save(); return r;
     }
-    /* 알림 발송 (프로토타입 — 이력 기록) */
+    /* 알림 발송 (이력 기록) */
     function notify(kind, id, to) {
         var r = (kind === 'we') ? workEnvOf(id) : healthOf(id);
         if (!r) return null;
@@ -555,7 +555,7 @@
 
     /* ================= 절차 진행형 관점(주관부서↔담당부서) =================
        'admin'(주관부서=재난안전과 중대재해팀 · 계획·대상자·문진표·알림 관리) |
-       'dept'(담당부서=대상 부서 · 결과 문서 제출) — 데모용 관점 전환(권한 기반 접근제어 시연) */
+       'dept'(담당부서=대상 부서 · 결과 문서 제출) — 관점 전환(권한 기반 접근제어 시연) */
     var PERSP_KEY = 'damyangHexPersp', PDEPT_KEY = 'damyangHexPerspDept';
     function procRole() { try { return global.sessionStorage.getItem(PERSP_KEY) || 'admin'; } catch (e) { return 'admin'; } }
     function setProcRole(v) { try { global.sessionStorage.setItem(PERSP_KEY, v); } catch (e) {} return v; }

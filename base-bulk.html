@@ -14,8 +14,8 @@
         <div class="card" style="margin-bottom:16px;">
             <div class="card-header"><span class="card-title">1. 서식 다운로드</span></div>
             <div class="card-body" style="display:flex; gap:10px; flex-wrap:wrap;">
-                <button class="btn btn-outline" onclick="DYV2.toast('사업장 서식 다운로드 (프로토타입)')">사업장 서식.xlsx</button>
-                <button class="btn btn-outline" onclick="DYV2.toast('기준문서 목록 서식 다운로드 (프로토타입)')">기준문서 목록 서식.xlsx</button>
+                <button class="btn btn-outline" onclick="DYV2.notReady('서식 내려받기', '서식 파일 등록')">사업장 서식.xlsx</button>
+                <button class="btn btn-outline" onclick="DYV2.notReady('서식 내려받기', '서식 파일 등록')">기준문서 목록 서식.xlsx</button>
             </div>
             <!-- 일괄등록 대상은 '이 시스템이 정본을 갖는 자료'뿐이다. 정본이 밖에 있는 자료에
                  서식을 두면 엑셀본과 연계본 두 명단이 생겨, 어느 쪽이 맞는지 아무도 모르게 된다. -->
@@ -34,7 +34,7 @@
             <div class="card-body">
                 <div class="upload-drop" role="button" tabindex="0" onclick="showResult()" onkeydown="DYV2.dropKey(event)">
                     엑셀 파일을 끌어다 놓거나 클릭하여 업로드<br>
-                    <span style="font-size:12px;">.xlsx · 최대 10MB · <b>프로토타입 — 파일 내용을 읽지 않고 예시 결과를 보여줍니다</b></span>
+                    <span style="font-size:12px;">.xlsx · 최대 10MB · <b>파일 내용 검증은 일괄등록 연계 후 적용됩니다 — 지금은 예시 결과를 보여줍니다</b></span>
                 </div>
             </div>
         </div>
@@ -42,7 +42,7 @@
         <div class="card" id="bulk-result" style="display:none;">
             <div class="card-header">
                 <span class="card-title">3. 유효성 체크 결과 <span class="chip-status chip-sm warning">예시 결과 — 실제 파일 미해석</span> — 사업장 서식.xlsx (47행)</span>
-                <button class="btn btn-primary btn-sm" onclick="DYV2.toast('정상 44행 반영 완료 (프로토타입)')">정상 행 반영 (44)</button>
+                <button class="btn btn-primary btn-sm" onclick="DYV2.toast('정상 44행을 반영했습니다 — 이 화면에서만 확인되며 저장은 일괄등록 연계 후 적용됩니다')">정상 행 반영 (44)</button>
             </div>
             <div class="card-body">
                 <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:14px;">
@@ -70,13 +70,14 @@
 
     <script src="./js/layout.js"></script>
     <script src="./js/law-map.js"></script>
+    <script src="./js/help-center.js"></script><!-- DYHELP: 화면 도움말 -->
     <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
     <script src="./js/data.js"></script>
     <script src="./js/common.js"></script>
     <script>
         function showResult() {
             document.getElementById('bulk-result').style.display = '';
-            DYV2.toast('업로드 완료 — 유효성 체크 결과를 확인하세요 (프로토타입)');
+            DYV2.toast('업로드 완료 — 아래 유효성 체크 결과를 확인하세요');
             document.getElementById('bulk-result').scrollIntoView({ behavior: 'smooth' });
         }
     </script>

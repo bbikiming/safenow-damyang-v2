@@ -42,7 +42,7 @@
         } catch (e) { return ''; }
     }
 
-    /* 부서(=DYV2.ORG deptId) 시연 시드 */
+    /* 부서(=DYV2.ORG deptId) 예시 자료 */
     function deptName(deptId) {
         try {
             var n = global.DYV2 && global.DYV2.orgNode ? global.DYV2.orgNode(deptId) : null;
@@ -63,7 +63,7 @@
         return out;
     }
 
-    /* 시연 시드용 증빙 썸네일 (data-URI · 160x120 JPEG, 각 1~2KB).
+    /* 예시 자료용 증빙 썸네일 (data-URI · 160x120 JPEG, 각 1~2KB).
      * 실제 파일 저장소가 없는 프로토타입에서 개선 전·후 '대조'를 보여주는 유일한 방법이다.
      * b* = 개선 전(주황 계열) · a* = 개선 후(녹색 계열). 전체 14KB. */
     var T = {
@@ -617,10 +617,10 @@
         var t = new Date(); var mm = t.getMonth() + 1, dd = t.getDate();
         return t.getFullYear() + '-' + (mm < 10 ? '0' : '') + mm + '-' + (dd < 10 ? '0' : '') + dd;
     }
-    /* 날짜는 시연 기준일(DYV2.today) · 시각만 실제 시계 (§11)
+    /* 날짜는 기준일(DYV2.today) · 시각만 실제 시계 (§11)
        종전에는 날짜까지 실제 시각이라, 공문 상신일시가 2026-08-05 로 찍히는데
        같은 화면의 완료일·기한은 2026-07-16 기준이라 나란히 어긋나 보였다.
-       이력의 '순서'에 필요한 건 시각이고, 날짜는 시연 기준일을 따라야 한다. */
+       이력의 '순서'에 필요한 건 시각이고, 날짜는 기준일을 따라야 한다. */
     function nowTs() {
         var t = new Date(), pad = function (n) { return (n < 10 ? '0' : '') + n; };
         return today() + ' ' + pad(t.getHours()) + ':' + pad(t.getMinutes());
@@ -1373,8 +1373,8 @@
         /* 부서 */
         deptName: deptName, deptCandidates: deptCandidates,
         /* 정기 평가 */
-        /* 시연용 증빙 썸네일 — 무대에서 OS 파일 대화상자를 여는 걸 피하기 위해
-           시연 투어가 이 이미지를 '개선 후 사진'으로 넣는다. 실사용 경로(실제 파일
+        /* 예시 증빙 썸네일 — 무대에서 OS 파일 대화상자를 여는 걸 피하기 위해
+           단계별 안내가 이 이미지를 '개선 후 사진'으로 넣는다. 실사용 경로(실제 파일
            선택)는 그대로 남는다 — 증빙 요건을 낮추는 것이 아니라 시연 수단이다. */
         demoShot: function (kind) { return T[(kind === 'before' ? 'b' : 'a') + '2']; },
         assessments: assessments, assessmentOf: assessmentOf, assessmentYears: assessmentYears,

@@ -92,7 +92,7 @@
                      소관으로 잡고 있다. 실무에서 '온나라 조직도'라 부르는 것이
                      같은 것인지 확인 필요(DYPOLICY work-org-source). */
                 '<p class="wka-note">' + ICO_LINK + ' 담양군 <b>행정포털 조직도</b> 연계 · ' +
-                    '마지막 동기화 <b>미연동(프로토타입 시드 ' + V().orgTotal() + '명)</b> — ' +
+                    '마지막 동기화 <b>미연동(예시 명단 ' + V().orgTotal() + '명)</b> — ' +
                     '실제 연계 시 부서·팀·직원이 자동으로 채워집니다.</p>' +
                 teamNote +
             '</div>' +
@@ -126,7 +126,7 @@
         if (!W().assign(ctx.issueId, ctx.deptId, ctx.uid, ctx.memo)) { toast('배정하지 못했습니다'); return; }
         var nm = ctx.name;
         var cb = onDone; close();
-        toast(nm.split(' ')[0] + ' 님에게 배정했습니다 — 알림이 발송됩니다 (프로토타입)');
+        toast(nm.split(' ')[0] + ' 님에게 배정했습니다 — 담당자에게 알림이 갑니다');
         if (cb) cb();
     }
     /* 자임 — 부서장이 부재해도 담당자가 스스로 가져가 일이 멈추지 않게 한다 */

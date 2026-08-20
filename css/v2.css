@@ -1,5 +1,5 @@
 /* =========================================================================
-   담양군 중대재해예방 통합관리시스템 — 프로토타입 v2 추가 스타일
+   담양군 중대재해예방 통합관리시스템 — v2 추가 스타일
    (재구축 프롬프트 §5 화면 표준 패턴: 요약 바 + 3탭 + PDCA 세트 보드)
    기본 토큰·컴포넌트는 css/style.css 재사용 — 여기는 v2 신규 패턴만.
    ========================================================================= */
@@ -611,7 +611,7 @@
 .modal.modal-wide .modal-body {
   flex: 1; overflow: auto; padding: 28px; background: var(--gray-50);
   display: flex; justify-content: center; align-items: flex-start;
-  /* 시연 투어 안내(.dy-tour-inline)가 이 flex 행에 끼어 98px 열로 눌리며
+  /* 단계별 안내 안내(.dy-tour-inline)가 이 flex 행에 끼어 98px 열로 눌리며
      열 글자마다 줄바꿈됐다. 감싸기를 켜 두면 안내가 첫 줄을 통째로 쓰고
      문서는 다음 줄에서 그대로 가운데 정렬된다(안내가 없을 때 동작은 동일). */
   flex-wrap: wrap;
@@ -1824,7 +1824,7 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .edu-hist-by { color: var(--text-gray); margin-left: 6px; }
 
 /* =========================================================================
-   안전보건교육 시연 바 + 크로스 페이지 시연 투어 (EDUTOUR · js/edu-tour.js)
+   안전보건교육 첫 방문 배너 + 크로스 페이지 단계별 안내 (EDUTOUR · js/edu-tour.js)
    발표용 핵심 자산 — 구 edu.html 인라인 스타일 이식본(토큰 치환).
    ========================================================================= */
 .edu-demo-bar,
@@ -1955,7 +1955,7 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .dy-tour-progress { flex: 1; font-size: var(--fs-12); color: var(--text-gray); }
 .edu-tour-inline,
 .dy-tour-inline { margin-bottom: 14px; padding: 11px 12px; border: 1px solid var(--brand-100); border-radius: var(--radius-button); background: var(--brand-50); color: var(--main-dark2); font-size: var(--fs-12); line-height: 1.55; }
-/* 맨 앞의 '시연 포인트' 라벨만 줄을 차지한다 — 종전에는 모든 <b> 가 block 이라
+/* 맨 앞의 '입력 도움말' 라벨만 줄을 차지한다 — 종전에는 모든 <b> 가 block 이라
    안내문 안의 강조("…뒤에서 <b>공문 기안 조건</b>을 채우느라…")가 전부 줄바꿈돼
    한 문장이 대여섯 줄로 쪼개졌다. 3개 투어의 거의 모든 modalGuide 가 해당됐다. */
 .edu-tour-inline > b:first-child,

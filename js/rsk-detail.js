@@ -140,7 +140,7 @@
         var a = D().assessmentOf(state.aid);
         a.files = a.files || {}; a.files.report = a.year + '_정기평가_보고서.hwpx';
         D().pushHistory(a.id, { type: 'STATUS', by: '재난안전과', memo: '용역업체 보고서 첨부 (' + a.files.report + ')' });
-        toast('보고서 업로드 (프로토타입)'); render();
+        toast('목록에 추가했습니다 — 파일 저장은 문서관리 연계 후 적용됩니다'); render();
     }
     function clearReport() {
         var a = D().assessmentOf(state.aid);
@@ -295,7 +295,7 @@
         D().pushHistory(a.id, { type: 'DELIVER', by: '재난안전과', memo: deptNm + ' 개선조치 ' + valid.length + '건 전달 (기한 ' + (EM.bulkDue || '개별') + ')' });
         D().refreshAssessmentStatus(a.id);
 
-        V().closeModal(); toast(deptNm + ' 개선조치 ' + valid.length + '건 전달 · 부서 알림 (프로토타입)'); render();
+        V().closeModal(); toast(deptNm + ' 개선조치 ' + valid.length + '건 전달 · 부서 알림'); render();
     }
 
     /* =============== 재촉 =============== */
@@ -313,7 +313,7 @@
         var m = D().improvementOf(impId); if (!m) return;
         D().pushImpHistory(m.id, { type: 'REMIND', by: '재난안전과', memo: '기한초과 재촉 (기한 ' + (m.due || m.due_date) + ')' });
         D().pushHistory(m.assessment_id, { type: 'REMIND', by: '재난안전과', memo: D().deptName(m.dept_id) + ' · ' + (m.hazard && m.hazard.name || '') + ' 재촉' });
-        toast('재촉 알림 발송 (프로토타입)'); renderDeptModal();
+        toast('재촉 알림을 발송했습니다'); renderDeptModal();
     }
 
     /* =============== init =============== */

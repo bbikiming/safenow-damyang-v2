@@ -9,42 +9,87 @@
     <link rel="stylesheet" href="./css/style.css">
     <link rel="stylesheet" href="./css/v2.css">
 </head>
-<body data-dy-page="admin-integration" data-page-title="연계 관리" data-page-subtitle="시스템 관리 > 연계 관리 — 온나라 · FMS · e호조 · 행정포털 상태 모니터링 (SIR-001 목업)">
+<body data-dy-page="admin-integration" data-page-title="연계 관리" data-page-subtitle="시스템 관리 > 연계 관리 — 온나라 · FMS · 법제처 · 행정포털 상태 모니터링">
     <main>
+        <div class="check-notice">
+            <b>지금 실제 자료에서 상태를 만들어 내는 연계는 시설물(FMS)과 법제처(법령 조문 수집) 둘입니다.</b>
+            카드와 아래 로그는 <b>연계 실행 기록</b>에서만 계산합니다 — 시설물은 대장의 수신·전송 기록, 법제처는 수집 배치의 실행 기록입니다.
+            법제처의 수집 결과 검토(무엇이 어떻게 바뀌었는지)는 사람이 읽는 자료라 상태 판정에 넣지 않습니다 — 넣으면 이 화면과 법령 관리 화면이 같은 시각에 서로 다른 상태를 말하게 됩니다.
+            온나라·행정포털은 상태를 만들어 낼 연계 기록이 아직 없어 <b>「연계 이력 미구현」</b>으로 표시하며 정상·지연·실패 중 어느 것으로도 표시하지 않습니다 —
+            임의 날짜나 0건으로 채우면 한 번도 받지 않은 상태와 받았는데 0건인 상태를 구분할 수 없어집니다.
+        </div>
+
+
+        <!-- 외부 자료·연계 준비사항 (DYPOLICY) — 종전 헤더 칩이 하던 창구를 여기로 옮겼다.
+             헤더는 사용자 자리이고, "외부에서 무엇이 들어오는가"는 이 화면의 축이다. -->
+        <div class="card" style="margin-bottom:16px;">
+            <div class="card-header">
+                <span class="card-title">외부 자료·연계 준비사항 <span class="chip-status chip-sm neutral" id="pol-n">·</span></span>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="window.DYPOLICY && window.DYPOLICY.open()">준비 목록 보기</button>
+            </div>
+            <div class="card-body">
+                <p style="font-size:var(--fs-13); line-height:1.6; margin:0;">
+                    담양군·타 기관에서 받아야 시스템이 채울 수 있는 항목입니다. 받기 전까지 각 화면은
+                    <b>「미등록」</b>으로 표시하며 값을 지어내지 않습니다 — 항목마다 미수신 동안의 대체 동작이 정해져 있습니다.
+                </p>
+                <p style="font-size:var(--fs-12); color:var(--text-gray); margin-top:8px;" id="pol-sum"></p>
+            </div>
+        </div>
+
         <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; margin-bottom:16px;">
+            <!-- 온나라 — 파생할 원본 이력이 없다. 상태를 지어내지 않는다. -->
             <div class="card"><div class="card-body">
-                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;"><span class="link-status-dot ok"></span><b style="font-size:14px;">온나라 (문서·결재)</b></div>
-                <p style="font-size:12px; color:var(--text-gray);">경영방침·총괄보고서 결재 연동<br>마지막 호출: 06-11 09:02 · 정상</p>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
+                    <span class="link-status-dot off"></span><b style="font-size:var(--fs-14);">온나라 (문서·결재)</b>
+                    <span class="chip-status neutral chip-sm" data-int-chip>연계 이력 미구현</span>
+                </div>
+                <p style="font-size:var(--fs-12); color:var(--text-gray);">경영방침·총괄보고서 결재 연동<br>상태를 계산할 호출·수신 기록이 아직 없습니다. 연계 작업 화면도 아직 없어 이동할 곳을 만들지 않았습니다.</p>
             </div></div>
+            <!-- FMS — 시설물 대장의 연계 실행 기록(수신·전송)에서 값이 파생된다.
+                 담당자 보완입력은 연계 실행이 아니라서 이 카드의 어떤 값에도 들어가지 않는다. -->
             <div class="card"><div class="card-body">
-                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;"><span class="link-status-dot ok"></span><b style="font-size:14px;">FMS (시설물관리)</b></div>
-                <p style="font-size:12px; color:var(--text-gray);">시설물관리대장 기본현황 일 1회 수신<br>마지막 수신: <span data-fms-last>—</span> · <span data-fms-cnt>—</span>건</p>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
+                    <span class="link-status-dot off" data-fms-dot></span><b style="font-size:var(--fs-14);">FMS (시설물관리)</b>
+                    <span class="chip-status neutral chip-sm" data-fms-chip>확인 중</span>
+                </div>
+                <p style="font-size:var(--fs-12); color:var(--text-gray);">시설물관리대장 기본현황 일 1회 수신<br>마지막 <b>성공</b> 수신: <span data-fms-last>—</span><br>현재 대장 보유 <span data-fms-cnt>—</span>건 (누적 총량 — 위 수신 1회가 받은 건수가 아닙니다)</p>
+                <p style="font-size:var(--fs-12); color:var(--text-gray); margin-top:4px;" data-fms-why hidden></p>
+                <a class="btn btn-sm btn-outline" href="fac-sync.html" style="margin-top:10px;">FMS 연계로 이동</a>
             </div></div>
+            <!-- 법제처 — 야간 수집 배치의 실행 기록에서 값이 파생된다.
+                 법령 관리 화면이 "수집 실패 알림·재시도는 연계 관리가 단일 창구"라고
+                 이 화면을 지목하므로, 여기에 카드가 없으면 그 링크가 막다른 길이 된다. -->
             <div class="card"><div class="card-body">
-                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;"><span class="link-status-dot warn"></span><b style="font-size:14px;">e호조 (재정)</b></div>
-                <p style="font-size:12px; color:var(--text-gray);">도급 사업·예산 집행 정보 연계<br>지연: 06-10 배치 1건 재시도 대기</p>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
+                    <span class="link-status-dot off" data-law-dot></span><b style="font-size:var(--fs-14);">법제처 (법령 조문 수집)</b>
+                    <span class="chip-status neutral chip-sm" data-law-chip>확인 중</span>
+                </div>
+                <p style="font-size:var(--fs-12); color:var(--text-gray);">법령 조문 원문 수집 — <span data-law-sched>—</span><br>마지막 <b>성공</b> 수집: <span data-law-last>—</span> · 대상 법령 <span data-law-cnt>—</span>종</p>
+                <p style="font-size:var(--fs-12); color:var(--text-gray); margin-top:4px;" data-law-why hidden></p>
+                <a class="btn btn-sm btn-outline" href="admin-law.html" style="margin-top:10px;">법령 관리로 이동</a>
             </div></div>
+            <!-- 행정포털 — 파생할 원본 이력이 없다. -->
             <div class="card"><div class="card-body">
-                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;"><span class="link-status-dot ok"></span><b style="font-size:14px;">행정포털 (SSO·조직도)</b></div>
-                <p style="font-size:12px; color:var(--text-gray);">SSO 인증 + 조직도·인사 정보<br>마지막 동기화: 06-11 06:00 · 정상</p>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
+                    <span class="link-status-dot off"></span><b style="font-size:var(--fs-14);">행정포털 (SSO·조직도)</b>
+                    <span class="chip-status neutral chip-sm" data-int-chip>연계 이력 미구현</span>
+                </div>
+                <p style="font-size:var(--fs-12); color:var(--text-gray);">SSO 인증 + 조직도·인사 정보<br>상태를 계산할 동기화 기록이 아직 없습니다. 연계 작업 화면도 아직 없어 이동할 곳을 만들지 않았습니다.</p>
             </div></div>
         </div>
 
         <div class="card">
             <div class="card-header">
                 <span class="card-title">연계 로그</span>
-                <button class="btn btn-secondary btn-sm" onclick="DYV2.toast('실패 건 재시도 (프로토타입)')">실패 재시도</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-int-retry disabled>실패 재시도</button>
             </div>
             <div class="card-body" style="overflow-x:auto;">
-                <table class="table-figma">
+                <table class="table-figma table-compact table-nowrap" data-int-logtable hidden>
                     <thead><tr><th>일시</th><th>시스템</th><th>작업</th><th>건수</th><th>결과</th></tr></thead>
-                    <tbody>
-                        <tr><td>06-11 09:02</td><td>온나라</td><td>결재 상태 조회</td><td>2</td><td><span class="chip-mini st-done">성공</span></td></tr>
-                        <tr><td data-fms-last>—</td><td>FMS</td><td>시설물관리대장 수신</td><td data-fms-cnt>—</td><td><span class="chip-mini st-done">성공</span></td></tr>
-                        <tr><td>06-11 06:00</td><td>행정포털</td><td>조직도 동기화</td><td>612</td><td><span class="chip-mini st-done">성공</span></td></tr>
-                        <tr><td>06-10 22:00</td><td>e호조</td><td>집행 정보 배치</td><td>18</td><td><span class="chip-mini st-todo">1건 실패</span></td></tr>
-                    </tbody>
+                    <tbody data-int-logbody></tbody>
                 </table>
+                <div class="v2-empty" data-int-logempty>연계 이력을 확인하는 중입니다.</div>
+                <p style="font-size:var(--fs-12); color:var(--text-gray); margin-top:10px;" data-int-retrynote></p>
             </div>
         </div>
     </main>
@@ -53,24 +98,353 @@
 
     <script src="./js/layout.js"></script>
     <script src="./js/law-map.js"></script>
+    <script src="./js/help-center.js"></script><!-- DYHELP: 화면 도움말 -->
     <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
     <script src="./js/data.js"></script>
     <script src="./js/common.js"></script>
 
     <script src="./js/facil-data.js"></script><!-- FMS 시설물 대장 시드 -->
     <script src="./js/facil.js"></script>
+    <script src="./js/law-sync-seed.js"></script><!-- 법제처 수집 배치 기록 (DYLAWSYNC) -->
     <script>
-        /* FMS 행의 건수·일시는 하드코딩하지 않는다 — 시설물 대장(SCR-FAC-001)과
-           연계 이력(SCR-FAC-004)에서 파생한다. 두 화면이 다른 숫자를 보이면
-           어느 쪽이 맞는지 알 수 없어 연계 상태 모니터로서 값을 잃는다. */
+        /* 이 화면은 상태를 지어내지 않는다.
+           - 값이 있는 카드·로그 행은 전부 파생이다. 시설물은 대장의 연계 실행 기록
+             (SCR-FAC-001·SCR-FAC-004)에서, 법제처는 수집 배치의 실행 기록(법령 관리)에서
+             가져온다.
+           - **판정 출처는 «연계 실행 기록» 하나다.** 법제처의 수집 결과 검토 대장은
+             무엇이 어떻게 바뀌었는지를 사람이 읽는 자료이지, 연계가 살아 있는지를
+             말하는 자료가 아니다. 둘을 합쳐 세면 검토 대장에만 실패가 있는 법령 때문에
+             이 화면은 「실패」, 법령 관리 화면은 「정상」이 되어 두 화면이 같은 시각에
+             정반대를 말한다 — 그러면 상태판이 모니터로서 값을 잃는다.
+           - 같은 이유로 시설물도 **연계 실행(수신·전송)만** 센다. 담당자 보완입력은
+             연계가 아니라 자체 저장이라, 섞어 세면 담당자가 시설물 한 건을 저장하는
+             것만으로 「3회 연속 실패」 판정이 조용히 풀린다.
+           - 온나라·행정포털은 파생할 원본 이력이 없어 카드에 고정 문구만 둔다.
+             로그도 그 두 시스템의 행을 만들지 않는다 — 한 번도 연계하지 않은
+             상태와 연계했는데 0건인 상태를 구분할 수 없게 되기 때문이다.
+           - 그래서 「수신 기록 없음」(연계는 붙었는데 아직 한 건도 안 받았다)과
+             「연계 이력 미구현」(상태를 파생할 원본 자체가 없다), 「자료 미확보」
+             (원본을 이번에 못 불러왔다) 셋을 섞어 쓰지 않는다. */
         document.addEventListener('DOMContentLoaded', function () {
-            if (!window.DYFACIL) return;
-            var cnt = DYFACIL.list({}).length;
-            var log = (DYFACIL.syncLog() || []).filter(function (l) { return l.dir === 'IN'; })[0];
-            var last = log ? log.at : '수신 기록 없음';
-            document.querySelectorAll('[data-fms-cnt]').forEach(function (el) { el.textContent = cnt; });
-            document.querySelectorAll('[data-fms-last]').forEach(function (el) { el.textContent = last; });
+            var V = window.DYV2 || {};
+            var esc = V.esc || function (s) { return String(s == null ? '' : s); };
+            var tone = V.toneOf || function () { return 'neutral'; };
+
+            /* 재시도 상한 — 세 번을 다 쓰고도 같은 결과면 다시 보내서 풀릴 일이 아니다.
+               사람이 원인을 없애야 하므로 「점검 필요」로 바꾸고 수단을 거둔다. */
+            var RETRY_MAX = 3;
+            var RKEY = 'dy-int-retry-v1';
+
+            /* 재시도 기록 — 세션 한정 스토어 { tries:{연계id:횟수}, log:[행] }.
+               연계 적용 전에는 외부 시스템을 실제로 호출하지 않으므로 «요청했다»는 사실만
+               남기고 상태를 성공으로 바꾸지 않는다(연계가 없으면 성공으로 가장하지 않는다).
+               그래도 기록은 남긴다 — 눌렀는데 아무 일도 일어나지 않는 것이 이 화면에서
+               가장 나쁜 상태이기 때문이다. */
+            function loadRetry() {
+                var s = null;
+                try { s = JSON.parse(sessionStorage.getItem(RKEY)); } catch (e) { s = null; }
+                if (!s || typeof s !== 'object') { s = {}; }
+                if (!s.tries || typeof s.tries !== 'object') { s.tries = {}; }
+                if (!Array.isArray(s.log)) { s.log = []; }
+                return s;
+            }
+            function saveRetry(s) {
+                if (s.log.length > 30) { s.log = s.log.slice(s.log.length - 30); }
+                try { sessionStorage.setItem(RKEY, JSON.stringify(s)); } catch (e) {}
+            }
+            /* 재시도는 «지금» 일어난 행위라 실제 시각으로 남긴다 — 기준일(DYV2.today())은
+               시드 판정용 축이고, 사람이 방금 누른 기록까지 그 날짜로 적으면 이력이 거짓이 된다. */
+            function stampNow() {
+                var d = new Date(), p = function (n) { return (n < 10 ? '0' : '') + n; };
+                return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) +
+                    ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+            }
+
+            function setText(sel, txt) {
+                document.querySelectorAll(sel).forEach(function (el) { el.textContent = txt; });
+            }
+            function isFail(s) { return String(s || '').indexOf('실패') >= 0; }
+
+            /* 배지 색은 화면이 고르지 않는다 — 어휘를 DYV2.toneOf 에 물어본다.
+               매핑에 없는 어휘는 neutral 로 수렴하므로, 새 어휘는 상태 어휘 표에 추가한다. */
+            function paint(dotSel, chipSel, whySel, label, why) {
+                var t = tone(label);
+                var chip = document.querySelector(chipSel);
+                if (chip) { chip.textContent = label; chip.className = 'chip-status ' + t + ' chip-sm'; }
+                var dot = document.querySelector(dotSel);
+                /* 점도 배지와 같은 tone 에서 파생한다 — 어휘별로 따로 적어 두면 배지는
+                   주황인데 점은 회색인 식으로 조용히 어긋난다.
+                   .link-status-dot 은 ok/warn/off 세 갈래뿐이라 없는 변형을 만들지 않고,
+                   실패·점검 필요의 뜻은 색이 아니라 배지 라벨이 말한다. */
+                if (dot) {
+                    dot.className = 'link-status-dot ' +
+                        (t === 'success' ? 'ok' : (t === 'warning' || t === 'danger') ? 'warn' : 'off');
+                }
+                var el = document.querySelector(whySel);
+                /* 지연·실패 카드는 사유를 한 줄로 함께 적는다 — 상태만 있으면 어디를 봐야 할지 모른다. */
+                if (el) { el.textContent = why || ''; el.hidden = !why; }
+            }
+
+            /* 원본이 없는 카드(온나라·행정포털)의 배지도 같은 경로로 색을 얻는다 */
+            document.querySelectorAll('[data-int-chip]').forEach(function (el) {
+                el.className = 'chip-status ' + tone((el.textContent || '').trim()) + ' chip-sm';
+            });
+
+            /* 재시도로 값이 바뀌므로 전 계산을 다시 돌릴 수 있어야 한다 —
+               한 번만 그리면 재시도 결과가 화면에 반영되지 않아 «눌러도 안 바뀌는 버튼»이 된다. */
+            function render() {
+                var store = loadRetry();
+                var rows = [];          /* 연계 로그 행 — 파생한 것만 쌓인다 */
+                var targets = [];       /* 재시도 대상 — { id, sys, label, work, fails } */
+                var blocked = [];       /* 점검 필요 — 다시 보내도 같은 결과라 재시도 대상에서 뺀다 */
+                var derived = [];       /* 상태를 파생한 연계 */
+                var unavailable = [];   /* 이번에 원본 자료를 못 불러온 연계 */
+
+                /* ── 시설물(FMS) — 대장의 연계 실행 기록에서 파생 ───────────────── */
+                if (!window.DYFACIL) {
+                    /* 자료를 못 불러온 것이지 「수신 기록이 없는」 것이 아니다. 임의값을 넣지 않는다. */
+                    unavailable.push('시설물(FMS)');
+                    setText('[data-fms-last]', '자료 미확보');
+                    setText('[data-fms-cnt]', '—');
+                    paint('[data-fms-dot]', '[data-fms-chip]', '[data-fms-why]', '자료 미확보',
+                        '시설물 대장 자료를 이번에 불러오지 못해 수신 상태를 계산할 수 없습니다.');
+                } else {
+                    derived.push('시설물(FMS)');
+                    var flog = DYFACIL.syncLog() || [];
+                    /* 연계 실행만 고른다 — 담당자 보완입력(자체 저장)은 연계가 아니다.
+                       섞어 두면 시설물 한 건을 저장하는 것만으로 연속 실패 판정이 풀린다. */
+                    var fruns = flog.filter(function (l) { return l.dir === 'IN' || l.dir === 'OUT'; });
+                    var ffail = fruns.filter(function (l) { return isFail(l.result); });
+                    /* 마지막 «성공» 수신만 쓴다 — 실패한 수신을 마지막 수신으로 적으면
+                       그 옆의 대장 건수가 그 실패분이 받아온 것처럼 읽힌다. */
+                    var flastOk = fruns.filter(function (l) { return l.dir === 'IN' && !isFail(l.result); })[0] || null;
+                    /* 세 번 연속 실패는 재시도로 풀리지 않는다 — 사람이 원인을 없애야 한다. */
+                    var fstreak = fruns.length >= 3 && fruns.slice(0, 3).every(function (l) { return isFail(l.result); });
+                    var ftries = store.tries.fms || 0;
+                    var fspent = ffail.length > 0 && ftries >= RETRY_MAX;
+
+                    setText('[data-fms-cnt]', DYFACIL.list({}).length);
+                    setText('[data-fms-last]', flastOk ? flastOk.at : '수신 기록 없음');
+
+                    var fstate = (fstreak || fspent) ? '점검 필요'
+                        : ffail.length ? '실패'
+                        : flastOk ? '정상' : '수신 기록 없음';
+                    paint('[data-fms-dot]', '[data-fms-chip]', '[data-fms-why]', fstate,
+                        fstreak ? '최근 연계 실행 3회가 연속 실패했습니다 — 다시 보내도 같은 결과이므로 원인 확인이 필요합니다.'
+                        : fspent ? '재시도 ' + RETRY_MAX + '회를 모두 썼는데도 실패 ' + ffail.length + '건이 남았습니다 — 원인 확인이 필요해 재시도 수단을 거뒀습니다.'
+                        : ffail.length ? '실패한 연계 실행(수신·전송) ' + ffail.length + '건이 남아 있습니다.'
+                        : flastOk ? '' : '연계는 붙어 있으나 아직 성공한 수신이 한 건도 없습니다 — 대장이 비었다는 뜻이 아닙니다.');
+
+                    if (fstreak || fspent) {
+                        blocked.push('시설물(FMS)' + (fspent && !fstreak ? '(재시도 ' + RETRY_MAX + '회 소진)' : '(연속 실패)'));
+                    } else if (ffail.length) {
+                        targets.push({ id: 'fms', sys: 'FMS', label: '시설물(FMS)', work: '시설물관리대장 연계', fails: ffail.length });
+                    }
+
+                    /* 로그 — 연계 실행 기록을 그대로 낸다. 건수 칸은 그 실행이 실제로 남긴
+                       값만 쓰는데, 시설물 연계는 건수를 숫자로 남기지 않으므로 비운다.
+                       (지금 대장에 몇 건 있는지는 그 실행이 받아온 건수가 아니라 누적 총량이다.)
+                       실행이 남긴 내역은 작업 칸에 그대로 붙인다.
+                       담당자 보완입력을 포함한 전체 이력은 FMS 연계 화면이 갖는다. */
+                    fruns.forEach(function (l) {
+                        rows.push({
+                            at: l.at, sys: 'FMS',
+                            /* 방향(수신·전송)을 먼저 적는다 — 실패 건수 문구가 «연계 실행»을 세므로
+                               어느 방향이 실패했는지 로그에서 바로 짚을 수 있어야 한다. */
+                            work: (l.dir === 'IN' ? '수신' : '전송') + ' · ' + (l.iface || '') + (l.detail ? ' · ' + l.detail : ''),
+                            n: '', result: l.result
+                        });
+                    });
+                }
+
+                /* ── 법제처(법령 조문 수집) — 야간 배치의 실행 기록에서 파생 ────────
+                   화면은 법제처를 직접 호출하지 않는다(방화벽 명세: 배치 서버 단독
+                   아웃바운드). 여기 보이는 것은 배치가 남긴 실행 기록이다. */
+                var SY = window.DYLAWSYNC || null;
+                var H = SY && SY.health;
+                if (!H) {
+                    unavailable.push('법제처(법령 조문 수집)');
+                    setText('[data-law-sched]', '자료 미확보');
+                    setText('[data-law-last]', '자료 미확보');
+                    setText('[data-law-cnt]', '—');
+                    paint('[data-law-dot]', '[data-law-chip]', '[data-law-why]', '자료 미확보',
+                        '법령 수집 배치 기록을 이번에 불러오지 못해 수집 상태를 계산할 수 없습니다.');
+                } else {
+                    derived.push('법제처(법령 조문 수집)');
+                    var runs = (H.runs || []).slice();      /* 최근 실행이 앞에 온다 */
+                    var lawRows = H.laws || [];
+                    var LAWS = (window.DYLAW || {}).LAWS || {};
+
+                    /* 실패 법령 — **배치 실행 기록(법령별 최근 수집 결과)에서만** 센다.
+                       수집 결과 검토 대장은 여기서 보지 않는다. 두 곳을 합쳐 세면
+                       검토 대장에만 실패가 있는 법령 때문에 이 카드가 「실패」가 되는데
+                       법령 관리 화면은 같은 시각에 「정상」이라 말한다. */
+                    var failLaw = {};
+                    lawRows.forEach(function (l) {
+                        if (isFail(l.result)) { failLaw[l.key] = (LAWS[l.key] || {}).name || l.key; }
+                    });
+                    var failKeys = Object.keys(failLaw);
+
+                    /* 신선도 — 마지막 성공 수집이 며칠 전인가. 인증키 만료나 배치의 조용한
+                       실패는 오류 화면이 아니라 "조문이 안 바뀜"으로만 나타나서, 이 숫자가
+                       유일한 증상이다. 법령 관리 화면과 같은 규칙이어야 두 화면이 같은 말을 한다. */
+                    var days = null;
+                    if (H.lastOk && V.today) {
+                        days = Math.max(0, Math.round((new Date(V.today()) - new Date(String(H.lastOk).split(' ')[0])) / 86400000));
+                    }
+                    var lstreak = runs.length >= 3 && runs.slice(0, 3).every(function (r) { return isFail(r.result); });
+                    var ltries = store.tries.law || 0;
+                    var lspent = failKeys.length > 0 && ltries >= RETRY_MAX;
+
+                    setText('[data-law-sched]', H.schedule || '주기 미등록');
+                    setText('[data-law-last]', H.lastOk || '수집 기록 없음');
+                    setText('[data-law-cnt]', lawRows.length || '—');
+
+                    /* 단계 상태는 정상 → 지연·주의 → 실패 → 점검 필요 넷이고, 라벨은 상태
+                       어휘 표에 등록된 것만 쓴다(표에 없는 말을 지어내면 색이 neutral 로
+                       떨어져 경고 단계가 화면에서 사라진다). 법령 관리 화면의 신선도 칩은
+                       정상·지연 두 갈래라 「지연·주의」와 낱말이 다르지만, 같은 조건에서
+                       같은 판정(주기 초과·경고)을 말한다. */
+                    var lstate = (lstreak || lspent) ? '점검 필요'
+                        : (failKeys.length || (runs[0] && isFail(runs[0].result))) ? '실패'
+                        : !H.lastOk ? '수신 기록 없음'
+                        : (days !== null && days > 1) ? '지연·주의' : '정상';
+                    paint('[data-law-dot]', '[data-law-chip]', '[data-law-why]', lstate,
+                        lstreak ? '최근 배치 3회가 연속 실패했습니다 — 다시 보내도 같은 결과이므로 원인 확인이 필요합니다.'
+                        : lspent ? '재시도 ' + RETRY_MAX + '회를 모두 썼는데도 실패 ' + failKeys.length + '종이 남았습니다 — 원인 확인이 필요해 재시도 수단을 거뒀습니다.'
+                        : failKeys.length ? '법령 ' + failKeys.length + '종의 조문 수집이 실패했습니다 — 그 법령은 마지막 성공 수집분을 그대로 보여줍니다.'
+                        : (runs[0] && isFail(runs[0].result)) ? '마지막 배치가 실패했습니다 — 조문은 마지막 성공 수집분을 그대로 보여줍니다.'
+                        : !H.lastOk ? '배치는 등록돼 있으나 성공한 수집이 아직 없습니다.'
+                        : (days !== null && days > 1) ? '예정 주기를 넘겼습니다 — 마지막 성공 수집 D+' + days + '.' : '');
+
+                    if (lstreak || lspent) {
+                        blocked.push('법제처(법령 조문 수집)' + (lspent && !lstreak ? '(재시도 ' + RETRY_MAX + '회 소진)' : '(연속 실패)'));
+                    } else if (failKeys.length) {
+                        targets.push({ id: 'law', sys: '법제처', label: '법제처(법령 조문 수집)', work: '법령 조문 수집', fails: failKeys.length });
+                    }
+
+                    /* 로그 — 배치 실행 이력을 그대로 낸다. 건수는 그 실행이 실제로 남긴 값에서
+                       파생하고, 남기지 않았으면 비운다(추정치를 채우지 않는다). */
+                    runs.forEach(function (r) {
+                        var work = '법령 조문 수집 배치';
+                        if (r.changed != null) { work += ' · ' + (r.changed ? '변경 ' + r.changed + '건' : '변경 없음'); }
+                        var n = (r.laws != null && r.arts != null) ? ('법령 ' + r.laws + ' · 조문 ' + r.arts) : '';
+                        rows.push({ at: r.at, sys: '법제처', work: work, n: n, result: r.result });
+                    });
+                    /* 실패한 법령은 배치 행과 따로 낸다 — 배치는 돌았는데 그 안의 한 법령이
+                       실패한 것이라, 두 사건을 한 행으로 합치면 무엇을 재시도하는지 사라진다.
+                       일시는 그 법령의 마지막 «성공» 시각이 아니라 실패가 난 배치 시각이다. */
+                    failKeys.forEach(function (k) {
+                        rows.push({
+                            at: SY.batchAt || (runs[0] && runs[0].at) || '',
+                            sys: '법제처', work: failLaw[k] + ' 조문 수집', n: '', result: '수집 실패'
+                        });
+                    });
+                }
+
+                /* 재시도 기록도 로그 행이다 — 누른 사실이 남지 않으면 눌렀는지 알 수 없다. */
+                store.log.forEach(function (r) { rows.push(r); });
+
+                /* ── 연계 로그 렌더 — 최근 작업이 위에 온다 ─────────────────────── */
+                var table = document.querySelector('[data-int-logtable]');
+                var tbody = document.querySelector('[data-int-logbody]');
+                var empty = document.querySelector('[data-int-logempty]');
+                rows.sort(function (a, b) { return String(b.at).localeCompare(String(a.at)); });
+
+                if (rows.length && tbody && table && empty) {
+                    tbody.innerHTML = rows.map(function (r) {
+                        return '<tr><td>' + esc(r.at) + '</td><td>' + esc(r.sys) + '</td><td>' + esc(r.work) + '</td>' +
+                            '<td>' + esc(r.n) + '</td>' +
+                            '<td><span class="chip-status ' + tone(r.result) + ' chip-sm">' + esc(r.result) + '</span></td></tr>';
+                    }).join('');
+                    table.hidden = false;
+                    empty.hidden = true;
+                } else if (empty) {
+                    /* 빈 상태 문구도 실제 상황에서 만든다 — 고정 문구를 두면 자료를 못 불러온
+                       경우에도 "한 번도 수신하지 않았다"고 단언하게 된다. 둘은 다른 상태다. */
+                    if (table) { table.hidden = true; }
+                    empty.hidden = false;
+                    empty.textContent = unavailable.length
+                        ? ('연계 로그를 계산할 수 없습니다. ' + unavailable.join(' · ') + ' 자료를 이번에 불러오지 못했습니다. 조회 조건 때문에 비어 있는 것이 아닙니다.')
+                        : derived.length
+                            ? ('아직 연계 이력이 없습니다. 이력을 남기는 연계는 ' + derived.join(' · ') + '이며, 아직 한 건도 기록되지 않았습니다. 조회 조건 때문에 비어 있는 것이 아닙니다.')
+                            : '상태를 파생할 연계 기록이 아직 없습니다.';
+                }
+
+                /* ── 재시도 — 외부로 나가는 행위다. 대상이 없으면 비활성으로 두고 이유를 밝힌다.
+                     눌렀는데 아무 일도 일어나지 않는 것이 가장 나쁘다. ───────────── */
+                var failTotal = targets.reduce(function (s, t) { return s + t.fails; }, 0);
+                var retry = document.querySelector('[data-int-retry]');
+                var note = document.querySelector('[data-int-retrynote]');
+                if (retry) {
+                    retry.disabled = !targets.length;
+                    retry.title = targets.length
+                        ? '실패한 연계 ' + failTotal + '건을 다시 시도합니다 (연계별 최대 ' + RETRY_MAX + '회).'
+                        : derived.length ? '재시도할 실패 건이 없습니다.' : '실패 건을 확인할 원본 자료를 불러오지 못했습니다.';
+                    retry.onclick = targets.length ? function () {
+                        var s = loadRetry();
+                        var said = [];
+                        targets.forEach(function (t) {
+                            var n = (s.tries[t.id] || 0) + 1;
+                            s.tries[t.id] = n;
+                            /* 결과를 「성공」으로 적지 않는다 — 실제로 나간 호출이 없다.
+                               남기는 것은 «요청했다»는 사실과 몇 번째 시도인지뿐이다. */
+                            s.log.push({
+                                at: stampNow(), sys: t.sys,
+                                work: t.work + ' 재시도 — 실패 ' + t.fails + '건 (' + n + '/' + RETRY_MAX + '회)',
+                                n: '', result: '재시도 요청'
+                            });
+                            said.push(t.label + ' ' + t.fails + '건 (' + n + '/' + RETRY_MAX + '회)');
+                        });
+                        saveRetry(s);
+                        if (V.toast) {
+                            V.toast('재시도 요청 기록: ' + said.join(' · ') + ' — 연계 적용 전이라 외부 호출은 하지 않았습니다.');
+                        }
+                        render();
+                    } : null;
+                }
+                if (note) {
+                    /* 셀 수 없었던 것을 「없다」고 단언하지 않는다 — 자료를 못 불러온 것과
+                       실패가 0건인 것은 다른 상태다. */
+                    var msg = targets.length ? '재시도할 실패 건 ' + failTotal + '건이 있습니다.'
+                        : !derived.length ? '재시도할 실패 건을 확인할 수 없습니다.'
+                        : unavailable.length ? '지금 확인할 수 있는 범위에는 재시도할 실패 건이 없습니다.'
+                        : '재시도할 실패 건이 없습니다.';
+                    /* 대상 연계를 세어서 쓴다 — 문장에 개수를 박으면 연계가 늘거나 줄 때 여기만 옛말이 된다. */
+                    msg += derived.length
+                        ? ' 재시도 대상은 ' + derived.join(' · ') + ' ' + derived.length + '개 연계의 실패 건입니다.'
+                        : ' 상태를 파생하는 연계가 없어 셀 대상 자체가 없습니다.';
+                    msg += ' 재시도는 연계마다 최대 ' + RETRY_MAX + '회이며, 누르면 「재시도 요청」으로 연계 로그에 남습니다.' +
+                        ' 연계 적용 전에는 외부 시스템을 실제로 호출하지 않으므로 이 기록이 상태를 성공으로 바꾸지 않습니다 — ' +
+                        '나가지 않은 호출을 성공으로 적으면 상태판이 거짓이 됩니다.' +
+                        ' ' + RETRY_MAX + '회를 다 쓰고도 실패가 남으면 그 연계는 「점검 필요」가 되고 재시도 수단을 거둡니다.';
+                    if (unavailable.length) {
+                        msg += ' ' + unavailable.join(' · ') + ' 자료는 이번에 불러오지 못해 실패 건을 셀 수 없었습니다.';
+                    }
+                    if (blocked.length) {
+                        msg += ' ' + blocked.join(' · ') + '은(는) 「점검 필요」라 재시도 대상에서 뺐습니다 — 사람이 원인을 없애야 하는 상태입니다.';
+                    }
+                    msg += ' 연계 상태는 연계 실행 기록에서만 판정합니다 — 수집 결과 검토(무엇이 어떻게 바뀌었는지)는 법령 관리 화면이,' +
+                        ' 시설물의 담당자 보완입력을 포함한 전체 이력은 FMS 연계 화면이 맡습니다.';
+                    note.textContent = msg;
+                }
+            }
+
+            render();
         });
+    </script>
+    <script>
+    /* 준비 항목 건수 — DYPOLICY 파생만 읽는다(자체 집계 금지) */
+    (function () {
+        function sync() {
+            var P = window.DYPOLICY; if (!P) return;
+            var left = P.ITEMS.length - P.decidedCount();
+            var n = document.getElementById('pol-n'), sum = document.getElementById('pol-sum');
+            if (n) n.textContent = left ? '미수신 ' + left + '건' : '전체 수신 완료';
+            if (sum) sum.textContent = '전체 ' + P.ITEMS.length + '건 중 ' + P.decidedCount() + '건 수신 확인 · ' + left + '건 대기';
+        }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', sync); else sync();
+    })();
     </script>
 </body>
 </html>

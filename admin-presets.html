@@ -35,7 +35,7 @@
                     <span class="card-title" id="builder-title">양식 빌더</span>
                     <div style="display:flex; gap:8px;">
                         <button class="btn btn-secondary btn-sm" onclick="previewPreset()">미리보기</button>
-                        <button class="btn btn-primary btn-sm" onclick="DYV2.toast('양식이 저장되었습니다 (프로토타입)')">저장</button>
+                        <button class="btn btn-primary btn-sm" onclick="DYV2.notReady('양식 저장', '양식 관리 연계')">저장</button>
                     </div>
                 </div>
                 <div class="card-body">
@@ -56,6 +56,7 @@
 
     <script src="./js/layout.js"></script>
     <script src="./js/law-map.js"></script>
+    <script src="./js/help-center.js"></script><!-- DYHELP: 화면 도움말 -->
     <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
     <script src="./js/data.js"></script>
     <script src="./js/common.js"></script>
@@ -68,13 +69,17 @@
             { name: '교육 결과 양식', menu: '안전보건교육', fields: 6, used: 7 },
             { name: '평가·후속조치 양식', menu: '조직', fields: 5, used: 4 },
         ];
-        const FIELD_TYPES = ['텍스트', '문장(여러 줄)', '날짜', '선택(드롭다운)', 'O/X 판정', '파일 첨부'];
+        /* 입력 형식은 화면이 정하지 않는다 — 정의서 SCR-ADMIN-003 §4-2 확정 목록 10종.
+           표준 양식(F1~F7)이 실제로 쓰는 형식에서 뽑았고, 여기 없는 형식은 항목을 만들 수 없다.
+           '조직도 선택'을 빼면 계획서의 담당부서·담당자, 점검표의 점검자, 조치보고의 확인자가
+           갈 곳을 잃어 표준 양식 세 종이 사용 불가가 된다. */
+        const FIELD_TYPES = ['한 줄 글', '여러 줄 글', '숫자', '날짜', '단일 선택', '복수 선택', '점검 항목', '점수 항목', '조직도 선택', '파일 첨부'];
         let fields = [
-            { label: '대상 연도·주기', type: '선택(드롭다운)', req: true },
+            { label: '대상 연도·주기', type: '단일 선택', req: true },
             { label: '작성일', type: '날짜', req: true },
-            { label: '담당부서·작성자', type: '텍스트', req: true },
-            { label: '주요 내용', type: '문장(여러 줄)', req: true },
-            { label: '점검자 확인', type: 'O/X 판정', req: false },
+            { label: '담당부서·작성자', type: '조직도 선택', req: true },
+            { label: '주요 내용', type: '여러 줄 글', req: true },
+            { label: '점검자 확인', type: '점검 항목', req: false },
             { label: '증빙 첨부', type: '파일 첨부', req: false },
         ];
 
@@ -85,7 +90,7 @@
                 '<td>' + p.fields + '개</td><td>' + p.used + '건</td>' +
                 '<td class="col-action">' +
                 '<button class="btn btn-sm btn-outline" onclick="loadPreset(' + i + ')">편집</button>' +
-                '<button class="btn btn-sm btn-secondary" onclick="DYV2.toast(\'양식 삭제 — 사용 중 문서가 있으면 보관 처리 (프로토타입)\')">삭제</button>' +
+                '<button class="btn btn-sm btn-secondary" onclick="DYV2.notReady(\'양식 삭제\', \'양식 관리 연계\')">삭제</button>' +
                 '</td></tr>'
             ).join('');
         }
@@ -102,11 +107,11 @@
                 '</div>'
             ).join('');
         }
-        function addField() { fields.push({ label: '새 필드', type: '텍스트', req: false }); renderFields(); }
+        function addField() { fields.push({ label: '새 필드', type: '한 줄 글', req: false }); renderFields(); }
         function loadPreset(i) {
             document.getElementById('b-name').value = PRESETS[i].name;
             document.getElementById('builder-title').textContent = '양식 빌더 — ' + PRESETS[i].name;
-            DYV2.toast('"' + PRESETS[i].name + '" 양식을 불러왔습니다 (프로토타입)');
+            DYV2.toast('"' + PRESETS[i].name + '" 양식을 불러왔습니다');
         }
         function newPreset() {
             document.getElementById('b-name').value = '새 양식';
@@ -117,9 +122,14 @@
             const body = '<div class="preset-form-grid">' + fields.map(f => {
                 const k = '<span class="k">' + f.label + (f.req ? ' <b style="color:var(--status-danger-fg)">*</b>' : '') + '</span>';
                 if (f.type === '날짜') return k + '<input type="date">';
-                if (f.type === '문장(여러 줄)') return k + '<textarea placeholder="입력"></textarea>';
-                if (f.type === '선택(드롭다운)') return k + '<select><option>2026년 · 연간</option></select>';
-                if (f.type === 'O/X 판정') return k + '<div><label style="margin-right:12px;"><input type="radio" name="p' + f.label + '"> O</label><label><input type="radio" name="p' + f.label + '"> X</label></div>';
+                if (f.type === '여러 줄 글') return k + '<textarea placeholder="입력"></textarea>';
+                if (f.type === '숫자') return k + '<input type="number" placeholder="0">';
+                if (f.type === '단일 선택') return k + '<select class="form-select"><option>2026년 · 연간</option></select>';
+                if (f.type === '복수 선택') return k + '<div><label style="margin-right:12px;"><input type="checkbox"> 항목 1</label><label><input type="checkbox"> 항목 2</label></div>';
+                if (f.type === '점검 항목') return k + '<div><label style="margin-right:12px;"><input type="radio" name="p' + f.label + '"> 적합</label><label><input type="radio" name="p' + f.label + '"> 부적합</label></div>';
+                if (f.type === '점수 항목') return k + '<input type="number" min="0" max="100" placeholder="점수">';
+                /* 조직도 선택은 자체 드롭다운을 만들지 않는다 — 부서·담당자 선택은 공용 인라인 조직도만 쓴다. */
+                if (f.type === '조직도 선택') return k + '<input type="text" placeholder="조직도에서 선택" readonly>';
                 if (f.type === '파일 첨부') return k + DYV2.uploadDrop('파일 첨부 (다중 가능)', null, { style: 'padding:14px;' });
                 return k + '<input type="text" placeholder="입력">';
             }).join('') + '</div>';

@@ -235,7 +235,7 @@
     }
 
     function resetDemo() {
-        if (!confirm('권한 등급 데모 데이터를 초기 시드로 되돌립니다. 변경 내용이 모두 사라집니다. 계속하시겠습니까?')) return;
+        if (!confirm('권한 등급 예시 자료를 처음 상태로 되돌립니다. 변경 내용이 모두 사라집니다. 계속하시겠습니까?')) return;
         A.resetDemo();
         RUI.sel = null; RUI.draft = null; RUI.dirty = false;
         renderList(); renderPanel(); V().toast('데모 데이터를 초기화했습니다.');
