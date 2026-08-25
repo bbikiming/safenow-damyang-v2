@@ -73,6 +73,18 @@
         "../프로토타입-v2-배포-20260814"
       ],
       "port": 8790
+    },
+    {
+      "name": "deploy-check-0825",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8791",
+        "--directory",
+        "../프로토타입-v2-배포-20260825"
+      ],
+      "port": 8791
     }
   ]
 }
