@@ -1704,7 +1704,7 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .chip-status.chip-sm { padding: 2px 10px; font-size: var(--fs-12); }
 
 /* 밀도 높은 표 변형 — table-figma modifier */
-.table-figma.table-compact th { padding: 9px 12px; font-size: var(--fs-12); }
+.table-figma.table-compact th { padding: var(--sp-2) var(--sp-3); font-size: var(--fs-12); }
 .table-figma.table-compact td { padding: 9px 12px; font-size: var(--fs-13); }
 .table-figma.table-nowrap th, .table-figma.table-nowrap td { white-space: nowrap; }
 .table-figma tr.row-short td { background: var(--status-warning-bg); }
@@ -4393,12 +4393,23 @@ p > .dx-note-gap { display: inline; }
 /* 문서 상세는 이미 카드 안이다 — 여기서 또 테두리를 두르면 3겹이 된다 */
 .cmp-two-doc .cmp-two-l { background: var(--surface-alt); border: 0; }
 .cmp-two-r { min-width: 0; }
+/* 세로 리듬 — 종전에는 이 열의 블록 간격이 **전부 12px** 이라 「조건 → 표 →
+   쪽」이 한 덩어리로 묶이지 않고, 그 다음 주제(누락·지난연도·비해당)와도
+   구분되지 않았다. 좌측·전체에 세운 3티어를 이 열에도 적용한다. */
+.cmp-two-r .edu-filterbar { margin-bottom: var(--stack-tight); }   /* 조건 ↔ 표 : 밀착 */
+.cmp-two-r .cmp-wrap + .dy-pager { margin-top: var(--stack-tight); } /* 표 ↔ 쪽 : 밀착 */
+.cmp-two-r .dy-pager,
+.cmp-two-r .dy-pager-one { margin-bottom: var(--stack-section); }  /* 쪽 ↔ 다음 주제 : 섹션 */
 .cmp-two-doc { padding: 20px 24px 24px; }
 .cmp-detail-code { display: block; margin-bottom: 2px; }
 .cmp-detail-h { font-size: var(--fs-18); font-weight: var(--fw-bold); color: var(--text-black); line-height: 1.4; margin: 4px 0 10px; }
 .cmp-detail-h3 { font-size: var(--fs-15); font-weight: var(--fw-bold); color: var(--text-black); margin: 0; }
 .cmp-detail-sum { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--card-line); }
-.cmp-detail-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.cmp-detail-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; margin-bottom: var(--sp-3); }
+/* 한 줄에 서는 컨트롤은 같은 높이 — 연도 셀렉트(40)와 등록 버튼(32)이 8px
+   어긋나 있었다. 필터 바·페이지 제목 줄과 같은 처리다(폼 필드 단에 맞춘다). */
+.cmp-detail-act .btn,
+.cmp-detail-act a.btn { min-height: var(--ctl-lg); }
 .cmp-detail-act { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .cmp-detail-prev { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--card-line); }
 .cmp-gapbox { text-align: left; padding: 18px 20px; border: 1px dashed var(--card-line); border-radius: var(--radius-card); margin-top: 16px; }
@@ -4566,10 +4577,20 @@ p > .dx-note-gap { display: inline; }
   border: 1px solid var(--card-line); border-radius: var(--radius-sm);
 }
 .du-saved-item {
-  display: flex; flex-direction: column; gap: var(--sp-0-5);
-  padding: var(--sp-2-5) var(--sp-3);
+  /* 항목 전체가 클릭 영역이다 — 링크만 타깃이면 높이가 글자만큼(21px)이라
+     노려서 눌러야 한다. 링크를 블록으로 펴고 패딩을 링크가 갖는다. */
   border-bottom: 1px solid var(--card-line);
 }
+.du-saved-item > .du-saved-t {
+  display: block;
+  padding: var(--sp-2-5) var(--sp-3) 0;
+  min-height: var(--sp-5);
+}
+.du-saved-item > .du-saved-m {
+  display: block;
+  padding: var(--sp-0-5) var(--sp-3) var(--sp-2-5);
+}
+.du-saved-item:hover { background: var(--surface-alt); }
 .du-saved-item:last-child { border-bottom: 0; }
 .du-saved-t {
   font-size: var(--fs-14); font-weight: var(--fw-semibold); color: var(--main-dark);
@@ -4591,7 +4612,8 @@ p > .dx-note-gap { display: inline; }
  * ========================================================================= */
 .dy-pager {
   display: flex; align-items: center; flex-wrap: wrap;
-  gap: var(--sp-1-5); margin-top: var(--sp-3);
+  /* 8px — 인접 타깃 사이 최소 간격. 6px 이면 옆 쪽을 잘못 누르기 쉽다. */
+  gap: var(--sp-2); margin-top: var(--sp-2);
 }
 .dy-pager-one { margin: var(--sp-3) 0 0; font-size: var(--fs-12); color: var(--text-gray); }
 .dy-pg {
@@ -4632,6 +4654,9 @@ p > .dx-note-gap { display: inline; }
 @media (max-width: 767px) {
   /* 좁은 폭에서는 건수를 아래 줄로 내린다 — 페이저가 두 줄로 접히며 끊기지 않게 */
   .dy-pager-sum { margin-left: 0; width: 100%; }
+  /* 손가락 폭에 맞춘다 — 32px 은 마우스 관행이고 터치에는 작다 */
+  .dy-pg { min-width: var(--ctl-lg); height: var(--ctl-lg); }
+  .dy-pager-in { height: var(--ctl-lg); width: 60px; }
 }
 
 /* 제목 옆 수정 버튼 — 제목과 «고치는 곳»이 멀어지지 않게 같은 줄에 둔다.
