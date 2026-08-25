@@ -402,7 +402,11 @@
                 '<span class="chip-mini wt">' + esc(d.year) + '년 문서</span>' +
                 /* 시드 표시는 아래 업무단계 줄의 mapChip 이 이미 낸다 — 여기 또
                    부르면 같은 칩이 한 헤더에 두 번 뜬다. */
-                '<h2 class="cmp-detail-h">' + esc(d.title) + '</h2>' +
+                '<h2 class="cmp-detail-h">' + esc(d.title) +
+                    /* 제목 수정은 DOCUP 이 그린다 — 업무문서 상세와 같은 모달·검사·
+                       권한을 쓴다(§7). 권한이 없으면 아무것도 나오지 않는다. */
+                    ((global.DOCUP && global.DOCUP.titleEditBtn) ? global.DOCUP.titleEditBtn(d, 'CMPDOC') : '') +
+                '</h2>' +
                 '<p class="cmp-dim">' + esc((D().SRC[d.src] || {}).label || d.src || '') +
                     ' · ' + esc(d.date || '일자 미기재') + ' · ' + esc(d.id) +
                     (D().srText(d, true) ? ' · ' + esc(D().srText(d, true)) : '') + '</p>' +
@@ -421,6 +425,7 @@
                     '<div class="v2-empty cmp-pdf"><b>PDF 미보유 (온나라 연동 전)</b>' +
                         '<p>이 시스템에는 문서명·수발신자·보고일자·생산등록번호만 있습니다. ' +
                         '결재 완료본을 여기서 보려면 온나라 연동이 필요합니다 — 그럴듯한 미리보기를 대신 그리지 않습니다.</p></div>' +
+                    metaBlock(d) +
                 '</div>' +
                 '<div class="cmp-two-r">' +
                     (past ? carryCard(d) : '') +
@@ -430,6 +435,42 @@
             '</div>' +
         '</section>';
     }
+    /* 문서 정보 — 종전에는 헤더 한 줄에 압축돼 있어 **담당부서·데이터 구분이
+     * 보이지 않았고**, 그걸 보려면 업무문서 쪽 상세로 넘어가야 했다. 업무관리에서
+     * 시작한 사람이 다른 메뉴로 튕기지 않도록 여기서 끝낸다. */
+    function metaBlock(d) {
+        function row(k, v) { return '<div><dt>' + esc(k) + '</dt><dd>' + v + '</dd></div>'; }
+        var dim = function (t) { return '<span class="cmp-dim">' + esc(t) + '</span>'; };
+        return '<h3 class="cmp-detail-h3 cmp-meta-h">문서 정보</h3>' +
+            '<dl class="cmp-dl">' +
+                row('문서번호', d.origin === 'ledger' ? dim('기록 없음') : dim('(온나라에서 부여)')) +
+                row('보고일자', d.date ? esc(d.date) : dim('미기재')) +
+                row('수발신', D().srText(d, true) ? esc(D().srText(d, true)) : dim('미기재')) +
+                row('담당부서 · 담당자', d.dept
+                    ? esc(d.dept) + (d.assignee ? ' / ' + esc(d.assignee)
+                        : ' ' + dim('/ 담당자는 기록 없음 — 문서 원장이 부서까지만 갖고 있습니다'))
+                    : dim('기록 없음')) +
+                row('기준연도', esc(d.year) + '년') +
+                /* 출처를 틀리게 말하면 그 자체가 거짓 자료가 된다(원장 실측 5만여 건이
+                   «사용자 등록»으로 뜨던 결함). 좁은 것부터 판정한다. */
+                row('데이터 구분', d.origin === 'seed26'
+                    ? '<b>예시 자료</b> ' + dim('— 2026년 실적은 2025년 실측 패턴에서 규칙으로 만든 자료입니다. 실제 제출 기록이 아닙니다.')
+                    : d.dataMode === 'real'
+                    ? '<b>문서 원장 실측</b> ' + dim('— ' + d.year + '년 담양군 문서 원장에서 그대로 가져온 실제 기록입니다.')
+                    : d.dataMode === 'demo' ? '예시 값'
+                    : '사용자 등록') +
+                (d.presetOf ? row('가져온 원본', presetLink(d)) : '') +
+                (d.note ? row('비고', esc(d.note)) : '') +
+            '</dl>';
+    }
+    /* 어느 문서에서 가져왔는지 — 되돌아가 볼 수 있어야 «제목이 왜 이런지»를 안다 */
+    function presetLink(d) {
+        var src = D().docById(d.presetOf);
+        if (!src) return '<span class="cmp-dim">' + esc(d.presetOf) + ' (원본을 찾을 수 없음)</span>';
+        return '<button type="button" class="du-link" onclick="CMPDOC.openDoc(\'' + esc(src.id) + '\')">' +
+            esc(src.year) + '년 «' + esc(src.title) + '»</button>';
+    }
+
     /* 회수 경로 — 등록만 있고 지울 수단이 없으면 시연을 반복할수록 데이터가 쌓인다
      * (CLAUDE.md §4 CRUD · 검수 C-3). 판정·삭제는 전부 DYDOCS 다 — 사용자 등록분만
      * 지울 수 있고(원장 불가) 권한은 canDelete()(재난안전과 담당자) 그대로다. */
@@ -603,6 +644,11 @@
         setF: setF, resetF: resetF, expand: expand, go: go, toggleAdv: toggleAdv,
         openPick: openPick, pick: pick, applyPick: applyPick, dropStage: dropStage, clearStages: clearStages,
         openDoc: openDoc, closeDoc: closeDoc, carry: carry, rowOpen: rowOpen,
+        /* 제목 수정은 DOCUP 단일 출처 — 저장 뒤 이 화면만 다시 그린다 */
+        editTitle: function (id) {
+            if (!global.DOCUP || !global.DOCUP.editTitle) { V().toast('제목 수정을 불러오지 못했습니다.'); return; }
+            global.DOCUP.editTitle(id, function () { render(); });
+        },
         askRemove: askRemove, doRemove: doRemove,
         state: S,
     };

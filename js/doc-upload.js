@@ -776,11 +776,83 @@
      *          backTo — 돌아올 화면(`cmp-status.html?year=2025` 등). 상세에서
      *          «뒤로»가 온 곳을 가리키게 한다. 생략하면 지금 화면.
      * ========================================================================= */
+    /* 상세는 **업무관리의 문서 목록 안에서** 연다 — 업무관리에서 시작한 사람이
+     * 업무문서 메뉴로 튕기면 하던 일의 맥락을 잃는다. 그 화면 상세가 문서 정보·
+     * 제목 수정·삭제·이어받기를 전부 갖고 있어 거기서 끝난다.
+     * 업무문서 메뉴 안에서 등록한 경우(docs-preset·docs-exec)는 그쪽 상세로 간다 —
+     * 지금 있는 메뉴를 벗어나지 않는 것이 규칙이다. */
+    function inWorkDocs() {
+        var f = location.pathname.split('/').pop();
+        return f === 'docs-preset.html' || f === 'docs-exec.html' || f === 'doc-detail.html';
+    }
     function detailHref(doc, backTo) {
         var back = backTo || (location.pathname.split('/').pop() + location.search);
-        return 'doc-detail.html?id=' + encodeURIComponent(doc.id) +
-               '&back=' + encodeURIComponent(back);
+        if (inWorkDocs()) {
+            return 'doc-detail.html?id=' + encodeURIComponent(doc.id) + '&back=' + encodeURIComponent(back);
+        }
+        return 'cmp-docs.html?doc=' + encodeURIComponent(doc.id) +
+               '&year=' + encodeURIComponent(doc.year);
     }
+    /* ── 문서 제목 수정 — 두 상세가 함께 쓴다 (2026-08-25) ────────────────
+     * 업무문서 상세(doc-detail)와 업무관리 문서 목록 상세(cmp-docs) 양쪽에서
+     * 고칠 수 있어야 하는데, 두 곳에 같은 모달을 짜면 문구·검사·권한이 갈린다.
+     *
+     * **등록분만** 고칠 수 있다 — `canEditDoc` 은 원장 문서에도 재난안전과
+     * 담당자를 허용하지만 그건 «잘못 붙은 분류를 고치는» 권한이고, 원장 제목은
+     * 실제 온나라 문서의 제목이라 이 시스템이 고칠 값이 아니다. updateDocument
+     * 가 실제로 거절하므로 버튼만 내면 «확인까지 시키고 거절하는 버튼»이 된다.
+     */
+    function canEditTitle(d) { return !!d && D().canEditDoc(d) && d.origin === 'user'; }
+    function titleDenyNote(d) {
+        if (!d) return '문서를 찾을 수 없습니다.';
+        if (d.origin !== 'user') {
+            return '원장·예시 문서의 제목은 바꿀 수 없습니다 — 실제 문서의 제목이라 이 시스템이 고칠 값이 아닙니다.';
+        }
+        return D().ownDenyNote(d.dept);
+    }
+    /* 제목 옆에 다는 버튼 — 권한이 없으면 아무것도 내지 않는다 */
+    function titleEditBtn(d, ns) {
+        if (!canEditTitle(d)) return '';
+        return ' <button type="button" class="dd-title-edit" aria-label="문서 제목 수정"' +
+            ' onclick="' + esc(ns) + '.editTitle(\'' + esc(d.id) + '\')">제목 수정</button>';
+    }
+    function editTitle(id, onDone) {
+        var d = D().docById(id);
+        if (!canEditTitle(d)) { V().toast(titleDenyNote(d)); return; }
+        _titleDone = typeof onDone === 'function' ? onDone : null;
+        _titleId = id;
+        V().openModal('문서 제목 수정',
+            '<div class="form-field">' +
+                '<label class="form-label" for="du-title-in">문서명 <b>(필수)</b></label>' +
+                '<input type="text" class="form-input" id="du-title-in" value="' + esc(d.title) + '"' +
+                    ' maxlength="200" autocomplete="off"' +
+                    ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();DOCUP.saveTitle();}">' +
+                '<p class="form-field-help">지난 연도 문서를 불러오면 제목의 연도 표기가 남아 있을 수 있습니다 — ' +
+                    '이 문서의 기준연도는 <b>' + esc(d.year) + '년</b>입니다.</p>' +
+            '</div>',
+            '<button type="button" class="btn btn-outline" onclick="DYV2.closeModal()">취소</button>' +
+            '<button type="button" class="btn btn-primary" onclick="DOCUP.saveTitle()">저장</button>');
+        setTimeout(function () {
+            var el = document.getElementById('du-title-in');
+            if (el) { el.focus(); el.select(); }
+        }, 30);
+    }
+    var _titleId = '', _titleDone = null;
+    function saveTitle() {
+        var d = D().docById(_titleId);
+        if (!canEditTitle(d)) { V().toast(titleDenyNote(d)); return; }
+        var el = document.getElementById('du-title-in');
+        var v = el ? String(el.value).trim() : '';
+        /* 빈 제목은 저장하지 않는다 — 목록에서 그 줄이 통째로 사라진 것처럼 보인다 */
+        if (!v) { V().toast('문서명을 입력해 주세요.'); if (el) el.focus(); return; }
+        if (v === d.title) { V().closeModal(); return; }
+        var r = D().updateDocument(_titleId, { title: v });
+        if (!r.ok) { V().toast(r.reason); return; }
+        V().closeModal();
+        if (_titleDone) _titleDone(r.doc);
+        V().toast('문서명을 바꿨습니다.');
+    }
+
     function saved(docs, opts) {
         docs = (docs || []).filter(Boolean);
         var o = opts || {};
@@ -801,15 +873,68 @@
                     '</li>';
                 }).join('') +
                 '</ul>' +
-                /* 지금 상태를 한 줄로 — «등록했다»만으로는 다음에 무엇이 남았는지 모른다 */
-                '<p class="du-saved-next">올린 서류는 <b>진행중</b>입니다. 재난안전과 담당자가 확인하면 완료가 됩니다.</p>' +
+                /* 지금 상태를 한 줄로 — «등록했다»만으로는 다음에 무엇이 남았는지 모른다.
+                   그 다음 할 일은 이 화면이 아니라 **내 할일**에서 이어진다. */
+                '<p class="du-saved-next">올린 서류는 <b>진행중</b>입니다. 재난안전과 담당자가 확인하면 완료가 됩니다. ' +
+                    '<a class="du-saved-go" href="my-work.html">내 할일에서 이어서 처리 →</a></p>' +
             '</div>';
+        /* **되돌리기** — 방금 만든 것을 바로 물릴 수 있어야 한다. 잘못 골라 30건을
+           만들고 나면 한 건씩 찾아 지우는 수밖에 없었다(§4 «CRUD 는 회수 경로까지»).
+           원본은 건드리지 않는다 — 지우는 것은 방금 만든 사본뿐이다. */
+        _undo = docs.map(function (d) { return d.id; });
         var foot =
             '<button type="button" class="btn btn-outline" onclick="DYV2.closeModal()">닫기</button>' +
-            (one
-                ? '<a class="btn btn-primary" href="' + esc(detailHref(docs[0], o.backTo)) + '">문서 상세 보기 →</a>'
-                : '<a class="btn btn-primary" href="' + esc(detailHref(docs[0], o.backTo)) + '">첫 문서 열기 →</a>');
+            '<button type="button" class="btn btn-outline du-undo" onclick="DOCUP.undoSaved()">' +
+                '방금 만든 ' + docs.length + '건 되돌리기</button>' +
+            '<a class="btn btn-primary" href="' + esc(detailHref(docs[0], o.backTo)) + '">' +
+                (one ? '문서 상세 보기 →' : '첫 문서 열기 →') + '</a>';
         V().openModal(o.title || '등록 완료', body, foot);
+    }
+    var _undo = [];
+    /* 되돌리기는 **확인을 한 번 받는다** — 되돌릴 수 없는 삭제이고, 첨부까지
+       함께 사라진다. 무엇이 지워지는지 수로 밝힌다(§4 회수 모달 규칙). */
+    function undoSaved() {
+        if (!_undo.length) { V().toast('되돌릴 것이 없습니다.'); return; }
+        var ids = _undo.slice();
+        var docs = ids.map(D().docById).filter(Boolean);
+        var files = 0, stages = {};
+        docs.forEach(function (d) {
+            files += (d.files || []).length;
+            (d.stageIds || []).forEach(function (sid) { stages[sid] = 1; });
+        });
+        V().openModal('되돌리기 — 방금 만든 ' + docs.length + '건을 지웁니다',
+            '<div class="du-saved">' +
+                '<p class="du-saved-lead"><b>' + docs.length + '건</b>을 지웁니다. 되돌릴 수 없습니다.</p>' +
+                '<ul class="du-saved-list">' + docs.map(function (d) {
+                    return '<li class="du-saved-item"><span class="du-saved-t">' + esc(d.title) + '</span>' +
+                        '<span class="du-saved-m">' + esc(d.id) + '</span></li>';
+                }).join('') + '</ul>' +
+                '<p class="du-saved-note">함께 사라지는 것 — 첨부 <b>' + files + '건</b> · ' +
+                    '할 일 <b>' + Object.keys(stages).length + '개</b>의 증빙에서 빠집니다. ' +
+                    '남은 증빙이 없는 할 일은 <b>미이행</b>으로 돌아갑니다.<br>' +
+                    '<b>가져온 원본 문서는 그대로 있습니다</b> — 지우는 것은 방금 만든 사본뿐입니다.</p>' +
+            '</div>',
+            '<button type="button" class="btn btn-outline" onclick="DYV2.closeModal()">그대로 둡니다</button>' +
+            /* 삭제 확인도 primary 다 — 이 코드베이스의 관례이고(doc-detail 의 [삭제]와
+               같다) 새 계열을 만들지 않는다(§7). 위험은 색이 아니라 문구가 말한다. */
+            '<button type="button" class="btn btn-primary" onclick="DOCUP.doUndo()">' + docs.length + '건 지우기</button>');
+    }
+    function doUndo() {
+        var ok = 0, fail = '';
+        _undo.forEach(function (id) {
+            var r = D().removeDocument(id);
+            if (r && r.ok) ok++; else if (r) fail = r.reason;
+        });
+        _undo = [];
+        V().closeModal();
+        refreshScreens();
+        V().toast(ok ? ok + '건을 지웠습니다 — 원본은 그대로입니다.' : (fail || '지우지 못했습니다.'));
+    }
+    /* 저장·삭제 뒤 낡은 화면을 남기지 않는다 — 어느 화면에서 불렀는지 모르므로 전부 */
+    function refreshScreens() {
+        ['DOCEXEC', 'DOCLIST', 'CMPST', 'CMPDOC'].forEach(function (k) {
+            if (global[k] && global[k].render) global[k].render();
+        });
     }
 
     function runPreset() {
@@ -891,6 +1016,9 @@
         setPreF: setPreF, resetPreF: resetPreF, prePage: prePage,
         selDoc: selDoc, clearSel: clearSel, expand: expand, setOne: setOne, setBulk: setBulk,
         /* 등록 결과 화면 — 다른 화면(cmp-status 불러오기 등)이 함께 쓴다 */
-        saved: saved, detailHref: detailHref,
+        saved: saved, detailHref: detailHref, undoSaved: undoSaved, doUndo: doUndo,
+        /* 제목 수정 — 두 상세(업무문서·업무관리)가 함께 쓴다 */
+        editTitle: editTitle, saveTitle: saveTitle,
+        canEditTitle: canEditTitle, titleDenyNote: titleDenyNote, titleEditBtn: titleEditBtn,
     };
 }(window));

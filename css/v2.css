@@ -4665,3 +4665,10 @@ p > .dx-note-gap { display: inline; }
 }
 .dd-title-edit:hover { color: var(--main-dark); border-color: var(--main); }
 .dd-title-edit:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
+
+/* 등록 결과 — 되돌리기 버튼과 「내 할일」 바로가기 (2026-08-25) */
+.du-undo { color: var(--status-danger-fg); border-color: var(--status-danger-border); }
+.du-undo:hover { background: var(--status-danger-bg); }
+.du-saved-go { margin-left: var(--sp-1); color: var(--main-dark); font-weight: var(--fw-medium); white-space: nowrap; }
+/* 문서 정보 dl 은 PDF 안내 아래에 온다 — 두 덩어리가 붙지 않게 */
+.cmp-meta-h { margin-top: var(--stack-section); }
