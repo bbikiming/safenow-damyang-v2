@@ -84,7 +84,15 @@
                 '</div>' +
                 /* 이 화면의 주제목이다 — 페이지에 h1 이 없으면 읽기 순서가 h2 부터
                    시작해 보조기술이 문서 제목을 잡지 못한다 */
-                '<h1 class="dd-title">' + esc(d.title) + '</h1>' +
+                '<h1 class="dd-title">' + esc(d.title) +
+                    /* 제목은 **제목 옆**에서 고친다 — 아래 관리 영역까지 내려가야
+                       하면 «여기가 틀렸는데»와 «고치는 곳»이 멀어진다. 권한이
+                       없으면 버튼을 내지 않는다(눌러도 거절하는 버튼을 남기지 않는다). */
+                    (canEditTitle()
+                        ? ' <button type="button" class="dd-title-edit" onclick="DOCDET.editTitle()"' +
+                          ' aria-label="문서 제목 수정">제목 수정</button>'
+                        : '') +
+                '</h1>' +
                 '<dl class="dd-meta">' +
                     m('문서번호', d.origin === 'ledger' ? '<span class="dx-nodoc">기록 없음</span>' : '<span class="dx-nodoc">(온나라에서 부여)</span>') +
                     m('보고일자', d.date || '<span class="dx-nodoc">미기재</span>') +
@@ -211,12 +219,65 @@
        (CLAUDE.md §2 무핸들러 드롭존 금지와 같은 근거). 데이터 계층 가드는 화면
        우회 방어로 그대로 둔다(IMP-04). */
     function canDeleteDoc() { return D().canDelete() && doc.origin === 'user'; }
+    /* 제목 수정도 **등록분뿐**이다 — canEditDoc 은 원장 문서에도 재난안전과
+       담당자를 허용하지만 그건 «잘못 붙은 분류를 고치는»(remap) 권한이고,
+       제목은 실제 온나라 문서의 제목이라 우리가 바꿀 것이 아니다. 실제로
+       updateDocument 가 «시드 문서는 수정할 수 없습니다» 로 거절한다 —
+       확인까지 시키고 거절하는 버튼은 없는 동작을 약속하는 것이다(삭제 버튼이
+       origin 을 함께 보는 것과 같은 근거). */
+    function canEditTitle() { return D().canEditDoc(doc) && doc.origin === 'user'; }
+    function titleDenyNote() {
+        if (doc.origin !== 'user') {
+            return '원장·예시 문서의 제목은 바꿀 수 없습니다 — 실제 문서의 제목이라 이 시스템이 고칠 값이 아닙니다.';
+        }
+        return D().ownDenyNote(doc.dept);
+    }
     function delDenyNote() {
         if (doc.origin !== 'user') {
             return '원장·시드 문서는 지울 수 없습니다 — 잘못 붙은 분류는 [단계 지정]으로 고칩니다.';
         }
         return D().ownDenyNote(doc.dept);
     }
+    /* ── 제목 수정 ─────────────────────────────────────────────────────────
+     * 지난 연도 문서를 불러오면 제목의 연도 표기가 어긋난 채 남는다 — 불러오기는
+     * «작년→올해» 두 값만 치환하므로 «2024년 하반기 …» 같은 제목은 그대로다.
+     * 자동으로 판단할 수 없는 값이라 사람이 고쳐야 하는데, 종전에는 **고칠 수단이
+     * 아예 없었다**(업무 업로드 프리셋에만 제목 편집이 있었다).
+     *
+     * 권한·저장은 DYDOCS 단일 출처를 그대로 쓴다 — canEditDoc 이 남의 부서·원장
+     * 문서를 막고, updateDocument 가 저장 직전에 한 번 더 검사한다. */
+    function editTitle() {
+        if (!canEditTitle()) { V().toast(titleDenyNote()); return; }
+        V().openModal('문서 제목 수정',
+            '<div class="form-field">' +
+                '<label class="form-label" for="dd-title-in">문서명 <b>(필수)</b></label>' +
+                '<input type="text" class="form-input" id="dd-title-in" value="' + esc(doc.title) + '"' +
+                    ' maxlength="200" autocomplete="off"' +
+                    ' onkeydown="if(event.key===\'Enter\'){event.preventDefault();DOCDET.saveTitle();}">' +
+                '<p class="form-field-help">지난 연도 문서를 불러오면 제목의 연도 표기가 남아 있을 수 있습니다 — ' +
+                    '이 문서의 기준연도는 <b>' + esc(doc.year) + '년</b>입니다.</p>' +
+            '</div>',
+            '<button type="button" class="btn btn-outline" onclick="DYV2.closeModal()">취소</button>' +
+            '<button type="button" class="btn btn-primary" onclick="DOCDET.saveTitle()">저장</button>');
+        setTimeout(function () {
+            var el = document.getElementById('dd-title-in');
+            if (el) { el.focus(); el.select(); }
+        }, 30);
+    }
+    function saveTitle() {
+        if (!canEditTitle()) { V().toast(titleDenyNote()); return; }
+        var el = document.getElementById('dd-title-in');
+        var v = el ? String(el.value).trim() : '';
+        /* 빈 제목은 저장하지 않는다 — 목록에서 그 줄이 통째로 사라진 것처럼 보인다 */
+        if (!v) { V().toast('문서명을 입력해 주세요.'); if (el) el.focus(); return; }
+        if (v === doc.title) { V().closeModal(); return; }
+        var r = D().updateDocument(docId, { title: v });
+        if (!r.ok) { V().toast(r.reason); return; }
+        V().closeModal();
+        render();
+        V().toast('문서명을 바꿨습니다.');
+    }
+
     function manage() {
         var imp = D().impactOf(doc.id) || {};
         /* 영향 범위 설명은 **지울 수 있을 때만** 낸다 — 못 지우는 문서에 삭제
@@ -302,5 +363,6 @@
         return true;
     }
 
-    global.DOCDET = { init: init, handles: handles, render: render, remap: remap, confirmDel: confirmDel, doDel: doDel };
+    global.DOCDET = { init: init, handles: handles, render: render, remap: remap, confirmDel: confirmDel, doDel: doDel,
+        editTitle: editTitle, saveTitle: saveTitle };
 }(window));

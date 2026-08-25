@@ -801,6 +801,83 @@
             esc(note || '실제 제출·접수 기록이 아닌 예시 자료입니다.') + '">예시 자료</span>';
     }
 
+    /* =========================================================================
+     * 쪽 나눔 — 공용 페이저 (2026-08-25 신설)
+     * -------------------------------------------------------------------------
+     * 화면마다 페이저를 다시 짜지 않는다(§7). 종전에는 문서 목록에만 있었고,
+     * 이행 관리의 단계별 문서 목록은 **전건을 한 번에 그렸다** — 원장 적재 후
+     * 한 단계에 최대 3,730건, 179단계 중 130개가 10건을 넘는다.
+     *
+     * **쪽 번호를 입력으로 받는다.** 373쪽짜리 목록에서 «‹ 이전»만으로 1쪽에
+     * 가려면 372번을 눌러야 한다. 번호 칸에 직접 쳐 넣는 편이 빠르고, 처음·끝
+     * 버튼(«·»)이 그 위의 흔한 경우를 덮는다.
+     *
+     *   cfg.page   현재 쪽(1-base) · cfg.pages 전체 쪽 수 · cfg.total 전체 건수
+     *   cfg.fn     쪽 이동 전역 함수 경로 (예: 'CMPST.docGo') — 인자는 쪽 번호
+     *   cfg.label  aria-label (기본 '목록 페이지')
+     *   cfg.unit   건수 단위 (기본 '건')
+     * ========================================================================= */
+    function pager(cfg) {
+        var c = cfg || {};
+        var pages = Math.max(1, c.pages | 0), page = Math.min(Math.max(1, c.page | 0), pages);
+        var fn = c.fn, total = c.total || 0;
+        /* 한 쪽뿐이면 페이저 대신 **건수만** 남긴다 — 다음 쪽이 없는데 화살표를
+           내면 «더 있는데 안 보여준다»로 읽힌다. */
+        if (pages <= 1) {
+            return '<p class="dy-pager-one">전체 ' + total.toLocaleString() + esc(c.unit || '건') + '</p>';
+        }
+        var s2 = Math.max(1, page - 2), e = Math.min(pages, s2 + 4);
+        if (e - s2 < 4) s2 = Math.max(1, e - 4);
+        var nums = '';
+        for (var i = s2; i <= e; i++) {
+            nums += '<button type="button" class="dy-pg' + (i === page ? ' is-on' : '') + '"' +
+                ' aria-current="' + (i === page ? 'page' : 'false') + '"' +
+                ' onclick="' + esc(fn) + '(' + i + ')">' + i + '</button>';
+        }
+        function nav(to, glyph, label, off) {
+            return '<button type="button" class="dy-pg dy-pg-nav"' + (off ? ' disabled' : '') +
+                ' aria-label="' + esc(label) + '"' + (off ? '' : ' onclick="' + esc(fn) + '(' + to + ')"') +
+                '>' + glyph + '</button>';
+        }
+        var jumpId = 'dy-pgj-' + String(fn).replace(/[^\w]/g, '');
+        return '<nav class="dy-pager" aria-label="' + esc(c.label || '목록 페이지') + '">' +
+            nav(1, '«', '첫 쪽', page === 1) +
+            nav(page - 1, '‹', '이전 쪽', page === 1) +
+            nums +
+            nav(page + 1, '›', '다음 쪽', page === pages) +
+            nav(pages, '»', '마지막 쪽', page === pages) +
+            '<span class="dy-pager-jump">' +
+                '<label for="' + jumpId + '" class="dy-pager-jl">쪽</label>' +
+                '<input id="' + jumpId + '" class="dy-pager-in" type="text" inputmode="numeric"' +
+                    ' value="' + page + '" size="4" autocomplete="off"' +
+                    ' aria-label="쪽 번호를 입력하고 Enter — 전체 ' + pages + '쪽"' +
+                    ' onkeydown="DYV2.pagerKey(event, \'' + esc(fn) + '\', ' + pages + ')"' +
+                    ' onfocus="this.select()">' +
+                '<span class="dy-pager-tot">/ ' + pages + '</span>' +
+            '</span>' +
+            '<span class="dy-pager-sum">전체 ' + total.toLocaleString() + esc(c.unit || '건') + '</span>' +
+        '</nav>';
+    }
+    /* Enter 로 이동 · Esc 로 되돌림 · 범위 밖은 양끝으로 붙인다(오타로 빈 화면을
+       보여주지 않는다). 위/아래 화살표로 한 쪽씩도 움직인다. */
+    function pagerKey(e, fn, pages) {
+        var el = e.target, cur = +el.value || 1;
+        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+            e.preventDefault();
+            el.value = Math.min(pages, Math.max(1, cur + (e.key === 'ArrowUp' ? 1 : -1)));
+            return;
+        }
+        if (e.key === 'Escape') { el.blur(); return; }
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        var n = parseInt(String(el.value).replace(/[^0-9]/g, ''), 10);
+        if (!n || n < 1) n = 1;
+        if (n > pages) n = pages;
+        var f = fn.split('.').reduce(function (o, k) { return o && o[k]; }, window);
+        if (typeof f === 'function') f(n);
+        else toast('쪽을 옮기지 못했습니다.');
+    }
+
     window.DYV2 = {
         MENUS, byMenu, complianceRate, dueCount,
         esc, josa, statusChip, workTypeChip, processTypeChip, pdcaChip, lawChip,
@@ -812,6 +889,8 @@
         acceptFiles, dropFiles, dropOver, isImageFile,
         BP, below, STATUS_TONE, toneOf,
         notice, noticeToggle, notReady, sampleChip,
+        /* 쪽 나눔 — 화면마다 다시 짜지 않는다(§7) */
+        pager, pagerKey,
         /* 표 내려받기 — 엑셀이 여는 UTF-8 BOM CSV (§7 단일 창구) */
         tableFile, csvText, csvCell, fileStamp, download,
         ORG, orgFlat, orgNode, orgCount, orgTotal, orgWalk, deptNames, orgDepts, deptIdOf,

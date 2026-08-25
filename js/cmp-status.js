@@ -42,7 +42,11 @@
         detail: '',             /* 이행 상세 대상 stageId */
         dyear: 0,               /* 이행 상세의 연도 셀렉터 */
         gapSel: {},             /* 누락 점검 일괄 선택 */
+        /* 이행 상세의 문서 목록 — 한 단계에 최대 3,730건이라 쪽을 나눈다.
+           단계·연도를 바꾸면 1쪽으로 돌아가고 조건도 비운다(다른 목록이므로). */
+        docPage: 1, docQ: '', docDept: '', docSt: '',
     };
+    var DOC_PAGE = 10;          /* 상세는 곁들여 보는 목록이라 목록 화면(25)보다 짧다 */
 
     /* ── 접속자 ──────────────────────────────────────────────────────────── */
     function me() { var R = global.DYROLE; return R && R.current ? R.current() : null; }
@@ -869,6 +873,7 @@
         if (!D().stage(stageId)) return;
         S.detail = stageId;
         S.dyear = S.year;
+        docReset();
         try { history.pushState({ cmp: 'detail' }, '', urlOf()); } catch (e) {}
         render();
         try { window.scrollTo(0, 0); } catch (e) {}
@@ -960,7 +965,7 @@
                     '</span>' +
                 '</div>' +
                 (live ? '' : '<p class="cmp-cap"><b>' + y + '년은 지난 연도입니다.</b> 소급 등록을 막기 위해 등록 버튼을 내지 않습니다 — 조회만 됩니다.</p>') +
-                (docs.length ? docTable(docs) : '<div class="v2-empty">이 연도에 등록된 문서가 없습니다.</div>') +
+                docBlock(docs, y) +
                 gapBox(s, y, canReg, prev, prevN) +
                 (prev
                     ? '<div class="cmp-detail-bar cmp-detail-prev">' +
@@ -1068,6 +1073,63 @@
                   '<span class="cmp-dim">개발측이 메뉴를 대조해 만든 <b>초안</b>입니다 — 발주처 확정 전입니다.</span></dd></div>'
                 : '') +
             '</dl></div>';
+    }
+    /* ── 이행 상세의 문서 목록 ─────────────────────────────────────────────
+     * 종전에는 **전건을 한 번에** 그렸다. 원장을 적재하고 보니 한 단계에 최대
+     * 3,730건이고 179단계 중 130개가 10건을 넘는다 — 그 화면은 문서를 «보는»
+     * 곳이 아니라 스크롤로 잃어버리는 곳이 된다.
+     *
+     * 조건은 **셋만** 둔다(§«간소화») — 검색어·부서·결재상태. 문서 목록 화면
+     * (cmp-docs)이 전체 조회를 맡으므로 여기서 같은 조건을 다 갖출 이유가 없다.
+     * 옵션은 **지금 이 단계의 문서에 실재하는 값만** 낸다 — 고르면 0건이 되는
+     * 선택지는 «있는데 안 보여준다»로 읽힌다. */
+    function docFilter(docs) {
+        return docs.filter(function (d) {
+            if (S.docDept && d.dept !== S.docDept) return false;
+            if (S.docSt && (d.status || '') !== S.docSt) return false;
+            if (S.docQ && !F().match(S.docQ, [d.title, d.sr, d.id])) return false;
+            return true;
+        });
+    }
+    function docOpts(docs, key, label) {
+        var seen = {};
+        docs.forEach(function (d) { var v = d[key]; if (v) seen[v] = (seen[v] || 0) + 1; });
+        var names = Object.keys(seen).sort();
+        if (names.length < 2) return null;      /* 선택지가 하나뿐인 드롭다운은 두지 않는다(§12) */
+        return [['', label]].concat(names.map(function (n) {
+            return [n, n + ' (' + seen[n].toLocaleString() + ')'];
+        }));
+    }
+    function docBar(all, shown) {
+        var fields = [{ type: 'search', id: 'cmp-docq', value: S.docQ,
+                        placeholder: '문서명·수발신자로 찾기', on: "CMPST.docF('Q', this.value)" }];
+        var dept = docOpts(all, 'dept', '부서 전체');
+        if (dept) fields.push({ type: 'select', id: 'cmp-docdept', value: S.docDept, label: '부서',
+                                options: dept, on: "CMPST.docF('Dept', this.value)" });
+        var st = docOpts(all, 'status', '결재상태 전체');
+        if (st) fields.push({ type: 'select', id: 'cmp-docst', value: S.docSt, label: '결재상태',
+                              options: st, on: "CMPST.docF('St', this.value)" });
+        return F().bar(fields, {
+            count: shown.length, unit: '건',
+            reset: 'CMPST.docClear()',
+        });
+    }
+    /* 문서가 없으면 조건 때문인지 애초에 없는지를 가른다 — 같은 빈 화면이라도
+       «걸어 놓은 조건을 풀면 보인다»는 것과 «이 해에 아무것도 없다»는 다르다. */
+    function docBlock(all, y) {
+        if (!all.length) return '<div class="v2-empty">이 연도에 등록된 문서가 없습니다.</div>';
+        var list = docFilter(all);
+        var bar = docBar(all, list);
+        if (!list.length) {
+            return bar + '<div class="v2-empty">조건에 맞는 문서가 없습니다. ' +
+                '<button type="button" class="du-link" onclick="CMPST.docClear()">조건 지우기</button></div>';
+        }
+        var pages = Math.max(1, Math.ceil(list.length / DOC_PAGE));
+        var page = Math.min(S.docPage, pages);
+        var rows = list.slice((page - 1) * DOC_PAGE, page * DOC_PAGE);
+        return bar + docTable(rows) +
+            V().pager({ page: page, pages: pages, total: list.length,
+                        fn: 'CMPST.docGo', label: y + '년 등록 문서 페이지' });
     }
     function docTable(docs) {
         return '<div class="cmp-wrap"><table class="table-figma table-compact cmp-table"><thead><tr>' +
@@ -1547,7 +1609,18 @@
     }
     function toggleLaw(id) { S.law[id] = !S.law[id]; render(); }
     function toggleAdv() { S.adv = !advOpen(); render(); }
-    function setDetailYear(y) { S.dyear = +y || S.year; render(); }
+    function setDetailYear(y) { S.dyear = +y || S.year; docReset(); render(); }
+    /* ── 이행 상세의 문서 목록 — 조건·쪽 ──────────────────────────────────
+     * 다른 단계·다른 연도는 **다른 목록**이다. 조건을 들고 넘어가면 «검색은
+     * 걸려 있는데 왜 0건이지»가 된다. */
+    function docReset() { S.docPage = 1; S.docQ = ''; S.docDept = ''; S.docSt = ''; }
+    function docGo(n) { S.docPage = Math.max(1, n | 0); render(); }
+    function docF(k, v) {
+        S['doc' + k] = v;
+        S.docPage = 1;                     /* 조건이 바뀌면 1쪽 — 3쪽에 머물면 빈 화면이 된다 */
+        F().rerender(render);              /* 검색어 타이핑 중 포커스·캐럿 보존 */
+    }
+    function docClear() { docReset(); render(); }
     /* 등록 마법사 — 단계 프리필. 연도는 지금 보고 있는 연도(상세면 상세 연도) */
     function openReg(stageId) {
         var y = S.detail ? (S.dyear || S.year) : S.year;
@@ -1905,6 +1978,7 @@
         toggleItem: toggleItem, toggleLaw: toggleLaw, toggleAdv: toggleAdv,
         openDetail: openDetail, closeDetail: closeDetail, setDetailYear: setDetailYear, rowOpen: rowOpen,
         openDept: openDept, openItem: openItem,
+        docGo: docGo, docF: docF, docClear: docClear,
         openPull: openPull, pullQ: pullQ, pullSel: pullSel, pullAll: pullAll, pullNone: pullNone,
         pullField: pullField, pullRun: pullRun,
         openNA: openNA, saveNA: saveNA, clearNA: clearNA, openReg: openReg,

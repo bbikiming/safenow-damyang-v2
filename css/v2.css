@@ -4583,3 +4583,68 @@ p > .dx-note-gap { display: inline; }
   padding: var(--sp-2-5) var(--sp-3);
   background: var(--surface-alt); border-radius: var(--radius-sm);
 }
+
+/* =========================================================================
+ * 쪽 나눔 — DYV2.pager() (2026-08-25)
+ *   화면마다 페이저를 다시 짜지 않는다(§7). 쪽 번호를 **입력으로도** 받는다 —
+ *   373쪽짜리 목록에서 «‹ 이전»만으로 1쪽에 가려면 372번을 눌러야 한다.
+ * ========================================================================= */
+.dy-pager {
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: var(--sp-1-5); margin-top: var(--sp-3);
+}
+.dy-pager-one { margin: var(--sp-3) 0 0; font-size: var(--fs-12); color: var(--text-gray); }
+.dy-pg {
+  min-width: var(--ctl-sm); height: var(--ctl-sm);
+  padding: 0 var(--sp-2);
+  border: 1px solid var(--card-line); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--text-black);
+  font-size: var(--fs-13); font-family: inherit; cursor: pointer;
+  transition: background-color 150ms ease-out, border-color 150ms ease-out;
+}
+.dy-pg:hover:not(:disabled) { background: var(--surface-alt); border-color: var(--main); }
+.dy-pg:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
+.dy-pg.is-on {
+  background: var(--main); border-color: var(--main); color: var(--surface);
+  font-weight: var(--fw-semibold);
+}
+/* 끝에 닿으면 «더 없다»를 보여준다 — 눌러도 아무 일 없는 버튼을 남기지 않는다 */
+.dy-pg:disabled { opacity: 0.4; cursor: default; }
+.dy-pg-nav { color: var(--text-gray); }
+
+.dy-pager-jump {
+  display: inline-flex; align-items: center; gap: var(--sp-1);
+  margin-left: var(--sp-2);
+}
+.dy-pager-jl { font-size: var(--fs-12); color: var(--text-gray); }
+.dy-pager-in {
+  width: 52px; height: var(--ctl-sm); padding: 0 var(--sp-2);
+  border: 1px solid var(--card-line); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--text-black);
+  font-size: var(--fs-13); font-family: inherit; text-align: center;
+  /* 자릿수가 바뀌어도 폭이 흔들리지 않게 */
+  font-variant-numeric: tabular-nums;
+}
+.dy-pager-in:focus-visible { outline: 2px solid var(--main); outline-offset: 1px; border-color: var(--main); }
+.dy-pager-tot { font-size: var(--fs-12); color: var(--text-gray); font-variant-numeric: tabular-nums; }
+.dy-pager-sum { margin-left: auto; font-size: var(--fs-12); color: var(--text-gray); }
+
+@media (max-width: 767px) {
+  /* 좁은 폭에서는 건수를 아래 줄로 내린다 — 페이저가 두 줄로 접히며 끊기지 않게 */
+  .dy-pager-sum { margin-left: 0; width: 100%; }
+}
+
+/* 제목 옆 수정 버튼 — 제목과 «고치는 곳»이 멀어지지 않게 같은 줄에 둔다.
+   제목이 길어 줄바꿈되면 버튼도 함께 흐르되, 글자 크기는 제목을 따라가지 않는다. */
+.dd-title-edit {
+  margin-left: var(--sp-2);
+  padding: var(--sp-1) var(--sp-2-5);
+  min-height: var(--ctl-sm);
+  border: 1px solid var(--card-line); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--text-gray);
+  font-size: var(--fs-12); font-weight: var(--fw-regular); font-family: inherit;
+  vertical-align: middle; white-space: nowrap; cursor: pointer;
+  transition: color 150ms ease-out, border-color 150ms ease-out;
+}
+.dd-title-edit:hover { color: var(--main-dark); border-color: var(--main); }
+.dd-title-edit:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
