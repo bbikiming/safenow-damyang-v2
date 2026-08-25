@@ -18,7 +18,12 @@
 (function (global) {
     'use strict';
 
-    var SKEY = 'dy-docs-v1';          /* 저장 키는 하나 — reset() 이 새는 곳을 만들지 않는다 */
+    /* 저장 키는 하나 — reset() 이 새는 곳을 만들지 않는다.
+       v2(2026-08-25): 원장 문서 id 체계가 바뀌었다(DOC-2025-1366 → DOC-2025-000001).
+       옛 키를 그대로 두면 관리자 교정(fix)·중복 병합이 **이제 없는 문서 id** 를
+       가리킨 채 남아, 화면이 «교정 N건»이라 말하는데 대상이 없는 상태가 된다.
+       조용히 끊기는 종류라 눈으로는 안 잡힌다. */
+    var SKEY = 'dy-docs-v2';
     var BASE_YEAR = 2025;             /* 원장 연도 */
     var DEFAULT_YEAR = 2026;          /* 기준연도 기본값 (지시서 §5-2) */
     /* ── 시연 기준연도 — 발주처 확정 2026-08-18 ──────────────────────────────
@@ -751,7 +756,11 @@
             counts: c,
             /* 반려는 status 축이 아니므로 counts 안에 넣지 않는다 — 넣으면 합이 업무단계 수를 넘는다 */
             returned: returned,
-            unmapped: docs.filter(function (d) { return d.origin === 'ledger' && !d.mapped; }).length,
+            /* «정리할 문서»에 **분류 제외**를 섞지 않는다 — 타 기관 소관·자치사무라
+               분류 단계에서 이미 판단이 끝난 문서라 교정 대상이 아니다. 섞으면
+               «남은 할 일»이 부풀고, 아무리 정리해도 0 이 되지 않는다. */
+            unmapped: docs.filter(function (d) { return d.origin === 'ledger' && !d.mapped && !d.excluded; }).length,
+            excluded: docs.filter(function (d) { return d.origin === 'ledger' && !!d.excluded; }).length,
             nearDup: docs.filter(function (d) { return d.nearDup; }).length,
             docsOfYear: docs.filter(function (d) { return d.year === year; }).length,
         };

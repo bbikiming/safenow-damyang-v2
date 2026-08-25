@@ -3,7 +3,7 @@
  *   기획: docs/planning/기획-업무문서-이행목록-업무목록-UX설계-v1.md §8 (UF-07·08)
  *
  *   목록 1행 = 문서 1건. 카드형·세트형·PDCA 그룹형을 쓰지 않는다.
- *   모집단 4,256 = 2025 원장 3,830 + 현행 업무문서 426 + 사용자 등록분.
+ *   모집단 = 2025 원장 57,765(20개 부서) + 현행 업무문서 426 + 2026 예시 자료 + 사용자 등록분.
  *
  *   [성능] 매 키 입력마다 4,256행을 DOM 에 만들지 않는다 — 검색은 미리 만든
  *   소문자 blob 을 훑고, 그리는 것은 현재 페이지(20/50/100행)뿐이다.
@@ -133,7 +133,8 @@
            현행 업무문서 426건이 아니다. 둘을 합치면 이행 목록의 '미분류 34건'
            링크가 460건으로 열려 교정 대상이 무엇인지 알 수 없게 된다. */
         if (S.mapping === 'mapped' && !d.mapped) return false;
-        if (S.mapping === 'unmapped' && !(d.origin === 'ledger' && !d.mapped)) return false;
+        if (S.mapping === 'unmapped' && !(d.origin === 'ledger' && !d.mapped && !d.excluded)) return false;
+        if (S.mapping === 'excluded' && !d.excluded) return false;
         if (S.mapping === 'noaxis' && d.origin !== 'v2') return false;
         return true;
     }
@@ -245,7 +246,7 @@
         return '<div class="dl-adv" id="dl-adv">' + tree +
             '<div class="dl-adv-grid">' +
                 f('상태', selHtml('dl-status', S.status, statusOpts(), "DOCLIST.setF('status', this.value)")) +
-                f('법정 의무 연결', selHtml('dl-mapping', S.mapping, [['', '전체'], ['mapped', '연결됨'],
+                f('법정 의무 연결', selHtml('dl-mapping', S.mapping, [['', '전체'], ['mapped', '연결됨'], ['excluded', '분류 제외'],
                     ['unmapped', '연결 안 됨 — 지정 필요'], ['noaxis', '이 목록 밖 문서']],
                     "DOCLIST.setF('mapping', this.value)")) +
                 f('담당부서', selHtml('dl-dept', S.dept, docOpts('dept', '담당부서 전체'), "DOCLIST.setF('dept', this.value)")) +
@@ -340,7 +341,8 @@
         if (k === 'src') return D().SRC[v] ? D().SRC[v].label : v;
         if (k === 'item') { var i = D().item(v); return i ? i.name : v; }
         if (k === 'stage') { var s = D().stage(v); return s ? s.name : v; }
-        if (k === 'mapping') return v === 'mapped' ? '연결됨' : v === 'noaxis' ? '이 목록 밖' : '연결 안 됨';
+        if (k === 'mapping') return v === 'mapped' ? '연결됨' : v === 'noaxis' ? '이 목록 밖'
+            : v === 'excluded' ? '분류 제외' : '연결 안 됨';
         if (k === 'hasFile' || k === 'hasPdf') return v === 'y' ? '있음' : '없음';
         if (k === 'menu') { var m = (global.DY_MENUS_V2 || {})[v]; return m ? m.label : v; }
         return v;

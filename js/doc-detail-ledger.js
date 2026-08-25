@@ -67,7 +67,7 @@
                    시작해 보조기술이 문서 제목을 잡지 못한다 */
                 '<h1 class="dd-title">' + esc(d.title) + '</h1>' +
                 '<dl class="dd-meta">' +
-                    m('문서번호', d.origin === 'ledger' ? '<span class="dx-nodoc">원장 미보유</span>' : '<span class="dx-nodoc">(온나라에서 부여)</span>') +
+                    m('문서번호', d.origin === 'ledger' ? '<span class="dx-nodoc">기록 없음</span>' : '<span class="dx-nodoc">(온나라에서 부여)</span>') +
                     m('보고일자', d.date || '<span class="dx-nodoc">미기재</span>') +
                     /* 방향이 있으면 «받음 · 기관» 으로 낸다. 옛 데이터는 방향이
                        없어 기관명만 나온다 — 없는 값을 지어내지 않는다. */
@@ -76,14 +76,21 @@
                         : '<span class="dx-nodoc">미기재</span>') +
                     /* 문구가 출처를 지목하므로 출처별로 갈린다 — 2026 예시 자료에
                        «2025년 원장에 없다»고 쓰면 그 화면에서 바로 어긋난다. */
-                    m('담당부서 · 담당자', d.dept ? esc(d.dept) + (d.assignee ? ' / ' + esc(d.assignee) : '')
-                        : (d.origin === 'seed26'
-                            ? '<span class="dx-nodoc">예시 자료에는 담당 정보가 없습니다 — 원본인 문서 원장이 담당 축을 갖고 있지 않습니다</span>'
-                            : '<span class="dx-nodoc">원장 미보유 — 2025년 재난안전과 문서 원장에는 담당 정보가 없습니다</span>')) +
+                    /* 원장이 20개 부서를 갖게 되면서 **부서는 있고 담당자만 없다**.
+                       종전 문구(«원장에 담당 정보가 없습니다»)는 이제 사실과 다르다. */
+                    m('담당부서 · 담당자', d.dept
+                        ? esc(d.dept) + (d.assignee ? ' / ' + esc(d.assignee)
+                            : ' <span class="dx-nodoc">/ 담당자는 기록 없음 — 문서 원장이 부서까지만 갖고 있습니다</span>')
+                        : '<span class="dx-nodoc">기록 없음</span>') +
                     m('기준연도', d.year + '년') +
                     m('운영주기', d.cycle ? esc(d.cycle) : '<span class="dx-nodoc">미기재</span>') +
+                    /* 출처를 틀리게 말하면 그 자체가 거짓 자료가 된다 — 원장 실측
+                       57,765건이 «사용자 등록»으로 뜨던 결함을 여기서 막는다.
+                       판정 순서는 좁은 것부터다(seed26 → real → demo → 등록분). */
                     m('데이터 구분', d.origin === 'seed26'
                         ? '<b>예시 자료</b> <span class="dx-nodoc">— 2026년 실적은 2025년 실측 패턴에서 규칙으로 만든 자료입니다(tools/build-doc-seed-2026.py). 실제 제출 기록이 아닙니다.</span>'
+                        : d.dataMode === 'real'
+                        ? '<b>문서 원장 실측</b> <span class="dx-nodoc">— ' + esc(d.year) + '년 담양군 문서 원장에서 그대로 가져온 실제 기록입니다.</span>'
                         : d.dataMode === 'demo'
                         ? '예시 값 <span class="dx-nodoc">— 출처·상태는 문서 ID 해시로 고정 배정된 값이며 실서비스에서는 온나라·전자문서·파일관리 어댑터의 원천 상태로 대체됩니다</span>'
                         : '사용자 등록') +

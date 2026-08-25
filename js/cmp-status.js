@@ -12,8 +12,10 @@
  *   이 파일은 **그리기와 조회 조건**만 맡는다.
  *
  *   [권한 — 조회는 열고 조작만 막는다 (§6)]
- *   원자료가 재난안전과 문서 원장이라 조회 범위(scope)를 걸면 그 밖 부서 담당자
- *   에게 0건이 된다(기존 이행 목록과 같은 근거, CLAUDE.md §5). 대신 등록·비해당·
+ *   조회 범위(scope)는 걸지 않는다. 종전 근거는 «원자료가 재난안전과 문서 원장
+ *   이라 걸면 그 밖 부서 담당자에게 0건이 된다» 였으나, 원장이 20개 부서를 갖게
+ *   되면서 그 근거는 사라졌다 — 지금은 **좁힐지가 담양군이 정할 정책**이라 열어
+ *   둔다(CLAUDE.md §5·§12). 대신 등록·비해당·
  *   불러오기는 DYDOCS 의 권한 판정(canUpload·canSetNA)을 그대로 쓴다.
  * ========================================================================= */
 (function (global) {
@@ -69,7 +71,11 @@
         var R = global.DYROLE;
         var mine = (me() && me().deptId && R && me().deptId !== R.OWNER_DEPT) ? myDept() : '';
         S.dept = p.get('dept') != null ? p.get('dept') : mine;
-        if (!p.get('level')) S.level = 'L1';   /* popstate 재진입 — URL 이 곧 상태다 */
+        /* popstate 재진입 — URL 이 곧 상태다. 다만 **부서 조건이 걸리면 L2 다** —
+           군 단위 단계는 특정 부서에 걸리지 않으므로, 부서를 건 채 L1 에 서면
+           «군 단위 103개 중 1개» 같은 무의미한 분모가 나온다(딥링크 ?dept= 와
+           부서 담당자 프리셋 양쪽에서 실제로 재현됐다). */
+        if (!p.get('level')) S.level = S.dept ? 'L2' : 'L1';
         var st = p.get('stage');
         if (st && D().stage(st)) { S.detail = st; S.dyear = +p.get('dyear') || S.year; }
         else S.detail = '';                    /* 파라미터가 없으면 상세도 없다 — 남겨두면 뒤로가기가 닫히지 않는다 */
@@ -145,12 +151,13 @@
             return '<p><b>' + S.year + '년 실적은 예시 자료입니다.</b> 2025년 실측 문서 원장에서 ' +
                 '«작년에 실적이 있던 할 일만, 도래한 회차 안에서» 규칙으로 만든 자료이고(단계 ' +
                 sd.META.stagesSeeded + '개 · 문서 ' + sd.META.docs + '건) 실제 제출 기록이 아닙니다. ' +
-                '<b>' + D().BASE_YEAR + '년으로 바꾸면</b> 재난안전과 문서 원장 실측(문서 ' +
+                '<b>' + D().BASE_YEAR + '년으로 바꾸면</b> 담양군 문서 원장 실측(문서 ' +
                 D().summary(D().BASE_YEAR).docsOfYear.toLocaleString() + '건)을 봅니다.</p>';
         }
         if (S.year === D().BASE_YEAR) {
-            return '<p><b>' + S.year + '년은 재난안전과 문서 원장 실측</b>입니다(문서 ' +
-                D().summary(S.year).docsOfYear.toLocaleString() + '건). ' +
+            return '<p><b>' + S.year + '년은 담양군 문서 원장 실측</b>입니다(문서 ' +
+                D().summary(S.year).docsOfYear.toLocaleString() + '건 · ' +
+                C().deptList().filter(function (x) { return x.inLedger; }).length + '개 부서). ' +
                 sd.META.year + '년으로 바꾸면 예시 자료로 만든 올해 진행 상황을 봅니다.</p>';
         }
         return '';
@@ -290,8 +297,11 @@
     function axisOptions() {
         return C().AXES.map(function (a) { return [a.id, a.id ? a.label : '법령 축 전체']; });
     }
+    /* 필터 옵션은 **표와 같은 명단**이어야 한다 — 표에 23개를 그려 놓고 셀렉트에
+       조직도 11개만 담으면 «보이는데 고를 수 없는» 부서가 12개 생긴다(§12 의
+       «목록에서 지운 행을 select 에 남기지 않는다»의 역방향 사고). */
     function deptOptions() {
-        return [['', '부서 전체']].concat(V().orgDepts().map(function (d) { return [d.name, d.name]; }));
+        return [['', '부서 전체']].concat(C().deptList().map(function (d) { return [d.name, d.name]; }));
     }
     function facClsOptions() {
         var seen = {};
@@ -1556,6 +1566,7 @@
     function openDept(e, name) {
         if (e && e.target && e.target.closest && e.target.closest('a')) return;
         S.dept = name;
+        S.level = 'L2';        /* 부서 조건은 부서 계층에서만 뜻이 선다 */
         S.seg2 = 'stage';
         S.q = '';
         render();
@@ -1788,7 +1799,7 @@
     function srcBreakdown() {
         var by = {};
         D().allDocs().forEach(function (d) { by[d.origin] = (by[d.origin] || 0) + 1; });
-        var L = { ledger: '2025년 재난안전과 문서 원장', v2: '현행 업무문서', seed26: '2026년 예시 자료', user: '이 시스템 등록분' };
+        var L = { ledger: '2025년 담양군 문서 원장', v2: '현행 업무문서', seed26: '2026년 예시 자료', user: '이 시스템 등록분' };
         return Object.keys(L).filter(function (k) { return by[k]; })
             .map(function (k) { return L[k] + ' ' + by[k].toLocaleString() + '건'; }).join(' + ');
     }
@@ -1804,7 +1815,7 @@
             ['원자료', srcBreakdown()],
         ];
         if (D().seedStale && S.year === 2026) {
-            n.push(['자료 성격', '2026년 실적은 예시 자료입니다(규칙 생성) — 2025년은 재난안전과 문서 원장 실측입니다.']);
+            n.push(['자료 성격', '2026년 실적은 예시 자료입니다(규칙 생성) — 2025년은 담양군 문서 원장 실측입니다.']);
         }
         if (S.level === 'L3') {
             n.push(['자료 한계', '시설↔할 일 매핑은 시설 분류에서 파생한 추정이고, 이행상태는 시설 건별이 아니라 그 할 일의 군 단위 판정입니다.']);
