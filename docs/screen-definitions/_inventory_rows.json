@@ -1085,11 +1085,11 @@
     "name": "이행 관리",
     "type": "목록",
     "route": "cmp-status.html",
-    "components": "cmp-status.html, cmp-status.js, cmp-core.js, cmp-dept-docs.js, doc-progress.js, doc-taxonomy-data.js, doc-history-data.js, doc-pick.js, doc-upload.js, facil-data.js",
+    "components": "cmp-status.html, cmp-status.js, cmp-core.js, doc-progress.js, doc-taxonomy-data.js, doc-history-data.js, doc-seed-2026.js, doc-pick.js, doc-upload.js, facil-data.js, cmp-dept-docs.js",
     "existingSfr": "CMP01-T / CMP02-D / CMP04-V",
     "defFile": "SCR-CMP-001_이행관리.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/cmp-status.html",
-    "unresolvedCount": 7
+    "unresolvedCount": 9
   },
   {
     "scrId": "SCR-CMP-002",
@@ -1098,10 +1098,10 @@
     "name": "문서 목록",
     "type": "목록",
     "route": "cmp-docs.html",
-    "components": "cmp-docs.html, cmp-docs.js, cmp-core.js, doc-progress.js, doc-pick.js, doc-upload.js",
+    "components": "cmp-docs.html, cmp-docs.js, cmp-core.js, doc-progress.js, doc-taxonomy-data.js, doc-history-data.js, doc-seed-2026.js, doc-pick.js, doc-upload.js",
     "existingSfr": "DOC01-L / DOC02-D",
     "defFile": "SCR-CMP-002_문서목록.md",
     "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/cmp-docs.html",
-    "unresolvedCount": 3
+    "unresolvedCount": 4
   }
 ]
