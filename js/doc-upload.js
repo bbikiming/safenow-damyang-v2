@@ -233,7 +233,9 @@
             }).join('') + '</div>';
         var help = cur ? D().DIR[cur].help : '받은 문서 · 보낸 문서 · 내부 문서 중 하나를 고르세요';
 
-        var out = '<div class="form-field du-dir-f' + (W.fieldErr['du-dir'] ? ' has-err' : '') + '" id="du-dir">' +
+        /* `du-dir-f` 를 달고 있었으나 CSS 규칙도 JS 선택자 참조도 없었다 —
+           포커스 이동은 `id="du-dir"` 가 담당하므로 클래스는 쓰임이 없다. */
+        var out = '<div class="form-field' + (W.fieldErr['du-dir'] ? ' has-err' : '') + '" id="du-dir">' +
             '<label class="form-label">이 문서는 어떻게 오간 건가요 <span class="du-req">*</span></label>' +
             seg +
             (W.fieldErr['du-dir']
@@ -499,11 +501,16 @@
     }
     /* 오류가 난 첫 칸으로 초점을 옮긴다 — 배너만 띄우면 어디를 고쳐야 할지 모른다 */
     function focusFirstError() {
-        var order = ['du-drop', 'du-title', 'du-date', 'du-org'];
+        /* 화면에 놓인 **순서 그대로** 훑는다 — 위에서 처음 걸리는 것으로 포커스를
+           옮겨야 «어디를 고쳐야 하는지»가 맞는다. 종전에는 `du-dir`(문서 방향)이
+           빠져 있어, 방향만 안 골랐을 때 오류 문구는 뜨는데 포커스가 아무 데도
+           가지 않았다(§8 focus-management). */
+        var order = ['du-drop', 'du-title', 'du-date', 'du-dir', 'du-org'];
         for (var i = 0; i < order.length; i++) {
             if (!W.fieldErr[order[i]]) continue;
             var el = order[i] === 'du-org' ? document.querySelector('#du-org .du-orgbtn')
                    : order[i] === 'du-drop' ? document.querySelector('.upload-drop')
+                   : order[i] === 'du-dir' ? document.querySelector('#du-dir .cmp-seg-btn')
                    : document.getElementById(order[i]);
             if (el) { try { el.focus(); el.scrollIntoView({ block: 'center' }); } catch (e) {} return; }
         }

@@ -3927,6 +3927,11 @@ p > .dx-note-gap { display: inline; }
 
 /* 폼 필드 오류 상태 — 색만으로 말하지 않고 테두리+문구를 함께 준다 */
 .form-field.has-err .form-input, .form-field.has-err .form-select { border-color: var(--status-danger-border); }
+/* 세그먼트로 받는 필드(문서 방향)도 오류를 표시한다 — 종전에는 `.form-input`·
+   `.form-select` 만 노려서, 방향을 안 고르고 [다음]을 누르면 **오류 문구는 뜨는데
+   어느 칸이 문제인지 표시되지 않았다.** 그 필드에 `du-dir-f` 라는 클래스가 붙어
+   있었으나 규칙이 없어 아무 일도 하지 않았다(§8 error-placement). */
+.form-field.has-err .cmp-seg { border-color: var(--status-danger-border); }
 .du-owner.has-err .du-orgbtn { border-color: var(--status-danger-border); }
 
 /* =========================================================================
@@ -4707,3 +4712,96 @@ p > .dx-note-gap { display: inline; }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   vertical-align: bottom;
 }
+
+/* =========================================================================
+ * 업무 업로드 마법사 — 컨테이너 (2026-08-25)
+ * -------------------------------------------------------------------------
+ * 자식(du-steps · du-pick-lead · du-conf-meta · du-pre-tbl …)은 전부 자체
+ * 여백을 갖는데 **감싸는 컨테이너에만 규칙이 없었다.** 눈에 띄는 깨짐은 없지만
+ * 마지막 자식의 아래 여백이 모달 본문 패딩(24px)과 겹쳐 바닥만 넓어진다.
+ * 컨테이너가 그 한 가지를 맡는다.
+ * ========================================================================= */
+.du-wrap > :last-child,
+.du-pick > :last-child,
+.du-conf > :last-child,
+.du-pre > :last-child { margin-bottom: 0; }
+
+/* 확인(STEP3) 표 — 「어떤 의무·무슨 일」이 길고 나머지 두 열은 상태 칩뿐이다.
+   폭을 정하지 않으면 칩 열이 내용보다 넓게 벌어져 첫 열이 눌린다. */
+.du-conf-tbl { table-layout: fixed; width: 100%; }
+.du-conf-tbl th:nth-child(2), .du-conf-tbl td:nth-child(2),
+.du-conf-tbl th:nth-child(3), .du-conf-tbl td:nth-child(3) { width: 92px; }
+
+/* =========================================================================
+ * 문서 상세(업무문서) — 컨테이너 (2026-08-25)
+ *   업무 업로드 마법사와 같은 상태였다 — 자식(dd-head-chips · dd-del-list ·
+ *   dd-del-warn)은 정의됐는데 감싸는 쪽에만 규칙이 없었다.
+ * ========================================================================= */
+.dd-head > :last-child,
+.dd-del > :last-child { margin-bottom: 0; }
+
+/* 업무단계 표 — 「이행항목 / 업무단계」가 길고 나머지 세 열은 짧다.
+   폭을 정하지 않으면 주기·상태 열이 내용보다 벌어져 이름 열이 눌린다. */
+.dd-stages { table-layout: fixed; width: 100%; }
+.dd-stages th:nth-child(2), .dd-stages td:nth-child(2) { width: 132px; }
+.dd-stages th:nth-child(3), .dd-stages td:nth-child(3) { width: 96px; }
+.dd-stages th.col-action, .dd-stages td.col-action { width: 116px; }
+
+/* =========================================================================
+ * 미정의 컨테이너 일괄 (2026-08-25 감사)
+ * -------------------------------------------------------------------------
+ * 자식은 정의됐는데 **감싸는 쪽에만 규칙이 없던** 것들. 눈에 띄는 깨짐은
+ * 없지만 마지막 자식의 아래 여백이 부모 패딩과 겹쳐 바닥만 넓어진다.
+ * (같은 성질의 du-* · dd-* 는 위에서 처리했다.)
+ * ========================================================================= */
+.adml-fam > :last-child,
+.adml-law > :last-child,
+.dl-merge > :last-child,
+.dl-remap > :last-child,
+.dx-mod > :last-child,
+.lawpick-group > :last-child { margin-bottom: 0; }
+
+/* 빈 상태의 제목·부제 — `.v2-empty` 는 표준 계열인데 **그 안의 제목과 부제에
+   규칙이 없어** 셋이 같은 크기·같은 색으로 보였다(§7 표준 컴포넌트). */
+.v2-empty-title {
+  margin-bottom: var(--sp-1);
+  font-size: var(--fs-14); font-weight: var(--fw-semibold); color: var(--text-black);
+}
+.v2-empty-sub { font-size: var(--fs-12); color: var(--text-gray); line-height: 1.7; }
+
+/* 「조회」·「미첨부」처럼 **값이 없거나 할 수 없음**을 알리는 짧은 표시.
+   규칙이 없어 본문과 같은 크기로 붙어 있었다. */
+.dchk-ro,
+.sh-pill-none { font-size: var(--fs-12); color: var(--text-gray); }
+
+/* 규칙 없는 의미 훅 — 스타일을 주면 안 되는 것들. 검사에서 «빠뜨린 것»으로
+   오인하지 않도록 여기 남긴다(§7-1 `.rskdoc-send` 와 같은 처리).
+   · dy-ntf-wrap / dy-role-wrap : 인라인 style(position:relative) + id 로 제어
+   · rskdoc-status              : 동결된 위험성평가 공문과 공유 — 값을 주면 그쪽이 움직인다 */
+.dy-ntf-wrap, .dy-role-wrap, .rskdoc-status { /* 의도적으로 규칙 없음 */ }
+
+/* ── 감사 잔여 (2026-08-25) ──────────────────────────────────────────────
+ * 위와 같은 훑기에서 남은 것들. 성격이 둘로 갈려 따로 적는다. */
+
+/* (1) 값이 필요했던 것 */
+/* 권한이 없는 메뉴 행 — 표시가 없어 **권한 있는 행과 똑같이 보였다.**
+   색만으로 말하지 않도록 흐림과 함께 배경도 낮춘다(§1 color-not-only 보완). */
+.admm-noperm-row > td { color: var(--text-gray); background: var(--surface-alt); }
+/* 「확인되지 않았습니다」 — 본문과 같은 크기로 붙어 있었다 */
+.lawinfo-soon-note { font-size: var(--fs-12); color: var(--text-gray); }
+/* 담당자 이름 + 기간 — 이름이 앞서고 기간이 뒤따르는 한 줄 */
+.wk-up-name { font-size: var(--fs-13); font-weight: var(--fw-semibold); color: var(--text-black); }
+
+/* (2) 컨테이너 — 마지막 자식 여백만 */
+.dsh-hero-main > :last-child,
+.pol-wrap > :last-child,
+.pol-detail-info > :last-child { margin-bottom: 0; }
+
+/* (3) 규칙 없는 의미 훅 — **JS 가 값을 읽는 선택자**다. 스타일을 주면 안 되는
+   것이 아니라 줄 이유가 없다(입력 폭 등은 인라인 style 이 이미 잡는다).
+   검사에서 «빠뜨린 것»으로 오인하지 않도록 여기 남긴다.
+   · cb-area/item/type/basis : menu.js 가 점검표 값을 읽는다
+   · mf-decision             : 경영방침 결정문 입력값을 읽는다
+   · cb-stat                 : chip-mini 위 modifier(기반이 스타일을 갖는다)
+   · sl-thead                : setlist.js — 살아 있는 소비처가 없다(CLAUDE.md §5) */
+.cb-area, .cb-item, .cb-type, .cb-basis, .mf-decision, .cb-stat, .sl-thead { /* 의도적으로 규칙 없음 */ }
