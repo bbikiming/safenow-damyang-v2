@@ -419,13 +419,16 @@
                     ' ' + mapChip(d) +
                 '</p>' +
             '</header>' +
+            /* 문서 정보는 **열에 가두지 않는다** — 문서 전체에 대한 값이라 한쪽 열에
+               넣으면 좌우가 갈린다(실측 왼쪽 704 / 오른쪽 148). 2열 위에 전폭으로
+               두고, 항목이 많지 않으므로 가로로 흐르게 한다. */
+            '<div class="card-body cmp-meta-wrap">' + metaBlock(d) + '</div>' +
             '<div class="card-body cmp-two cmp-two-doc">' +
                 '<div class="cmp-two-l">' +
                     '<h3 class="cmp-detail-h3">결재 완료 문서</h3>' +
                     '<div class="v2-empty cmp-pdf"><b>PDF 미보유 (온나라 연동 전)</b>' +
                         '<p>이 시스템에는 문서명·수발신자·보고일자·생산등록번호만 있습니다. ' +
                         '결재 완료본을 여기서 보려면 온나라 연동이 필요합니다 — 그럴듯한 미리보기를 대신 그리지 않습니다.</p></div>' +
-                    metaBlock(d) +
                 '</div>' +
                 '<div class="cmp-two-r">' +
                     (past ? carryCard(d) : '') +
@@ -467,8 +470,12 @@
     function presetLink(d) {
         var src = D().docById(d.presetOf);
         if (!src) return '<span class="cmp-dim">' + esc(d.presetOf) + ' (원본을 찾을 수 없음)</span>';
-        return '<button type="button" class="du-link" onclick="CMPDOC.openDoc(\'' + esc(src.id) + '\')">' +
-            esc(src.year) + '년 «' + esc(src.title) + '»</button>';
+        /* 제목이 길면 세 줄로 접혀 dl 이 흐트러진다 — 한 줄로 자르고 전체는
+           title 로 남긴다(§6 truncation-strategy — 자를 때는 전체를 볼 수단을 준다). */
+        return '<button type="button" class="du-link cmp-preset-link"' +
+            ' title="' + esc(src.year) + '년 ' + esc(src.title) + '"' +
+            ' onclick="CMPDOC.openDoc(\'' + esc(src.id) + '\')">' +
+            esc(src.year) + '년 ' + esc(src.title) + '</button>';
     }
 
     /* 회수 경로 — 등록만 있고 지울 수단이 없으면 시연을 반복할수록 데이터가 쌓인다

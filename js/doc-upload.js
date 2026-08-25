@@ -882,10 +882,17 @@
            만들고 나면 한 건씩 찾아 지우는 수밖에 없었다(§4 «CRUD 는 회수 경로까지»).
            원본은 건드리지 않는다 — 지우는 것은 방금 만든 사본뿐이다. */
         _undo = docs.map(function (d) { return d.id; });
+        /* 순서가 곧 배치다 — 되돌리기가 **맨 앞**이어야 `margin-right:auto` 가
+           그 뒤를 전부 오른쪽으로 민다. 가운데 두면 앞 버튼까지 왼쪽 그룹이
+           되어 [닫기][되돌리기] … [열기] 라는 어색한 묶음이 나온다.
+           결과: [되돌리기] ……… [닫기] [열기] */
         var foot =
-            '<button type="button" class="btn btn-outline" onclick="DYV2.closeModal()">닫기</button>' +
-            '<button type="button" class="btn btn-outline du-undo" onclick="DOCUP.undoSaved()">' +
+            /* 이 창을 닫으면 **일괄** 되돌리기 수단이 사라진다(문서별 삭제는 상세에
+               남는다). 닫고 나서 찾게 하지 않으려면 버튼이 그 사실을 말해야 한다. */
+            '<button type="button" class="btn btn-outline du-undo" onclick="DOCUP.undoSaved()"' +
+                ' title="한 번에 되돌릴 수 있는 것은 지금뿐입니다 — 이 창을 닫으면 문서별로 지워야 합니다.">' +
                 '방금 만든 ' + docs.length + '건 되돌리기</button>' +
+            '<button type="button" class="btn btn-outline" onclick="DYV2.closeModal()">닫기</button>' +
             '<a class="btn btn-primary" href="' + esc(detailHref(docs[0], o.backTo)) + '">' +
                 (one ? '문서 상세 보기 →' : '첫 문서 열기 →') + '</a>';
         V().openModal(o.title || '등록 완료', body, foot);
