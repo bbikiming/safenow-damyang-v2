@@ -1222,7 +1222,7 @@
     function pullRun() {
         var ids = Object.keys(P.sel);
         if (!ids.length) { V().toast('불러올 문서를 하나 이상 고르세요.'); return; }
-        var ok = 0, skip = 0, fail = '';
+        var ok = 0, skip = 0, fail = '', madeDocs = [];
         ids.forEach(function (id) {
             var src = D().docById(id); if (!src) return;
             if (pulledInto(id, P.to)) { skip++; return; }   /* 저장 직전에 한 번 더 — 모달이 열린 사이 생겼을 수 있다 */
@@ -1238,6 +1238,11 @@
             var r = D().addDocument({
                 title: title,
                 sr: P.fields.sr ? src.sr : '',
+                /* 방향(받은/보낸/내부)도 이어받는다 — 같은 업무를 같은 곳과 다시
+                   주고받는 것이 불러오기의 전제다. 종전에는 이 줄이 없어 상대
+                   기관은 따라오는데 방향만 «미상»이 됐다(업무 업로드 프리셋
+                   경로는 넘기고 있어 같은 일을 하는 두 경로가 갈려 있었다). */
+                dir: (P.fields.sr && src.dir) ? src.dir : null,
                 date: P.fields.date && src.date ? String(src.date).replace(String(P.from), String(P.to)) : P.to + '-01-01',
                 year: P.to,
                 stageIds: stages,
@@ -1249,14 +1254,27 @@
                       '. 본문·결재문서는 복제하지 않습니다(온나라 연동 전).',
                 presetOf: id,
             });
-            if (r.ok) ok++; else fail = r.reason;
+            if (r.ok) { ok++; madeDocs.push(r.doc); } else fail = r.reason;
         });
+        var TO = P.to;
         V().closeModal(true);
         P = null;
         render();
-        var msg = ok ? ok + '건을 ' + S.dyear + '년 문서로 만들었습니다 (메타데이터만 복사).' : (fail || '만들지 못했습니다.');
-        if (skip) msg += ' 이미 불러온 ' + skip + '건은 건너뛰었습니다.';
-        V().toast(msg);
+        if (!ok) { V().toast(fail || '만들지 못했습니다.'); return; }
+        /* 만든 문서로 갈 수 있게 결과 화면을 준다 — 종전에는 토스트만 내고 끝나
+           «방금 만든 것»을 목록에서 다시 찾아야 했다. 결과 화면은 DOCUP 한 곳에
+           있고(§7), backTo 로 이 화면을 넘겨 상세에서 여기로 돌아온다. */
+        if (global.DOCUP && global.DOCUP.saved) {
+            global.DOCUP.saved(madeDocs, {
+                title: TO + '년 문서로 만들었습니다',
+                lead: ok + '건을 ' + TO + '년 문서로 만들었습니다.',
+                note: skip ? '이미 불러온 <b>' + skip + '건</b>은 건너뛰었습니다.' : null,
+                backTo: 'cmp-status.html' + location.search,
+            });
+            return;
+        }
+        V().toast(ok + '건을 ' + TO + '년 문서로 만들었습니다.' +
+            (skip ? ' 이미 불러온 ' + skip + '건은 건너뛰었습니다.' : ''));
     }
 
     /* =========================================================================

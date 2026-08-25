@@ -569,7 +569,12 @@
         /* 업무 관리(신) — 저장 뒤 낡은 화면을 남기지 않는다(같은 가드 패턴) */
         if (global.CMPST && global.CMPST.render) global.CMPST.render();
         if (global.CMPDOC && global.CMPDOC.render) global.CMPDOC.render();
-        V().toast((extra ? extra + ' ' : '') + '업무 등록 완료 — 업무단계 ' + doc.stageIds.length + '개가 진행중이 되었습니다.');
+        saved([doc], {
+            title: '서류를 올렸습니다',
+            lead: '«' + doc.title + '» 을 등록했습니다.',
+            note: (extra ? esc(extra) + ' ' : '') +
+                  '할 일 <b>' + (doc.stageIds || []).length + '개</b>가 진행중이 되었습니다.',
+        });
     }
 
     /* =========================================================================
@@ -751,6 +756,62 @@
     /* 저장 뒤에는 확인 없이 닫는다 */
     function closePresetDone() { V().clearModalGuard(); V().closeModal(true); P = null; }
 
+    /* =========================================================================
+     * 등록 결과 — 만든 문서로 가는 길을 준다 (2026-08-25 신설)
+     * -------------------------------------------------------------------------
+     * 종전에는 등록·불러오기·프리셋이 전부 **토스트만 내고 끝났다.** 방금 만든
+     * 문서가 어떤 것인지, 어디서 볼 수 있는지 알 방법이 없었다 — 목록으로 돌아가
+     * 검색해 찾아야 했다. 문서 상세의 «올해 이어받기»만 예외적으로 상세로
+     * 이동하고 있었는데, 같은 일을 하는 네 경로가 서로 다르게 끝난 셈이다.
+     *
+     * **자동으로 튕기지 않는다.** 이행 관리에서 불러온 사람은 그 화면에 남고 싶을
+     * 수 있어, 강제 이동하면 하던 일의 맥락을 잃는다. 대신 «갈 수 있게» 한다 —
+     * 1건이면 주 버튼이 곧 그 문서이고, 여러 건이면 목록에서 고른다.
+     *
+     * 화면마다 결과 화면을 새로 짜지 않는다(§7 계열 신설 금지). 네 화면이 모두
+     * 이 모듈을 로드하므로 여기 한 곳에 둔다.
+     *
+     *   docs : addDocument 가 돌려준 문서 객체 배열
+     *   opts : { title, lead, note, backTo }
+     *          backTo — 돌아올 화면(`cmp-status.html?year=2025` 등). 상세에서
+     *          «뒤로»가 온 곳을 가리키게 한다. 생략하면 지금 화면.
+     * ========================================================================= */
+    function detailHref(doc, backTo) {
+        var back = backTo || (location.pathname.split('/').pop() + location.search);
+        return 'doc-detail.html?id=' + encodeURIComponent(doc.id) +
+               '&back=' + encodeURIComponent(back);
+    }
+    function saved(docs, opts) {
+        docs = (docs || []).filter(Boolean);
+        var o = opts || {};
+        if (!docs.length) { V().toast(o.note || '만들어진 문서가 없습니다.'); return; }
+        var one = docs.length === 1;
+        var body =
+            '<div class="du-saved">' +
+                '<p class="du-saved-lead"><b>' + esc(o.lead || (docs.length + '건을 등록했습니다.')) + '</b></p>' +
+                (o.note ? '<p class="du-saved-note">' + o.note + '</p>' : '') +
+                '<ul class="du-saved-list">' +
+                docs.map(function (d) {
+                    var stg = (d.stageIds || []).length;
+                    return '<li class="du-saved-item">' +
+                        '<a class="du-saved-t" href="' + esc(detailHref(d, o.backTo)) + '">' + esc(d.title) + '</a>' +
+                        '<span class="du-saved-m">' + esc(d.id) +
+                        (stg ? ' · 할 일 ' + stg + '개' : ' · 할 일 미지정') +
+                        ((d.files || []).length ? ' · 첨부 ' + d.files.length + '건' : '') + '</span>' +
+                    '</li>';
+                }).join('') +
+                '</ul>' +
+                /* 지금 상태를 한 줄로 — «등록했다»만으로는 다음에 무엇이 남았는지 모른다 */
+                '<p class="du-saved-next">올린 서류는 <b>진행중</b>입니다. 재난안전과 담당자가 확인하면 완료가 됩니다.</p>' +
+            '</div>';
+        var foot =
+            '<button type="button" class="btn btn-outline" onclick="DYV2.closeModal()">닫기</button>' +
+            (one
+                ? '<a class="btn btn-primary" href="' + esc(detailHref(docs[0], o.backTo)) + '">문서 상세 보기 →</a>'
+                : '<a class="btn btn-primary" href="' + esc(detailHref(docs[0], o.backTo)) + '">첫 문서 열기 →</a>');
+        V().openModal(o.title || '등록 완료', body, foot);
+    }
+
     function runPreset() {
         var ids = Object.keys(P.sel);
         if (!ids.length) return;
@@ -767,7 +828,7 @@
         /* 가져온 문서의 담당자는 **가져온 사람 본인**이다 — 전년도 담당자를 그대로
            복제하면 남의 이름으로 새 연도 문서를 만드는 것이 된다(소유권 규칙). */
         var OWNER = me();
-        var made = 0, missing = 0, denied = 0;
+        var made = 0, missing = 0, denied = 0, madeDocs = [];
         ids.forEach(function (id) {
             var src = D().docById(id); if (!src) return;
             var c = P.sel[id];
@@ -798,6 +859,7 @@
             });
             if (!res.ok) { denied++; return; }
             var doc = res.doc;
+            madeDocs.push(doc);
             D().store().presets.push({
                 id: 'PRESET-' + FROM + '-' + id, sourceYear: FROM, targetYear: TO,
                 sourceDocumentId: id, newDocumentId: doc.id, stageIds: src.stageIds.slice(),
@@ -811,9 +873,13 @@
         if (global.DOCLIST && global.DOCLIST.render) global.DOCLIST.render();
         if (global.CMPST && global.CMPST.render) global.CMPST.render();
         if (global.CMPDOC && global.CMPDOC.render) global.CMPDOC.render();
-        V().toast(made + '건을 ' + TO + '년으로 가져왔습니다.' +
-            (missing ? ' ' + missing + '건은 원본 첨부가 없어 «원본 파일 확인 필요»로 남았습니다.' : '') +
-            (denied ? ' ' + denied + '건은 소유권 검증에 걸려 만들지 않았습니다.' : ''));
+        var warn = (missing ? missing + '건은 원본 첨부가 없어 <b>원본 파일 확인 필요</b>로 남았습니다. ' : '') +
+                   (denied ? denied + '건은 소유권 검증에 걸려 만들지 않았습니다. ' : '');
+        saved(madeDocs, {
+            title: FROM + '년 문서를 ' + TO + '년으로 가져왔습니다',
+            lead: made + '건을 ' + TO + '년 문서로 만들었습니다.',
+            note: warn || null,
+        });
     }
 
     global.DOCUP = {
@@ -824,5 +890,7 @@
         openPreset: openPreset, closePreset: closePreset, runPreset: runPreset, dirty: dirty,
         setPreF: setPreF, resetPreF: resetPreF, prePage: prePage,
         selDoc: selDoc, clearSel: clearSel, expand: expand, setOne: setOne, setBulk: setBulk,
+        /* 등록 결과 화면 — 다른 화면(cmp-status 불러오기 등)이 함께 쓴다 */
+        saved: saved, detailHref: detailHref,
     };
 }(window));

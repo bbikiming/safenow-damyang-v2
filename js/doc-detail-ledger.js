@@ -23,11 +23,28 @@
         return !!d && d.origin !== 'v2';
     }
 
-    function backHref() {
-        var p = new URLSearchParams(location.search);
-        var b = p.get('back') || '';
-        return 'docs-preset.html' + (b && b.charAt(0) === '?' ? b : '');
+    /* ── 돌아갈 곳 ─────────────────────────────────────────────────────────
+     * 종전에는 `back` 이 **쿼리스트링만** 담고 목적지가 `docs-preset.html` 로
+     * 고정이라, 이행 관리·이행 목록에서 문서를 열고 돌아가면 **온 적 없는 업무
+     * 목록**으로 튕겼다. 문서를 여는 화면이 넷이므로 목적지도 함께 받는다.
+     *
+     * **허용 목록으로 제한한다** — `back` 은 URL 파라미터라 아무 값이나 들어올
+     * 수 있고, 그대로 `location.href` 에 넣으면 외부로 튕기는 통로가 된다.
+     * 기존 «? 로 시작하는 값»은 업무 목록의 쿼리로 그대로 해석한다(무수정 호환). */
+    var BACKS = {
+        'docs-preset.html': '업무 목록',
+        'docs-exec.html': '이행 목록',
+        'cmp-status.html': '이행 관리',
+        'cmp-docs.html': '문서 목록',
+    };
+    function backTarget() {
+        var b = new URLSearchParams(location.search).get('back') || '';
+        if (b.charAt(0) === '?') return { href: 'docs-preset.html' + b, label: BACKS['docs-preset.html'] };
+        var file = b.split('?')[0].split('#')[0];
+        if (BACKS[file]) return { href: b, label: BACKS[file] };
+        return { href: 'docs-preset.html', label: BACKS['docs-preset.html'] };
     }
+    function backHref() { return backTarget().href; }
 
     function render() {
         doc = D().docById(docId);
@@ -36,14 +53,16 @@
         var bc = document.getElementById('dd-breadcrumb');
         if (!doc) {
             main.innerHTML = '<div class="card"><div class="card-body"><div class="v2-empty">' +
-                '<b>문서를 찾을 수 없습니다.</b><br><a href="' + backHref() + '">업무 목록으로 돌아가기</a></div></div></div>';
+                '<b>문서를 찾을 수 없습니다.</b><br><a href="' + esc(backHref()) + '">' +
+                esc(backTarget().label) + '으로 돌아가기</a></div></div></div>';
             if (side) side.innerHTML = '';
             return;
         }
         document.title = doc.title + ' - 담양군 중대재해예방통합관리시스템 v2';
+        var back = backTarget();
         bc.innerHTML =
             '<a href="docs-preset.html">업무문서</a>' +
-            '<span class="dd-bc-sep">›</span><a href="' + backHref() + '">업무 목록</a>' +
+            '<span class="dd-bc-sep">›</span><a href="' + esc(back.href) + '">' + esc(back.label) + '</a>' +
             '<span class="dd-bc-sep">›</span><span class="dd-bc-cur">' + esc(doc.title) + '</span>';
         main.innerHTML = head() + body();
         if (side) side.innerHTML = aside();
