@@ -4262,7 +4262,6 @@ p > .dx-note-gap { display: inline; }
 .cmp-table tr.cmp-rowlink:hover td { background: var(--brand-50); }
 .cmp-table tr.cmp-grp td { font-weight: var(--fw-bold); color: var(--text-black); border-bottom: 1px solid var(--card-line); padding-top: 11px; padding-bottom: 11px; font-size: var(--fs-13); }
 .cmp-table tr.cmp-stg td { vertical-align: middle; padding-top: 12px; padding-bottom: 12px; }
-.cmp-table tr.cmp-lawrow td { background: var(--surface-alt); }
 .cmp-table tr.cmp-missing td { color: var(--text-gray); font-size: var(--fs-12); background: var(--surface-alt); }
 /* 그룹 행 — 하위 할 일의 «부모»임이 한눈에 보여야 한다.
    좌측 강조선 + 이름/코드/요약을 한 줄에 모아 시선 이동을 줄인다. */
@@ -4288,7 +4287,6 @@ p > .dx-note-gap { display: inline; }
 /* 분류 확신도가 낮은 문서 표시 — 단계 칩 옆에 붙으므로 줄바꿈을 막는다 */
 .cmp-weak { white-space: nowrap; }
 .cmp-c-dc { width: 76px; }
-.cmp-c-law { width: 52px; text-align: center; }
 /* 수행 위치 열 — 업무유형 축(2026-08-18). 목록에서 «어디서 하는 일인지»를 읽는다 */
 .cmp-c-way { width: 14%; min-width: 96px; }
 /* 실측 원장 집계 — 등록분과 시각으로 구분한다(수치 뜻이 다르다) */
@@ -4339,12 +4337,6 @@ p > .dx-note-gap { display: inline; }
 .cmp-slink:hover { color: var(--main-dark); text-decoration: underline; }
 .cmp-slink:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
 .cmp-scode { display: block; margin-top: 4px; font-size: var(--fs-12); color: var(--text-gray); line-height: 1.5; }
-.cmp-law-btn {
-  min-width: 32px; min-height: 32px; padding: 0;
-  border: 0; background: none; cursor: pointer;
-  font-family: inherit; font-size: var(--fs-14); color: var(--main-dark);
-}
-.cmp-law-btn:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
 .cmp-fchips .chip-status { margin: 1px 3px 1px 0; }
 /* 단계명이 긴 칩은 셀보다 길어진다 — nowrap 이면 셀 밖으로 넘쳐 잘린다(1024 실측).
    칩 안에서 줄바꿈시켜 셀 폭 안에 담는다. */

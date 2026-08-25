@@ -38,7 +38,6 @@
         q: '', cycle: '', st: '', axis: '', dept: '', facCls: '', way: '',
         adv: false,           /* 상세 조건 펼침 — 값이 걸리면 advOpen() 이 자동 true */
         open: {},               /* itemId → 펼침 */
-        law: {},                /* stageId → 법령 인라인 펼침 */
         detail: '',             /* 이행 상세 대상 stageId */
         dyear: 0,               /* 이행 상세의 연도 셀렉터 */
         gapSel: {},             /* 누락 점검 일괄 선택 */
@@ -499,7 +498,6 @@
                     '<span class="cmp-gcode">' + esc(it.id) + '</span>' +
                     '<span class="cmp-gsum' + (ok === g.length ? ' is-full' : '') + '">이행 ' + ok + '/' + g.length + '</span></td>' +
                 '<td class="cmp-num cmp-gm">' + docs + '건</td>' +
-                '<td></td>' +
             '</tr>';
             if (!open) return head;
             return head + g.map(stageRow).join('');
@@ -507,7 +505,7 @@
         return '<div class="cmp-wrap"><table class="table-figma table-compact cmp-table"><thead><tr>' +
             '<th class="cmp-c-main">할 일(업무단계)</th><th class="cmp-c-cy">이행주기</th><th class="cmp-num cmp-c-rd">회차</th>' +
             '<th class="cmp-c-st">이행상태</th><th class="cmp-c-way">수행 위치</th><th class="cmp-c-ac">수행 주체</th>' +
-            '<th class="cmp-num cmp-c-dc">문서</th><th class="cmp-c-law">법령</th>' +
+            '<th class="cmp-num cmp-c-dc">문서</th>' +
         '</tr></thead><tbody>' + rows + '</tbody></table></div>' + derivedCap();
     }
 
@@ -527,8 +525,7 @@
             '<td class="cmp-c-way">' + wayChip(s) + '</td>' +
             '<td class="cmp-c-ac">' + esc(String(s.actor || '—').split('·')[0].trim()) + '</td>' +
             '<td class="cmp-num' + (j.docs ? '' : ' cmp-dim') + '">' + j.docs + '건</td>' +
-            '<td class="cmp-c-law">' + lawBtn(s) + '</td>' +
-        '</tr>' + lawRow(s);
+        '</tr>';
     }
     /* 수행 위치 칩 — 어디서 하는 일인지 목록에서 바로 읽힌다.
        초안(DRAFT)·미정(UNKNOWN)은 물음표를 달아 «확정 아님»을 숨기지 않는다. */
@@ -546,29 +543,6 @@
     function chip(j) {
         if (!j) return '';
         return '<span class="chip-status chip-sm ' + j.tone + '">' + j.glyph + ' ' + esc(j.label) + '</span>';
-    }
-    /* 법령 ⓘ 는 hover 툴팁이 아니라 **행 아래 인라인 펼침**이다(§7 · CLAUDE.md §1) */
-    function lawBtn(s) {
-        var on = !!S.law[s.id];
-        return '<button type="button" class="cmp-law-btn" aria-expanded="' + (on ? 'true' : 'false') +
-            '" aria-label="' + esc(s.name) + ' 법령 근거" onclick="CMPST.toggleLaw(\'' + esc(s.id) + '\')">ⓘ</button>';
-    }
-    function lawRow(s) {
-        if (!S.law[s.id]) return '';
-        var cy = C().cycleOf(s);
-        return '<tr class="cmp-lawrow"><td colspan="8">' +
-            '<div class="lawinfo-inline">' +
-                '<dl class="cmp-dl">' +
-                    '<div><dt>법령근거</dt><dd>' + lawCell(s.law) + '</dd></div>' +
-                    '<div><dt>법정주기</dt><dd>' + esc(s.legalCycle || '정기주기 없음') +
-                        (s.opCycle ? ' <span class="cmp-dim">· 재난안전과 운영주기 ' + esc(s.opCycle) + '</span>' : '') + '</dd></div>' +
-                    '<div><dt>수행시점조건</dt><dd>' + (s.timing ? esc(s.timing) : '<span class="cmp-dim">—</span>') + '</dd></div>' +
-                '</dl>' +
-                (cy.need > 0
-                    ? '<p class="cmp-cap">회차 기한은 달력 말일 <b>추정</b>입니다 — 공문에 적힌 실제 기한이 아닙니다.</p>'
-                    : '') +
-            '</div>' +
-        '</td></tr>';
     }
     /* 근거 표기는 화면이 조립하지 않는다 — DYLAW 로 해석하고, 스냅샷에 없는
        조문은 지어내지 않고 '조문 미연결'로 밝힌다(CLAUDE.md §10). */
@@ -736,21 +710,17 @@
                 '<td class="cmp-c-cy' + (cy.need ? '' : ' cmp-dim') + '">' + esc(cy.label) + '</td>' +
                 '<td><div class="cmp-dots">' + dots + '</div></td>' +
                 '<td class="cmp-num' + (ap ? '' : ' cmp-dim') + '">' + (ap ? done + ' / ' + ap : '—') + '</td>' +
-                '<td class="cmp-c-law">' + lawBtn(s) + '</td></tr>' + lawRowSpan(s, 5);
+                '</tr>';
         }).join('');
         return '<div class="cmp-wrap"><table class="table-figma table-compact cmp-table"><thead><tr>' +
             '<th class="cmp-c-main">할 일(업무단계)</th><th class="cmp-c-cy">이행주기</th><th class="cmp-c-dots-h">부서 이행 현황</th>' +
-            '<th class="cmp-num cmp-c-n2">이행 부서</th><th class="cmp-c-law">법령</th>' +
+            '<th class="cmp-num cmp-c-n2">이행 부서</th>' +
         '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
         '<p class="cmp-legend cmp-cap"><span class="cmp-dot-k"><i class="ok"></i> 이행</span>' +
             '<span class="cmp-dot-k"><i class="na"></i> 적용(추정) · 서류 없음</span>' +
             '<span class="cmp-dot-k"><i class="extra"></i> 추정 밖인데 서류 있음</span>' +
             '<span class="cmp-dot-k"><i></i> 적용 대상 아님(추정)</span>' +
             ' 부서 ' + depts.length + '개 — 「이행 부서」의 분모는 <b>적용대상 문구 추정</b>입니다.</p>';
-    }
-    function lawRowSpan(s, span) {
-        if (!S.law[s.id]) return '';
-        return lawRow(s).replace('colspan="7"', 'colspan="' + span + '"');
     }
 
     /* ── L3 관리대상별 보기 ─────────────────────────────────────────────────
@@ -1607,7 +1577,6 @@
         } else S.open[id] = !cur;
         render();
     }
-    function toggleLaw(id) { S.law[id] = !S.law[id]; render(); }
     function toggleAdv() { S.adv = !advOpen(); render(); }
     function setDetailYear(y) { S.dyear = +y || S.year; docReset(); render(); }
     /* ── 이행 상세의 문서 목록 — 조건·쪽 ──────────────────────────────────
@@ -1975,7 +1944,7 @@
     global.CMPST = {
         init: init, render: render,
         setF: setF, resetF: resetF, setTab: setTab, setLevel: setLevel, setSeg: setSeg,
-        toggleItem: toggleItem, toggleLaw: toggleLaw, toggleAdv: toggleAdv,
+        toggleItem: toggleItem, toggleAdv: toggleAdv,
         openDetail: openDetail, closeDetail: closeDetail, setDetailYear: setDetailYear, rowOpen: rowOpen,
         openDept: openDept, openItem: openItem,
         docGo: docGo, docF: docF, docClear: docClear,
