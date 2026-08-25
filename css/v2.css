@@ -4269,6 +4269,11 @@ p > .dx-note-gap { display: inline; }
 .cmp-c-rd { width: 92px; }
 .cmp-c-st { width: 104px; }
 .cmp-c-ac { width: 140px; font-size: var(--fs-13); color: var(--text-gray); line-height: 1.5; }
+/* 문서 목록의 부서 열 — 원장이 20개 부서를 갖게 되면서 생긴 열이다.
+   가장 긴 이름이 「농업기술센터미래농업연구단」이라 두 줄까지 허용한다. */
+.cmp-c-dept2 { width: 116px; font-size: var(--fs-13); color: var(--text-gray); line-height: 1.4; }
+/* 분류 확신도가 낮은 문서 표시 — 단계 칩 옆에 붙으므로 줄바꿈을 막는다 */
+.cmp-weak { white-space: nowrap; }
 .cmp-c-dc { width: 76px; }
 .cmp-c-law { width: 52px; text-align: center; }
 /* 수행 위치 열 — 업무유형 축(2026-08-18). 목록에서 «어디서 하는 일인지»를 읽는다 */
@@ -4347,10 +4352,15 @@ p > .dx-note-gap { display: inline; }
 .cmp-dots i { display: block; width: 11px; height: 11px; border-radius: var(--radius-xs); background: var(--gray-200); }
 .cmp-dots i.ok { background: var(--main); }
 .cmp-dots i.na { background: var(--status-warning-border); }
+/* 추정 밖인데 서류가 있는 칸 — 적용대상 추정이 틀렸다는 표시라 «이행»과 다른 색이어야 한다 */
+.cmp-dots i.extra { background: var(--surface); border: 2px solid var(--main); }
 .cmp-dot-k { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; }
 .cmp-dot-k i { display: inline-block; width: 9px; height: 9px; border-radius: var(--radius-xs); background: var(--gray-200); }
 .cmp-dot-k i.ok { background: var(--main); }
 .cmp-dot-k i.na { background: var(--status-warning-border); }
+.cmp-dot-k i.extra { background: var(--surface); box-shadow: inset 0 0 0 2px var(--main); }
+.cmp-srctag { margin-left: 6px; vertical-align: middle; }
+.cmp-warn { color: var(--status-warning-fg); font-weight: var(--fw-600); }
 
 /* ── 범례 ─────────────────────────────────────────────────────────────── */
 .cmp-legend { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin: 10px 0 0; font-size: var(--fs-12); color: var(--text-gray); }

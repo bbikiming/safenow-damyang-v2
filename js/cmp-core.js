@@ -27,6 +27,7 @@
     var V = function () { return global.DYV2; };
     var D = function () { return global.DYDOCS; };
     var T = function () { return global.DYDOCT || { ITEMS: [], STAGES: [] }; };
+    var V = function () { return global.DYV2 || { orgDepts: function () { return []; } }; };
 
     /* =========================================================================
      * 1. 계층 파생 (§3-1)
@@ -44,7 +45,8 @@
         { id: 'L2', label: '부서 단위', short: '부서',
           note: '과·사업소·읍면이 각각 수행합니다.',
           note2: '부서 담당자는 자기 부서가 기본 조회 조건으로 걸리고(제한이 아니라 프리셋입니다), 군수·전담조직은 전 부서를 봅니다. ' +
-                 '부서 귀속 자료가 아직 없어(원장이 재난안전과 문서다) 부서별 이행 판정은 «자료 미취합»으로 둡니다.' },
+                 '부서별 이행 판정은 2025년 문서 원장(20개 부서)에서 냅니다. 다만 어느 할 일이 어느 부서에 걸리는지는 ' +
+                 '적용대상 문구에서 부서 이름을 찾은 추정이라, 분모가 추정임을 표에 함께 밝힙니다.' },
         { id: 'L3', label: '관리대상 단위', short: '시설',
           note: '시설·공사 건별로 수행해 세 계층 중 이행량이 가장 큽니다.',
           note2: '승강기·어린이놀이시설 자체점검은 이미 외부 시스템(승강기안전종합정보망 등)에 등록되므로 이 시스템은 결과 보고 문서를 관리합니다 — ' +
@@ -564,8 +566,82 @@
             lawRate: law.pct, lawTotal: law.total, lawDone: law.done, lawMiss: law.miss,
         };
     }
-    /* 부서별 문서 보유량 — 5개년 원장 집계(js/cmp-dept-docs.js). 이행 증빙 수가
-       아니라 «그 부서 문서 전체»라 화면이 그 사실을 함께 밝힌다. */
+    /* ── 부서 축 — 2025 원장(20개 부서 57,765건)에서 파생 ────────────────────
+     * 종전에는 원장이 재난안전과 한 부서뿐이라 화면이 «부서별 이행 판정은 아직
+     * 낼 수 없습니다»라고 말해 왔다. 지금은 전건이 부서를 갖는다.
+     *
+     * **부서 목록은 원장 ∪ 조직도다.** 어느 한쪽만 쓰면 조용히 잃는 것이 있다 —
+     * 원장만 쓰면 조직에는 있는데 2025 문서가 0건인 부서(회계과·보건소·담양읍)가
+     * 사라지고, 조직도만 쓰면 문서를 가진 12개 부서(경제교통과·산림정원과 등)가
+     * 통째로 안 보인다. 둘 다 보여주고 **각 행이 어디서 왔는지 밝힌다**.
+     *
+     * ⚠ 두 명단은 부서를 나누는 깊이가 다르다 — 조직도의 「보건소」를 원장은
+     *   「보건소보건행정과」로, 농업기술센터를 3개 과로 쪼갠다. 같은 것으로 합치지
+     *   않는다(합치면 우리가 만든 매핑이 자료가 된다). 나란히 두고 드러낸다.
+     */
+    function deptList() {
+        var led = {}, out = [], seen = {};
+        D().allDocs().forEach(function (d) {
+            if (d.origin === 'ledger' && d.dept) led[d.dept] = (led[d.dept] || 0) + 1;
+        });
+        Object.keys(led).sort().forEach(function (n) {
+            seen[n] = 1; out.push({ name: n, docs: led[n], inLedger: true, inOrg: false });
+        });
+        (V() && V().orgDepts ? V().orgDepts() : []).forEach(function (dp) {
+            if (seen[dp.name]) { out[idxOf(out, dp.name)].inOrg = true; return; }
+            out.push({ name: dp.name, docs: 0, inLedger: false, inOrg: true });
+        });
+        return out;
+    }
+    function idxOf(arr, name) {
+        for (var i = 0; i < arr.length; i++) { if (arr[i].name === name) return i; }
+        return -1;
+    }
+    /* 한 부서의 이행 상태 — **분모가 추정이라는 사실을 값과 함께 돌려준다.**
+     *   applied  : 적용대상 문구에서 부서 이름을 찾은 «추정» 단계 수
+     *   withDoc  : 그 추정 단계 중 실제로 그 부서 문서가 붙은 수  → 이행
+     *   extra    : 추정 밖인데 그 부서 문서가 붙은 단계 수
+     * extra 가 크다는 것은 곧 «적용대상 문구 추정이 실제와 다르다»는 증거다.
+     * 이 수를 숨기고 이행률만 내면 분모가 틀린 비율을 정답처럼 보여주게 된다.
+     */
+    function deptStats(name, year) {
+        var stages = T().STAGES, applied = 0, withDoc = 0, extra = 0, docs = 0;
+        var hit = {};
+        D().allDocs().forEach(function (d) {
+            if (d.dept !== name) return;
+            if (year && +d.year !== +year) return;
+            docs++;
+            (d.stageIds || []).forEach(function (sid) { hit[sid] = 1; });
+        });
+        stages.forEach(function (s) {
+            var ap = D().stageDeptHit(s, name), hs = !!hit[s.id];
+            if (ap) { applied++; if (hs) withDoc++; }
+            else if (hs) extra++;
+        });
+        /* 서류가 붙은 할 일 — 추정을 거치지 않은 **실측**이다. 부서 표가 확실히
+           말할 수 있는 유일한 수라 별도로 돌려준다. */
+        var covered = withDoc + extra;
+        /* 비율을 낼 수 있는가 — **추정 밖이 적용보다 많으면 내지 않는다.**
+           실측상 20개 부서 중 19개가 그 상태다(적용 23~48 vs 추정 밖 51~90).
+           분모가 그 정도로 틀렸는데 «이행률 30%»를 칩으로 찍으면 담당자에게는
+           그것이 측정값이 된다. 못 내는 이유를 말하는 편이 정확하다.
+
+           **문서가 0건인 부서도 비율을 내지 않는다** — 회계과·담양읍처럼 원장에
+           그 이름의 문서가 없는 부서에 «0%»를 찍으면 «아무것도 안 했다»로 읽히는데,
+           실제로는 판정할 자료가 없는 것이다(원장이 다른 이름으로 부르거나 그 해
+           문서가 없다). 대상이 아닌 것을 완료로 세지 않는 것과 같은 이유다. */
+        var usable = applied > 0 && docs > 0 && extra <= applied;
+        return { applied: applied, withDoc: withDoc, extra: extra, docs: docs,
+                 covered: covered, usable: usable,
+                 pct: usable ? Math.round(withDoc / applied * 100) : null };
+    }
+
+    /* 부서별 문서 보유량 — 5개년 원장 집계(js/cmp-dept-docs.js).
+       ⚠ **이행 관리 표에서는 쓰지 않는다.** 이 집계는 폴더 안의 파일을 세고
+       원장은 온나라 문서 1건을 세어 **단위가 다르다** — 건설과 2025 가 원장
+       5,057 인데 이 집계로는 29,813 이다(6배). 한 칸에 섞으면 시드가 실린
+       4개 부서만 자릿수가 커져 «그 부서가 일을 많이 했다»로 읽힌다.
+       5개년 축 자체는 값이 있어 함수는 남긴다. */
     function deptDocs(name) {
         var S = global.DYCMPDEPT;
         if (!S || !S.DEPTS) return null;
@@ -598,6 +674,6 @@
         axesOf: axesOf, axisLabel: axisLabel,
         TASK_TYPE: TASK_TYPE, FUNCS: FUNCS,
         typeOf: typeOf, pathsOf: pathsOf, funcOf: funcOf, needsConfirm: needsConfirm, typeCounts: typeCounts,
-        kpiOf: kpiOf, rateOf: rateOf, rateStages: rateStages, docsOfStage: docsOfStage, deptDocs: deptDocs, deptDocsMeta: deptDocsMeta, linkCounts: linkCounts, years: years,
+        kpiOf: kpiOf, rateOf: rateOf, rateStages: rateStages, docsOfStage: docsOfStage, deptList: deptList, deptStats: deptStats, deptDocs: deptDocs, deptDocsMeta: deptDocsMeta, linkCounts: linkCounts, years: years,
     };
 }(window));

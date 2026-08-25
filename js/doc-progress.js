@@ -152,8 +152,8 @@
 
     /* =========================================================================
      * 문서 축 — 세 출처를 하나의 배열로 (UX설계 §5-3)
-     *   2025 원장 3,830 + DY_DOCS_V2 426 + 2026 예시 자료 + 사용자 등록분
-     *   4,000행이 넘으므로 파생 인덱스까지 한 번에 만들고 캐시한다.
+     *   2025 원장 57,765 + DY_DOCS_V2 426 + 2026 예시 자료 + 사용자 등록분
+     *   6만행이 넘으므로 파생 인덱스까지 한 번에 만들고 캐시한다(실측 49ms).
      * ========================================================================= */
     var _cache = null;
     function build() {
@@ -168,7 +168,8 @@
         }
         var docs = [];
 
-        /* (1) 2025 재난안전과 문서 원장 — 생성물, 부서 축 없음.
+        /* (1) 2025 문서 원장 — 생성물(20개 부서 57,765건). 종전 3,830건은 재난안전과
+               한 부서뿐이라 «부서 축 없음»이었으나 지금은 전건이 부서를 갖는다.
                관리자 교정(store().fix)은 원본을 고치지 않고 여기서 **덧씌운다**. */
         var FX = store().fix || {};
         H().DOCS.forEach(function (d) {
@@ -179,8 +180,12 @@
                 fixedAt: fx && fx.at ? fx.at : null, fixedBy: fx && fx.by ? fx.by : null,
                 mergedInto: fx && fx.mergedInto ? fx.mergedInto : null,
                 src: d.src, status: d.st,
-                dept: '', assignee: '',          /* 원장 미보유 — 있는 척하지 않는다 */
-                origin: 'ledger', dataMode: 'demo', statusSource: 'demo-seed',
+                dept: d.dept || '', assignee: '',   /* 담당자는 여전히 원장 미보유 */
+                dir: d.dir || null,                 /* 발신구분 → 수발신 방향(전건 보유) */
+                mapConf: d.mapConf || '',           /* sure·weak·vague — weak 이 진짜 위험 */
+                excluded: d.excluded || '',         /* 타 기관 소관·의무아님 */
+                origin: 'ledger', dataMode: d.dataMode || 'real',
+                statusSource: d.statusSource || 'ledger-2025',
                 nearDup: (fx && fx.mergedInto) ? null : (d.nearDup || null),
                 mapped: ((fx && fx.stageIds) ? fx.stageIds : d.stageIds).length > 0,
             });
@@ -211,7 +216,8 @@
                     id: d.id, title: d.title, sr: d.sr || '', date: d.date, year: +sd.META.year,
                     stageIds: (d.stageIds || []).slice(), cycle: d.cycle || '',
                     src: d.src || 'onnara', status: d.st || '',
-                    dept: '', assignee: '',        /* 원장과 같은 이유로 부서 축이 없다 */
+                    dept: d.dept || '', assignee: '',   /* 부서는 원본 2025 문서에서 이어받는다 */
+                    dir: d.dir || null,
                     origin: 'seed26', dataMode: 'demo', statusSource: 'demo-seed-2026',
                     nearDup: null, mapped: (d.stageIds || []).length > 0,
                     /* 어느 2025 문서에서 왔는지를 **presetOf 로 투영**한다. 화면의

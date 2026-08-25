@@ -1796,11 +1796,24 @@
                섞이면 읽는 사람이 형식 차이를 자료의 차이로 읽고, 중복 확인(사업명·업체·기간)도 표기가
                갈린 행끼리는 영영 맞지 않는다. */
             if (!window.CONTRACT_BIZ_STATE) {
+                /* 담양군 계약정보시스템(gyeyak.damyang.go.kr) 공개 목록에서 옮겨 적은 실제 계약이다.
+                   id 는 그 시스템의 「번호」를 그대로 쓴다 — 우리가 새로 채번하면 원본과 대조할 수 없다.
+                   ⚠ period 는 10건 중 1건만 채워져 있다. 지어낸 것이 아니라 «목록 화면에 계약기간 열이
+                   없어서» 그렇다(계약기간·준공일은 건별 상세에만 있다). 빈 채로 두어야 «기간을 모르면
+                   반기 점검 대상을 판정할 수 없다»는 사실이 화면에 그대로 드러난다.
+                   ⚠ 전부 「용역」이다 — 공사·구매설치·위탁 구분의 실자료를 아직 받지 못했다. 없는 구분을
+                   지어내 채우지 않는다. */
                 window.CONTRACT_BIZ_STATE = [
-                    { id: 'CON-01', name: '군도 5호선 포장공사', cat: '공사', co: '○○건설', period: '2026-03-02 ~ 2026-11-30', amount: '' },
-                    { id: 'CON-02', name: '청사 경비·미화 용역', cat: '용역', co: '△△서비스', period: '2026-01-01 ~ 2026-12-31', amount: '' },
-                    { id: 'CON-03', name: 'CCTV 설치 (구매설치)', cat: '구매설치', co: '□□시스템', period: '2026-05-11 ~ 2026-07-31', amount: '' },
-                    { id: 'CON-04', name: '생활폐기물 수집·운반 위탁', cat: '위탁', co: '◇◇환경', period: '2026-01-01 ~ 2026-12-31', amount: '' },
+                    { id: '4173', name: '2026년 담양군 마을상수도 기술진단용역 추진, 감독공무원 지명 및 임명', cat: '용역', dept: '물순환사업소', co: '(주)우리종합기술', signed: '2026-08-11', period: '2026-08-14 ~ 2027-08-13', amount: '61000000', src: 'gyeyak' },
+                    { id: '4172', name: '2026년도 의원 연구단체 정책개발연구용역 계약 추진', cat: '용역', dept: '의회사무과', co: '(사)한국행정발전연구원', signed: '2026-07-30', period: '', amount: '20460000', src: 'gyeyak' },
+                    { id: '4171', name: '담양군보건소 이전신축 조성사업 교통성검토 용역', cat: '용역', dept: '보건소', co: '(주)우리이엔티', signed: '2026-07-28', period: '', amount: '22000000', src: 'gyeyak' },
+                    { id: '4170', name: '2026년 담양공공하수처리시설 정밀안전점검 용역 시행', cat: '용역', dept: '물순환사업소', co: '(주)태성기술개발', signed: '2026-07-27', period: '', amount: '16300000', src: 'gyeyak' },
+                    { id: '4169', name: '2026년 고서공공하수처리시설 외 1개소 하반기 정기안전점검용역 시행', cat: '용역', dept: '물순환사업소', co: '주식회사 길성이앤시', signed: '2026-07-24', period: '', amount: '11200000', src: 'gyeyak' },
+                    { id: '4168', name: '가사문학면 학선리 개선동마을 등 3개소 소규모수도시설 지하수영향조사 용역', cat: '용역', dept: '물순환사업소', co: '(주)우진엔지니어링', signed: '2026-07-17', period: '', amount: '19980000', src: 'gyeyak' },
+                    { id: '4167', name: '창평면 용수리 부동제 여수로 정비공사 폐기물처리용역 - 도급액', cat: '용역', dept: '본청', co: '(주)금성환경산업', signed: '2026-07-07', period: '', amount: '1555000', src: 'gyeyak' },
+                    { id: '4166', name: '농어촌 생활용수(창평지구) 개발사업 폐기물처리용역(1차)', cat: '용역', dept: '물순환사업소', co: '(주)대림환경', signed: '2026-07-06', period: '', amount: '58700000', src: 'gyeyak' },
+                    { id: '4165', name: '담양, 고서, 무증, 태암 공공하수도 재해복구사업 실시설계 용역', cat: '용역', dept: '물순환사업소', co: '(주)진성기술단', signed: '2026-07-01', period: '', amount: '16100000', src: 'gyeyak' },
+                    { id: '4164', name: '담양읍 백동리(251-15) 하수관로 정비사업 설계안정성검토', cat: '용역', dept: '물순환사업소', co: '(주)태성기술개발', signed: '2026-07-01', period: '', amount: '7500000', src: 'gyeyak' },
                 ];
             }
             const biz = window.CONTRACT_BIZ_STATE;
@@ -1865,9 +1878,13 @@
                    계약하는 사업(청사 경비·미화 용역 등)을 두 번째 해부터 등록할 수 없고, 직접 등록이
                    유일한 경로라 그 사업이 화면에서 통째 사라진다 — 점검하지 않은 현장이 없는 현장이 된다. */
                 if (!force && biz.some(b => b.name === name && b.co === co && b.period === period)) { conDupAsk(); return; }
+                /* 계약정보시스템에서 옮겨 적은 계약과 직접 등록한 사업이 한 목록에 섞인다.
+                   출처를 행마다 남겨야 연계가 열렸을 때 무엇을 교체하고 무엇을 남길지 가릴 수 있다.
+                   계약관서(dept)는 등록 폼이 받지 않는다 — 조직도에 등재된 부서가 11개뿐이라
+                   본청·의회사무과·보건소를 고를 수 없고, 고르게 하면 없는 부서를 지어내게 된다. */
                 biz.push({
                     id: 'CON-' + String(biz.length + 1).padStart(2, '0'),
-                    name: name, cat: cat, co: co, period: period, amount: amt,
+                    name: name, cat: cat, dept: '', co: co, period: period, amount: amt, src: 'manual',
                 });
                 V.closeModal(); V.toast('사업을 등록했습니다 — 수급인 안전보건 수준 평가를 진행하세요'); render();
             }
@@ -1915,15 +1932,32 @@
                 '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
                 '<button class="btn btn-primary" onclick="DYV2.closeModal(); DYV2.toast(\'서약서가 첨부되었습니다\')">업로드</button>');
 
-            const cat = c => '<span class="chip-mini pdca">' + esc(c) + '</span>';
+            const cat = c => '<span class="chip-mini pdca" style="white-space:nowrap;">' + esc(c) + '</span>';
             /* 계약금액은 원 단위 숫자로 저장한다(정의서 §5-1). 표시할 때만 자릿수를 넣고, 숫자가 아닌
                옛 값이 남아 있으면 고쳐 쓰지 않고 그대로 보여 준다 — 지어낸 해석을 붙이지 않는다. */
             const amtText = a => {
                 const v = String(a == null ? '' : a).trim();
                 if (!v) return '-';
-                return /^\d+$/.test(v) ? Number(v).toLocaleString('ko-KR') + '원' : esc(v);
+                const t = /^\d+$/.test(v) ? Number(v).toLocaleString('ko-KR') + '원' : esc(v);
+                return '<span style="white-space:nowrap;">' + t + '</span>';
             };
+            /* 계약기간은 계약정보시스템 «목록» 화면에 없다(건별 상세에만 있다). 빈칸으로 두면
+               «기간이 없는 계약»으로 읽히므로 모른다는 사실을 그대로 적고, 대신 아는 값(계약일)을
+               같이 보여 준다 — 없는 기간을 계약일로 대신 채우면 반기 판정이 조용히 틀어진다. */
+            const periodText = b => {
+                const v = String(b.period == null ? '' : b.period).trim();
+                if (v) return '<span style="white-space:nowrap;">' + esc(v) + '</span>';
+                return '<span class="rl-ro-none">기간 미확인</span>'
+                    + (b.signed ? '<div style="font-size:var(--fs-12); color:var(--text-gray);">계약일 ' + esc(b.signed) + '</div>' : '');
+            };
+            /* 출처와 계약관서를 값 옆에 남긴다 — 옮겨 적은 계약과 직접 등록한 사업이 한 목록에
+               섞이므로, 구분이 없으면 연계가 열렸을 때 무엇을 교체할지 가릴 수 없다. */
+            const srcLine = b => '<div style="font-size:var(--fs-12); color:var(--text-gray); margin-top:3px;">'
+                + (b.dept ? esc(b.dept) + ' · ' : '')
+                + (b.src === 'gyeyak' ? '계약정보시스템 ' + esc(b.id) : '직접 등록')
+                + '</div>';
             const vendors = vendorList();
+            const noPeriod = biz.filter(b => !String(b.period == null ? '' : b.period).trim()).length;
             const checkTodo = biz.filter(b => !E.statusOf('EDOC-도급점검-' + b.id)).length;
             const evalTodo = vendors.filter(v => !E.statusOf('EDOC-수급인평가-' + v.co)).length;
             /* 요약 수치는 전부 아래 목록에서 센다. 사업이 들어오는 경로가 직접 등록 하나뿐인데 고정값을
@@ -1937,14 +1971,16 @@
                 [evalTodo ? 'danger' : 'success', evalTodo, '수급인 미평가'],
             ]) +
             sectionCard('도급·용역·위탁 사업 목록',
-                '<div class="check-notice" style="margin-bottom:10px;">사업 자료는 담당자가 직접 등록한 것만 표시합니다. 계약 시스템에서 사업 정보를 받아오는 경로가 없으므로 등록하지 않은 사업은 이 목록에도, 위 요약에도 잡히지 않습니다 — <b>위 수치는 모두 이 목록에서 센 값</b>입니다.</div>' +
+                '<div class="check-notice" style="margin-bottom:10px;">목록은 <b>담양군 계약정보시스템 공개 목록에서 옮겨 적은 계약</b>과 담당자가 직접 등록한 사업으로 채워집니다. 자동으로 받아오는 연계는 없으므로 옮겨 적지 않은 계약은 이 목록에도, 위 요약에도 잡히지 않습니다 — <b>위 수치는 모두 이 목록에서 센 값</b>입니다.'
+                + (noPeriod ? ' 계약기간은 계약정보시스템 <b>목록 화면에 없어</b> 건별 상세를 열어야 확인됩니다 — 현재 <b>' + noPeriod + '건</b>이 미확인이라 그 사업은 반기 점검 대상을 판정하지 못합니다.' : '')
+                + '</div>' +
                 (biz.length
                     ? tbl(['사업명', '구분', '수급업체', '계약기간', '계약금액', '점검표', '서약서'],
                         biz.map(b => [
-                            '<b>' + esc(b.name) + '</b> ' + docStChip('EDOC-도급점검-' + b.id),
+                            '<b>' + esc(b.name) + '</b> ' + docStChip('EDOC-도급점검-' + b.id) + srcLine(b),
                             /* 기간은 한 값이다 — 줄이 갈리면 «2026-03-02»와 «2026-11-30» 두 날짜로 읽힌다.
                                표는 이미 가로 스크롤 래퍼 안이라 줄바꿈을 막아도 본문이 밀리지 않는다. */
-                            cat(b.cat), esc(b.co), '<span style="white-space:nowrap;">' + esc(b.period) + '</span>', amtText(b.amount),
+                            cat(b.cat), esc(b.co), periodText(b), amtText(b.amount),
                             /* 같은 행의 [첨부]·[평가 작성]과 같은 기준으로 건다 — 여기만 무조건 그리면
                                군수·과장에게 활성 버튼이 보이고 «눌러야 거절»한다. 한 행 안에서 기준이
                                갈리면 무엇이 내 권한인지 표가 알려주지 못한다. */

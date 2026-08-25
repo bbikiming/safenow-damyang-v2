@@ -124,11 +124,22 @@
     function notice() {
         var all = D().allDocs();
         var lc = C().linkCounts(all);
-        var lead = '업무문서 <b>' + all.length.toLocaleString() + '건</b> · 할 일 연결 <b>' + lc.links.toLocaleString() + '건</b>';
+        var led = all.filter(function (d) { return d.origin === 'ledger'; });
+        var un = led.filter(function (d) { return !d.mapped && !d.excluded; }).length;
+        var ex = led.filter(function (d) { return !!d.excluded; }).length;
+        var wk = led.filter(function (d) { return d.mapConf === 'weak'; }).length;
+        /* 접어도 남는 한 줄은 «설명»이 아니라 «지금 상태»여야 한다(§14-12) */
+        var lead = '업무문서 <b>' + all.length.toLocaleString() + '건</b> · 할 일 연결 <b>' + lc.links.toLocaleString() + '건</b>' +
+            (un ? ' · <b>미분류 ' + un.toLocaleString() + '건</b>' : '');
         var rest =
             '<p><b>한 문서가 여러 할 일에 연결되므로 이행현황의 문서 합계는 실제 문서 수보다 큽니다.</b> ' +
                 '두 숫자를 함께 적어 오해를 막습니다 — 위 수치는 화면에서 센 값이지 고정값이 아닙니다.</p>' +
             '<p>결재 완료 PDF·본문은 아직 없습니다 — 온나라 연동 전이라 <b>문서명·수발신자·보고일자·생산등록번호</b>만 있습니다.</p>' +
+            '<p>2025년 문서 원장 ' + led.length.toLocaleString() + '건 중 <b>미분류 ' + un.toLocaleString() + '건</b>은 ' +
+                '어느 할 일의 증빙인지 아직 붙지 않은 문서입니다 — 이행 판정에 들어가지 않습니다. ' +
+                '<b>분류 제외 ' + ex.toLocaleString() + '건</b>은 타 기관 소관·자치사무라 판단이 끝난 문서라 교정 대상이 아닙니다. ' +
+                '<b>분류 확인 ' + wk.toLocaleString() + '건</b>은 할 일이 붙어 있으나 원장에서 «애매»로 표시된 문서라 ' +
+                '이행 판정에는 들어가되 확인이 필요합니다.</p>' +
             '<p>같은 문서를 종전 방식으로 찾는 화면은 <a href="docs-preset.html">업무문서 &gt; 업무 목록</a>입니다.</p>' +
             ((global.DYROLE && global.DYROLE.readOnlyNote) ? (global.DYROLE.readOnlyNote('문서 등록') || '') : '');
         return V().notice('cmp-docs', lead, rest);
@@ -150,7 +161,7 @@
             {
                 count: list.length.toLocaleString(), unit: '건',
                 reset: 'CMPDOC.resetF()',
-                extraActive: advN + (S.stages.length ? 1 : 0) + (S.dept ? 1 : 0),
+                extraActive: advN + (S.stages.length ? 1 : 0),
                 actions: '<button type="button" class="btn btn-outline btn-sm" onclick="CMPDOC.openPick()">업무단계 고르기' +
                         (S.stages.length ? ' <b>' + S.stages.length + '</b>' : '') + '</button>' +
                     '<button type="button" class="btn btn-outline btn-sm" aria-expanded="' + (docAdvOpen() ? 'true' : 'false') +
@@ -165,15 +176,24 @@
             (rows.length ? table(rows) : emptyBox()) +
             pager(pages, list.length);
     }
-    /* 부서 조건은 **셀렉트로 내지 않는다**(D-5) — 원장 문서에 담당부서 값이 없어
-     * 드롭다운을 만들면 대부분 0건이 되고 "데이터가 없다"로 오독된다. 이행 관리에서
-     * 넘어와 걸린 경우에만 칩으로 보이고, 그 사실(원장 미보유)을 함께 밝힌다. */
+    /* 부서 조건 — 2025 원장이 20개 부서를 갖게 되면서 **드롭다운이 성립한다.**
+     * 종전에는 원장이 재난안전과 한 부서뿐이라 «만들면 대부분 0건이 되어 자료가
+     * 없다로 오독된다»는 이유로 칩만 두었다. 그 전제가 사라졌으므로 셀렉트로
+     * 올린다. 옵션은 **실제로 문서가 있는 부서만**이고 건수를 함께 찍는다 —
+     * 고르기 전에 몇 건인지 보이면 0건짜리를 고르는 헛걸음이 없다. */
+    function deptOptions() {
+        var by = {};
+        D().allDocs().forEach(function (d) { if (d.dept) by[d.dept] = (by[d.dept] || 0) + 1; });
+        var names = Object.keys(by).sort();
+        return [['', '부서 전체']].concat(names.map(function (n) {
+            return [n, n + ' (' + by[n].toLocaleString() + ')'];
+        }));
+    }
     function deptCond() {
         if (!S.dept) return '';
         var total = D().allDocs().filter(function (d) { return d.dept === S.dept; }).length;
-        return '<p class="cmp-cond"><span class="chip-mini wt-elec">' + esc(S.dept) + ' 문서 ' + total + '건' +
-            '<button type="button" class="cmp-cond-x" aria-label="부서 조건 해제" onclick="CMPDOC.setF(\'dept\',\'\')">×</button></span>' +
-            '<span class="cmp-dim">담당부서 값이 있는 문서만 셉니다 — 2025년 원장은 재난안전과 소관이라 부서 값이 없습니다.</span></p>';
+        return '<p class="cmp-cond"><span class="chip-mini wt-elec">' + esc(S.dept) + ' 문서 ' + total.toLocaleString() + '건' +
+            '<button type="button" class="cmp-cond-x" aria-label="부서 조건 해제" onclick="CMPDOC.setF(\'dept\',\'\')">×</button></span></p>';
     }
     /* 연도 칩 — 값이 2~3개뿐이라 드롭다운은 과하다. 각 칩에 건수를 붙여
        고르기 전에 몇 건인지 보이게 한다. */
@@ -192,11 +212,14 @@
         years.forEach(function (y) { out += chip(y, y + '년', byYear[y]); });
         return '<div class="cmp-fchips" role="radiogroup" aria-label="연도로 거르기">' + out + '</div>';
     }
-    function docAdvCount() { return [S.status, S.sr].filter(Boolean).length; }
+    function docAdvCount() { return [S.status, S.sr, S.dept].filter(Boolean).length; }
     function docAdvOpen() { return S.adv || docAdvCount() > 0; }
     function docAdvPanel() {
         if (!docAdvOpen()) return '';
         return '<div class="dl-adv cmp-adv" id="cd-adv"><div class="dl-adv-grid">' +
+            '<label class="dl-f"><span>부서</span>' +
+                '<select class="form-select" id="cd-dept" onchange="CMPDOC.setF(\'dept\', this.value)">' +
+                F().optionsHtml(deptOptions(), S.dept) + '</select></label>' +
             '<label class="dl-f"><span>결재상태</span>' +
                 '<select class="form-select" id="cd-st" onchange="CMPDOC.setF(\'status\', this.value)">' +
                 F().optionsHtml(statusOptions(), S.status) + '</select></label>' +
@@ -218,7 +241,8 @@
     }
     function table(rows) {
         return '<div class="cmp-wrap"><table class="table-figma table-compact cmp-table"><thead><tr>' +
-            '<th class="cmp-c-main">문서명</th><th class="cmp-c-stg">업무단계</th><th class="cmp-c-ac">수발신자</th>' +
+            '<th class="cmp-c-main">문서명</th><th class="cmp-c-stg">업무단계</th><th class="cmp-c-dept2">부서</th>' +
+            '<th class="cmp-c-ac">수발신자</th>' +
             '<th class="cmp-num cmp-c-rd">보고일자</th><th class="cmp-c-st">결재상태</th>' +
         '</tr></thead><tbody>' + rows.map(row).join('') + '</tbody></table></div>';
     }
@@ -231,6 +255,7 @@
                     : '') +
                 '<span class="cmp-scode">' + esc(d.id) + ' · ' + esc(d.year) + '년</span></td>' +
             '<td class="cmp-c-stg">' + stageChips(d) + '</td>' +
+            '<td class="cmp-c-dept2">' + (d.dept ? esc(d.dept) : '<span class="cmp-dim">—</span>') + '</td>' +
             /* 목록은 방향 접두를 붙이지 않는다 — 이 열이 159px 이라 «받음 · »가
                붙으면 기관명이 잘린다. 내부 문서만 그 사실을 낸다(값이 비므로). */
             '<td class="cmp-c-ac">' + (D().srText(d) ? esc(D().srText(d)) : '<span class="cmp-dim">—</span>') + '</td>' +
@@ -243,18 +268,34 @@
         var st = (d.stageIds || []).map(D().stage).filter(Boolean);
         /* 왜 비었는지 모르면 데이터 오류로 읽힌다 — 칩에 이유를 단다(D-11) */
         if (!st.length) {
-            return d.origin === 'ledger'
-                ? '<span class="chip-status chip-sm warning" title="2025년 원장에 분류가 빠진 문서입니다. 원장 교정은 업무문서 &gt; 이행 목록에서 합니다.">미분류</span>'
-                : '<span class="chip-mini wt" title="이행항목 축이 없는 현행 업무문서입니다 — 전용 화면에서 관리하는 문서라 여기서는 연결된 할 일이 없습니다.">이 목록 밖 문서</span>';
+            if (d.origin !== 'ledger') {
+                return '<span class="chip-mini wt" title="이행항목 축이 없는 현행 업무문서입니다 — 전용 화면에서 관리하는 문서라 여기서는 연결된 할 일이 없습니다.">이 목록 밖 문서</span>';
+            }
+            /* «미분류»와 «분류에서 뺀 것»은 다르다 — 뺀 것은 이미 판단이 끝난
+               문서라 교정 대상이 아니다. 한 칩으로 묶으면 24,332건 안에 교정할
+               필요가 없는 1,681건이 섞여 «할 일이 이만큼 남았다»가 부풀어 보인다. */
+            if (d.excluded) {
+                return '<span class="chip-mini wt" title="' + esc(d.excluded) +
+                    ' — 담양군 소관 의무가 아니라고 분류 단계에서 뺀 문서입니다. 교정 대상이 아닙니다.">분류 제외</span>';
+            }
+            return '<span class="chip-status chip-sm warning" title="2025년 원장에 분류가 빠진 문서입니다. 원장 교정은 업무문서 &gt; 이행 목록에서 합니다.">미분류</span>';
         }
         var open = !!S.expand[d.id];
         var show = open ? st : st.slice(0, 2);
         var more = st.length - show.length;
+        /* 단계는 붙었는데 확신이 낮은 것 — 실측 7,384건. 미분류(24,332)와 달리
+           «붙어 있으니 맞다»로 읽히기 쉬워, 이행 판정에 그대로 들어가는 만큼
+           눈에 보여야 한다. «모호»는 대개 미분류와 겹쳐 따로 찍지 않는다. */
+        var weak = d.mapConf === 'weak'
+            ? ' <span class="chip-status chip-sm warning cmp-weak" title="원장 분류 단계에서 «애매»로 표시된 문서입니다. ' +
+              '할 일 연결은 되어 있으나 확신이 낮아 이행 판정에 그대로 쓰기 전에 확인이 필요합니다.">분류 확인</span>'
+            : '';
         /* 목록의 칩도 상세와 같이 눌린다(D-7) — 같은 칩이 자리에 따라 다르게 동작하면 안 된다 */
         return show.map(function (s) {
             return '<a class="chip-mini wt-elec" title="' + esc(s.name) + ' 이행 상세로"' +
                 ' href="cmp-status.html?stage=' + encodeURIComponent(s.id) + '&year=' + d.year + '">' + esc(s.name) + '</a>';
         }).join(' ') +
+            weak +
             (more > 0
                 ? ' <button type="button" class="chip-mini wt cmp-more" onclick="CMPDOC.expand(\'' + esc(d.id) + '\')" aria-expanded="false">+' + more + '</button>'
                 : (open && st.length > 2

@@ -580,74 +580,104 @@
     }
 
     /* ── L2 부서별 보기 ─────────────────────────────────────────────────────
-     * 이행 판정을 지어내지 않는다 — 원장(DYDOCH)은 재난안전과 문서라 부서 귀속
-     * 데이터가 없다(doc-history-data 헤더 주석: sr 은 수발신 기관이지 부서가
-     * 아니다). 부서별로 낼 수 있는 것은 ① 적용 단계 수(추정) ② 그 부서가 보유한
-     * 업무문서 수뿐이고, 이행 칸은 '자료 미취합'으로 드러낸다(§9-1). */
-    /* 부서 문서 보유량 — 5개년 원장 실측(DYCMPDEPT)이 있으면 그것을, 없으면
-     * 이 화면에서 등록한 문서만 센다.
-     * ⚠ 두 수는 뜻이 다르다 — 실측은 «그 부서 문서 전체»(분류 이전 원장)이고
-     *   등록분은 «이 시스템에 올린 증빙»이다. 화면이 어느 쪽인지 밝힌다. */
-    function deptDocCount(name) {
-        var m = C().deptDocs(name);
-        if (m) return { n: m.total, real: true, byYear: m.byYear };
-        return { n: D().allDocs().filter(function (d) { return d.dept === name; }).length, real: false };
-    }
+     * 2025 원장이 20개 부서 57,765건을 갖게 되면서 **부서별 이행을 실제로 낼 수
+     * 있다**. 종전의 «자료 미취합»은 원장이 재난안전과 한 부서뿐이던 시절의 문구다.
+     *
+     * 다만 **분모는 여전히 추정이다** — 어느 단계가 어느 부서에 걸리는지는 적용대상
+     * 문구에서 부서 이름을 찾은 값이다. 그래서 이행률만 크게 내지 않고 세 수를
+     * 나란히 둔다: 적용(추정) · 이행 · **추정 밖 문서**. 마지막 수가 곧 추정이
+     * 틀렸다는 증거라, 그걸 감추면 틀린 분모로 낸 비율이 정답처럼 보인다. */
     /* 부서 필터·검색을 **표에도** 건다 — 필터 바에는 조건이 걸린 것으로 표시되는데
      * 표가 전 부서를 그대로 내면 "걸었는데 안 걸린다"가 된다(검수 C-1). 부서
      * 담당자의 자기 부서 프리셋(§6)도 이 표에서 비로소 1행이 된다. */
     function deptRows() {
-        return V().orgDepts().filter(function (dp) {
+        return C().deptList().filter(function (dp) {
             if (S.dept && dp.name !== S.dept) return false;
             if (S.q && !F().match(S.q, [dp.name])) return false;
             return true;
         });
     }
-    /* 보유 문서 셀 — 실측(원장 집계)과 등록분을 구분해 보여준다.
-       실측은 «분류 이전 원장 전체»라 이행 증빙 수가 아니다. */
-    function docCell(name, d) {
-        if (!d.n) return '<span class="cmp-dim">0건</span>';
-        var yrs = d.byYear ? Object.keys(d.byYear).map(function (y) { return y + ' ' + d.byYear[y].toLocaleString(); }).join(' · ') : '';
-        if (d.real) {
-            return '<span class="cmp-real" title="5개년 원장 집계 — ' + esc(yrs) + '">' +
-                   d.n.toLocaleString() + '건</span>' +
-                   '<span class="cmp-dim cmp-real-tag">원장</span>';
-        }
-        return '<a href="cmp-docs.html?dept=' + encodeURIComponent(name) + '">' + d.n + '건</a>';
+    /* 보유 문서 셀 — 그 부서의 문서 목록으로 보낸다. 수만 보여주고 못 열면
+       막다른 길이 된다. */
+    function docCell(name, n) {
+        if (!n) return '<span class="cmp-dim">0건</span>';
+        return '<a href="cmp-docs.html?dept=' + encodeURIComponent(name) + '">' +
+               n.toLocaleString() + '건</a>';
     }
     function deptTable() {
-        var stages = levelStages();
         var depts = deptRows();
         if (!depts.length) return emptyBox();
+        var yr = S.year;
         var rows = depts.map(function (dp) {
-            var mine = stages.filter(function (s) { return D().stageDeptHit(s, dp.name); });
-            var per = mine.filter(function (s) { return C().cycleOf(s).need > 0; }).length;
-            var docs = deptDocCount(dp.name);
+            var st = C().deptStats(dp.name, yr);
             /* 행 클릭 → 그 부서의 할 일 목록(D-1). 와이어프레임이 표 위에 명시한
                흐름이다. 적용 단계 N개를 보여주면서 그 N개를 못 여는 것이 막다른 길이었다. */
             return '<tr class="cmp-stg cmp-rowlink" onclick="CMPST.openDept(event, \'' + esc(dp.name) + '\')">' +
-                '<td><button type="button" class="cmp-slink">' + esc(dp.name) + '</button></td>' +
-                '<td class="cmp-num">' + mine.length + '개</td>' +
-                '<td class="cmp-num">' + per + '개</td>' +
-                '<td class="cmp-num">' + (mine.length - per) + '개</td>' +
-                '<td><span class="chip-status chip-sm warning">자료 미취합</span></td>' +
-                /* 보유 문서는 이 화면 밖(문서 목록)이 답이다(D-5) */
-                '<td class="cmp-num">' + docCell(dp.name, docs) + '</td></tr>';
+                '<td><button type="button" class="cmp-slink">' + esc(dp.name) + '</button>' + srcTag(dp) + '</td>' +
+                /* 실측이 먼저다 — 추정을 거치지 않은 수를 앞에 둔다 */
+                '<td class="cmp-num">' + st.covered + '개</td>' +
+                '<td class="cmp-num">' + docCell(dp.name, st.docs) + '</td>' +
+                '<td class="cmp-num cmp-dim">' + st.applied + '개</td>' +
+                '<td class="cmp-num">' + extraCell(st.extra, st.applied) + '</td>' +
+                '<td>' + rateCell(st) + '</td></tr>';
         }).join('');
-        var reg = V().orgDepts().length;
-        /* 명단 미확보 안내 행은 전체 보기에서만 — 한 부서로 거른 표 밑에 '나머지
-           28개'가 붙으면 필터 결과가 29개처럼 읽힌다 */
-        var missing = (S.dept || S.q) ? '' :
-            '<tr class="cmp-missing"><td colspan="6">… 나머지 ' + (39 - reg) + '개 부서 — <b>명단 미확보</b> (대상 과·사업소 39개 중 ' + reg + '개 등록)</td></tr>';
         return '<div class="cmp-wrap"><table class="table-figma table-compact cmp-table"><thead><tr>' +
-            '<th class="cmp-c-dept">부서</th><th class="cmp-num cmp-c-n">적용 단계(추정)</th><th class="cmp-num cmp-c-n">정기</th>' +
-            '<th class="cmp-num cmp-c-n">상시</th><th class="cmp-c-rate">이행 판정</th><th class="cmp-num cmp-c-n">보유 업무문서</th>' +
-        '</tr></thead><tbody>' + rows + missing +
-        '</tbody></table></div>' +
-        deptDocsNote() +
-        '<p class="cmp-cap"><b>부서별 이행 판정은 아직 낼 수 없습니다.</b> 2025년 문서 원장이 재난안전과 소관이라 ' +
-            '문서에 <b>담당부서 값이 없습니다</b>(수발신 기관은 부서가 아닙니다). 적용 단계 수는 적용대상 문구에서 부서 이름을 찾은 <b>추정</b>이고, ' +
-            '담당부서 연계(새올·온나라)를 받으면 이 표가 실측으로 바뀝니다.</p>';
+            '<th class="cmp-c-dept">부서</th><th class="cmp-num cmp-c-n">서류가 붙은 할 일</th>' +
+            '<th class="cmp-num cmp-c-n">보유 업무문서</th>' +
+            '<th class="cmp-num cmp-c-n">적용(추정)</th><th class="cmp-num cmp-c-n">추정 밖</th>' +
+            '<th class="cmp-c-rate">이행률</th>' +
+        '</tr></thead><tbody>' + rows +
+        '</tbody></table></div>' + deptCap(depts);
+    }
+    /* 그 행이 어디서 왔는지 — 두 명단을 합쳐 그리므로 밝히지 않으면 «조직도에 있는
+       부서»와 «문서만 있는 부서»가 같은 것으로 읽힌다. */
+    function srcTag(dp) {
+        if (dp.inLedger && dp.inOrg) return '';
+        if (dp.inLedger) return '<span class="chip-status chip-sm neutral cmp-srctag" ' +
+            'title="2025년 문서 원장에는 있으나 시스템 조직도에는 아직 등록되지 않은 부서입니다.">조직도 미등록</span>';
+        return '<span class="chip-status chip-sm neutral cmp-srctag" ' +
+            'title="시스템 조직도에는 있으나 2025년 문서 원장에 문서가 없습니다.">문서 없음</span>';
+    }
+    function extraCell(n, ap) {
+        if (!n) return '<span class="cmp-dim">0개</span>';
+        var over = n > ap;
+        return '<span class="' + (over ? 'cmp-warn' : 'cmp-dim') + '" title="적용대상 문구로는 이 부서 대상이 아닌데 ' +
+               '실제로 그 부서 서류가 붙은 할 일입니다.' + (over ? ' 적용(추정)보다 많아 그 추정을 분모로 쓸 수 없습니다.' : '') +
+               '">' + n + '개</span>';
+    }
+    function rateCell(st) {
+        if (!st.applied) return '<span class="chip-status chip-sm neutral">적용 할 일 없음</span>';
+        /* 분모가 틀린 비율은 내지 않는다 — 못 낸다고 말하는 편이 정확하다 */
+        if (!st.docs) return '<span class="chip-status chip-sm neutral" ' +
+            'title="' + S.year + '년 문서 원장에 이 부서 이름의 문서가 없습니다. 판정할 자료가 없는 것이지 ' +
+            '이행하지 않은 것이 아닙니다 — 원장이 다른 이름으로 부르는지 확인이 필요합니다.">원장에 문서 없음</span>';
+        if (!st.usable) return '<span class="chip-status chip-sm warning" ' +
+            'title="적용대상 추정 밖에서 서류가 더 많이 나와(추정 ' + st.applied + '개 · 추정 밖 ' + st.extra + '개) ' +
+            '이 추정을 이행률의 분모로 쓸 수 없습니다.">분모 확인 필요</span>';
+        var tone = st.pct >= 80 ? 'success' : (st.pct >= 50 ? 'warning' : 'danger');
+        return '<span class="chip-status chip-sm ' + tone + '">' + st.pct + '%</span>' +
+               '<span class="cmp-dim"> ' + st.withDoc + '/' + st.applied + '</span>';
+    }
+    function deptCap(depts) {
+        var led = 0, org = 0, both = 0, bad = 0, ok = 0;
+        depts.forEach(function (d) {
+            if (d.inLedger && d.inOrg) both++; else if (d.inLedger) led++; else org++;
+            var st = C().deptStats(d.name, S.year);
+            if (!st.applied) return;
+            if (st.usable) ok++; else bad++;
+        });
+        return '<p class="cmp-cap"><b>부서별 이행률은 아직 대부분 낼 수 없습니다 — 이유가 바뀌었습니다.</b> ' +
+            '종전에는 문서에 부서 값이 없어서였고, 지금은 <b>어느 할 일이 어느 부서 소관인지가 정해져 있지 않아서</b>입니다. ' +
+            '지금 쓰는 「적용(추정)」은 적용대상 문구에서 부서 이름을 찾은 값인데, ' +
+            (bad ? '<b>' + bad + '개 부서</b>에서 그 추정 밖 서류가 추정 안쪽보다 많습니다' : '검증 결과 쓸 만합니다') +
+            (ok ? ' (분모를 쓸 수 있는 부서는 ' + ok + '개).' : '.') +
+            ' 담양군이 <b>부서별 이행항목 소관</b>을 확정해 주면 이 칸이 실측 이행률로 바뀝니다.</p>' +
+            '<p class="cmp-cap">그때까지 이 표가 확실히 말하는 것은 앞 두 칸입니다 — ' +
+            '<b>서류가 붙은 할 일</b>과 <b>보유 업무문서</b>는 ' + S.year + '년 문서 원장 실측이고 추정을 거치지 않습니다.</p>' +
+            '<p class="cmp-cap">부서 <b>' + depts.length + '개</b> — 문서 원장과 시스템 조직도 양쪽에 있는 ' + both + '개 · ' +
+            '<b>조직도 미등록</b> ' + led + '개(문서는 있음) · <b>문서 없음</b> ' + org + '개(조직도에만 있음). ' +
+            '두 명단은 부서를 나누는 깊이도 다릅니다 — 조직도의 「보건소」를 원장은 「보건소보건행정과」로, ' +
+            '농업기술센터를 3개 과로 나눕니다. <b>임의로 합치지 않고</b> 그대로 둡니다.</p>';
     }
     /* 실측 시드가 실린 경우에만 그 출처와 한계를 밝힌다 — 수치만 크게 보여주면
        «이 부서는 이행을 많이 했다»로 읽힌다. */
@@ -664,23 +694,34 @@
     /* ── L2 단계별 보기 — 부서 이행 도트 ─────────────────────────────────── */
     function deptDotTable(list) {
         if (!list.length) return emptyBox();
-        var depts = V().orgDepts();
+        var depts = C().deptList();
+        /* 도트 한 칸 = 한 부서. 이제 세 값이 실제로 갈린다 —
+           적용 대상 아님(추정) · 적용인데 서류 없음 · 이행. */
+        var byDept = {};
+        depts.forEach(function (dp) { byDept[dp.name] = {}; });
+        D().allDocs().forEach(function (d) {
+            if (!d.dept || !byDept[d.dept]) return;
+            if (+d.year !== +S.year) return;
+            (d.stageIds || []).forEach(function (sid) { byDept[d.dept][sid] = 1; });
+        });
         var rows = list.map(function (s) {
             var cy = C().cycleOf(s);
-            var hit = depts.filter(function (dp) { return D().stageDeptHit(s, dp.name); });
-            /* 도트는 시각 요소다 — title 만 두면 스크린리더에 아무것도 읽히지 않는다(D-10).
-               클릭 목적지는 두지 않는다(부서별 판정이 자료 미취합이라 갈 곳이 없다). */
+            var done = 0, ap = 0;
+            /* 도트는 시각 요소다 — title 만 두면 스크린리더에 아무것도 읽히지 않는다(D-10). */
             var dots = depts.map(function (dp) {
-                var on = hit.indexOf(dp) >= 0;
-                var lab = dp.name + (on ? ' — 적용(추정) · 자료 미취합' : ' — 적용 대상 아님(추정)');
-                return '<i class="' + (on ? 'na' : '') + '" role="img" aria-label="' + esc(lab) + '" title="' + esc(lab) + '"></i>';
+                var on = D().stageDeptHit(s, dp.name), hs = !!byDept[dp.name][s.id];
+                if (on) { ap++; if (hs) done++; }
+                var cls = on ? (hs ? 'ok' : 'na') : (hs ? 'extra' : '');
+                var lab = dp.name + ' — ' + (on ? (hs ? '이행' : '적용(추정) · 서류 없음')
+                                               : (hs ? '추정 밖인데 서류 있음' : '적용 대상 아님(추정)'));
+                return '<i class="' + cls + '" role="img" aria-label="' + esc(lab) + '" title="' + esc(lab) + '"></i>';
             }).join('');
             return '<tr class="cmp-stg cmp-rowlink" onclick="CMPST.rowOpen(event, \'' + esc(s.id) + '\')"><td class="cmp-c-main">' +
                     '<button type="button" class="cmp-slink" onclick="CMPST.openDetail(\'' + esc(s.id) + '\')">' + esc(s.name) + '</button>' +
                     '<span class="cmp-scode">' + esc(s.id) + '</span></td>' +
                 '<td class="cmp-c-cy' + (cy.need ? '' : ' cmp-dim') + '">' + esc(cy.label) + '</td>' +
                 '<td><div class="cmp-dots">' + dots + '</div></td>' +
-                '<td class="cmp-num cmp-dim">— / 39</td>' +
+                '<td class="cmp-num' + (ap ? '' : ' cmp-dim') + '">' + (ap ? done + ' / ' + ap : '—') + '</td>' +
                 '<td class="cmp-c-law">' + lawBtn(s) + '</td></tr>' + lawRowSpan(s, 5);
         }).join('');
         return '<div class="cmp-wrap"><table class="table-figma table-compact cmp-table"><thead><tr>' +
@@ -688,9 +729,10 @@
             '<th class="cmp-num cmp-c-n2">이행 부서</th><th class="cmp-c-law">법령</th>' +
         '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
         '<p class="cmp-legend cmp-cap"><span class="cmp-dot-k"><i class="ok"></i> 이행</span>' +
+            '<span class="cmp-dot-k"><i class="na"></i> 적용(추정) · 서류 없음</span>' +
+            '<span class="cmp-dot-k"><i class="extra"></i> 추정 밖인데 서류 있음</span>' +
             '<span class="cmp-dot-k"><i></i> 적용 대상 아님(추정)</span>' +
-            '<span class="cmp-dot-k"><i class="na"></i> 자료 미취합</span>' +
-            ' 등록 부서 ' + V().orgDepts().length + ' / 39개 — 부서 귀속 자료가 없어 <b>이행 도트는 전부 미취합</b>입니다.</p>';
+            ' 부서 ' + depts.length + '개 — 「이행 부서」의 분모는 <b>적용대상 문구 추정</b>입니다.</p>';
     }
     function lawRowSpan(s, span) {
         if (!S.law[s.id]) return '';
@@ -1768,7 +1810,9 @@
             n.push(['자료 한계', '시설↔할 일 매핑은 시설 분류에서 파생한 추정이고, 이행상태는 시설 건별이 아니라 그 할 일의 군 단위 판정입니다.']);
         }
         if (S.level === 'L2') {
-            n.push(['자료 한계', '부서별 이행률은 적용 단계 추정 기준이며, 보유 업무문서의 «원장» 값은 분류 이전 5개년 원장 집계라 이행 증빙 수가 아닙니다.']);
+            n.push(['자료 한계', '앞 두 칸(서류가 붙은 할 일 · 보유 업무문서)만 문서 원장 실측입니다. ' +
+                '「적용(추정)」은 적용대상 문구에서 부서 이름을 찾은 값이라, 추정 밖 서류가 더 많은 부서는 이행률을 «분모 확인 필요»로 둡니다. ' +
+                '담양군이 부서별 이행항목 소관을 확정해 주면 실측 이행률로 바뀝니다.']);
         }
         return n;
     }
@@ -1784,19 +1828,17 @@
             return V().tableFile(['이행관리', '누락점검', y + '년'].concat(expCond()), head, rows, expNote('누락 점검', rows.length));
         }
         if (S.level === 'L2' && S.seg2 === 'dept') {
-            var stages = levelStages();
-            /* 화면이 «자료 미취합»이라 말하는 값을 파일에서 백분율로 찍지 않는다.
-               부서 귀속 자료가 없어(원장이 재난안전과 문서다) 부서별 이행 판정은
-               성립하지 않는데, 파일만 87% 를 내면 표를 떼어 본 사람에게는 그것이
-               측정값이 된다 — 파일이 화면보다 더 아는 척하면 안 된다. */
-            var head2 = ['부서', '적용 단계(추정)', '정기', '상시', '정기 이행률', '보유 업무문서', '문서 출처'];
+            /* 파일이 화면보다 더 아는 척하지 않는다 — 화면이 «분모는 추정»이라 밝히는
+               값이므로 파일도 이행률 옆에 «추정 밖 서류» 수와 명단 출처를 함께 싣는다.
+               비율만 떼어 가면 그것이 측정값이 된다. */
+            var head2 = ['부서', '서류가 붙은 할 일(실측)', '보유 업무문서(실측)', '적용(추정)', '추정 밖', '이행률', '명단 출처'];
             var rows2 = deptRows().map(function (dp) {
-                var mine = stages.filter(function (s) { return D().stageDeptHit(s, dp.name); });
-                var per = mine.filter(function (s) { return C().cycleOf(s).need > 0; });
-                var dc = deptDocCount(dp.name);
-                return [dp.name, mine.length, per.length, mine.length - per.length,
-                    '자료 미취합',
-                    dc.n, dc.real ? '5개년 원장 집계' : '이 시스템 등록분'];
+                var st = C().deptStats(dp.name, y);
+                return [dp.name, st.covered, st.docs, st.applied, st.extra,
+                    !st.applied ? '적용 할 일 없음'
+                        : (!st.docs ? '원장에 문서 없음' : (st.usable ? st.pct + '%' : '분모 확인 필요')),
+                    (dp.inLedger && dp.inOrg) ? '문서 원장 · 조직도'
+                        : (dp.inLedger ? '문서 원장(조직도 미등록)' : '조직도(문서 없음)')];
             });
             return V().tableFile(['이행관리', '부서단위', y + '년'].concat(expCond()), head2, rows2, expNote('부서 단위 — 부서별 보기', rows2.length));
         }

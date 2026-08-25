@@ -316,6 +316,11 @@ def main():
                     'seedOf': base.get('id') or '',
                     'title': title,
                     'sr': base.get('sr') or '',
+                    # 원장이 20개 부서를 갖게 되면서 부서·방향도 이어받는다. 안 이어받으면
+                    # 2025 는 부서로 걸리는데 2026 만 전건 «부서 없음»이 되어, 같은 화면의
+                    # 연도 토글이 축 하나를 조용히 잃는다.
+                    'dept': base.get('dept') or '',
+                    'dir': base.get('dir') or '',
                     'date': date,
                     'stageIds': [s['id']],
                     'cycle': label,
