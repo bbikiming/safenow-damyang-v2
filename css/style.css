@@ -125,6 +125,45 @@
   --z-modal: 120;
   --z-toast: 130;
 
+  /* ── 간격 스케일 (2026-08-25 신설) ────────────────────────────────────────
+     실측 결과 padding/margin/gap 선언 2,450개 중 **14%가 4px 그리드 밖**이었다
+     (5·7·9·11·13·15·17px …). 색·폰트·반경만 토큰이고 간격에는 기준이 없어
+     화면마다 «대충 이 정도»를 다시 정한 결과다.
+
+     4px 그리드다. 6·10·14px 은 실사용이 많아(각 302·343·176회) 반 단계로 둔다.
+     **스케일 밖 값은 최근접 토큰으로 수렴시킨다**(§6 폰트·반경과 같은 관례). */
+  --sp-0-5: 2px;   --sp-1: 4px;    --sp-1-5: 6px;   --sp-2: 8px;
+  --sp-2-5: 10px;  --sp-3: 12px;   --sp-3-5: 14px;  --sp-4: 16px;
+  --sp-5: 20px;    --sp-6: 24px;   --sp-7: 28px;    --sp-8: 32px;
+  --sp-10: 40px;   --sp-12: 48px;
+
+  /* 수직 리듬 3티어 — 실측상 화면의 블록 간격이 전부 10~16px 안에 몰려 있어
+     «필터 바 ↔ 표»와 «표 ↔ 다음 섹션»이 같은 간격이었다. 어디서 한 덩어리가
+     끝나는지 눈으로 알 수 없다는 뜻이다. 위계를 세 단으로 나눈다. */
+  --stack-tight: var(--sp-2);     /* 같은 덩어리 안 (라벨↔값, 칩 줄) */
+  --stack-base: var(--sp-4);      /* 블록 사이 (필터↔표) */
+  --stack-section: var(--sp-7);   /* 섹션 경계 (표↔다음 주제) */
+
+  /* 컨트롤 높이 — 실측상 한 화면에 28·32·34·36·40·41·43px 이 섞여 있었고,
+     특히 **필터 바에서 입력(43)과 그 옆 버튼(34)이 9px 어긋났다**. 나란히 놓이는
+     컨트롤의 높이가 다르면 정렬이 무너져 «대충 만든 화면»으로 보인다.
+       sm 32 — 칩·보조 버튼    md 36 — 기본 버튼    lg 40 — 폼 필드(입력·셀렉트)
+     같은 줄에 서는 것끼리는 반드시 같은 단을 쓴다. */
+  --ctl-sm: 32px;
+  --ctl-md: 36px;
+  --ctl-lg: 40px;
+
+  /* 읽기 폭 — 1920px 에서 안내 문단이 한 줄 225자였다(권장 40~50자의 4배).
+     표는 넓을수록 좋으므로 폭을 제한하는 것은 **설명 문단뿐**이다.
+
+     ch 가 아니라 px 인 이유: ch 는 «0» 글자 폭 기준이라 폰트 크기마다 결과가
+     달라지고, 무엇보다 **텍스트가 아니라 블록에 걸어야** 한다. 텍스트만 좁히면
+     안내 박스는 전폭 그대로라 접기 버튼이 텍스트에서 1,000px 떨어진 자리에
+     남는다(실측). 블록을 묶으면 버튼도 따라온다. 820px 는 12~14px 본문에서
+     한글 약 55~65자다. */
+  --measure: 820px;
+  --content-max: 1680px;          /* 초광폭에서 본문이 무한정 늘어나지 않게 */
+
   /* Breakpoint — 4단계 표준(문서화 값. CSS @media 는 리터럴을 쓰되 이 값만 사용하고,
      JS matchMedia 는 DYV2.BP 를 참조한다). xl 1280 / lg 1024 / md 768 / sm 560 */
   --bp-xl: 1280px;
@@ -139,7 +178,7 @@
    *   더 줄이지 말 것 — 사용자 칩이 이름/직위 2행이고 터치 타깃 44px 을 지켜야 한다. */
   --dy-header-h: 64px;
   --dy-gnb-h: 52px;
-  --dy-sidebar-w: 282px;
+  --dy-sidebar-w: 240px;
 }
 
 /* =========================================
@@ -1987,7 +2026,7 @@ body.sidebar-locked {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 60px;
+  padding: 0 var(--sp-8);
   position: sticky;
   top: 0;
   z-index: var(--z-nav);
@@ -2106,7 +2145,7 @@ body.sidebar-locked {
 .dy-gnb {
   height: var(--dy-gnb-h);
   background: var(--main);
-  padding: 0 60px;
+  padding: 0 var(--sp-8);
   display: flex;
   align-items: center;
   gap: 10px;
@@ -2188,7 +2227,9 @@ body.sidebar-locked {
   overflow-y: auto;
 }
 .dy-sidebar-inner {
-  width: 211px;
+  /* 고정 211px 이 아니라 좌우 여백을 남기는 계산식 — 사이드바 폭이 바뀌어도
+     안쪽 여백(16px×2)이 유지된다. 종전에는 ≥1600 만 211px 고정이었다. */
+  width: calc(100% - var(--sp-8));
   margin: 0 auto;
   display: flex;
   flex-direction: column;
@@ -2343,12 +2384,17 @@ body.sidebar-locked {
 /* --- Main content area --- */
 .dy-main {
   min-width: 0;
-  padding: 30px 55px;
+  padding: var(--sp-7) var(--sp-8);
   overflow-x: hidden;
   background: #ffffff;
+  /* 초광폭에서 본문이 무한정 늘어나지 않게. 표는 넓을수록 좋으므로 넉넉히 두고,
+     읽기 폭 제한은 설명 문단(.measure 계열)이 따로 맡는다. */
+  max-width: var(--content-max);
 }
+/* 최상위 블록은 **섹션 경계**다 — 종전 25px 는 카드 안 간격(16px)과 9px 차이라
+   «한 덩어리가 어디서 끝나는지»가 눈에 안 들어왔다. 3티어의 맨 위를 쓴다. */
 .dy-main > * + * {
-  margin-top: 25px;
+  margin-top: var(--stack-section);
 }
 /* 서브 탭으로 표시되는 pane도 같은 여백 적용 (doc/evl/imp/con-detail 등) */
 .dy-main .doc-pane.is-active > * + *,
@@ -3333,7 +3379,9 @@ body.sidebar-locked {
 .form-select,
 .form-textarea {
   width: 100%;
-  padding: 10px 14px;
+  /* 높이를 토큰에 못 박는다 — 종전에는 패딩+줄높이 합이 43px 이라 옆 버튼(34px)과
+     어긋났다. textarea 는 여러 줄이라 제외한다. */
+  padding: var(--sp-2-5) var(--sp-3-5);
   font-size: 14px;
   color: var(--text-black);
   background: white;
@@ -3358,6 +3406,13 @@ body.sidebar-locked {
   min-height: 96px;
   line-height: 1.5;
 }
+/* min-height 로는 못 잡힌다 — 패딩(10+10)+줄높이(21)+테두리(2)=43px 이라 이미
+   40 을 넘는다. 한 줄 입력이므로 높이를 못 박는다.
+   ⚠ **태그로 거른다** — 코드베이스에 `<textarea class="form-input">` 이 5곳 있어
+   클래스만 보고 높이를 박으면 여러 줄 입력이 40px 로 눌려 잘린다(실제로 냈던 회귀).
+   `input`·`select` 만 대상이고 textarea 는 rows 가 정한다. */
+input.form-input,
+select.form-select { height: var(--ctl-lg); }
 .form-select {
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23777777'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
@@ -4267,30 +4322,11 @@ body.sidebar-locked {
 }
 
 /* --- Responsive --- */
-@media (max-width: 1599px) {
-  .dy-header {
-    padding: 0 32px;
-  }
-  .dy-gnb {
-    padding: 0 32px;
-    gap: 10px;
-  }
-  .dy-main {
-    padding: 28px 32px;
-  }
-  :root {
-    --dy-sidebar-w: 240px;
-  }
-  .dy-sidebar-inner {
-    width: calc(100% - 32px);
-  }
-  .dy-page-title h1 {
-    font-size: 22px;
-  }
-  .dy-brand-name {
-    font-size: 22px;
-  }
-}
+/* 종전 이 자리에 @media (max-width: 1599px) 가 있었다 — §8 표준(1280/1024/768/560)
+   밖 값이라 다섯 번째 브레이크포인트였고, 1600px 이상에서만 셸이 «특대»(패딩 60px ·
+   사이드바 282px · 제목 26px)로 벌어졌다. 그런데 그 특대 쪽이 오히려 헐거워
+   1920px 에서 본문 여백만 커지고 읽기 폭은 더 나빠졌다. 여기 있던 값을 **기본으로
+   올리고** 블록을 없앴다 — 전 해상도에서 같은 셸을 쓴다. */
 
 @media (max-width: 1279px) {
   :root {

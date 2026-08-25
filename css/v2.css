@@ -1679,7 +1679,17 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 /* 공용 필터 바 (EDUFILTER.bar) — 좌: 조회 조건 / 우: 건수·초기화·액션 */
 .edu-filterbar, .dy-filterbar { justify-content: space-between; align-items: flex-start; }
 .edu-filterbar-fields, .dy-filterbar-fields { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 0; }
-.edu-filterbar-tail, .dy-filterbar-tail { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
+.edu-filterbar-tail, .dy-filterbar-tail { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; flex-shrink: 0; }
+/* 필터 바 한 줄에 서는 컨트롤은 **같은 높이**여야 한다 — 실측에서 입력 43px 옆에
+   버튼 34px 이 서 있어 9px 어긋났다. 줄이 하나뿐인데 밑변이 안 맞으면 그것만으로
+   화면이 흐트러져 보인다. 폼 필드 단(lg)에 맞춘다. */
+.edu-filterbar-fields > .btn,
+.edu-filterbar-tail > .btn,
+.dy-filterbar-fields > .btn,
+.dy-filterbar-tail > .btn { min-height: var(--ctl-lg); }
+/* 페이지 제목 줄도 같은 이유 — 연도 셀렉트(40) 옆에 버튼(32)이 서면 11px 어긋난다 */
+.page-head-action .btn,
+.page-head-action > select { min-height: var(--ctl-lg); }
 .edu-f-search, .dy-f-search { width: auto; flex: 0 1 220px; min-width: 160px; }
 
 .edu-card { background: var(--surface); border: 1px solid var(--card-line); border-radius: var(--radius-card); padding: 14px 16px; margin-bottom: 12px; }
@@ -4135,7 +4145,7 @@ p > .dx-note-gap { display: inline; }
    ========================================================================= */
 
 /* ── 공통 유틸 ─────────────────────────────────────────────────────── */
-.cmp-cap { font-size: var(--fs-12); color: var(--text-gray); line-height: 1.7; margin: 12px 0 16px; }
+.cmp-cap { font-size: var(--fs-12); color: var(--text-gray); line-height: 1.7; margin: var(--sp-3) 0 var(--sp-4); }
 .cmp-cap b { color: var(--text-black); font-weight: var(--fw-bold); }
 .cmp-dim { color: var(--text-gray); font-weight: var(--fw-regular); }
 .cmp-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; font-size: var(--fs-13); }
@@ -4150,11 +4160,12 @@ p > .dx-note-gap { display: inline; }
 /* ── 서브탭 · 계층탭 (표준 .sub-tabs / .tabs 위 modifier) ───────────────
    두 축을 **한 줄**에 둔다 — 각자 한 줄을 쓰면 첫 데이터 행이 900px 밖으로
    밀린다(§14-12 실측). 왼쪽이 화면 축(현황/누락), 오른쪽이 계층 축이다. */
-.cmp-tabbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+.cmp-tabbar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); flex-wrap: wrap; margin-bottom: var(--sp-3); }
 /* 이 두 화면만의 밀도 조정 — 공용 컴포넌트의 기본 여백을 그대로 두면 1280×900 에서
    첫 데이터 행이 610px 로 밀린다(§14-12 는 600px 이내를 요구한다). 전역 값을 건드리면
    다른 화면이 함께 움직이므로 페이지 범위로만 좁힌다. */
-[data-dy-page^="cmp-"] .dy-notice { margin-bottom: 12px; }
+/* 안내(맥락) 다음이 «맥락 → 요약» 섹션 경계다 — 3티어의 맨 위 */
+[data-dy-page^="cmp-"] .dy-notice { margin-bottom: var(--stack-section); }
 .cmp-subtabs { flex: 1 1 260px; }
 .cmp-lvtabs { flex: 0 0 auto; flex-wrap: wrap; }
 .cmp-lvtabs .tab { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; flex: 0 0 auto; }
@@ -4163,7 +4174,9 @@ p > .dx-note-gap { display: inline; }
 /* 여백은 §14-12(1280×900 첫 데이터 행 600px 이내)를 맞추는 값이다 — 표 위 한 줄
    안내(.cmp-mini)가 들어오면서 624px 로 밀렸고, 폰트를 줄이는 대신 여백만 깎았다.
    더 늘리려면 첫 행 위치를 다시 재고 넘지 않는지 확인할 것. */
-.cmp-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+/* KPI 다음이 «요약 → 목록» 섹션 경계다. 종전 16px 은 블록 간격과 같아
+   화면 전체가 한 덩어리로 읽혔다(실측: 28px 하나 빼고 전부 10~16px). */
+.cmp-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--sp-3); margin-bottom: var(--stack-section); }
 .cmp-kpis .kpi-card { padding: 14px 16px; gap: 4px; }
 .cmp-kpis .kpi-card-title { font-size: var(--fs-13); font-weight: var(--fw-medium); }
 .cmp-kpis .kpi-card-value { font-size: var(--fs-24); line-height: 1.2; }
@@ -4179,13 +4192,13 @@ p > .dx-note-gap { display: inline; }
 .cmp-kpis .kpi-card-label { display: flex; align-items: center; gap: 6px; }
 
 /* 표 위 한 줄 — 무엇을 보는 표인지와 어디를 누르면 되는지(D-3) */
-.cmp-mini { margin: 0 0 10px; font-size: var(--fs-13); color: var(--text-gray); line-height: 1.6; }
+.cmp-mini { margin: 0 0 var(--sp-2); font-size: var(--fs-13); color: var(--text-gray); line-height: 1.6; }
 .cmp-mini b { color: var(--text-black); font-weight: var(--fw-semibold); }
 
 /* ── 필터 칩 (설계 §8) ─────────────────────────────────────────────────
    옵션이 적고 상호배타이며 자주 바꾸는 축은 드롭다운 대신 칩 줄로 낸다.
    드롭다운은 «열기→고르기» 2회이고 고르기 전에는 건수를 알 수 없다. */
-.cmp-fchips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.cmp-fchips { display: flex; flex-wrap: wrap; gap: var(--sp-1-5); margin-bottom: var(--sp-2); }
 .cmp-fchip {
   display: inline-flex; align-items: center; gap: 5px;
   min-height: 32px; padding: 5px 12px;
@@ -4363,7 +4376,7 @@ p > .dx-note-gap { display: inline; }
 .cmp-warn { color: var(--status-warning-fg); font-weight: var(--fw-600); }
 
 /* ── 범례 ─────────────────────────────────────────────────────────────── */
-.cmp-legend { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin: 10px 0 0; font-size: var(--fs-12); color: var(--text-gray); }
+.cmp-legend { display: flex; gap: var(--sp-3-5); flex-wrap: wrap; align-items: center; margin: var(--sp-2) 0 0; font-size: var(--fs-12); color: var(--text-gray); }
 .cmp-legend > span { display: inline-flex; align-items: center; gap: 5px; }
 
 /* ── 2단 상세 (좌 340 고정 / 우 가변, lg 이하 1단) ─────────────────────── */
@@ -4495,7 +4508,7 @@ p > .dx-note-gap { display: inline; }
   .cmp-kpis { grid-template-columns: minmax(0, 1fr); }
   .cmp-dl > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
   .cmp-detail-bar { align-items: flex-start; flex-direction: column; }
-  .cmp-legend { gap: 8px; }
+  .cmp-legend { gap: var(--sp-2); }
   /* 좁은 폭에서 계층 탭·세그먼트가 컨테이너 밖으로 나가면 마지막 항목
      (관리대상 단위 · 개별법)이 잘려 **누를 수 없게 된다** — 줄을 나눠 준다. */
   .cmp-tabbar { flex-direction: column; align-items: stretch; }
@@ -4511,4 +4524,28 @@ p > .dx-note-gap { display: inline; }
   [data-dy-page^="cmp-"] .edu-filterbar-tail { flex-shrink: 1; min-width: 0; max-width: 100%; }
   .cmp-seg { width: 100%; }
   .cmp-seg-btn { flex: 1 1 auto; }
+}
+
+/* =========================================================================
+ * 읽기 폭 — 설명 문단은 한 줄이 길어지지 않게 (2026-08-25)
+ * -------------------------------------------------------------------------
+ * 실측: 1920px 에서 안내 문단이 한 줄 **225자**였다(권장 40~50자의 4배).
+ * 줄이 그만큼 길면 눈이 줄 끝에서 다음 줄 첫 글자로 돌아오지 못해, 글이
+ * 있어도 읽히지 않는다.
+ *
+ * **표는 제한하지 않는다** — 열이 많을수록 넓은 편이 낫다. 폭을 묶는 것은
+ * «읽는 글»뿐이고, 그래서 전역 `p` 가 아니라 안내·캡션 계열만 지정한다.
+ * (전역으로 걸면 표 안 셀·카드 안 문단까지 좁아진다.)
+ * ========================================================================= */
+/* **블록**에 건다 — 텍스트에만 걸면 박스는 전폭 그대로라 접기 버튼이 텍스트에서
+   1,000px 떨어진 자리에 남는다(1920px 실측). 박스를 묶으면 버튼이 따라온다. */
+.dy-notice,
+.cmp-cap,
+.dy-page-subtitle,
+.edu-pop-note,
+.dsh-seed-note,
+.dx-note-rel,
+.du-hint,
+.v2-empty p {
+  max-width: var(--measure);
 }
