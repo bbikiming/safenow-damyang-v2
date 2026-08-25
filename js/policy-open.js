@@ -39,6 +39,17 @@
             options: [{ k: 'waiting', label: '자료 대기' }, { k: 'received', label: '수신 완료' }]
         },
         {
+            /* 분류기준 v3.3 「EVENT생성방식」 시트에서 **판정 D(보류) 19건이 전부
+               이 하나 때문**이다 — «계약정보시스템 제공 항목 목록 미수령».
+               2026-08-21 회의에서도 도급·용역 현황 확인의 전제로 지목됐다
+               (재무과 앞 공문 발송했으나 진행 미확인). FMS·인사 연계는 준비
+               목록에 있는데 이것만 빠져 있어 추가한다. */
+            id: 'contract-sys', kind: 'integration', menu: '업무 관리 · 도급',
+            title: '계약정보시스템(차세대 e호조) 제공 항목 목록 — IF-004',
+            now: '수신 전까지 EVENT 단계 19건의 생성방식을 「판정 보류」로 두고, 이행 상세에 어느 인터페이스에서 무엇을 기다리는지 밝힙니다. 도급·용역 대상 목록이 없어 관리대상 단위의 공사·용역 축은 비워 둡니다 — 대상을 지어내지 않습니다.',
+            options: [{ k: 'waiting', label: '자료 대기' }, { k: 'spec', label: '규격 대기' }, { k: 'received', label: '수신 완료' }]
+        },
+        {
             id: 'hr-sync', kind: 'integration', menu: '조직·안전보건교육',
             title: '행정포털·인사 연계 규격',
             now: '연계 전에는 엑셀 반입과 직접 등록을 사용하고 출처를 구분합니다. 관리감독자 지정일은 재난안전과가 별도로 등록하며 인사 기본정보와 섞지 않습니다.',
@@ -103,7 +114,12 @@
         'rsk-imp': ['doc-org', 'onnara', 'official-letter'],
         'reports': ['doc-org', 'onnara'],
         /* 카드 넷과 항목 넷이 같은 순서로 맞물린다 — 셋만 뜨면 «하나 빠졌다» 로 읽힌다. */
-        'admin-integration': ['onnara', 'fms-data', 'law-api', 'hr-sync'],
+        'admin-integration': ['onnara', 'fms-data', 'law-api', 'hr-sync', 'contract-sys'],
+        /* 업무 관리(신) — 분류기준 v3.3 이 이 화면의 «판정 보류» 사유로 지목한 것들.
+           계약정보시스템 19건 · 인사정보시스템 19건 · FMS 13건이 EVENT 단계의
+           생성방식을 정하고, 담당부서 축은 문서 연계에서 온다. */
+        'cmp-status': ['contract-sys', 'hr-sync', 'fms-data', 'doc-dept-src'],
+        'cmp-docs': ['doc-dept-src', 'onnara'],
         'fac-list': ['fms-data'], 'fac-risk': ['fms-data'], 'fac-sync': ['fms-data'], 'fac-settings': ['fms-data'],
         'base-targets': ['fms-data', 'public-transport', 'material-scope'],
         'sbm-org': ['dept-list', 'hr-sync'], 'sbm-comply': ['dept-list', 'law-list'], 'sbm-policy': ['dept-list'],

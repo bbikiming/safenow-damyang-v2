@@ -165,9 +165,15 @@
             ' <span class="cmp-dim">전체 ' + D().summary(S.year).stages + '개 = 군 ' + c.L1 + ' · 부서 ' + c.L2 + ' · 관리대상 ' + c.L3 + '</span>';
         var rest =
             '<p>' + esc(lv.label) + ' — ' + esc(lv.note2) + '</p>' +
-            '<p>계층(군/부서/관리대상)은 원자료의 <b>적용대상 문구에서 파생한 추정</b>입니다 — ' +
-            c.byItemId + '개 단계는 문구에 시설 표현이 없어 이행항목 번호(FAC-*)로, ' +
-            c.fallback + '개 단계는 어느 쪽으로도 가릴 수 없어 부서 단위로 수렴시켰습니다. 발주처 확정 대상입니다.</p>' +
+            /* 분류기준 v3.3 «이행단위» 가 오면서 계층이 **확정값**이 됐다.
+               추정이 0건인데 «추정입니다»라고 쓰면 사실과 반대가 된다 — 확정과
+               추정이 섞여 있을 때만 그 사실을 말한다. */
+            (c.derived
+                ? '<p>계층(군/부서/관리대상)은 일부가 <b>적용대상 문구에서 파생한 추정</b>입니다 — ' +
+                  c.byItemId + '개 단계는 문구에 시설 표현이 없어 이행항목 번호(FAC-*)로, ' +
+                  c.fallback + '개 단계는 어느 쪽으로도 가릴 수 없어 부서 단위로 수렴시켰습니다. 발주처 확정 대상입니다.</p>'
+                : '<p>계층(군/부서/관리대상)은 분류기준의 <b>이행단위 확정값</b>입니다 — 추정이 아닙니다. ' +
+                  '관리대상 단위는 <b>시설</b>과 <b>공사·용역</b>으로 다시 갈리며, 공사·용역은 계약 자료 연계 후 대상이 채워집니다.</p>') +
             (un ? '<p>주기 문구를 회차로 옮기지 못한 단계 <b>' + un + '개</b>는 <b>상시</b>로 분류했습니다 — 없는 회차를 지어내지 않습니다.</p>' : '') +
             seedNote() +
             '<p><b>[엑셀 내려받기]</b>는 지금 조회 조건에 맞는 결과 전건을 <b>CSV 파일(.csv)</b>로 냅니다 — ' +
@@ -235,16 +241,19 @@
                 ? '<button type="button" class="kpi-card cmp-kpi-btn" onclick="' + act + '">' + inner + '</button>'
                 : '<div class="kpi-card">' + inner + '</div>';
         }
-        var gauge = '<div class="progress cmp-kpi-bar" role="progressbar" aria-valuenow="' + k.rate +
-            '" aria-valuemin="0" aria-valuemax="100" aria-label="정기 이행률">' +
-            '<div class="progress-bar green" style="width:' + k.rate + '%;"></div></div>';
+        /* KPI 는 판정과 **같은 축**으로만 센다 — 시트와 같은 말을 하기 위해서다.
+           종전의 «정기 이행률»(회차 충족률)·«연간 이행 회차»는 회차를 세던 시절의
+           축이라 없앴다. 회차는 이제 이행 상세에만 참고로 남는다. */
+        var gauge = '<div class="progress cmp-kpi-bar" role="progressbar" aria-valuenow="' + k.lawRate +
+            '" aria-valuemin="0" aria-valuemax="100" aria-label="법정 이행률">' +
+            '<div class="progress-bar green" style="width:' + k.lawRate + '%;"></div></div>';
         return '<div class="cmp-kpis">' +
-            card('정기 이행률', k.rate, '%', '충족 ' + k.periodicOk + ' / 정기 ' + k.periodic + '개' +
-                (k.na ? ' · 비해당 ' + k.na + '개 제외' : '') + gauge) +
-            card('상시 이행 충족', k.eventOk, '/ ' + k.event, '미충족 ' + (k.event - k.eventOk) + '개') +
-            card('미이행 단계', k.unmet, '', '이 중 기한 경과(지연) ' + k.late + '개', 'cmp-kpi-bad',
+            card('법정 이행률', k.lawRate, '%', '이행 ' + k.lawDone + ' / 산정 대상 ' + k.lawTotal + '개' + gauge) +
+            card('서류 확인', k.done, '/ ' + (k.done + k.unmet + k.cond + k.na), '문서가 확인된 할 일') +
+            card('미이행', k.unmet, '', '정기·상시 항목인데 서류 0건', 'cmp-kpi-bad',
                 "CMPST.setTab('gap')", '누락 점검') +
-            card('연간 이행 회차', k.rounds, '회', roundsFoot()) +
+            card('조건 미발생', k.cond, '', '사유 ' + k.condEvent + ' · 대상 ' + k.condTarget +
+                ' — 미이행이 아닐 수 있습니다') +
         '</div>';
     }
     /* 회차 합계는 **단계 기준**이다. 부서·시설 배수를 곱해 적어 두면 근거 없는
@@ -273,7 +282,7 @@
     }
     function statusOptions() {
         var out = [['', '상태 전체']];
-        ['ok', 'run', 'late', 'no', 'na'].forEach(function (k) {
+        C().JUDGE_ORDER.forEach(function (k) {
             out.push([k, C().JUDGE[k].glyph + ' ' + C().JUDGE[k].label]);
         });
         return out;
@@ -361,7 +370,7 @@
             if (S.dept && !D().stageDeptHit(s2, S.dept)) return false;
             return true;
         });
-        var cnt = { ok: 0, run: 0, late: 0, no: 0, na: 0 };
+        var cnt = { ok: 0, no: 0, cev: 0, ctg: 0, na: 0 };
         base.forEach(function (s2) { var j = C().judge(s2, S.year); if (j && cnt[j.key] !== undefined) cnt[j.key]++; });
         function chipBtn(key, label, glyph, tone, n) {
             var on = S.st === key;
@@ -372,7 +381,7 @@
                 esc(label) + '<span class="cmp-fchip-n">' + n + '</span></button>';
         }
         var out = chipBtn('', '전체', '', '', base.length);
-        ['ok', 'run', 'late', 'no', 'na'].forEach(function (k) {
+        C().JUDGE_ORDER.forEach(function (k) {
             var j = C().JUDGE[k];
             out += chipBtn(k, j.label, j.glyph, V().toneOf(j.label), cnt[k]);
         });
@@ -461,7 +470,7 @@
         var rows = order.map(function (itemId) {
             var g = by[itemId], it = D().item(itemId) || { id: itemId, name: itemId };
             var js = g.map(function (s) { return C().judge(s, S.year); });
-            var gap = js.some(function (j) { return j && (j.key === 'no' || j.key === 'late'); });
+            var gap = js.some(function (j) { return j && j.key !== 'ok' && j.key !== 'na'; });
             var open = (S.open[itemId] === undefined) ? gap : !!S.open[itemId];
             var ok = js.filter(function (j) { return j && j.key === 'ok'; }).length;
             var docs = js.reduce(function (a, j) { return a + (j ? j.docs : 0); }, 0);
@@ -474,7 +483,7 @@
                 '<td colspan="6"><span class="cmp-car" aria-hidden="true">' + (open ? '▾' : '▸') + '</span>' +
                     '<span class="cmp-gname">' + esc(it.name) + '</span>' +
                     '<span class="cmp-gcode">' + esc(it.id) + '</span>' +
-                    '<span class="cmp-gsum' + (ok === g.length ? ' is-full' : '') + '">충족 ' + ok + '/' + g.length + '</span></td>' +
+                    '<span class="cmp-gsum' + (ok === g.length ? ' is-full' : '') + '">이행 ' + ok + '/' + g.length + '</span></td>' +
                 '<td class="cmp-num cmp-gm">' + docs + '건</td>' +
                 '<td></td>' +
             '</tr>';
@@ -632,7 +641,7 @@
             '<tr class="cmp-missing"><td colspan="6">… 나머지 ' + (39 - reg) + '개 부서 — <b>명단 미확보</b> (대상 과·사업소 39개 중 ' + reg + '개 등록)</td></tr>';
         return '<div class="cmp-wrap"><table class="table-figma table-compact cmp-table"><thead><tr>' +
             '<th class="cmp-c-dept">부서</th><th class="cmp-num cmp-c-n">적용 단계(추정)</th><th class="cmp-num cmp-c-n">정기</th>' +
-            '<th class="cmp-num cmp-c-n">상시</th><th class="cmp-c-rate">정기 이행률</th><th class="cmp-num cmp-c-n">보유 업무문서</th>' +
+            '<th class="cmp-num cmp-c-n">상시</th><th class="cmp-c-rate">이행 판정</th><th class="cmp-num cmp-c-n">보유 업무문서</th>' +
         '</tr></thead><tbody>' + rows + missing +
         '</tbody></table></div>' +
         deptDocsNote() +
@@ -777,7 +786,7 @@
         }).join('');
         return '<div class="cmp-wrap"><table class="table-figma table-compact cmp-table"><thead><tr>' +
             '<th class="cmp-c-fac">관리대상</th><th class="cmp-c-ac">소관부서</th><th class="cmp-c-cy">분류</th>' +
-            '<th class="cmp-c-fchips-h">적용 단계 이행</th><th class="cmp-num cmp-c-n2">충족</th>' +
+            '<th class="cmp-c-fchips-h">적용 단계 이행</th><th class="cmp-num cmp-c-n2">이행</th>' +
         '</tr></thead><tbody>' + rows +
             (recs.length > show.length
                 ? '<tr class="cmp-missing"><td colspan="5">… 조건에 맞는 ' + recs.length + '개 중 ' + show.length + '개 표시 (FMS 연계 시드 ' + facRecs().length + '건)</td></tr>'
@@ -791,7 +800,7 @@
     }
 
     function legend() {
-        return '<p class="cmp-legend">' + ['ok', 'run', 'late', 'no', 'na'].map(function (k) {
+        return '<p class="cmp-legend">' + C().JUDGE_ORDER.map(function (k) {
             var j = C().JUDGE[k];
             return '<span><span class="chip-status chip-sm ' + V().toneOf(j.label) + '">' + j.glyph + ' ' + esc(j.label) +
                 '</span> ' + esc(j.desc) + '</span>';
@@ -843,6 +852,15 @@
                 '<dl class="cmp-dl">' +
                     '<div><dt>법령근거</dt><dd>' + lawCell(s.law) + '</dd></div>' +
                     '<div><dt>법정주기</dt><dd>' + esc(s.legalCycle || '정기주기 없음') + '</dd></div>' +
+                    /* v3.3 «이행의무 유형» — 조건부인지 아닌지가 «미이행» 판정의
+                       뜻을 바꾼다. 상세에서 그 성격을 먼저 밝힌다. */
+                    (C().dutyOf(s)
+                        ? '<div><dt>의무 성격</dt><dd>' +
+                          (C().isConditional(s, S.year)
+                            ? '<span class="chip-status chip-sm info">' + esc(C().dutyOf(s).label) + '</span> ' +
+                              '<span class="cmp-dim">조건이 발생해야 하는 할 일입니다 — 조건이 없었다면 서류가 없는 것이 맞습니다.</span>'
+                            : esc(C().dutyOf(s).label)) + '</dd></div>'
+                        : '') +
                     '<div><dt>운영주기(재난안전과)</dt><dd>' + (s.opCycle ? esc(s.opCycle) : '<span class="cmp-dim">미지정</span>') + '</dd></div>' +
                     '<div><dt>수행시점조건</dt><dd>' + (s.timing ? esc(s.timing) : '<span class="cmp-dim">—</span>') + '</dd></div>' +
                     '<div><dt>적용대상</dt><dd>' + esc(s.target || '—') + '</dd></div>' +
@@ -855,7 +873,16 @@
                             (j.key === 'na' ? ' <span class="cmp-dim">' + (j.reason ? esc(j.reason) : '사유 미기재 — 확인 필요') + '</span>' : '') + '</dd></div>' +
                         '<div><dt>회차</dt><dd>' + (cy.need > 0
                             ? j.round + ' <span class="cmp-dim">(' + esc(cy.label) + ' · 기한은 달력 말일 추정)</span>'
-                            : '<span class="cmp-dim">상시 — 정기 회차 없음</span>') + '</dd></div>' +
+                            /* 회차를 못 만드는 데는 두 이유가 있다 — 애초에 정기
+                               주기가 없는 것과, 주기는 있는데 **판정할 자료가 없어
+                               보류**된 것(등급·임기·담당 시작일 · 다년 주기).
+                               둘을 같은 «상시»로 뭉치면 «왜 회차가 없지»를 알 수
+                               없고, 받아야 할 자료가 무엇인지도 사라진다. */
+                            : cy.hold
+                                ? '<span class="chip-status chip-sm warning">판정 보류</span> ' +
+                                  '<span class="cmp-dim">' + esc(cy.label) + ' — <b>' + esc(cy.needs) +
+                                  '</b>이(가) 있어야 회차가 정해집니다. 자료 수신 전까지 지연으로 세지 않습니다.</span>'
+                                : '<span class="cmp-dim">상시 — 정기 회차 없음</span>') + '</dd></div>' +
                         /* 숫자만 보여주고 못 열면 셀렉터를 찾아 다시 골라야 한다(D-8) */
                         (prev ? '<div><dt>' + prev + '년 실적</dt><dd>' + (prevN
                             ? '<button type="button" class="du-link" onclick="CMPST.setDetailYear(' + prev + ')">' + prevN + '건 보기 →</button>'
@@ -938,6 +965,38 @@
         return '<div><dt>이행 판정</dt><dd>' + chip +
             ' <span class="cmp-dim">' + note + ' 지금은 <b>증빙 문서</b> 기준으로 판정합니다.</span></dd></div>';
     }
+    /* ── 이 할 일은 언제 어떻게 생기나 — 연계 개발자 회신 확정본 ────────────────
+     * 분류기준 v3.3 「EVENT생성방식」 시트가 140단계에 대해 **연계 시스템·인터페이스
+     * 번호·미확보 항목·조치**까지 정해 두었다. 종전에는 이 자리에 아무것도 없었고
+     * «판정 보류» 를 우리가 «모른다» 로만 말했다 — 실제로는 «무엇을 받으면 되는지»
+     * 까지 정해져 있다. 모르는 것과 자료를 기다리는 것은 다르다. */
+    function linkRow(s) {
+        var l = C().linkOf(s);
+        if (!l || !l.gen) return '';
+        var g = C().linkGrade(s);
+        var head = esc(l.gen);
+        if (l.gen === '시스템 연계(자동 생성)' && l.sys) {
+            head = '<span class="chip-status chip-sm success">자동 생성</span> ' +
+                   '<span class="cmp-dim">' + esc(l.sys) + (l.iface ? ' · ' + esc(l.iface) : '') + '</span>';
+        } else if (l.gen === '판정 보류') {
+            head = '<span class="chip-status chip-sm warning">판정 보류</span> ' +
+                   '<span class="cmp-dim">' + esc(l.sys || '연계 시스템 미확정') +
+                   (l.iface ? ' · ' + esc(l.iface) : '') + '</span>';
+        } else {
+            head = '<span class="chip-status chip-sm neutral">담당자 직접 등록</span>';
+        }
+        var lines = '';
+        /* 무엇이 없어서 보류인지 — 이것이 이 줄의 존재 이유다 */
+        if (l.missing && l.missing !== '없음 (전 항목 확보)') {
+            lines += '<p class="cmp-cap"><b>받아야 할 것</b> — ' + esc(l.missing) + '</p>';
+        }
+        if (l.action) lines += '<p class="cmp-cap"><b>조치</b> — ' + esc(l.action) + '</p>';
+        if (g && g.label === '일부 부족' && l.why) {
+            lines += '<p class="cmp-cap">' + esc(l.why) + '</p>';
+        }
+        return '<div><dt>어떻게 생기나</dt><dd>' + head +
+            (g ? ' <span class="cmp-dim">(' + esc(g.label) + ')</span>' : '') + lines + '</dd></div>';
+    }
     function typeBlock(s) {
         var t = C().typeOf(s), paths = C().pathsOf(s), draft = C().needsConfirm(s);
         var where = paths.length
@@ -951,6 +1010,7 @@
         return '<div class="cmp-detail-sum">' +
             '<dl class="cmp-dl"><div><dt>어디서 수행하나</dt><dd>' + where + '</dd></div>' +
             probeRow(s) +
+            linkRow(s) +
             (draft
                 ? '<div><dt>분류 상태</dt><dd><span class="chip-status chip-sm warning">확인 필요</span> ' +
                   '<span class="cmp-dim">개발측이 메뉴를 대조해 만든 <b>초안</b>입니다 — 발주처 확정 전입니다.</span></dd></div>'
@@ -1193,7 +1253,8 @@
     function gapStages() {
         return D().stages().filter(function (s) {
             var j = C().judge(s, S.year);
-            return j && (j.key === 'no' || j.key === 'late');
+            /* 서류가 없는 할 일 — 미이행과 «미발생»을 함께 모으되 화면이 갈라 보여준다 */
+            return j && (j.key === 'no' || j.key === 'cev' || j.key === 'ctg');
         });
     }
     /* 표와 내려받기가 **같은 목록**을 봐야 한다 — 필터를 두 곳에 적으면 반드시 갈린다 */
@@ -1227,12 +1288,27 @@
                     : ''),
         });
 
+        /* ── 「안 한 것」과 「할 조건이 안 된 것」을 가른다 ─────────────────────
+         * 2026-08-21 회의: *"나머지 15개는 조건이 안 되면 안 해도 되는 것 — 조건 미발생"*.
+         * 조건부 단계에 문서가 없는 것은 미이행이 아닐 수 있다. 한 덩어리로 세면
+         * «하지 않아도 될 일»까지 미이행으로 몰아 수치가 부풀고, 정작 봐야 할 것이
+         * 묻힌다. 조건이 발생했는지는 담당자만 안다 — 그래서 지우지 않고 **갈라서**
+         * 보여주고 확인 대상임을 밝힌다. */
+        var cond = list.filter(function (st) { return C().isConditional(st, S.year); });
+        var real = list.filter(function (st) { return !C().isConditional(st, S.year); });
         return bar +
             '<div class="cmp-gap-head">' +
-                '<p class="cmp-gap-n">미이행 단계 <b>' + list.length + '개</b></p>' +
+                '<p class="cmp-gap-n">서류가 없는 할 일 <b>' + list.length + '개</b>' +
+                    (cond.length ? ' <span class="cmp-dim">— 확인 필요 ' + real.length +
+                        ' · 조건 확인 ' + cond.length + '</span>' : '') + '</p>' +
                 '<p class="cmp-cap">정기 ' + per + ' + 상시 ' + (list.length - per) + ' · ' +
                     (prev ? prev + '년에도 문서가 없던 단계 <b>' + twice + '개</b>는 <b>2년 연속</b>으로 표시됩니다.'
                           : '지난연도 비교 자료가 없어 2년 연속 표시는 생략됩니다.') + '</p>' +
+                (cond.length
+                    ? '<p class="cmp-cap"><b>조건 확인 ' + cond.length + '개는 미이행이 아닐 수 있습니다.</b> ' +
+                      '사유·대상이 발생해야 하는 할 일이라, 조건이 없었다면 하지 않은 것이 맞습니다 — ' +
+                      '조건이 있었는지는 담당 부서만 압니다. 아래에서 <b>조건 확인</b> 표시로 구분됩니다.</p>'
+                    : '') +
             '</div>' +
             (list.length ? gapGroups(list, prev) : '<div class="v2-empty"><b>조건에 맞는 미이행 단계가 없습니다.</b></div>') +
             '<p class="cmp-cap"><b>비해당 처리에는 사유가 반드시 필요합니다.</b> 중대재해 대응에서는 “미이행”보다 ' +
@@ -1287,6 +1363,11 @@
             '<td class="cmp-c-main"><button type="button" class="cmp-slink" onclick="CMPST.openDetail(\'' + esc(s.id) + '\')">' +
                     esc(s.name) + '</button>' +
                 '<span class="cmp-scode">' + esc(s.law || '근거 미등록') + ' · ' + esc(cy.label) + '</span>' +
+                /* 조건부는 «안 한 것»이 아니라 «조건이 있었는지 물어야 할 것»이다 */
+                (C().isConditional(s, S.year)
+                    ? '<span class="cmp-gap-yr"><span class="chip-status chip-sm info" title="' +
+                      esc(C().dutyOf(s).label) + ' — 조건이 없었다면 하지 않은 것이 맞습니다">조건 확인</span></span>'
+                    : '') +
                 '<span class="cmp-gap-yr">' + chip(j) +
                     (twice ? ' <span class="chip-status chip-sm danger">□ 2년 연속</span>' : '') +
                     (prev ? ' <span class="cmp-dim">' + prev + '년 ' + prevN + '건 · ' + S.year + '년 ' + j.docs + '건</span>'
@@ -1389,7 +1470,7 @@
         if (cur === undefined) {
             /* 기본값(지연·미이행 있으면 펼침)의 반대로 뒤집는다 — 저장값만 보면 첫 클릭이 먹지 않는다 */
             var g = D().stagesOfItem(id).filter(stageMatch);
-            var open = g.some(function (s) { var j = C().judge(s, S.year); return j && (j.key === 'no' || j.key === 'late'); });
+            var open = g.some(function (s) { var j = C().judge(s, S.year); return j && j.key !== 'ok' && j.key !== 'na'; });
             S.open[id] = !open;
         } else S.open[id] = !cur;
         render();
@@ -1560,7 +1641,7 @@
                 '<div class="cmp-detail-bar">' +
                     '<h3 class="cmp-detail-h3">이 시설에 적용되는 할 일 <span class="cmp-dim">(' + st.length + ')</span></h3>' +
                     '<span class="cmp-detail-act">' +
-                        '<span class="cmp-dim">' + y + '년 충족 ' + ok + '/' + st.length + '</span>' +
+                        '<span class="cmp-dim">' + y + '년 이행 ' + ok + '/' + st.length + '</span>' +
                         '<a class="btn btn-outline btn-sm" href="fac-list.html?no=' + encodeURIComponent(r.facilNo) + '">시설물 대장에서 열기 →</a>' +
                     '</span>' +
                 '</div>' +
@@ -1721,7 +1802,7 @@
         }
         if (S.level === 'L3' && S.seg3 === 'fac') {
             var head3 = ['관리대상', '시설물번호', '소관부서', '구분', '종류', '시설물종별', '소재지',
-                '적용 단계 수', '충족', '적용 단계'];
+                '적용 단계 수', '이행', '적용 단계'];
             var rows3 = facList().map(function (r) {
                 var ex = facExtOf(r.facilNo), st = facStages(r);
                 var ok = st.filter(function (s) { return C().judge(s, y).key === 'ok'; }).length;

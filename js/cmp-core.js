@@ -98,6 +98,32 @@
             state: !isProgram ? 'doc' : (key ? 'pending' : 'unmapped'),
         };
     }
+    /* ── EVENT 단계가 «언제 어떻게 생기는가» — 연계 개발자 회신 확정본 ────────
+     * 분류기준 v3.3 「EVENT생성방식」 시트(140단계 × 14열)가 정본이다.
+     *   최종 생성 방식 — 사용자 직접 등록 112 · 시스템 연계(자동 생성) 9 · 판정 보류 19
+     *   연계 실현 판정 — A 확보 1 · B 일부 부족 8 · C 23 · D 보류 19 · 해당없음 89
+     *
+     * [보류 19건은 이유가 있다] 전부 **계약정보시스템(차세대 e호조) 제공 항목 미수령**
+     * 이다. 종전에는 우리가 «어느 결과를 이행으로 볼지 정해지지 않았습니다» 라고
+     * 뭉뚱그렸는데, 시트는 **인터페이스 번호·미확보 항목·조치**까지 갖고 있다.
+     * 모르는 것과 «자료를 기다리는 중»은 다르다 — 후자는 무엇을 받으면 되는지 안다.
+     *
+     * [B 등급은 «되지만 한 가지가 빈다»] 예: IND-05-01 은 직위명으로 관리감독자를
+     * 가릴 수 있으나 **발령일**이 없어 감지일로 대체한다. 그 사실을 화면이 말한다. */
+    function linkOf(stage) {
+        var s = (stage && stage.id) ? stage : D().stage(stage);
+        return (s && s.link) || null;
+    }
+    var LINK_GRADE = {
+        'A': { label: '연계 가능', tone: 'success', desc: '필요 항목 전부 확보' },
+        'B': { label: '일부 부족',  tone: 'info',    desc: '연계는 되나 일부 항목이 없어 대체값을 쓴다' },
+        'C': { label: '연계 제한',  tone: 'warning', desc: '' },
+        'D': { label: '판정 보류',  tone: 'warning', desc: '연계 시스템 제공 항목 미수령 — 수령 후 재판정' },
+    };
+    function linkGrade(stage) {
+        var l = linkOf(stage);
+        return (l && LINK_GRADE[l.grade]) || null;
+    }
     function levelOf(stage) {
         var id = stage && stage.id ? stage.id : stage;
         return levelIndex()[id] || { level: 'L2', derived: true, by: 'unknown' };
@@ -181,6 +207,38 @@
         var src = s.opCycle ? 'op' : (s.legalCycle ? 'legal' : 'none');
         var r = parseCycle(s.opCycle || s.legalCycle);
         r.src = src;
+        /* ── 분류기준 v3.3 «주기코드» 가 있으면 **그 값이 이긴다** ──────────────
+         * 종전에는 법정주기 문장을 파싱해 회차를 만들었다. v3.3 은 발주처·컨설팅이
+         * 확정한 코드를 직접 준다 — 추정보다 확정이 먼저다.
+         *
+         * ⚠ 네 종류는 **연 단위 고정 회차가 아니다.** 회차를 만들어 내면 없는 기한이
+         * 생기고 «지연»이 거짓으로 뜬다. 회차 없이 두고 그 이유를 화면이 말한다.
+         *   GRADE     시설 안전등급에 따라 다름(A·B·C 반기 1회 / D 월 1회 / E 월 2회)
+         *             → **등급 자료를 받아야 회차가 정해진다**(FMS 80건 중 8건만 보유)
+         *   TERM      «임기 중 2회 이상» — 임기 시작일이 있어야 창이 정해진다
+         *   MULTIYEAR «2년에 1회»·«10년마다» — 그 해에 도래하는지 셀 수 없다
+         *   BIENNIAL  «담당 후 6개월 내 신규, 이후 매 2년» — 담당 시작일이 필요하다
+         * 네 종류 모두 **판정 보류**이고, 무엇이 있어야 판정되는지를 needs 로 남긴다. */
+        var CC_FIXED = { YEAR: 1, HALF: 2, QUARTER: 4, MONTH: 12, WEEK: 52 };
+        var CC_HOLD = {
+            GRADE:     '시설 안전등급',
+            TERM:      '임기 시작일',
+            MULTIYEAR: '다년 주기 — 그 해 도래 여부',
+            BIENNIAL:  '담당 시작일',
+        };
+        var code = s.cycleCode || '';
+        if (code) {
+            r.cycleCode = code;
+            if (code === 'EVENT') { r.cc = 'EVENT'; r.need = 0; r.unparsed = false; }
+            else if (CC_FIXED[code]) {
+                /* 파싱이 같은 버킷을 이미 맞혔으면 그 회차(예: 월 2회=24)를 살린다 */
+                if (r.cc !== code || !r.need) { r.cc = code; r.need = CC_FIXED[code]; }
+                r.unparsed = false;
+            } else if (CC_HOLD[code]) {
+                r.cc = 'EVENT'; r.need = 0; r.unparsed = false;
+                r.hold = true; r.needs = CC_HOLD[code];
+            }
+        }
         /* 주기가 아닌 값을 «이행주기» 자리에 두면 「4시간」이 떠서 데이터 오류로
            읽힌다. 표시용 라벨만 수행시점으로 바꾸고 **원문은 hoursOnly 에 남긴다**
            — 상세의 «법정주기» 행은 s.legalCycle 을 직접 쓰므로 시간 요건을 잃지
@@ -241,16 +299,69 @@
      * (재난안전과 담당자)의 축은 기존 이행 목록에 그대로 있다.
      * 문서 수는 DYDOCS.documentIdsOfStage(stageId, year).length 하나만 쓴다.
      * ========================================================================= */
-    var JUDGE = {
-        /* «도래 회차»가 아니라 **연간 필요 회차** 기준이다(아래 done >= cy.need).
-           그래서 반기 이상 주기는 연말 전에 충족이 되지 않는다 — 설명이 코드와
-           달라 «7월에 상반기분 냈는데 왜 충족이 아니냐»로 읽히던 것을 바로잡는다. */
-        ok:   { key: 'ok',   label: '충족',   glyph: '✓', desc: '연간 필요 회차 전부 등록' },
-        run:  { key: 'run',  label: '진행중', glyph: '◐', desc: '일부 등록' },
-        late: { key: 'late', label: '지연',   glyph: '!', desc: '기한 경과' },
-        no:   { key: 'no',   label: '미이행', glyph: '□', desc: '문서 0건' },
-        na:   { key: 'na',   label: '비해당', glyph: '−', desc: '사유 기재' },
+    /* ── 이행의무 유형 — 「안 한 것」과 「할 조건이 안 된 것」을 가른다 ──────────
+     * 분류기준 v3.3 «이행의무 유형» 이 213단계를 다섯으로 나눈다.
+     *   정기주기 70 · 상시·최초 52 · 조건부(사유 발생) 45 · 조건부(대상 발생) 43 · 산출불가 3
+     *
+     * ⚠ 조건부라고 무조건 «미발생» 이 아니다 — **문서가 없을 때만** 그렇다.
+     * 시트에서 조건부 88건 중 문서가 있는 72건은 그냥 «이행» 이다(문서가 있다는 것은
+     * 조건이 발생했다는 뜻이다). 판정은 judge() 가 그 순서를 지킨다.
+     *
+     * ⚠ «산출불가» 는 판정 불가가 아니다 — 회차를 셀 수 없다는 뜻이고 문서가 있으면
+     * 이행이다(DSM-06-01 문서 423건 → 이행). */
+    var DUTY = {
+        '정기주기':         { key: 'periodic',   label: '정기주기',            cond: false },
+        '상시·최초':        { key: 'once',       label: '상시·최초',           cond: false },
+        '조건부(사유 발생)': { key: 'condEvent',  label: '조건부 — 사유 발생 시', cond: true },
+        '조건부(대상 발생)': { key: 'condTarget', label: '조건부 — 대상 발생 시', cond: true },
+        '산출불가':         { key: 'nocalc',     label: '산출 불가',           cond: false },
     };
+    function dutyOf(stage) {
+        var s = (stage && stage.id) ? stage : D().stage(stage);
+        return (s && DUTY[s.dutyKind]) || null;
+    }
+    /* 조건부 «이면서 문서가 없는» 단계인가 — 이 둘을 함께 봐야 «서류가 있는데
+       조건이 없었다면 맞습니다» 같은 말을 하지 않는다. */
+    function isConditional(stage, year) {
+        var s = (stage && stage.id) ? stage : D().stage(stage);
+        var d = dutyOf(s);
+        if (!d || !d.cond) return false;
+        return D().documentIdsOfStage(s.id, +(year || D().DEFAULT_YEAR)).length === 0;
+    }
+
+    /* =========================================================================
+     * 이행 판정 — 분류기준 v3.3 「단계별현황」 시트의 판정 방식이 정본이다
+     * -------------------------------------------------------------------------
+     * 시트가 밝힌 기준 원문:
+     *   «이행(문서 확인) · 미이행(정기주기·상시 항목인데 0건) ·
+     *    사유 미발생 / 대상 미발생(조건부 항목이라 0건이 미이행을 뜻하지 않음) ·
+     *    산출불가(회차 판정 불가)»
+     *
+     * [회차를 세지 않는다 (MUST)] 종전에는 «반기 2회 중 1회»를 세어 «지연»을 냈다.
+     * 그러나 **자료가 그 정밀도를 못 받친다** — 문서 제목만으로는 같은 제목 3건이
+     * 1·2·3회차인지 알 수 없고(2026-08-21 회의: *"제목만으로는 절대 파악이 안 된다"*),
+     * 분류확인이 확실 44% · 모호 43% · 애매 13% 다. 실제로 시트는 주 52회짜리
+     * FAC-16-02 에 문서 2건, 반기 2회짜리 IND-10-01 에 문서 1건인데 **둘 다 «이행»**
+     * 으로 판정한다. 우리가 회차를 세면 그 11건을 «지연»이라 불러 **발주처 분석과
+     * 화면이 서로 다른 말을 하게 된다.**
+     * 회차는 버리지 않고 **이행 상세에만 참고로** 남긴다(round·need·hold).
+     *
+     * [조건부는 문서가 없을 때만 «미발생» 이다] 조건부 88건 중 문서가 있는 72건은
+     * 시트에서 그냥 «이행» 이다 — 문서가 있다는 것은 조건이 발생했다는 뜻이다.
+     * 문서 유무를 안 보고 조건부라는 이유만으로 «조건 확인» 을 붙이면, 서류가 있는
+     * 단계에 «조건이 없었다면 서류가 없는 것이 맞습니다» 라고 말하게 된다.
+     *
+     * [산출불가는 «판정 불가»가 아니다] 회차를 셀 수 없다는 뜻이고, 문서가 있으면
+     * 이행이다(DSM-06-01 문서 423건 → 이행). GRADE·TERM·MULTIYEAR·BIENNIAL 도 같다.
+     * ========================================================================= */
+    var JUDGE = {
+        ok:   { key: 'ok',   label: '이행',       glyph: '✓', desc: '문서 확인' },
+        no:   { key: 'no',   label: '미이행',     glyph: '□', desc: '정기주기·상시 항목인데 0건' },
+        cev:  { key: 'cev',  label: '사유 미발생', glyph: '·', desc: '조건부 — 사유가 발생하지 않았을 수 있음' },
+        ctg:  { key: 'ctg',  label: '대상 미발생', glyph: '·', desc: '조건부 — 대상이 발생하지 않았을 수 있음' },
+        na:   { key: 'na',   label: '비해당',     glyph: '−', desc: '사유 기재' },
+    };
+    var JUDGE_ORDER = ['ok', 'no', 'cev', 'ctg', 'na'];
     function judge(stage, year) {
         var s = (stage && stage.id) ? stage : D().stage(stage);
         if (!s) return null;
@@ -259,29 +370,28 @@
         var n = D().documentIdsOfStage(s.id, year).length;
         var rec = D().stageRecord(s.id, year);
 
-        /* 비해당이 최우선 — 사유 없는 옛 데이터도 상태는 비해당으로 두되 화면이
-           '사유 미기재'를 따로 드러낸다(CLAUDE.md §4-2 와 같은 근거) */
-        if (rec.status === D().ST.NA) {
-            return mk('na', 0, cy.need, n, cy, { reason: rec.naReason || '' });
-        }
-        if (cy.cc === 'EVENT') {
-            return mk(n > 0 ? 'ok' : 'no', n > 0 ? 1 : 0, 0, n, cy, {});
-        }
-        var done = Math.min(n, cy.need);
-        if (done >= cy.need) return mk('ok', done, cy.need, n, cy, {});
-        if (done > 0) return mk('run', done, cy.need, n, cy, {});
-        var due = elapsedRounds(cy.need, year);
-        return mk(due > 0 ? 'late' : 'no', 0, cy.need, n, cy, { elapsed: due });
+        /* 비해당이 최우선 — 사람이 사유를 대고 뺀 것이라 자동 판정보다 앞선다
+           (사유 없는 옛 데이터도 상태는 비해당으로 두되 화면이 «사유 미기재»를 드러낸다) */
+        if (rec.status === D().ST.NA) return mk('na', n, cy, rec, { reason: rec.naReason || '' });
+        if (n > 0) return mk('ok', n, cy, rec, {});
+        var d = dutyOf(s);
+        if (d && d.key === 'condEvent') return mk('cev', 0, cy, rec, {});
+        if (d && d.key === 'condTarget') return mk('ctg', 0, cy, rec, {});
+        return mk('no', 0, cy, rec, {});
 
-        function mk(key, done2, need2, n2, cy2, extra) {
+        function mk(key, n2, cy2, rec2, extra) {
             var j = JUDGE[key];
             var o = {
-                key: key, label: j.label, glyph: j.glyph,
+                key: key, label: j.label, glyph: j.glyph, desc: j.desc,
                 tone: V().toneOf(j.label),
-                done: done2, need: need2, docs: n2,
-                cc: cy2.cc, cycleLabel: cy2.label,
-                round: need2 > 0 ? (done2 + '/' + need2) : '',
-                status: rec.status,
+                docs: n2,
+                /* ── 아래는 **상세 전용 참고값**이다. 판정에 쓰지 말 것. ──────────
+                   표·필터·집계는 위 5상태만 본다(시트와 같은 말을 하기 위해서다). */
+                cc: cy2.cc, cycleLabel: cy2.label, need: cy2.need,
+                round: cy2.need > 0 ? (Math.min(n2, cy2.need) + '/' + cy2.need) : '',
+                shortfall: cy2.need > 0 && n2 < cy2.need,   /* 회차 미달 — 참고 */
+                hold: !!cy2.hold, holdNeeds: cy2.needs || '',
+                status: rec2.status,
             };
             Object.keys(extra || {}).forEach(function (k) { o[k] = extra[k]; });
             return o;
@@ -420,35 +530,42 @@
      * 비해당은 분모에서 뺀다 — 사유를 대고 빠진 건을 미이행으로 세면 이행률이
      * 영영 100% 가 되지 않는다. 뺀 건수는 화면이 함께 밝힌다.
      * ========================================================================= */
+    /* ── 법정 이행률 — 분모는 «이행률 포함 = Y» 다 (v3.3 신규 축) ─────────────
+     * 213단계 중 **72단계**만 이행률에 든다. 나머지 141 은 «마련»처럼 한 번 하면
+     * 되는 일이거나 조건부라 분모에 넣으면 이행률이 영영 낮게 나온다.
+     * 엑셀 「이행률」 시트가 이 분모로 L1 97% · L2 63% · L3 시설 100% ·
+     * L3 공사 0% · 합계 82%(59/72)를 낸다 — 우리가 같은 값을 재현해야 한다.
+     * inRate 가 없는 옛 데이터에서는 전 단계를 분모로 두어 종전 동작을 지킨다. */
+    function rateStages(stages) {
+        var arr = stages || [];
+        var tagged = arr.filter(function (s) { return s && s.inRate === true; });
+        return tagged.length ? tagged : arr;
+    }
+    function rateOf(stages, year) {
+        var pool = rateStages(stages), done = 0;
+        pool.forEach(function (s) { if (D().documentIdsOfStage(s.id, year).length > 0) done++; });
+        return { total: pool.length, done: done, miss: pool.length - done,
+                 pct: pool.length ? Math.round(done / pool.length * 100) : 0 };
+    }
+    /* KPI — 판정과 같은 축으로만 센다(시트와 같은 말을 하기 위해서다).
+       종전의 «정기 이행률»(회차 충족률)은 회차를 세던 시절의 축이라 없앤다 —
+       두 축이 공존하면 같은 화면에서 다른 이행률이 두 개 뜬다. */
     function kpiOf(stages, year) {
-        var per = [], ev = [], na = 0;
+        var c = { ok: 0, no: 0, cev: 0, ctg: 0, na: 0 };
         (stages || []).forEach(function (s) {
             var j = judge(s, year);
-            if (!j) return;
-            if (j.key === 'na') { na++; return; }
-            (j.need > 0 ? per : ev).push(j);
+            if (j && c[j.key] !== undefined) c[j.key]++;
         });
-        var pOk = per.filter(function (j) { return j.key === 'ok'; }).length;
-        var eOk = ev.filter(function (j) { return j.key === 'ok'; }).length;
-        var rounds = 0;
-        (stages || []).forEach(function (s) { rounds += cycleOf(s).need || 0; });
+        var law = rateOf(stages, year);
         return {
-            periodic: per.length, periodicOk: pOk,
-            rate: per.length ? Math.round(pOk / per.length * 100) : 0,
-            event: ev.length, eventOk: eOk,
-            na: na,
-            unmet: (per.length - pOk) + (ev.length - eOk),
-            late: per.filter(function (j) { return j.key === 'late'; }).length,
-            rounds: rounds,
+            done: c.ok, unmet: c.no, condEvent: c.cev, condTarget: c.ctg, na: c.na,
+            cond: c.cev + c.ctg,
+            /* 법정 이행률 — 분모는 «이행률 포함 = Y» 다 */
+            lawRate: law.pct, lawTotal: law.total, lawDone: law.done, lawMiss: law.miss,
         };
     }
-
-    /* =========================================================================
-     * 7. 문서 조회 도우미
-     * ========================================================================= */
-    /* 부서 문서 보유량 — 5개년 원장 집계(DYCMPDEPT). 시드가 없으면 null 이고
-     * 화면은 종전처럼 사용자 등록분만 센다.
-     * ⚠ 이행 판정이 아니다 — 원본에 업무단계 분류가 없어 «문서가 있다» 까지만 말한다. */
+    /* 부서별 문서 보유량 — 5개년 원장 집계(js/cmp-dept-docs.js). 이행 증빙 수가
+       아니라 «그 부서 문서 전체»라 화면이 그 사실을 함께 밝힌다. */
     function deptDocs(name) {
         var S = global.DYCMPDEPT;
         if (!S || !S.DEPTS) return null;
@@ -475,10 +592,12 @@
         levelOf: levelOf, stagesOfLevel: stagesOfLevel, levelCounts: levelCounts, doneProbe: doneProbe,
         cycleOf: cycleOf, parseCycle: parseCycle, ccLabel: ccLabel, unparsedStages: unparsedStages,
         deadlineOf: deadlineOf, elapsedRounds: elapsedRounds,
-        judge: judge, nextGap: nextGap,
+        judge: judge, JUDGE_ORDER: JUDGE_ORDER, nextGap: nextGap,
+        DUTY: DUTY, dutyOf: dutyOf, isConditional: isConditional,
+        linkOf: linkOf, linkGrade: linkGrade, LINK_GRADE: LINK_GRADE,
         axesOf: axesOf, axisLabel: axisLabel,
         TASK_TYPE: TASK_TYPE, FUNCS: FUNCS,
         typeOf: typeOf, pathsOf: pathsOf, funcOf: funcOf, needsConfirm: needsConfirm, typeCounts: typeCounts,
-        kpiOf: kpiOf, docsOfStage: docsOfStage, deptDocs: deptDocs, deptDocsMeta: deptDocsMeta, linkCounts: linkCounts, years: years,
+        kpiOf: kpiOf, rateOf: rateOf, rateStages: rateStages, docsOfStage: docsOfStage, deptDocs: deptDocs, deptDocsMeta: deptDocsMeta, linkCounts: linkCounts, years: years,
     };
 }(window));
