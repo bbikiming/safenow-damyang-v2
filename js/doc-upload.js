@@ -788,6 +788,23 @@
      * 제목 수정·삭제·이어받기를 전부 갖고 있어 거기서 끝난다.
      * 업무문서 메뉴 안에서 등록한 경우(docs-preset·docs-exec)는 그쪽 상세로 간다 —
      * 지금 있는 메뉴를 벗어나지 않는 것이 규칙이다. */
+    /* ── 돌아갈 곳 — 두 상세가 함께 쓴다 ────────────────────────────────────
+     * **허용 목록으로 제한한다** — `back` 은 URL 파라미터라 아무 값이나 들어올 수
+     * 있고, 그대로 `location.href` 에 넣으면 외부로 튕기는 통로가 된다.
+     * 기존 «? 로 시작하는 값»은 업무 목록의 쿼리로 해석한다(무수정 호환). */
+    var BACKS = {
+        'docs-preset.html': '업무 목록',
+        'docs-exec.html': '이행 목록',
+        'cmp-status.html': '이행 관리',
+        'cmp-docs.html': '문서 목록',
+    };
+    function backTarget(raw) {
+        var b = String(raw || '');
+        if (b.charAt(0) === '?') return { href: 'docs-preset.html' + b, label: BACKS['docs-preset.html'] };
+        var file = b.split('?')[0].split('#')[0];
+        if (BACKS[file]) return { href: b, label: BACKS[file] };
+        return null;                      /* 목록에 없으면 «돌아가기»를 내지 않는다 */
+    }
     function inWorkDocs() {
         var f = location.pathname.split('/').pop();
         return f === 'docs-preset.html' || f === 'docs-exec.html' || f === 'doc-detail.html';
@@ -797,8 +814,16 @@
         if (inWorkDocs()) {
             return 'doc-detail.html?id=' + encodeURIComponent(doc.id) + '&back=' + encodeURIComponent(back);
         }
+        /* backTo 를 여기서도 넘긴다 — 종전에는 이 분기가 그것을 버려, 이행 관리에서
+           불러온 사람이 문서를 열면 **돌아갈 길이 없었다**(GNB 로 다시 들어가야
+           했고 보고 있던 단계 상세는 잃었다).
+           호출자가 backTo 를 안 주면 **지금 화면**이 기본값이다(새 등록·프리셋
+           경로가 그렇다). 단, 목적지가 지금 화면과 같으면 담지 않는다 — 자기
+           자신으로 돌아가는 링크는 눌러도 아무 일이 없다. */
+        var to = backTarget(back) && back.split('?')[0] !== 'cmp-docs.html' ? back : '';
         return 'cmp-docs.html?doc=' + encodeURIComponent(doc.id) +
-               '&year=' + encodeURIComponent(doc.year);
+               '&year=' + encodeURIComponent(doc.year) +
+               (to ? '&back=' + encodeURIComponent(to) : '');
     }
     /* ── 문서 제목 수정 — 두 상세가 함께 쓴다 (2026-08-25) ────────────────
      * 업무문서 상세(doc-detail)와 업무관리 문서 목록 상세(cmp-docs) 양쪽에서
@@ -1031,6 +1056,8 @@
         selDoc: selDoc, clearSel: clearSel, expand: expand, setOne: setOne, setBulk: setBulk,
         /* 등록 결과 화면 — 다른 화면(cmp-status 불러오기 등)이 함께 쓴다 */
         saved: saved, detailHref: detailHref, undoSaved: undoSaved, doUndo: doUndo,
+        /* 돌아갈 곳 — 두 상세가 같은 허용 목록을 쓴다 */
+        backTarget: backTarget,
         /* 제목 수정 — 두 상세(업무문서·업무관리)가 함께 쓴다 */
         editTitle: editTitle, saveTitle: saveTitle,
         canEditTitle: canEditTitle, titleDenyNote: titleDenyNote, titleEditBtn: titleEditBtn,

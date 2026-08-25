@@ -32,6 +32,7 @@
         page: 1,
         expand: {},          /* docId → 업무단계 칩 전부 펼침 */
         doc: '',             /* 문서 상세 */
+        back: '',            /* 왔던 화면 — 다른 메뉴에서 문서를 열러 온 경우 */
         pickTmp: null,       /* 선택기 모달 임시값 */
         adv: false,          /* 상세 조건 펼침 — 값이 걸리면 자동 true */
     };
@@ -61,6 +62,10 @@
         if (S.dept && p.get('year') == null) S.year = '';
         var doc = p.get('doc');
         S.doc = (doc && D().docById(doc)) ? doc : '';   /* 없으면 상세도 없다 — 뒤로가기 닫힘의 전제 */
+        /* 다른 화면(이행 관리 등)에서 문서를 열러 왔다면 그 화면으로 돌아갈 수
+           있어야 한다 — 없으면 GNB 로 다시 들어가야 하고 보고 있던 자리를 잃는다.
+           허용 목록은 DOCUP 단일 출처다(외부 URL 주입 차단). */
+        S.back = p.get('back') || '';
     }
     function urlOf() {
         var p = new URLSearchParams();
@@ -71,6 +76,7 @@
         if (S.status) p.set('status', S.status);
         if (S.dept) p.set('dept', S.dept);
         if (S.doc) p.set('doc', S.doc);
+        if (S.back) p.set('back', S.back);
         var qs = p.toString();
         return location.pathname + (qs ? '?' + qs : '');
     }
@@ -396,7 +402,7 @@
         var past = d.year < liveYear();
         var st = (d.stageIds || []).map(D().stage).filter(Boolean);
 
-        return '<p class="cmp-back"><button type="button" class="du-link" onclick="CMPDOC.closeDoc()">‹ 문서 목록으로</button></p>' +
+        return backLine() +
         '<section class="card">' +
             '<header class="card-header cmp-doc-h">' +
                 '<span class="chip-mini wt">' + esc(d.year) + '년 문서</span>' +
@@ -510,6 +516,26 @@
         S.doc = '';
         render();
         V().toast('문서를 삭제했습니다 — 할 일 연결 ' + r.doc.stageIds.length + '건이 함께 회수되었습니다.');
+    }
+    /* 돌아가는 줄 — 두 목적지가 **한 줄에** 온다.
+     *   ‹ 문서 목록으로   : 이 화면 안에서 상세를 닫는다(늘 있다)
+     *   ‹ 이행 관리로     : 왔던 화면으로 나간다(다른 메뉴에서 온 경우만)
+     * 세로로 쌓으면 둘 다 «‹»로 시작해 어느 쪽이 어디로 가는지 헷갈리고 제목이
+     * 아래로 밀린다. 한 줄에 두고 구분자로 갈라 «지금 어디서 왔는지»를 보인다.
+     * 조사는 josa() 가 붙인다 — 「이행 관리(으)로」 같은 표기를 내지 않는다. */
+    function backLine() {
+        var close = '<button type="button" class="du-link" onclick="CMPDOC.closeDoc()">‹ 문서 목록으로</button>';
+        var out = '';
+        if (S.back) {
+            var U = global.DOCUP;
+            var t = (U && U.backTarget) ? U.backTarget(S.back) : null;
+            if (t) {
+                out = '<a class="du-link" href="' + esc(t.href) + '">‹ ' + esc(t.label) +
+                    V().josa(t.label, '으로', '로') + ' 돌아가기</a>' +
+                    '<span class="cmp-back-sep" aria-hidden="true">·</span>';
+            }
+        }
+        return '<p class="cmp-back">' + out + close + '</p>';
     }
     function mapChip(d) {
         /* 2026 실적은 규칙으로 만든 예시 자료다 — 실제 제출 기록과 구분되지 않으면

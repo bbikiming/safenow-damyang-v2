@@ -4805,3 +4805,8 @@ p > .dx-note-gap { display: inline; }
    · cb-stat                 : chip-mini 위 modifier(기반이 스타일을 갖는다)
    · sl-thead                : setlist.js — 살아 있는 소비처가 없다(CLAUDE.md §5) */
 .cb-area, .cb-item, .cb-type, .cb-basis, .mf-decision, .cb-stat, .sl-thead { /* 의도적으로 규칙 없음 */ }
+
+/* 돌아가는 줄 — 「왔던 화면으로」와 「이 화면의 목록으로」가 한 줄에 온다.
+   세로로 쌓으면 둘 다 «‹»로 시작해 어디로 가는지 헷갈리고 제목이 아래로 밀린다. */
+.cmp-back { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.cmp-back-sep { color: var(--text-gray); }

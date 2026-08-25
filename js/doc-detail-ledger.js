@@ -23,26 +23,14 @@
         return !!d && d.origin !== 'v2';
     }
 
-    /* ── 돌아갈 곳 ─────────────────────────────────────────────────────────
-     * 종전에는 `back` 이 **쿼리스트링만** 담고 목적지가 `docs-preset.html` 로
-     * 고정이라, 이행 관리·이행 목록에서 문서를 열고 돌아가면 **온 적 없는 업무
-     * 목록**으로 튕겼다. 문서를 여는 화면이 넷이므로 목적지도 함께 받는다.
-     *
-     * **허용 목록으로 제한한다** — `back` 은 URL 파라미터라 아무 값이나 들어올
-     * 수 있고, 그대로 `location.href` 에 넣으면 외부로 튕기는 통로가 된다.
-     * 기존 «? 로 시작하는 값»은 업무 목록의 쿼리로 그대로 해석한다(무수정 호환). */
-    var BACKS = {
-        'docs-preset.html': '업무 목록',
-        'docs-exec.html': '이행 목록',
-        'cmp-status.html': '이행 관리',
-        'cmp-docs.html': '문서 목록',
-    };
+    /* 돌아갈 곳 — 허용 목록은 **DOCUP 단일 출처**다(업무관리 문서 상세와 같은
+       목록을 쓴다). 종전에는 이 파일이 자체 BACKS 를 들고 있어, 화면이 하나
+       늘 때 한쪽만 고치면 다른 쪽이 폴백으로 떨어졌다. */
     function backTarget() {
-        var b = new URLSearchParams(location.search).get('back') || '';
-        if (b.charAt(0) === '?') return { href: 'docs-preset.html' + b, label: BACKS['docs-preset.html'] };
-        var file = b.split('?')[0].split('#')[0];
-        if (BACKS[file]) return { href: b, label: BACKS[file] };
-        return { href: 'docs-preset.html', label: BACKS['docs-preset.html'] };
+        var raw = new URLSearchParams(location.search).get('back') || '';
+        var U = global.DOCUP;
+        var t = (U && U.backTarget) ? U.backTarget(raw) : null;
+        return t || { href: 'docs-preset.html', label: '업무 목록' };
     }
     function backHref() { return backTarget().href; }
 
