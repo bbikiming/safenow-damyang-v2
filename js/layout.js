@@ -975,10 +975,30 @@
             frag.appendChild(topbar);
         }
 
+    /* 제목 점 — 정의서로 가는 링크. 뷰어 자신에서는 링크로 만들지 않는다
+       (자기 자신으로 가는 링크는 눌러도 아무 일이 없다). */
+    function defDotHtml() {
+        const base = (location.pathname.split('/').pop() || '').toLowerCase();
+        if (base === 'screen-definitions.html' || !base) return '<span class="dy-page-dot"></span>';
+        const from = base + (location.search || '');
+        return '<a class="dy-page-dot dy-page-dot-link"' +
+            ' href="screen-definitions.html?from=' + encodeURIComponent(from) + '"' +
+            ' target="_blank" rel="noopener"' +
+            ' title="이 화면의 화면 정의서 열기 (새 탭)"' +
+            ' aria-label="이 화면의 화면 정의서 열기, 새 탭에서 열립니다"></a>';
+    }
+
         if (title) {
             const titleEl = document.createElement('div');
             titleEl.className = 'dy-page-title';
-            titleEl.innerHTML = '<span class="dy-page-dot"></span><h1>' + title + '</h1>';
+            /* 제목 앞의 점은 **그 화면의 정의서로 가는 길**이다.
+               새 진입점을 만드는 대신 이미 있던 장식에 목적지를 준다 — 업무 화면에
+               제작용 버튼을 상시 노출하지 않는다는 규칙(§15)을 지키면서, 검토하는
+               사람이 지금 보는 화면의 정의서를 그 자리에서 열 수 있게 한다.
+               목적지는 정의서 진입 버튼과 **같은 방식**(현재 파일+쿼리를 넘기면
+               뷰어가 해당 화면을 골라 연다)이라 규칙이 한 곳에만 있다.
+               새 탭으로 연다 — 보던 화면을 잃지 않고 대조할 수 있어야 한다. */
+            titleEl.innerHTML = defDotHtml() + '<h1>' + title + '</h1>';
             frag.appendChild(titleEl);
             if (subtitle) {
                 const sub = document.createElement('div');

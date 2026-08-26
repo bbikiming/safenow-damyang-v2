@@ -2447,6 +2447,35 @@ body.sidebar-locked {
   background: var(--main);
   flex-shrink: 0;
 }
+/* 점이 정의서로 가는 링크일 때 — 평소에는 **장식 그대로 보인다.**
+   업무 화면에 제작용 버튼을 상시 노출하지 않는다는 규칙을 지키려면 점이
+   눈에 띄어서는 안 되고, 그렇다고 아무 표시가 없으면 누를 수 있다는 것을
+   알 길이 없다. 그래서 평소에는 그대로 두고 **가까이 가면** 반응하게 한다.
+   10px 은 마우스로 정확히 겨누기 작으므로 보이는 크기는 그대로 두고
+   **누를 수 있는 영역만** 사방으로 넓힌다(§2 no-precision-required). */
+.dy-page-title .dy-page-dot-link {
+  position: relative;
+  display: block;
+  cursor: pointer;
+  transition: transform 150ms ease-out, box-shadow 150ms ease-out;
+}
+.dy-page-title .dy-page-dot-link::after {
+  content: "";
+  position: absolute;
+  inset: -11px;            /* 보이는 10px + 사방 11px = 32px 타깃 */
+}
+.dy-page-title .dy-page-dot-link:hover {
+  transform: scale(1.35);
+  box-shadow: 0 0 0 4px var(--status-success-bg);
+}
+.dy-page-title .dy-page-dot-link:focus-visible {
+  outline: 2px solid var(--main);
+  outline-offset: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dy-page-title .dy-page-dot-link { transition: none; }
+  .dy-page-title .dy-page-dot-link:hover { transform: none; }
+}
 .dy-page-subtitle {
   font-size: 14px;
   color: var(--text-gray);
