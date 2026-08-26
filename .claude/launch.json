@@ -39,42 +39,6 @@
       "port": 8786
     },
     {
-      "name": "deploy-check",
-      "runtimeExecutable": "python3",
-      "runtimeArgs": [
-        "-m",
-        "http.server",
-        "8788",
-        "--directory",
-        "../프로토타입-v2-배포"
-      ],
-      "port": 8788
-    },
-    {
-      "name": "deploy-check-0804",
-      "runtimeExecutable": "python3",
-      "runtimeArgs": [
-        "-m",
-        "http.server",
-        "8789",
-        "--directory",
-        "../프로토타입-v2-배포-20260804"
-      ],
-      "port": 8789
-    },
-    {
-      "name": "deploy-check-0814",
-      "runtimeExecutable": "python3",
-      "runtimeArgs": [
-        "-m",
-        "http.server",
-        "8790",
-        "--directory",
-        "../프로토타입-v2-배포-20260814"
-      ],
-      "port": 8790
-    },
-    {
       "name": "deploy-check-0825",
       "runtimeExecutable": "python3",
       "runtimeArgs": [
@@ -85,6 +49,18 @@
         "../프로토타입-v2-배포-20260825"
       ],
       "port": 8791
+    },
+    {
+      "name": "deploy-check-0826",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8796",
+        "--directory",
+        "../프로토타입-v2-배포-20260826"
+      ],
+      "port": 8796
     }
   ]
 }
