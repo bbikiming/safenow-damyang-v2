@@ -471,13 +471,16 @@
     <script src="./js/help-center.js"></script><!-- DYHELP: 화면 도움말 -->
     <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
     <script src="./js/common.js"></script>
+    <script src="./js/org-pick.js"></script><!-- ORGPICK: 공용 조직도 선택기 -->
+    <script src="./js/doc-flow.js"></script><!-- DYDOC: 공문 골격 + 결재선 공용 조각 -->
     <script src="./js/sh-data.js"></script>
     <script src="./js/evl-data.js"></script>
     <script>
     (function () {
         'use strict';
 
-        const CURRENT_USER = '박안전';
+        /* 신원 출처를 하나로 — 종전에는 이 상수·지면 고정 문자열·DYROLE 세 벌이었다(검수 E) */
+        const CURRENT_USER = (window.DYROLE && DYROLE.current) ? DYROLE.current().name : '박안전';
         const TODAY = '2026-06-30';
 
         /* ─── 공식 평가 항목·세부평가기준 — 단일 출처 DYEVL(js/evl-data.js)에서 파생 ───
@@ -1028,7 +1031,7 @@
                     rows: ITEMS[r.role].map((t, i) => [String(i + 1), t, docGrade((r.grades || [])[i])]),
                 },
                 summary: { label: '종합 결과', value: docGrade(r.result), note: '미흡 1개↑=미흡 · 전항목 양호=양호 · 그 외 보통' },
-                approval: [{ role: '평가자', name: r.evaluator }, { role: '부서장', name: '' }, { role: '결재', name: '' }],
+                approval: apprCols('평가자', r.evaluator, subOf(r.dept)),
                 stamp: '평가완료',
                 foot: '근거: 중대재해처벌법 시행령 제4조제1항제5호 · 산업안전보건법 §15·§16<br>담양군 중대재해예방 통합관리시스템에서 생성된 문서입니다.',
             };
@@ -1043,7 +1046,7 @@
                     ['부서', dept],
                     ['평가 대상', recs.length + '명 (안전보건관리책임자 · 관리감독자)'],
                     ['권한·예산 부여 <span style="font-weight:400;color:#888;">(§4①5호 가목)</span>', '안전보건 예산 편성·집행(예산관리) · 안전보건관리책임자 권한 부여(위임전결) — <b>부여 완료</b>'],
-                    ['작성자', '박안전 (재난안전과 중대재해팀)'],
+                    ['작성자', (subOf(dept) && subOf(dept).by) || ((window.DYROLE && DYROLE.current) ? DYROLE.current().name : '박안전')],
                     ['작성일', TODAY],
                     ['근거 법령', '중대재해처벌법 시행령 제4조제1항제5호 (가. 권한·예산 부여 · 나. 반기 1회 평가)'],
                 ],
@@ -1054,7 +1057,7 @@
                     rows: recs.map(r => [r.cycle, r.roleLabel, r.name, r.evaluator, r.date, docGrade(r.result)]),
                 },
                 summary: recs.length ? { label: '결과 분포', value: '양호 ' + cnt('양호') + ' · 보통 ' + cnt('보통') + ' · 미흡 ' + cnt('미흡') } : null,
-                approval: [{ role: '작성', name: '박안전' }, { role: '검토', name: '' }, { role: '결재', name: '담양군수' }],
+                approval: apprCols('작성', null, subOf(dept)),
                 stamp: null,
                 foot: '본 보고서는 온나라 전자결재 시스템을 통해 결재가 진행됩니다.',
                 _count: recs.length,
@@ -1069,14 +1072,21 @@
             if (opts.mode === 'approval') {
                 banner.style.display = 'flex';
                 banner.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>'
-                    + '<span>이 보고서를 <strong>규격 기안문</strong>으로 <strong>온나라 전자결재</strong>에 상신합니다(호출기안 연계). 결재선 <strong>평가자 → 부서장(검토) → 군수(결재)</strong> · 결재 완료 시 온나라가 부여한 <strong>문서등록번호·결재일</strong>을 회신 등록해 평가 이력과 연결합니다.</span>';
+                    + '<span>' + (function () {
+                        const sub = subOf(currentDept);
+                        if (sub && sub.no) return '이미 상신된 보고서입니다 — 문서번호 <strong>' + DYV2.esc(sub.no) + '</strong> · 결재일 ' + DYV2.esc(sub.apprDate || '-') + ' · 결재선 <strong>' + DYV2.esc(sub.lineText || '') + '</strong>';
+                        if (sub) return '이미 상신된 보고서입니다 — 결재선 <strong>' + DYV2.esc(sub.lineText || '') + '</strong> · 온나라 결재 완료 시 문서등록번호·결재일을 회신 등록하면 평가 이력과 연결됩니다.';
+                        return '이 보고서를 <strong>규격 기안문</strong>으로 <strong>온나라 전자결재</strong>에 상신합니다(호출기안 연계). 결재선은 <strong>[온나라로 결재 상신]</strong>에서 조직도로 지정하며, 기안·검토·결재는 서로 다른 사람이어야 합니다 — 결재선 전체가 한 번에 올라갑니다.';
+                    })() + '</span>';
             } else {
                 banner.style.display = 'none';
             }
             let html = '<button class="doc-tb-btn" type="button" onclick="window.EVL.printDoc()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> PDF 저장 / 인쇄</button>';
             if (opts.mode === 'approval') {
-                const dis = opts.submittable ? '' : ' disabled title="완료된 평가가 없습니다 — 평가 완료 후 상신하세요"';
-                html += '<button class="doc-tb-btn primary" type="button" onclick="window.EVL.submitOnnara()"' + dis + '>온나라로 결재 상신</button>';
+                if (canDraft()) {
+                    const dis = opts.submittable ? '' : ' disabled title="완료된 평가가 없습니다 — 평가 완료 후 상신하세요"';
+                    html += '<button class="doc-tb-btn primary" type="button" onclick="window.EVL.submitOnnara()"' + dis + '>온나라로 결재 상신</button>';
+                }
             }
             html += '<button class="doc-tb-btn" type="button" onclick="window.EVL.closeDoc()">닫기</button>';
             document.getElementById('doc-toolbar-btns').innerHTML = html;
@@ -1093,14 +1103,81 @@
             if (!viewedRec) return;
             openDoc(buildEvalDocSpec(viewedRec), { mode: 'view' });
         }
+        /* ── 결재선 — 공용 조각 하나만 쓴다 (CLAUDE.md §7-1) ──────────────
+         * 종전에는 「평가자 → 부서장(검토) → 군수(결재)」를 배너 문구와 배열에
+         * **글자로 박아** 두고 담당자에게 한 번도 묻지 않았다. 부서장·결재 칸은
+         * 빈 문자열이라 지면의 결재란이 늘 비어 있었고, 온나라에 넘길 계정
+         * 식별자도 만들 수 없었다. 2026-08-27 확정으로 전 도메인이
+         * 「기안 → 검토 → 결재」 3단계로 같아졌다. */
+        const LN = (window.DYDOC && window.DYDOC.approvalLine)
+            ? window.DYDOC.approvalLine({
+                ns: 'EVL.ln', key: 'dy-evl-apprline-v1',
+                onChange: () => { const el = document.getElementById('evl-lnmount'); if (el) el.innerHTML = LN.lineEditorHtml(); },
+            })
+            : null;
+        /* ── 상신 기록 저장소 ────────────────────────────────────────────
+         * 종전에는 **상신해도 아무것도 저장되지 않았다** — 6개 흐름 중 유일하게
+         * 결재선·기안자·문서번호가 남지 않아 「무엇을 언제 올렸나」를 답할 수 없었고,
+         * 과거 평가표 지면까지 **지금 세션 결재선**으로 그렸다(2026-08-28 검수 C-4).
+         * 상신 단위는 **부서별 평가 결과 보고 1건**이므로 부서를 키로 잡는다. */
+        /* ── 조작 권한 (CLAUDE.md §12 · 2026-08-28 검수 B-2) ────────────────
+         * **상신은 기안 행위다.** 결재선을 붙인 뒤로는 조회 전용 계층이 상신을 누르면
+         * 그 사람이 기안자로 온나라 결재선에 올라간다. 그래서 상신 경로만 담당자로
+         * 좁힌다 — 화면 전체를 조회 전용으로 만드는 것은 §12 2단계(발주처 정책 확정 후)라
+         * 여기서 하지 않는다. 판정은 DYROLE.canAct() 단일 출처. */
+        function canDraft() { return !window.DYROLE || window.DYROLE.canAct(''); }
+        const DRAFT_DENY = '상신은 <b>담당자</b>가 합니다 — 관리·감독 계층은 조회만 합니다.';
+
+        const SUBKEY = 'dy-evl-onnara-v1';
+        function subs() { try { return JSON.parse(localStorage.getItem(SUBKEY)) || {}; } catch (e) { return {}; } }
+        function subOf(dept) { return subs()[dept] || null; }
+        function saveSub(dept, rec) {
+            const all = subs(); all[dept] = Object.assign({}, all[dept], rec);
+            try { localStorage.setItem(SUBKEY, JSON.stringify(all)); } catch (e) {}
+        }
+
+        /* 지면 결재란 — 결재선에서 파생한다. 빈 칸을 남기지 않는다.
+         * **저장된 상신이 있으면 그때 결재선**을 쓴다 — 과거 문서를 지금 세션 값으로
+         * 그리면 결재선이 사후에 바뀐 것처럼 보인다(검수 C-4·C-2 와 같은 근거). */
+        function apprCols(drafterRole, drafterName, sub) {
+            const L = (sub && sub.line) ? sub.line : (LN ? LN.line() : []);
+            const me = (window.DYROLE && DYROLE.current) ? DYROLE.current() : { name: '박안전' };
+            const by = (sub && sub.by) || drafterName || me.name;
+            return [{ role: drafterRole || '기안', name: by }].concat(
+                L.map((x, i) => ({ role: i === L.length - 1 ? '결재' : '검토', name: x.name || '' })));
+        }
         function printDoc() { window.print(); }
+        /* 상신 앞에 **결재선 지정 단계**를 둔다 — 종전에는 브라우저 confirm 한 번으로
+           바로 넘어갔고 결재선은 그 문구 안에 글자로만 있었다(§1 자작 다이얼로그 금지). */
         function submitOnnara() {
-            if (!window.confirm('규격 기안문으로 온나라 전자결재에 상신할까요?\n연계 방식: 호출기안 · 결재선: 평가자 → 부서장(검토) → 군수(결재)')) return;
+            if (!canDraft()) { toast('상신은 담당자가 합니다 — 관리·감독 계층은 조회만 합니다.'); return; }
+            if (!LN) { doSubmitOnnara(); return; }
+            closeDoc();
+            DYV2.openModal('온나라 결재 상신 — 평가 결과 보고',
+                '<div class="rskdoc-send">' +
+                    '<p class="file-hint">규격 기안문으로 온나라 전자결재에 상신합니다(호출기안 연계). 상신은 <b>결재선 전체를 한 번에</b> 넘기므로 기안·검토·결재가 서로 다른 사람이어야 합니다.</p>' +
+                    '<div id="evl-lnmount">' + LN.lineEditorHtml() + '</div>' +
+                '</div>',
+                '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+                '<button type="button" class="btn btn-primary" onclick="window.EVL.doSubmitOnnara()">상신</button>');
+        }
+        function doSubmitOnnara() {
+            if (!canDraft()) { toast('상신은 담당자가 합니다 — 관리·감독 계층은 조회만 합니다.'); return; }
+            if (LN && LN.lineDenied()) return;      /* 버튼만 잠그면 전역 호출로 뚫린다 */
+            /* **상신 사실을 먼저 저장한다** — 회신 등록을 「나중에」로 닫아도 상신한
+               사실과 그때 결재선은 남아야 한다(검수 C-4). */
+            const me = (window.DYROLE && DYROLE.current) ? DYROLE.current() : { name: '박안전', uid: '' };
+            const snap = LN ? LN.snapshot() : { line: [], lineText: '' };
+            saveSub(currentDept, {
+                dept: currentDept, at: TODAY, status: '결재중',
+                by: me.name, byUid: me.uid || '',
+                line: snap.line, lineText: snap.lineText,
+            });
             closeDoc();
             /* 온나라 결재결과 회신 등록(1단계 연계) — 상신 후 결재 완료 시 부여되는 문서등록번호·결재일을 시스템에 회신 저장 */
             const mockNo = '재난안전과-' + Math.floor(1000 + Math.random() * 9000);
             DYV2.openModal('온나라 결재결과 회신 등록',
-                '<p style="font-size:13px;line-height:1.6;margin-bottom:12px;color:var(--text-gray);">규격 기안문이 온나라로 상신되었습니다. 온나라에서 <b>결재 완료</b> 시 부여되는 <b>문서등록번호</b>·결재일을 등록하면 평가 이력과 연결됩니다. <span style="color:var(--text-gray);">(연계 적용 후 온나라가 결과를 자동 회신)</span></p>' +
+                '<p style="font-size:13px;line-height:1.6;margin-bottom:12px;color:var(--text-gray);">규격 기안문이 온나라로 상신되었습니다. 결재선: <b>' + DYV2.esc(LN ? LN.lineText() : '') + '</b><br> 온나라에서 <b>결재 완료</b> 시 부여되는 <b>문서등록번호</b>·결재일을 등록하면 평가 이력과 연결됩니다. <span style="color:var(--text-gray);">(연계 적용 후 온나라가 결과를 자동 회신)</span></p>' +
                 '<div style="margin-bottom:12px;"><label class="form-label" for="onnara-docno">문서등록번호 <span style="color:var(--text-gray);font-weight:400;">(온나라 부여)</span></label>' +
                     '<input type="text" class="form-input" id="onnara-docno" value="' + mockNo + '"></div>' +
                 '<div><label class="form-label" for="onnara-date">결재일</label>' +
@@ -1111,8 +1188,12 @@
         function saveOnnara() {
             const no = (document.getElementById('onnara-docno').value || '').trim();
             const dt = document.getElementById('onnara-date').value || TODAY;
+            /* 인력평가는 **결재 결과를 받는 도메인**이다(2026-08-28 확정 · 공통 §7-4) —
+               문서등록번호·결재일이 평가 이력과 연결되는 값이라 회신을 받는다.
+               자체 결재가 아니라 온나라가 보낸 값을 옮겨 적는 것이다. */
+            saveSub(currentDept, { no: no, apprDate: dt, status: '결재완료' });
             DYV2.closeModal();
-            toast('온나라 결재 완료 회신 등록 · 문서번호 ' + (no || '-') + ' · 결재일 ' + dt + ' (목업)');
+            toast('온나라 결재 완료 회신 등록 · 문서번호 ' + (no || '-') + ' · 결재일 ' + dt);
         }
         function closeDoc() { docModal$.classList.remove('is-open'); }
 
@@ -1146,7 +1227,8 @@
                 const q = document.getElementById('hist-f-q'); if (q) q.value = '';
                 renderHistory();
             },
-            openApproval, openDocFromView, printDoc, submitOnnara, saveOnnara, closeDoc,
+            openApproval, openDocFromView, printDoc, submitOnnara, doSubmitOnnara, saveOnnara, closeDoc,
+            ln: LN,                                  /* 결재선 편집기 onclick 경로 (EVL.ln.pickOpen 등) */
         };
 
         /* 초기 렌더 */

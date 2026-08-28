@@ -32,6 +32,256 @@
     function esc(s) { return V().esc(String(s == null ? '' : s)); }
     function toast(m) { V().toast(m); }
 
+    /* ===================== 사람 ===================== */
+    function persona() {
+        var R = global.DYROLE;
+        return (R && R.current) ? R.current() : { name: '담당자', role: '담당', deptName: '재난안전과' };
+    }
+    function myDeptName() { return persona().deptName || '재난안전과'; }
+
+    /* 단계 라벨 — **한 곳에서만 정한다**(2026-08-28 검수 E).
+     * 「마지막이 결재, 나머지는 검토」라는 같은 규칙이 6벌로 흩어져 있었다(골격 인스턴스·
+     * 동결본·예산·경영방침 3함수·DYROLE). 라벨을 바꿀 일이 생기면 여섯 곳을 찾아야 한다. */
+    function stepLabel(i, len) { return i === len - 1 ? '결재' : '검토'; }
+    function today() { return V().today(); }
+
+    /* =====================================================================
+     * 결재선 — **공용 조각** (DYDOC.approvalLine)
+     * ---------------------------------------------------------------------
+     * 공문 골격(define)뿐 아니라 **자체 상신 흐름을 가진 도메인**도 이걸 쓴다 —
+     * 예산 총괄표·전자문서 폼·경영방침·의견청취 점검결과지·인력평가가 그렇다.
+     * 그 다섯은 지면과 상태머신이 서로 달라 골격 전체를 태울 수 없지만,
+     * **결재선만은 같아야 한다**. 각자 짜면 §7 계열 신설이고, 실제로 그렇게 갈려서
+     * 「팀장 → 과장 → 부군수」 같은 문구가 화면마다 따로 박혀 있었다.
+     *
+     *   cfg.ns       이 인스턴스가 놓일 전역 경로 (onclick 문자열이 이것으로 만들어진다)
+     *   cfg.key      sessionStorage 키
+     *   cfg.shape    { min, max } — 생략 시 { min:2, max:4 }
+     *   cfg.capture  값 보존 훅 — 재렌더 전에 폼 입력을 담아 두는 도메인이 준다
+     *   cfg.onChange 결재선이 바뀐 뒤 도메인이 다시 그릴 함수
+     * ===================================================================== */
+    function approvalLine(cfg) {
+        cfg = cfg || {};
+        var NS = cfg.ns;
+        var LK = cfg.key;
+        var LINE = null, editIdx = -1;
+        function drafter() { return persona(); }
+        function capture() { if (typeof cfg.capture === 'function') cfg.capture(); }
+        function changed() { if (typeof cfg.onChange === 'function') cfg.onChange(); }
+
+        /* ===================== 결재선 =====================
+         * 전 도메인이 **기안 → 검토 → 결재 3단계**로 같다(2026-08-27 확정).
+         * 종전에는 도메인마다 갈려 예산만 4단계(팀장·과장·부군수)였고 경영방침·평가·도급은
+         * 결재선 데이터 없이 문구만 있었다. 하나로 모은 이유는 담당자가 도메인마다 다른
+         * 결재선을 외우지 않게 하기 위해서다.
+         *
+         * ── 세 단계는 서로 다른 계정이어야 한다 (MUST) ───────────────────
+         * 상신은 **결재선 전체를 한 번에** 온나라로 넘긴다(호출기안). 같은 계정이 두 단계에
+         * 들어가면 온나라가 그 자리에서 거절한다. 그래서
+         *   ① 결재선은 이름이 아니라 **uid** 로 저장하고(동명이인·개명에 견딘다),
+         *   ② 기안자 자신과 이미 고른 사람은 **고르는 자리에서** 막고,
+         *   ③ 상신 경로 전부에서 다시 검사한다 — 버튼만 막으면 전역 호출로 뚫린다.
+         *
+         * ── 결재권자를 코드에 고정하지 않는다 ────────────────────────────
+         * 결재권자는 안전보건 법령이 아니라 **지자체 위임전결규칙** 소관이라 조직 개편·규칙
+         * 개정으로 바뀐다. 기본값만 조직도에서 직위명으로 파생하고 변경은 ORGPICK 으로만
+         * 받는다(새 select 금지). **찾지 못한 자리는 지어내 채우지 않고 미지정으로 드러낸다** —
+         * 11개 부서 중 7곳은 팀장·과장이 조직도에 없어 자동으로 채워지지 않는다. */
+        /* 단계 수 — 도메인이 `cfg.shape` 로 덮어쓸 수 있으나 지금은 전부 같다.
+         * min 2 는 「검토 없는 결재선」을 막는다. max 4 는 위임전결규칙상 검토가 늘 수 있는
+         * 여지이고, 늘리면 그만큼 계정이 더 필요하다는 뜻이라 무한히 열지 않는다. */
+        function shape() {
+            var s = cfg.shape || {};
+            return { min: s.min || 2, max: s.max || 4 };
+        }
+        function blank() { return { uid: '', name: '', role: '', dept: '' }; }
+        /* 기안자 본인은 건너뛴다 — 안 그러면 관리감독자가 기안할 때 기본 결재선에
+         * 자기가 들어가 「기안자가 결재선에 있습니다」로 막히고, 담당자는 무엇을 고쳐야
+         * 하는지 알 수 없다(2026-08-28 검수 C-3). 못 찾으면 **비워 드러낸다**. */
+        function findRole(list, re) {
+            var me = drafter().uid;
+            for (var i = 0; i < list.length; i++) {
+                if (me && list[i].uid === me) continue;
+                if (re.test(list[i].role || '')) return list[i];
+            }
+            return null;
+        }
+        function defaultLine() {
+            /* 직위 정규식은 **동결된 위험성평가 공문(js/rsk-doc.js)과 같아야 한다.**
+               골격을 뽑아낼 때 여기만 좁게(과장|소장|실장) 복제돼 담양읍장·면장·국장을
+               놓쳤고, 담양읍은 결재선 기본값이 통째로 비었다. */
+            var ms = (global.DYV2 && DYV2.orgMembers) ? DYV2.orgMembers(drafter().deptId) : [];
+            var lead = findRole(ms, /팀장/);
+            var head = findRole(ms, /(과장|소장|실장|국장|읍장|면장)$/);
+            var row = function (m) {
+                return m ? { uid: m.uid, name: m.name, role: m.role, dept: m.deptName || '' } : blank();
+            };
+            /* **언제나 2행**을 돌려준다. 찾지 못해도 자리를 남기는 이유는 규칙을 화면에
+               보이게 하기 위해서다 — 행이 사라지면 담당자는 검토 단계가 없는 줄 안다. */
+            return [row(lead), row(head)];
+        }
+        function line() {
+            if (LINE) return LINE;
+            try { LINE = JSON.parse(global.sessionStorage.getItem(LK) || 'null'); } catch (e) { LINE = null; }
+            /* 옛 저장분은 `{role,name}` 만 있고 uid 가 없다. **이름으로 uid 를 추정하지 않는다** —
+               동명이인에서 엉뚱한 계정으로 상신된다. 통째로 기본값으로 되돌린다. */
+            if (LINE && LINE.some(function (s) { return s && s.name && !s.uid; })) LINE = null;
+            if (!LINE || !LINE.length) LINE = defaultLine();
+            return LINE;
+        }
+        function saveLine() { try { global.sessionStorage.setItem(LK, JSON.stringify(LINE || [])); } catch (e) {} }
+        /* by: 저장된 기안자 이름. 주면 그걸 쓰고, 없으면 지금 사람(기안 중)이다.
+           저장된 문서를 다른 계정으로 열 때 기안자가 바뀌지 않게 한다(검수 C-2). */
+        function lineText(L, by) {
+            L = L || line();
+            return ['기안 ' + (by || drafter().name)].concat(L.map(function (s, i) {
+                return stepLabel(i, L.length) + ' ' + (s.name || '(미지정)');
+            })).join(' → ');
+        }
+
+        /* ── 중복 금지 — 판정은 여기 한 곳이다 ──────────────────────────
+         * 화면마다 검사하면 반드시 빠뜨리는 곳이 생긴다(교육 addEnroll 중복 방지와 같은 근거). */
+        function lineIssues(L) {
+            L = L || line();
+            var sh = shape(), out = [], me = drafter();
+            if (L.length < sh.min) out.push('결재선은 최소 ' + sh.min + '단계입니다 — 지금은 ' + L.length + '단계입니다.');
+            var miss = L.filter(function (s) { return !s.uid; }).length;
+            if (miss) out.push('지정하지 않은 단계가 ' + miss + '건 있습니다 — 조직도에서 결재자를 고르세요.');
+            var seen = {};
+            L.forEach(function (s, i) {
+                if (!s.uid) return;
+                if (me.uid && s.uid === me.uid) {
+                    out.push(stepLabel(i, L.length) + ' 단계에 기안자(' + me.name + ')가 지정돼 있습니다 — 기안·검토·결재는 서로 다른 사람이어야 합니다.');
+                }
+                if (seen[s.uid]) out.push(s.name + ' 님이 두 단계에 지정돼 있습니다 — 한 사람이 두 번 결재할 수 없습니다.');
+                seen[s.uid] = true;
+            });
+            return out;
+        }
+        function lineReady(L) {
+            var iss = lineIssues(L);
+            return iss.length ? { ok: false, why: iss[0] } : { ok: true };
+        }
+        /* 상신 경로 공통 게이트 — preview 는 막지 않는다(문서를 못 보게 할 이유가 없다). */
+        function lineDenied() {
+            var r = lineReady();
+            if (r.ok) return false;
+            toast(r.why);
+            return true;
+        }
+
+        /* ── 조직도 ────────────────────────────────────────────────────
+         * 'member'(표시 문자열) 가 아니라 **'memberUid'** 를 쓴다 — 온나라 결재선은 계정
+         * 식별자 배열이라 이름만으로는 만들 수 없다. leadership 을 켜는 이유는 위임전결
+         * 규칙상 부군수·군수가 결재권자로 서는 문서가 있는데 종전 조직도에는 그 사람들이
+         * 아예 나오지 않았기 때문이다. */
+        function pickBlocked(i) {
+            var out = {}, me = drafter(), L = line();
+            if (me.uid) out[me.uid] = '기안자';
+            L.forEach(function (s, j) {
+                if (j !== i && s.uid) out[s.uid] = stepLabel(j, L.length) + ' 지정됨';
+            });
+            return out;
+        }
+        /* **한 번에 한 패널만 연다** — 두 패널이 동시에 열리면 선택 대상 인덱스(editIdx)가
+         * 마지막으로 연 것으로 덮여, 먼저 연 패널에서 고른 사람이 **다른 단계에 들어간다**
+         * (2026-08-28 검수 C-1 재현). 같은 인덱스를 다시 누르면 ORGPICK 이 토글로 닫는다. */
+        function closeOtherPicks(i) {
+            var L = line();
+            for (var j = 0; j < L.length; j++) {
+                if (j === i) continue;
+                var f = global.document.getElementById(NS + '-ln-' + j);
+                var open = f && f.querySelector('.org-inline');
+                if (open) open.remove();
+            }
+        }
+        function pickOpen(i) {
+            closeOtherPicks(i);
+            editIdx = i;
+            global.ORGPICK.toggle(NS + '-ln-' + i, 'memberUid', NS + '.pickApprover',
+                { leadership: true, disabled: pickBlocked(i) });
+        }
+        function pickApprover(uid, name, role, team, m) {
+            var L = line();
+            if (editIdx < 0 || !L[editIdx]) return;   /* 어느 단계인지 잃었으면 아무 데도 넣지 않는다 */
+            if (L[editIdx]) {
+                L[editIdx] = { uid: uid, name: name, role: role, dept: (m && m.deptName) || '' };
+            }
+            saveLine(); changed();
+        }
+        function addStep() {
+            capture(); var L = line(), sh = shape();
+            if (L.length >= sh.max) {
+                toast('결재선은 최대 ' + sh.max + '단계입니다 — 단계마다 다른 계정이 필요합니다.');
+                return;
+            }
+            L.splice(L.length - 1, 0, blank());   /* 검토를 늘린다 — 결재는 늘 마지막이다 */
+            saveLine(); changed();
+        }
+        function delStep(i) {
+            capture(); var L = line(), sh = shape();
+            if (L.length <= sh.min) { toast('결재선은 최소 ' + sh.min + '단계입니다 — 검토 없이 결재만 올릴 수 없습니다.'); return; }
+            L.splice(i, 1); saveLine(); changed();
+        }
+        function resetLine() { capture(); LINE = defaultLine(); saveLine(); changed(); toast('기본 결재선으로 되돌렸습니다.'); }
+        function lineEditorHtml() {
+            var L = line(), iss = lineIssues(L);
+            return '<div class="rskdoc-line">' +
+                '<div class="rskdoc-line-head"><b>결재선</b>' +
+                    '<span class="file-hint">기안·검토·결재는 <b>서로 다른 사람</b>이어야 합니다 — 결재선 전체가 한 번에 올라갑니다</span>' +
+                    '<span class="spacer"></span>' +
+                    '<button type="button" class="btn btn-sm btn-outline" onclick="' + NS + '.addStep()">＋ 검토</button> ' +
+                    '<button type="button" class="btn btn-sm btn-outline" onclick="' + NS + '.resetLine()">기본값</button>' +
+                '</div>' +
+                /* 결재선 행은 **이미 있는 계열**(.rskdoc-ln-row / -step / -pick)로 그린다.
+                   골격을 분리할 때 여기만 새 이름(.rskdoc-ln·-ln-k·-line-body)을 만들어
+                   CSS 가 하나도 붙지 않았다 — 계열을 새로 만들지 않는다(CLAUDE.md §7). */
+                '<div class="rskdoc-ln-row">' +
+                    '<span class="rskdoc-ln-step">기안</span>' +
+                    '<div class="rskdoc-ln-pick"><b>' + esc(drafter().name) + '</b>' +
+                        '<span class="file-hint">' + esc(drafter().role || '') + '</span></div>' +
+                '</div>' +
+                L.map(function (s, i) {
+                    /* 지휘부 노드는 부서명 = 직위명이라(군수·부군수) 그대로 이으면
+                       「군수 군수 김담양」이 된다 — 같으면 한 번만 쓴다(검수 E). */
+                    var val = s.name ? [s.dept, (s.dept === s.role ? '' : s.role), s.name].filter(Boolean).join(' ') : '';
+                    return '<div class="rskdoc-ln-row">' +
+                        '<span class="rskdoc-ln-step">' + stepLabel(i, L.length) + '</span>' +
+                        '<div class="orgpick-field" id="' + NS + '-ln-' + i + '">' +
+                            '<div class="rskdoc-ln-pick">' +
+                                '<input type="text" class="form-input" readonly placeholder="조직도에서 결재자를 선택하세요"' +
+                                    ' aria-label="' + stepLabel(i, L.length) + ' 결재자"' +
+                                    ' value="' + esc(val) + '">' +
+                                '<button type="button" class="btn btn-sm btn-outline" onclick="' + NS + '.pickOpen(' + i + ')">조직도</button>' +
+                                (L.length > shape().min ? '<button type="button" class="btn btn-sm btn-outline" onclick="' + NS + '.delStep(' + i + ')"' +
+                                    ' aria-label="' + stepLabel(i, L.length) + ' 단계 삭제">×</button>' : '') +
+                            '</div>' +
+                        '</div>' +
+                    '</div>';
+                }).join('') +
+                /* 규칙은 **상신 직전이 아니라 지금** 보인다 — 기안을 다 쓰고 나서야
+                   결재선이 틀렸다고 알리면 담당자는 처음부터 다시 확인해야 한다. */
+                (iss.length
+                    ? '<div class="rskdoc-lock-warn"><b>결재선을 확인하세요</b><br>' +
+                        iss.map(function (w) { return '<span class="file-hint">· ' + esc(w) + '</span>'; }).join('<br>') + '</div>'
+                    : '<p class="file-hint">' + esc(lineText(L)) + ' — 상신할 수 있습니다.</p>') +
+            '</div>';
+        }
+        /* 상신 확정 시 문서에 실어 보낼 값 — 이름이 아니라 **계정 식별자 배열**이 정본이다 */
+        function snapshot() {
+            return { by: drafter().name, byUid: drafter().uid || '', line: line().slice(), lineText: lineText() };
+        }
+        function clear() { LINE = null; try { global.sessionStorage.removeItem(LK); } catch (e) {} }
+
+        return {
+            line: line, lineText: lineText, lineIssues: lineIssues, lineReady: lineReady,
+            lineDenied: lineDenied, lineEditorHtml: lineEditorHtml, snapshot: snapshot, clear: clear,
+            pickOpen: pickOpen, pickApprover: pickApprover,
+            addStep: addStep, delStep: delStep, resetLine: resetLine,
+            stepLabel: stepLabel
+        };
+    }
+
     /* =========================================================================
      * cfg 계약 — 도메인이 채우는 것만 적는다. 나머지는 골격이 한다.
      * -------------------------------------------------------------------------
@@ -49,114 +299,23 @@
      *   docsFor(t)    그 대상의 문서 목록(최신순 아님, 배열 그대로)
      *   nextNo()      문서번호 채번
      *   lockNote      상신 확인에 낼 잠금 경고 문장
+     *   lineShape     결재선 단계 수 { min, max } — 생략하면 { min:2, max:4 } 다.
+     *                 min 2 는 기안 제외 **검토+결재** 두 단계이고, 이것이 곧 「기안 →
+     *                 검토 → 결재」다. 전 도메인이 같으므로 **선언하지 않는 것이 기본**이고,
+     *                 다르게 쓰려면 그 도메인의 위임전결 근거를 §6 에 적는다.
      * ========================================================================= */
     function define(cfg) {
         var NS = cfg.ns;
         var F = null;            /* 기안 폼 상태 */
-        var LINE = null;         /* 결재선 */
-        var editIdx = -1;
         var REFRESH = [];
 
-        /* ===================== 사람 ===================== */
-        function persona() {
-            var R = global.DYROLE;
-            return (R && R.current) ? R.current() : { name: '담당자', role: '담당', deptName: '재난안전과' };
-        }
-        function myDeptName() { return persona().deptName || '재난안전과'; }
-        function today() { return V().today(); }
-
-        /* ===================== 결재선 =====================
-         * 결재권자는 안전보건 법령이 아니라 **지자체 위임전결규칙** 소관이라
-         * 조직 개편·규칙 개정으로 바뀐다. 코드에 고정하지 않고 기본값만 조직도에서
-         * 파생하며, 변경은 ORGPICK 인라인 조직도로만 받는다(새 select 금지). */
-        function stepLabel(i, len) { return i === len - 1 ? '결재' : '검토'; }
-        function defaultLine() {
-            var out = [];
-            var dept = (global.DYV2 && DYV2.orgNode) ? DYV2.orgNode(persona().deptId) : null;
-            var lead = null, head = null;
-            if (dept) {
-                (dept.members || []).forEach(function (m) {
-                    if (/팀장/.test(m.role || '') && !lead) lead = m;
-                    if (/(과장|소장|실장)/.test(m.role || '') && !head) head = m;
-                });
-                (dept.children || []).forEach(function (c) {
-                    (c.members || []).forEach(function (m) {
-                        if (/팀장/.test(m.role || '') && !lead) lead = m;
-                    });
-                });
-            }
-            if (lead) out.push({ role: lead.role, name: lead.name });
-            if (head) out.push({ role: head.role, name: head.name });
-            if (!out.length) out.push({ role: '', name: '' });
-            return out;
-        }
-        function line() {
-            if (LINE) return LINE;
-            try { LINE = JSON.parse(global.sessionStorage.getItem(cfg.lkey) || 'null'); } catch (e) { LINE = null; }
-            if (!LINE || !LINE.length) LINE = defaultLine();
-            return LINE;
-        }
-        function saveLine() { try { global.sessionStorage.setItem(cfg.lkey, JSON.stringify(LINE || [])); } catch (e) {} }
-        function lineText(L) {
-            L = L || line();
-            return ['기안 ' + persona().name].concat(L.map(function (s, i) {
-                return stepLabel(i, L.length) + ' ' + (s.name || '(미지정)');
-            })).join(' → ');
-        }
-        function parseMember(value) {
-            /* ORGPICK 'member' 는 '부서 · 역할 / 이름' 으로 준다 */
-            var s = String(value || ''); var i = s.lastIndexOf('/');
-            if (i < 0) return { role: '', name: s.trim() };
-            var left = s.slice(0, i).trim(), name = s.slice(i + 1).trim();
-            var j = left.lastIndexOf('·');
-            return { role: (j < 0 ? left : left.slice(j + 1)).trim(), name: name };
-        }
-        function pickOpen(i) { editIdx = i; global.ORGPICK.toggle(NS + '-ln-' + i, 'member', NS + '.pickApprover'); }
-        function pickApprover(value) {
-            var m = parseMember(value); var L = line();
-            if (L[editIdx]) { L[editIdx].role = m.role; L[editIdx].name = m.name; }
-            saveLine(); renderDraft();
-        }
-        function addStep() { capture(); line().push({ role: '', name: '' }); saveLine(); renderDraft(); }
-        function delStep(i) {
-            capture(); var L = line();
-            if (L.length <= 1) { toast('결재선은 최소 1단계가 필요합니다.'); return; }
-            L.splice(i, 1); saveLine(); renderDraft();
-        }
-        function resetLine() { capture(); LINE = defaultLine(); saveLine(); renderDraft(); toast('기본 결재선으로 되돌렸습니다.'); }
-        function lineEditorHtml() {
-            var L = line();
-            return '<div class="rskdoc-line">' +
-                '<div class="rskdoc-line-head"><b>결재선</b>' +
-                    '<span class="file-hint">위임전결규칙 소관이라 고정하지 않습니다 — 조직도에서 고르세요</span>' +
-                    '<span class="spacer"></span>' +
-                    '<button type="button" class="btn btn-sm btn-outline" onclick="' + NS + '.addStep()">＋ 단계</button> ' +
-                    '<button type="button" class="btn btn-sm btn-outline" onclick="' + NS + '.resetLine()">기본값</button>' +
-                '</div>' +
-                /* 결재선 행은 **이미 있는 계열**(.rskdoc-ln-row / -step / -pick)로 그린다.
-                   골격을 분리할 때 여기만 새 이름(.rskdoc-ln·-ln-k·-line-body)을 만들어
-                   CSS 가 하나도 붙지 않았다 — 계열을 새로 만들지 않는다(CLAUDE.md §7). */
-                '<div class="rskdoc-ln-row">' +
-                    '<span class="rskdoc-ln-step">기안</span>' +
-                    '<div class="rskdoc-ln-pick"><b>' + esc(persona().name) + '</b></div>' +
-                '</div>' +
-                L.map(function (s, i) {
-                    return '<div class="rskdoc-ln-row">' +
-                        '<span class="rskdoc-ln-step">' + stepLabel(i, L.length) + '</span>' +
-                        '<div class="orgpick-field" id="' + NS + '-ln-' + i + '">' +
-                            '<div class="rskdoc-ln-pick">' +
-                                '<input type="text" class="form-input" readonly placeholder="조직도에서 결재자를 선택하세요"' +
-                                    ' aria-label="' + stepLabel(i, L.length) + ' 결재자"' +
-                                    ' value="' + esc(s.name ? (s.role ? s.role + ' ' + s.name : s.name) : '') + '">' +
-                                '<button type="button" class="btn btn-sm btn-outline" onclick="' + NS + '.pickOpen(' + i + ')">조직도</button>' +
-                                (L.length > 1 ? '<button type="button" class="btn btn-sm btn-outline" onclick="' + NS + '.delStep(' + i + ')"' +
-                                    ' aria-label="' + stepLabel(i, L.length) + ' 단계 삭제">×</button>' : '') +
-                            '</div>' +
-                        '</div>' +
-                    '</div>';
-                }).join('') +
-            '</div>';
-        }
+        /* 결재선 — 공용 조각에 위임한다(§7-1). api 표면은 그대로 두어 onclick 경로가 바뀌지 않는다. */
+        var LN = approvalLine({
+            ns: NS, key: cfg.lkey, shape: cfg.lineShape,
+            capture: function () { capture(); }, onChange: function () { renderDraft(); }
+        });
+        var line = LN.line, lineText = LN.lineText, lineIssues = LN.lineIssues;
+        var lineReady = LN.lineReady, lineDenied = LN.lineDenied, lineEditorHtml = LN.lineEditorHtml;
 
         /* ===================== 기안 폼 =====================
          * **본문은 자동 생성하지 않는다.** 발주처: "이게 다 직접 타이핑 하셔야 돼".
@@ -277,8 +436,18 @@
         }
 
         /* ===================== 지면 ===================== */
-        function signLineHtml(L) {
-            var p = persona();
+        /* **기안자는 저장값에서 읽는다** — 저장된 문서를 다른 계정으로 열면 지면의
+         * 기안자가 그 계정으로 바뀌던 결함이 있었다(2026-08-28 검수 C-2). 3계정 전환
+         * 시연에서 바로 드러난다. `doc` 이 있으면 그때 상신한 사람, 없으면(기안 중
+         * 미리보기) 지금 사람이다. 직위는 상신 당시 값을 따로 저장하지 않으므로
+         * 조직도에서 uid 로 되찾고, 못 찾으면 비워 이름만 낸다. */
+        function drafterOf(doc) {
+            if (!doc) { var p = persona(); return { name: p.name, role: p.role || '담당' }; }
+            var m = (doc.byUid && V().orgMemberByUid) ? V().orgMemberByUid(doc.byUid) : null;
+            return { name: doc.by || (m && m.name) || '', role: (m && m.role) || '' };
+        }
+        function signLineHtml(L, doc) {
+            var p = drafterOf(doc);
             var cols = [{ t: '기안자', r: p.role || '담당', n: p.name }].concat(L.map(function (s, i) {
                 return { t: i === L.length - 1 ? '결재권자' : '검토자', r: s.role || '', n: s.name || '' };
             }));
@@ -329,7 +498,7 @@
                 attachDocHtml(attachNames(t, doc)) +
                 (out ? '<div class="pdf-gm-issuer">담 양 군 수<span class="pdf-doc-seal">관인</span></div>' : '') +
                 '<div class="pdf-gm-foot">' +
-                    signLineHtml(L) +
+                    signLineHtml(L, doc) +
                     '<div class="pdf-gm-frow"><span class="k">협조자</span><span class="v"><span class="pdf-dash">-</span></span></div>' +
                     '<div class="pdf-gm-frow"><span class="k">시행</span><span class="v">' + noCell + '</span>' +
                         (out ? '<span class="k">접수</span><span class="v"><span class="pdf-dash">-</span></span>' : '') + '</div>' +
@@ -363,8 +532,13 @@
                 /* 좁은 화면에서 지면이 왼쪽으로 밀리는 것을 막는 래퍼 — 규칙은 .rskdoc-preview(css/v2.css) */
                 '<div class="rskdoc-preview">' +
                     '<div>' + paperHtml(t, null) + '</div></div>',
+                /* 결재선이 규칙에 안 맞아도 **미리보기 자체는 막지 않는다** — 문서를 못 보게
+                   할 이유가 없다. 대신 상신 버튼을 잠그고 **무엇이 걸렸는지** 그 자리에 쓴다.
+                   누르면 거절하는 버튼을 남기면 담당자가 이유를 모른 채 두 번 누른다. */
                 '<button type="button" class="btn btn-secondary" onclick="' + NS + '.back()">← 수정</button>' +
-                '<button type="button" class="btn btn-primary" onclick="' + NS + '.confirmSend()">온나라로 결재 상신</button>',
+                (lineReady().ok
+                    ? '<button type="button" class="btn btn-primary" onclick="' + NS + '.confirmSend()">온나라로 결재 상신</button>'
+                    : '<span class="rskdoc-foot-note">' + esc(lineReady().why) + ' <b>[← 수정]</b>에서 결재선을 고치세요.</span>'),
                 { variant: 'wide', headHtml: '<button type="button" class="btn btn-sm btn-outline pdf-noprint" onclick="' + NS + '.print()">PDF 저장 / 인쇄</button>' });
         }
         function back() { if (!F) return; renderDraft(); }
@@ -376,9 +550,7 @@
         function confirmSend() {
             if (!F) { toast('먼저 [공문 기안]으로 문서를 작성하세요.'); return; }
             if (denied(cfg.targetOf(F.id))) return;
-            var L = line();
-            var blank = L.filter(function (s) { return !s.name; }).length;
-            if (blank) { toast('결재선에 지정하지 않은 단계가 ' + blank + '건 있습니다 — 조직도에서 결재자를 고르세요'); return; }
+            if (lineDenied()) return;
             V().openModal('상신하면 되돌릴 수 없습니다',
                 '<div class="rskdoc-send">' +
                     '<div class="rskdoc-lock-warn">' +
@@ -394,6 +566,8 @@
             if (!F) { toast('먼저 [공문 기안]으로 문서를 작성하세요.'); return; }
             var t = cfg.targetOf(F.id);
             if (denied(t)) return;
+            /* 확인 화면을 건너뛰고 전역 호출로 들어오는 경로까지 막는다 — 버튼만 잠그면 뚫린다 */
+            if (lineDenied()) return;
             var no = cfg.nextNo();
             var doc = {
                 sid: no + '-' + (cfg.docsFor(t) || []).length,
@@ -401,8 +575,10 @@
                 docType: F.docType, title: F.title, to: F.to, body: F.body,
                 attach: F.attach.filter(function (x) { return x.on; }),
                 annex: F.annex, basis: Object.keys(F.basis),
+                /* 온나라로 넘어가는 결재선 — **계정 식별자(uid) 배열**이다. 이름은 표시용이라
+                   함께 담되, 연계가 붙으면 키가 되는 것은 uid 다(SCR-ADMIN-001 §4). */
                 line: line().slice(), lineText: lineText(),
-                by: persona().name, dept: myDeptName()
+                by: persona().name, byUid: persona().uid || '', dept: myDeptName()
             };
             cfg.save(t, doc);
             V().closeModal();
@@ -436,13 +612,15 @@
             confirmSend: confirmSend, send: send, openDoc: openDoc,
             capture: capture, insert: insert, setType: setType, setAttach: setAttach,
             setAnnex: setAnnex, setBasis: setBasis,
-            pickOpen: pickOpen, pickApprover: pickApprover, addStep: addStep, delStep: delStep, resetLine: resetLine,
-            line: line, lineText: lineText, registerRefresh: registerRefresh, refresh: refresh,
+            pickOpen: LN.pickOpen, pickApprover: LN.pickApprover, addStep: LN.addStep,
+            delStep: LN.delStep, resetLine: LN.resetLine,
+            line: line, lineText: lineText, lineIssues: lineIssues, lineReady: lineReady,
+            registerRefresh: registerRefresh, refresh: refresh,
             paperHtml: paperHtml
         };
         global[NS] = api;
         return api;
     }
 
-    global.DYDOC = { define: define };
+    global.DYDOC = { define: define, approvalLine: approvalLine, stepLabel: stepLabel };
 })(window);

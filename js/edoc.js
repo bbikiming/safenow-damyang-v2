@@ -71,15 +71,67 @@
     }
 
     /* ── 온나라 결재 요청 팝업 (컨펌: 안내 팝업 1회) ── */
-    function onnaraPopup(docTitle, after) {
+    /* ── 결재선 — 공용 조각 하나만 쓴다 (CLAUDE.md §7-1) ──────────────────
+     * 종전에는 이 모듈이 결재선을 **글자로만** 갖고 있었다("팀장 → 과장 → 부군수").
+     * 담당자에게 한 번도 묻지 않은 값을 상신했다고 말한 셈이고, 온나라로 넘길 계정
+     * 식별자도 만들 수 없었다. 이제 조직도에서 고르고 uid 로 보관한다.
+     * 전자문서 폼(F1~F7)과 그 폼을 부르는 화면(경영방침 점검표·도급 점검표 등)이 공유한다. */
+    /* ── 조작 권한 (CLAUDE.md §12 · 2026-08-28 검수 B-2) ────────────────
+     * **상신은 기안 행위다.** 결재선을 붙인 뒤로는 조회 전용 계층이 상신을 누르면
+     * 그 사람이 기안자로 온나라 결재선에 올라간다. 그래서 상신 경로만 담당자로
+     * 좁힌다 — 화면 전체를 조회 전용으로 만드는 것은 §12 2단계(발주처 정책 확정 후)라
+     * 여기서 하지 않는다. 판정은 DYROLE.canAct() 단일 출처. */
+    function canDraft() { return !window.DYROLE || window.DYROLE.canAct(''); }
+    /* 이력의 작성자는 **로그인 계정**이다 — '박안전' 고정이면 누가 등록했든 같은 이름이 남는다 */
+    function actorName() { return (window.DYROLE && DYROLE.current) ? DYROLE.current().name : '담당자'; }
+    const DRAFT_DENY = '상신은 <b>담당자</b>가 합니다 — 관리·감독 계층은 조회만 합니다.';
+
+    let lnRedraw = null;                                   /* 결재선만 다시 그린다 — 폼 전체를 재렌더하지 않는다 */
+    const LN = (window.DYDOC && window.DYDOC.approvalLine)
+        ? window.DYDOC.approvalLine({
+            ns: 'EDOCLN', key: 'dy-edoc-apprline-v1',
+            onChange: () => { if (lnRedraw) lnRedraw(); },
+        })
+        : null;
+    if (LN) window.EDOCLN = LN;
+
+    /* 확정(=상신) 직전에만 결재선을 묻는다 — 작성중에는 아직 물을 단계가 아니다.
+       확정된 뒤에는 그 문서에 실제로 실린 결재선을 조회로만 보여준다. */
+    function lineBlock(saved, mountId) {
+        if (!LN) return '';
+        if (saved.status === '확정') {
+            return saved.approval
+                ? '<div class="edoc-linkcard">결재선 — ' + esc(saved.approval.lineText) + '</div>'
+                : '';
+        }
+        if (saved.status !== '등록완료') return '';
+        return '<div id="' + mountId + '">' + LN.lineEditorHtml() + '</div>';
+    }
+    function lineWire(mountId) {
+        if (!LN) return;
+        lnRedraw = () => {
+            const el = document.getElementById(mountId);
+            if (el) el.innerHTML = LN.lineEditorHtml();
+        };
+    }
+
+    /* 결재선 값을 그대로 보여준다 — 고정 문구를 쓰지 않는다. 팝업·이력·지면이
+       같은 값 하나를 읽어야 어긋나지 않는다(SCR-EDOC-008 §6). */
+    /* 문서번호를 **돌려준다** — 화면이 「진행 상황은 온나라에서 문서번호로 확인하세요」라고
+       안내하는데 그 번호가 팝업에만 있고 저장되지 않아 다시 볼 수 없었다(검수 E).
+       호출부가 반환값을 그 문서에 실어 둔다. 실제 채번은 온나라 몫이다. */
+    function onnaraPopup(docTitle, after, snap) {
         const no = '온나라-2026-' + String(Math.floor(1000 + (docTitle.length * 137) % 9000));
+        const lineTxt = (snap && snap.lineText) || (LN ? LN.lineText() : '');
         V().openModal('온나라 결재 요청',
             '<div style="text-align:center; padding:8px 4px 4px;">' +
             '<p style="font-size:14px; font-weight:700; margin-bottom:6px;">온나라로 결재 요청을 보냈습니다</p>' +
-            '<p style="font-size:12px; color:var(--text-gray);">' + esc(docTitle) + '<br>문서번호 <b>' + no + '</b> · 결재선: 팀장 → 과장 → 부군수</p>' +
-            '<p style="font-size:12px; color:var(--text-gray); margin-top:8px;">결재 완료 시 문서 상태가 자동으로 갱신됩니다. (연계 시뮬레이션)</p>' +
+            '<p style="font-size:12px; color:var(--text-gray);">' + esc(docTitle) + '<br>문서번호 <b>' + no + '</b>' +
+                (lineTxt ? '<br>결재선: ' + esc(lineTxt) : '') + '</p>' +
+            '<p style="font-size:12px; color:var(--text-gray); margin-top:8px;">결재 완료·반려는 온나라에서 회신됩니다 — 진행 상황은 온나라에서 문서번호로 확인하세요. (연계 시뮬레이션)</p>' +
             '</div>',
             '<button class="btn btn-primary" onclick="DYV2.closeModal();' + (after ? after : '') + '">확인</button>');
+        return no;
     }
 
     /* ── 필드 렌더 ── */
@@ -236,6 +288,7 @@
                     '<span class="k">' + esc(f.label) + '</span>' + fieldHtml(f, saved.fields[f.k], renderCtx)
                 ).join('') +
             '</div>' +
+            lineBlock(saved, 'edoc-lnmount') +
             (saved.history.length ?
                 '<div class="edoc-history"><p class="edoc-history-title">처리 이력</p>' +
                 saved.history.map(h => '<div class="edoc-history-row"><span>' + h.at + '</span>' + esc(h.ev) + '</div>').join('') +
@@ -248,9 +301,11 @@
               '<button class="btn btn-outline" id="edoc-save">임시저장</button>' +
               (saved.status === '작성중'
                 ? '<button class="btn btn-primary" id="edoc-submit">등록</button>'
-                : '<button class="btn btn-primary" id="edoc-fix">확정 · 온나라 결재 상신</button>');
+                : (canDraft() ? '<button class="btn btn-primary" id="edoc-fix">확정 · 온나라 결재 상신</button>'
+                              : '<span class="file-hint">' + DRAFT_DENY + '</span>'));
 
         V().openModal(esc(opts.title), body, foot);
+        lineWire('edoc-lnmount');
 
         /* 체크리스트 O/X 토글 */
         document.querySelectorAll('#edoc-form .edoc-ox').forEach(b => {
@@ -276,13 +331,19 @@
         });
         const btnSubmit = document.getElementById('edoc-submit');
         if (btnSubmit) btnSubmit.addEventListener('click', () => {
-            persist('등록완료', '등록 (작성자: 박안전)');
+            persist('등록완료', '등록 (작성자: ' + actorName() + ')');
             V().closeModal(); V().toast('등록되었습니다 — 확정 전까지 수정 가능');
             if (opts.onChange) opts.onChange(saved);
         });
         const btnFix = document.getElementById('edoc-fix');
         if (btnFix) btnFix.addEventListener('click', () => {
+            /* 확정 = 상신이므로 결재선 규칙을 여기서 막는다. 확정은 되돌릴 수 없으니
+               통과시킨 뒤 상신만 실패하는 상태를 만들면 안 된다. */
+            if (!canDraft()) { V().toast('확정·상신은 담당자가 합니다 — 관리·감독 계층은 조회만 합니다.'); return; }
+            if (LN && LN.lineDenied()) return;
+            const snap = LN ? LN.snapshot() : null;
             persist('확정', '확정 · 온나라 결재 상신');
+            if (snap) { saved.approval = snap; S.saveDoc(id, saved); }
             /* 점검표 X 항목 → 개선조치 자동 생성 (내부 데이터 연계 114건의 핵심 패턴) */
             let createdImps = 0;
             formDef.fields.filter(f => f.type === 'checklist').forEach(f => {
@@ -295,7 +356,8 @@
                 });
             });
             V().closeModal();
-            onnaraPopup(opts.title);
+            const docNo = onnaraPopup(opts.title, '', snap);
+            saved.docNo = docNo; S.saveDoc(id, saved);
             if (createdImps) setTimeout(() => V().toast('X 항목 ' + createdImps + '건이 개선조치로 자동 등록되었습니다'), 600);
             if (opts.onChange) opts.onChange(saved);
         });
@@ -334,7 +396,8 @@
             : '<button class="btn btn-outline" data-act="save">임시저장</button>' +
               (saved.status === '작성중'
                 ? '<button class="btn btn-primary" data-act="submit">등록</button>'
-                : '<button class="btn btn-primary" data-act="fix">확정 · 온나라 결재 상신</button>');
+                : (canDraft() ? '<button class="btn btn-primary" data-act="fix">확정 · 온나라 결재 상신</button>'
+                              : '<span class="file-hint">' + DRAFT_DENY + '</span>'));
 
         container.innerHTML =
             '<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:14px;">' +
@@ -345,11 +408,13 @@
             '<div class="preset-form-grid edoc-form-grid">' +
                 formDef.fields.map(f => '<span class="k">' + esc(f.label) + '</span>' + fieldHtml(f, saved.fields[f.k], renderCtx)).join('') +
             '</div>' +
+            lineBlock(saved, 'edoc-lnmount-inline') +
             (saved.history.length
                 ? '<div class="edoc-history"><p class="edoc-history-title">처리 이력</p>' +
                   saved.history.map(h => '<div class="edoc-history-row"><span>' + h.at + '</span>' + esc(h.ev) + '</div>').join('') + '</div>'
                 : '') +
             '<div class="edoc-inline-foot">' + foot + '</div>';
+        lineWire('edoc-lnmount-inline');
 
         const grid = container.querySelector('.edoc-form-grid');
         grid.querySelectorAll('.edoc-ox').forEach(b => b.addEventListener('click', () => {
@@ -367,10 +432,14 @@
         function rerender() { renderInline(container, opts); if (opts.onChange) opts.onChange(saved); }
         const act = a => container.querySelector('[data-act="' + a + '"]');
         if (act('save')) act('save').addEventListener('click', () => { persist(saved.status, '임시저장'); V().toast('임시저장되었습니다'); rerender(); });
-        if (act('submit')) act('submit').addEventListener('click', () => { persist('등록완료', '등록 (작성자: 박안전)'); V().toast('등록되었습니다 — 확정 전까지 수정 가능'); rerender(); });
+        if (act('submit')) act('submit').addEventListener('click', () => { persist('등록완료', '등록 (작성자: ' + actorName() + ')'); V().toast('등록되었습니다 — 확정 전까지 수정 가능'); rerender(); });
         if (act('revise')) act('revise').addEventListener('click', () => V().notReady('문서 개정', '문서관리 연계'));
         if (act('fix')) act('fix').addEventListener('click', () => {
+            if (!canDraft()) { V().toast('확정·상신은 담당자가 합니다 — 관리·감독 계층은 조회만 합니다.'); return; }
+            if (LN && LN.lineDenied()) return;        /* 확정 = 상신 — 결재선 규칙을 여기서 막는다 */
+            const snap = LN ? LN.snapshot() : null;
             persist('확정', '확정 · 온나라 결재 상신');
+            if (snap) { saved.approval = snap; S.saveDoc(id, saved); }
             let created = 0;
             formDef.fields.filter(f => f.type === 'checklist').forEach(f => {
                 const items = renderCtx.checklist || T.CHECKLIST_PRESETS.default;
@@ -378,7 +447,8 @@
                     if (r.v === 'X') { addImprovement({ title: (items[i] && typeof items[i] === 'object' ? items[i].item : items[i]) + (r.note ? ' — ' + r.note : ''), sourceMenu: (opts.ctx && opts.ctx.menuLabel) || '점검', sourceDoc: opts.title, due: '2026-07-31' }); created++; }
                 });
             });
-            onnaraPopup(opts.title);
+            const docNo = onnaraPopup(opts.title, '', snap);
+            saved.docNo = docNo; S.saveDoc(id, saved);
             if (created) setTimeout(() => V().toast('X 항목 ' + created + '건이 개선조치로 자동 등록되었습니다'), 600);
             rerender();
         });

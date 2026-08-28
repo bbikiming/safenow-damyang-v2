@@ -74,6 +74,19 @@
              유일하게 admin 그룹을 보는 사람이다. */
           sysAdmin: true,
           desc: '주관부서(재난안전과) 실무 · 시스템 관리 — 전 부서 취합·점검' },
+        /* 검토자 관점 — 공문 결재선의 **검토 단계**를 맡는 사람. 종전에는 이 자리에
+           페르소나가 없어서, 기본 기안자(박안전)의 결재선이 「검토 김중대 → 결재 홍길동」
+           인데도 **검토자 계정으로는 로그인할 수 없었다.** 상신은 결재선 전체를 한 번에
+           보내고 기안·검토·결재가 서로 다른 계정이어야 하므로, 세 자리가 다 계정으로
+           존재해야 흐름을 끝까지 확인할 수 있다(3계정 = 박안전 → 김중대 → 홍길동).
+           uid·부서는 DYV2.ORG 값과 동일해야 한다(§3).
+           ※ SUPER_SEED 추가는 필요 없다 — deptId 가 'safety' 라 기존 시드를 쓴다.
+           teamLead 를 다는 이유는 문정수(정수팀장) 선례와 같다 — 팀장은 자기 팀 안에서만
+           배정한다. 빼면 assignKind 가 'dept' 로 떨어져 부서 전체 배정 권한을 갖는다. */
+        { id: 'jjtlead', tier: 'super', uid: 'u_jjt1', name: '김중대', role: '중대재해팀장',
+          org: '담양군청 · 재난안전과 중대재해팀', deptId: 'safety', deptName: '재난안전과',
+          teamLead: true, team: '중대재해팀',
+          desc: '팀장 — 공문 결재선의 검토 단계 · 중대재해팀 업무 배정·감독' },
         /* 업무를 '배정받는' 쪽 관점 — 주관부서 실무자(박안전)와 성격이 다르다.
            이 사람들은 자기 부서 일만 보고, 위험성평가를 직접 실시해 개선조치를 끝낸다.
            uid·deptId 는 DYV2.ORG 값과 동일해야 한다(CLAUDE.md §3). */
@@ -207,6 +220,36 @@
         if (!p) return true;
         return p.tier === 'staff' && p.deptId === OWNER_DEPT;
     }
+
+    /* =========================================================================
+     * 결재 권한 (DYROLE.canApprove) — '이 문서를 **결재할** 사람인가'
+     * -------------------------------------------------------------------------
+     * 조회(scope)·조작(canAct)·배정(assignKind)에 이은 **네 번째 축**이다.
+     * 판정 기준은 계층(tier)이 아니라 **결재선에 내 uid 가 있는가** 하나다.
+     *
+     * canAct 로 판정하면 안 되는 이유 — canAct 는 `tier !== 'staff'` 를 전부 막는데
+     * 결재자는 정확히 과장·소장(super)·군수(head)다. 그리고 canAct 가 막는 근거는
+     * "담당자 이름으로 대신 등록·서명하면 문서 위조"인데, 결재는 대신 하는 것이 아니라
+     * **자기 이름으로 하는 결재**라 그 근거가 걸리지 않는다. 배정을 세 번째 축으로 연
+     * 것과 같은 논리다(§14-7).
+     *
+     * ※ 이 시스템에는 **결재함(승인·반려 처리 화면)이 없고 만들지 않는다** — 승인·반려는
+     *   온나라에서 일어난다. 이 축이 여는 것은 «내가 결재선에 있다»는 표시와, 아래
+     *   inScopeDoc 의 조회 예외 둘뿐이다. 결재를 요청받고 그 문서를 볼 수 없으면
+     *   그건 결재선이 아니다.
+     * ========================================================================= */
+    function roleApprovalStep(line) {
+        const p = rolePersona();
+        if (!p || !p.uid || !Array.isArray(line)) return '';
+        const i = line.findIndex(s => s && s.uid === p.uid);
+        if (i < 0) return '';
+        return (window.DYDOC && DYDOC.stepLabel) ? DYDOC.stepLabel(i, line.length) : (i === line.length - 1 ? '결재' : '검토');
+    }
+    function roleCanApprove(line) { return !!roleApprovalStep(line); }
+    /* 문서 단위 조회 범위 — 소속 부서이거나, **내가 그 문서의 결재선에 있으면** 보인다.
+       결재선에는 타 부서 사람(부군수·군수)이 서므로 부서만으로 거르면 결재자가
+       자기가 결재할 문서를 못 본다. */
+    function roleInScopeDoc(deptId, line) { return roleInScope(deptId) || roleCanApprove(line); }
 
     /* 자임 — 그 부서 담당자가 본인을 담당자로 세운다(남에게 배정하는 것이 아니다) */
     function roleCanClaim(deptId) {
@@ -685,7 +728,7 @@
         `;
     }
 
-    /* 권한 전환 드롭다운 — 책임체계 3계층 · 페르소나 5인 */
+    /* 권한 전환 드롭다운 — 책임체계 3계층 · 페르소나 10인(정본은 ROLE_PERSONAS) */
     function renderRoleDropdown() {
         const cur = rolePersona();
         const tierOrder = ['head', 'super', 'staff'];
@@ -1244,6 +1287,10 @@
         canScopeDept: roleCanScopeDept,
         assignCandidates: roleAssignCandidates,
         assignTeam: roleAssignTeam,
+        /* 결재 축 — 결재선에 내 uid 가 있는가 (CLAUDE.md §7-1) */
+        canApprove: roleCanApprove,
+        approvalStep: roleApprovalStep,
+        inScopeDoc: roleInScopeDoc,
         leadOf: roleLeadOf,
         actorLabel: roleActorLabel,
         canRemind: roleCanRemind,

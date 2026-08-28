@@ -95,6 +95,138 @@
      * ===================================================================== */
     const PG = window.PG = {};
 
+    /* =====================================================================
+     * 결재선 — 공용 조각 하나만 쓴다 (CLAUDE.md §7-1)
+     * ---------------------------------------------------------------------
+     * 종전에는 경영방침·의견청취 점검결과지가 [온나라 결재 상신]을 누르는 순간
+     * 곧바로 `결재중` 으로 넘어갔다 — **결재선을 한 번도 묻지 않았다.** 그러고는
+     * 결재 이력 모달이 「김담당 → 이팀장 → 부군수」 같은 **조직도에 없는 이름**을
+     * 고정으로 찍었다. 상신은 결재선 전체를 한 번에 넘기는 일이라 그 값이 없으면
+     * 애초에 올릴 수 없다.
+     *
+     * 그래서 상신 앞에 **결재선 지정 단계**를 하나 넣는다. 공문 기안 폼을 새로
+     * 만들지는 않는다 — 이 두 화면은 문서가 이미 있고(방침 버전 · 점검결과지)
+     * 없는 것은 결재선뿐이다. 지정과 상신을 한 모달에서 끝낸다.
+     * ===================================================================== */
+    const APPRLN = (window.DYDOC && window.DYDOC.approvalLine)
+        ? window.DYDOC.approvalLine({
+            ns: 'PG.ln', key: 'dy-sbm-apprline-v1',
+            onChange: () => { const el = document.getElementById('sbm-lnmount'); if (el) el.innerHTML = APPRLN.lineEditorHtml(); },
+        })
+        : null;
+    if (APPRLN) PG.ln = APPRLN;
+
+    /* 상신 확인 — 결재선을 고르고 [상신]을 눌러야 넘어간다.
+       onDone(snapshot) 은 도메인이 상태를 바꾸고 결재선을 저장한다. */
+    function apprSubmit(title, onDone) {
+        if (!APPRLN) { onDone(null); return; }
+        V.openModal('온나라 결재 상신 — ' + esc(title),
+            '<div class="rskdoc-send">' +
+                '<p class="file-hint">결재선을 지정해야 상신할 수 있습니다. 상신은 <b>결재선 전체를 한 번에</b> 온나라로 넘기므로 기안·검토·결재가 서로 다른 사람이어야 합니다.</p>' +
+                '<div id="sbm-lnmount">' + APPRLN.lineEditorHtml() + '</div>' +
+                '<div class="rskdoc-lock-warn" style="margin-top:10px;"><b>상신 후에는 수정할 수 없습니다.</b><br>' +
+                '<span class="file-hint">문서번호가 채번되고 결재 이력에 남습니다. 되돌리려면 반려를 받아야 합니다.</span></div>' +
+            '</div>',
+            '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+            '<button class="btn btn-primary" onclick="PG._apprGo()">상신</button>');
+        PG._apprGo = () => {
+            if (APPRLN.lineDenied()) return;      /* 버튼만 잠그면 전역 호출로 뚫린다 */
+            const snap = APPRLN.snapshot();
+            V.closeModal();
+            onDone(snap);
+        };
+    }
+    /* 결재 이력 행 — **저장된 결재선에서 파생한다.** 고정 3행을 찍지 않는다.
+       상신 사실까지만 만들고 승인·반려는 온나라 회신 몫이다(§7-4). */
+    function apprRows(appr, snap, at, done) {
+        if (!snap || !snap.line) return [];
+        const L = snap.line;
+        const label = i => (window.DYDOC ? DYDOC.stepLabel(i, L.length) : (i === L.length - 1 ? '결재' : '검토'));
+        const rows = [[at, '결재 상신', snap.by, '-']];
+        const n = (appr === '승인완료') ? L.length : Math.min(done || 0, L.length);
+        for (let i = 0; i < n; i++) rows.push([at, label(i) + ' 승인', L[i].name, i === L.length - 1 ? '승인 완료' : '-']);
+        if (appr === '반려') rows.push([at, '반려', (L[Math.min(n, L.length - 1)] || {}).name || '-', '보완 후 재상신 요망']);
+        return rows;
+    }
+
+    /* ── 결재 결과 회신 등록 (연계 전 수동 기록) ─────────────────────
+     * **경영방침은 결재 결과를 받는 도메인이다**(2026-08-28 확정 · `_공통_권한정의.md` §7-4).
+     * 가르는 기준은 「결재 결과가 후속 업무를 여는가」인데, 경영방침은 **승인완료라야
+     * 현행본이 되고** 그래야 이행점검·게시가 열린다. 회신이 없으면 새로 상신한 방침이
+     * 결재중에 갇혀 영영 현행본이 되지 못한다(2026-08-28 검수에서 발견).
+     *
+     * **자체 결재가 아니다 — 셋을 지킨다.**
+     *   ① 화면에 **연계 전 수동 기록**임을 밝힌다(결재하는 자리가 아니라 옮겨 적는 자리).
+     *   ② 승인 단계·처리자를 **그 문서 결재선에서 파생**한다 — 고정 이름 금지.
+     *   ③ 회신 등록은 결재가 아니라서 결재선과 무관하게 담당자가 한다.
+     * 같은 형태가 예산 총괄표에 있다(`js/bgt.js` recvBox·receiveOnnara).
+     *
+     * ns: 'PG.polRecv' 처럼 이 조각의 핸들러가 놓인 전역 경로. */
+    function recvBox(ns, id, appr, snap, steps) {
+        if (appr !== '결재중') return '';
+        const line = (snap && snap.line) || [];
+        const done = (steps || 0);
+        const label = i => (window.DYDOC ? DYDOC.stepLabel(i, line.length) : (i === line.length - 1 ? '결재' : '검토'));
+        const midLeft = line.length > 1 && done < line.length - 1;
+        const nextName = line[done] ? line[done].name : '';
+        return '<div class="bgt-sim-box">' +
+            '<div class="bgt-sim-head">결재 결과 회신 등록 — 연계 전 수동 기록</div>' +
+            '<p class="file-hint" style="margin-bottom:10px;">온나라가 보낸 결재 결과를 <b>옮겨 적는 자리</b>입니다 — 이 시스템이 결재하지 않습니다. ' +
+                '연계가 붙으면 온나라 응답이 대신합니다. 회신 등록은 결재가 아니라서 <b>결재선과 무관하게 담당자가</b> 합니다.</p>' +
+            '<div class="bgt-act-btns">' +
+                (midLeft ? '<button class="btn btn-sm btn-outline" onclick="' + ns + '(\'' + id + '\',\'mid\')">' +
+                    esc(label(done)) + ' 승인 회신' + (nextName ? ' (' + esc(nextName) + ')' : '') + '</button>' : '') +
+                '<button class="btn btn-sm btn-primary" onclick="' + ns + '(\'' + id + '\',\'approve\')">결재 완료 회신</button>' +
+                '<button class="btn btn-sm btn-outline" onclick="' + ns + '(\'' + id + '\',\'reject\')">반려 회신</button>' +
+            '</div>' +
+            '<div id="sbm-reject-form" style="display:none;"></div>' +
+        '</div>';
+    }
+    /* 반려 사유 인라인 입력 — 별도 모달을 띄우지 않는다(CLAUDE.md §1) */
+    function rejectInline(ns, id) {
+        const box = document.getElementById('sbm-reject-form'); if (!box) return;
+        if (box.style.display !== 'none' && box.innerHTML) { box.style.display = 'none'; box.innerHTML = ''; return; }
+        box.style.display = 'block';
+        box.innerHTML = '<div class="bgt-reject-inline">' +
+            '<label class="form-label" for="sbm-reject-reason">반려 사유 (필수)</label>' +
+            '<textarea id="sbm-reject-reason" class="form-textarea" rows="2" placeholder="온나라에서 회신된 반려 사유를 그대로 옮겨 적으세요"></textarea>' +
+            '<div class="bgt-act-btns" style="margin-top:8px;">' +
+                '<button class="btn btn-outline btn-sm" onclick="' + ns + '(\'' + id + '\',\'cancel\')">취소</button>' +
+                '<button class="btn btn-primary btn-sm" onclick="' + ns + '(\'' + id + '\',\'doReject\')">반려 회신 등록</button>' +
+            '</div></div>';
+        const ta = document.getElementById('sbm-reject-reason'); if (ta) ta.focus();
+    }
+    /* 회신 반영 — 단계·처리자를 **결재선에서 파생**한다(안전장치 ②).
+     * 반환: {ok, msg, appr} — 도메인이 상태를 받아 자기 객체에 쓴다. */
+    function applyRecv(kind, appr, snap, doneSteps, reason) {
+        const line = (snap && snap.line) || [];
+        const label = i => (window.DYDOC ? DYDOC.stepLabel(i, line.length) : (i === line.length - 1 ? '결재' : '검토'));
+        if (kind === 'mid') {
+            if (!(line.length > 1 && doneSteps < line.length - 1)) return { ok: false, msg: '중간 결재가 이미 완료되었습니다.' };
+            return { ok: true, appr: '결재중', done: doneSteps + 1, msg: label(doneSteps) + ' 승인 회신이 등록되었습니다.' };
+        }
+        if (kind === 'approve') return { ok: true, appr: '승인완료', done: line.length, msg: '결재 완료 회신이 등록되었습니다 — 현행본으로 반영됩니다.' };
+        if (kind === 'reject') {
+            const rs = String(reason || '').trim();
+            if (!rs) return { ok: false, msg: '반려 사유를 입력하세요.' };
+            return { ok: true, appr: '반려', done: doneSteps, reason: rs, msg: '반려 회신이 등록되었습니다.' };
+        }
+        return { ok: false, msg: '알 수 없는 회신 유형입니다.' };
+    }
+
+    /* 지난 문서의 결재선 — **예시 값**이다(§15). 종전에는 이력 모달이
+       「김담당 → 이팀장 → 부군수」라는 **조직도에 없는 이름**을 고정으로 찍었다.
+       실인물 uid 로 바꿔 두어야 지금 규칙과 같은 형태로 읽히고, 온나라에 넘길
+       계정 식별자가 무엇인지도 드러난다. `sample` 표시는 지우지 말 것. */
+    function sampleLine() {
+        return {
+            by: '박안전', byUid: 'u_jjt2',
+            line: [{ uid: 'u_jjt1', name: '김중대', role: '중대재해팀장', dept: '재난안전과' },
+                   { uid: 'u_safe1', name: '홍길동', role: '재난안전과장', dept: '재난안전과' }],
+            lineText: '기안 박안전 → 검토 김중대 → 결재 홍길동', sample: true,
+        };
+    }
+
     const PROGRAM = {
         /* ── 경영방침 [SFR-005] 전면 재개편: 버전 목록형 3탭(경영방침/이행점검/게시 현황) + 상세(PDF 미리보기) + 등록(최초/제정/개정). 마스터(근거법령·고려사항·점검표·가이드 CRUD)는 상세에서 모달로 진입(RFP 유지). ── */
         policy() {
@@ -345,21 +477,26 @@
                           postings: [{ id: 'L1', loc: '군청 본관 1층 게시판', photo: '본관 1층 게시판 게시 사진', date: '2026-02-05', status: '게시완료' },
                                      { id: 'L2', loc: '내부망(새올) 전자게시', photo: '새올 전자게시 화면 캡처', date: '2026-02-03', status: '게시완료' }],
                           evidence: [{ id: 'E1', name: '경영방침_2026.pdf', kind: '본문' }, { id: 'E2', name: '의견수렴결과.xlsx', kind: '의견수렴' }],
-                          postedDate: '2026-02-05', pdf: { docNo: '온나라-2026-3174', issued: '2026-02-03', signer: '담양군수 홍OO' } },
+                          postedDate: '2026-02-05', pdf: { docNo: '온나라-2026-3174', issued: '2026-02-03', signer: '담양군수 김담양' } },
                         { ver: '1.1', type: '개정', title: '담양군 안전·보건 경영방침', goal: '안전한 일터, 건강한 담양',
                           details: ['중대재해 ZERO 유지', '위험성평가 이행률 100%', '안전보건교육 이수율 90% 이상'], inspector: '재난안전과 · 재난안전과장 / 홍길동',
                           effDate: '2025-07-01', appr: '승인완료', inspections: [{ half: '2025 하반기', date: '2025-12-10', result: '보완 필요', inspector: '홍길동' }],
                           postings: [{ id: 'L1', loc: '군청 본관 1층 게시판', photo: '본관 1층 게시판 게시 사진', date: '2025-07-03', status: '게시완료' }],
                           evidence: [{ id: 'E1', name: '개정_방침_v1.1.pdf', kind: '본문' }], postedDate: '2025-07-03',
-                          pdf: { docNo: '온나라-2025-2210', issued: '2025-07-01', signer: '담양군수 홍OO' } },
+                          pdf: { docNo: '온나라-2025-2210', issued: '2025-07-01', signer: '담양군수 김담양' } },
                         { ver: '1.0', type: '최초', title: '담양군 안전·보건 경영방침', goal: '안전 담양 원년 — 중대재해 예방 체계 구축',
                           details: ['중대재해 예방 관리체계 구축', '위험성평가 도입'], inspector: '재난안전과 · 재난안전과장 / 홍길동',
                           effDate: '2024-03-01', appr: '승인완료', inspections: [], postings: [], evidence: [], postedDate: '',
-                          pdf: { docNo: '온나라-2024-1102', issued: '2024-03-01', signer: '담양군수 홍OO' } },
+                          pdf: { docNo: '온나라-2024-1102', issued: '2024-03-01', signer: '담양군수 김담양' } },
                     ],
                 };
             }
             const S = window.POLICY_STATE;
+            /* 시드 버전은 결재선 없이 '승인완료'만 갖고 있었다 — 이력이 통째로 비어 화면이
+               무엇을 보여주는지 전달되지 않는다. 예시 값으로 채우되 예시임을 표시한다. */
+            S.VERSIONS.forEach(v => {
+                if (v.appr !== '미상신' && !v.approval) { v.approval = sampleLine(); v.apprAt = (v.pdf && v.pdf.issued) || v.effDate; }
+            });
             S.VERSIONS.sort((a, b) => parseFloat(b.ver) - parseFloat(a.ver));
             const POL = {
                 cur: () => S.VERSIONS.find(v => v.ver === S.ver) || S.VERSIONS[0] || null,
@@ -436,14 +573,59 @@
             PG.polRevise = () => PG.polNewKind('개정');
             PG.polEnact = () => PG.polNewKind('제정');
 
-            /* 온나라 결재 */
-            PG.polApprSet = (ver, st) => { const v = S.VERSIONS.find(x => x.ver === ver); if (v) v.appr = st; render(); V.toast('결재 상태: ' + st); };
-            PG.polOnnara = ver => { const v = S.VERSIONS.find(x => x.ver === ver); if (v) v.appr = '결재중'; E.onnaraPopup('경영방침 v' + ver); render(); };
-            PG.polApprHistory = () => V.openModal('온나라 결재 이력',
-                '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>일시</th><th>처리</th><th>처리자</th><th>비고</th></tr></thead><tbody>' +
-                [['2026-06-22 16:20', '결재 상신', '김담당', '-'], ['2026-06-22 17:05', '팀장 승인', '이팀장', '-'], ['2026-06-23 10:12', '부군수 승인', '부군수', '승인 완료']].map(r => '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td><td>' + r[2] + '</td><td>' + r[3] + '</td></tr>').join('') +
-                '</tbody></table></div>',
-                '<button class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
+            /* 온나라 결재 — 상태를 임의로 바꾸던 전역 `polApprSet` 은 제거했다(2026-08-28).
+               검증 없이 결재 상태를 세팅할 수 있어 결재선·회신 규칙을 통째로 우회했다.
+               상태는 상신(polOnnara)과 회신 등록(polRecv) 두 경로로만 바뀐다. */
+            /* 결재 결과 회신 등록 — 단계·처리자는 결재선에서 파생한다(recvBox·applyRecv 주석). */
+            PG.polRecv = (ver, kind) => {
+                const v = S.VERSIONS.find(x => x.ver === ver); if (!v) return;
+                if (kind === 'reject') { rejectInline('PG.polRecv', ver); return; }
+                if (kind === 'cancel') { rejectInline('PG.polRecv', ver); return; }
+                let reason = '';
+                if (kind === 'doReject') {
+                    const ta = document.getElementById('sbm-reject-reason');
+                    reason = ta ? ta.value.trim() : '';
+                    kind = 'reject';
+                }
+                const r = applyRecv(kind, v.appr, v.approval, v.recvDone || 0, reason);
+                if (!r.ok) { V.toast(r.msg); return; }
+                v.appr = r.appr;
+                v.recvDone = r.done;
+                if (r.reason) v.rejectReason = r.reason;
+                V.toast(r.msg);
+                if (r.appr === '결재중') { PG.polApprHistory(ver); }   /* 중간 승인 — 모달 유지 */
+                else { V.closeModal(); }
+                render();
+            };
+            /* 상신 전에 **결재선을 지정한다** — 종전에는 누르는 즉시 결재중이 됐다.
+               결재선은 그 방침 버전에 저장하고 이력·팝업이 같은 값 하나를 읽는다. */
+            PG.polOnnara = ver => {
+                if (actGate('경영방침 결재 상신')) return;
+                const v = S.VERSIONS.find(x => x.ver === ver); if (!v) return;
+                apprSubmit('경영방침 v' + ver, snap => {
+                    v.appr = '결재중';
+                    v.apprAt = V.today() + ' 09:00';
+                    v.approval = snap;
+                    v.recvDone = 0;          /* 재상신이면 회신 진행도 초기화 */
+                    v.rejectReason = '';
+                    v.docNo = E.onnaraPopup('경영방침 v' + ver, '', snap);
+                    render();
+                });
+            };
+            PG.polApprHistory = ver => {
+                const v = ver ? S.VERSIONS.find(x => x.ver === ver) : POL.active();
+                const rows = v ? apprRows(v.appr, v.approval, v.apprAt || V.today(), v.recvDone || 0) : [];
+                V.openModal('온나라 결재 ' + (v && v.appr === '결재중' ? '상태 — 회신 등록' : '이력') + (v ? ' — v' + v.ver + (v.docNo ? ' · ' + v.docNo : '') : ''),
+                    (rows.length
+                        ? '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>일시</th><th>처리</th><th>처리자</th><th>비고</th></tr></thead><tbody>' +
+                          rows.map(r => '<tr><td>' + esc(r[0]) + '</td><td>' + esc(r[1]) + '</td><td>' + esc(r[2]) + '</td><td>' + esc(r[3]) + '</td></tr>').join('') +
+                          '</tbody></table></div>' +
+                          ((v && v.approval && v.approval.sample) ? '<p style="margin-top:8px;">' + V.sampleChip('지난 버전의 결재선은 예시 값입니다') + '</p>' : '') +
+                          '<p class="file-hint" style="margin-top:10px;">결재 완료·반려는 <b>온나라에서</b> 판단합니다 — 진행 상황은 온나라에서 문서번호로 확인하세요.</p>' +
+                          (v ? recvBox('PG.polRecv', v.ver, v.appr, v.approval, v.recvDone || 0) : '')
+                        : '<div class="v2-empty">결재 이력이 없습니다 — 상신하면 이력이 기록됩니다.</div>'),
+                    '<button class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
+            };
 
             /* PDF 미리보기 */
             const pdfPaper = v => '<div class="pdf-paper">' +
@@ -693,7 +875,7 @@
                     '<span class="k">세부 방침</span><ol style="margin:0; padding-left:18px;">' + (v.details || []).map(d => '<li>' + V.esc(d) + '</li>').join('') + '</ol>' +
                     '<span class="k">점검자</span><div>' + V.esc(v.inspector || '-') + '</div>' +
                     '<span class="k">반기 점검</span><div>' + checkChip(v) + '</div>' +
-                    '<span class="k">온나라 결재</span><div style="display:flex; gap:8px; align-items:center;">' + apprChip(v.appr) + '<button class="btn btn-sm btn-outline" onclick="PG.polApprHistory()">이력</button></div>' +
+                    '<span class="k">온나라 결재</span><div style="display:flex; gap:8px; align-items:center;">' + apprChip(v.appr) + '<button class="btn btn-sm btn-outline" onclick="PG.polApprHistory(\'' + v.ver + '\')">이력</button></div>' +
                     '</div>' +
                     '<div class="pol-badges" style="margin-top:14px;">' +
                     '<button type="button" class="pol-badge" onclick="PG.policyGuide()">ⓘ 작성 가이드</button>' +
@@ -716,7 +898,14 @@
                     '');
                 const header = '<div class="pol-detail-top"><button class="btn btn-sm btn-outline" onclick="PG.polBack()">‹ 목록</button>' +
                     '<div class="pol-detail-actions"><button class="btn btn-sm btn-outline" onclick="PG.polRevise()">개정</button><button class="btn btn-sm btn-outline" onclick="PG.polEnact()">제정</button>' +
-                    (v.appr === '미상신' || v.appr === '반려' ? '<button class="btn btn-sm btn-primary" onclick="PG.polOnnara(\'' + v.ver + '\')">온나라 결재 상신</button>' : '') + '</div></div>';
+                    ((v.appr === '미상신' || v.appr === '반려')
+                        /* 상신은 **기안 행위**다 — 결재선을 붙인 뒤로는 조회 전용 계층이 누르면
+                           그 사람이 기안자로 온나라에 올라간다. 권한이 없으면 버튼을 내지 않고
+                           **누가 하는지**를 대신 밝힌다(CLAUDE.md §12 · 2026-08-28 검수 B-2). */
+                        ? (canAct()
+                            ? '<button class="btn btn-sm btn-primary" onclick="PG.polOnnara(\'' + v.ver + '\')">온나라 결재 상신</button>'
+                            : '<span class="opn-muted" style="font-size:var(--fs-12); align-self:center;">상신은 <b>담당자</b>가 합니다 — 관리·감독 계층은 조회만 합니다.</span>')
+                        : '') + '</div></div>';
                 const main = sectionCard('경영방침 v' + v.ver + ' 상세', '<div class="pol-detail-grid"><div class="pol-detail-info">' + infoGrid + '</div>' + pdfPanel + '</div>', '');
                 return subtabs + header + main + checkSec + boardSec;
             }
@@ -759,7 +948,7 @@
                 window.ORG_APPOINT_STATE = [
                     { kind: '안전관리자', name: '김안전', date: '2025-03-02', cert: '산업안전기사', paper: true },
                     { kind: '보건관리자', name: '이보건', date: '2025-03-02', cert: '간호사', paper: true },
-                    { kind: '안전보건관리책임자', name: '박과장', date: '2025-01-02', cert: '재난안전과장', paper: false },
+                    { kind: '안전보건관리책임자', name: '홍길동', date: '2025-01-02', cert: '재난안전과장', paper: false },
                     { kind: '관리감독자 (도시과)', name: '', date: '', cert: '', paper: false },
                 ];
             }
@@ -1070,6 +1259,10 @@
                 };
             }
             const S = window.OPINION_STATE;
+            /* 시드 점검결과지의 결재선도 예시 값이다 — 없으면 이력이 통째로 빈다(§15) */
+            (S.COUNCIL && S.COUNCIL.checklists ? S.COUNCIL.checklists : []).forEach(c => {
+                if (c.appr !== '미상신' && !c.approval) { c.approval = sampleLine(); c.apprAt = (c.date || V.today()) + ' 14:10'; }
+            });
             if (!S._migrated) { S.VOICES.forEach(migrateVoice); S._migrated = true; }
             /* SNB(sub 파라미터)가 곧 현재 탭 — 탭 간 이동은 SNB 페이지 이동으로 일어남 */
             if (OPN_SUB) S.tab = OPN_SUB;
@@ -1439,24 +1632,32 @@
                 if (!window.confirm('이 점검결과지를 삭제하시겠습니까? 삭제 후 되돌릴 수 없습니다.')) return;
                 S.COUNCIL.checklists = S.COUNCIL.checklists.filter(x => x.id !== id); PG.opnGo('council', 'list', null); V.toast('점검결과지가 삭제되었습니다');
             };
-            PG.opnChkOnnara = id => { const c = S.COUNCIL.checklists.find(x => x.id === id); if (c) c.appr = '결재중'; E.onnaraPopup('의견청취 점검결과지 ' + id); render(); };
-            /* 결재 이력 — 문서의 실제 appr 상태에 따라 이력 행을 동적 생성(고정 3행 표시 금지) */
+            /* 상신 전에 **결재선을 지정한다** — 종전에는 누르는 즉시 결재중이 됐다. */
+            PG.opnChkOnnara = id => {
+                if (actGate('점검결과지 결재 상신')) return;
+                const c = S.COUNCIL.checklists.find(x => x.id === id); if (!c) return;
+                apprSubmit('의견청취 점검결과지 ' + id, snap => {
+                    c.appr = '결재중';
+                    c.apprAt = (c.date || V.today()) + ' 14:10';
+                    c.approval = snap;
+                    c.docNo = E.onnaraPopup('의견청취 점검결과지 ' + id, '', snap);
+                    render();
+                });
+            };
+            /* 결재 이력 — **저장된 결재선에서 파생한다.** 종전에는 '중대재해팀장'·'부군수'를
+               고정으로 찍었는데 그 사람들은 이 문서의 결재선이 아니었다. */
             PG.opnChkApprHistory = id => {
                 const c = S.COUNCIL.checklists.find(x => x.id === id);
-                const appr = c ? c.appr : '미상신';
-                const inspector = (c && c.inspector) || '정안전';
-                const d0 = (c && c.date) || '2026-06-28';
-                const d1 = addDays(d0, 1);
-                let rows = [];
-                if (appr === '결재중') rows = [[d0 + ' 14:10', '결재 상신', inspector, '-']];
-                else if (appr === '승인완료') rows = [[d0 + ' 14:10', '결재 상신', inspector, '-'], [d0 + ' 15:30', '팀장 승인', '중대재해팀장', '-'], [d1 + ' 09:40', '부군수 승인', '부군수', '승인 완료']];
-                else if (appr === '반려') rows = [[d0 + ' 14:10', '결재 상신', inspector, '-'], [d0 + ' 15:30', '반려', '중대재해팀장', (c && c.rejectReason) || '보완 후 재상신 요망']];
+                const rows = c ? apprRows(c.appr, c.approval, c.apprAt || ((c.date || V.today()) + ' 14:10')) : [];
+                if (c && c.appr === '반려' && c.rejectReason && rows.length > 1) rows[rows.length - 1][3] = c.rejectReason;
                 const body = rows.length
                     ? '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>일시</th><th>처리</th><th>처리자</th><th>비고</th></tr></thead><tbody>' +
-                      rows.map(r => '<tr><td>' + r[0] + '</td><td>' + r[1] + '</td><td>' + r[2] + '</td><td>' + r[3] + '</td></tr>').join('') +
-                      '</tbody></table></div>'
-                    : '<p style="font-size:var(--fs-13); color:var(--text-gray); text-align:center; padding:20px 0;">결재 이력이 없습니다 — 상신 후 이력이 기록됩니다.</p>';
-                V.openModal('온나라 결재 이력' + (c ? ' — ' + c.id : ''), body,
+                      rows.map(r => '<tr><td>' + esc(r[0]) + '</td><td>' + esc(r[1]) + '</td><td>' + esc(r[2]) + '</td><td>' + esc(r[3]) + '</td></tr>').join('') +
+                      '</tbody></table></div>' +
+                      ((c && c.approval && c.approval.sample) ? '<p style="margin-top:8px;">' + V.sampleChip('지난 점검결과지의 결재선은 예시 값입니다') + '</p>' : '') +
+                      '<p class="file-hint" style="margin-top:10px;">결재 완료·반려는 <b>온나라에서 회신</b>됩니다 — 진행 상황은 온나라에서 문서번호로 확인하세요.</p>'
+                    : '<div class="v2-empty">결재 이력이 없습니다 — 상신하면 이력이 기록됩니다.</div>';
+                V.openModal('온나라 결재 이력' + (c ? ' — ' + c.id + (c.docNo ? ' · ' + c.docNo : '') : ''), body,
                     '<button class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
             };
             PG.opnChkPdfDownload = () => V.notReady('PDF 내려받기', '문서 출력 연계');
@@ -1767,7 +1968,9 @@
                 let acts = '<div class="pol-detail-actions">';
                 if (editable) {
                     acts += '<button class="btn btn-sm btn-outline" onclick="PG.opnChkEdit(\'' + c.id + '\')">수정</button>';
-                    acts += '<button class="btn btn-sm btn-primary" onclick="PG.opnChkOnnara(\'' + c.id + '\')">온나라 결재 상신</button>';
+                    acts += canAct()
+                        ? '<button class="btn btn-sm btn-primary" onclick="PG.opnChkOnnara(\'' + c.id + '\')">온나라 결재 상신</button>'
+                        : '<span class="opn-muted" style="font-size:var(--fs-12); align-self:center;">상신은 <b>담당자</b>가 합니다 — 관리·감독 계층은 조회만 합니다.</span>';
                 } else {
                     acts += '<span class="opn-muted" style="font-size:var(--fs-12); align-self:center;">' + (c.appr === '승인완료' ? '결재 승인 완료' : '결재 진행 중') + ' — 수정하려면 반려 후 진행하세요.</span>';
                 }
@@ -2073,7 +2276,26 @@
                 id: 'EDOC-의무이행점검-2026H1', title: '2026 상반기 의무이행 점검표 (중처법 시행령 §4·§5)', form: 'F5',
                 ctx: { menuLabel: '이행관리 · 반기', checklist: T.CHECKLIST_PRESETS.comply }, onChange: render,
             });
-            PG.cmpClose = () => E.onnaraPopup('2026 상반기 의무이행 점검 마감 보고');
+            /* 반기 마감 보고 상신 — **결재선을 묻고 검사한 뒤** 올린다.
+             * 종전에는 이 버튼이 결재선을 묻지도 검사하지도 않고 곧바로 안내 팝업을 띄웠고,
+             * 팝업은 **검증되지 않은 기본 결재선**을 「상신 완료」로 인쇄했다 — 재난안전과장이
+             * 누르면 「기안 홍길동 → 검토 김중대 → **결재 홍길동**」처럼 기안자와 결재자가
+             * 같은 결재선이 올라간 것처럼 보였다(2026-08-28 검수 B-1).
+             * 회차도 '2026 상반기' 로 박혀 있어 다른 반기를 골라도 그대로였다.
+             *
+             * 이행점검은 **결재 결과를 받지 않는 도메인**이다(공통 §7-4) — 결재 결과가
+             * 후속 업무를 열지 않으므로 `결재중` 하나만 만들고 진행은 온나라에서 확인한다. */
+            PG.cmpClose = () => {
+                if (actGate('반기 마감 상신')) return;
+                const per = periodLabel(S.period);
+                if (S.closed && S.closed[S.period]) { V.toast(per + ' 마감 보고는 이미 상신되었습니다.'); return; }
+                apprSubmit(per + ' 의무이행 점검 마감 보고', snap => {
+                    S.closed = S.closed || {};
+                    S.closed[S.period] = Object.assign({ at: V.today(), status: '결재중' }, snap);
+                    S.closed[S.period].docNo = E.onnaraPopup(per + ' 의무이행 점검 마감 보고', '', snap);
+                    render();
+                });
+            };
             /* 관계 법령 목록은 담양군 제공 자료다. 미수신 대체 동작과 요청 범위를 안내한다. */
             PG.cmpLawList = () => V.openModal('관계 법령 목록 — 외부 준비 안내',
                 '<p style="font-size:13px; line-height:1.7;">중처법 시행령 §5①·§11①은 "안전·보건 관계 법령"을 ' +
@@ -2100,6 +2322,8 @@
             const _t = DYV2.today();
             S.period = S.period || (_t.slice(0, 4) + (+_t.slice(5, 7) <= 6 ? '-H1' : '-H2'));
             PG.cmpPeriod = (v) => { S.period = v; render(); };
+            /* 회차 표기는 한 곳에서 — 상신 제목·버튼 문구가 갈리지 않게 한다 */
+            const periodLabel = (v) => String(v || '').replace(/^(\d{4})-H([12])$/, (m, y, h) => y + ' ' + (h === '1' ? '상반기' : '하반기'));
             const periodOpts = [];
             [+_t.slice(0, 4), +_t.slice(0, 4) - 1].forEach(y => {
                 periodOpts.push({ v: y + '-H2', label: y + '년 하반기' });
@@ -2159,7 +2383,14 @@
                 ]),
                 '<div style="display:flex; gap:6px;">' +
                 '<button class="btn btn-sm btn-primary" onclick="PG.cmpCheck()">점검표 작성</button>' +
-                '<button class="btn btn-sm btn-outline" onclick="PG.cmpClose()">반기 마감 · 온나라 상신</button></div>') +
+                ((S.closed && S.closed[S.period])
+                    ? '<span class="opn-muted" style="font-size:var(--fs-12); align-self:center;">' +
+                        periodLabel(S.period) + ' 마감 보고 <b>상신됨</b>' + (S.closed[S.period].docNo ? ' · ' + esc(S.closed[S.period].docNo) : '') + ' — ' + esc(S.closed[S.period].lineText || '') +
+                        ' · 결재 진행은 온나라에서 문서번호로 확인하세요</span>'
+                    : (canAct()
+                        ? '<button class="btn btn-sm btn-outline" onclick="PG.cmpClose()">반기 마감 · 온나라 상신</button>'
+                        : '<span class="opn-muted" style="font-size:var(--fs-12); align-self:center;">상신은 <b>담당자</b>가 합니다 — 관리·감독 계층은 조회만 합니다.</span>')) +
+                '</div>') +
             sectionCard('중대재해 예방 매뉴얼·업무처리절차 점검',
                 '<div class="check-notice" style="margin-bottom:10px;">제정·개정 원문과 버전은 <b>기준문서함</b>에서 관리하고, 제정·조치 여부·교육·점검 증빙은 <b>이행 목록</b>에서 회차별로 관리합니다. 같은 파일을 두 곳에 중복 등록하지 않습니다.</div>' +
                 tbl(['관리 구분', '정본 위치', '현재 상태', '이동'], [

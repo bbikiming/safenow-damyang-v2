@@ -73,7 +73,7 @@
                             { uid: 'u_safe2', name: '박담당', role: '안전관리담당' },
                         ], children: [
                             { id: 'jjt', name: '중대재해팀', type: 'team', members: [
-                                { uid: 'u_jjt1', name: '김중대', role: '중대재해팀장' },
+                                { uid: 'u_jjt1', name: '김중대', role: '중대재해팀장', teamLead: true },
                                 { uid: 'u_jjt2', name: '박안전', role: '안전관리 주무관' },
                                 { uid: 'u_jjt3', name: '김안전', role: '안전관리자' },
                             ], children: [] },
@@ -174,10 +174,44 @@
         });
         return found;
     }
-    function orgDepts() {
+    /* 부서형 노드 목록. opts.includeLeadership 이면 **지휘부 노드**(군수·부군수·국장)도 함께 준다.
+     * 왜 옵션인가 — 기본 동작을 바꾸면 부서 선택 드롭다운·다중 선택 패널에 '군수'가 부서처럼
+     * 끼어든다(소비처가 이미 여럿이다). 지휘부가 필요한 곳은 **결재선 하나뿐**이라 그쪽만 연다.
+     * 결재선에 이 옵션이 필요한 이유는 위임전결규칙상 부군수·군수가 결재권자로 서는 문서가
+     * 있기 때문이다 — 종전에는 그 사람들이 조직도에 아예 나오지 않아 지정할 수 없었다. */
+    function orgDepts(opts) {
+        opts = opts || {};
         const out = [];
-        orgWalk(n => { if (isDeptLike(n)) out.push({ id: n.id, name: n.name, count: orgCount(n.id) }); });
+        orgWalk(n => {
+            if (isDeptLike(n)) { out.push({ id: n.id, name: n.name, count: orgCount(n.id) }); return; }
+            if (opts.includeLeadership && (n.type === 'post' || n.type === 'bureau') && (n.members || []).length) {
+                out.push({ id: n.id, name: n.name, count: n.members.length, leadership: true });
+            }
+        });
         return out;
+    }
+    /* uid → 사람. 조직도 **전체**를 훑으므로 팀 노드·지휘부 노드에 있는 사람도 찾는다.
+     * 결재선은 이름이 아니라 uid 로 저장하고(동명이인·개명에 견딘다) 표시할 때 이 파생으로
+     * 되돌린다. deptId·deptName 은 그 사람이 속한 **부서형/지휘부 노드**를 가리킨다 —
+     * 팀 노드(중대재해팀) 소속이면 팀이 아니라 그 위 부서(재난안전과)를 준다. */
+    function orgMemberByUid(uid) {
+        if (!uid) return null;
+        let found = null;
+        (function walk(n, unit) {
+            if (found) return;
+            const u = (isDeptLike(n) || n.type === 'post' || n.type === 'bureau') ? n : unit;
+            (n.members || []).forEach(m => {
+                if (found || m.uid !== uid) return;
+                found = {
+                    uid: m.uid, name: m.name, role: m.role,
+                    team: m.team || (n.type === 'team' ? n.name : ''),
+                    lead: !!m.lead, teamLead: !!m.teamLead,
+                    deptId: u ? u.id : '', deptName: u ? u.name : '',
+                };
+            });
+            (n.children || []).forEach(c => walk(c, u));
+        })(ORG, null);
+        return found;
     }
     /* =========================================================================
      * uid 를 살린 구성원 파생 — orgFlat() 은 EDOC 호환을 위해 uid·team 을 버린다.
@@ -896,5 +930,7 @@
         ORG, orgFlat, orgNode, orgCount, orgTotal, orgWalk, deptNames, orgDepts, deptIdOf,
         /* 업무 배정용 파생 — uid 를 살린다(orgFlat 은 EDOC 호환으로 uid 를 버린다) */
         orgMembers, orgTeams, orgAttrs, orgHasAttr,
+        /* 결재선용 — uid 로 사람을 되찾는다(§7-1 결재선은 uid 로 저장한다) */
+        orgMemberByUid,
     };
 })();

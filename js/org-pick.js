@@ -8,7 +8,13 @@
    · mode 'dept'   — 부서 선택, 부서'명' 반환   → onpick(부서명)
    · mode 'deptId' — 부서 선택, 부서'id' 반환   → onpick(deptId, 부서명)
    · mode 'member' — 담당자 선택               → onpick('부서 · 역할 / 이름')
-   사용: ORGPICK.toggle(fieldElementId, mode, '전역함수경로')
+   · mode 'memberUid' — 담당자 선택(uid 반환)  → onpick(uid, name, role, team, member)
+     opts.rootId 그 부서 하위만 · opts.teamOnly 그 팀만
+     opts.leadership 군수·부군수·국장도 노출(결재선 전용) · opts.disabled {uid:사유} 선택 불가
+   ※ 결재선은 반드시 'memberUid' 를 쓴다 — 'member' 는 표시 문자열만 주어 uid 가 사라진다.
+     온나라 결재선은 계정 식별자 배열로 넘어가므로 이름만으로는 만들 수 없고,
+     '기안자 ≠ 검토자 ≠ 결재자' 검사도 이름으로 하면 동명이인에서 조용히 틀린다.
+   사용: ORGPICK.toggle(fieldElementId, mode, '전역함수경로', opts)
         예) ORGPICK.toggle('we-n-deptfield', 'dept', 'WENV.pickDept')
 
    [상시 노출형] 트리 자체가 본문인 곳(마법사 STEP 등) — 부서 다중 선택.
@@ -101,10 +107,15 @@
      *   ② 콜백이 (uid, name, role, team) 을 받는다 — 배정은 이름이 아니라 uid 로
      *      저장해야 동명이인·개명에 견딘다.
      * DYV2.orgMembers() 파생만 쓴다(§3). */
-    function memberUidTree(q, rootId, teamOnly) {
+    function memberUidTree(q, rootId, teamOnly, opts) {
         q = (q || '').trim();
+        opts = opts || {};
+        /* 이미 고른 사람은 **고르는 자리에서** 막는다 — 상신 직전에야 거절하면 조직도를
+           다시 열어야 한다. disabled 는 {uid: 사유} 이고 사유를 그 행에 그대로 보여준다. */
+        var off = opts.disabled || {};
         var depts = rootId ? [{ id: rootId, name: (V().orgNode(rootId) || {}).name || rootId }]
-                           : V().orgDepts().map(function (d) { return { id: d.id, name: d.name }; });
+                           : V().orgDepts({ includeLeadership: !!opts.leadership })
+                                .map(function (d) { return { id: d.id, name: d.name, leadership: d.leadership }; });
         var out = depts.map(function (d) {
             var ms = V().orgMembers(d.id).filter(function (m) {
                 /* 팀장 관점 — 자기 팀 사람만 보인다(남의 팀에 배정하면 지휘계통이 깨진다) */
@@ -112,14 +123,20 @@
                 return !q || (d.name + m.name + m.role + (m.team || '')).indexOf(q) !== -1;
             });
             if (!ms.length) return '';
-            var openStyle = (q || rootId) ? ' style="display:block;"' : '';
-            var arrow = (q || rootId) ? '▾' : '▸';
+            var openStyle = (q || rootId || d.leadership) ? ' style="display:block;"' : '';
+            var arrow = (q || rootId || d.leadership) ? '▾' : '▸';
             return '<div class="otr-dept" data-dept="' + esc(d.name) + '">' +
                 '<button type="button" class="otr-deptbtn" onclick="ORGPICK._toggle(this)"><span class="otr-arrow">' + arrow + '</span> ' +
                     esc(d.name) + ' <span class="otr-count">' + ms.length + '명</span></button>' +
                 '<div class="otr-members"' + openStyle + '>' +
                 ms.map(function (m) {
                     var sub = m.team ? m.team : m.role;
+                    var why = off[m.uid];
+                    if (why) {
+                        return '<span class="otr-member is-off" aria-disabled="true">' +
+                            '<span class="otr-role">' + esc(sub) + '</span><span class="otr-name">' + esc(m.name) +
+                            ' <span class="otr-count">' + esc(why) + '</span></span></span>';
+                    }
                     return '<button type="button" class="otr-member" onclick="ORGPICK._pickUid(this,\'' + esc(m.uid) + '\')">' +
                         '<span class="otr-role">' + esc(sub) + '</span><span class="otr-name">' + esc(m.name) +
                         (m.lead ? ' <span class="otr-count">부서장</span>' : '') + '</span></button>';
@@ -130,11 +147,22 @@
         return '<div class="org-tree-root">' + esc(head) + '</div>' + (out || emptyRow());
     }
 
-    function body(mode, q, rootId, teamOnly) {
+    function body(mode, q, rootId, teamOnly, opts) {
         if (mode === 'member') return memberTree(q);
-        if (mode === 'memberUid') return memberUidTree(q, rootId, teamOnly);
+        if (mode === 'memberUid') return memberUidTree(q, rootId, teamOnly, opts);
         if (mode === 'deptId') return deptIdTree(q);
         return deptTree(q);
+    }
+    /* 패널에 실어 둔 옵션을 다시 읽는다 — 검색어를 칠 때마다 트리를 다시 그리므로
+       지휘부 포함 여부·선택 불가 목록이 그때도 유지되어야 한다. */
+    function panelOpts(panel) {
+        var off = {};
+        String(panel.getAttribute('data-off') || '').split('|').forEach(function (pair) {
+            if (!pair) return;
+            var i = pair.indexOf(':');
+            if (i > 0) off[pair.slice(0, i)] = pair.slice(i + 1);
+        });
+        return { leadership: panel.getAttribute('data-lead') === '1', disabled: off };
     }
     /* 공통 트리 접힘/펼침 토글(EDOC._orgToggle 와 동일 동작) */
     function _toggle(btn) {
@@ -157,9 +185,17 @@
         panel.setAttribute('data-onpick', onpick || '');
         if (opts.rootId) panel.setAttribute('data-root', opts.rootId);
         if (opts.teamOnly) panel.setAttribute('data-team', opts.teamOnly);
+        /* 결재선 전용 옵션 — 지휘부(군수·부군수·국장) 노출 · 이미 고른 사람 선택 불가 */
+        if (opts.leadership) panel.setAttribute('data-lead', '1');
+        if (opts.disabled) {
+            panel.setAttribute('data-off', Object.keys(opts.disabled).map(function (uid) {
+                return uid + ':' + opts.disabled[uid];
+            }).join('|'));
+        }
         panel.innerHTML =
             '<div class="org-inline-search"><input type="text" placeholder="' + (isMember ? '이름·팀 검색' : '부서 검색') + '" oninput="ORGPICK._filter(this)"></div>' +
-            '<div class="org-inline-body">' + body(mode || 'dept', '', opts.rootId || '', opts.teamOnly || '') + '</div>';
+            '<div class="org-inline-body">' + body(mode || 'dept', '', opts.rootId || '', opts.teamOnly || '',
+                { leadership: !!opts.leadership, disabled: opts.disabled || {} }) + '</div>';
         field.appendChild(panel);
         panel.scrollIntoView({ block: 'nearest' });
     }
@@ -231,7 +267,7 @@
         var panel = inp.closest('.org-inline'); if (!panel) return;
         var b = panel.querySelector('.org-inline-body');
         if (b) b.innerHTML = body(panel.getAttribute('data-mode'), inp.value,
-            panel.getAttribute('data-root') || '', panel.getAttribute('data-team') || '');
+            panel.getAttribute('data-root') || '', panel.getAttribute('data-team') || '', panelOpts(panel));
     }
     function _pick(btn, value) {
         var panel = btn.closest('.org-inline'); if (!panel) return;
@@ -248,21 +284,20 @@
         if (typeof fn === 'function') fn(id, name);
     }
 
-    /* uid 선택 — 콜백에 (uid, name, role, team) 을 넘긴다 */
+    /* uid 선택 — 콜백에 (uid, name, role, team, member) 를 넘긴다.
+     * 앞 4개는 기존 소비처(업무 배정·업무 업로드)의 계약이라 순서를 바꾸지 않는다.
+     * 5번째 member 는 deptId·deptName 까지 담은 원본이다 — 결재선은 부서까지 저장해야
+     * '재난안전과 과장 홍길동'처럼 소속을 밝힐 수 있다.
+     * 조회는 조직도 **전체**를 훑는 DYV2.orgMemberByUid 로 한다 — 종전에는 orgDepts()
+     * 만 돌아 지휘부 노드(군수·부군수·국장)에 있는 사람을 고르면 콜백이 아예 불리지 않았다. */
     function _pickUid(btn, uid) {
         var panel = btn.closest('.org-inline'); if (!panel) return;
         var onpick = panel.getAttribute('data-onpick');
-        var root = panel.getAttribute('data-root') || '';
         panel.remove();
         var fn = resolve(onpick);
         if (typeof fn !== 'function') return;
-        var m = null;
-        (root ? [root] : V().orgDepts().map(function (d) { return d.id; })).some(function (did) {
-            var hit = V().orgMembers(did).filter(function (x) { return x.uid === uid; })[0];
-            if (hit) { m = hit; return true; }
-            return false;
-        });
-        if (m) fn(m.uid, m.name, m.role, m.team || '');
+        var m = V().orgMemberByUid(uid);
+        if (m) fn(m.uid, m.name, m.role, m.team || '', m);
     }
 
     global.ORGPICK = {

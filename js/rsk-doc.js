@@ -15,7 +15,7 @@
      '삽입' 칩으로 건네줄 뿐, 문장은 사람이 친다.
 
    표준 준수 — 모달은 DYV2.openModal 하나(§1) · 지면은 .pdf-paper.pdf-doc(§7) ·
-     결재자 선택은 ORGPICK member(§3) · 근거는 DYLAW 조문 키(§10) · 토큰만(§6).
+     결재자 선택은 ORGPICK memberUid(§3 — uid 로 저장한다) · 근거는 DYLAW 조문 키(§10) · 토큰만(§6).
    ===================================================================== */
 (function (global) {
     'use strict';
@@ -30,6 +30,9 @@
        이 키로 수렴시킨다. 지금 EDUAPV 를 건드리지 않는 대가로 두 벌이 공존한다. */
     var LKEY = 'dy-apprline-v1';
     var MAX_STEP = 3;
+    /* 최소 2단계 = 검토 + 결재. 「검토 없이 결재만」을 막는다(2026-08-27 3단계 확정).
+       MAX_STEP 3 은 골격(4)보다 하나 적지만 규칙(≤4) 안이라 그대로 둔다 — 동결 화면이다. */
+    var MIN_STEP = 2;
 
     /* 기안 폼 상태 — 모달 재렌더 사이에 유지된다 */
     var F = null;
@@ -44,53 +47,117 @@
     function myDeptName() { return persona().deptName || '재난안전과'; }
 
     /* ===================== 결재선 ===================== */
-    function stepLabel(i, len) { return i === len - 1 ? '결재' : '검토'; }
+    /* 단계 라벨은 골격 한 곳에서 온다(DYDOC.stepLabel) — 규칙이 갈리지 않게 한다 */
+    function stepLabel(i, len) {
+        return (global.DYDOC && global.DYDOC.stepLabel) ? global.DYDOC.stepLabel(i, len) : (i === len - 1 ? '결재' : '검토');
+    }
     function defaultLine() {
+        /* **uid 를 함께 담는다**(2026-08-27) — 온나라 결재선은 계정 식별자 배열이라
+           이름만으로는 넘길 값을 만들 수 없고, '기안자 ≠ 검토자 ≠ 결재자' 판정도
+           이름으로 하면 동명이인에서 조용히 틀린다. 종전에는 orgFlat() 을 써서
+           uid 가 버려졌다. **행 수·표시 문자열은 지금 그대로 둔다**(동결 화면). */
         var dn = myDeptName();
-        var d = (V().orgFlat() || []).filter(function (x) { return x.dept === dn; })[0];
+        var did = (persona().deptId) || (V().deptIdOf ? V().deptIdOf(dn) : '');
+        var ms = (V().orgMembers && did) ? V().orgMembers(did) : [];
+        var me = persona().uid;
         var team = null, head = null;
-        if (d) {
-            d.members.forEach(function (m) {
-                if (!team && /팀장/.test(m[0])) team = m;
-                if (!head && /(과장|소장|실장|국장|읍장|면장)$/.test(m[0])) head = m;
-            });
-        }
-        var out = [];
-        if (team) out.push({ dept: dn, role: team[0], name: team[1] });
-        out.push(head ? { dept: dn, role: head[0], name: head[1] } : { dept: dn, role: '과장', name: '' });
-        return out;
+        ms.forEach(function (m) {
+            /* 기안자 본인은 건너뛴다 — 안 그러면 관리감독자가 기안할 때 기본 결재선에
+               자기가 들어가 상신이 막히고 무엇을 고쳐야 하는지 알 수 없다(검수 C-3). */
+            if (me && m.uid === me) return;
+            if (!team && /팀장/.test(m.role || '')) team = m;
+            if (!head && /(과장|소장|실장|국장|읍장|면장)$/.test(m.role || '')) head = m;
+        });
+        /* **언제나 2행**(검토 + 결재)을 돌려준다 — 골격(js/doc-flow.js defaultLine)과 같다.
+           종전에는 팀장을 못 찾으면 검토 행 자체가 사라져 「검토 없이 결재만」인 1단계가
+           됐고, 부서장을 못 찾으면 없는 직위('과장')를 지어냈다. 못 찾은 자리는
+           **비워 드러낸다** — 담당자가 조직도에서 고르면 된다(2026-08-28 검수 C-3·D5-06). */
+        var row = function (m) {
+            return m ? { uid: m.uid, dept: dn, role: m.role, name: m.name }
+                     : { uid: '', dept: dn, role: '', name: '' };
+        };
+        return [row(team), row(head)];
     }
     function line() {
         if (LINE) return LINE;
         try {
             var raw = global.sessionStorage.getItem(LKEY);
-            if (raw) { var v = JSON.parse(raw); if (v && v.length) { LINE = v; return v; } }
+            if (raw) {
+                var v = JSON.parse(raw);
+                /* 옛 저장분은 `{dept,role,name}` 만 있고 uid 가 없다. **이름으로 uid 를
+                   추정하지 않는다** — 동명이인에서 엉뚱한 계정으로 상신된다. */
+                var stale = v && v.some(function (x) { return x && x.name && !x.uid; });
+                if (v && v.length && !stale) { LINE = v; return v; }
+            }
         } catch (e) {}
         LINE = defaultLine();
         return LINE;
     }
     function saveLine() { try { global.sessionStorage.setItem(LKEY, JSON.stringify(LINE || [])); } catch (e) {} }
-    function lineText(L) {
+    /* by: 저장된 기안자 이름. 주면 그걸 쓴다(검수 C-2). */
+    function lineText(L, by) {
         L = L || line();
-        var p = persona();
-        return ['기안 ' + p.name].concat(L.map(function (s, i) {
+        return ['기안 ' + (by || persona().name)].concat(L.map(function (s, i) {
             return stepLabel(i, L.length) + ' ' + (s.name || '(미지정)');
         })).join(' → ');
     }
-    function parseMember(value) {
-        var s = String(value || '');
-        var slash = s.lastIndexOf(' / ');
-        var name = slash >= 0 ? s.slice(slash + 3) : s;
-        var left = slash >= 0 ? s.slice(0, slash) : '';
-        var dot = left.indexOf(' · ');
-        return { dept: dot >= 0 ? left.slice(0, dot) : '', role: dot >= 0 ? left.slice(dot + 3) : left, name: name };
+    /* ── 중복 금지 — 규칙·문구는 공용 골격(DYDOC.approvalLine)과 같아야 한다 ──
+     * 상신은 결재선 전체를 한 번에 온나라로 넘기므로(호출기안) 기안·검토·결재가
+     * 서로 다른 계정이어야 한다. 이 화면은 동결이라 골격으로 이관하지 않았고,
+     * **규칙만** 같은 형태로 심는다(2026-08-27). 규칙이 갈리면 같은 시스템에서
+     * 도메인마다 다른 결재선이 통과하게 된다. */
+    function lineIssues(L) {
+        L = L || line();
+        var out = [], me = persona();
+        if (L.length < MIN_STEP) out.push('결재선은 최소 ' + MIN_STEP + '단계입니다 — 지금은 ' + L.length + '단계입니다.');
+        var miss = L.filter(function (s) { return !s.uid; }).length;
+        if (miss) out.push('결재선에 지정하지 않은 단계가 ' + miss + '건 있습니다 — 조직도에서 결재자를 고르세요.');
+        var seen = {};
+        L.forEach(function (s, i) {
+            if (!s.uid) return;
+            if (me.uid && s.uid === me.uid) {
+                out.push(stepLabel(i, L.length) + ' 단계에 기안자(' + me.name + ')가 지정돼 있습니다 — 기안·검토·결재는 서로 다른 사람이어야 합니다.');
+            }
+            if (seen[s.uid]) out.push(s.name + ' 님이 두 단계에 지정돼 있습니다 — 한 사람이 두 번 결재할 수 없습니다.');
+            seen[s.uid] = true;
+        });
+        return out;
     }
-    function pickOpen(i) { editIdx = i; global.ORGPICK.toggle('rskdoc-ln-' + i, 'member', 'DYRSKDOC.pickApprover'); }
-    function pickApprover(value) {
+    function lineReady(L) { var i = lineIssues(L); return i.length ? { ok: false, why: i[0] } : { ok: true }; }
+    function lineDenied() { var r = lineReady(); if (r.ok) return false; toast(r.why); return true; }
+
+    /* 이미 쓴 사람은 **고르는 자리에서** 막는다 — 상신 직전에야 거절하면 조직도를
+       다시 열어야 한다. 지휘부(군수·부군수·국장)를 여는 이유는 위임전결규칙상
+       그 사람들이 결재권자로 서는 문서가 있기 때문이다. */
+    function pickBlocked(i) {
+        var out = {}, me = persona(), L = line();
+        if (me.uid) out[me.uid] = '기안자';
+        L.forEach(function (s, j) { if (j !== i && s.uid) out[s.uid] = stepLabel(j, L.length) + ' 지정됨'; });
+        return out;
+    }
+    /* **한 번에 한 패널만 연다** — 두 패널이 동시에 열리면 editIdx 가 마지막으로 연
+       것으로 덮여 먼저 연 패널에서 고른 사람이 다른 단계에 들어간다(검수 C-1). */
+    function closeOtherPicks(i) {
+        var L = line();
+        for (var j = 0; j < L.length; j++) {
+            if (j === i) continue;
+            var f = global.document.getElementById('rskdoc-ln-' + j);
+            var open = f && f.querySelector('.org-inline');
+            if (open) open.remove();
+        }
+    }
+    function pickOpen(i) {
+        closeOtherPicks(i);
+        editIdx = i;
+        global.ORGPICK.toggle('rskdoc-ln-' + i, 'memberUid', 'DYRSKDOC.pickApprover',
+            { leadership: true, disabled: pickBlocked(i) });
+    }
+    function pickApprover(uid, name, role, team, m) {
         var L = line();
         if (editIdx < 0 || !L[editIdx]) return;
         capture();
-        L[editIdx] = parseMember(value); saveLine(); renderDraft();
+        L[editIdx] = { uid: uid, dept: (m && m.deptName) || '', role: role, name: name };
+        saveLine(); renderDraft();
     }
     function addStep() {
         var L = line();
@@ -100,7 +167,7 @@
     }
     function delStep(i) {
         var L = line();
-        if (L.length <= 1) { toast('최종 결재자는 삭제할 수 없습니다.'); return; }
+        if (L.length <= MIN_STEP) { toast('결재선은 최소 ' + MIN_STEP + '단계입니다 — 검토 없이 결재만 올릴 수 없습니다.'); return; }
         capture();
         L.splice(i, 1); saveLine(); renderDraft();
     }
@@ -117,7 +184,7 @@
                         '<input type="text" class="form-input" readonly value="' + esc(val) + '"' +
                             ' placeholder="조직도에서 결재자 선택" aria-label="' + stepLabel(i, L.length) + ' 결재자">' +
                         '<button type="button" class="btn btn-outline btn-sm" onclick="DYRSKDOC.pickOpen(' + i + ')">조직도</button>' +
-                        (L.length > 1 ? '<button type="button" class="btn btn-outline btn-sm" onclick="DYRSKDOC.delStep(' + i + ')"' +
+                        (L.length > MIN_STEP ? '<button type="button" class="btn btn-outline btn-sm" onclick="DYRSKDOC.delStep(' + i + ')"' +
                             ' aria-label="' + stepLabel(i, L.length) + ' 단계 삭제">×</button>' : '') +
                     '</div>' +
                 '</div></div>';
@@ -340,8 +407,16 @@
 
     /* 하단 서명란 — 표준 시행문은 결재란이 상단이 아니라 하단의
        '기안자 / 검토자 / 결재권자 직위(직급) 서명' 줄이다. */
-    function signLineHtml(L) {
-        var p = persona();
+    /* **기안자는 저장값에서 읽는다**(2026-08-28 검수 C-2) — 저장된 문서를 다른 계정으로
+       열면 지면의 기안자가 그 계정으로 바뀌던 결함이 있었다. doc 이 있으면 상신 당시
+       사람, 없으면 기안 중이므로 지금 사람이다. 직위는 uid 로 조직도에서 되찾는다. */
+    function drafterOf(doc) {
+        if (!doc) { var p = persona(); return { name: p.name, role: p.role || '담당' }; }
+        var m = (doc.byUid && V().orgMemberByUid) ? V().orgMemberByUid(doc.byUid) : null;
+        return { name: doc.by || (m && m.name) || '', role: (m && m.role) || '' };
+    }
+    function signLineHtml(L, doc) {
+        var p = drafterOf(doc);
         var cols = [{ t: '기안자', r: p.role || '담당', n: p.name }].concat(L.map(function (s, i) {
             return { t: i === L.length - 1 ? '결재권자' : '검토자', r: s.role || '', n: s.name || '' };
         }));
@@ -414,7 +489,7 @@
 
             /* ⑥ 서명란 · 시행/접수 · 기관정보 */
             '<div class="pdf-gm-foot">' +
-                signLineHtml(L) +
+                signLineHtml(L, doc) +
                 '<div class="pdf-gm-frow"><span class="k">협조자</span><span class="v"><span class="pdf-dash">-</span></span></div>' +
                 '<div class="pdf-gm-frow"><span class="k">시행</span><span class="v">' + noCell + '</span>' +
                     (out ? '<span class="k">접수</span><span class="v"><span class="pdf-dash">-</span></span>' : '') + '</div>' +
@@ -505,8 +580,7 @@
     /* ===================== 상신 ===================== */
     function confirmSend() {
         var L = line();
-        var blank = L.filter(function (s) { return !s.name; }).length;
-        if (blank) { toast('결재선에 지정하지 않은 단계가 ' + blank + '건 있습니다 — 조직도에서 결재자를 고르세요.'); return; }
+        if (lineDenied()) return;
         var a = assess(F.aid); if (!a) return;
         var t = totals(a);
         var attachOn = F.attach.filter(function (x) { return x.on; }).length + F.files.length;
@@ -529,6 +603,8 @@
     }
     function send() {
         var a = assess(F.aid); if (!a) return;
+        /* 확인 단계를 건너뛰고 전역 호출로 들어오는 경로까지 막는다 — 버튼만 잠그면 뚫린다 */
+        if (lineDenied()) return;
         var p = persona();
         var no = myDeptName() + '-' + (100 + D().docs().length + 1);
         var doc = D().pushDoc({
@@ -537,7 +613,7 @@
             basis: F.basis.slice(),
             attach: F.attach.filter(function (x) { return x.on; }).map(function (x) { return { label: x.label, auto: x.auto }; }),
             files: F.files.map(function (f) { return { name: f.name }; }),
-            line: line().slice(), status: '결재중', by: p.name
+            line: line().slice(), status: '결재중', by: p.name, byUid: p.uid || ''
         });
         D().pushHistory(F.aid, { type: 'DISPATCH', by: p.name,
             memo: '공문 온나라 상신 — ' + F.title + ' (' + no + ')' });
@@ -552,7 +628,7 @@
                 '<p class="t">온나라로 결재 요청을 보냈습니다</p>' +
                 '<p class="d"><b>' + esc(doc.title) + '</b><br>문서번호 ' + esc(doc.no) +
                     ' <span class="pdf-note">(임시 채번 — 실제 번호는 온나라가 부여)</span><br>' +
-                    '결재선: ' + esc(lineText(doc.line)) + '</p>' +
+                    '결재선: ' + esc(lineText(doc.line, doc.by)) + '</p>' +
                 '<p class="d pdf-note">온나라 연동은 미구현입니다 — 결재 결과는 상태 카드의 <b>회신 버튼</b>으로 시연합니다.</p>' +
             '</div>',
             '<button type="button" class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
@@ -601,8 +677,9 @@
                 '<table class="table-figma table-doc pdf-meta"><tbody>' +
                     '<tr><td class="k">문서번호</td><td><b>' + esc(doc.no) + '</b> <span class="pdf-note">(임시 채번)</span></td></tr>' +
                     '<tr><td class="k">상신일시</td><td>' + esc(doc.at) + '</td></tr>' +
-                    '<tr><td class="k">결재선</td><td>' + esc(lineText(doc.line)) + '</td></tr>' +
-                    '<tr><td class="k">상태</td><td><span class="chip-status ' + V().toneOf(doc.status) + ' chip-sm">' + esc(doc.status) + '</span></td></tr>' +
+                    '<tr><td class="k">결재선</td><td>' + esc(lineText(doc.line, doc.by)) + '</td></tr>' +
+                    '<tr><td class="k">상태</td><td><span class="chip-status ' + V().toneOf(doc.status) + ' chip-sm">' + esc(doc.status) + '</span>' +
+                        (doc.sample ? ' ' + V().sampleChip('지난 공문은 예시 자료입니다') : '') + '</td></tr>' +
                 '</tbody></table>' +
                 '<div class="rskdoc-log">' + logRows + '</div>' + demo +
             '</div>',

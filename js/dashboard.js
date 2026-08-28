@@ -229,7 +229,7 @@
               '<div class="dsh-hero-stats">' +
                 '<a class="dsh-hero-stat" href="stats.html"><b>0<em>건</em></b><span>중대재해 발생 (올해)</span></a>' +
                 '<a class="dsh-hero-stat is-danger" href="my-work.html"><b>' + totalOverdue + '<em>건</em></b><span>기한 초과 업무</span></a>' +
-                '<a class="dsh-hero-stat" href="menu.html?m=policy"><b>2<em>건</em></b><span>결재 대기 (온나라)</span></a>' +
+                '<a class="dsh-hero-stat" href="menu.html?m=policy"><b>2<em>건</em></b><span>온나라 상신 중</span></a>' +
                 '<a class="dsh-hero-stat" href="base-targets.html"><b>23<em>개소</em></b><span>관리 사업장</span></a>' +
               '</div>' +
             '</div>';

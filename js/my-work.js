@@ -101,7 +101,9 @@
               atype: 'menu', href: 'menu.html?m=policy', action: '검토하러 가기', destLabel: '경영방침' },
             { id: 'A-02', cat: 'approval',   title: '2026 하반기 안전보건 예산 편성안 결재',
               due: '2026-07-22', dept: 'plan', dept_label: '기획예산실',
-              atype: 'menu', href: 'bgt-main.html', action: '결재하러 가기', destLabel: '예산 총괄표' },
+              /* 이 시스템에는 결재함이 없다(공통 권한정의 §7-4) — 결재는 온나라에서 한다.
+                 「결재하러 가기」는 없는 동작을 약속하므로 실제로 하는 일로 고친다(검수 E). */
+              atype: 'menu', href: 'bgt-main.html', action: '상신 상태 보기', destLabel: '예산 총괄표' },
             /* 점검 */
             { id: 'I-01', cat: 'inspection', title: '기준문서함 안전점검 계열 16건 분류 확인',
               due: '2026-07-19', dept: 'safety', dept_label: '재난안전과',

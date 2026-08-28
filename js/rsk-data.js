@@ -407,9 +407,11 @@
                     attach: [{ label: '부서별 개선조치 확인 결과표', auto: true },
                              { label: '개선 전·후 증빙 사진철', auto: true }],
                     files: [],
-                    line: [{ dept: '재난안전과', role: '중대재해팀장', name: '김중대' },
-                           { dept: '재난안전과', role: '재난안전과장', name: '홍길동' }],
-                    status: '결재완료', at: '2025-11-10 14:20', by: '박안전',
+                    /* 결재선은 **계정 식별자(uid)** 로 보관한다 — 온나라로 넘어가는 값이 그것이다.
+                       지난 문서라 예시 값이지만 uid 는 조직도 실인물이어야 한다(§15). */
+                    line: [{ uid: 'u_jjt1', dept: '재난안전과', role: '중대재해팀장', name: '김중대' },
+                           { uid: 'u_safe1', dept: '재난안전과', role: '재난안전과장', name: '홍길동' }],
+                    status: '결재완료', at: '2025-11-10 14:20', by: '박안전', byUid: 'u_jjt2', sample: true,
                     log: [
                         { at: '2025-11-10 14:20', st: '결재중',   by: '박안전', memo: '온나라 상신' },
                         { at: '2025-11-18 10:05', st: '결재완료', by: '온나라', memo: '' }
@@ -1105,8 +1107,11 @@
             no: o.no || '', title: o.title || '', to: o.to || '', body: o.body || '',
             docType: o.docType || '내부결재',
             basis: (o.basis || []).slice(), attach: (o.attach || []).slice(),
-            line: (o.line || []).slice(),
+            line: (o.line || []).slice(), sample: !!o.sample,
             status: o.status || '결재중', at: o.at || nowTs(), by: o.by || '',
+            /* 기안자 **계정 식별자** — 온나라 결재선은 기안자를 포함한 계정 배열이다.
+               화이트리스트라 여기 없으면 조용히 버려진다(2026-08-27 실측). */
+            byUid: o.byUid || '',
             log: [{ at: nowTs(), st: o.status || '결재중', by: o.by || '', memo: '온나라 상신' }]
         };
         d.docs.push(doc); save(); return doc;
