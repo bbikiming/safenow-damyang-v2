@@ -38,6 +38,7 @@
         q: '', cycle: '', st: '', axis: '', dept: '', facCls: '', way: '',
         adv: false,           /* 상세 조건 펼침 — 값이 걸리면 advOpen() 이 자동 true */
         open: {},               /* itemId → 펼침 */
+        focusItem: '',          /* ?item= 으로 들어온 항목 — 조건 줄에 밝힌다 */
         detail: '',             /* 이행 상세 대상 stageId */
         dyear: 0,               /* 이행 상세의 연도 셀렉터 */
         gapSel: {},             /* 누락 점검 일괄 선택 */
@@ -82,6 +83,33 @@
         var st = p.get('stage');
         if (st && D().stage(st)) { S.detail = st; S.dyear = +p.get('dyear') || S.year; }
         else S.detail = '';                    /* 파라미터가 없으면 상세도 없다 — 남겨두면 뒤로가기가 닫히지 않는다 */
+        /* 이행항목으로 들어오기 — 문서 상세가 «이 문서가 증빙하는 할 일»을 가리킬 때 쓴다.
+           단계(stage)는 상세를 열지만 항목(item)은 **그 항목의 할 일 목록을 펼치는** 것이다.
+           단계로 들어왔으면 그 단계가 속한 항목도 함께 펼친다 — 상세를 닫았을 때
+           어느 항목에서 왔는지 보이지 않으면 길을 잃는다. */
+        var itemId = p.get('item');
+        if (st && D().stage(st)) itemId = itemId || D().stage(st).itemId;
+        if (itemId && D().item(itemId)) {
+            S.open[itemId] = true;
+            S.focusItem = itemId;
+            /* **계층을 그 항목이 사는 곳으로 맞춘다** — 항목을 펼치기만 하면
+               기본 계층(군 단위)에 없는 항목은 화면에 아예 나오지 않는다.
+               누르고 왔는데 그것이 안 보이는 것이 이 딥링크의 유일한 실패 방식이다.
+               계층을 명시해 들어온 경우(?level=)는 그 뜻을 존중한다. */
+            if (!p.get('level')) {
+                var lv = '';
+                (D().stagesOfItem ? D().stagesOfItem(itemId) : []).some(function (sg) {
+                    var l = C().levelOf(sg); if (l && l.level) { lv = l.level; return true; }
+                    return false;
+                });
+                if (lv) S.level = lv;
+            }
+            /* 보기 축도 맞춘다 — 부서 단위·관리대상 단위의 기본 보기는 «부서별»·«시설별»이라
+               계층만 맞춰서는 이행항목 줄이 화면에 없다. 항목으로 들어온 사람이 보려는 것은
+               «할 일»이므로 단계별 보기로 연다. 세그먼트를 명시해 들어온 경우는 존중한다. */
+            if (!p.get('seg2')) S.seg2 = 'stage';
+            if (!p.get('seg3')) S.seg3 = 'stage';
+        } else S.focusItem = '';
         var fc = p.get('fac');
         S.fac = (fc && facRec(fc)) ? fc : '';  /* 같은 근거 — 없는 시설번호로는 열지 않는다 */
     }
@@ -90,6 +118,7 @@
         if (S.year !== D().defaultYear()) p.set('year', S.year);
         if (S.tab !== 'status') p.set('tab', S.tab);
         if (S.level !== 'L1') p.set('level', S.level);
+        if (S.focusItem) p.set('item', S.focusItem);
         if (S.detail) { p.set('stage', S.detail); if (S.dyear !== S.year) p.set('dyear', S.dyear); }
         if (S.fac) p.set('fac', S.fac);
         if (S.q) p.set('q', S.q);
@@ -189,9 +218,8 @@
             '<p><b>[엑셀 내려받기]</b>는 지금 조회 조건에 맞는 결과 전건을 <b>CSV 파일(.csv)</b>로 냅니다 — ' +
             '엑셀에서 바로 열리고 한글이 깨지지 않습니다. 표에 25행만 보이더라도 조건에 맞는 행은 전부 담기며, ' +
             '파일 끝에 화면·기준연도·조회 조건·기준일이 함께 적힙니다.</p>' +
-            '<p>비슷해 보이는 다른 메뉴 — 같은 데이터를 종전 방식으로 보는 화면은 ' +
-            '<a href="docs-exec.html">업무문서 &gt; 이행 목록</a>, 부서 반기 점검은 ' +
-            '<a href="menu.html?m=comply">이행점검</a>입니다. 여기는 <b>서류</b>를 봅니다.</p>' +
+            '<p>비슷해 보이는 다른 메뉴 — 부서 반기 점검은 ' +
+            '<a href="menu.html?m=comply">안전보건관리체계 &gt; 이행점검</a>입니다. 여기는 <b>서류</b>를 봅니다.</p>' +
             readOnlyNote();
         /* 기본 접힘 — §14-12 의 '기본은 펼침' 은 그 화면에 **다른 안내 장치가 없을 때**의
            규칙이다. 여기는 바로 아래 계층 탭과 스코프 한 줄이 그 역할을 하고, 안내를

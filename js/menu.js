@@ -2395,7 +2395,7 @@
                 '<div class="check-notice" style="margin-bottom:10px;">제정·개정 원문과 버전은 <b>기준문서함</b>에서 관리하고, 제정·조치 여부·교육·점검 증빙은 <b>이행 목록</b>에서 회차별로 관리합니다. 같은 파일을 두 곳에 중복 등록하지 않습니다.</div>' +
                 tbl(['관리 구분', '정본 위치', '현재 상태', '이동'], [
                     ['제정·개정 원문', '기준문서함', '<span class="chip-status info">문서별 버전 관리</span>', '<a class="btn btn-sm btn-outline" href="docs-archive.html?filter=manual">원문 조회</a>'],
-                    ['제정·조치 여부 점검', '이행 목록', '<span class="chip-status warning">회차별 증빙 확인</span>', '<a class="btn btn-sm btn-primary" href="docs-exec.html">이행 점검</a>'],
+                    ['제정·조치 여부 점검', '이행 관리', '<span class="chip-status warning">회차별 증빙 확인</span>', '<a class="btn btn-sm btn-primary" href="cmp-status.html">이행 점검</a>'],
                 ]),
                 '') +
             /* 시행령 §5·§11 — 관계 법령 의무이행 점검.
@@ -2425,7 +2425,7 @@
         window.DYSETLIST.render(pane, { menuKey: KEY, hideTabs: true });
         pane.insertAdjacentHTML('beforeend',
             '<p style="font-size:12px; color:var(--text-gray); margin-top:4px;">' +
-                '전 메뉴 통합 보기는 <a href="docs-preset.html?menu=' + KEY + '" style="color:var(--main-dark); font-weight:700;">업무문서 &gt; 업무 목록</a>에서.' +
+                '전 메뉴 통합 보기는 <a href="cmp-docs.html?menu=' + KEY + '" style="color:var(--main-dark); font-weight:700;">업무 관리 &gt; 문서 목록</a>에서.' +
             '</p>');
     })();
 

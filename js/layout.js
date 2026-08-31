@@ -48,7 +48,12 @@
     const ROLE_TIERS = {
         head:  { label: '총괄 책임자', tone: 'purple',  who: '군수',
                  law: '중대재해처벌법 §4 — 안전보건 확보의무 총괄',
-                 hideNav: ['docs', 'admin'] },
+                 /* 종전 값은 ['docs','admin'] 이었다 — 'docs'(업무문서)는 2026-08-28
+                  * 재편에서 그룹째 사라졌고(→ cmp 로 흡수), 없는 그룹 id 를 계속
+                  * 적어 두면 다음 사람이 "군수에게 감추는 메뉴가 있다"고 오독한다.
+                  * 흡수처인 '업무 관리'(cmp)는 감추지 않는다 — 전 부서 이행 현황은
+                  * 총괄 책임자가 봐야 하는 축이고, 조작은 canAct 가 이미 막는다(§12). */
+                 hideNav: ['admin'] },
         super: { label: '관리감독자', tone: 'info',     who: '실과장·사업소장·읍면장',
                  law: '산업안전보건법 §16 — 소속 부서 관리·감독',
                  hideNav: ['admin'] },
@@ -495,177 +500,187 @@
         `;
     }
 
-    /* --- 네비게이션 데이터 (v2) ---
-     *   담양군_프로토타입_v2_재구축_프롬프트.md §3 IA 기준 — GNB 6개, 최대 3뎁스.
-     *   안전보건관리체계 9개 대메뉴는 공통 레이아웃 1개(menu.html)에 데이터 주입 (?m= 파라미터).
-     *   각 아이템: id — body[data-dy-page]와 매칭되면 활성 표시 / sfr — 제안요청서 매핑(참고)
-     */
+
+    /* =========================================================================
+     * 네비게이션 데이터 (v2) — 1뎁스(GNB) / 2뎁스(SNB 섹션) / 3뎁스(SNB 항목)
+     * -------------------------------------------------------------------------
+     * [축은 제안요청서(RFP) §2 「기능 모듈 기준 분류」다]
+     *   ① 현황·통계·대시보드·출력 (SFR-018·020·021)
+     *   ② 대상/시설 정보 관리      (SFR-002·016)
+     *   ③ 계획·방침·의무 이행       (SFR-004·005·014)
+     *   ④ 위험성평가·유해위험요인   (SFR-003·007·019)
+     *   ⑤ 조직·인력·예산·평가       (SFR-006·008·009·010)
+     *   ⑥ 종사자·도급·매뉴얼        (SFR-011·012·013)
+     *   ⑦ 공통 기반                 (SFR-001·015·016·017)
+     * 재구축 프롬프트 §3 이 약속한 값도 「GNB 6개, 최대 3뎁스」였다. 그 뒤 회의마다
+     * 대메뉴가 하나씩 늘어 **16개**가 되면서 GNB 가 가로로 넘쳐 스크롤됐고,
+     * 1뎁스에 항목 1개짜리 그룹(작업환경측정·특수건강검진)까지 생겼다.
+     * 아래는 **화면을 하나도 지우지 않고** 위 7축으로 1뎁스를 접은 결과다(16 → 11).
+     *
+     * [뎁스 계약]
+     *   1뎁스 = 이 배열의 그룹      → 헤더 GNB 한 줄
+     *   2뎁스 = item.section        → 사이드바 섹션 헤더(비클릭). 값이 바뀌면 헤더 삽입
+     *   3뎁스 = item               → 사이드바 링크. section 이 있으면 is-nested 들여쓰기
+     *   · 항목이 4개 미만이고 축이 하나면 섹션을 두지 않는다 — 항목 2개짜리 표에
+     *     머리글을 다는 셈이라 깊이만 늘고 정보가 늘지 않는다.
+     *   · hidden:true — GNB/사이드바에 그리지 않지만 **그룹 소속은 유지**한다.
+     *     딥링크로 들어온 화면이 엉뚱한 그룹의 사이드바를 달고 뜨는 것을 막는다.
+     *
+     * [id 는 계약이다 — 바꾸지 말 것]
+     *   item.id 는 body[data-dy-page]·DYLAW.MAP(법령 근거)·DYHELP(도움말)·
+     *   adm-perm(메뉴 권한 시드)의 키다. 그래서 이번 재편은 **그룹의 소속과 라벨만**
+     *   바꾸고 item.id 는 한 글자도 건드리지 않았다(sbm-workenv 가 workenv 그룹에
+     *   있는 것도 같은 이유 — CLAUDE.md §10).
+     *   그룹 id 도 없애는 대신 **흡수하는 쪽 id 를 재사용**한다
+     *   (facil→base · health→workenv · budget→eval · docs/work→cmp).
+     *   DYLayout.NAV 는 메뉴 관리·권한 관리·법령 관리의 단일 출처라 여기만 고치면
+     *   세 관리 화면이 함께 따라온다.
+     * ========================================================================= */
     const NAV = [
-        // GNB 1. 대시보드 (SFR-020·017)
+        /* ① 대시보드 — RFP 현황·통계·대시보드 (SFR-020·017)
+         *   NAV[0] 은 findGroup() 의 폴백이다. 첫 자리를 비우지 말 것. */
         { id: 'dashboard', label: '대시보드', icon: 'grid', items: [
             { id: 'index',   label: '통합 현황', icon: 'grid',  href: 'index.html',   screen: 'SFR-020' },
-            { id: 'my-work', label: '내 할일',   icon: 'check', href: 'my-work.html', screen: 'MYW01-V' },  // v1.1 §6.2 전 업무 통합 내 할일
+            { id: 'my-work', label: '내 할일',   icon: 'check', href: 'my-work.html', screen: 'MYW01-V' },
         ]},
 
-        // GNB. 업무 관리 (WORK) — 부서별 반복 업무 자동발행 · 배정 · 회수
-        //   근거: docs/planning/기획-업무자동발행-v1.md (담양군 5개 부서 5개년 문서 430,089행 실측)
-        //   위치 — 대시보드 **바로 뒤**. '내 할일'(수신측)과 '업무 관리'(발행측)는
-        //   같은 데이터의 양면이라 인접해야 관계가 읽힌다. 도메인 그룹(위험성평가·
-        //   교육) 사이에 끼우면 '또 하나의 도메인'으로 오독된다 — 업무 관리는
-        //   도메인 **위를 가로지르는 축**이다.
-        //   ※ docs 그룹에 넣지 않는다 — 군수의 hideNav:['docs','admin'] 때문에
-        //     상위 권한용 메뉴를 최상위 권한이 못 보게 된다.
-        //   ※ 라벨 '(구)업무관리' — 신설 cmp 그룹(이행 관리·문서 목록)이 '업무 관리' 라벨을
-        //     쓰면서 중복이 생겨, 발주처(사용자) 지시로 기존 그룹을 (구)로 개명(2026-08-16).
-        { id: 'work', label: '(구)업무관리', icon: 'check', items: [
-            { id: 'work-admin', label: '업무 발행 관리', icon: 'list',  href: 'work-admin.html', screen: 'WRK01-L' },
-            { id: 'work-dept',  label: '부서 업무함',   icon: 'users', href: 'work-dept.html',  screen: 'WRK02-L' },
-        ]},
-
-        // GNB 2. 기본정보 (SFR-002·016)
+        /* ② 기본정보 — RFP 대상/시설 정보 관리 (SFR-002·016)
+         *   구 'facil'(시설물 안전관리) 그룹을 2뎁스 섹션으로 흡수했다.
+         *   RFP SFR-002 가 「관리대상 현황 + 시설물안전법 1·2·3종 FMS 연계·현행화」를
+         *   **한 요구사항**으로 묶고 있어, 둘을 형제 대메뉴로 세우면 같은 요구사항이
+         *   1뎁스에 두 번 선다. 시설물 4개 화면은 그대로 살아 있고 경로만 한 단 내려왔다. */
         { id: 'base', label: '기본정보', icon: 'building', items: [
-            { id: 'base-targets', label: '관리대상 현황', icon: 'building', href: 'base-targets.html', screen: 'SFR-002' },
-            { id: 'base-bulk',    label: '데이터 일괄등록', icon: 'file',   href: 'base-bulk.html',    screen: 'SFR-016' },
+            { id: 'base-targets', section: '관리대상',        label: '관리대상 현황',   icon: 'building', href: 'base-targets.html', screen: 'SFR-002' },
+            { id: 'base-bulk',    section: '관리대상',        label: '데이터 일괄등록', icon: 'file',     href: 'base-bulk.html',    screen: 'SFR-016' },
+            { id: 'fac-list',     section: '시설물 (FMS 연계)', label: '시설물 대장',   icon: 'list',     href: 'fac-list.html',     screen: 'FAC01-V / SFR-002' },
+            { id: 'fac-risk',     section: '시설물 (FMS 연계)', label: '시설물 위험도', icon: 'alert',    href: 'fac-risk.html',     screen: 'FAC03-V / SFR-002' },
+            { id: 'fac-sync',     section: '시설물 (FMS 연계)', label: 'FMS 연계',      icon: 'external', href: 'fac-sync.html',     screen: 'FAC04-S / SFR-002' },
+            { id: 'fac-settings', section: '시설물 (FMS 연계)', label: '연계 설정',     icon: 'cog',      href: 'fac-settings.html', screen: 'FAC05-S / SFR-002' },
         ]},
 
-        // GNB 3. 시설물 안전관리 (FAC) — FMS 시설물관리대장 연계. 기본정보→시설물대장→위험성평가 흐름 (기획-시설물관리-FMS연계-PRD-v1.md)
-        { id: 'facil', label: '시설물 안전관리', icon: 'building', items: [
-            { id: 'fac-list',     label: '시설물 대장',   icon: 'list',     href: 'fac-list.html',     screen: 'FAC01-V' },
-            { id: 'fac-risk',     label: '시설물 위험도', icon: 'alert',    href: 'fac-risk.html',     screen: 'FAC03-V' },
-            { id: 'fac-sync',     label: 'FMS 연계',     icon: 'external',  href: 'fac-sync.html',     screen: 'FAC04-S' },
-            { id: 'fac-settings', label: '연계 설정',     icon: 'cog',      href: 'fac-settings.html', screen: 'FAC05-S' },
-        ]},
-
-        // GNB. 위험성평가 — 재설계 v1 (docs/planning/기획-위험성평가-재설계-v1.md). 개선조치 원본은 rsk-imp.
-        //    정기(RSK01-L, 목록·상세 통합) · 수시(RSK03-L) · 개선조치(IMP01-L).
-        //    v1.1 §6.2: '내 할일'은 위험성평가 그룹에서 빠져 대시보드 그룹의 전역 메뉴로 이관 (my-work.html).
-        //    작업공정 관리(rsk-proc) · 위험성 추정(rsk-exec)은 메뉴에서 제거하되 파일은 보존.
-        //    ※ 개선조치(rsk-imp)는 2026-07-30 회의에서 **독립 메뉴 제외** 확정 — 정기평가 상세 안에서
-        //       부서별로 처리한다("저기서 지금 개선 조치를 우리 이제 추가하기로 했잖아요. 그러니까
-        //       개선 조치 저거는 이제 필요 없죠"). 프로세스가 없어진 게 아니라 화면이 합쳐진 것이므로
-        //       rsk-imp.html·rsk-imp-detail.html 과 DYLAW 매핑은 **보존**한다(rsk-proc·rsk-exec 선례와 동일).
-        //       딥링크(dashboard·my-work·menu)는 그대로 동작한다. 메뉴로 되살리지 말 것.
-        { id: 'risk', label: '위험성평가', icon: 'alert', items: [
-            { id: 'rsk-list', label: '정기 위험성평가', icon: 'alert', href: 'rsk-list.html', screen: 'RSK01-L / SFR-007' },
-            { id: 'rsk-occ',  label: '수시 위험성평가', icon: 'alert', href: 'rsk-occ.html',  screen: 'RSK03-L / SFR-007' },
-            /* hidden — 사이드바에는 안 뜨지만 그룹 소속은 유지한다. 딥링크(내 할일·대시보드)로
-             * 들어온 개선조치 화면이 엉뚱하게 '대시보드' SNB 를 달고 뜨는 것을 막는다. */
-            { id: 'rsk-imp',        hidden: true, label: '개선조치',      icon: 'check', href: 'rsk-imp.html',        screen: 'IMP01-L / SFR-003' },
-            { id: 'rsk-imp-detail', hidden: true, label: '개선조치 상세', icon: 'check', href: 'rsk-imp-detail.html', screen: 'IMP01-D / SFR-003' },
-        ]},
-
-        // GNB 4. 안전보건관리체계 — 2026-07-30 회의로 **2카테고리**로 재편.
-        //    발주처: "안전 보건 관리 체계는 두 카테고리로 해주세요. 첫 번째 중대 산업 시민 재해 계획 …
-        //             두 번째 … 중대 산업 시민재해 의무 이행 점검 이 두 개만 만들어 주시면 돼요."
-        //    ※ 하위 점검항목·계획 서식은 화면 정의서와 전자문서 양식 정의서가 계약한다.
-        //       메뉴는 업무 단계가 아니라 사용 목적 기준의 2카테고리를 유지한다 — 트리를 더 쪼개지 말 것.
-        //    ※ 작업환경측정·특수건강검진은 같은 회의에서 **대메뉴로 분리**되어 아래로 빠졌다.
-        //    ※ 도급관리는 재무과 계약자료 회신·컨설팅 자문 대기 중이라 직속으로 남긴다(삭제 아님).
+        /* ③ 안전보건관리체계 — RFP 계획·방침·의무 이행 (SFR-005·006·013·014)
+         *   ※ 2026-07-30 회의 확정 구조 그대로다 — **2카테고리를 더 쪼개지 말 것**
+         *     (발주처: "이 두 개만 만들어 주시면 돼요"). 이번 재편에서도 의견청취·
+         *     인력·예산을 여기 섹션으로 넣지 않은 이유가 이 지시다.
+         *   ※ 도급관리는 직속(section 없음) 유지 — 재무과 계약자료 회신 대기 중이라
+         *     두 카테고리 어느 쪽에도 넣지 않고 남겨 둔 자리다. */
         { id: 'sbm', label: '안전보건관리체계', icon: 'shield', items: [
-            { id: 'sbm-policy',   section: '중대산업·시민재해 계획',      label: '경영방침', icon: 'shield', href: 'menu.html?m=policy', screen: 'SFR-005' },
-            { id: 'sbm-org',      section: '중대산업·시민재해 계획',      label: '조직',     icon: 'users',  href: 'menu.html?m=org',    screen: 'SFR-006·009·010' },
-            { id: 'sbm-comply',   section: '중대산업·시민재해 의무 이행점검', label: '이행점검', icon: 'check', href: 'menu.html?m=comply', screen: 'SFR-008·014' },
+            { id: 'sbm-policy',   section: '중대산업·시민재해 계획',        label: '경영방침', icon: 'shield', href: 'menu.html?m=policy', screen: 'SFR-005' },
+            { id: 'sbm-org',      section: '중대산업·시민재해 계획',        label: '조직',     icon: 'users',  href: 'menu.html?m=org',    screen: 'SFR-006·009·010' },
+            { id: 'sbm-comply',   section: '중대산업·시민재해 의무 이행점검', label: '이행점검', icon: 'check',  href: 'menu.html?m=comply', screen: 'SFR-008·014' },
             /* 직속 (section 없음) */
             { id: 'sbm-contract', label: '도급관리', icon: 'building', href: 'menu.html?m=contract', screen: 'SFR-013' },
         ]},
 
-        // GNB. 안전보건교육 — 재설계 v1 §8.5 (SNB 3뎁스, 2026-07-20 적용)
-        //   item.section 값이 바뀌면 헤더 삽입, undefined 면 직속(top-level) — renderSidebar 참고.
-        //   대표 진입: edu-status.html(이수현황) — edu.html 은 리다이렉트 스텁. 단계별 안내는 js/edu-tour.js(EDUTOUR).
+        /* ④ 위험성평가 — RFP 위험성평가·유해위험요인·재발방지 (SFR-003·007·019)
+         *   개선조치(rsk-imp)는 2026-07-30 회의에서 독립 메뉴 제외 확정 — 정기평가
+         *   상세 안에서 부서별로 처리한다. 화면·딥링크는 살아 있으므로 hidden 으로
+         *   그룹 소속만 유지한다. 메뉴로 되살리지 말 것. */
+        { id: 'risk', label: '위험성평가', icon: 'alert', items: [
+            { id: 'rsk-list', label: '정기 위험성평가', icon: 'alert', href: 'rsk-list.html', screen: 'RSK01-L / SFR-007' },
+            { id: 'rsk-occ',  label: '수시 위험성평가', icon: 'alert', href: 'rsk-occ.html',  screen: 'RSK03-L / SFR-007' },
+            /* 폐지 화면 — 메뉴에 없지만 소속 축은 남긴다. 주소로 열렸을 때
+               엉뚱한 그룹(대시보드) 사이드바가 붙는 것을 막는다(SCR-COM-003 §6). */
+            { id: 'rsk-proc',       hidden: true, label: '작업공정 관리 (폐지)', icon: 'list',  href: 'rsk-proc.html',       screen: 'SCR-PRC-001' },
+            { id: 'rsk-exec',       hidden: true, label: '위험성 추정 (폐지)',   icon: 'alert', href: 'rsk-exec.html',       screen: 'SCR-RISK-003' },
+            { id: 'rsk-imp',        hidden: true, label: '개선조치',      icon: 'check', href: 'rsk-imp.html',        screen: 'IMP01-L / SFR-003' },
+            { id: 'rsk-imp-detail', hidden: true, label: '개선조치 상세', icon: 'check', href: 'rsk-imp-detail.html', screen: 'IMP01-D / SFR-003' },
+        ]},
+
+        /* ⑤ 안전보건교육 — RFP 안전계획·의무이행 점검 (SFR-004·010)
+         *   3뎁스 구조는 재설계 v1 §8.5 그대로. 종전에 직속으로 흩어져 있던 뒤쪽 3개
+         *   (이수현황·근로자 명단·결재 이력)에 2뎁스 이름을 줬다 — 앞 6개가 섹션을
+         *   갖는데 뒤 3개만 구분선 아래 떠 있으면 같은 깊이인지 아닌지 읽히지 않는다. */
         { id: 'edu', label: '안전보건교육', icon: 'user', items: [
-            /* 현업근로자 3종 */
-            { id: 'edu-reg',     section: '현업근로자',  label: '정기교육',   icon: 'user',  href: 'edu-reg.html',     screen: 'EDU-REG / SFR-004·010' },
-            { id: 'edu-hire',    section: '현업근로자',  label: '채용시교육', icon: 'user',  href: 'edu-hire.html',    screen: 'EDU-HIRE / SFR-004' },
-            { id: 'edu-etc',     section: '현업근로자',  label: '기타 교육',  icon: 'user',  href: 'edu-etc.html',     screen: 'EDU-ETC / SFR-004' },
-            /* 관리감독자 2종 */
-            { id: 'edu-sup',     section: '관리감독자',  label: '정기교육',  icon: 'user',  href: 'edu-sup.html',     screen: 'EDU-SUP / SFR-004' },
-            { id: 'edu-sup-hire', section: '관리감독자', label: '채용시교육', icon: 'user', href: 'edu-sup-hire.html', screen: 'EDU-SUP-HIRE / SFR-004' },
-            { id: 'edu-sup-etc', section: '관리감독자',  label: '기타 교육', icon: 'user',  href: 'edu-sup-etc.html', screen: 'EDU-SUP-ETC / SFR-004' },
-            /* 직속 (section 없음) */
-            { id: 'edu-status',  label: '이수현황',           icon: 'chart', href: 'edu-status.html',  screen: 'EDU-STATUS / SFR-004·010' },
-            { id: 'edu-workers', label: '근로자 명단 관리',    icon: 'users', href: 'edu-workers.html', screen: 'EDU-WORKERS / SFR-004' },
-            /* 온나라 결재 상신 이력 통합 조회 (총괄·교육별·개인별) — js/edu-apv-log.js */
-            { id: 'edu-approval', label: '결재 이력',          icon: 'file',  href: 'edu-approval.html', screen: 'EDU-APV-LOG / SFR-004' },
+            { id: 'edu-reg',      section: '현업근로자',    label: '정기교육',        icon: 'user',  href: 'edu-reg.html',      screen: 'EDU-REG / SFR-004·010' },
+            { id: 'edu-hire',     section: '현업근로자',    label: '채용시교육',      icon: 'user',  href: 'edu-hire.html',     screen: 'EDU-HIRE / SFR-004' },
+            { id: 'edu-etc',      section: '현업근로자',    label: '기타 교육',       icon: 'user',  href: 'edu-etc.html',      screen: 'EDU-ETC / SFR-004' },
+            { id: 'edu-sup',      section: '관리감독자',    label: '정기교육',        icon: 'user',  href: 'edu-sup.html',      screen: 'EDU-SUP / SFR-004' },
+            { id: 'edu-sup-hire', section: '관리감독자',    label: '채용시교육',      icon: 'user',  href: 'edu-sup-hire.html', screen: 'EDU-SUP-HIRE / SFR-004' },
+            { id: 'edu-sup-etc',  section: '관리감독자',    label: '기타 교육',       icon: 'user',  href: 'edu-sup-etc.html',  screen: 'EDU-SUP-ETC / SFR-004' },
+            { id: 'edu-status',   section: '교육 현황·관리', label: '이수현황',        icon: 'chart', href: 'edu-status.html',   screen: 'EDU-STATUS / SFR-004·010' },
+            { id: 'edu-workers',  section: '교육 현황·관리', label: '근로자 명단 관리', icon: 'users', href: 'edu-workers.html',  screen: 'EDU-WORKERS / SFR-004' },
+            { id: 'edu-approval', section: '교육 현황·관리', label: '결재 이력',       icon: 'file',  href: 'edu-approval.html', screen: 'EDU-APV-LOG / SFR-004' },
         ]},
 
-        // GNB. 작업환경측정 · 특수건강검진 — 2026-07-30 회의에서 안전보건관리체계 하위에서 **대메뉴로 승격**.
-        //   근거: 매년 반복 수행하고 예산 과목이 직접 편성되는 업무라 첫 화면에서 바로 보여야 한다
-        //         (발주처: "작업 환경 측정 그리고 특수 건강 검진 이 항목은 예산 과목에 들어 있어요" /
-        //          개발측 "일단 이 두 개만 대메뉴를 빼는 걸로 할게요" → 발주처 "예. 일단 빼주시고").
-        //   ※ page id 는 sbm-* 를 그대로 둔다 — DYLAW.MAP(law-map.js)·역참조 표가 이 키에 묶여 있고
-        //     law-map.js 는 법제처 스냅샷 생성물이라 손으로 키를 고칠 수 없다(CLAUDE.md §10).
-        //   ※ 2026-08-12 화면 계약 확정 — 작업환경측정·건강검진은 독립 대메뉴이며,
-        //      사업장/대상 판정·실시·결과문서·개선/사후관리 상태를 각각 분리해 관리한다.
-        { id: 'workenv', label: '작업환경측정', icon: 'gauge', items: [
-            { id: 'sbm-workenv', label: '작업환경측정', icon: 'gauge', href: 'work-env.html', screen: 'WEM01-L' },
-        ]},
-        { id: 'health', label: '특수건강검진', icon: 'activity', items: [
-            /* 화면은 일반·특수를 함께 다룬다(무수정) — SNB 라벨로 그 범위를 밝힌다 */
-            { id: 'sbm-health', label: '건강검진 (일반·특수)', icon: 'activity', href: 'health-exam.html', screen: 'HEX01-L' },
+        /* ⑥ 작업환경·건강 — RFP 안전·보건관리 인력/보건조치 (SFR-010)
+         *   2026-07-30 회의에서 안전보건관리체계 하위에서 **대메뉴로 승격**된 두 화면이다
+         *   (발주처: "작업 환경 측정 그리고 특수 건강 검진 … 일단 빼주시고").
+         *   그 지시는 「안전보건관리체계 밑에 묻지 말라」는 뜻이므로 1뎁스 자리는 지키되,
+         *   **항목 1개짜리 GNB 그룹 두 개**로 두지 않고 한 그룹의 형제 항목으로 세웠다.
+         *   둘 다 GNB 한 번 클릭으로 사이드바에 함께 보이므로 노출 깊이는 그대로다.
+         *   ※ 그룹 id 는 흡수하는 쪽(workenv)을 재사용한다. page id 는 sbm-* 유지 —
+         *     DYLAW.MAP 이 이 키에 묶여 있다(CLAUDE.md §10). */
+        { id: 'workenv', label: '작업환경·건강', icon: 'gauge', items: [
+            { id: 'sbm-workenv', label: '작업환경측정',        icon: 'gauge',    href: 'work-env.html',   screen: 'WEM01-L / SFR-010' },
+            { id: 'sbm-health',  label: '건강검진 (일반·특수)', icon: 'activity', href: 'health-exam.html', screen: 'HEX01-L / SFR-010' },
         ]},
 
-        // GNB 4. 의견청취 (SFR-011) — 대메뉴 승격. 화면 내부 3탭을 SNB 3메뉴로 분리 (menu.html?m=opinion&sub=)
+        /* ⑦ 의견청취 — RFP 종사자 의견청취 (SFR-011)
+         *   안전보건관리체계로 접지 않는다 — 위 ③의 「2카테고리 유지」가 발주처 지시라
+         *   세 번째 카테고리를 만들 수 없다. */
         { id: 'opinion', label: '의견청취', icon: 'bell', items: [
             { id: 'opn-voice',     label: '의견청취·건의함',   icon: 'bell',  href: 'menu.html?m=opinion&sub=voice',     screen: 'SFR-011' },
             { id: 'opn-committee', label: '산업안전보건위원회', icon: 'users', href: 'menu.html?m=opinion&sub=committee', screen: 'SFR-011' },
             { id: 'opn-council',   label: '협의체·점검표',     icon: 'check', href: 'menu.html?m=opinion&sub=council',   screen: 'SFR-011' },
         ]},
 
-        // GNB 4. 인력 평가 (EVL / SFR-009) — 안전보건관리책임자·관리감독자 업무수행평가 (중처법 시행령 §4①5호 반기 1회 · 산안법 §15·§16)
-        { id: 'eval', label: '인력 평가', icon: 'user', items: [
-            { id: 'evl-eval',     label: '인력 평가', icon: 'user',  href: 'evl-eval.html',     screen: 'EVL02-E / SFR-009' },
-            { id: 'evl-status',   label: '평가 현황', icon: 'chart', href: 'evl-list.html',     screen: 'EVL01-V / SFR-009' },
-            { id: 'evl-settings', label: '평가 설정', icon: 'cog',   href: 'evl-settings.html', screen: 'EVL03-S / SFR-009' },
+        /* ⑧ 인력·예산 — RFP 조직·인력·예산·평가 (SFR-008·009)
+         *   구 'budget'(예산관리) 그룹을 2뎁스 섹션으로 흡수했다. RFP 는 SFR-008 을
+         *   「인력, 예산 편성 및 집행 관리」 **한 요구사항**으로 묶고, 중처법 시행령
+         *   §4 도 인력·예산·평가를 같은 호 계열로 둔다. 실제로 두 화면은 같은 사람이
+         *   같은 반기에 연다. */
+        { id: 'eval', label: '인력·예산', icon: 'coins', items: [
+            { id: 'evl-eval',     section: '인력 평가', label: '인력 평가',      icon: 'user',  href: 'evl-eval.html',     screen: 'EVL02-E / SFR-009' },
+            { id: 'evl-status',   section: '인력 평가', label: '평가 현황',      icon: 'chart', href: 'evl-list.html',     screen: 'EVL01-V / SFR-009' },
+            { id: 'evl-settings', section: '인력 평가', label: '평가 설정',      icon: 'cog',   href: 'evl-settings.html', screen: 'EVL03-S / SFR-009' },
+            { id: 'bgt-main',     section: '예산 관리', label: '예산 총괄표',    icon: 'chart', href: 'bgt-main.html',     screen: 'BGT01-V / SFR-008' },
+            { id: 'bgt-settings', section: '예산 관리', label: '예산 기준 설정', icon: 'cog',   href: 'bgt-settings.html', screen: 'BGT02-S / SFR-008' },
         ]},
 
-        // GNB 5. 예산관리 (BGT) — 안전보건 예산 편성·집행 총괄표 + 점검표 (중처법 시행령 §4①4호 예산)
-        { id: 'budget', label: '예산관리', icon: 'coins', items: [
-            { id: 'bgt-main',     label: '예산 총괄표',   icon: 'chart', href: 'bgt-main.html',     screen: 'BGT01-V' },
-            { id: 'bgt-settings', label: '예산 기준 설정', icon: 'cog',   href: 'bgt-settings.html', screen: 'BGT02-S' },
-        ]},
-
-        // GNB 5. 업무문서 — 기준문서함 + 문서 찾기(업무 목록) + 이행 현황(이행 목록)
-        //    ※ 두 목록은 같은 문서 데이터를 공유하지만 **기본 단위와 목적이 다르다**:
-        //      업무 목록 = 문서 1건을 찾는 화면 / 이행 목록 = 법정 이행항목의 증빙이
-        //      갖춰졌는지 보는 화면. 파일명 docs-preset 은 옛 이름이고 딥링크 호환용이다.
-        { id: 'docs', label: '업무문서', icon: 'file', items: [
-            { id: 'docs-archive', label: '기준문서함',          icon: 'file', href: 'docs-archive.html' },
-            { id: 'docs-preset',  label: '업무 목록',           icon: 'list', href: 'docs-preset.html' },  // 평면 문서 검색
-            { id: 'docs-exec',    label: '이행 목록',           icon: 'grid', href: 'docs-exec.html' },    // 법정 이행항목 78 · 업무단계 168
-        ]},
-
-        // GNB. 업무 관리(신) — 이행 관리 · 문서 목록
-        //   근거: docs/planning/기획-업무관리-신버전-이행관리-문서목록-v1.md
-        //   기존 docs 그룹(업무문서)과 **병행**한다 — 구/신 버전이 나란히 보여야 비교 시연이 된다.
-        //   기존 화면·모듈(docs-archive/preset/exec · doc-exec.js · doc-list.js)은 무수정이다.
-        //   ※ 라벨 중복 해소 — 기존 work 그룹(업무 자동발행)도 '업무 관리'였으나
-        //     발주처(사용자) 지시로 그쪽을 '(구)업무관리'로 개명했다(2026-08-16). 이 그룹이 '업무 관리'다.
+        /* ⑨ 업무 관리 — RFP 안전계획·의무이행 점검 / 관계법령 점검 (SFR-004·012·014)
+         *   [구버전 2개 그룹을 여기로 접었다 — 2026-08-28 사용자 지시]
+         *   · 구 'docs'(업무문서: 업무 목록·이행 목록) — 신버전 이행 관리·문서 목록이
+         *     같은 데이터를 같은 목적으로 다시 그린다. 비교 시연이 끝나 **메뉴에서 뺀다**.
+         *   · 구 'work'((구)업무관리: 업무 발행 관리·부서 업무함) — 라벨부터 (구)였다.
+         *   지우지 않고 hidden 으로 남기는 이유는 rsk-imp 선례와 같다 — 내 할일·통계·
+         *   프리셋 양식 관리 등에서 들어오는 딥링크가 살아 있어서, 그룹 소속까지 없애면
+         *   그 화면들이 '대시보드' 사이드바를 달고 뜬다(findGroup 폴백).
+         *   ※ 기준문서함(docs-archive)은 구버전이 아니라 **제정·개정 원문 문서함**이라
+         *     신버전에 대응 화면이 없다. 그래서 그룹만 옮겨 정식 항목으로 살린다 —
+         *     같이 지우면 내 할일의 '분류하러 가기'가 메뉴 없는 화면으로 떨어진다. */
         { id: 'cmp', label: '업무 관리', icon: 'check', items: [
-            { id: 'cmp-status', label: '이행 관리', icon: 'grid', href: 'cmp-status.html', screen: 'CMP01-T / CMP02-D / CMP04-V' },
-            { id: 'cmp-docs',   label: '문서 목록', icon: 'list', href: 'cmp-docs.html',   screen: 'DOC01-L / DOC02-D' },
+            { id: 'cmp-status',   label: '이행 관리',  icon: 'grid', href: 'cmp-status.html', screen: 'CMP01-T / CMP02-D / CMP04-V' },
+            { id: 'cmp-docs',     label: '문서 목록',  icon: 'list', href: 'cmp-docs.html',   screen: 'DOC01-L / DOC02-D' },
+            { id: 'docs-archive', label: '기준문서함', icon: 'file', href: 'docs-archive.html', screen: 'SCR-EDOC-010' },
+            /* hidden — 메뉴에서 뺀 구버전. 딥링크 호환용이며 **되살리지 말 것**. */
+            { id: 'docs-preset', hidden: true, label: '업무 목록 (구)',      icon: 'list',  href: 'docs-preset.html' },
+            { id: 'docs-exec',   hidden: true, label: '이행 목록 (구)',      icon: 'grid',  href: 'docs-exec.html' },
+            { id: 'work-admin',  hidden: true, label: '업무 발행 관리 (구)', icon: 'list',  href: 'work-admin.html', screen: 'WRK01-L' },
+            { id: 'work-dept',   hidden: true, label: '부서 업무함 (구)',    icon: 'users', href: 'work-dept.html',  screen: 'WRK02-L' },
         ]},
 
-        // GNB 6. 통계·보고 (SFR-018·021)
+        /* ⑩ 통계·보고 — RFP 현황·통계·제증명 (SFR-018·021) */
         { id: 'stats', label: '통계·보고', icon: 'chart', items: [
             { id: 'stats',       label: '현황 통계',     icon: 'chart', href: 'stats.html',       screen: 'SFR-018' },
             { id: 'reports',     label: '보고서·제증명', icon: 'file',  href: 'reports.html',     screen: 'SFR-021' },
             { id: 'info-center', label: '정보센터',      icon: 'list',  href: 'info-center.html' },
         ]},
 
-        // GNB 7. 시스템 관리 (관리자 전용) — 프리셋 양식 관리가 v2 차별 포인트
+        /* ⑪ 시스템 관리 — RFP 공통 기반 (SFR-001·015·016·017)
+         *   8개가 한 줄로 늘어서 있어 무엇이 '사람'이고 무엇이 '기준값'이고 무엇이
+         *   '바깥과 주고받는 설정'인지 읽히지 않았다. 3뎁스로 나눈다. */
         { id: 'admin', label: '시스템 관리', icon: 'cog', items: [
-            { id: 'admin-users',       label: '사용자 관리',      icon: 'users',    href: 'admin-users.html',       screen: 'SFR-015' },
-            { id: 'admin-sites',       label: '사업장 관리',      icon: 'building', href: 'admin-sites.html',       screen: 'ADM03-S' },
-            { id: 'admin-menus',       label: '메뉴 관리',        icon: 'list',  href: 'admin-menus.html',       screen: 'ADM01-S' },
-            { id: 'admin-roles',       label: '권한 관리',        icon: 'cog',   href: 'admin-roles.html',       screen: 'ADM02-S' },
-            { id: 'admin-notify',      label: '알림 관리',        icon: 'bell',  href: 'admin-notify.html',      screen: 'SFR-017' },
-            { id: 'admin-presets',     label: '프리셋 양식 관리', icon: 'cog',   href: 'admin-presets.html' },
-            { id: 'admin-integration', label: '연계 관리',        icon: 'cog',   href: 'admin-integration.html', screen: 'SIR-001' },
+            { id: 'admin-users',       section: '사용자·권한', label: '사용자 관리',      icon: 'users',    href: 'admin-users.html',       screen: 'SFR-015' },
+            { id: 'admin-roles',       section: '사용자·권한', label: '권한 관리',        icon: 'cog',      href: 'admin-roles.html',       screen: 'ADM02-S' },
+            { id: 'admin-menus',       section: '사용자·권한', label: '메뉴 관리',        icon: 'list',     href: 'admin-menus.html',       screen: 'ADM01-S' },
+            { id: 'admin-sites',       section: '기준정보',    label: '사업장 관리',      icon: 'building', href: 'admin-sites.html',       screen: 'ADM03-S' },
+            { id: 'admin-presets',     section: '기준정보',    label: '프리셋 양식 관리', icon: 'cog',      href: 'admin-presets.html' },
             /* 법령 관리 — 법령·조문 / 메뉴 근거 매핑 / 변경 이력 3탭 단일 화면
-             * (2026-07-30 통합, 구 ADM05 메뉴 근거 매핑 흡수. admin-law-map.html 은
-             *  매핑 탭으로 가는 리다이렉트 스텁). 조문(사실)과 매핑(판단)의 파괴
-             *  성격 차이는 탭 분리로 유지된다. */
-            { id: 'admin-law',         label: '법령 관리',        icon: 'file',  href: 'admin-law.html',         screen: 'ADM04-S' },
+             * (2026-07-30 통합. admin-law-map.html 은 매핑 탭 리다이렉트 스텁) */
+            { id: 'admin-law',         section: '기준정보',    label: '법령 관리',        icon: 'file',     href: 'admin-law.html',         screen: 'ADM04-S' },
+            { id: 'admin-integration', section: '연계·알림',   label: '연계 관리',        icon: 'external', href: 'admin-integration.html', screen: 'SIR-001' },
+            { id: 'admin-notify',      section: '연계·알림',   label: '알림 관리',        icon: 'bell',     href: 'admin-notify.html',      screen: 'SFR-017' },
         ]},
     ];
 
@@ -846,7 +861,11 @@
                     const onclick = first.soon
                         ? `onclick="return window.DYLayout._soon(event, '${first.soon}')"`
                         : '';
-                    return html`<a class="dy-gnb-item ${g.id === activeGroupId ? 'is-active' : ''}" href="${href}" ${onclick}>${g.label}</a>`;
+                    /* aria-current — 지금 어느 1뎁스에 있는지는 색(pill)만으로 말하지 않는다.
+                       색 단독 의미 금지(§7)와 같은 근거이고, 스크린리더가 GNB 를 훑을 때
+                       현재 위치를 알 수 있는 유일한 단서다. */
+                    const cur = g.id === activeGroupId;
+                    return html`<a class="dy-gnb-item ${cur ? 'is-active' : ''}" href="${href}" ${cur ? 'aria-current="page"' : ''} ${onclick}>${g.label}</a>`;
                 }).join('')}
             </nav>
         `;
@@ -880,7 +899,14 @@
                 ? `<span class="dy-sidebar-item-external" aria-label="다른 메뉴로 이동" title="다른 GNB로 이동">${ICON.external}</span>`
                 : '';
             const nestedCls = curSection ? 'is-nested' : '';
-            return `${prefix}<a class="dy-sidebar-item ${isActive ? 'is-active' : ''} ${it.external ? 'is-external' : ''} ${nestedCls}" href="${href}" ${onclick}>
+            /* 2뎁스 이름을 링크의 접근성 이름에 붙인다 — 섹션 헤더는 <div> 라 스크린리더가
+               링크만 훑을 때는 읽히지 않는다. 안전보건교육에는 '정기교육'·'채용시교육'·
+               '기타 교육'이 현업근로자/관리감독자 두 벌씩 있어, 이름이 같은 링크 6개가
+               구분 없이 나열된다. 눈으로는 섹션 헤더가 갈라 주지만 소리로는 갈라지지 않는다. */
+            const aria = curSection
+                ? ` aria-label="${curSection} ${it.label}"` : '';
+            const cur = isActive ? ' aria-current="page"' : '';
+            return `${prefix}<a class="dy-sidebar-item ${isActive ? 'is-active' : ''} ${it.external ? 'is-external' : ''} ${nestedCls}" href="${href}"${aria}${cur} ${onclick}>
                 <span class="dy-sidebar-item-icon">${ICON[it.icon] || ICON.dot}</span>
                 <span>${it.label}</span>
                 ${externalIcon}

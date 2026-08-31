@@ -19,7 +19,9 @@
 
     const isV2 = params.get('v') === '2';
     const verQS = isV2 ? '&v=2' : '';
-    const listHref = isV2 ? 'docs-preset.html?ver=v2' : 'docs-preset.html';
+    /* 목록으로 돌아가는 자리 — 지금 쓰는 문서 목록이다.
+       종전에는 은퇴한 «업무 목록»으로 보냈고 폐기된 ?ver=v2 까지 달고 있었다(CLAUDE.md §5). */
+    const listHref = 'cmp-docs.html';
 
     /* 버전별 데이터 소스 */
     const HAS_REG = isV2 && window.DYREG;
@@ -96,10 +98,11 @@
     const PT_CHIP = { 전자문서: 'wt-elec', 첨부파일: 'wt-attach', 프로그램: 'wt-program' };
 
     /* ── 브레드크럼 ── */
-    const menuQS = (isV2 ? 'docs-preset.html?ver=v2&menu=' : 'docs-preset.html?menu=') + d.menuKey;
+    /* 분야로 좁힌 목록 — 문서 목록이 ?menu= 를 받는다(같은 분야 축, 같은 건수) */
+    const menuQS = 'cmp-docs.html?menu=' + d.menuKey;
     document.getElementById('dd-breadcrumb').innerHTML =
-        '<a href="' + listHref + '">업무문서</a>' +
-        '<span class="dd-bc-sep">›</span><a href="' + listHref + '">업무 목록' + (isV2 ? ' (재분류 v2)' : '') + '</a>' +
+        '<a href="cmp-status.html">업무 관리</a>' +
+        '<span class="dd-bc-sep">›</span><a href="' + listHref + '">문서 목록</a>' +
         '<span class="dd-bc-sep">›</span><a href="' + menuQS + '">' + esc(menu.label) + '</a>' +
         (set ? '<span class="dd-bc-sep">›</span><a href="' + menuQS + '">' + esc(set.name) + '</a>' : '') +
         '<span class="dd-bc-sep">›</span><span class="dd-bc-cur">' + esc(d.name) + '</span>';

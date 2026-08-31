@@ -28,6 +28,7 @@
         mount: null,
         q: '', sr: '', year: '', status: '',
         dept: '',            /* 이행 관리 L2 에서 넘어온 부서 조건 — 필터 UI 로는 내지 않는다(D-5) */
+        menu: '',            /* 분야(구 대메뉴) 조건 — 통계·기준문서함이 넘겨 준다. 필터 UI 로는 내지 않는다 */
         stages: [],          /* 업무단계 다중 조건 (DYPICK) */
         page: 1,
         expand: {},          /* docId → 업무단계 칩 전부 펼침 */
@@ -57,6 +58,12 @@
         S.sr = p.get('sr') || '';
         S.status = p.get('status') || '';
         S.dept = p.get('dept') || '';
+        /* 분야 조건 — 현황 통계·기준문서함이 «분야별 문서»로 보낸다.
+           그 두 화면은 현행 업무문서 426건을 분야(구 대메뉴)로 세는데, 조건 없이 보내면
+           9개 링크가 전부 같은 전체 목록으로 떨어져 누른 의미가 사라진다.
+           연도 기본값도 함께 푼다 — 분야를 보러 온 것이지 특정 연도를 보러 온 것이 아니다. */
+        S.menu = p.get('menu') || '';
+        if (S.menu && p.get('year') == null) S.year = '';
         /* 부서로 들어오면 연도 기본값을 풀어 준다 — 그 부서 문서를 보러 온 것이지
            특정 연도를 보러 온 것이 아니다(0건으로 맞이하지 않는다) */
         if (S.dept && p.get('year') == null) S.year = '';
@@ -75,6 +82,7 @@
         if (S.sr) p.set('sr', S.sr);
         if (S.status) p.set('status', S.status);
         if (S.dept) p.set('dept', S.dept);
+        if (S.menu) p.set('menu', S.menu);
         if (S.doc) p.set('doc', S.doc);
         if (S.back) p.set('back', S.back);
         var qs = p.toString();
@@ -91,6 +99,7 @@
     function match(d) {
         if (S.year && String(d.year) !== String(S.year)) return false;
         if (S.dept && d.dept !== S.dept) return false;
+        if (S.menu && d.menuKey !== S.menu) return false;
         if (S.status && d.status !== S.status) return false;
         if (S.sr && !F().match(S.sr, [d.sr])) return false;
         if (S.stages.length) {
@@ -105,7 +114,7 @@
             return String(b.date || '').localeCompare(String(a.date || ''));
         });
     }
-    function filtering() { return !!(S.q || S.sr || S.year || S.status || S.stages.length || S.dept); }
+    function filtering() { return !!(S.q || S.sr || S.year || S.status || S.stages.length || S.dept || S.menu); }
 
     function yearOptions() {
         return [['', '연도 전체']].concat(C().years().slice().reverse().map(function (y) { return [y, y + '년']; }));
@@ -146,7 +155,7 @@
                 '<b>분류 제외 ' + ex.toLocaleString() + '건</b>은 타 기관 소관·자치사무라 판단이 끝난 문서라 교정 대상이 아닙니다. ' +
                 '<b>분류 확인 ' + wk.toLocaleString() + '건</b>은 할 일이 붙어 있으나 원장에서 «애매»로 표시된 문서라 ' +
                 '이행 판정에는 들어가되 확인이 필요합니다.</p>' +
-            '<p>같은 문서를 종전 방식으로 찾는 화면은 <a href="docs-preset.html">업무문서 &gt; 업무 목록</a>입니다.</p>' +
+            '<p>할 일 하나하나에 증빙이 갖춰졌는지는 <a href="cmp-status.html">업무 관리 &gt; 이행 관리</a>에서 봅니다. 여기는 <b>문서 1건</b>을 찾습니다.</p>' +
             ((global.DYROLE && global.DYROLE.readOnlyNote) ? (global.DYROLE.readOnlyNote('문서 등록') || '') : '');
         return V().notice('cmp-docs', lead, rest);
     }
@@ -176,7 +185,7 @@
             });
         bar += yearChips() + docAdvPanel();
 
-        return notice() + bar + deptCond() + stageCond() +
+        return notice() + bar + deptCond() + menuCond() + stageCond() +
             '<p class="cmp-cap">조건에 맞는 <b>문서 ' + list.length.toLocaleString() + '건</b> · 할 일 <b>연결 ' + lc.links.toLocaleString() + '건</b> — ' +
                 '한 문서가 여러 할 일에 걸리므로 두 수는 다릅니다.</p>' +
             (rows.length ? table(rows) : emptyBox()) +
@@ -200,6 +209,16 @@
         var total = D().allDocs().filter(function (d) { return d.dept === S.dept; }).length;
         return '<p class="cmp-cond"><span class="chip-mini wt-elec">' + esc(S.dept) + ' 문서 ' + total.toLocaleString() + '건' +
             '<button type="button" class="cmp-cond-x" aria-label="부서 조건 해제" onclick="CMPDOC.setF(\'dept\',\'\')">×</button></span></p>';
+    }
+    /* 분야 조건 칩 — 부서 조건과 같은 형태다. 조건이 걸린 줄 모르고 «왜 47건뿐이지»
+       하지 않도록 무엇으로 좁혔는지 보이고, 그 자리에서 풀 수 있어야 한다. */
+    function menuCond() {
+        if (!S.menu) return '';
+        var M = (global.DY_MENUS_V2 || {})[S.menu];
+        var label = (M && M.label) || S.menu;
+        var total = D().allDocs().filter(function (d) { return d.menuKey === S.menu; }).length;
+        return '<p class="cmp-cond"><span class="chip-mini wt-elec">분야 ' + esc(label) + ' 문서 ' + total.toLocaleString() + '건' +
+            '<button type="button" class="cmp-cond-x" aria-label="분야 조건 해제" onclick="CMPDOC.setF(\'menu\',\'\')">×</button></span></p>';
     }
     /* 연도 칩 — 값이 2~3개뿐이라 드롭다운은 과하다. 각 칩에 건수를 붙여
        고르기 전에 몇 건인지 보이게 한다. */
@@ -660,7 +679,7 @@
     function setF(k, v) { S[k] = v; S.page = 1; rerender(); }
     /* 초기화는 '연도 전체'가 아니라 **기본 연도**로 돌아간다 — 읽는 사람이 기대하는
        초기 상태가 처음 열었을 때의 화면이다. */
-    function resetF() { S.q = ''; S.sr = ''; S.year = String(D().defaultYear()); S.status = ''; S.stages = []; S.dept = ''; S.page = 1; rerender(); }
+    function resetF() { S.q = ''; S.sr = ''; S.year = String(D().defaultYear()); S.status = ''; S.stages = []; S.dept = ''; S.menu = ''; S.page = 1; rerender(); }
     function expand(id) { S.expand[id] = !S.expand[id]; render(); }
     function toggleAdv() { S.adv = !docAdvOpen(); render(); }
     function go(n) { S.page = n; render(); try { window.scrollTo(0, 0); } catch (e) {} }

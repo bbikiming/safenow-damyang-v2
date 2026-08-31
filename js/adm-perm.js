@@ -2,7 +2,7 @@
  * 담양군 중대재해예방 통합관리시스템 v2 — 시스템 관리 공용 코어 (DYADM)
  *   메뉴 관리(ADM01-S) · 권한 관리(ADM02-S) 두 화면 공용.
  *   · 계층형 조직도 ORG — 단일 출처 DYV2.ORG(js/common.js) 참조 (자체 조직도 금지)
- *   · 6등급 시드 + 메뉴 권한 프리셋 시드 (localStorage 'dy-adm-perm-v2')
+ *   · 7등급 시드 + 메뉴 권한 프로필 프리셋 시드 (localStorage 'dy-adm-perm-v3')
  *   · 공용 복수선택 조직도 모달 openOrgPicker (DYV2.openModal 1개 — 적층 금지)
  *   · 사용자 기준 실효 권한 계산(effectiveForUser) — 사용자 관리 역조회에서 사용
  *   · 데모 데이터 초기화(resetDemo)
@@ -10,7 +10,8 @@
  * 결정 반영(docs/planning/기획-시스템관리-메뉴권한-검토-v1.md D1~D8):
  *   D1 보기/수정 체크는 메뉴 관리의 지정 행 · 권한 관리는 구성원만 · '전체 권한'은 등급 속성
  *   D2 등급/직접 지정 병존 → 통합 목록 · 중복 경로는 높은 권한 우선(합집합)
- *   D3 기본 6등급 · 부서별 담당자는 메뉴별 개별 지정
+ *   D3 기본 등급 + 부서별 담당자 — 2026-08-31 개정: 「부서 안전보건 담당자」를 등급으로 세웠다.
+ *      메뉴별 개별 지정만으로 두면 부서가 늘 때마다 47개 메뉴에 사람을 하나씩 꽂아야 한다.
  *   D4 미설정 = 기본 차단(시스템 관리자 제외) · 트리 '미설정' 배지 (실제 GNB 숨김은 미구현)
  *   D5 '수정' = 등록·수정·삭제·상신 포함
  *   D8 복수 선택형 단일 모달
@@ -18,11 +19,18 @@
 (function () {
     'use strict';
 
-    const KEY = 'dy-adm-perm-v2';   /* 조직도 단일 출처(DYV2.ORG) 통합 — 시드 버전 상향 */
+    const KEY = 'dy-adm-perm-v3';   /* v3 (2026-08-31): 메뉴 권한 프로필 + 부서 담당자 등급 신설.
+                                       시드 값이 바뀌면 반드시 키를 올린다 — 병합 경로는 'NAV 에 있는데
+                                       스토어에 없는 메뉴'만 채우므로, 키를 그대로 두면 기존 브라우저에서
+                                       옛 권한이 살아남아 화면과 시드가 조용히 갈린다. */
     const esc = s => (window.DYV2 && DYV2.esc)
         ? DYV2.esc(s)
         : String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     const NAV = () => (window.DYLayout && DYLayout.NAV) || [];
+    /* 주관부서(재난안전과) — 자체 상수를 만들지 않고 권한 판정의 단일 출처에서 읽는다.
+       layout.js 는 이 파일보다 먼저 로드된다(admin-menus·users·roles 전건 확인).
+       폴백은 그 값과 같아야 한다 — 다르면 조용한 어긋남이 된다(CLAUDE.md §6 폴백 규칙). */
+    const OWNER_DEPT = (window.DYROLE && window.DYROLE.OWNER_DEPT) || 'safety';
 
     /* =====================================================================
      * 1. 계층형 조직도 ORG — 단일 출처 DYV2.ORG(js/common.js) 참조.
@@ -87,25 +95,101 @@
     function load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } }
     function persist(d) { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) {} }
 
-    /* 메뉴 1건의 기본 권한 프리셋 — 최초 시드와 신규 메뉴 병합이 같은 규칙을 쓴다.
-     *   시스템 관리자(fullAccess)는 개별 지정 없음(자동). 시스템 관리 하위 = 지정 없음(관리자 전용).
-     *   base-bulk = 프리셋 제외(미설정 배지 확인).
-     * 병합에서 이 함수를 쓰지 않으면 NAV 에 추가된 신규 메뉴가 권한 0건으로 들어가
-     * 기존 스토어를 가진 브라우저에서만 '미설정'으로 보인다. */
-    function defaultPerms(m) {
-        if (m.groupId === 'admin') return [];
-        if (m.id === 'base-bulk') return [];
-        return [
-            { kind: 'role', id: 'mayor', view: true, edit: false },
-            { kind: 'role', id: 'exec', view: true, edit: false },
-            { kind: 'role', id: 'manager', view: true, edit: false },
+    /* =====================================================================
+     * 3-1. 메뉴 권한 프로필 — "담당자 전용 / 관리자 전용"을 적을 자리 (2026-08-31 신설)
+     * ---------------------------------------------------------------------
+     * [왜 프로필인가]
+     * 종전 기본값은 **대메뉴 단위 하나**였다. 시스템 관리 9개와 예외 2개를 빼면
+     * 나머지 40개 메뉴가 전부 같은 권한이라, 「이 화면은 담당자만 봐도 된다」를
+     * 적을 자리 자체가 없었다. 프로필은 그 자리를 만든다 — 메뉴마다 성격을
+     * 고르고, 등급 배치는 프로필이 정한다.
+     *
+     * [프로필 분류는 초기값이다]
+     * 어느 메뉴가 어느 프로필인지는 담양군이 확정할 정책이다(_공통_권한정의 §8).
+     * 여기 값은 화면 성격에서 끌어낸 초기 제안이며, 운영 중 변경은 기획 변경이
+     * 아니라 메뉴 관리 화면의 설정 변경으로 처리한다.
+     *
+     * [프로필을 늘릴 때]
+     * 새 프로필은 **등급 배치가 실제로 다를 때만** 만든다. 같은 배치에 이름만
+     * 다른 프로필을 두면 무엇이 다른지 아무도 모른 채 둘로 갈린다.
+     * ===================================================================== */
+    const PROFILE = {
+        /* 업무 화면 기본 — 전 직원 조회, 주관부서·부서 담당자 등록 */
+        common: [
+            { kind: 'role', id: 'mayor',      view: true, edit: false },
+            { kind: 'role', id: 'exec',       view: true, edit: false },
+            { kind: 'role', id: 'manager',    view: true, edit: false },
+            { kind: 'role', id: 'team',       view: true, edit: true },
+            { kind: 'role', id: 'dept_staff', view: true, edit: true },
+            { kind: 'role', id: 'staff',      view: true, edit: false },
+        ],
+        /* 전 직원이 등록까지 하는 화면 — 의견청취처럼 종사자 본인이 올리는 축 */
+        openWrite: [
+            { kind: 'role', id: 'mayor',      view: true, edit: false },
+            { kind: 'role', id: 'exec',       view: true, edit: false },
+            { kind: 'role', id: 'manager',    view: true, edit: false },
+            { kind: 'role', id: 'team',       view: true, edit: true },
+            { kind: 'role', id: 'dept_staff', view: true, edit: true },
+            { kind: 'role', id: 'staff',      view: true, edit: true },
+        ],
+        /* 기준값·연계 설정 — 주관부서 소관. 한 번 바꾸면 전 부서 화면이 함께 움직이는
+           값이라 부서 담당자에게도 열지 않는다. 주관부서는 보고, 그 안 담당자가 고친다. */
+        settings: [
             { kind: 'role', id: 'team', view: true, edit: true },
-            { kind: 'role', id: 'staff', view: true, edit: (m.id === 'opn-voice') },
-        ];
+            { kind: 'dept', id: OWNER_DEPT, includeSub: true, view: true, edit: false },
+        ],
+        /* 주관부서 조회 전용 — 문서 §5 확정 예외(결재 이력) */
+        ownerView: [
+            { kind: 'dept', id: OWNER_DEPT, includeSub: true, view: true, edit: false },
+        ],
+        /* 개인정보가 담긴 명단·결과 — 전 직원 열람에서 뺀다.
+           개인 단위 열람은 이 메뉴 권한만으로 열리지 않는다(_공통_권한정의 §4 각주). */
+        personal: [
+            { kind: 'role', id: 'manager',    view: true, edit: false },
+            { kind: 'role', id: 'team',       view: true, edit: true },
+            { kind: 'role', id: 'dept_staff', view: true, edit: true },
+        ],
+        /* 시스템 관리 — 지정 없음. 미설정 메뉴는 시스템 관리자만 본다(D4) */
+        adminOnly: [],
+    };
+
+    /* 메뉴 → 프로필. 적지 않은 메뉴는 common 이다.
+       시스템 관리 그룹은 여기 적지 않는다 — 그룹으로 판정한다(메뉴가 늘어도 자동). */
+    const MENU_PROFILE = {
+        /* 기준값·연계 설정 */
+        'base-bulk':     'settings',   /* 여러 건을 한 번에 바꾸는 대량 등록 */
+        'fac-sync':      'settings',   /* FMS 수신·전송·재처리 */
+        'fac-settings':  'settings',   /* 인증·수신주기·필드 소유권 */
+        'evl-settings':  'settings',   /* 평가 항목 마스터·배점 */
+        'bgt-settings':  'settings',   /* 예산 편성 기준 */
+        /* 주관부서 조회 전용 */
+        'edu-approval':  'ownerView',
+        /* 개인정보 */
+        'sbm-health':    'personal',   /* 건강검진 대상자·결과 */
+        'edu-workers':   'personal',   /* 근로자 명단(이름·채용일·고용형태) */
+        /* 전 직원 등록 */
+        'opn-voice':     'openWrite',
+    };
+
+    /* 메뉴 1건의 기본 권한 프리셋 — 최초 시드와 신규 메뉴 병합이 같은 규칙을 쓴다.
+     * 병합에서 이 함수를 쓰지 않으면 NAV 에 추가된 신규 메뉴가 권한 0건으로 들어가
+     * 기존 스토어를 가진 브라우저에서만 '미설정'으로 보인다.
+     * 새 메뉴의 기본값이 common 인 것은 의도다 — 모르는 화면을 조용히 잠그는 것보다
+     * 열어 두고 분류를 요구하는 편이 눈에 띈다(잠그면 "왜 안 보이지"를 물을 곳이 없다). */
+    function defaultPerms(m) {
+        if (m.groupId === 'admin') return PROFILE.adminOnly.slice();
+        const p = PROFILE[MENU_PROFILE[m.id] || 'common'] || PROFILE.common;
+        return p.map(a => Object.assign({}, a));
+    }
+    /* 이 메뉴에 적용된 프로필 이름 — 메뉴 관리 화면·검증에서 쓴다 */
+    function menuProfile(menuId) {
+        const m = menuById(menuId);
+        if (m && m.groupId === 'admin') return 'adminOnly';
+        return MENU_PROFILE[menuId] || 'common';
     }
 
     function seed() {
-        /* ── 6등급 ──
+        /* ── 7등급 ──
          *   members: [{kind:'user', id:uid}] 또는 [{kind:'dept', id:nodeId, includeSub}]
          *   fullAccess: 전체 권한 플래그 / autoAll: 구성원 자동(전 직원) / protected: 보호 등급 */
         const managerMembers = PEOPLE
@@ -125,23 +209,41 @@
               protected: false, fullAccess: false, autoAll: false, dataScope: 'DEPT', members: managerMembers },
             { id: 'team', name: '전담부서(중대재해 총괄)', desc: '재난안전과 중대재해팀 — 전 업무 메뉴 등록·수정 총괄.',
               protected: false, fullAccess: false, autoAll: false, dataScope: 'ALL', members: [{ kind: 'dept', id: 'jjt', includeSub: true }] },
+            /* 부서 안전보건 담당자 — 2026-08-31 신설.
+               종전 6등급에는 **각 과의 실무자가 들어갈 자리가 없었다.** 물순환사업소 주무관은
+               과장도 재난안전과도 아니라 '일반 공무원'이 되고, 그 등급은 의견청취 말고는 전부
+               조회 전용이다. 그런데 실제로는 그 사람이 자기 부서 위험성평가를 등록·제출한다 —
+               등급표와 화면 동작이 어긋나 있었다. 이 등급이 그 자리다.
+               ※ 구성원은 **예시 명단**이다(시연 페르소나 2인). 부서별 안전보건 담당자 지정은
+                 담양군이 정할 자료라 지어내 채우지 않는다 — 명단을 받으면 통째로 교체한다
+                 (팀장 시드와 같은 취급). 지금은 나머지 주무관이 '일반 공무원'으로 남아
+                 **명단 미확보가 화면에 드러난다.** */
+            { id: 'dept_staff', name: '부서 안전보건 담당자', desc: '각 과·사업소·읍면의 안전보건 실무 담당자 — 소속 부서 업무 등록·수정. 구성원은 예시 명단이며 담양군 지정 명단으로 교체 대상.',
+              protected: false, fullAccess: false, autoAll: false, dataScope: 'DEPT', members: [
+                  { kind: 'user', id: uidOf('하정수') }, { kind: 'user', id: uidOf('정환경') },
+              ] },
             { id: 'staff', name: '일반 공무원', desc: 'SSO 로그인 전 직원 — 대시보드·통계 등 열람 + 의견청취 등록.',
               protected: false, fullAccess: false, autoAll: true, dataScope: 'SELF', members: [] },
         ];
 
         /* ── 메뉴 권한 프리셋 ──
-         *   시스템 관리자(fullAccess)는 개별 지정 없음(자동). 시스템 관리 하위 6개 = 지정 없음(관리자 전용).
-         *   base-bulk = 프리셋 제외(미설정 배지 확인). */
+         *   메뉴마다 §3-1 의 프로필을 적용한다. 시스템 관리자(fullAccess)는 개별 지정 없음(자동).
+         *   ※ 종전에는 base-bulk 를 프리셋에서 빼 '미설정 배지'의 표본으로 삼았다. 대량 등록은
+         *     실제로 누군가 쓰는 화면이라 '아무도 못 보는 상태'로 두는 것이 표본으로 부적절해
+         *     settings 프로필로 옮겼다. 미설정 배지는 메뉴 관리에서 지정을 모두 지우면 그대로
+         *     확인된다(관리자가 실제로 하는 동작이라 표본을 위해 메뉴를 잠가 둘 이유가 없다). */
         const menuPerms = {};
         const menuUsage = {};
         middleMenus().forEach(m => {
             menuUsage[m.id] = true;
             menuPerms[m.id] = defaultPerms(m);
         });
-        /* 개별 지정 3건 (부서 1 · 사용자 2) */
+        /* 개별 지정 2건 (부서 1 · 사용자 1) — 프로필로 표현되지 않는 예외만 남긴다.
+           ※ 구 'sbm-hazard'(유해·위험요인 관리) 지정 줄을 제거했다 — 그 메뉴는 2026-07-21
+             재설계로 폐지돼 메뉴 정의에 없다. 있지도 않은 키에 권한을 넣는 줄은 아무 동작도
+             하지 않으면서 "그 화면에 개별 권한이 있다"고 읽히게 만든다. */
         /* 안전보건교육 재설계 v1(2026-07-20): sbm-edu → edu 그룹 분리, 대표 화면 edu-status 에 개별 권한 이관 */
         if (menuPerms['edu-status']) menuPerms['edu-status'].push({ kind: 'dept', id: 'health', includeSub: false, view: true, edit: true });
-        if (menuPerms['sbm-hazard']) menuPerms['sbm-hazard'].push({ kind: 'user', id: uidOf('정환경'), view: true, edit: true });
         if (menuPerms['sbm-contract']) menuPerms['sbm-contract'].push({ kind: 'user', id: uidOf('최회계'), view: true, edit: true });
 
         const d = { roles, menuPerms, menuUsage, v: 1 };
@@ -153,7 +255,7 @@
     if (!_data || !_data.roles || !_data.menuPerms || !_data.menuUsage) { _data = seed(); }
     else {
         /* 구버전 저장값 보강 — 화면마다 범위를 다시 묻지 않도록 등급 기본값을 한 번 이관한다. */
-        const scopeById = { sys: 'ALL', mayor: 'ALL', exec: 'JURISDICTION', manager: 'DEPT', team: 'ALL', staff: 'SELF' };
+        const scopeById = { sys: 'ALL', mayor: 'ALL', exec: 'JURISDICTION', manager: 'DEPT', team: 'ALL', dept_staff: 'DEPT', staff: 'SELF' };
         _data.roles.forEach(r => { if (!r.dataScope) r.dataScope = scopeById[r.id] || 'SELF'; });
         /* 시드 병합: NAV에 있는데 스토어에 없는 메뉴 키 보강 (신규 메뉴 대비).
          * 최초 시드와 같은 defaultPerms 를 써야 신규 메뉴가 '권한 미설정'으로 보이지 않는다. */
@@ -297,7 +399,9 @@
         return result;
     }
     /* 사용자 목록 '권한' 컬럼 산출값 — 대표 등급 1개 (없으면 메뉴별 지정 / 일반 공무원) */
-    const PRIMARY_ORDER = ['sys', 'mayor', 'exec', 'team', 'manager'];
+    /* 위에서부터 먼저 잡히는 등급이 대표로 표시된다. 부서 담당자는 과장·팀장보다 아래다.
+       여기 빠뜨리면 부서 담당자가 '일반 공무원'으로 표시돼 등급 신설이 화면에 드러나지 않는다. */
+    const PRIMARY_ORDER = ['sys', 'mayor', 'exec', 'team', 'manager', 'dept_staff'];
     function primaryRole(uid) {
         for (const id of PRIMARY_ORDER) { const r = roleById(id); if (r && userInRole(uid, r)) return r.name; }
         const hasDirect = middleMenus().some(m => getAssignments(m.id).some(a =>
@@ -599,7 +703,7 @@
         data, save, resetDemo,
         roles, roleById, roleMemberUids, roleMemberCountLabel, userInRole,
         getAssignments, setAssignments, getUsage, setUsage,
-        menuStatus, assignmentSummary, roleAppliedMenus, roleAppliedCount,
+        menuStatus, menuProfile, PROFILE, MENU_PROFILE, assignmentSummary, roleAppliedMenus, roleAppliedCount,
         removeRole, saveRole, addRole, assignLabel,
         effectiveForUser, primaryRole,
         openOrgPicker,

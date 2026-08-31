@@ -68,11 +68,22 @@
         '전자문서': 'doc-detail.html?id=V2-013&v=2',
         '프로그램': 'doc-detail.html?id=V2-001&v=2',
     };
+    /* 대메뉴 → 그 축의 첫 화면. 키는 정의서 인벤토리의 대메뉴 이름과 같아야 한다
+       (2026-08-28 정보구조 재편 후 11축). 종전에는 6개만 있어 나머지 축의 화면이
+       전부 폴백 없이 떨어졌고, '업무문서'처럼 없어진 대메뉴가 남아 있었다. */
     var MENU_FALLBACK = {
-        '대시보드': 'index.html', '기본정보': 'base-targets.html', '위험성평가': 'rsk-list.html',
+        '대시보드': 'index.html',
+        '기본정보': 'base-targets.html',
         '안전보건관리체계': 'menu.html?m=policy',
-        '업무문서': 'docs-preset.html', '통계·보고': 'stats.html', '시스템 관리': 'admin-users.html',
-        '전자문서(공통)': 'docs-preset.html', '공통/전역': 'index.html',
+        '위험성평가': 'rsk-list.html',
+        '안전보건교육': 'edu-reg.html',
+        '작업환경·건강': 'work-env.html',
+        '의견청취': 'menu.html?m=opinion&sub=voice',
+        '인력·예산': 'evl-eval.html',
+        '업무 관리': 'cmp-status.html',
+        '통계·보고': 'stats.html',
+        '시스템 관리': 'admin-users.html',
+        '전자문서(공통)': 'cmp-docs.html', '공통/전역': 'index.html',
     };
     var SCR_OVERRIDE = { 'SCR-EDOC-010': 'docs-archive.html' };
 

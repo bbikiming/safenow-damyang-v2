@@ -30,7 +30,7 @@
         var raw = new URLSearchParams(location.search).get('back') || '';
         var U = global.DOCUP;
         var t = (U && U.backTarget) ? U.backTarget(raw) : null;
-        return t || { href: 'docs-preset.html', label: '업무 목록' };
+        return t || { href: 'cmp-docs.html', label: '문서 목록' };
     }
     function backHref() { return backTarget().href; }
 
@@ -49,7 +49,7 @@
         document.title = doc.title + ' - 담양군 중대재해예방통합관리시스템 v2';
         var back = backTarget();
         bc.innerHTML =
-            '<a href="docs-preset.html">업무문서</a>' +
+            '<a href="cmp-status.html">업무 관리</a>' +
             '<span class="dd-bc-sep">›</span><a href="' + esc(back.href) + '">' + esc(back.label) + '</a>' +
             '<span class="dd-bc-sep">›</span><span class="dd-bc-cur">' + esc(doc.title) + '</span>';
         main.innerHTML = head() + body();
@@ -156,15 +156,15 @@
         Object.keys(byItem).map(function (iid) {
             var it = D().item(iid);
             return '<tr class="dd-item-row"><td colspan="4">' +
-                    '<a href="docs-exec.html?item=' + esc(iid) + '&year=' + d.year + '">' + esc(it.id) + ' · ' + esc(it.name) + '</a></td></tr>' +
+                    '<a href="cmp-status.html?item=' + esc(iid) + '&year=' + d.year + '">' + esc(it.id) + ' · ' + esc(it.name) + '</a></td></tr>' +
                 byItem[iid].map(function (s) {
                     var code = D().statusOfStage(s.id, d.year);
                     return '<tr><td class="dd-stage-name">' + esc(s.id) + ' ' + esc(s.name) + '</td>' +
                         '<td>' + esc(s.opCycle || s.timing || '—') + '</td>' +
                         '<td><span class="chip-status chip-sm ' + V().toneOf(D().statusLabel(code)) + '">' +
                             esc(D().statusLabel(code)) + '</span></td>' +
-                        '<td class="col-action"><a class="btn btn-sm btn-outline" href="docs-exec.html?stage=' +
-                            esc(s.id) + '&year=' + d.year + '">이행 목록 →</a></td></tr>';
+                        '<td class="col-action"><a class="btn btn-sm btn-outline" href="cmp-status.html?stage=' +
+                            esc(s.id) + '&year=' + d.year + '">이행 관리 →</a></td></tr>';
                 }).join('');
         }).join('') + '</tbody></table>';
     }
@@ -272,7 +272,7 @@
        교정 흐름으로 이 문서를 집어 보낸다. 버튼이 아무 데도 안 가면 그게 막다른 길이다. */
     function remap() {
         if (doc.origin === 'ledger') {
-            location.href = 'docs-preset.html?mapping=unmapped&q=' + encodeURIComponent(doc.title);
+            location.href = 'cmp-docs.html?q=' + encodeURIComponent(doc.title);
             return;
         }
         V().toast('업무단계 수정은 업무 업로드 마법사에서 다시 등록해 주세요 — 이미 붙은 확인 기록과 어긋나지 않게 하기 위해서입니다.');

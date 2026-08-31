@@ -13,7 +13,7 @@
 | 화면 ID | SCR-SBM-001 |
 | 화면명 | 경영방침 |
 | URL 경로 | menu.html?m=policy |
-| 상위 메뉴 | 안전보건관리체계 > 경영방침 |
+| 상위 메뉴 | 안전보건관리체계 > 중대산업·시민재해 계획 > 경영방침 |
 | 화면 유형 | 목록 · 등록(제정/개정/최초) · 상세 |
 | 구성 파일 | menu.html, menu.js(policy 모듈), edoc.js / edoc-templates.js(이행점검 F5·법령사전), common.js(모달·토스트) |
 | 관련 SFR | SFR-005 (안전·보건 목표와 경영방침) |

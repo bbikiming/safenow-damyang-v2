@@ -827,8 +827,8 @@
         if (!pubs.length) {
             return '<div class="mw-empty"><b>' + esc(deptName) + '</b> 부서로 발행된 업무가 없습니다.<br>' +
                 '<span style="color:var(--text-gray);">법으로 해야 하는 일 중 아직 서류가 없는 것은 <b>이행 목록</b>에서 확인하고 올릴 수 있습니다.</span><br><br>' +
-                '<a class="btn btn-sm btn-primary" href="docs-exec.html">이행 목록 열기 ' + ICO.arrow + '</a> ' +
-                '<a class="btn btn-sm btn-outline" href="docs-preset.html">업무 목록 열기 ' + ICO.arrow + '</a></div>';
+                '<a class="btn btn-sm btn-primary" href="cmp-status.html">이행 관리 열기 ' + ICO.arrow + '</a> ' +
+                '<a class="btn btn-sm btn-outline" href="cmp-docs.html">문서 목록 열기 ' + ICO.arrow + '</a></div>';
         }
         var counts = { all: 0, '첨부파일': 0, '전자문서': 0, '프로그램': 0 };
         pubs.forEach(function (d) { if (d.status !== '완료') { counts.all++; counts[d.processType] = (counts[d.processType] || 0) + 1; } });
@@ -852,8 +852,8 @@
                     '<option value="진행"'   + (state.pubStatus === '진행' ? ' selected' : '') + '>진행</option>' +
                     '<option value=""'       + (state.pubStatus === '' ? ' selected' : '') + '>완료 포함 전체</option>' +
                 '</select>' +
-                '<a class="btn btn-sm btn-outline" href="docs-exec.html" style="margin-left:auto;">이행 목록 ' + ICO.arrow + '</a>' +
-            '<a class="btn btn-sm btn-outline" href="docs-preset.html">업무 목록 ' + ICO.arrow + '</a>' +
+                '<a class="btn btn-sm btn-outline" href="cmp-status.html" style="margin-left:auto;">이행 관리 ' + ICO.arrow + '</a>' +
+            '<a class="btn btn-sm btn-outline" href="cmp-docs.html">문서 목록 ' + ICO.arrow + '</a>' +
             '</div>';
 
         var view = pubFiltered(pubs);
@@ -861,7 +861,7 @@
         if (!view.length) rows = '<div class="mw-empty">조건에 맞는 발행 업무가 없습니다.</div>';
 
         var note =
-            '<div class="mw-pub-note">업무 목록에서 <b>' + esc(deptName) + '</b>로 발행된 담당 문서입니다. ' +
+            '<div class="mw-pub-note">문서 목록에서 <b>' + esc(deptName) + '</b>로 발행된 담당 문서입니다. ' +
             '<b>바로 첨부</b>형은 여기서 파일을 올리면 끝나고, <b>양식 작성</b>·<b>메뉴 진행</b>형은 해당 화면으로 이동해 처리합니다.</div>';
 
         return note + filters + '<div class="mw-group"><div class="mw-group-body">' + rows + '</div></div>';
@@ -884,13 +884,13 @@
                 ICO.clip + ' 파일 첨부</button>';
             cardAct = ' onclick="MYWORK.cardAttach(\'' + d.id + '\',\'pub\',event)"';
         } else if (d.processType === '전자문서') {
-            destChip = '<span class="mw-dest">' + ICO.arrow + ' 업무 목록에서 작성</span>';
-            action = '<a class="btn btn-outline btn-sm" href="docs-preset.html">양식 작성 ' + ICO.arrow + '</a>';
-            cardAct = ' onclick="MYWORK.go(\'docs-preset.html\',event)"';
+            destChip = '<span class="mw-dest">' + ICO.arrow + ' 문서 목록에서 작성</span>';
+            action = '<a class="btn btn-outline btn-sm" href="cmp-docs.html">양식 작성 ' + ICO.arrow + '</a>';
+            cardAct = ' onclick="MYWORK.go(\'cmp-docs.html\',event)"';
         } else {
             var menu = (global.DY_MENUS_V2 || {})[d.menuKey];
-            var label = menu ? menu.label : '업무 목록';
-            var href = MENU_HREF_V2[d.menuKey] || 'docs-preset.html';
+            var label = menu ? menu.label : '문서 목록';
+            var href = MENU_HREF_V2[d.menuKey] || 'cmp-docs.html';
             destChip = '<span class="mw-dest">' + ICO.arrow + ' ' + esc(label) + '에서 진행</span>';
             action = '<a class="btn btn-outline btn-sm" href="' + esc(href) + '">진행하러 가기 ' + ICO.arrow + '</a>';
             cardAct = ' onclick="MYWORK.go(\'' + esc(href) + '\',event)"';

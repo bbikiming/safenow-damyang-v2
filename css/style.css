@@ -4381,11 +4381,15 @@ select.form-select { height: var(--ctl-lg); }
   }
   .dy-gnb {
     padding: 0 24px;
-    gap: 8px;
+    /* gap 8 → 6 · item 좌우 13 → 10 (2026-08-28)
+       1뎁스가 11개로 줄면서 1280px 이상은 한 줄에 다 들어오는데, 1024~1080px 대만
+       53px 넘쳐 스크롤 페이드가 남았다. 이 대역에서만 쓰는 블록이므로 여기만 조인다.
+       5·7·9·11·13px 은 스케일 밖이라 최근접 토큰으로 수렴시킨다(§6 간격 토큰). */
+    gap: var(--sp-1-5, 6px);
   }
   .dy-gnb-item {
     font-size: 14px;
-    padding: 6px 13px;
+    padding: 6px var(--sp-2-5, 10px);
   }
   .dy-main {
     padding: 24px;

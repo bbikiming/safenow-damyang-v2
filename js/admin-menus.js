@@ -158,6 +158,26 @@
     }
 
     /* 중메뉴 설정 패널 */
+
+    /* 메뉴 성격(프로필) — 초기 권한이 어디서 왔는지 한 줄로 밝힌다.
+       보이지 않으면 관리자는 "왜 이 메뉴만 지정이 둘뿐이지"를 알 수 없다.
+       화면 어휘로 낸다 — 내부 이름(settings·ownerView…)을 그대로 쓰지 않는다. */
+    const PROFILE_LABEL = {
+        common:    { t: '업무 기본',        d: '전 직원 조회 · 담당자 등록' },
+        openWrite: { t: '전 직원 등록',      d: '종사자 본인이 올리는 축' },
+        settings:  { t: '기준값·연계 설정',   d: '주관부서 소관 — 바꾸면 전 부서 화면이 함께 움직인다' },
+        ownerView: { t: '주관부서 조회',      d: '주관부서만 보는 조회 전용' },
+        personal:  { t: '개인정보',          d: '이름·채용일·건강 결과가 담긴 명단' },
+        adminOnly: { t: '관리자 전용',        d: '지정 없음 — 시스템 관리자만 본다' },
+    };
+    function profileRow(id) {
+        const k = A.menuProfile ? A.menuProfile(id) : '';
+        const p = PROFILE_LABEL[k];
+        if (!p) return '';
+        return infoRow('메뉴 성격',
+            '<span class="chip-mini wt">' + esc(p.t) + '</span> ' +
+            '<span style="color:var(--text-gray);">' + esc(p.d) + '</span>');
+    }
     function menuPanel(id) {
         const m = A.menuById(id);
         if (!m) return '';
@@ -166,6 +186,7 @@
             '<div class="card-body"><div class="admm-info">' +
                 infoRow('메뉴명', esc(m.label)) +
                 infoRow('대메뉴', esc(m.groupLabel)) +
+                profileRow(id) +
                 infoRow('경로', '<code>' + esc(m.href || '-') + '</code>') +
                 infoRow('연결 화면 코드', m.screen ? '<span class="chip-mini wt">' + esc(m.screen) + '</span>' : '-') +
                 '<span class="admm-info-k">사용 여부</span><span class="admm-info-v">' +

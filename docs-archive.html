@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="./css/style.css">
     <link rel="stylesheet" href="./css/v2.css">
 </head>
-<body data-dy-page="docs-archive" data-page-title="기준문서함" data-page-subtitle="업무문서 > 기준문서함 — V2 분류가 확정된 첨부·보관 문서 조회 · 버전 이력 · 다중 첨부">
+<body data-dy-page="docs-archive" data-page-title="기준문서함" data-page-subtitle="업무 관리 > 기준문서함 — V2 분류가 확정된 첨부·보관 문서 조회 · 버전 이력 · 다중 첨부">
     <main>
         <div id="archive-stats" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin-bottom:16px;"></div>
 
@@ -135,7 +135,7 @@
                 document.getElementById('archive-tbody').innerHTML = shown.map(d =>
                     '<tr>' +
                     '<td style="font-weight:600; max-width:420px;">' + V.esc(d.name) + '</td>' +
-                    '<td><a href="docs-preset.html?ver=v2&menu=' + d.menuKey + '" class="chip-mini pdca" style="text-decoration:none;">' + V.esc(d.daemenu) + '</a></td>' +
+                    '<td><a href="cmp-docs.html?menu=' + d.menuKey + '" class="chip-mini pdca" style="text-decoration:none;">' + V.esc(d.daemenu) + '</a></td>' +
                     '<td><span class="chip-mini wt" title="' + V.esc(d.legalBasis || '근거 없음') + '">' + basisGroup(d) + '</span></td>' +
                     '<td>' + flags(d) + '</td>' +
                     '<td>' + V.esc(d.version) + '</td>' +

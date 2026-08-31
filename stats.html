@@ -174,7 +174,7 @@
                     const docs = list.filter(d => d.menuKey === k);
                     const c = s => docs.filter(d => d.status === s).length;
                     const rate = docs.length ? Math.round(c('완료') / docs.length * 100) : null;
-                    return '<tr><td style="font-weight:600;"><a href="docs-preset.html?ver=v2&menu=' + k + '" style="color:var(--main-dark);">' + MENUS[k].label + '</a></td>' +
+                    return '<tr><td style="font-weight:600;"><a href="cmp-docs.html?menu=' + k + '" style="color:var(--main-dark);">' + MENUS[k].label + '</a></td>' +
                         '<td>' + docs.length + '</td><td>' + c('완료') + '</td><td>' + c('진행') + '</td><td>' + c('미시행') + '</td>' +
                         '<td><b style="color:var(--main-dark);">' + (rate == null ? '대상 없음' : rate + '%') + '</b></td></tr>';
                 }).join('');

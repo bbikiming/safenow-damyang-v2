@@ -66,53 +66,42 @@
     ];
     const linkTarget = v => LINK_TARGETS.find(t => t.v === v) || null;
 
-    /* 프로그램 연결: 메뉴(GNB) → 뎁스(화면) 2단계 */
-    const NAV_TREE = [
-        { menu: '대시보드', depths: [{ label: '대시보드', href: 'index.html' }] },
-        { menu: '기본정보', depths: [{ label: '평가대상 관리', href: 'base-targets.html' }, { label: '일괄 등록', href: 'base-bulk.html' }] },
-        { menu: '안전보건관리체계', depths: [
-            { label: '위험성평가', href: 'rsk-list.html' },
-            { label: '경영방침', href: 'menu.html?m=policy' },
-            { label: '조직', href: 'menu.html?m=org' },
-            { label: '의견청취', href: 'menu.html?m=opinion' },
-            { label: '도급관리', href: 'menu.html?m=contract' },
-            { label: '개선조치', href: 'rsk-imp.html' },
-            { label: '이행관리', href: 'menu.html?m=comply' },
-        ] },
-        /* 안전보건교육 — 재설계 v1(2026-07-20) 별도 GNB 그룹 */
-        { menu: '안전보건교육', depths: [
-            { label: '정기교육 (현업근로자)', href: 'edu-reg.html' },
-            { label: '채용시교육 (현업근로자)', href: 'edu-hire.html' },
-            { label: '기타 교육 (현업근로자)', href: 'edu-etc.html' },
-            { label: '관리감독자 정기교육', href: 'edu-sup.html' },
-            { label: '관리감독자 기타 교육', href: 'edu-sup-etc.html' },
-            { label: '이수현황', href: 'edu-status.html' },
-            { label: '근로자 명단 관리', href: 'edu-workers.html' },
-        ] },
-        { menu: '업무문서', depths: [
-            { label: '기준문서함', href: 'docs-archive.html' },
-            { label: '업무 목록', href: 'docs-preset.html' },
-            { label: '이행 목록', href: 'docs-exec.html' },
-        ] },
-        { menu: '통계·보고', depths: [
-            { label: '통계', href: 'stats.html' },
-            { label: '보고서', href: 'reports.html' },
-            { label: '정보센터', href: 'info-center.html' },
-        ] },
-        { menu: '시스템 관리', depths: [
-            { label: '사용자 관리', href: 'admin-users.html' },
-            { label: '알림 설정', href: 'admin-notify.html' },
-            { label: '프리셋 양식 관리', href: 'admin-presets.html' },
-            { label: '연계 관리', href: 'admin-integration.html' },
-        ] },
-    ];
-    const NAV_DEFAULT = 2; /* 안전보건관리체계 */
+    /* 프로그램 연결: 메뉴(GNB) → 뎁스(화면) 2단계
+     * -------------------------------------------------------------------------
+     * **메뉴 정의에서 파생한다 — 손으로 유지하는 사본을 두지 않는다.**
+     * 종전에는 이 목록을 직접 적어 두어, 메뉴가 개편될 때마다 여기만 옛 이름으로
+     * 남았다. 2026-08-31 확인 시점에 11개 대메뉴 중 **4개(위험성평가·작업환경·건강·
+     * 의견청취·인력·예산)가 통째로 빠져** 그 메뉴에 걸리는 문서를 아예 고를 수 없었다.
+     *
+     * · 메뉴에서 뺀 화면(hidden)은 넣지 않는다 — 새 문서를 은퇴 화면에 걸 이유가 없다.
+     * · 구분 머리글이 있는 항목은 «머리글 > 항목»으로 낸다. 안전보건교육의 '정기교육'
+     *   처럼 같은 이름이 두 벌 있는 축에서 어느 쪽인지 구분되지 않기 때문이다.
+     * · 한 번 만든 배열을 재사용한다 — 선택 상태를 인덱스로 들고 있어, 다시 만들면
+     *   고른 자리가 어긋난다.
+     */
+    let _navTree = null;
+    function navTree() {
+        if (_navTree) return _navTree;
+        const NAV = (window.DYLayout && window.DYLayout.NAV) || [];
+        _navTree = NAV.map(g => ({
+            menu: g.label,
+            gid: g.id,
+            depths: (g.items || []).filter(it => !it.hidden).map(it => ({
+                label: (it.section ? it.section + ' > ' : '') + it.label,
+                href: it.href || '',
+            })),
+        })).filter(g => g.depths.length);
+        return _navTree;
+    }
+    /* 기본 선택 — 인덱스를 박지 않고 그룹 id 로 찾는다(대메뉴 순서가 바뀌어도 따라온다) */
+    function navDefault() { const i = navTree().findIndex(g => g.gid === 'sbm'); return i < 0 ? 0 : i; }
     function findNav(href) {
-        for (let mi = 0; mi < NAV_TREE.length; mi++) {
-            const di = NAV_TREE[mi].depths.findIndex(d => d.href === href);
+        const T = navTree();
+        for (let mi = 0; mi < T.length; mi++) {
+            const di = T[mi].depths.findIndex(d => d.href === href);
             if (di >= 0) return { mi, di };
         }
-        return { mi: NAV_DEFAULT, di: 0 };
+        return { mi: navDefault(), di: 0 };
     }
 
     /* ── 스토어 (사용자 등록 문서) ── */
@@ -143,7 +132,7 @@
             menu: mk, set: firstSet, pdca: 'P', pt: '첨부파일',
             f: { name: '', dept: '', assignee: '', cycle: '연간', applyCond: '상시', legalBasis: '', docRole: '계획', version: 'v1.0', note: '', status: '미시행' },
             formRef: formOptions()[0],
-            navMenuIdx: NAV_DEFAULT, navDepthIdx: 0,
+            navMenuIdx: navDefault(), navDepthIdx: 0,
             files: [], retention: '5년',
         };
     }
@@ -277,9 +266,9 @@
 
     /* 프로그램: 담당 + 어떤 메뉴의 어떤 뎁스로 넘길지 선택 (문서명은 화면 이름으로 자동) */
     function step3Program() {
-        const depths = NAV_TREE[S.navMenuIdx].depths;
+        const depths = (navTree()[S.navMenuIdx] || navTree()[0]).depths;
         return '<p class="reg-lab">연결 메뉴 <span class="reg-req">*</span></p>' +
-            '<select id="reg-navmenu">' + NAV_TREE.map((n, i) =>
+            '<select id="reg-navmenu">' + navTree().map((n, i) =>
                 '<option value="' + i + '"' + (i === S.navMenuIdx ? ' selected' : '') + '>' + esc(n.menu) + '</option>').join('') + '</select>' +
             '<p class="reg-lab">연결 뎁스(화면) <span class="reg-req">*</span></p>' +
             '<select id="reg-navdepth">' + depths.map((d, i) =>
@@ -340,7 +329,7 @@
     }
 
     function progNav() {
-        const m = NAV_TREE[S.navMenuIdx] || NAV_TREE[0];
+        const m = navTree()[S.navMenuIdx] || navTree()[0];
         const d = m.depths[S.navDepthIdx] || m.depths[0];
         return { menu: m.menu, label: d.label, href: d.href };
     }
