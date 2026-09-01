@@ -7,7 +7,7 @@
   "type": "대시보드",
   "route": "index.html",
   "components": "layout.js, common.js, data.js",
-  "existingSfr": "SFR-020·017",
+  "existingSfr": "SFR-020",
   "defFile": "SCR-DASH-001_통합현황대시보드.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/index.html",
   "unresolvedCount": 0
@@ -111,7 +111,7 @@
   "type": "목록",
   "route": "fac-risk.html",
   "components": "layout.js, common.js, facil-data.js, facil.js",
-  "existingSfr": "SFR-002·007",
+  "existingSfr": "SFR-002·016",
   "defFile": "SCR-FAC-003_시설물위험도.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/fac-risk.html",
   "unresolvedCount": 6
@@ -163,7 +163,7 @@
   "type": "목록",
   "route": "menu.html?m=org",
   "components": "menu.html, menu.js, common.js, edoc.js",
-  "existingSfr": "SFR-006·009·010",
+  "existingSfr": "SFR-006·010",
   "defFile": "SCR-SBM-002_조직.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/menu.html",
   "unresolvedCount": 4
@@ -189,7 +189,7 @@
   "type": "목록",
   "route": "menu.html?m=comply",
   "components": "menu.html, menu.js, common.js, edoc.js",
-  "existingSfr": "SFR-008·012·014",
+  "existingSfr": "SFR-014",
   "defFile": "SCR-SBM-006_이행관리.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/menu.html",
   "unresolvedCount": 5
@@ -215,7 +215,7 @@
   "type": "목록",
   "route": "rsk-list.html",
   "components": "layout.js, rsk-list.js, rsk-data.js, rsk-kosha.js",
-  "existingSfr": "SFR-007",
+  "existingSfr": "SFR-007·003",
   "defFile": "SCR-RISK-001_정기위험성평가.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/rsk-list.html",
   "unresolvedCount": 0
@@ -254,7 +254,7 @@
   "type": "목록",
   "route": "rsk-occ.html",
   "components": "layout.js, rsk-occ.js, rsk-data.js, org-pick.js",
-  "existingSfr": "SFR-007",
+  "existingSfr": "SFR-007·003",
   "defFile": "SCR-RISK-004_수시위험성평가.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/rsk-occ.html",
   "unresolvedCount": 0
@@ -293,7 +293,7 @@
   "type": "목록",
   "route": "edu-reg.html",
   "components": "layout.js, edu-reg.js, edu-form.js, edu-data.js, doc-flow.js, edu-doc.js, edu-filter.js, edu-tour.js, org-pick.js",
-  "existingSfr": "SFR-004·010",
+  "existingSfr": "SFR-008·004",
   "defFile": "SCR-EDU-001_정기교육.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/edu-reg.html",
   "unresolvedCount": 0
@@ -306,7 +306,7 @@
   "type": "목록",
   "route": "edu-hire.html",
   "components": "layout.js, edu-hire.js, edu-form.js, edu-data.js, doc-flow.js, edu-doc.js, edu-filter.js, edu-tour.js, org-pick.js",
-  "existingSfr": "SFR-004",
+  "existingSfr": "SFR-008·004",
   "defFile": "SCR-EDU-002_채용시교육.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/edu-hire.html",
   "unresolvedCount": 0
@@ -319,7 +319,7 @@
   "type": "목록",
   "route": "edu-etc.html",
   "components": "layout.js, edu-etc.js, edu-form.js, edu-data.js, doc-flow.js, edu-doc.js, edu-filter.js, edu-tour.js, org-pick.js",
-  "existingSfr": "SFR-004",
+  "existingSfr": "SFR-008·004",
   "defFile": "SCR-EDU-003_기타교육.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/edu-etc.html",
   "unresolvedCount": 0
@@ -345,7 +345,7 @@
   "type": "목록",
   "route": "edu-status.html",
   "components": "layout.js, edu-status.js, edu-data.js, doc-flow.js, edu-doc.js, edu-filter.js, edu-tour.js, org-pick.js",
-  "existingSfr": "SFR-004·010",
+  "existingSfr": "SFR-008·004",
   "defFile": "SCR-EDU-005_이수현황.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/edu-status.html",
   "unresolvedCount": 0
@@ -358,7 +358,7 @@
   "type": "목록",
   "route": "edu-workers.html",
   "components": "layout.js, edu-workers.js, edu-data.js, doc-flow.js, edu-doc.js, edu-filter.js, edu-tour.js, org-pick.js",
-  "existingSfr": "SFR-004",
+  "existingSfr": "SFR-008",
   "defFile": "SCR-EDU-006_근로자명단관리.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/edu-workers.html",
   "unresolvedCount": 0
@@ -371,7 +371,7 @@
   "type": "목록",
   "route": "edu-approval.html",
   "components": "layout.js, edu-apv-log.js, edu-data.js, doc-flow.js, edu-doc.js, edu-filter.js, edu-tour.js",
-  "existingSfr": "SFR-004",
+  "existingSfr": "(해당 없음)",
   "defFile": "SCR-EDU-007_결재이력.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/edu-approval.html",
   "unresolvedCount": 0
@@ -384,7 +384,7 @@
   "type": "목록",
   "route": "edu-sup.html",
   "components": "layout.js, edu-reg.js, edu-form.js, edu-data.js, doc-flow.js, edu-doc.js, edu-filter.js, edu-tour.js, org-pick.js",
-  "existingSfr": "SFR-004·010",
+  "existingSfr": "SFR-008·004",
   "defFile": "SCR-EDU-001_정기교육.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/edu-sup.html",
   "unresolvedCount": 0
@@ -397,7 +397,7 @@
   "type": "목록",
   "route": "edu-sup-etc.html",
   "components": "layout.js, edu-etc.js, edu-form.js, edu-data.js, doc-flow.js, edu-doc.js, edu-filter.js, edu-tour.js, org-pick.js",
-  "existingSfr": "SFR-004",
+  "existingSfr": "SFR-008·004",
   "defFile": "SCR-EDU-003_기타교육.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/edu-sup-etc.html",
   "unresolvedCount": 0
@@ -410,7 +410,7 @@
   "type": "목록",
   "route": "edu-sup-hire.html",
   "components": "layout.js, edu-hire.js, edu-form.js, edu-data.js, doc-flow.js, edu-doc.js, edu-filter.js, edu-tour.js, org-pick.js",
-  "existingSfr": "SFR-004",
+  "existingSfr": "SFR-008·004",
   "defFile": "SCR-EDU-002_채용시교육.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/edu-sup-hire.html",
   "unresolvedCount": 0
@@ -514,7 +514,7 @@
   "type": "목록·등록",
   "route": "evl-eval.html",
   "components": "evl-eval.html, layout.js, common.js",
-  "existingSfr": "SFR-009 (EVL02-E)",
+  "existingSfr": "(EVL02-E) / SFR-009",
   "defFile": "SCR-EVL-001_인력평가.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/evl-eval.html",
   "unresolvedCount": 9
@@ -527,7 +527,7 @@
   "type": "대시보드",
   "route": "evl-list.html",
   "components": "evl-list.html, layout.js, common.js",
-  "existingSfr": "SFR-009 (EVL01-V)",
+  "existingSfr": "(EVL01-V) / SFR-009",
   "defFile": "SCR-EVL-001_인력평가.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/evl-list.html",
   "unresolvedCount": 9
@@ -540,7 +540,7 @@
   "type": "목록·수정",
   "route": "evl-settings.html",
   "components": "evl-settings.html, layout.js, common.js",
-  "existingSfr": "SFR-009 (EVL03-S)",
+  "existingSfr": "(EVL03-S) / SFR-009",
   "defFile": "SCR-EVL-001_인력평가.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/evl-settings.html",
   "unresolvedCount": 9
@@ -553,7 +553,7 @@
   "type": "목록·상세·등록",
   "route": "bgt-main.html",
   "components": "layout.js, common.js, edoc.js, bgt.js",
-  "existingSfr": "BGT01-V",
+  "existingSfr": "BGT01-V / SFR-008",
   "defFile": "SCR-BGT-001_예산총괄.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/bgt-main.html",
   "unresolvedCount": 0
@@ -566,7 +566,7 @@
   "type": "설정",
   "route": "bgt-settings.html",
   "components": "layout.js, common.js, edoc.js, bgt.js, bgt-settings.js",
-  "existingSfr": "BGT02-S",
+  "existingSfr": "BGT02-S / SFR-008",
   "defFile": "SCR-BGT-002_예산기준설정.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/bgt-settings.html",
   "unresolvedCount": 0
@@ -696,7 +696,7 @@
   "type": "목록",
   "route": "cmp-status.html",
   "components": "cmp-status.html, cmp-status.js, cmp-core.js, doc-progress.js, doc-taxonomy-data.js, doc-history-data.js, doc-seed-2026.js, doc-pick.js, doc-upload.js, facil-data.js, cmp-dept-docs.js",
-  "existingSfr": "CMP01-T / CMP02-D / CMP04-V",
+  "existingSfr": "CMP01-T / CMP02-D / CMP04-V / SFR-014·004",
   "defFile": "SCR-CMP-001_이행관리.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/cmp-status.html",
   "unresolvedCount": 9
@@ -709,7 +709,7 @@
   "type": "목록",
   "route": "cmp-docs.html",
   "components": "cmp-docs.html, cmp-docs.js, cmp-core.js, doc-progress.js, doc-taxonomy-data.js, doc-history-data.js, doc-seed-2026.js, doc-pick.js, doc-upload.js",
-  "existingSfr": "DOC01-L / DOC02-D",
+  "existingSfr": "DOC01-L / DOC02-D / SFR-014",
   "defFile": "SCR-CMP-002_문서목록.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/cmp-docs.html",
   "unresolvedCount": 4
@@ -761,7 +761,7 @@
   "type": "목록",
   "route": "admin-users.html",
   "components": "layout.js, common.js",
-  "existingSfr": "SFR-006·015",
+  "existingSfr": "SFR-015",
   "defFile": "SCR-ADMIN-001_사용자권한관리.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/admin-users.html",
   "unresolvedCount": 6
@@ -813,7 +813,7 @@
   "type": "설정",
   "route": "admin-menus.html",
   "components": "admin-menus.html, common.js",
-  "existingSfr": "SFR-001·ADM01-S",
+  "existingSfr": "ADM01-S / SFR-001·015",
   "defFile": "SCR-ADMIN-005_메뉴관리.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/admin-menus.html",
   "unresolvedCount": 8
@@ -826,7 +826,7 @@
   "type": "설정",
   "route": "admin-roles.html",
   "components": "admin-roles.html, common.js",
-  "existingSfr": "ADM02-S",
+  "existingSfr": "ADM02-S / SFR-015·001",
   "defFile": "SCR-ADMIN-006_권한관리.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/admin-roles.html",
   "unresolvedCount": 9
@@ -865,7 +865,7 @@
   "type": "목록·등록·수정",
   "route": "admin-sites.html",
   "components": "layout.js, common.js, site-data.js, admin-sites.js",
-  "existingSfr": "ADM03-S",
+  "existingSfr": "ADM03-S / SFR-002",
   "defFile": "SCR-ADMIN-009_사업장관리.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/admin-sites.html",
   "unresolvedCount": 0

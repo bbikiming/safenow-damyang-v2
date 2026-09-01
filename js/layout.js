@@ -552,9 +552,9 @@
         { id: 'base', label: '기본정보', icon: 'building', items: [
             { id: 'base-targets', section: '관리대상',        label: '관리대상 현황',   icon: 'building', href: 'base-targets.html', screen: 'SFR-002' },
             { id: 'base-bulk',    section: '관리대상',        label: '데이터 일괄등록', icon: 'file',     href: 'base-bulk.html',    screen: 'SFR-016' },
-            { id: 'fac-list',     section: '시설물 (FMS 연계)', label: '시설물 대장',   icon: 'list',     href: 'fac-list.html',     screen: 'FAC01-V / SFR-002' },
-            { id: 'fac-risk',     section: '시설물 (FMS 연계)', label: '시설물 위험도', icon: 'alert',    href: 'fac-risk.html',     screen: 'FAC03-V / SFR-002' },
-            { id: 'fac-sync',     section: '시설물 (FMS 연계)', label: 'FMS 연계',      icon: 'external', href: 'fac-sync.html',     screen: 'FAC04-S / SFR-002' },
+            { id: 'fac-list',     section: '시설물 (FMS 연계)', label: '시설물 대장',   icon: 'list',     href: 'fac-list.html',     screen: 'FAC01-V / SFR-002·016' },
+            { id: 'fac-risk',     section: '시설물 (FMS 연계)', label: '시설물 위험도', icon: 'alert',    href: 'fac-risk.html',     screen: 'FAC03-V / SFR-002·016' },
+            { id: 'fac-sync',     section: '시설물 (FMS 연계)', label: 'FMS 연계',      icon: 'external', href: 'fac-sync.html',     screen: 'FAC04-S / SFR-002·016' },
             { id: 'fac-settings', section: '시설물 (FMS 연계)', label: '연계 설정',     icon: 'cog',      href: 'fac-settings.html', screen: 'FAC05-S / SFR-002' },
         ]},
 
@@ -566,8 +566,8 @@
          *     두 카테고리 어느 쪽에도 넣지 않고 남겨 둔 자리다. */
         { id: 'sbm', label: '안전보건관리체계', icon: 'shield', items: [
             { id: 'sbm-policy',   section: '중대산업·시민재해 계획',        label: '경영방침', icon: 'shield', href: 'menu.html?m=policy', screen: 'SFR-005' },
-            { id: 'sbm-org',      section: '중대산업·시민재해 계획',        label: '조직',     icon: 'users',  href: 'menu.html?m=org',    screen: 'SFR-006·009·010' },
-            { id: 'sbm-comply',   section: '중대산업·시민재해 의무 이행점검', label: '이행점검', icon: 'check',  href: 'menu.html?m=comply', screen: 'SFR-008·014' },
+            { id: 'sbm-org',      section: '중대산업·시민재해 계획',        label: '조직',     icon: 'users',  href: 'menu.html?m=org',    screen: 'SFR-006·010' },
+            { id: 'sbm-comply',   section: '중대산업·시민재해 의무 이행점검', label: '이행점검', icon: 'check',  href: 'menu.html?m=comply', screen: 'SFR-014' },
             /* 직속 (section 없음) */
             { id: 'sbm-contract', label: '도급관리', icon: 'building', href: 'menu.html?m=contract', screen: 'SFR-013' },
         ]},
@@ -577,8 +577,8 @@
          *   상세 안에서 부서별로 처리한다. 화면·딥링크는 살아 있으므로 hidden 으로
          *   그룹 소속만 유지한다. 메뉴로 되살리지 말 것. */
         { id: 'risk', label: '위험성평가', icon: 'alert', items: [
-            { id: 'rsk-list', label: '정기 위험성평가', icon: 'alert', href: 'rsk-list.html', screen: 'RSK01-L / SFR-007' },
-            { id: 'rsk-occ',  label: '수시 위험성평가', icon: 'alert', href: 'rsk-occ.html',  screen: 'RSK03-L / SFR-007' },
+            { id: 'rsk-list', label: '정기 위험성평가', icon: 'alert', href: 'rsk-list.html', screen: 'RSK01-L / SFR-007·003' },
+            { id: 'rsk-occ',  label: '수시 위험성평가', icon: 'alert', href: 'rsk-occ.html',  screen: 'RSK03-L / SFR-007·003' },
             /* 폐지 화면 — 메뉴에 없지만 소속 축은 남긴다. 주소로 열렸을 때
                엉뚱한 그룹(대시보드) 사이드바가 붙는 것을 막는다(SCR-COM-003 §6). */
             { id: 'rsk-proc',       hidden: true, label: '작업공정 관리 (폐지)', icon: 'list',  href: 'rsk-proc.html',       screen: 'SCR-PRC-001' },
@@ -592,15 +592,15 @@
          *   (이수현황·근로자 명단·결재 이력)에 2뎁스 이름을 줬다 — 앞 6개가 섹션을
          *   갖는데 뒤 3개만 구분선 아래 떠 있으면 같은 깊이인지 아닌지 읽히지 않는다. */
         { id: 'edu', label: '안전보건교육', icon: 'user', items: [
-            { id: 'edu-reg',      section: '현업근로자',    label: '정기교육',        icon: 'user',  href: 'edu-reg.html',      screen: 'EDU-REG / SFR-004·010' },
-            { id: 'edu-hire',     section: '현업근로자',    label: '채용시교육',      icon: 'user',  href: 'edu-hire.html',     screen: 'EDU-HIRE / SFR-004' },
-            { id: 'edu-etc',      section: '현업근로자',    label: '기타 교육',       icon: 'user',  href: 'edu-etc.html',      screen: 'EDU-ETC / SFR-004' },
-            { id: 'edu-sup',      section: '관리감독자',    label: '정기교육',        icon: 'user',  href: 'edu-sup.html',      screen: 'EDU-SUP / SFR-004' },
-            { id: 'edu-sup-hire', section: '관리감독자',    label: '채용시교육',      icon: 'user',  href: 'edu-sup-hire.html', screen: 'EDU-SUP-HIRE / SFR-004' },
-            { id: 'edu-sup-etc',  section: '관리감독자',    label: '기타 교육',       icon: 'user',  href: 'edu-sup-etc.html',  screen: 'EDU-SUP-ETC / SFR-004' },
-            { id: 'edu-status',   section: '교육 현황·관리', label: '이수현황',        icon: 'chart', href: 'edu-status.html',   screen: 'EDU-STATUS / SFR-004·010' },
-            { id: 'edu-workers',  section: '교육 현황·관리', label: '근로자 명단 관리', icon: 'users', href: 'edu-workers.html',  screen: 'EDU-WORKERS / SFR-004' },
-            { id: 'edu-approval', section: '교육 현황·관리', label: '결재 이력',       icon: 'file',  href: 'edu-approval.html', screen: 'EDU-APV-LOG / SFR-004' },
+            { id: 'edu-reg',      section: '현업근로자',    label: '정기교육',        icon: 'user',  href: 'edu-reg.html',      screen: 'EDU-REG / SFR-008·004' },
+            { id: 'edu-hire',     section: '현업근로자',    label: '채용시교육',      icon: 'user',  href: 'edu-hire.html',     screen: 'EDU-HIRE / SFR-008·004' },
+            { id: 'edu-etc',      section: '현업근로자',    label: '기타 교육',       icon: 'user',  href: 'edu-etc.html',      screen: 'EDU-ETC / SFR-008·004' },
+            { id: 'edu-sup',      section: '관리감독자',    label: '정기교육',        icon: 'user',  href: 'edu-sup.html',      screen: 'EDU-SUP / SFR-008·004' },
+            { id: 'edu-sup-hire', section: '관리감독자',    label: '채용시교육',      icon: 'user',  href: 'edu-sup-hire.html', screen: 'EDU-SUP-HIRE / SFR-008·004' },
+            { id: 'edu-sup-etc',  section: '관리감독자',    label: '기타 교육',       icon: 'user',  href: 'edu-sup-etc.html',  screen: 'EDU-SUP-ETC / SFR-008·004' },
+            { id: 'edu-status',   section: '교육 현황·관리', label: '이수현황',        icon: 'chart', href: 'edu-status.html',   screen: 'EDU-STATUS / SFR-008·004' },
+            { id: 'edu-workers',  section: '교육 현황·관리', label: '근로자 명단 관리', icon: 'users', href: 'edu-workers.html',  screen: 'EDU-WORKERS / SFR-008' },
+            { id: 'edu-approval', section: '교육 현황·관리', label: '결재 이력',       icon: 'file',  href: 'edu-approval.html', screen: 'EDU-APV-LOG' },
         ]},
 
         /* ⑥ 작업환경·건강 — RFP 안전·보건관리 인력/보건조치 (SFR-010)
@@ -612,15 +612,15 @@
          *   ※ 그룹 id 는 흡수하는 쪽(workenv)을 재사용한다. page id 는 sbm-* 유지 —
          *     DYLAW.MAP 이 이 키에 묶여 있다(CLAUDE.md §10). */
         { id: 'workenv', label: '작업환경·건강', icon: 'gauge', items: [
-            { id: 'sbm-workenv', label: '작업환경측정',        icon: 'gauge',    href: 'work-env.html',   screen: 'WEM01-L / SFR-010' },
-            { id: 'sbm-health',  label: '건강검진 (일반·특수)', icon: 'activity', href: 'health-exam.html', screen: 'HEX01-L / SFR-010' },
+            { id: 'sbm-workenv', label: '작업환경측정',        icon: 'gauge',    href: 'work-env.html',   screen: 'WEM01-L' },
+            { id: 'sbm-health',  label: '건강검진 (일반·특수)', icon: 'activity', href: 'health-exam.html', screen: 'HEX01-L' },
         ]},
 
         /* ⑦ 의견청취 — RFP 종사자 의견청취 (SFR-011)
          *   안전보건관리체계로 접지 않는다 — 위 ③의 「2카테고리 유지」가 발주처 지시라
          *   세 번째 카테고리를 만들 수 없다. */
         { id: 'opinion', label: '의견청취', icon: 'bell', items: [
-            { id: 'opn-voice',     label: '의견청취·건의함',   icon: 'bell',  href: 'menu.html?m=opinion&sub=voice',     screen: 'SFR-011' },
+            { id: 'opn-voice',     label: '의견청취·건의함',   icon: 'bell',  href: 'menu.html?m=opinion&sub=voice',     screen: 'SFR-011·019' },
             { id: 'opn-committee', label: '산업안전보건위원회', icon: 'users', href: 'menu.html?m=opinion&sub=committee', screen: 'SFR-011' },
             { id: 'opn-council',   label: '협의체·점검표',     icon: 'check', href: 'menu.html?m=opinion&sub=council',   screen: 'SFR-011' },
         ]},
@@ -650,9 +650,9 @@
          *     신버전에 대응 화면이 없다. 그래서 그룹만 옮겨 정식 항목으로 살린다 —
          *     같이 지우면 내 할일의 '분류하러 가기'가 메뉴 없는 화면으로 떨어진다. */
         { id: 'cmp', label: '업무 관리', icon: 'check', items: [
-            { id: 'cmp-status',   label: '이행 관리',  icon: 'grid', href: 'cmp-status.html', screen: 'CMP01-T / CMP02-D / CMP04-V' },
-            { id: 'cmp-docs',     label: '문서 목록',  icon: 'list', href: 'cmp-docs.html',   screen: 'DOC01-L / DOC02-D' },
-            { id: 'docs-archive', label: '기준문서함', icon: 'file', href: 'docs-archive.html', screen: 'SCR-EDOC-010' },
+            { id: 'cmp-status',   label: '이행 관리',  icon: 'grid', href: 'cmp-status.html', screen: 'CMP01-T / CMP02-D / CMP04-V / SFR-014·004' },
+            { id: 'cmp-docs',     label: '문서 목록',  icon: 'list', href: 'cmp-docs.html',   screen: 'DOC01-L / DOC02-D / SFR-014' },
+            { id: 'docs-archive', label: '기준문서함', icon: 'file', href: 'docs-archive.html', screen: 'SCR-EDOC-010 / SFR-012' },
             /* hidden — 메뉴에서 뺀 구버전. 딥링크 호환용이며 **되살리지 말 것**. */
             { id: 'docs-preset', hidden: true, label: '업무 목록 (구)',      icon: 'list',  href: 'docs-preset.html' },
             { id: 'docs-exec',   hidden: true, label: '이행 목록 (구)',      icon: 'grid',  href: 'docs-exec.html' },
@@ -662,7 +662,7 @@
 
         /* ⑩ 통계·보고 — RFP 현황·통계·제증명 (SFR-018·021) */
         { id: 'stats', label: '통계·보고', icon: 'chart', items: [
-            { id: 'stats',       label: '현황 통계',     icon: 'chart', href: 'stats.html',       screen: 'SFR-018' },
+            { id: 'stats',       label: '현황 통계',     icon: 'chart', href: 'stats.html',       screen: 'SFR-018·019' },
             { id: 'reports',     label: '보고서·제증명', icon: 'file',  href: 'reports.html',     screen: 'SFR-021' },
             { id: 'info-center', label: '정보센터',      icon: 'list',  href: 'info-center.html' },
         ]},
@@ -672,9 +672,9 @@
          *   '바깥과 주고받는 설정'인지 읽히지 않았다. 3뎁스로 나눈다. */
         { id: 'admin', label: '시스템 관리', icon: 'cog', items: [
             { id: 'admin-users',       section: '사용자·권한', label: '사용자 관리',      icon: 'users',    href: 'admin-users.html',       screen: 'SFR-015' },
-            { id: 'admin-roles',       section: '사용자·권한', label: '권한 관리',        icon: 'cog',      href: 'admin-roles.html',       screen: 'ADM02-S' },
-            { id: 'admin-menus',       section: '사용자·권한', label: '메뉴 관리',        icon: 'list',     href: 'admin-menus.html',       screen: 'ADM01-S' },
-            { id: 'admin-sites',       section: '기준정보',    label: '사업장 관리',      icon: 'building', href: 'admin-sites.html',       screen: 'ADM03-S' },
+            { id: 'admin-roles',       section: '사용자·권한', label: '권한 관리',        icon: 'cog',      href: 'admin-roles.html',       screen: 'ADM02-S / SFR-015·001' },
+            { id: 'admin-menus',       section: '사용자·권한', label: '메뉴 관리',        icon: 'list',     href: 'admin-menus.html',       screen: 'ADM01-S / SFR-001·015' },
+            { id: 'admin-sites',       section: '기준정보',    label: '사업장 관리',      icon: 'building', href: 'admin-sites.html',       screen: 'ADM03-S / SFR-002' },
             { id: 'admin-presets',     section: '기준정보',    label: '프리셋 양식 관리', icon: 'cog',      href: 'admin-presets.html' },
             /* 법령 관리 — 법령·조문 / 메뉴 근거 매핑 / 변경 이력 3탭 단일 화면
              * (2026-07-30 통합. admin-law-map.html 은 매핑 탭 리다이렉트 스텁) */
