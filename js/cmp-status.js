@@ -268,7 +268,7 @@
         var k = C().kpiOf(list, S.year);
         /* act 가 있으면 카드 자체가 버튼이다 — 목적지가 하나로 정해지는 카드만
          * 누르게 한다(설계 §3-2). 이행률은 여러 상태의 합이라 링크를 만들지 않는다. */
-        function card(title, value, unit, foot, tone, act, hint) {
+        function card(title, value, unit, foot, tone, act, hint, tour) {
             var inner =
                 '<div class="kpi-card-label"><span class="kpi-card-title">' + esc(title) + '</span>' +
                     (hint ? '<span class="cmp-kpi-go">' + esc(hint) + ' →</span>' : '') + '</div>' +
@@ -276,7 +276,8 @@
                     (unit ? '<span class="unit">' + esc(unit) + '</span>' : '') + '</div>' +
                 '<div class="kpi-card-foot">' + foot + '</div>';
             return act
-                ? '<button type="button" class="kpi-card cmp-kpi-btn" onclick="' + act + '">' + inner + '</button>'
+                ? '<button type="button" class="kpi-card cmp-kpi-btn"' +
+                    (tour ? ' data-tour="' + tour + '"' : '') + ' onclick="' + act + '">' + inner + '</button>'
                 : '<div class="kpi-card">' + inner + '</div>';
         }
         /* KPI 는 판정과 **같은 축**으로만 센다 — 시트와 같은 말을 하기 위해서다.
@@ -289,7 +290,7 @@
             card('법정 이행률', k.lawRate, '%', '이행 ' + k.lawDone + ' / 산정 대상 ' + k.lawTotal + '개' + gauge) +
             card('서류 확인', k.done, '/ ' + (k.done + k.unmet + k.cond + k.na), '문서가 확인된 할 일') +
             card('미이행', k.unmet, '', '정기·상시 항목인데 서류 0건', 'cmp-kpi-bad',
-                "CMPST.setTab('gap')", '누락 점검') +
+                "CMPST.setTab('gap')", '누락 점검', 'doc-open') +
             card('조건 미발생', k.cond, '', '사유 ' + k.condEvent + ' · 대상 ' + k.condTarget +
                 ' — 미이행이 아닐 수 있습니다') +
         '</div>';
@@ -971,6 +972,7 @@
                         '<a class="btn btn-outline btn-sm" href="cmp-docs.html?stage=' + encodeURIComponent(s.id) + '&year=' + prev + '">지난연도 전체 보기</a>' +
                       '</div>'
                     : '') +
+                confirmBox(s, y, docs) +
                 naBox(s, y) +
             '</div>' +
         '</div>';
@@ -1160,6 +1162,107 @@
                 : '') +
         '</div>';
     }
+    /* =========================================================================
+     * 완료 확인 · 확인 반려 (2026-09-01 이관)
+     * -------------------------------------------------------------------------
+     * 종전에는 이 기능이 **은퇴한 이행 목록(docs-exec)에만** 있었다. 대메뉴가
+     * 16 → 11 로 접히면서 그 화면이 메뉴에서 빠졌는데 완료 경로가 함께 따라오지
+     * 않아, **신버전 메뉴만으로는 서류를 올려도 영영 «진행중»** 이었다.
+     * `statusOfStage` 가 «완료는 주관부서 담당자가 증빙을 확인해야 붙는 것»
+     * 이라 자동으로도 붙지 않는다.
+     *
+     * 판정·사유 검사는 전부 DYDOCS.transition 이 한다(§ 화면이 재구현하지 않는다).
+     * 여기서는 «누구에게 무엇을 보여줄지» 만 정한다.
+     *
+     * 반려 사유는 접지 않는다 — 반려의 존재 이유가 그 한 줄이다. 숨겨 두면
+     * 담당자가 무엇을 다시 해야 하는지 모른 채 같은 서류를 또 올린다.
+     * ========================================================================= */
+    function confirmBox(s, y, docs) {
+        if (!D().canConfirm()) return '';
+        /* 지난 연도는 소급 확인을 막는다 — naBox 와 같은 기준이다 */
+        if (y < baseYear()) return '';
+        var rec = D().stageRecord(s.id, y);
+        var n = (docs || []).length;
+        var ret = rec.returned
+            ? '<p class="cmp-cap cmp-ret"><b>확인 반려</b> — ' + esc(rec.returned.reason) +
+              ' <span class="cmp-dim">' + esc(rec.returned.by) + ' · ' + esc(rec.returned.at) +
+              (rec.returnRound > 1 ? ' · ' + rec.returnRound + '회째' : '') + '</span></p>'
+            : '';
+        if (rec.status === D().ST.DONE) {
+            return ret + '<p class="cmp-cap"><b>완료 확인됨</b>' +
+                (rec.confirmedBy ? ' — ' + esc(rec.confirmedBy) + ' · ' + esc(rec.confirmedAt) : '') +
+                ' <button type="button" class="du-link" data-tour="doc-confirm"' +
+                ' onclick="CMPST.openConfirm(\'' + esc(s.id) + '\')">확인 되돌리기</button></p>';
+        }
+        /* 서류가 0건이면 확인할 것이 없다 — 없는 근거로 완료를 찍지 않는다 */
+        if (!n) return ret;
+        return ret +
+            '<p class="cmp-cap">올라온 서류를 열어 본 뒤 <b>재난안전과가 완료를 줍니다.</b> ' +
+            '올린 사람이 스스로 완료로 만들 수 없습니다. ' +
+            '<button type="button" class="du-link" data-tour="doc-confirm"' +
+            ' onclick="CMPST.openConfirm(\'' + esc(s.id) + '\')">확인하기</button></p>';
+    }
+    /* 확인 모달 — 서류를 다시 나열하지 않는다(바로 위 상세에 이미 있다).
+       무엇이 바뀌는지와 되돌릴 수 있다는 사실만 말한다. */
+    function openConfirm(stageId) {
+        var s = D().stage(stageId); if (!s) return;
+        if (!D().canConfirm()) { V().toast('완료 확인은 주관부서(재난안전과) 담당자만 할 수 있습니다.'); return; }
+        var rec = D().stageRecord(stageId, S.year);
+        var done = rec.status === D().ST.DONE;
+        var n = D().documentIdsOfStage(stageId, S.year).length;
+        var body =
+            '<div class="cmp-na">' +
+                '<p class="cmp-scode">' + esc(s.id) + '</p>' +
+                '<p class="cmp-pull-t">' + esc(s.name) + '</p>' +
+                (done
+                    ? '<p class="cmp-cap">완료를 되돌리면 <b>진행중</b>으로 돌아가고 <b>재확인 대상</b>으로 표시됩니다. 확인자·확인일시 기록은 지워집니다.</p>'
+                    : '<p class="cmp-cap">올라온 서류 <b>' + n + '건</b>을 근거로 이 일을 <b>완료</b>로 표시합니다. ' +
+                      '누가 언제 확인했는지 기록에 남고, 그때부터 이행률에 반영됩니다.</p>' +
+                      '<p class="cmp-cap">서류가 부족하면 완료 대신 <b>확인 반려</b>로 사유를 남기세요 — 담당자 화면에 그 사유가 표시됩니다.</p>') +
+            '</div>';
+        var foot =
+            (done
+                ? '<button class="btn btn-primary" onclick="CMPST.saveUnconfirm(\'' + esc(stageId) + '\')">완료 되돌리기</button>'
+                : '<button class="btn btn-primary" onclick="CMPST.saveConfirm(\'' + esc(stageId) + '\')">완료 처리</button>' +
+                  '<button class="btn btn-secondary" onclick="CMPST.openReject(\'' + esc(stageId) + '\')">확인 반려</button>') +
+            '<button class="btn btn-outline" onclick="DYV2.closeModal()">닫기</button>';
+        V().openModal('서류 확인 · ' + S.year + '년', body, foot);
+    }
+    function saveConfirm(stageId) { applyStage(stageId, D().ST.DONE, '', ''); }
+    function saveUnconfirm(stageId) { applyStage(stageId, D().ST.WIP, '', ''); }
+    /* 반려는 사유가 필수다 — 단일 모달 규칙이라 같은 모달 본문을 바꿔 낸다 */
+    function openReject(stageId) {
+        var s = D().stage(stageId); if (!s) return;
+        V().openModal('확인 반려 — 사유 기재',
+            '<div class="cmp-na">' +
+                '<p class="cmp-scode">' + esc(s.id) + '</p>' +
+                '<p class="cmp-pull-t">' + esc(s.name) + '</p>' +
+                '<div class="form-field">' +
+                    '<label class="form-label" for="cmp-rj-why">반려 사유 <b>(필수)</b></label>' +
+                    '<textarea class="form-input" id="cmp-rj-why" rows="3" placeholder="예: 2분기 실시 결과가 빠져 있습니다"></textarea>' +
+                '</div>' +
+                '<p class="cmp-cap">반려해도 상태는 <b>진행중</b> 그대로입니다 — 사유가 담당자 화면에 표시되고 반려 회차가 쌓입니다.</p>' +
+            '</div>',
+            '<button class="btn btn-outline" onclick="CMPST.openConfirm(\'' + esc(stageId) + '\')">‹ 뒤로</button>' +
+            '<button class="btn btn-primary" onclick="CMPST.saveReject(\'' + esc(stageId) + '\')">확인 반려</button>');
+    }
+    function saveReject(stageId) {
+        var el = document.getElementById('cmp-rj-why');
+        var why = el ? el.value.trim() : '';
+        if (!why) { V().toast('반려 사유를 입력해야 저장됩니다.'); return; }
+        applyStage(stageId, D().ST.WIP, why, 'reject');
+    }
+    /* 전이는 한 곳에서 — 화면 세 경로가 같은 검사·같은 갱신을 지나게 한다 */
+    function applyStage(stageId, to, reason, kind) {
+        var r = D().transition(stageId, S.year, to, { reason: reason, kind: kind });
+        if (!r.ok) { V().toast(r.reason); return; }
+        V().closeModal(true);
+        render();
+        V().toast(kind === 'reject'
+            ? D().stage(stageId).name + ' — 확인 반려했습니다. 사유가 담당자 화면에 표시됩니다.'
+            : D().stage(stageId).name + ' — ' + D().statusLabel(to) + ' 처리했습니다.');
+    }
+
     function naBox(s, y) {
         var rec = D().stageRecord(s.id, y);
         if (!D().canSetNA()) return '';
@@ -1578,7 +1681,7 @@
                 '<select class="form-select" aria-label="기준연도" onchange="CMPST.setF(\'year\', this.value)">' +
                     F().optionsHtml(C().years().map(function (y) { return [y, y + '년']; }), S.year) + '</select></label>' +
             (D().canUpload()
-                ? '<button type="button" class="btn btn-primary btn-sm" onclick="DOCUP.open(' + S.year + ')">＋ 서류 올리기</button>'
+                ? '<button type="button" class="btn btn-primary btn-sm" data-tour="doc-upload" onclick="DOCUP.open(' + S.year + ')">＋ 서류 올리기</button>'
                 : '<span class="cmp-ro">조회 전용</span>');
         host.appendChild(wrap);
     }
@@ -1970,6 +2073,8 @@
     }
 
     global.CMPST = {
+        openConfirm: openConfirm, saveConfirm: saveConfirm, saveUnconfirm: saveUnconfirm,
+        openReject: openReject, saveReject: saveReject,
         init: init, render: render,
         setF: setF, resetF: resetF, setTab: setTab, setLevel: setLevel, setSeg: setSeg,
         toggleItem: toggleItem, toggleAdv: toggleAdv,

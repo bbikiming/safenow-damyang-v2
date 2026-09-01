@@ -41,11 +41,13 @@
     <script src="./js/cmp-dept-docs.js"></script><!-- DYCMPDEPT: 부서별 문서 보유량(5개년 원장 집계) -->
     <script src="./js/cmp-core.js"></script><!-- DYCMP: 계층·주기·이행상태 파생 -->
     <script src="./js/cmp-status.js"></script>
+    <script src="./js/doc-tour.js"></script><!-- DOCTOUR: 업무문서 단계별 안내 (2026-09-01 은퇴 화면에서 이관) -->
     <script>
         /* layout.js 가 DOMContentLoaded 에서 .dy-page-title 을 주입하므로 그 뒤에 붙는다
            — 먼저 돌면 제목 줄 액션(기준연도·서류 올리기)이 붙을 자리가 없다 */
         document.addEventListener('DOMContentLoaded', function () {
             CMPST.init(document.getElementById('cmp-status'));
+            DOCTOUR.boot();
         });
     </script>
 </body>

@@ -4161,6 +4161,11 @@ p > .dx-note-gap { display: inline; }
 /* ── 공통 유틸 ─────────────────────────────────────────────────────── */
 .cmp-cap { font-size: var(--fs-12); color: var(--text-gray); line-height: 1.7; margin: var(--sp-3) 0 var(--sp-4); }
 .cmp-cap b { color: var(--text-black); font-weight: var(--fw-bold); }
+/* 확인 반려 사유 — 접지 않는다. 반려의 존재 이유가 이 한 줄이라 숨기면
+   담당자가 무엇을 다시 해야 하는지 모른 채 같은 서류를 또 올린다.
+   같은 뜻의 .dx-ret(은퇴한 이행 목록)과 시각을 맞춘다. */
+.cmp-ret { padding: var(--sp-2) var(--sp-3); border-left: 3px solid var(--status-warning-border);
+  background: var(--surface-alt); border-radius: var(--radius-xs); word-break: keep-all; }
 .cmp-dim { color: var(--text-gray); font-weight: var(--fw-regular); }
 .cmp-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; font-size: var(--fs-13); }
 .cmp-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }

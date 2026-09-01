@@ -42,13 +42,11 @@
     <script src="./js/doc-pick.js"></script><!-- DYPICK: 이행항목·업무단계 2단 선택기 -->
     <script src="./js/doc-upload.js"></script><!-- DOCUP: 업무 업로드 마법사 · 전년도 프리셋 -->
     <script src="./js/doc-exec.js"></script>
-    <script src="./js/doc-tour.js"></script><!-- DOCTOUR: 업무문서 단계별 안내 -->
     <script>
         /* layout.js 가 DOMContentLoaded 에서 .dy-page-title 을 주입하므로 그 뒤에 붙는다
            — 먼저 돌면 제목 줄 액션(기준연도·업로드)이 붙을 자리가 없다 */
         document.addEventListener('DOMContentLoaded', function () {
             DOCEXEC.init(document.getElementById('docs-exec'));
-            DOCTOUR.boot();
         });
     </script>
 </body>

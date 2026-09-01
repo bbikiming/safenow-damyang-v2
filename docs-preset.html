@@ -40,12 +40,10 @@
     <script src="./js/doc-pick.js"></script><!-- DYPICK: 이행항목·업무단계 2단 선택기 -->
     <script src="./js/doc-upload.js"></script><!-- DOCUP: 업무 업로드 마법사 · 전년도 프리셋 -->
     <script src="./js/doc-list.js"></script>
-    <script src="./js/doc-tour.js"></script><!-- DOCTOUR: 업무문서 단계별 안내 -->
     <script>
         /* layout.js 가 DOMContentLoaded 에서 .dy-page-title 을 주입한 뒤에 붙는다 */
         document.addEventListener('DOMContentLoaded', function () {
             DOCLIST.init(document.getElementById('docs-list'));
-            DOCTOUR.boot();
         });
     </script>
 </body>

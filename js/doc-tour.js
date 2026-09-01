@@ -8,7 +8,12 @@
    "그래서 내가 뭘 하지"에서 멈춘다. 교육·위험성평가에는 있고 여기만 없었다.
 
    4단계: 아직 서류 없는 일 찾기 → 서류 올리고 할 일 연결 →
-          재난안전과가 확인해 완료 → 업무 목록에서 그 문서 찾기
+          재난안전과가 확인해 완료 → 문서 목록에서 그 문서 찾기
+
+   ※ 2026-09-01 이관 — 종전에는 은퇴한 docs-exec/docs-preset 에 실려 있어
+     대메뉴 재편(16→11) 뒤 **메뉴로는 이 안내에 닿을 수 없었다**. 신버전
+     이행 관리·문서 목록으로 옮겼다. ③단계가 가리키던 «완료 처리»도 그때
+     은퇴 화면에만 있었으므로 cmp-status 에 함께 구현했다.
 
    완료 판정은 전부 DYDOCS 파생이다 — 커서로 판정하면 뒤로 갈 때 체크가 풀리고,
    가이드를 끄고 손으로 처리한 건이 안 잡힌다.
@@ -76,52 +81,53 @@
 
     /* 화면 경로를 문구에 그대로 쓴다 — "지금 어디에 있고 다음에 어디로 가는지"를
        말해 주지 않으면 가이드를 따라가면서도 길을 잃는다. */
-    var HERE_EXEC = '업무문서 › 이행 목록';
-    var HERE_LIST = '업무문서 › 업무 목록';
+    var HERE_EXEC = '업무 관리 › 이행 관리';
+    var HERE_LIST = '업무 관리 › 문서 목록';
     /* 흐름 보드는 제목·사람·실수치 세 줄이라 "어느 화면에서 하는 일인지"가 빠진다.
        실수치 앞에 화면 이름을 붙여 한 줄만 봐도 이동 경로가 읽히게 한다. */
     function at(screen, text) { return '［' + screen + '］ ' + text; }
 
     var STEPS = [
         {
-            key: 'find', label: '① 할 일 찾기', page: 'docs-exec.html',
+            key: 'find', label: '① 할 일 찾기', page: 'cmp-status.html',
             persona: deptPersona, scopeDept: demoDept,
-            href: function () { return 'docs-exec.html'; },
+            href: function () { return 'cmp-status.html'; },
             selector: '[data-tour="doc-open"]',
             title: '내가 채워야 할 일이 무엇인지 찾기',
-            where: '맨 위 초록 줄의 <b>[내 부서 미이행 먼저 보기]</b> 단추',
+            where: '요약 카드 줄의 <b>[미이행]</b> 카드 — 누르면 누락 점검으로 넘어갑니다',
             clickPath: [
                 '지금 보는 곳은 ' + HERE_EXEC + ' 입니다',
-                '맨 위 초록 줄에 «내 부서 관련(추정) 아직 서류 없는 일이 N건 있습니다» 라고 적혀 있습니다',
-                '그 옆 [내 부서 미이행 먼저 보기]를 누릅니다 — 내 부서로 추릴 것이 없으면 [미이행 먼저 보기]로 나옵니다',
-                '→ 내 부서와 관련된, 아직 서류가 안 올라온 일만 남습니다. 이게 오늘 채워야 할 목록입니다'
+'맨 위 요약 카드 넉 장 중 [미이행] 카드에 «정기·상시 항목인데 서류 0건» 이라고 적혀 있습니다',
+                '그 카드를 누릅니다 — «누락 점검» 으로 넘어갑니다',
+                '→ 서류가 하나도 안 올라온 일만 남습니다. 이게 오늘 채워야 할 목록입니다',
+                '부서·분야로 더 좁히려면 그 위 조회 조건을 씁니다'
             ],
             desc: '법으로 해야 하는 일이 ' + ((global.DYDOCT && global.DYDOCT.STAGES) ? global.DYDOCT.STAGES.length : '많이') + '개나 됩니다. 다 볼 필요 없습니다. ' +
                   '«내 부서 관련» 과 «미이행» 으로 거르면 지금 손댈 것만 남습니다. ' +
                   '카드 한 장이 법정 의무 한 가지, 그 안의 한 줄이 실제로 해야 할 일 하나입니다.',
             script: '이 화면은 "법으로 해야 할 일이 서류로 갖춰졌나"를 보는 곳입니다. ' +
                     '숫자를 누르면 그 상태인 것만 남고, 부서 담당자는 내 부서 관련 미이행만 보면 됩니다.',
-            actionLabel: '아직 안 한 일만 보기',
+            actionLabel: '누락 점검 열기',
             action: function () {
                 /* 초록 줄 단추와 같은 동작 — 미이행 + 내 부서를 한 번에 건다(IMP-02) */
-                if (global.DOCEXEC) global.DOCEXEC.mineTodo();
+                if (global.CMPST) global.CMPST.setTab('gap');
             },
             done: function () { return !!myDoc(); },
             note: function () {
                 var s = D().summary(year());
                 var st = openStage();
-                return at('이행 목록', '아직 서류 없는 일 ' + s.counts.not_started + '건' + (st ? ' · 예를 들면 «' + st.name + '»' : ''));
+                return at('이행 관리', '아직 서류 없는 일 ' + s.counts.not_started + '건' + (st ? ' · 예를 들면 «' + st.name + '»' : ''));
             }
         },
         {
-            key: 'upload', label: '② 서류 올리기', page: 'docs-exec.html',
+            key: 'upload', label: '② 서류 올리기', page: 'cmp-status.html',
             persona: deptPersona, scopeDept: demoDept,
-            href: function () { return 'docs-exec.html'; },
+            href: function () { return 'cmp-status.html'; },
             selector: '[data-tour="doc-upload"]',
             title: '서류를 올리고 «무슨 일» 인지 표시하기',
             where: '화면 제목 오른쪽 <b>[＋ 서류 올리기]</b> 단추',
             clickPath: [
-                '같은 화면(' + HERE_EXEC + ')에서 [＋ 서류 올리기]를 누릅니다',
+                '같은 화면(' + HERE_EXEC + ')에서 제목 오른쪽 [＋ 서류 올리기]를 누릅니다',
                 '1단계 — 파일을 고르고, 문서 이름·보고일자·담당을 채웁니다',
                 '2단계 — 왼쪽에서 «어떤 의무» 를 고르면 오른쪽에 «무슨 일» 이 나옵니다. 해당하는 것을 체크합니다',
                 '3단계 — 무엇이 어떻게 바뀌는지 확인하고 [이대로 등록]',
@@ -140,22 +146,23 @@
             done: function () { return wipCount() > 0 || doneCount() > 0; },
             note: function () {
                 var d = myDoc();
-                if (!d) return at('이행 목록', '여기서 [＋ 서류 올리기] — 아직 올린 서류가 없습니다');
-                return at('이행 목록', '«' + d.title.slice(0, 20) + '» · 일 ' + d.stageIds.length + '개 진행중');
+                if (!d) return at('이행 관리', '여기서 [＋ 서류 올리기] — 아직 올린 서류가 없습니다');
+                return at('이행 관리', '«' + d.title.slice(0, 20) + '» · 일 ' + d.stageIds.length + '개 진행중');
             }
         },
         {
-            key: 'confirm', label: '③ 확인·완료', page: 'docs-exec.html',
+            key: 'confirm', label: '③ 확인·완료', page: 'cmp-status.html',
             persona: function () { return OWNER_P; },
-            href: function () { return 'docs-exec.html'; },
+            href: function () { return 'cmp-status.html'; },
             selector: '[data-tour="doc-confirm"]',
             title: '재난안전과가 서류를 보고 «완료» 도장을 찍기',
-            where: '할 일 줄 오른쪽 <b>[확인하기]</b> — 재난안전과 담당자에게만 보입니다',
+            where: '할 일 <b>상세 안</b>의 <b>[확인하기]</b> — 재난안전과 담당자에게만 보입니다',
             clickPath: [
-                '여기서 사람이 바뀝니다 — 올린 사람(부서)이 아니라 <b>재난안전과</b> 차례입니다',
-                '같은 화면(' + HERE_EXEC + ')에서 그 일 줄의 [확인하기]를 누릅니다',
-                '올라온 서류 목록이 나옵니다. 이름을 누르면 문서 내용을 볼 수 있습니다',
-                '내용이 맞으면 [완료 처리] — 안 맞으면 사유를 적고 [확인 반려]',
+                '여기서 사람이 바뀝니다 — 올린 사람(부서)이 아니라 재난안전과 차례입니다',
+'같은 화면(' + HERE_EXEC + ')에서 그 일을 눌러 상세를 엽니다',
+                '올라온 서류 목록이 상세 안에 나옵니다. 이름을 누르면 문서 화면으로 들어갑니다',
+                '목록 아래 [확인하기]를 누릅니다',
+                '내용이 맞으면 [완료 처리] — 안 맞으면 [확인 반려] 로 사유를 적습니다',
                 '→ 완료가 되면 그때 카드의 진행률이 올라갑니다'
             ],
             desc: '올린 사람이 스스로 «완료» 로 만들 수 없습니다. 재난안전과가 서류를 보고 확인해야 합니다. ' +
@@ -168,26 +175,26 @@
             action: function () {
                 var d = myDoc();
                 if (!d || !d.stageIds.length) { V().toast('먼저 ② 단계에서 서류를 올려 주세요.'); return; }
-                if (global.DOCEXEC) global.DOCEXEC.openStage(d.stageIds[0]);
+                if (global.CMPST) global.CMPST.openDetail(d.stageIds[0]);
             },
             done: function () { return doneCount() > 0; },
             note: function () {
                 var d = myDoc();
-                if (!d) return at('이행 목록', '같은 화면에서 재난안전과가 확인 — 아직 올라온 서류가 없습니다');
-                return at('이행 목록', '완료 ' + doneCount() + '건 · 확인 기다리는 중 ' + wipCount() + '건');
+                if (!d) return at('이행 관리', '같은 화면에서 재난안전과가 확인 — 아직 올라온 서류가 없습니다');
+                return at('이행 관리', '완료 ' + doneCount() + '건 · 확인 기다리는 중 ' + wipCount() + '건');
             }
         },
         {
-            key: 'trace', label: '④ 문서 찾기', page: 'docs-preset.html',
+            key: 'trace', label: '④ 문서 찾기', page: 'cmp-docs.html',
             persona: function () { return OWNER_P; },
-            href: function () { return 'docs-preset.html'; },
-            selector: '[data-tour="doc-search"]',
+            href: function () { return 'cmp-docs.html'; },
+            selector: '#cd-q',
             title: '나중에 그 서류를 다시 찾아보기',
-            where: '맨 위 <b>검색창</b> — 문서 이름 일부만 쳐도 됩니다',
+            where: '맨 위 <b>[문서명으로 찾기]</b> 검색창 — 이름 일부만 쳐도 됩니다',
             clickPath: [
-                '화면이 바뀝니다 — ' + HERE_EXEC + ' 에서 <b>' + HERE_LIST + '</b> 로 넘어갑니다',
+                '화면이 바뀝니다 — ' + HERE_EXEC + ' 에서 ' + HERE_LIST + ' 로 넘어갑니다',
                 '맨 위 검색창에 문서 이름 일부를 칩니다',
-                '더 좁히려면 [상세 조건]을 엽니다 — «어떤 의무·무슨 일» 로도 찾을 수 있습니다',
+                '더 좁히려면 조회 조건을 씁니다 — 분야·부서·연도로도 좁힐 수 있습니다',
                 '문서 이름을 누르면 그 문서 화면으로 들어갑니다',
                 '→ 돌아오면 검색어와 쪽이 그대로 남아 있습니다'
             ],
@@ -199,12 +206,12 @@
             actionLabel: '업무 목록에서 찾아보기',
             action: function () {
                 var d = myDoc();
-                location.href = 'docs-preset.html' + (d ? '?q=' + encodeURIComponent(d.title.slice(0, 12)) : '');
+                location.href = 'cmp-docs.html' + (d ? '?q=' + encodeURIComponent(d.title.slice(0, 12)) : '');
             },
             done: function () { return doneCount() > 0; },
             note: function () {
                 var d = myDoc();
-                return at('업무 목록', d ? '여기로 넘어와 «' + d.title.slice(0, 20) + '» 찾기' : '여기로 넘어옵니다 — 아직 올린 서류가 없습니다');
+                return at('문서 목록', d ? '여기로 넘어와 «' + d.title.slice(0, 20) + '» 찾기' : '여기로 넘어옵니다 — 아직 올린 서류가 없습니다');
             }
         }
     ];
@@ -212,12 +219,12 @@
     var T = global.DYTOUR.define({
         key: 'doc', ns: 'DOCTOUR', skey: 'dy-tour-doc-v1', steps: STEPS,
         ownerPersona: OWNER_P,
-        pageLabels: { 'docs-exec.html': '이행 목록', 'docs-preset.html': '업무 목록' },
+        pageLabels: { 'cmp-status.html': '이행 관리', 'cmp-docs.html': '문서 목록' },
         kicker: function () { return year() + '년 업무문서'; },
         flowTitle: function () { return '업무문서는 이렇게 씁니다 — ' + STEPS.length + '걸음'; },
         flowNote: function () {
             var d = myDoc();
-            return '<b>업무문서 메뉴는 화면이 두 개입니다.</b><br>' +
+            return '<b>업무 관리 메뉴에서 두 화면을 오갑니다.</b><br>' +
                 '· <b>' + HERE_EXEC + '</b> — 법으로 해야 할 일이 <b>서류로 갖춰졌는지</b> 봅니다. ' +
                     '①②③ 걸음이 여기서 일어납니다.<br>' +
                 '· <b>' + HERE_LIST + '</b> — 그 <b>문서를 나중에 찾는</b> 곳입니다. ④ 걸음입니다.<br><br>' +
