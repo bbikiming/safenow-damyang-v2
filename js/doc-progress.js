@@ -503,6 +503,9 @@
      *        별도 축(returned·returnRound)에 사유를 남긴다(IMP-01).
      * 반환: { ok, reason }
      */
+    /* 검사 단계에서 현재 상태를 본다 — 아래 from 계산은 저장 직전이라 늦다 */
+    function from0(stageId, year) { return statusOfStage(stageId, year); }
+
     function transition(stageId, year, to, opt) {
         opt = opt || {};
         year = +(year || DEFAULT_YEAR);
@@ -522,6 +525,18 @@
         }
         if (to === ST.DONE && !canConfirm()) {
             return { ok: false, reason: '완료 확인은 주관부서(재난안전과) 담당자만 할 수 있습니다.' };
+        }
+        /* **완료를 내리는 것도 확인 권한이다** (2026-09-01 추가)
+         * 종전에는 to === DONE 만 막아서, 이미 붙은 완료를 «되돌리는» 전이가
+         * 검사 밖에 있었다. 화면은 [완료 되돌리기] 버튼을 canConfirm 인 사람에게만
+         * 냈지만 CMPST.saveUnconfirm 이 전역이라 **다른 부서 담당자가 남의 부서
+         * 완료 확인을 지울 수 있었다**(실측 재현: 확인자·확인일시가 지워지고
+         * 재확인 대상으로 바뀌며 이행률이 함께 내려갔다).
+         * 「버튼만 숨기면 전역 호출로 뚫린다」의 사례다 — 판정을 여기 둔다.
+         * ※ 문서 등록·수정에 따른 자동 환원(applyDocument)은 opt.silent 로 들어와
+         *   이 검사를 지나지 않는다. 그쪽은 사람의 조작이 아니라 규칙이다. */
+        if (from0(stageId, year) === ST.DONE && to !== ST.DONE && !opt.silent && !canConfirm()) {
+            return { ok: false, reason: '완료를 되돌리는 것도 주관부서(재난안전과) 담당자만 할 수 있습니다.' };
         }
         if (to === ST.NA) {
             if (!canSetNA()) return { ok: false, reason: '해당없음 처리는 주관부서(재난안전과) 담당자만 할 수 있습니다.' };
