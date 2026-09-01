@@ -172,6 +172,18 @@
         if (F.category === 'SUPERVISOR' && !F.designatedAt) { toast('관리감독자 지정일을 입력하세요.'); return; }
         if (F.category === 'SUPERVISOR' && F.designatedAt > E().today()) { toast('관리감독자 지정일은 미래일 수 없습니다.'); return; }
         if (F.category !== 'SUPERVISOR') F.designatedAt = '';
+        /* 계약기간은 **필수 표시(*)만 있고 검증이 없었다**(2026-09-01). 비운 채 저장하면
+           captureForm 의 `parseFloat(...) || 0` 이 **0** 을 넣고, 그 0 이 hireHours 의
+           `contractMonths <= 0.25`(1주 이하) 갈래에 걸려 **채용시교육 필요시간이 8h 가
+           아니라 1h** 가 된다. 그 사람만 틀리는 것이 아니라 이수 판정과 부서별 완료율이
+           함께 어긋난다. 화면정의서 SCR-EDU-006 §5 가 「기간제·일용 시 0보다 큰 기간」을
+           필수로 규정하므로 정의서가 맞고 구현이 빠져 있던 것이다.
+           일용(DAILY)은 hireHours 가 계약기간을 보지 않지만 정의서가 둘 다 요구하므로
+           함께 막는다 — 기록으로서의 값이 있고, 고용형태를 기간제로 바꾸는 순간 판정에 쓰인다. */
+        if (needsContract(F.empType) && !(F.contractMonths > 0)) {
+            toast('계약기간을 0보다 크게 입력하세요 — 채용시교육 필요시간(1·4·8h)이 이 값으로 갈립니다.');
+            return;
+        }
         if (F.mode === 'add') {
             E().addWorker({ name: F.name, deptId: F.deptId, category: F.category, empType: F.empType, hireDate: F.hireDate, designatedAt: F.designatedAt, contractMonths: F.contractMonths, source: 'MANUAL' });
             toast(F.name + ' 근로자 등록 완료');
