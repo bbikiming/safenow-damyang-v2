@@ -422,7 +422,23 @@
     /* ================= CRUD ================= */
     function workers() { return load().workers.filter(function (w) { return w.active; }); }
     function workerOf(id) { var arr = load().workers; for (var i = 0; i < arr.length; i++) if (arr[i].id === id) return arr[i]; return null; }
+    /* 계약기간 필수 판정 — **데이터 계층에 둔다** (2026-09-01)
+     * 종전 가드는 근로자 명단 화면의 저장 함수에만 있었다. 그런데 쓰기 경로가 넷이고
+     * (등록·수정·지정일·엑셀) 그중 엑셀은 화면 가드를 지나지 않는다. 지금은 그 경로가
+     * 계약기간을 12 로 박아 두어 드러나지 않을 뿐, 실제 엑셀 값을 읽도록 바꾸는 순간
+     * 같은 결함이 조용히 돌아온다.
+     * 값이 0 이면 hireHours 의 `<= 0.25`(1주 이하) 갈래에 걸려 **채용시교육 필요시간이
+     * 8h 가 아니라 1h** 가 되고, 그 값이 이수 판정의 분모라 부서별 완료율까지 부푼다.
+     * 「화면에서 검사하지 말고 데이터 계층에서 막는다」(CLAUDE.md §4 addEnroll 선례).
+     * 화면 가드는 그대로 둔다 — 사용자에게 사유를 말해 주는 것은 화면의 몫이다. */
+    function needsContractMonths(empType) { return empType === 'CONTRACT' || empType === 'DAILY'; }
+    function contractOk(empType, months) {
+        return !needsContractMonths(empType) || (+months > 0);
+    }
+
     function addWorker(o) {
+        /* 저장하지 않고 null 을 돌려준다 — addEnroll 이 중복에서 false 를 주는 것과 같은 형태다 */
+        if (!contractOk(o.empType || 'CONTRACT', o.contractMonths)) return null;
         var d = load(); d.seqW++;
         var w = {
             id: 'w_m_' + d.seqW,
@@ -436,11 +452,17 @@
         };
         d.workers.push(w); save(); return w;
     }
+    /* 거절된 건은 배열에서 빠진다 — 호출부가 «몇 건이 들어갔나»를 셀 수 있어야 한다 */
     function bulkAddWorkers(list) {
-        return (list || []).map(addWorker);
+        return (list || []).map(addWorker).filter(Boolean);
     }
     function updateWorker(id, patch) {
         var w = workerOf(id); if (!w) return null;
+        /* 수정도 같은 검사를 지난다 — 고용형태만 바꾸고 계약기간을 두고 가면
+           그 순간 0 이 판정에 쓰인다. 바꾸지 않은 값은 기존 값으로 본다. */
+        var emp = ('empType' in (patch || {})) ? patch.empType : w.empType;
+        var mon = ('contractMonths' in (patch || {})) ? patch.contractMonths : w.contractMonths;
+        if (!contractOk(emp, mon)) return null;
         Object.keys(patch || {}).forEach(function (k) { w[k] = patch[k]; });
         save(); return w;
     }

@@ -185,10 +185,16 @@
             return;
         }
         if (F.mode === 'add') {
-            E().addWorker({ name: F.name, deptId: F.deptId, category: F.category, empType: F.empType, hireDate: F.hireDate, designatedAt: F.designatedAt, contractMonths: F.contractMonths, source: 'MANUAL' });
+            /* 데이터 계층이 거절하면 저장되지 않는다 — 반환값을 보지 않으면
+               «완료» 토스트만 뜨고 명단에는 없는 상태가 된다(화면이 거짓말을 한다). */
+            if (!E().addWorker({ name: F.name, deptId: F.deptId, category: F.category, empType: F.empType, hireDate: F.hireDate, designatedAt: F.designatedAt, contractMonths: F.contractMonths, source: 'MANUAL' })) {
+                toast('저장하지 못했습니다 — 계약기간을 0보다 크게 입력하세요.'); return;
+            }
             toast(F.name + ' 근로자 등록 완료');
         } else {
-            E().updateWorker(F.id, { name: F.name, deptId: F.deptId, category: F.category, empType: F.empType, hireDate: F.hireDate, designatedAt: F.designatedAt, contractMonths: F.contractMonths });
+            if (!E().updateWorker(F.id, { name: F.name, deptId: F.deptId, category: F.category, empType: F.empType, hireDate: F.hireDate, designatedAt: F.designatedAt, contractMonths: F.contractMonths })) {
+                toast('저장하지 못했습니다 — 계약기간을 0보다 크게 입력하세요.'); return;
+            }
             toast('근로자 정보 저장');
         }
         V().closeModal(); render();
@@ -223,7 +229,7 @@
         var value = el ? el.value : '';
         if (!value) { toast('관리감독자 지정일을 입력하세요.'); return; }
         if (value > E().today()) { toast('관리감독자 지정일은 미래일 수 없습니다.'); return; }
-        E().updateWorker(id, { designatedAt: value });
+        if (!E().updateWorker(id, { designatedAt: value })) { toast('저장하지 못했습니다.'); return; }
         V().closeModal(); toast('관리감독자 지정일을 저장했습니다.'); render();
     }
 
@@ -255,9 +261,11 @@
                 hireDate: E().today(), contractMonths: 12, source: 'EXCEL'
             };
         });
-        E().bulkAddWorkers(sample);
+        /* 거절된 건은 배열에서 빠지므로 «몇 건이 들어갔나»를 세어 말한다 —
+           4건이라고 적어 두면 데이터 계층이 거절해도 4건이라고 말하게 된다 */
+        var added = E().bulkAddWorkers(sample);
         V().closeModal();
-        toast(E().deptName(deptId) + ' 부서에 4명 엑셀 업로드 완료');
+        toast(E().deptName(deptId) + ' 부서에 ' + added.length + '명 엑셀 업로드 완료');
         render();
     }
 
