@@ -28,7 +28,7 @@
         mount: null,
         q: '', sr: '', year: '', status: '',
         dept: '',            /* 이행 관리 L2 에서 넘어온 부서 조건 — 필터 UI 로는 내지 않는다(D-5) */
-        menu: '',            /* 분야(구 대메뉴) 조건 — 통계·기준문서함이 넘겨 준다. 필터 UI 로는 내지 않는다 */
+        menu: '',            /* 분야(구 대메뉴) 조건 — 현황 통계·경영방침이 넘겨 준다. 필터 UI 로는 내지 않는다 */
         stages: [],          /* 업무단계 다중 조건 (DYPICK) */
         page: 1,
         expand: {},          /* docId → 업무단계 칩 전부 펼침 */
@@ -58,7 +58,7 @@
         S.sr = p.get('sr') || '';
         S.status = p.get('status') || '';
         S.dept = p.get('dept') || '';
-        /* 분야 조건 — 현황 통계·기준문서함이 «분야별 문서»로 보낸다.
+        /* 분야 조건 — 현황 통계·경영방침이 «분야별 문서»로 보낸다.
            그 두 화면은 현행 업무문서 426건을 분야(구 대메뉴)로 세는데, 조건 없이 보내면
            9개 링크가 전부 같은 전체 목록으로 떨어져 누른 의미가 사라진다.
            연도 기본값도 함께 푼다 — 분야를 보러 온 것이지 특정 연도를 보러 온 것이 아니다. */
@@ -303,7 +303,7 @@
                 return '<span class="chip-mini wt" title="' + esc(d.excluded) +
                     ' — 담양군 소관 의무가 아니라고 분류 단계에서 뺀 문서입니다. 교정 대상이 아닙니다.">분류 제외</span>';
             }
-            return '<span class="chip-status chip-sm warning" title="2025년 원장에 분류가 빠진 문서입니다. 원장 교정은 업무문서 &gt; 이행 목록에서 합니다.">미분류</span>';
+            return '<span class="chip-status chip-sm warning" title="2025년 원장에 분류가 빠진 문서입니다. 문서를 열어 «분류 붙이기»로 교정합니다.">미분류</span>';
         }
         var open = !!S.expand[d.id];
         var show = open ? st : st.slice(0, 2);
@@ -394,6 +394,79 @@
     }
     function clearStages() { S.stages = []; S.page = 1; render(); }
 
+    /* ── 미분류 교정 «분류 붙이기» ──────────────────────────────────────────
+     * 2026-09-03 이관. 종전에는 은퇴한 업무 목록(docs-preset)에만 있어, 이 화면이
+     * «미분류 — 원장 교정 대상»이라고 말해 놓고 **고칠 자리가 메뉴 어디에도 없었다**.
+     * 판정·저장은 DYDOCS.remapLedger 그대로이고 선택기도 같은 DYPICK 이다 —
+     * 담당자가 같은 과업을 두 번 배우지 않는다(CLAUDE.md §5). */
+    var RM = null;                     /* {docId, stageIds[]} — 선택값은 이 화면이 든다 */
+    function openRemap(id) {
+        if (!D().isManager()) { V().toast('미분류 교정은 주관부서(재난안전과) 담당자만 할 수 있습니다.'); return; }
+        var d = D().docById(id); if (!d) return;
+        RM = { docId: id, stageIds: (d.stageIds || []).slice() };
+        global.DYPICK.reset('');
+        renderRemap();
+    }
+    function renderRemap() {
+        var d = D().docById(RM.docId);
+        V().openModal('업무단계 지정 · 미분류 교정',
+            '<div class="cmp-pick">' +
+                /* 삭제 확인 모달과 같은 어휘를 쓴다 — 새 클래스를 지어내면 규칙 없는
+                   클래스가 되어 조용히 무스타일로 뜬다(CLAUDE.md §7-1). */
+                '<p><b>' + esc(d.title) + '</b><span class="cmp-scode">' +
+                    esc(d.date || '일자 미기재') + (d.sr ? ' · ' + esc(d.sr) : '') + '</span></p>' +
+                global.DYPICK.render({ ns: 'CMPDOC.remapPick', multi: true, stages: RM.stageIds, height: 260 }) +
+                '<p class="cmp-cap">선택 <b>' + RM.stageIds.length + '</b>개 — 이 문서가 그 할 일의 <b>증빙</b>이 됩니다.</p>' +
+            '</div>',
+            '<button class="btn btn-outline" onclick="CMPDOC.closeRemap()">취소</button>' +
+            '<button class="btn btn-primary" onclick="CMPDOC.saveRemap()">저장</button>');
+    }
+    /* DYPICK 콜백 — 위 pick() 과 같은 계약(stage/all/clear) */
+    function remapPick(kind, a, b) {
+        if (!RM) return;
+        if (kind === 'stage') {
+            var i = RM.stageIds.indexOf(a);
+            if (b && i < 0) RM.stageIds.push(a);
+            if (!b && i >= 0) RM.stageIds.splice(i, 1);
+        } else if (kind === 'all') {
+            (a || []).forEach(function (id) {
+                var j = RM.stageIds.indexOf(id);
+                if (b && j < 0) RM.stageIds.push(id);
+                if (!b && j >= 0) RM.stageIds.splice(j, 1);
+            });
+        } else if (kind === 'clear') { RM.stageIds = []; }
+        F().rerender(renderRemap);
+    }
+    /* 선택기는 한 벌뿐이라 목록의 조건 트리와 상태를 공유한다 — 닫을 때 비워 두지
+       않으면 뒤에 있던 트리가 엉뚱한 단계를 고른 것처럼 보인다. */
+    function closeRemap() { global.DYPICK.reset(''); RM = null; V().closeModal(); }
+    function saveRemap() {
+        if (!RM) return;
+        if (!RM.stageIds.length) { V().toast('업무단계를 하나 이상 선택해야 저장됩니다.'); return; }
+        var r = D().remapLedger(RM.docId, RM.stageIds);
+        if (!r.ok) { V().toast(r.reason); return; }
+        V().closeModal(true);
+        RM = null;
+        global.DYPICK.reset('');
+        render();
+        V().toast('업무단계 ' + r.doc.stageIds.length + '개를 지정했습니다 — 이 문서가 그 할 일의 증빙으로 붙었습니다.');
+    }
+    /* 상세 오른쪽 칸 맨 위 — «미분류»라고 말하는 자리 바로 옆에 고치는 수단을 둔다 */
+    function remapCard(d) {
+        if (d.origin !== 'ledger' || d.mapped || d.excluded) return '';
+        return '<div class="cmp-card">' +
+            '<h3 class="cmp-detail-h3">분류 붙이기</h3>' +
+            /* 상태 이름을 단정하지 않는다 — 저장은 DYDOCS 상태축을 «진행중»으로 두지만
+               이행 관리가 보여 주는 것은 판정축(이행/미이행)이라 회차가 차면 «이행»으로 뜬다.
+               둘은 다른 축이므로(CLAUDE.md §5) 화면에 없는 상태 이름을 약속하지 않는다. */
+            '<p>원자료에 분류가 비어 있는 문서라 <b>이행 판정에 들어가지 않습니다.</b> ' +
+                '이 문서가 증빙하는 할 일(업무단계)을 고르면 그 할 일의 <b>증빙</b>으로 붙고 이행 관리의 판정에 함께 셉니다.</p>' +
+            (D().isManager()
+                ? '<button type="button" class="btn btn-primary" onclick="CMPDOC.openRemap(\'' + esc(d.id) + '\')">업무단계 지정</button>'
+                : '<p class="cmp-cap"><b>조회 전용</b> — 원장 교정은 주관부서(재난안전과) 담당자가 수행합니다.</p>') +
+        '</div>';
+    }
+
     /* =========================================================================
      * ⑤ 문서 상세
      * ========================================================================= */
@@ -456,6 +529,7 @@
                         '결재 완료본을 여기서 보려면 온나라 연동이 필요합니다 — 그럴듯한 미리보기를 대신 그리지 않습니다.</p></div>' +
                 '</div>' +
                 '<div class="cmp-two-r">' +
+                    remapCard(d) +
                     (past ? carryCard(d) : '') +
                     thisYearCard(d, st) +
                     removeLine(d, st) +
@@ -702,6 +776,7 @@
             global.DOCUP.editTitle(id, function () { render(); });
         },
         askRemove: askRemove, doRemove: doRemove,
+        openRemap: openRemap, remapPick: remapPick, closeRemap: closeRemap, saveRemap: saveRemap,
         state: S,
     };
 }(window));

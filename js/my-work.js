@@ -89,7 +89,9 @@
         safety: 'menu.html?m=policy', risk: 'rsk-list.html', law: 'menu.html?m=comply',
         opinion: 'menu.html?m=opinion&sub=voice', edu: 'edu-status.html',
         contract: 'menu.html?m=contract', order: 'menu.html?m=contract',
-        emergency: 'docs-archive.html', incident: 'docs-archive.html'
+        /* 2026-09-03 — 기준문서함(docs-archive)은 메뉴에서 뺐다. 비상대응·재해조사는
+           전용 화면이 없으므로 그 이행을 보는 자리인 이행 관리로 보낸다. */
+        emergency: 'cmp-status.html', incident: 'cmp-status.html'
     };
 
     /* 타 도메인 목업 시드 — atype: 처리 유형 / destLabel: 이동 목적지 라벨 */
@@ -105,9 +107,9 @@
                  「결재하러 가기」는 없는 동작을 약속하므로 실제로 하는 일로 고친다(검수 E). */
               atype: 'menu', href: 'bgt-main.html', action: '상신 상태 보기', destLabel: '예산 총괄표' },
             /* 점검 */
-            { id: 'I-01', cat: 'inspection', title: '기준문서함 안전점검 계열 16건 분류 확인',
+            { id: 'I-01', cat: 'inspection', title: '업무문서 안전점검 계열 16건 분류 확인',
               due: '2026-07-19', dept: 'safety', dept_label: '재난안전과',
-              atype: 'menu', href: 'docs-archive.html', action: '분류하러 가기', destLabel: '기준문서함' },
+              atype: 'menu', href: 'cmp-docs.html', action: '분류하러 가기', destLabel: '문서 목록' },
             { id: 'I-02', cat: 'inspection', title: '공중이용시설 안전점검 결과 정리 (담양읍 문화의전당)',
               due: '2026-07-17', dept: 'culture', dept_label: '문화체육과',
               atype: 'menu', href: 'fac-list.html', action: '처리하러 가기', destLabel: '시설물 대장' },
@@ -826,7 +828,7 @@
         try { deptName = D().deptName(state.deptId) || ''; } catch (e) {}
         if (!pubs.length) {
             return '<div class="mw-empty"><b>' + esc(deptName) + '</b> 부서로 발행된 업무가 없습니다.<br>' +
-                '<span style="color:var(--text-gray);">법으로 해야 하는 일 중 아직 서류가 없는 것은 <b>이행 목록</b>에서 확인하고 올릴 수 있습니다.</span><br><br>' +
+                '<span style="color:var(--text-gray);">법으로 해야 하는 일 중 아직 서류가 없는 것은 <b>이행 관리</b>에서 확인하고 올릴 수 있습니다.</span><br><br>' +
                 '<a class="btn btn-sm btn-primary" href="cmp-status.html">이행 관리 열기 ' + ICO.arrow + '</a> ' +
                 '<a class="btn btn-sm btn-outline" href="cmp-docs.html">문서 목록 열기 ' + ICO.arrow + '</a></div>';
         }
@@ -1186,7 +1188,7 @@
             if (d) { d.status = '완료'; d.updated = todayIso(); }
             state.pubFiles[ctx.id] = files.slice();
             toast(ctx.redo ? '첨부 재등록 완료 — 새 파일로 교체되었습니다.'
-                : '첨부 완료 — 업무 목록' + (d && d.setId ? ' (세트 ' + d.setId + ')' : '') + '에 반영되었습니다.');
+                : '첨부 완료 — 문서 목록' + (d && d.setId ? ' (세트 ' + d.setId + ')' : '') + '에 반영되었습니다.');
         } else {
             state.doneSeeds[ctx.id] = { at: todayIso(), files: files.slice() };
             toast(ctx.redo ? '첨부 재등록 완료 — 새 파일로 교체되었습니다.'

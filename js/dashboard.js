@@ -230,7 +230,10 @@
                 '<a class="dsh-hero-stat" href="stats.html"><b>0<em>건</em></b><span>중대재해 발생 (올해)</span></a>' +
                 '<a class="dsh-hero-stat is-danger" href="my-work.html"><b>' + totalOverdue + '<em>건</em></b><span>기한 초과 업무</span></a>' +
                 '<a class="dsh-hero-stat" href="menu.html?m=policy"><b>2<em>건</em></b><span>온나라 상신 중</span></a>' +
-                '<a class="dsh-hero-stat" href="base-targets.html"><b>23<em>개소</em></b><span>관리 사업장</span></a>' +
+                /* 2026-09-03 — 관리대상 현황(base-targets)은 메뉴에서 뺐다. 사업장 축을 여는
+                   화면이 남아 있지 않으므로 «갈 곳 없는 링크»를 남기지 않고 수치만 낸다.
+                   형제 3개는 링크라 태그를 <a> 로 두면 눌러도 아무 일이 없는 칸이 된다. */
+                '<div class="dsh-hero-stat is-static"><b>23<em>개소</em></b><span>관리 사업장</span></div>' +
               '</div>' +
             '</div>';
 
@@ -250,17 +253,25 @@
               '</div></div>' +
             '</div>';
 
+        /* 원료·제조물 건수 — 대장(DYMATERIAL)에서 센다. 대시보드가 그 모듈을 로드하지
+           않는 경우를 위해 폴백을 둔다(값을 지어내지 않고 시드 수를 쓴다). */
+        const matN = () => (window.DYMATERIAL && DYMATERIAL.list ? DYMATERIAL.list(true).length : 4);
+
         const targetCard =
             '<div class="card" style="margin-bottom:16px;">' +
               '<div class="card-header"><span class="card-title">중대시민재해 관리대상 기본현황</span>' +
-                '<a class="btn btn-sm btn-secondary" href="base-targets.html">관리대상 현황</a></div>' +
+                '<a class="btn btn-sm btn-secondary" href="fac-list.html">시설물 대장</a></div>' +
               '<div class="card-body">' +
                 '<div class="statbox-grid cols-3">' +
-                  '<a class="statbox info" href="base-targets.html?tab=facility" style="text-decoration:none;"><div class="statbox-num" style="font-size:22px;">판정 전</div><div class="statbox-label">공중이용시설 · FMS 후보</div></a>' +
-                  '<a class="statbox warning" href="base-targets.html?tab=material" style="text-decoration:none;"><div class="statbox-num">4<em style="font-size:12px;">건</em></div><div class="statbox-label">원료·제조물 · 확인 전 예시 자료</div></a>' +
+                  /* 2026-09-03 — 세 축의 목적지. 공중이용시설 판정 후보의 모집단은 FMS
+                     대장이라 시설물 대장으로, 원료·제조물은 같은 날 되살린 대장으로 간다.
+                     공중교통수단만 대장 화면이 없어 링크를 만들지 않는다 — 갈 곳 없는
+                     링크를 남기지 않는다. 건수는 대장에서 세어 화면과 어긋나지 않게 한다. */
+                  '<a class="statbox info" href="fac-list.html" style="text-decoration:none;"><div class="statbox-num" style="font-size:22px;">판정 전</div><div class="statbox-label">공중이용시설 · FMS 후보</div></a>' +
+                  '<a class="statbox warning" href="base-targets.html" style="text-decoration:none;"><div class="statbox-num">' + matN() + '<em style="font-size:12px;">건</em></div><div class="statbox-label">원료·제조물 · 확인 전 예시 자료</div></a>' +
                   '<div class="statbox neutral"><div class="statbox-num" style="font-size:22px;">자료 미수신</div><div class="statbox-label">공중교통수단 · 0건으로 단정하지 않음</div></div>' +
                 '</div>' +
-                '<p style="font-size:12px;color:var(--text-gray);margin-top:10px;">세 축은 각 관리대상 화면과 같은 모집단을 사용합니다. 확인 전 자료를 0개소로 표시하지 않습니다.</p>' +
+                '<p style="font-size:12px;color:var(--text-gray);margin-top:10px;">공중이용시설은 시설물 대장과 같은 모집단(FMS 수신분)을, 원료·제조물은 원료·제조물 대장을 그대로 셉니다. 공중교통수단만 대장 화면이 없어 여기서만 현황을 밝히며, 확인 전 자료를 0개소로 표시하지 않습니다.</p>' +
               '</div>' +
             '</div>';
 
@@ -294,7 +305,10 @@
             { name: '안전보건관리책임자 등 권한 부여·평가',    basis: '시행령 §4 5호', cycle: '반기 1회 평가', st: '완료',   href: 'evl-eval.html', due: H2_DUE },
             { name: '안전관리자 등 전문인력 배치',             basis: '시행령 §4 6호', cycle: '상시',         st: '완료',   href: 'menu.html?m=org' },
             { name: '종사자 의견청취 절차 운영',               basis: '시행령 §4 7호', cycle: '반기 1회 점검', st: '완료',   href: 'menu.html?m=opinion', note: '산보위 갈음' },
-            { name: '중대재해·급박한 위험 대비 매뉴얼 점검',   basis: '시행령 §4 8호', cycle: '반기 1회 점검', st: '진행',   href: 'docs-archive.html', due: H2_DUE },
+            /* 2026-09-03 — 기준문서함(docs-archive)은 메뉴에서 뺐다. 매뉴얼 «점검»의
+               회차별 증빙을 보는 자리는 이행 관리다. */
+            /* 원료·제조물 건수는 대장에서 센다 — 하드코딩하면 등록·중지 후 화면과 어긋난다 */
+            { name: '중대재해·급박한 위험 대비 매뉴얼 점검',   basis: '시행령 §4 8호', cycle: '반기 1회 점검', st: '진행',   href: 'cmp-status.html', due: H2_DUE },
             { name: '도급·용역·위탁 시 기준·절차 확인',        basis: '시행령 §4 9호', cycle: '반기 1회 점검', st: '미착수', href: 'menu.html?m=contract', due: H2_DUE },
         ];
         const doneN = duties.filter(d => d.st === '완료').length;
@@ -803,7 +817,7 @@
         const ratesCard =
             '<div class="card">' +
               '<div class="card-header"><span class="card-title">업무문서 처리율 — 대메뉴별</span>' +
-                '<span class="dsh-seed-note">기준문서함 문서 기준</span></div>' +
+                '<span class="dsh-seed-note">업무문서 처리 기록 기준</span></div>' +
               '<div class="card-body">' + ratesRows + '</div>' +
             '</div>';
 

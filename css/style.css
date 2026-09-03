@@ -4066,16 +4066,23 @@ select.form-select { height: var(--ctl-lg); }
 }
 .board-grid.cols-2 { grid-template-columns: 1fr 1fr; }
 .board-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+/* cols-4 — 2026-09-03 추가. 시설물 대장의 요약 카드 4장이 이 클래스를 쓰는데
+   규칙이 없어 **한 줄에 하나씩 쌓여** 1280×900 에서 첫 데이터 행이 1006px 아래로
+   밀려 있었다(§14-12 위반). 미정의 클래스는 오류를 내지 않고 그냥 기본 스타일로
+   그려진다 — 그래서 조용했다(§7-1). */
+.board-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
 .board-grid.cols-3-2 {
   grid-template-columns: 2fr 1fr;
 }
 @media (max-width: 1279px) {
   .board-grid.cols-3 { grid-template-columns: repeat(2, 1fr); }
+  .board-grid.cols-4 { grid-template-columns: repeat(2, 1fr); }
   .board-grid.cols-3-2 { grid-template-columns: 1fr; }
 }
 @media (max-width: 767px) {
   .board-grid.cols-2,
-  .board-grid.cols-3 {
+  .board-grid.cols-3,
+  .board-grid.cols-4 {
     grid-template-columns: 1fr;
   }
 }

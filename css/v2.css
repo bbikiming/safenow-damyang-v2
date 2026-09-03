@@ -341,6 +341,20 @@
 .sl-tabs button:hover { color: var(--text-black); }
 
 /* ── 문서 상세 페이지 ─────────────────────────────────────────────── */
+/* 이전 버전 화면 알림 — 이 화면은 페이지 크롬(제목·부제)을 쓰지 않아 «메뉴에서 뺐다»를
+   말할 자리가 없다(2026-09-03). 본문 맨 위에서 그 사실을 알린다. */
+.dd-retired {
+  margin: 0 0 var(--stack-tight);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--status-warning-border);
+  border-radius: var(--radius-sm);
+  background: var(--status-warning-bg);
+  color: var(--status-warning-fg);
+  font-size: var(--fs-13);
+  line-height: 1.6;
+}
+.dd-retired a { color: inherit; font-weight: var(--fw-bold); }
+
 .dd-breadcrumb {
   display: flex; align-items: center; flex-wrap: wrap; gap: 4px;
   font-size: var(--fs-12); margin-bottom: 14px;
@@ -2048,6 +2062,9 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
   transition: background .12s ease;
 }
 .dsh-hero-stat:hover { background: var(--overlay-btn-bg-hover); }
+/* 갈 곳이 없는 수치 — 링크가 아니므로 hover 로 «누를 수 있다» 고 약속하지 않는다.
+   (2026-09-03 관리 사업장: 관리대상 현황 화면을 메뉴에서 뺐다) */
+.dsh-hero-stat.is-static, .dsh-hero-stat.is-static:hover { background: var(--overlay-btn-bg); cursor: default; }
 .dsh-hero-stat b { font-size: var(--fs-26); font-weight: var(--fw-bold); line-height: 1.2; font-variant-numeric: tabular-nums; }
 .dsh-hero-stat b em { font-style: normal; font-size: var(--fs-13); font-weight: var(--fw-medium); margin-left: 2px; }
 .dsh-hero-stat span { font-size: var(--fs-12); opacity: .85; }
@@ -4811,14 +4828,38 @@ p > .dx-note-gap { display: inline; }
 .pol-wrap > :last-child,
 .pol-detail-info > :last-child { margin-bottom: 0; }
 
+/* 폼 필드 그리드 — 2026-09-03 추가.
+   보고서·제증명의 「보고서 조건」이 이 클래스를 쓰면서 인라인으로
+   `grid-template-columns: repeat(3, …)` 를 주는데, **규칙이 없어 `display:block` 으로
+   계산돼 3열 의도가 세로 1열로 쌓여 있었다**(자식 3개가 각 911px). 미정의 클래스는
+   오류를 내지 않고 그냥 기본 스타일로 그려진다 — `.board-grid.cols-4` 와 같은 사고다(§7-1).
+   · 라벨+입력 2열인 `.preset-form-grid` 와는 쓰임이 다르다 — 이쪽은 `.form-group` 을
+     가로로 늘어놓는 배치다. 계열을 합치면 라벨 열이 생겨 폼이 어긋난다.
+   · **좁은 폭에서는 1열로 접는다** — 규칙을 주는 순간 3열이 실제로 적용되므로,
+     접지 않으면 375px 에서 열이 눌린다(고치면서 모바일을 깨뜨리지 않는다). */
+.form-grid { display: grid; gap: var(--sp-3-5); align-items: start; }
+
+/* 본문 안 인라인 링크 — 2026-09-03. 규칙이 없어 **본문과 같은 색·밑줄 없음**으로 그려져
+   링크인지 알 수 없었다(실측: 링크와 부모가 본문색으로 같았다). 색만으로 말하지 않도록 밑줄을
+   함께 준다(§7 color-not-only). 코드에 이미 있던 이름이라 계열 신설이 아니다. */
+.link-primary { color: var(--main-dark); text-decoration: underline; }
+.link-primary:hover { color: var(--main); }
+@media (max-width: 767px) {
+  .form-grid { grid-template-columns: 1fr !important; }
+}
+
 /* (3) 규칙 없는 의미 훅 — **JS 가 값을 읽는 선택자**다. 스타일을 주면 안 되는
    것이 아니라 줄 이유가 없다(입력 폭 등은 인라인 style 이 이미 잡는다).
    검사에서 «빠뜨린 것»으로 오인하지 않도록 여기 남긴다.
    · cb-area/item/type/basis : menu.js 가 점검표 값을 읽는다
    · mf-decision             : 경영방침 결정문 입력값을 읽는다
    · cb-stat                 : chip-mini 위 modifier(기반이 스타일을 갖는다)
-   · sl-thead                : setlist.js — 살아 있는 소비처가 없다(CLAUDE.md §5) */
-.cb-area, .cb-item, .cb-type, .cb-basis, .mf-decision, .cb-stat, .sl-thead { /* 의도적으로 규칙 없음 */ }
+   · sl-thead                : setlist.js — 살아 있는 소비처가 없다(CLAUDE.md §5)
+   · perm-cell               : 사용자 관리가 `row.querySelector('.perm-cell')` 로 찾아
+                               권한 배지를 꽂는 자리다. 배지(chip-mini)가 스타일을 갖는다 */
+   · dd-main                 : 문서 상세 좌측 칸 — 배치는 부모 `.dd-grid` 가 잡는다 */
+.cb-area, .cb-item, .cb-type, .cb-basis, .mf-decision, .cb-stat, .sl-thead,
+.perm-cell, .dd-main { /* 의도적으로 규칙 없음 */ }
 
 /* 돌아가는 줄 — 「왔던 화면으로」와 「이 화면의 목록으로」가 한 줄에 온다.
    세로로 쌓으면 둘 다 «‹»로 시작해 어디로 가는지 헷갈리고 제목이 아래로 밀린다. */

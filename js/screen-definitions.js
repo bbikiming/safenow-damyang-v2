@@ -73,7 +73,7 @@
        전부 폴백 없이 떨어졌고, '업무문서'처럼 없어진 대메뉴가 남아 있었다. */
     var MENU_FALLBACK = {
         '대시보드': 'index.html',
-        '기본정보': 'base-targets.html',
+        '관리대상': 'fac-list.html',
         '안전보건관리체계': 'menu.html?m=policy',
         '위험성평가': 'rsk-list.html',
         '안전보건교육': 'edu-reg.html',

@@ -664,7 +664,9 @@
         if (!d) return;
         if (d.processType === '프로그램') {
             const m = MENUS[d.menuKey];
-            window.location.href = m ? m.href : 'docs-archive.html';
+            /* 폴백 — menuKey 를 못 찾은 프로그램형 문서. 2026-09-03 기준문서함이
+               메뉴에서 빠져 이행 관리로 보낸다(그 문서가 무슨 이행의 증빙인지 보는 자리). */
+            window.location.href = m ? m.href : 'cmp-status.html';
             return;
         }
         if (d.processType === '전자문서') {

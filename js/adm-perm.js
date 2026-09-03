@@ -83,6 +83,11 @@
         NAV().forEach(g => (g.items || []).forEach(it => out.push({
             id: it.id, label: it.label, href: it.href || '', screen: it.screen || '',
             section: it.section || '', groupId: g.id, groupLabel: g.label,
+            /* 2026-09-03 — 메뉴에서 뺀 화면(hidden)을 여기서 버리고 있었다. 그래서
+               메뉴 관리·권한 관리가 은퇴 화면을 «살아 있는 메뉴»로 보여 주었고,
+               관리자가 권한을 줘도 GNB·사이드바에 뜨지 않아 이유를 알 수 없었다.
+               권한 자체는 계속 필요하다 — 그 화면들은 주소로 열린다. */
+            hidden: !!it.hidden,
         })));
         return out;
     }

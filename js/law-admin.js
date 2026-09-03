@@ -252,6 +252,11 @@
                 if (!r) return;                     /* 관리 대상이 아닌 메뉴는 건너뛴다 */
                 used[it.id] = true;
                 r.label = it.label; r.group = g.label; r.section = it.section || '';
+                /* 2026-09-03 — 메뉴에서 뺀 화면(hidden)을 여기서 버리고 있어, 매핑 탭이
+                   은퇴 화면 9개를 «살아 있는 메뉴»로 나열했다. 근거 매핑은 화면이 살아
+                   있는 한 유효하므로 목록에서 빼지 않되, **지금 메뉴에 없다는 사실**은
+                   밝힌다 — 그러지 않으면 검토자가 그 화면을 메뉴에서 찾는다. */
+                r.hidden = !!it.hidden;
                 var sec = it.section || '';
                 if (sec !== curSec) {
                     curSec = sec;

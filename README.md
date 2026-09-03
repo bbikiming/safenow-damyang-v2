@@ -53,20 +53,25 @@
 
 ## IA (GNB 6개)
 
+> ⚠ 아래 표는 초기 구상이라 현행과 어긋난다. **현행 정본은 `js/layout.js` 의 `NAV` 배열**(대메뉴 11축)이고, 문서 정본은 `docs/screen-definitions/SCR-COM-002`(GNB)·`SCR-COM-003`(사이드바)다.
+
 | GNB | 화면 |
 |---|---|
 | 1. 대시보드 | `index.html` — 시기도래(목록/달력) · 대메뉴별 이행률 · 예방활동 · 알림 [SFR-020·017] |
-| 2. 기본정보 | `base-targets.html` [SFR-002] · `base-bulk.html` [SFR-016] |
+| 2. 관리대상 | `fac-list.html` (시설물 대장) · `fac-risk.html` (시설물 위험도) · `base-targets.html` (원료·제조물 대장) [SFR-002·016] — 2026-09-03 «기본정보»에서 개명·축소한 뒤 같은 날 원료·제조물 축을 되살렸다. `base-bulk.html`·`fac-sync.html`·`fac-settings.html` 은 메뉴 제외 |
 | 3. 안전보건관리체계 | 7개 대메뉴 → `menu.html?m=` (공통 레이아웃: 요약바 + [업무 기능]·[문서] 2탭) / **위험성평가 → `risk-list.html`**, **유해·위험요인 관리 → `proc-list.html`** (기존 UX 이식, menu.html 접근 시 자동 리다이렉트) |
-| 4. 업무문서 | `docs-archive.html` (기준문서함 — V2 첨부·보관 문서, 참고·안전점검 성격 태그) · **`docs-preset.html` (이행문서 — PDCA 필터·세트 보기의 유일한 거점)** |
+| 4. 업무 관리 | `cmp-status.html` (이행 관리) · `cmp-docs.html` (문서 목록) — 2026-09-03 이 둘과 `my-work.html`(내 할일) 안에서 흐름이 끝난다. `docs-archive.html`·`docs-preset.html`·`docs-exec.html`·`doc-detail.html` 은 메뉴 제외 |
 | 5. 통계·보고 | `stats.html` · `reports.html` · `info-center.html` |
 | 6. 시스템 관리 | `admin-users.html` · `admin-notify.html` · `admin-presets.html` (프리셋 양식 빌더) · `admin-integration.html` |
 
-## 위험성평가 이식 화면 (기존 프로토타입 → v2)
+## 위험성평가 이식 화면 (기존 프로토타입 → v2) — **폐기된 계획**
 
-`proc-list.html` `proc-detail.html` `risk-list.html` `risk-create.html` `risk-regular.html`
-`risk-process-eval.html` `risk-checklist.html` `risk-detail.html` `risk-form.html`
-(+ `js/risk-tour.js` 진행 가이드, `js/risk-process-eval.js`, `js/risk-checklist*.js`, `js/risk-sif-data.js`, `js/risk-assessment.js`)
+> ⚠ 아래 9개 파일은 **이 저장소에 존재하지 않는다.** 2026-07-13 위험성평가 재편에서 그 구상이
+> 대체됐고(정기·수시·개선조치 3축), 현행 화면은 `rsk-list.html` · `rsk-occ.html` 이며 모듈은
+> `js/rsk-*.js` 다. 주소를 그대로 열면 404 다 — 이 절은 «그때 이렇게 하려 했다»는 기록으로만 읽는다.
+
+~~`proc-list.html` `proc-detail.html` `risk-list.html` `risk-create.html` `risk-regular.html`
+`risk-process-eval.html` `risk-checklist.html` `risk-detail.html` `risk-form.html`~~
 
 이식 시 일괄 적용: ① 용어 "공정" → "유해·위험요인" ② 페이지 활성 ID를 v2 사이드바(sbm-risk/sbm-hazard)로 매핑
 ③ v2에 없는 화면 링크(imp-*)는 개선조치 메뉴로 보정.

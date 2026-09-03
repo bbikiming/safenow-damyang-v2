@@ -338,6 +338,26 @@
     const jurChip = j => '<span class="chip-mini ' + ({ '담양': 'st-done', '국가': 'wt-elec', '민간': 'wt-program', '미상': 'wt-attach' }[j] || 'wt') + '">' + esc(j) + '</span>';
     const riskChip = rk => '<span class="chip-status ' + ({ high: 'danger', mid: 'warning', low: 'success', na: 'neutral' }[rk.level]) + '">' + rk.label + (rk.score != null ? ' ' + rk.score : '') + '</span>';
 
+    /* 연계 · 변경 이력(감사추적) 표 — 시설물 대장과 FMS 연계가 **같은 표**를 쓴다.
+       2026-09-03: FMS 연계 화면을 메뉴에서 빼면서 보완입력(SELF) 기록을 볼 자리가
+       사라졌다. 감사추적이 갈 곳 없이 없어지면 «누가 무엇을 고쳤나» 를 물을 데가
+       없어지므로, 남은 두 화면 중 보완입력이 일어나는 대장으로 옮겨 왔다.
+       화면마다 표를 새로 짜지 않는다(CLAUDE.md §7). */
+    function syncLogCard(opt) {
+        const o = opt || {}, all = DB.syncLog || [];
+        const log = o.limit ? all.slice(0, o.limit) : all;
+        return '<div class="card" id="fac-log" tabindex="-1"><div class="card-header"><span class="card-title">연계 · 변경 이력 (감사추적)</span>' +
+            (o.headRight || '') + '</div>' +
+            '<div class="card-body" style="overflow-x:auto; padding:0;">' +
+            '<table class="table-figma"><thead><tr><th>일시</th><th>방향</th><th>인터페이스</th><th>시설물</th><th>반영키</th><th>결과</th><th>내용</th></tr></thead><tbody>' +
+            (log.length ? log.map(l => '<tr><td style="font-size:12px;">' + esc(l.at) + '</td><td>' + dirChip(l.dir) + '</td><td style="font-size:12px;">' + esc(l.iface) + '</td><td style="font-size:12px;">' + esc(l.facilNo) + '</td><td style="font-size:12px;">' + esc(l.key) + '</td><td>' + esc(l.result) + '</td><td style="font-size:12px; color:var(--text-gray);">' + esc(l.detail) + '</td></tr>').join('') : '<tr><td colspan="7"><div class="v2-empty">연계 이력이 없습니다.</div></td></tr>') +
+            '</tbody></table></div>' +
+            (o.limit && all.length > log.length
+                ? '<div class="card-body" style="border-top:1px solid var(--border); font-size:12px; color:var(--text-gray);">최근 ' + log.length + '건 표시 / 전체 ' + all.length + '건</div>'
+                : '') +
+            '</div>';
+    }
+
     /* ─────────── FAC01-V 시설물 대장 목록 ─────────── */
     function mountList(app) {
         const UI = { gbn: '', cls: '', jur: '', aged: '', graded: '', q: '' };
@@ -362,13 +382,18 @@
                 '<select class="select" id="fac-graded">' + opt('', UI.graded, '평가 전체') + opt('y', UI.graded, '등급 있음') + opt('n', UI.graded, '등급 없음') + '</select>' +
                 '<label style="display:flex; align-items:center; gap:5px; font-size:13px; color:var(--text-gray);"><input type="checkbox" id="fac-aged"' + (UI.aged ? ' checked' : '') + '> 노후만</label>' +
                 '<span class="spacer"></span>' +
+                /* 2026-09-03 — FMS 연계 실행 화면(fac-sync)은 메뉴에서 뺐다.
+                   대장에서 그쪽으로 보내는 버튼도 함께 없앤다(살아 있는 화면 → 은퇴 화면). */
                 '<button class="btn btn-outline btn-sm" onclick="DYFACIL._go(\'fac-risk.html\')">위험도 보기</button>' +
-                '<button class="btn btn-primary btn-sm" onclick="DYFACIL._go(\'fac-sync.html\')">FMS 연계</button>' +
+                /* 감사추적은 표(80행) 아래에 있어 실측 8,850px 지점이다 — 스크롤로는
+                   못 찾는다. «있는데 도달할 수 없는» 상태를 만들지 않으려고 바로가기를 둔다. */
+                '<button class="btn btn-outline btn-sm" onclick="DYFACIL._toLog()">연계·변경 이력' +
+                    ((DB.syncLog || []).length ? ' (' + DB.syncLog.length + ')' : '') + '</button>' +
                 '</div>';
         }
         function rows() {
             const list = DYFACIL.list(UI);
-            if (!list.length) return '<tr><td colspan="8"><div class="v2-empty">조건에 맞는 시설물이 없습니다.<br><span style="font-size:12px;">필터를 바꾸거나 [FMS 연계]에서 대장을 수신하세요.</span></div></td></tr>';
+            if (!list.length) return '<tr><td colspan="8"><div class="v2-empty">조건에 맞는 시설물이 없습니다.<br><span style="font-size:12px;">필터를 바꿔 보세요. 대장은 FMS 수신분이며 수신 주기·범위는 시스템 관리 &gt; 연계 관리에서 확인합니다.</span></div></td></tr>';
             return list.map(r => {
                 const e = extOf(r.facilNo), age = ageOf(r), rk = riskOf(r.facilNo);
                 const flags = [];
@@ -403,7 +428,8 @@
                 '<div class="card"><div class="card-body" style="overflow-x:auto; padding:0;">' +
                 '<table class="table-figma"><thead><tr><th>시설명 / 번호</th><th>구분 / 종류</th><th>종별</th><th>소재</th><th>경과</th><th>소관</th><th>안전등급 / 위험도</th><th>관리</th></tr></thead>' +
                 '<tbody>' + rows() + '</tbody></table>' +
-                '</div><div class="card-body" style="border-top:1px solid var(--border); font-size:12px; color:var(--text-gray);">표시 ' + list.length + ' / 전체 ' + DB.recs.length + '건</div></div>';
+                '</div><div class="card-body" style="border-top:1px solid var(--border); font-size:12px; color:var(--text-gray);">표시 ' + list.length + ' / 전체 ' + DB.recs.length + '건</div></div>' +
+                '<div style="margin-top:var(--stack-base);">' + syncLogCard({ limit: 20 }) + '</div>';
             wire();
         }
         function wire() {
@@ -647,7 +673,7 @@
         const ST = { staged: null };  /* 업로드 파싱 결과 스테이징 */
 
         function render() {
-            const s = DB.settings, log = DB.syncLog;
+            const s = DB.settings;
             app.innerHTML =
                 '<div class="board-grid cols-2" style="margin-bottom:16px;">' +
                 /* 수신 IN */
@@ -672,12 +698,8 @@
                 '<p style="font-size:12px; color:var(--text-gray); margin-top:10px;">개별 전송은 [시설물 상세]에서 실행합니다. 인증: 기관 ' + esc(s.orgCode) + ' · 사용자 ' + esc(s.userId) + ' (설정에서 변경)</p>' +
                 '</div></div>' +
                 '</div>' +
-                /* 이력 */
-                '<div class="card"><div class="card-header"><span class="card-title">연계 · 변경 이력 (감사추적)</span><button class="btn btn-sm btn-outline" onclick="DYFACIL._go(\'fac-settings.html\')">연계 설정</button></div>' +
-                '<div class="card-body" style="overflow-x:auto; padding:0;">' +
-                '<table class="table-figma"><thead><tr><th>일시</th><th>방향</th><th>인터페이스</th><th>시설물</th><th>반영키</th><th>결과</th><th>내용</th></tr></thead><tbody>' +
-                (log.length ? log.map(l => '<tr><td style="font-size:12px;">' + esc(l.at) + '</td><td>' + dirChip(l.dir) + '</td><td style="font-size:12px;">' + esc(l.iface) + '</td><td style="font-size:12px;">' + esc(l.facilNo) + '</td><td style="font-size:12px;">' + esc(l.key) + '</td><td>' + esc(l.result) + '</td><td style="font-size:12px; color:var(--text-gray);">' + esc(l.detail) + '</td></tr>').join('') : '<tr><td colspan="7"><div class="v2-empty">연계 이력이 없습니다.</div></td></tr>') +
-                '</tbody></table></div></div>';
+                /* 이력 — 시설물 대장과 같은 표(syncLogCard) */
+                syncLogCard({ headRight: '<button class="btn btn-sm btn-outline" onclick="DYFACIL._go(\'fac-settings.html\')">연계 설정</button>' });
             wire();
         }
         function wire() {
@@ -800,6 +822,14 @@
 
     /* ── 공통 액션 (전 화면 공유) ── */
     DYFACIL._go = href => { window.location.href = href; };
+    DYFACIL._toLog = () => {
+        const el = document.getElementById('fac-log');
+        if (!el) return;
+        /* 부드러운 스크롤을 쓰지 않는다 — 이동 거리가 실측 8,850px(좁은 폭에서는
+           18,000px 이상)이라 애니메이션이 몇 초씩 걸리고 도중에 끊긴다. */
+        el.scrollIntoView({ block: 'start' });
+        el.focus({ preventScroll: true });
+    };
     DYFACIL._detail = no => openDetail(no);
     DYFACIL._saveExt = no => {
         saveExt(no, collectExt());

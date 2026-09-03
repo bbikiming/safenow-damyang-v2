@@ -54,7 +54,9 @@
                 </div>
                 <p style="font-size:var(--fs-12); color:var(--text-gray);">시설물관리대장 기본현황 일 1회 수신<br>마지막 <b>성공</b> 수신: <span data-fms-last>—</span><br>현재 대장 보유 <span data-fms-cnt>—</span>건 (누적 총량 — 위 수신 1회가 받은 건수가 아닙니다)</p>
                 <p style="font-size:var(--fs-12); color:var(--text-gray); margin-top:4px;" data-fms-why hidden></p>
-                <a class="btn btn-sm btn-outline" href="fac-sync.html" style="margin-top:10px;">FMS 연계로 이동</a>
+                <!-- 2026-09-03 — FMS 연계 실행 화면(fac-sync)은 메뉴에서 뺐다. 수신 결과가
+                     쌓이는 곳은 시설물 대장이므로 그쪽으로 보낸다. 은퇴 화면으로 보내지 않는다. -->
+                <a class="btn btn-sm btn-outline" href="fac-list.html" style="margin-top:10px;">시설물 대장으로 이동</a>
             </div></div>
             <!-- 법제처 — 야간 수집 배치의 실행 기록에서 값이 파생된다.
                  법령 관리 화면이 "수집 실패 알림·재시도는 연계 관리가 단일 창구"라고
@@ -248,7 +250,7 @@
                        값만 쓰는데, 시설물 연계는 건수를 숫자로 남기지 않으므로 비운다.
                        (지금 대장에 몇 건 있는지는 그 실행이 받아온 건수가 아니라 누적 총량이다.)
                        실행이 남긴 내역은 작업 칸에 그대로 붙인다.
-                       담당자 보완입력을 포함한 전체 이력은 FMS 연계 화면이 갖는다. */
+                       담당자 보완입력을 포함한 전체 이력은 시설물 대장 화면이 갖는다. */
                     fruns.forEach(function (l) {
                         rows.push({
                             at: l.at, sys: 'FMS',
@@ -433,7 +435,7 @@
                         msg += ' ' + blocked.join(' · ') + '은(는) 「점검 필요」라 재시도 대상에서 뺐습니다 — 사람이 원인을 없애야 하는 상태입니다.';
                     }
                     msg += ' 연계 상태는 연계 실행 기록에서만 판정합니다 — 수집 결과 검토(무엇이 어떻게 바뀌었는지)는 법령 관리 화면이,' +
-                        ' 시설물의 담당자 보완입력을 포함한 전체 이력은 FMS 연계 화면이 맡습니다.';
+                        ' 시설물의 담당자 보완입력을 포함한 전체 이력은 시설물 대장 화면이 맡습니다.';
                     note.textContent = msg;
                 }
             }

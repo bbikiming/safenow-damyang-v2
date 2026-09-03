@@ -373,13 +373,18 @@
           title: '안전·보건 목표와 경영방침 결재 요청 (온나라)', href: 'menu.html?m=policy',
           work: 'my-work.html?cat=approval', basis: 'cse-4-1' },
         { id: 'n2', cat: 'assignment', catLabel: '지정',       time: '09:15',
-          title: '군청 청사 관리책임자로 자동 지정', href: 'base-targets.html',
+          /* 2026-09-03 — 책임자 «지정» 을 확인하는 자리는 조직(책임체계 지정 현황)이다.
+             base-targets 가 메뉴로 돌아왔어도 되돌리지 않는다 — 그 화면은 원료·제조물
+             대장이지 책임자 지정 축이 아니다. */
+          title: '군청 청사 관리책임자로 자동 지정', href: 'menu.html?m=org',
           work: 'my-work.html', basis: 'osh-15' },
         { id: 'n3', cat: 'compliance', catLabel: '이행',       time: '08:00',
           title: '의무이행 점검표 반기 마감 기한 초과 (D+8)', href: 'menu.html?m=comply',
           work: 'my-work.html?cat=comply', basis: 'cse-5' },
         { id: 'n4', cat: 'inspection', catLabel: '점검',       time: '어제 18:00',
-          title: '기준문서함 안전점검 계열 16건 분류 확인 요청', href: 'docs-archive.html',
+          /* 2026-09-03 — 종전 목적지 기준문서함(docs-archive)은 메뉴에서 뺐다.
+             미분류 교정은 문서 목록에서 한다. */
+          title: '업무문서 안전점검 계열 16건 분류 확인 요청', href: 'cmp-docs.html',
           work: 'my-work.html?cat=inspection', basis: 'cse-5' },
         { id: 'n5', cat: 'risk',       catLabel: '위험성평가', time: '어제 14:30',
           title: '물순환사업소 개선조치 기한초과 재촉', href: 'my-work.html?dept=water&cat=improve',
@@ -544,18 +549,38 @@
             { id: 'my-work', label: '내 할일',   icon: 'check', href: 'my-work.html', screen: 'MYW01-V' },
         ]},
 
-        /* ② 기본정보 — RFP 대상/시설 정보 관리 (SFR-002·016)
-         *   구 'facil'(시설물 안전관리) 그룹을 2뎁스 섹션으로 흡수했다.
-         *   RFP SFR-002 가 「관리대상 현황 + 시설물안전법 1·2·3종 FMS 연계·현행화」를
-         *   **한 요구사항**으로 묶고 있어, 둘을 형제 대메뉴로 세우면 같은 요구사항이
-         *   1뎁스에 두 번 선다. 시설물 4개 화면은 그대로 살아 있고 경로만 한 단 내려왔다. */
-        { id: 'base', label: '기본정보', icon: 'building', items: [
-            { id: 'base-targets', section: '관리대상',        label: '관리대상 현황',   icon: 'building', href: 'base-targets.html', screen: 'SFR-002' },
-            { id: 'base-bulk',    section: '관리대상',        label: '데이터 일괄등록', icon: 'file',     href: 'base-bulk.html',    screen: 'SFR-016' },
-            { id: 'fac-list',     section: '시설물 (FMS 연계)', label: '시설물 대장',   icon: 'list',     href: 'fac-list.html',     screen: 'FAC01-V / SFR-002·016' },
-            { id: 'fac-risk',     section: '시설물 (FMS 연계)', label: '시설물 위험도', icon: 'alert',    href: 'fac-risk.html',     screen: 'FAC03-V / SFR-002·016' },
-            { id: 'fac-sync',     section: '시설물 (FMS 연계)', label: 'FMS 연계',      icon: 'external', href: 'fac-sync.html',     screen: 'FAC04-S / SFR-002·016' },
-            { id: 'fac-settings', section: '시설물 (FMS 연계)', label: '연계 설정',     icon: 'cog',      href: 'fac-settings.html', screen: 'FAC05-S / SFR-002' },
+        /* ② 관리대상 — RFP 대상/시설 정보 관리 (SFR-002·016)
+         *   2026-09-03 에 사용자 지시가 **두 번** 있었다. 하나로 뭉뚱그리지 말 것 —
+         *   ①만 읽으면 ②가 규칙 위반으로 보인다.
+         *   ① 「기본정보 → 시설물 관리, 시설물 2화면만」 — 관리대상 2화면과 FMS 실행
+         *      2화면을 메뉴에서 뺐다.
+         *   ② 「관리대상 현황을 **원료·제조물 축만 남겨** 되살려라」 — 99_미결 EXT-10
+         *      (원료·제조물 적용 품목)을 담양군이 넣을 자리가 메뉴에서 사라졌기 때문이다
+         *      (99_미결 §7 선택지 ① 채택). 사업장·공중이용시설 탭은 화면에서 없앴다.
+         *   · 라벨 '관리대상' (사용자 확정) — ①이 '기본정보'를 버린 근거가 「무엇이 들어
+         *     있는지 말해 주지 않는다」였고, 원료·제조물은 시설물이 아니므로 같은 근거가
+         *     '시설물 관리'에도 걸렸다. RFP SFR-002 의 이름이 「중대재해 관리 대상
+         *     현황정보 관리」라 축과도 맞고, 축이 늘어도 덮으므로 재개명을 부르지 않는다.
+         *     ⚠ 다만 중처법 관리대상의 **사업장은 이 그룹에 없다**(정본 = 시스템 관리 >
+         *     사업장 관리). 그래서 원료·제조물 대장의 안내가 세 축의 정본을 밝힌다 —
+         *     그 문장을 지우면 라벨이 하지 않는 일을 한다고 말하게 된다.
+         *   · 항목 3개·축 둘이라 **머리글 '시설물' 2항목 + 원료·제조물 대장 직속**이다.
+         *     SCR-COM-003 §6 의 긍정 조항(성격이 갈리는 시점에 머리글 신설)이 발동하고,
+         *     1항목짜리 머리글을 만들지 않는 것은 sbm 도급관리 선례다.
+         *   · 그룹 id 'base' 와 item id 는 계약이라 한 글자도 바꾸지 않았다(§16).
+         *   · 뺀 3화면은 hidden:true 로 **그룹 소속만** 유지한다. 파일은 살아 있으므로
+         *     주소·즐겨찾기로 열리고, 그때 엉뚱한 그룹의 사이드바를 달지 않게 하는 자리다.
+         *     **그 셋을 메뉴로 되살리지 말 것** — 살아 있는 화면이 이쪽을 가리키지 않는
+         *     것은 tools/check-links.js 가 지킨다(RETIRED). */
+        { id: 'base', label: '관리대상', icon: 'building', items: [
+            { id: 'fac-list',     section: '시설물', label: '시설물 대장',   icon: 'list',  href: 'fac-list.html', screen: 'FAC01-V / SFR-002·016' },
+            { id: 'fac-risk',     section: '시설물', label: '시설물 위험도', icon: 'alert', href: 'fac-risk.html', screen: 'FAC03-V / SFR-002·016' },
+            /* 직속 — 어느 묶음에도 넣을 수 없다(시설물이 아니다). 구분선 아래로 온다. */
+            { id: 'base-targets', label: '원료·제조물 대장', icon: 'file', href: 'base-targets.html', screen: 'SFR-002' },
+            /* 은퇴 화면 — 메뉴에 없지만 소속 축은 남긴다 (2026-09-03) */
+            { id: 'base-bulk',    hidden: true, label: '데이터 일괄등록', icon: 'file',     href: 'base-bulk.html',    screen: 'SFR-016' },
+            { id: 'fac-sync',     hidden: true, label: 'FMS 연계',        icon: 'external', href: 'fac-sync.html',     screen: 'FAC04-S / SFR-002·016' },
+            { id: 'fac-settings', hidden: true, label: '연계 설정',       icon: 'cog',      href: 'fac-settings.html', screen: 'FAC05-S / SFR-002' },
         ]},
 
         /* ③ 안전보건관리체계 — RFP 계획·방침·의무 이행 (SFR-005·006·013·014)
@@ -646,14 +671,19 @@
          *   지우지 않고 hidden 으로 남기는 이유는 rsk-imp 선례와 같다 — 내 할일·통계·
          *   프리셋 양식 관리 등에서 들어오는 딥링크가 살아 있어서, 그룹 소속까지 없애면
          *   그 화면들이 '대시보드' 사이드바를 달고 뜬다(findGroup 폴백).
-         *   ※ 기준문서함(docs-archive)은 구버전이 아니라 **제정·개정 원문 문서함**이라
-         *     신버전에 대응 화면이 없다. 그래서 그룹만 옮겨 정식 항목으로 살린다 —
-         *     같이 지우면 내 할일의 '분류하러 가기'가 메뉴 없는 화면으로 떨어진다. */
+         *   ※ 기준문서함(docs-archive)은 2026-08-28 재편 때 «신버전에 대응 화면이 없다»는
+         *     이유로 정식 항목으로 살렸다가, **2026-09-03 사용자 지시로 메뉴에서 뺐다.**
+         *     그때 함께 옮긴 것이 내 할일의 '분류하러 가기'다 — 지금은 문서 목록으로
+         *     가고, 미분류 교정(«분류 붙이기») 자체가 문서 목록 상세 안에 있다. */
         { id: 'cmp', label: '업무 관리', icon: 'check', items: [
             { id: 'cmp-status',   label: '이행 관리',  icon: 'grid', href: 'cmp-status.html', screen: 'CMP01-T / CMP02-D / CMP04-V / SFR-014·004' },
             { id: 'cmp-docs',     label: '문서 목록',  icon: 'list', href: 'cmp-docs.html',   screen: 'DOC01-L / DOC02-D / SFR-014' },
-            { id: 'docs-archive', label: '기준문서함', icon: 'file', href: 'docs-archive.html', screen: 'SCR-EDOC-010 / SFR-012' },
-            /* hidden — 메뉴에서 뺀 구버전. 딥링크 호환용이며 **되살리지 말 것**. */
+            /* hidden — 메뉴에서 뺀 화면. 주소로만 열리며 **되살리지 말 것**.
+               2026-09-03 기준문서함(docs-archive)·문서 상세(doc-detail) 추가 —
+               업무 관리의 흐름을 **이행 관리 · 문서 목록 · 내 할일 셋 안에서** 끝내기로
+               했다(사용자 지시). 기준문서함이 갖고 있던 «제정·개정 원문 버전 이력»은
+               대체 화면이 없다 — 없어진 사실을 화면에 적고 지어내지 않는다. */
+            { id: 'docs-archive', hidden: true, label: '기준문서함', icon: 'file', href: 'docs-archive.html', screen: 'SCR-EDOC-010 / SFR-012' },
             { id: 'docs-preset', hidden: true, label: '업무 목록 (구)',      icon: 'list',  href: 'docs-preset.html' },
             { id: 'docs-exec',   hidden: true, label: '이행 목록 (구)',      icon: 'grid',  href: 'docs-exec.html' },
             { id: 'work-admin',  hidden: true, label: '업무 발행 관리 (구)', icon: 'list',  href: 'work-admin.html', screen: 'WRK01-L' },

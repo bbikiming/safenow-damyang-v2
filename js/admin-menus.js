@@ -17,6 +17,10 @@
 
     function clone(list) { return (list || []).map(a => Object.assign({}, a)); }
     function menuLabel(m) { return (m.section ? m.section + ' · ' : '') + m.label; }
+    /* 메뉴에서 뺀 화면 — 권한은 계속 걸지만(주소로 열린다) 목록에서 «지금 메뉴에
+       없다»를 밝히지 않으면 관리자가 권한을 주고도 왜 안 보이는지 알 수 없다. */
+    function hiddenChip(m) { return m && m.hidden ? ' <span class="chip-mini wt">메뉴 제외</span>' : ''; }
+    function hiddenText(m) { return m && m.hidden ? ' (메뉴 제외)' : ''; }
     function isUnset(id) { return A.getAssignments(id).length === 0; }   /* 지정 0건 = 미설정(기본 차단) */
 
     /* ── 좌측 트리 ── */
@@ -39,7 +43,7 @@
             const rows = open ? items.map(it => {
                 const sel = MUI.sel && MUI.sel.type === 'menu' && MUI.sel.id === it.id;
                 return '<button type="button" class="admm-menu' + (sel ? ' is-sel' : '') + '" onclick="DYADMENU.selMenu(\'' + it.id + '\')">' +
-                    '<span class="admm-menu-label">' + esc(menuLabel(it)) + '</span>' + statusBadge(it.id) + '</button>';
+                    '<span class="admm-menu-label">' + esc(menuLabel(it)) + '</span>' + hiddenChip(it) + statusBadge(it.id) + '</button>';
             }).join('') : '';
             return '<div class="admm-group">' +
                 '<div class="admm-ghead' + (gSel ? ' is-sel' : '') + '">' +
@@ -103,7 +107,7 @@
             const m = x.menu, u = x.metric;
             return '<tr>' +
                 '<td>' + esc(m.groupLabel) + '</td>' +
-                '<td style="font-weight:600;">' + esc(menuLabel(m)) + '</td>' +
+                '<td style="font-weight:600;">' + esc(menuLabel(m)) + hiddenChip(m) + '</td>' +
                 '<td style="text-align:right;">' + u.count + '</td>' +
                 '<td>' + esc(u.last) + '</td>' +
                 '<td>' + (u.unused ? '<span class="chip-mini st-todo">기간 내 미사용</span>' : '<span class="chip-mini st-done">이용</span>') + '</td>' +
@@ -134,7 +138,7 @@
             const cnt = st.kind === 'admin' ? '<span class="chip-mini wt">관리자 전용</span>'
                 : ('권한등급 ' + sm.role + ' · 부서 ' + sm.dept + ' · 개인 ' + sm.user);
             return '<tr onclick="DYADMENU.selMenu(\'' + it.id + '\')">' +
-                '<td style="font-weight:600;">' + esc(menuLabel(it)) + '</td>' +
+                '<td style="font-weight:600;">' + esc(menuLabel(it)) + hiddenChip(it) + '</td>' +
                 '<td>' + statusBadge(it.id) + '</td>' +
                 '<td>' + cnt + '</td>' +
                 '<td>' + (A.getUsage(it.id) ? '<span class="chip-mini st-done">사용</span>' : '<span class="chip-mini wt">사용 안 함</span>') + '</td>' +
@@ -145,7 +149,7 @@
             : '<div class="admm-bulk">' +
                 '<span class="admm-bulk-lab">하위 메뉴 일괄 적용</span>' +
                 '<select class="select" id="admm-bulk-src"><option value="">기준 메뉴 선택</option>' +
-                    (g.items || []).map(it => '<option value="' + it.id + '">' + esc(menuLabel(it)) + (isUnset(it.id) ? ' (미설정)' : '') + '</option>').join('') +
+                    (g.items || []).map(it => '<option value="' + it.id + '">' + esc(menuLabel(it)) + hiddenText(it) + (isUnset(it.id) ? ' (미설정)' : '') + '</option>').join('') +
                 '</select>' +
                 '<button class="btn btn-outline btn-sm" onclick="DYADMENU.bulkApply(\'' + gid + '\')">하위 전체에 복사</button>' +
               '</div>';
@@ -331,7 +335,7 @@
     /* 다른 메뉴 설정 복사 (단일 모달) */
     function openCopy(id) {
         const opts = A.middleMenus().filter(m => m.id !== id && m.groupId !== 'admin')
-            .map(m => '<option value="' + m.id + '">' + esc(m.groupLabel + ' > ' + menuLabel(m)) + (isUnset(m.id) ? ' (미설정)' : '') + '</option>').join('');
+            .map(m => '<option value="' + m.id + '">' + esc(m.groupLabel + ' > ' + menuLabel(m)) + hiddenText(m) + (isUnset(m.id) ? ' (미설정)' : '') + '</option>').join('');
         V().openModal('다른 메뉴 설정 복사',
             '<p style="font-size:13px; color:var(--text-gray); margin-bottom:12px;">선택한 메뉴의 접근 권한 설정을 현재 목록으로 <b>대체</b>합니다. 저장 전이므로 되돌릴 수 있습니다.</p>' +
             '<select class="select" id="admm-copy-src" style="width:100%;"><option value="">복사할 메뉴 선택</option>' + opts + '</select>',

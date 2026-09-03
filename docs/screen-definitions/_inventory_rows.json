@@ -27,7 +27,7 @@
  },
  {
   "scrId": "SCR-FAC-001",
-  "daemenu": "시설물·원료",
+  "daemenu": "관리대상",
   "jungmenu": "시설물 대장",
   "name": "시설물 대장",
   "type": "목록",
@@ -40,7 +40,7 @@
  },
  {
   "scrId": "SCR-FAC-002",
-  "daemenu": "시설물·원료",
+  "daemenu": "관리대상",
   "jungmenu": "시설물 대장",
   "name": "시설물 상세 · 보완입력",
   "type": "상세·등록·수정(팝업)",
@@ -53,7 +53,7 @@
  },
  {
   "scrId": "SCR-FAC-003",
-  "daemenu": "시설물·원료",
+  "daemenu": "관리대상",
   "jungmenu": "시설물 위험도",
   "name": "시설물 위험도",
   "type": "목록",
@@ -66,7 +66,7 @@
  },
  {
   "scrId": "SCR-BASE-003",
-  "daemenu": "시설물·원료",
+  "daemenu": "관리대상",
   "jungmenu": "원료·제조물 대장",
   "name": "원료·제조물 대장",
   "type": "목록",
@@ -79,7 +79,7 @@
  },
  {
   "scrId": "SCR-BASE-004",
-  "daemenu": "시설물·원료",
+  "daemenu": "관리대상",
   "jungmenu": "데이터 일괄등록 · 메뉴 제외",
   "name": "데이터 일괄등록",
   "type": "등록",
@@ -92,7 +92,7 @@
  },
  {
   "scrId": "SCR-FAC-004",
-  "daemenu": "시설물·원료",
+  "daemenu": "관리대상",
   "jungmenu": "FMS 연계 · 메뉴 제외",
   "name": "FMS 연계",
   "type": "기타",
@@ -105,7 +105,7 @@
  },
  {
   "scrId": "SCR-FAC-005",
-  "daemenu": "시설물·원료",
+  "daemenu": "관리대상",
   "jungmenu": "연계 설정 · 메뉴 제외",
   "name": "연계 설정",
   "type": "설정",

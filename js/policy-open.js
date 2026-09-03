@@ -101,13 +101,13 @@
             options: [{ k: 'waiting', label: '목록 대기' }, { k: 'received', label: '수신 완료' }]
         },
         {
-            id: 'public-transport', kind: 'data', menu: '관리대상 현황',
+            id: 'public-transport', kind: 'data', menu: '대시보드 — 관리대상 기본현황',
             title: '담양군 공중교통수단 운영·관리 대상 자료',
             now: '대상 유무를 확인할 자료가 없습니다. 수신 전에는 0건으로 단정하거나 빈 탭을 만들지 않고 대상 자료 미수신으로 표시합니다. 대상이 확인되면 시설물과 같은 판정·점검 구조를 적용합니다. 담양군 확인(2026-08-31) — 존부는 문서 분류 이후에 정해집니다. 분류 전에는 관리대상 축을 만들지 않습니다.',
             options: [{ k: 'waiting', label: '자료 대기' }, { k: 'received', label: '수신 완료' }]
         },
         {
-            id: 'material-scope', kind: 'data', menu: '관리대상 현황',
+            id: 'material-scope', kind: 'data', menu: '관리대상 > 원료·제조물 대장',
             title: '담양군 원료·제조물 생산·판매·유통·관리 실태와 적용 대상 품목 목록',
             now: '실목록 수신 전에는 등록된 예시 자료를 확인 전 자료로 표시하고 현재 건수를 법정 적용 대상 수로 사용하지 않습니다. 0건도 해당 없음으로 단정하지 않으며 개별 등록만 허용합니다.',
             options: [{ k: 'waiting', label: '자료 대기' }, { k: 'received', label: '수신 완료' }]
@@ -127,7 +127,12 @@
         'cmp-status': ['dept-duty', 'contract-sys', 'hr-sync', 'fms-data', 'doc-dept-src'],
         'cmp-docs': ['doc-dept-src', 'onnara'],
         'fac-list': ['fms-data'], 'fac-risk': ['fms-data'], 'fac-sync': ['fms-data'], 'fac-settings': ['fms-data'],
-        'base-targets': ['fms-data', 'public-transport', 'material-scope'],
+        /* 2026-09-03 — base-targets 가 원료·제조물 대장으로 좁혀 되살아났다.
+           fms-data 는 fac-* 화면의 것이고 public-transport 는 이 화면이 다루지 않는 축이라
+           둘을 뺐다. ※ MAP 은 준비 목록 모달이 열린 화면의 항목을 맨 위로 올리는 정렬
+           키일 뿐이고 그 모달의 진입점은 연계 관리 하나뿐이라 화면 표시에는 영향이 없다 —
+           담양군에게 «어느 화면에 넣는가»를 알려주는 것은 항목의 menu 라벨이다. */
+        'base-targets': ['material-scope'],
         'sbm-org': ['dept-list', 'hr-sync'], 'sbm-comply': ['dept-list', 'law-list'], 'sbm-policy': ['dept-list'],
         'work-admin': ['dept-list', 'onnara'], 'work-dept': ['dept-list', 'hr-sync'], 'my-work': ['dept-list'],
         /* 공문을 쓰는 교육 화면은 위험성평가와 같은 외부 의존을 진다 —

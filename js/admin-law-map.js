@@ -192,6 +192,7 @@
         return '<button type="button" class="adml-row admlm-item-row d' + depth + (on ? ' is-on' : '') + '" ' +
             'onclick="DYADMLAWMAP.sel(\'' + r.id + '\')">' +
             '<span class="adml-row-main">' + esc(r.label) +
+                (r.hidden ? ' <span class="chip-mini wt">메뉴 제외</span>' : '') +
                 (r.chipBlocked.length ? ' <span class="adml-art-t">표시 불가</span>' : '') +
             '</span>' + (review ? chip('재검토 요청') : chip(A().statusOf(r))) + '</button>';
     }

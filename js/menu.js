@@ -2260,7 +2260,9 @@
             sectionCard('조치 문서 마스터 (엑셀 분류본 ' + aDocs.length + '건)',
                 tbl(['문서명', '발생 메뉴', '주기', '상태'],
                     aDocs.slice(0, 8).map(d => [esc(d.name), d.daemenu === '확인필요' ? V.unassignedBadge() : '<span class="chip-mini pdca">' + esc(d.daemenu) + '</span>', esc(d.cycle), ST(d.status)])) +
-                '<p style="font-size:12px; color:var(--text-gray); margin-top:8px;">외 ' + (aDocs.length - 8) + '건 — 업무문서 &gt; 이행문서에서 A 조치 필터로 전체 조회</p>');
+                /* 2026-09-03 — «업무문서 > 이행문서»는 대메뉴도 화면도 없는 이름이었다.
+                   지금 전체를 보는 자리는 업무 관리 > 문서 목록이다. */
+                '<p style="font-size:12px; color:var(--text-gray); margin-top:8px;">외 ' + (aDocs.length - 8) + '건 — <a href="cmp-docs.html" style="color:var(--main-dark);">업무 관리 &gt; 문서 목록</a>에서 전체 조회</p>');
         },
 
         /* ── 의무 이행점검 [SFR-008·014] ──────────────────────────────────
@@ -2392,9 +2394,12 @@
                         : '<span class="opn-muted" style="font-size:var(--fs-12); align-self:center;">상신은 <b>담당자</b>가 합니다 — 관리·감독 계층은 조회만 합니다.</span>')) +
                 '</div>') +
             sectionCard('중대재해 예방 매뉴얼·업무처리절차 점검',
-                '<div class="check-notice" style="margin-bottom:10px;">제정·개정 원문과 버전은 <b>기준문서함</b>에서 관리하고, 제정·조치 여부·교육·점검 증빙은 <b>이행 목록</b>에서 회차별로 관리합니다. 같은 파일을 두 곳에 중복 등록하지 않습니다.</div>' +
+                /* 2026-09-03 — 기준문서함(docs-archive)을 메뉴에서 뺐다. 원문을 두는 자리는
+                   문서 목록이고, **문서별 버전 이력은 기준문서함에만 있던 기능이라 대체가
+                   없다.** 없어진 것을 «있는 것처럼» 적지 않는다(CLAUDE.md §14-12). */
+                '<div class="check-notice" style="margin-bottom:10px;">제정·개정 원문은 <b>문서 목록</b>에서 찾고, 제정·조치 여부·교육·점검 증빙은 <b>이행 관리</b>에서 회차별로 관리합니다. 같은 파일을 두 곳에 중복 등록하지 않습니다.</div>' +
                 tbl(['관리 구분', '정본 위치', '현재 상태', '이동'], [
-                    ['제정·개정 원문', '기준문서함', '<span class="chip-status info">문서별 버전 관리</span>', '<a class="btn btn-sm btn-outline" href="docs-archive.html?filter=manual">원문 조회</a>'],
+                    ['제정·개정 원문', '문서 목록', '<span class="chip-status neutral">문서별 버전 이력 없음 — 기준문서함 메뉴 제외</span>', '<a class="btn btn-sm btn-outline" href="cmp-docs.html">문서 찾기</a>'],
                     ['제정·조치 여부 점검', '이행 관리', '<span class="chip-status warning">회차별 증빙 확인</span>', '<a class="btn btn-sm btn-primary" href="cmp-status.html">이행 점검</a>'],
                 ]),
                 '') +
