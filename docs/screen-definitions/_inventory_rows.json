@@ -27,7 +27,7 @@
  },
  {
   "scrId": "SCR-FAC-001",
-  "daemenu": "시설물 관리",
+  "daemenu": "시설물·원료",
   "jungmenu": "시설물 대장",
   "name": "시설물 대장",
   "type": "목록",
@@ -40,7 +40,7 @@
  },
  {
   "scrId": "SCR-FAC-002",
-  "daemenu": "시설물 관리",
+  "daemenu": "시설물·원료",
   "jungmenu": "시설물 대장",
   "name": "시설물 상세 · 보완입력",
   "type": "상세·등록·수정(팝업)",
@@ -53,7 +53,7 @@
  },
  {
   "scrId": "SCR-FAC-003",
-  "daemenu": "시설물 관리",
+  "daemenu": "시설물·원료",
   "jungmenu": "시설물 위험도",
   "name": "시설물 위험도",
   "type": "목록",
@@ -65,39 +65,13 @@
   "unresolvedCount": 6
  },
  {
-  "scrId": "SCR-BASE-001",
-  "daemenu": "시설물 관리",
-  "jungmenu": "관리대상 현황 · 메뉴 제외",
-  "name": "관리대상 현황 — 사업장 탭",
-  "type": "목록",
-  "route": "base-targets.html?tab=biz",
-  "components": "layout.js, common.js, site-data.js",
-  "existingSfr": "SFR-002",
-  "defFile": "SCR-BASE-001_관리대상현황_사업장.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/base-targets.html",
-  "unresolvedCount": 4
- },
- {
-  "scrId": "SCR-BASE-002",
-  "daemenu": "시설물 관리",
-  "jungmenu": "관리대상 현황 · 메뉴 제외",
-  "name": "관리대상 현황 — 공중이용시설 탭",
-  "type": "목록",
-  "route": "base-targets.html?tab=facility",
-  "components": "layout.js, common.js, facil-data.js, facil.js",
-  "existingSfr": "SFR-002",
-  "defFile": "SCR-BASE-002_관리대상현황_공중이용시설.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/base-targets.html",
-  "unresolvedCount": 6
- },
- {
   "scrId": "SCR-BASE-003",
-  "daemenu": "시설물 관리",
-  "jungmenu": "관리대상 현황 · 메뉴 제외",
-  "name": "관리대상 현황 — 원료·제조물 탭",
+  "daemenu": "시설물·원료",
+  "jungmenu": "원료·제조물 대장",
+  "name": "원료·제조물 대장",
   "type": "목록",
-  "route": "base-targets.html?tab=material",
-  "components": "layout.js, common.js, material-data.js",
+  "route": "base-targets.html",
+  "components": "layout.js, common.js, org-pick.js, material-data.js",
   "existingSfr": "SFR-002",
   "defFile": "SCR-BASE-003_관리대상현황_원료제조물.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/base-targets.html",
@@ -105,7 +79,7 @@
  },
  {
   "scrId": "SCR-BASE-004",
-  "daemenu": "시설물 관리",
+  "daemenu": "시설물·원료",
   "jungmenu": "데이터 일괄등록 · 메뉴 제외",
   "name": "데이터 일괄등록",
   "type": "등록",
@@ -118,7 +92,7 @@
  },
  {
   "scrId": "SCR-FAC-004",
-  "daemenu": "시설물 관리",
+  "daemenu": "시설물·원료",
   "jungmenu": "FMS 연계 · 메뉴 제외",
   "name": "FMS 연계",
   "type": "기타",
@@ -131,7 +105,7 @@
  },
  {
   "scrId": "SCR-FAC-005",
-  "daemenu": "시설물 관리",
+  "daemenu": "시설물·원료",
   "jungmenu": "연계 설정 · 메뉴 제외",
   "name": "연계 설정",
   "type": "설정",
