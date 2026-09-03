@@ -94,6 +94,39 @@ def is_target(path):
     return b.startswith("SCR-") and b.endswith(".md")
 
 
+def check_inventory_drift():
+    """00_화면목록.md §3 표가 정본(_inventory_rows.json)과 같은지 본다.
+
+    표 머리에 «정본에서 생성한 표»라고 적혀 있었지만 생성기가 없어 손으로 유지돼 왔고,
+    2026-09-03 점검에서 **31행이 어긋나 있었다**(SFR 23행 · 표기 8행). 어긋남의 증상이
+    조용해서(문법 오류도 콘솔 경고도 없다) 검사가 없으면 다시 벌어진다.
+    고치는 방법은 손이 아니라 `python3 docs/screen-definitions/_build-data.py` 다.
+    """
+    import json as _json, re as _re
+    fn = os.path.join(HERE, "00_화면목록.md")
+    jf = os.path.join(HERE, "_inventory_rows.json")
+    if not (os.path.exists(fn) and os.path.exists(jf)):
+        return []
+    rows = _json.load(open(jf, encoding="utf-8"))
+    md = open(fn, encoding="utf-8").read()
+    def cell(v):
+        return str(v or "").replace("|", "\\|").strip()
+    def route(r):
+        rt = cell(r.get("route"))
+        return rt if rt.startswith("전역 —") else "`" + rt + "`"
+    want = ["| " + " | ".join([cell(r.get("scrId")), cell(r.get("daemenu")), cell(r.get("jungmenu")),
+            cell(r.get("name")), cell(r.get("type")), route(r), cell(r.get("components")),
+            cell(r.get("existingSfr")), cell(r.get("defFile"))]) + " |" for r in rows]
+    got = [l for l in md.split("\n") if _re.match(r"^\| SCR-[A-Z]+-\d+ \|", l)]
+    bad = []
+    if len(want) != len(got):
+        bad.append(("INV-ROWS", "표 %d행 ≠ 정본 %d행" % (len(got), len(want))))
+    for w, g in zip(want, got):
+        if w != g:
+            bad.append(("INV-DIFF", g.split("|")[1].strip() + " — 표가 정본과 다르다"))
+    return bad
+
+
 def main(argv):
     files = argv[1:] or sorted(glob.glob(os.path.join(HERE, "SCR-*.md")))
     targets = [f for f in files if is_target(f)]
@@ -112,6 +145,16 @@ def main(argv):
                 print("   [%s] %s" % (code, msg))
         else:
             print("✓ %s — 규칙 통과" % os.path.basename(f))
+    drift = check_inventory_drift()
+    if drift:
+        total += len(drift)
+        print("✗ 00_화면목록.md §3 표 — 정본과 어긋남 %d건 (고치려면 _build-data.py 를 다시 돌린다)" % len(drift))
+        for code, msg in drift[:10]:
+            print("   [%s] %s" % (code, msg))
+        if len(drift) > 10:
+            print("   … 외 %d건" % (len(drift) - 10))
+    else:
+        print("✓ 00_화면목록.md §3 표 — 정본과 일치")
     print("\n합계 위반 %d건 / 대상 %d개" % (total, len(targets)))
     return 1 if total else 0
 
