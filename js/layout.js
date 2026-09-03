@@ -557,27 +557,26 @@
          *   ② 「관리대상 현황을 **원료·제조물 축만 남겨** 되살려라」 — 99_미결 EXT-10
          *      (원료·제조물 적용 품목)을 담양군이 넣을 자리가 메뉴에서 사라졌기 때문이다
          *      (99_미결 §7 선택지 ① 채택). 사업장·공중이용시설 탭은 화면에서 없앴다.
-         *   · 라벨 '관리대상' (사용자 확정) — ①이 '기본정보'를 버린 근거가 「무엇이 들어
-         *     있는지 말해 주지 않는다」였고, 원료·제조물은 시설물이 아니므로 같은 근거가
-         *     '시설물 관리'에도 걸렸다. RFP SFR-002 의 이름이 「중대재해 관리 대상
-         *     현황정보 관리」라 축과도 맞고, 축이 늘어도 덮으므로 재개명을 부르지 않는다.
-         *     ⚠ 다만 중처법 관리대상의 **사업장은 이 그룹에 없다**(정본 = 시스템 관리 >
-         *     사업장 관리). 그래서 원료·제조물 대장의 안내가 세 축의 정본을 밝힌다 —
-         *     그 문장을 지우면 라벨이 하지 않는 일을 한다고 말하게 된다.
-         *   · 항목 3개·축 둘이라 **머리글 '시설물' 2항목 + 원료·제조물 대장 직속**이다.
-         *     SCR-COM-003 §6 의 긍정 조항(성격이 갈리는 시점에 머리글 신설)이 발동하고,
-         *     1항목짜리 머리글을 만들지 않는 것은 sbm 도급관리 선례다.
+         *   · 라벨 '관리대상' — RFP SFR-002 의 이름이 「중대재해 관리 대상 현황정보
+         *     관리」이고 **그 요구사항 본문이 전부 시설물 축**(FMS 연계·1·2·3종 분류·자동
+         *     현행화)이다. 즉 시설물 2화면만 있어도 이 라벨이 요구사항 이름과 정확히
+         *     맞는다 — 라벨을 또 바꾸지 않는 이유다.
+         *   · 항목 2개·축 하나라 **section 을 두지 않는다**(§16 뎁스 계약).
          *   · 그룹 id 'base' 와 item id 는 계약이라 한 글자도 바꾸지 않았다(§16).
          *   · 뺀 3화면은 hidden:true 로 **그룹 소속만** 유지한다. 파일은 살아 있으므로
          *     주소·즐겨찾기로 열리고, 그때 엉뚱한 그룹의 사이드바를 달지 않게 하는 자리다.
          *     **그 셋을 메뉴로 되살리지 말 것** — 살아 있는 화면이 이쪽을 가리키지 않는
          *     것은 tools/check-links.js 가 지킨다(RETIRED). */
         { id: 'base', label: '관리대상', icon: 'building', items: [
-            { id: 'fac-list',     section: '시설물', label: '시설물 대장',   icon: 'list',  href: 'fac-list.html', screen: 'FAC01-V / SFR-002·016' },
-            { id: 'fac-risk',     section: '시설물', label: '시설물 위험도', icon: 'alert', href: 'fac-risk.html', screen: 'FAC03-V / SFR-002·016' },
-            /* 직속 — 어느 묶음에도 넣을 수 없다(시설물이 아니다). 구분선 아래로 온다. */
-            { id: 'base-targets', label: '원료·제조물 대장', icon: 'file', href: 'base-targets.html', screen: 'SFR-002' },
-            /* 은퇴 화면 — 메뉴에 없지만 소속 축은 남긴다 (2026-09-03) */
+            { id: 'fac-list',     label: '시설물 대장',   icon: 'list',  href: 'fac-list.html', screen: 'FAC01-V / SFR-002·016' },
+            { id: 'fac-risk',     label: '시설물 위험도', icon: 'alert', href: 'fac-risk.html', screen: 'FAC03-V / SFR-002·016' },
+            /* 은퇴 화면 — 메뉴에 없지만 소속 축은 남긴다 (2026-09-03)
+               ※ base-targets(원료·제조물 대장)은 되살렸다가 **대시보드로 흡수**했다.
+                 원문 대조 결과 제안요청서는 이 축을 SFR-020 대시보드의 「원료·제조물
+                 개소 표시」로만 요구했고, 중처법 §9①·시행령 §8 어느 조문도 품목 대장
+                 작성을 명하지 않는다. 조치 의무는 이행 관리(CIT-02·03)가 이미 다룬다.
+                 화면은 주소로 열리며 EXT-10 자료가 오면 그 자리에 넣는다. */
+            { id: 'base-targets', hidden: true, label: '원료·제조물 대장', icon: 'file',     href: 'base-targets.html' },
             { id: 'base-bulk',    hidden: true, label: '데이터 일괄등록', icon: 'file',     href: 'base-bulk.html',    screen: 'SFR-016' },
             { id: 'fac-sync',     hidden: true, label: 'FMS 연계',        icon: 'external', href: 'fac-sync.html',     screen: 'FAC04-S / SFR-002·016' },
             { id: 'fac-settings', hidden: true, label: '연계 설정',       icon: 'cog',      href: 'fac-settings.html', screen: 'FAC05-S / SFR-002' },

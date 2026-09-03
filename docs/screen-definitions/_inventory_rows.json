@@ -67,12 +67,12 @@
  {
   "scrId": "SCR-BASE-003",
   "daemenu": "관리대상",
-  "jungmenu": "원료·제조물 대장",
+  "jungmenu": "원료·제조물 대장 · 메뉴 제외",
   "name": "원료·제조물 대장",
   "type": "목록",
   "route": "base-targets.html",
   "components": "layout.js, common.js, org-pick.js, material-data.js",
-  "existingSfr": "SFR-002",
+  "existingSfr": "없음 — 개소 표시는 SFR-020(대시보드)",
   "defFile": "SCR-BASE-003_관리대상현황_원료제조물.md",
   "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/base-targets.html",
   "unresolvedCount": 2

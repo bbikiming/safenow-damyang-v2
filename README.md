@@ -58,7 +58,7 @@
 | GNB | 화면 |
 |---|---|
 | 1. 대시보드 | `index.html` — 시기도래(목록/달력) · 대메뉴별 이행률 · 예방활동 · 알림 [SFR-020·017] |
-| 2. 관리대상 | `fac-list.html` (시설물 대장) · `fac-risk.html` (시설물 위험도) · `base-targets.html` (원료·제조물 대장) [SFR-002·016] — 2026-09-03 «기본정보»에서 개명·축소한 뒤 같은 날 원료·제조물 축을 되살렸다. `base-bulk.html`·`fac-sync.html`·`fac-settings.html` 은 메뉴 제외 |
+| 2. 관리대상 | `fac-list.html` (시설물 대장) · `fac-risk.html` (시설물 위험도) [SFR-002·016] — 2026-09-03 «기본정보»에서 개명·축소. `base-targets.html`(원료·제조물 대장)은 **대시보드로 흡수**해 메뉴 제외(개소는 SFR-020 대시보드가 표시). `base-bulk.html`·`fac-sync.html`·`fac-settings.html` 도 메뉴 제외 |
 | 3. 안전보건관리체계 | 7개 대메뉴 → `menu.html?m=` (공통 레이아웃: 요약바 + [업무 기능]·[문서] 2탭) / **위험성평가 → `risk-list.html`**, **유해·위험요인 관리 → `proc-list.html`** (기존 UX 이식, menu.html 접근 시 자동 리다이렉트) |
 | 4. 업무 관리 | `cmp-status.html` (이행 관리) · `cmp-docs.html` (문서 목록) — 2026-09-03 이 둘과 `my-work.html`(내 할일) 안에서 흐름이 끝난다. `docs-archive.html`·`docs-preset.html`·`docs-exec.html`·`doc-detail.html` 은 메뉴 제외 |
 | 5. 통계·보고 | `stats.html` · `reports.html` · `info-center.html` |

@@ -253,9 +253,11 @@
               '</div></div>' +
             '</div>';
 
-        /* 원료·제조물 건수 — 대장(DYMATERIAL)에서 센다. 대시보드가 그 모듈을 로드하지
-           않는 경우를 위해 폴백을 둔다(값을 지어내지 않고 시드 수를 쓴다). */
-        const matN = () => (window.DYMATERIAL && DYMATERIAL.list ? DYMATERIAL.list(true).length : 4);
+        /* 원료·제조물 개소 — 제안요청서 SFR-020 이 「시설 기본현황에 … 원료·제조물
+           개소를 표시한다」로 요구한 값이다. 대장(DYMATERIAL)에서 센다 — index.html 이
+           material-data.js 를 싣는 이유가 이것이고, 안 실으면 폴백이 하드코딩 수를
+           돌려줘 화면이 조용히 거짓말을 한다(2026-09-03 실측으로 드러난 결함). */
+        const matN = () => (window.DYMATERIAL && DYMATERIAL.list ? DYMATERIAL.list(true).length : null);
 
         const targetCard =
             '<div class="card" style="margin-bottom:16px;">' +
@@ -268,10 +270,14 @@
                      공중교통수단만 대장 화면이 없어 링크를 만들지 않는다 — 갈 곳 없는
                      링크를 남기지 않는다. 건수는 대장에서 세어 화면과 어긋나지 않게 한다. */
                   '<a class="statbox info" href="fac-list.html" style="text-decoration:none;"><div class="statbox-num" style="font-size:22px;">판정 전</div><div class="statbox-label">공중이용시설 · FMS 후보</div></a>' +
-                  '<a class="statbox warning" href="base-targets.html" style="text-decoration:none;"><div class="statbox-num">' + matN() + '<em style="font-size:12px;">건</em></div><div class="statbox-label">원료·제조물 · 확인 전 예시 자료</div></a>' +
+                  /* 링크를 만들지 않는다 — 이 축의 대장은 메뉴에서 뺐다(대시보드 흡수).
+                     개소를 세지 못하면 숫자를 지어내지 않고 «집계 불가»로 밝힌다. */
+                  '<div class="statbox warning"><div class="statbox-num"' + (matN() === null ? ' style="font-size:22px;"' : '') + '>' +
+                    (matN() === null ? '집계 불가' : matN() + '<em style="font-size:12px;">건</em>') +
+                    '</div><div class="statbox-label">원료·제조물 · 확인 전 예시 자료</div></div>' +
                   '<div class="statbox neutral"><div class="statbox-num" style="font-size:22px;">자료 미수신</div><div class="statbox-label">공중교통수단 · 0건으로 단정하지 않음</div></div>' +
                 '</div>' +
-                '<p style="font-size:12px;color:var(--text-gray);margin-top:10px;">공중이용시설은 시설물 대장과 같은 모집단(FMS 수신분)을, 원료·제조물은 원료·제조물 대장을 그대로 셉니다. 공중교통수단만 대장 화면이 없어 여기서만 현황을 밝히며, 확인 전 자료를 0개소로 표시하지 않습니다.</p>' +
+                '<p style="font-size:12px;color:var(--text-gray);margin-top:10px;">공중이용시설은 시설물 대장과 같은 모집단(FMS 수신분)을 셉니다. <b>원료·제조물·공중교통수단은 이 카드가 개소를 밝히는 유일한 자리입니다</b> — 제안요청서가 요구한 것이 개소 표시이고, 두 축은 전용 대장 화면을 두지 않았습니다. 확인 전 자료를 0개소로 표시하지 않습니다.</p>' +
               '</div>' +
             '</div>';
 

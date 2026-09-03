@@ -37,9 +37,10 @@ NAV.forEach(g => g.items.forEach(it => navItems.push({ ...it, group: g.label, gi
 
 /* 메뉴에서 뺐지만 파일은 살아 있는 화면 */
 const RETIRED = new Set(['docs-preset.html', 'docs-exec.html', 'work-admin.html', 'work-dept.html',
-    /* 2026-09-03 — 관리대상(구 기본정보) 대메뉴. base-targets 는 같은 날 두 번째
-       지시로 원료·제조물 축만 남겨 **메뉴로 되살렸다** — 여기서 뺐다(§16 되살림 절차 3). */
-    'base-bulk.html', 'fac-sync.html', 'fac-settings.html',
+    /* 2026-09-03 — 관리대상(구 기본정보) 대메뉴. base-targets 는 같은 날 되살렸다가
+       **대시보드로 흡수**해 다시 뺐다 — 제안요청서가 요구한 것은 SFR-020 의 「원료·제조물
+       개소 표시」이고 법령 어느 조문도 품목 대장을 명하지 않는다(§10 검증 6문 #2). */
+    'base-targets.html', 'base-bulk.html', 'fac-sync.html', 'fac-settings.html',
     /* 2026-09-03 — 업무 관리는 이행 관리·문서 목록·내 할일 셋 안에서 끝낸다.
        기준문서함과 그 문서 상세는 메뉴에서 뺐다. */
     'docs-archive.html', 'doc-detail.html']);
