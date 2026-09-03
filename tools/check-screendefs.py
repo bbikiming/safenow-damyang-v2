@@ -70,6 +70,53 @@ def flag(code, f, msg):
 # 공통 문서 3종도 본다 — 2026-09-03 실측: 99_미결사항목록이 담양군이 값을 넣을 자리로
 # «관리대상 현황»을 지목하고 있었는데 그 화면은 메뉴에서 뺀 뒤였다. SCR-*.md 만 보면 놓친다.
 COMMON = ["99_미결사항목록.md", "_공통_권한정의.md", "00_화면목록.md", "_규칙.md"]
+
+# ── QA 검수 시나리오도 본다 (2026-09-03 신설) ────────────────────────────────
+# 이 문서는 «검수자가 이 순서대로 눌러 본다»는 **실행 문서**라, 화면 목록과 어긋나면
+# 그 자체가 결함이다. 실측: 관리대상 재편·기준문서함 은퇴 뒤에도 TC 3건(SMK-003·004·010)
+# 이 은퇴 화면을 순회하라고 지시하고 있었다 — 검수자는 「화면이 없다」를 **시스템 결함**
+# 으로 기록한다. 정의서 검사(SCR-*.md)도 링크 검사(코드)도 이 문서를 보지 않았다.
+#
+# ⚠ 무엇을 보는지 좁혀 둔다 — 이 문서에는 「옛 대메뉴 → 지금」 매핑표처럼 **없어진 이름을
+#   적는 것이 옳은** 서술이 있다. 그래서 서술문은 보지 않고, 검수자가 실제로 **수행하는 행**
+#   두 종류만 본다: TC 표 행(`| SMK-003 | …`)과 모듈 범위표 행(`| P1 | ② … |`).
+QA_FILES = sorted(glob.glob(os.path.join(ROOT, "docs", "planning", "검수-QA시나리오-*.md"))) + \
+           sorted(glob.glob(os.path.join(ROOT, "docs", "planning", "노션임포트-QA-*", "*.md"))) + \
+           sorted(glob.glob(os.path.join(ROOT, "docs", "planning", "노션임포트-QA-*", "*.csv")))
+QA_ROW = re.compile(r"^\|\s*(?:(?:RISK|EDU|COM|SMK)-\d{3}|P[012])\s*\|")
+QA_CSV_ROW = re.compile(r"^(?:RISK|EDU|COM|SMK)-\d{3},")
+# 「그 화면은 없다」를 확인시키는 행은 위반이 아니다 — 오히려 있어야 하는 TC 다
+QA_OK = GONE_OK + ("FAIL", "없다", "보이지", "찾아본", "메뉴에 없", "없는 것")
+
+# 면제는 **셀 단위**로 판정한다 (MUST) — 행 전체를 보면 「…이 보이면 FAIL」이 한 칸에만
+# 있어도 다른 칸의 «기준문서함 진입 > 검색» 이 통째로 면제된다. 2026-09-03 변이 시험에서
+# 실제로 그렇게 3건 중 2건을 놓쳤다. 한 칸 안에서 이름과 부정어가 함께 있어야 면제다.
+def qa_cells(ln, is_csv):
+    if is_csv:
+        import csv as _csv
+        try:
+            return next(_csv.reader([ln]))
+        except Exception:
+            return [ln]
+    return ln.strip().strip("|").split("|")
+
+for f in QA_FILES:
+    is_csv = f.endswith(".csv")
+    for ln in io.open(f, encoding="utf-8"):
+        if not (QA_CSV_ROW.match(ln) if is_csv else QA_ROW.match(ln)):
+            continue
+        for cell in qa_cells(ln, is_csv):
+            if any(w in cell for w in QA_OK):
+                continue
+            hit = next((nm for nm in GONE_SCREENS if nm in cell), None)
+            if hit:
+                flag("QA-GONE", f, "검수 지시가 메뉴에 없는 화면 «%s» 을 가리킨다 — «%s»"
+                     % (hit, cell.strip()[:70]))
+                continue
+            dm = next((d for d in DEAD_MENU if d in cell), None)
+            if dm:
+                flag("QA-DEADMENU", f, "검수 지시에 없어진 대메뉴 이름 — «%s»" % cell.strip()[:70])
+
 for f in sorted(glob.glob(os.path.join(HERE, "SCR-*.md"))) + [os.path.join(HERE, c) for c in COMMON]:
     b, md = os.path.basename(f), io.open(f, encoding="utf-8").read()
     rs = byDef.get(b)
@@ -145,7 +192,8 @@ for f in sorted(glob.glob(os.path.join(HERE, "SCR-*.md"))) + [os.path.join(HERE,
         if not os.path.exists(os.path.join(ROOT, h)):
             flag("SD-FILE", f, "실재하지 않는 파일 참조: " + h)
 
-print("화면정의서 정합 검사 — 정의서 %d건 · 정본 %d행\n" % (len(glob.glob(os.path.join(HERE, "SCR-*.md"))), len(rows)))
+print("화면정의서 정합 검사 — 정의서 %d건 · 정본 %d행 · QA 문서 %d건\n"
+      % (len(glob.glob(os.path.join(HERE, "SCR-*.md"))), len(rows), len(QA_FILES)))
 if bad:
     for code, f, msg in bad:
         print("  ✗ [%s] %s — %s" % (code, f, msg))
@@ -156,4 +204,5 @@ print("  ✓ 실재하지 않는 화면 ID·파일 참조 없음")
 print("  ✓ 없어진 대메뉴 이름 없음")
 print("  ✓ 메뉴 제외 화면의 상태·대체 화면·진입 수단 명시")
 print("  ✓ 살아 있는 정의서가 은퇴 화면으로 안내하지 않음 (파일명·화면 이름 둘 다)")
-print("\n✔ 화면정의서 정합 9종 전건 통과")
+print("  ✓ QA 검수 지시가 메뉴에 없는 화면·대메뉴를 가리키지 않음")
+print("\n✔ 화면정의서 정합 10종 전건 통과")
