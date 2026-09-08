@@ -4325,6 +4325,8 @@ p > .dx-note-gap { display: inline; }
 .cmp-c-dc { width: 76px; }
 /* 수행 위치 열 — 업무유형 축(2026-08-18). 목록에서 «어디서 하는 일인지»를 읽는다 */
 .cmp-c-way { width: 14%; min-width: 96px; }
+/* 원문 확인 필요 칩(cmp-docs) — 분류 확인 칩과 같은 자리·같은 줄바꿈 규칙 */
+.cmp-review { white-space: nowrap; }
 /* 실측 원장 집계 — 등록분과 시각으로 구분한다(수치 뜻이 다르다) */
 .cmp-real { font-weight: var(--fw-semibold); color: var(--text-black); }
 .cmp-real-tag { display: inline-block; margin-left: 4px; font-size: var(--fs-12); }

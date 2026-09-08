@@ -157,7 +157,7 @@
 
     /* =========================================================================
      * 문서 축 — 세 출처를 하나의 배열로 (UX설계 §5-3)
-     *   2025 원장 57,765 + DY_DOCS_V2 426 + 2026 예시 자료 + 사용자 등록분
+     *   2025 원장(20개 부서) + DY_DOCS_V2 426 + 2026 예시 자료 + 사용자 등록분
      *   6만행이 넘으므로 파생 인덱스까지 한 번에 만들고 캐시한다(실측 49ms).
      * ========================================================================= */
     var _cache = null;
@@ -173,7 +173,7 @@
         }
         var docs = [];
 
-        /* (1) 2025 문서 원장 — 생성물(20개 부서 57,765건). 종전 3,830건은 재난안전과
+        /* (1) 2025 문서 원장 — 생성물(20개 부서). 종전 3,830건은 재난안전과
                한 부서뿐이라 «부서 축 없음»이었으나 지금은 전건이 부서를 갖는다.
                관리자 교정(store().fix)은 원본을 고치지 않고 여기서 **덧씌운다**. */
         var FX = store().fix || {};
@@ -188,7 +188,8 @@
                 dept: d.dept || '', assignee: '',   /* 담당자는 여전히 원장 미보유 */
                 dir: d.dir || null,                 /* 발신구분 → 수발신 방향(전건 보유) */
                 mapConf: d.mapConf || '',           /* sure·weak·vague — weak 이 진짜 위험 */
-                excluded: d.excluded || '',         /* 타 기관 소관·의무아님 */
+                excluded: d.excluded || '',         /* 제외사유 — 적용 법령 밖·집행 행정문서·참고수신·타 기관 소관·자치사무(v4.0 5종) */
+                review: d.review || null,           /* 원문 확인 필요 {type, what, cand} — 원장 v4.0 신규 열 */
                 origin: 'ledger', dataMode: d.dataMode || 'real',
                 statusSource: d.statusSource || 'ledger-2025',
                 nearDup: (fx && fx.mergedInto) ? null : (d.nearDup || null),
@@ -324,8 +325,8 @@
             if (s && s.st2025) return s.st2025;   /* v3 CSV 취합상태 투영(하위호환) */
             /* ── v3.3 부터는 취합상태 열이 없다 ────────────────────────────────
              * 분류기준 v3.3 은 「취합상태」를 빼고 **문서 목록 자체**로 판정하는
-             * 방식으로 바뀌었다. 그 열을 되살리면 v3.3 이 뺀 축을 우리가 부활시키는
-             * 것이고, 177/213 비대칭(신규 36단계는 값이 없다)도 생긴다.
+             * 방식으로 바뀌었다(v4.0 도 같다). 그 열을 되살리면 분류기준이 뺀 축을 우리가
+             * 부활시키는 것이고, 코드 비대칭(그 뒤 생긴 단계는 값이 없다)도 생긴다.
              *
              * 그래서 **문서 존재**로 판정한다. 다만 «완료»는 만들지 않는다 —
              * 완료는 주관부서 담당자가 증빙을 확인해야 붙는 것이고(§5 MUST),
@@ -771,11 +772,13 @@
             counts: c,
             /* 반려는 status 축이 아니므로 counts 안에 넣지 않는다 — 넣으면 합이 업무단계 수를 넘는다 */
             returned: returned,
-            /* «정리할 문서»에 **분류 제외**를 섞지 않는다 — 타 기관 소관·자치사무라
-               분류 단계에서 이미 판단이 끝난 문서라 교정 대상이 아니다. 섞으면
-               «남은 할 일»이 부풀고, 아무리 정리해도 0 이 되지 않는다. */
+            /* «정리할 문서»에 **분류 제외**를 섞지 않는다 — 적용 법령 밖·집행 행정문서·
+               참고수신·타 기관 소관·자치사무라 분류 단계에서 이미 판단이 끝난 문서라
+               교정 대상이 아니다. 섞으면 «남은 할 일»이 부풀고, 아무리 정리해도 0 이 되지 않는다. */
             unmapped: docs.filter(function (d) { return d.origin === 'ledger' && !d.mapped && !d.excluded; }).length,
             excluded: docs.filter(function (d) { return d.origin === 'ledger' && !!d.excluded; }).length,
+            /* 원문 확인 필요 — 세 갈래(미분류·제외·연결) 어디에도 걸쳐 있는 별도 축 */
+            review: docs.filter(function (d) { return d.origin === 'ledger' && !!d.review; }).length,
             nearDup: docs.filter(function (d) { return d.nearDup; }).length,
             docsOfYear: docs.filter(function (d) { return d.year === year; }).length,
         };
