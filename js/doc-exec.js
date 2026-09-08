@@ -378,8 +378,8 @@
         var n = (it.lawBases || []).length;
         if (!n) return '<span class="dx-meta">근거 법 미등록</span>';
         var L = global.DYLAW;
-        var linked = L && L.resolveBasis
-            ? (it.lawBases || []).filter(function (l) { return !!L.resolveBasis(l); }).length : 0;
+        var linked = L && L.parseBasis
+            ? (it.lawBases || []).filter(function (l) { return L.parseBasis(l).some(function (p) { return !!p.key; }); }).length : 0;
         return '<button type="button" class="dx-law-btn" aria-expanded="' + (S.law[it.id] ? 'true' : 'false') +
             '" onclick="DOCEXEC.toggleLaw(\'' + esc(it.id) + '\')">근거 법 ' + n + '건' + (linked && linked < n ? ' <em class="dx-law-part">' + linked + '건 원문</em>' : '') + ' <span aria-hidden="true">' +
             (S.law[it.id] ? '▴' : '▾') + '</span></button>';
@@ -393,9 +393,13 @@
         var L = global.DYLAW;
         return '<ul class="lawinfo-inline dx-law">' +
             (it.lawBases || []).map(function (l) {
-                if (L && L.resolveBasis && L.basisChip) {
-                    var key = L.resolveBasis(l);
-                    if (key) return '<li>' + L.basisChip(key, { withTitle: true }) + '</li>';
+                if (L && L.parseBasis && L.basisChip) {
+                    var ps = L.parseBasis(l);
+                    if (ps.some(function (p) { return !!p.key; })) {
+                        return '<li>' + ps.map(function (p) {
+                            return p.key ? L.basisChip(p.key, { withTitle: true }) : esc(p.text) + ' <span class="dx-law-un">조문 미연결</span>';
+                        }).join(' ') + '</li>';
+                    }
                 }
                 return '<li>' + esc(l) + ' <span class="dx-law-un">조문 미연결</span></li>';
             }).join('') +
@@ -537,12 +541,11 @@
     function lawCell(raw) {
         if (!raw) return '<span class="dx-nodoc">미등록</span>';
         var L = global.DYLAW;
-        return String(raw).split(',').map(function (t) {
-            var one = t.trim(); if (!one) return '';
-            var key = L && L.resolveBasis ? L.resolveBasis(one) : '';
-            return key && L.basisChip ? L.basisChip(key, { withTitle: true })
-                                      : esc(one) + ' <span class="dx-law-un">조문 미연결</span>';
-        }).filter(Boolean).join(' ');
+        if (!L || !L.parseBasis) return esc(raw);
+        return L.parseBasis(raw).map(function (p) {
+            return p.key && L.basisChip ? L.basisChip(p.key, { withTitle: true })
+                                        : esc(p.text) + ' <span class="dx-law-un">조문 미연결</span>';
+        }).join(' ');
     }
 
     function reasonVal() {

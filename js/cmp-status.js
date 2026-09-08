@@ -575,15 +575,17 @@
     }
     /* 근거 표기는 화면이 조립하지 않는다 — DYLAW 로 해석하고, 스냅샷에 없는
        조문은 지어내지 않고 '조문 미연결'로 밝힌다(CLAUDE.md §10). */
+    /* 분류기준 법령근거는 «같은 법 시행령 제10조제1호»처럼 앞 조문의 법령을 이어받는
+       표기라 DYLAW.parseBasis 가 통째로 해석한다(§10 — 화면이 근거를 파싱하지 않는다).
+       스냅샷에 없는 조문은 «조문 미연결»로 남긴다. */
     function lawCell(raw) {
         if (!raw) return '<span class="cmp-dim">미등록</span>';
         var L = global.DYLAW;
-        return String(raw).split(',').map(function (t) {
-            var one = t.trim(); if (!one) return '';
-            var key = L && L.resolveBasis ? L.resolveBasis(one) : '';
-            return (key && L.basisChip) ? L.basisChip(key, { withTitle: true })
-                : esc(one) + ' <span class="cmp-dim">조문 미연결</span>';
-        }).filter(Boolean).join(' ');
+        if (!L || !L.parseBasis) return esc(raw);
+        return L.parseBasis(raw).map(function (p) {
+            if (p.key && L.basisChip) return L.basisChip(p.key, { withTitle: true });
+            return esc(p.text) + ' <span class="cmp-dim">조문 미연결</span>';
+        }).join(' ');
     }
     /* 추정이 0건인데 «추정»이라 쓰면 사실과 반대다 — notice() 와 같은 분기(§14-12) */
     function derivedCap() {

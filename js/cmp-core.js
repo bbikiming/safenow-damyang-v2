@@ -614,6 +614,10 @@
         D().allDocs().forEach(function (d) {
             if (d.dept !== name) return;
             if (year && +d.year !== +year) return;
+            /* 현행 업무문서(sets-data-v2)는 이행항목 축이 없는 «이 목록 밖 문서»라 부서 표에
+               세지 않는다 — 세면 예시 자료 해(2026)에 행정과 84건처럼 판정과 무관한 수가
+               «보유 업무문서»로 찍힌다(검수 2026-09-08). deptList 와 같은 기준(원장·시드·등록분). */
+            if (d.origin === 'v2') return;
             docs++;
             (d.stageIds || []).forEach(function (sid) { hit[sid] = 1; });
         });

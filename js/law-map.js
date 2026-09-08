@@ -1664,6 +1664,69 @@
         return (head !== s && BASIS_ALIAS[head]) || null;
     }
 
+    /* ── 분류기준 «법령근거» 문자열 → 조문 키 목록 (2026-09-08) ──────────────
+     * 분류기준 v4.0 의 법령근거는 «중대재해처벌법 제9조제2항, 같은 법 시행령 제10조제1호»
+     * 처럼 한 칸에 여러 조문을 잇고, 뒤 조문은 «같은 법»으로 앞 법령을 이어받는다.
+     * 쉼표로 잘라 resolveBasis 에 넣으면 «같은 법 시행령 제10조»는 어느 법인지 잃어
+     * 91개 표기 중 83개가 «조문 미연결»로 떴다(검수 2026-09-08). 문자열마다 별칭을
+     * 손으로 늘리는 대신 표기 규칙을 해석한다 — BASIS_ALIAS 의 일반화이지 조문 편집이
+     * 아니다(§10). **스냅샷에 있는 키만 돌려준다** — 없는 조문은 key null 로 두어
+     * 화면이 «조문 미연결»이라 말하게 한다. 지어내지 않는다.
+     *   법령 접두 — 중대재해처벌법 csa · 그 시행령 cse · 산업안전보건법 osh ·
+     *   그 시행령 oshe · 그 시행규칙 oshr · 산업안전보건기준에 관한 규칙 oshs
+     *   조 표기 — 제N조[제M항][제K호] · 제N조·제M조 · 제N조~제M조 · 별표 N
+     *   호 단위 키는 cse-4-K 처럼 스냅샷이 호를 따로 갖는 조문에만 있다.
+     * 돌려주는 값 — [{text, key|null}] (text 는 원문 조각 그대로) */
+    const LAW_HEAD = [
+        [/^산업안전보건기준에\s*관한\s*규칙/, 'oshs'],
+        [/^산업안전보건법\s*시행규칙/, 'oshr'], [/^산업안전보건법\s*시행령/, 'oshe'], [/^산업안전보건법/, 'osh'],
+        [/^중대재해\s*처벌\s*등에\s*관한\s*법률\s*시행령|^중대재해처벌법\s*시행령|^중처법\s*시행령/, 'cse'],
+        [/^중대재해\s*처벌\s*등에\s*관한\s*법률|^중대재해처벌법|^중처법/, 'csa'],
+    ];
+    const SUB_LAW = { osh: { '시행령': 'oshe', '시행규칙': 'oshr' }, csa: { '시행령': 'cse' } };
+    function parseBasis(raw) {
+        const out = [];
+        let ctx = '';
+        String(raw || '').split(/,|(?:\s+및\s+)/).forEach(part => {
+            const text = part.trim();
+            if (!text) return;
+            let rest = text, code = '';
+            const same = rest.match(/^같은\s*법\s*(시행령|시행규칙)?\s*/);
+            if (same) {
+                const base = ctx && ctx.replace(/[er]$/, '');   /* oshe/oshr → osh · cse → cs? (아래) */
+                const root = (ctx === 'cse') ? 'csa' : (ctx === 'oshe' || ctx === 'oshr' || ctx === 'oshs') ? 'osh' : ctx;
+                code = same[1] ? ((SUB_LAW[root] || {})[same[1]] || '') : root;
+                rest = rest.slice(same[0].length);
+            } else {
+                for (const [re, c] of LAW_HEAD) { const m = rest.match(re); if (m) { code = c; rest = rest.slice(m[0].length).trim(); break; } }
+            }
+            /* «및 별표 4»·«및 제5조제2항»처럼 법령 머리 없이 이어지는 조각은 앞 조각의 법령을 잇는다 */
+            if (!code && ctx && /^(별표|제\d+조)/.test(rest)) code = ctx;
+            if (code) ctx = code;
+            if (!code) { out.push({ text, key: null }); return; }
+            const keys = [];
+            const t = rest.match(/별표\s*(\d+)/);
+            if (t) keys.push(code + '-t' + t[1]);
+            const jo = rest.match(/제(\d+)조(?:의(\d+))?/g) || [];
+            if (jo.length) {
+                /* «제4조제3호·제7호·제8호» — 호 단위 키가 스냅샷에 있으면 호마다 잇는다 */
+                const first = rest.match(/제(\d+)조(?:의(\d+))?(?:제(\d+)항)?(?:제(\d+)호)?/);
+                const hos = first && first[4] ? (rest.slice(first.index).match(/제(\d+)호/g) || []).map(h => h.match(/\d+/)[0]) : [];
+                if (hos.length && hos.every(h => ARTICLES[code + '-' + first[1] + '-' + h])) {
+                    hos.forEach(h => keys.push(code + '-' + first[1] + '-' + h));
+                } else {
+                    jo.forEach(j => { const m = j.match(/제(\d+)조(?:의(\d+))?/); keys.push(code + '-' + m[1] + (m[2] ? '-' + m[2] : '')); });
+                    const rg = rest.match(/제(\d+)조\s*[~～]\s*제(\d+)조/);
+                    if (rg) for (let n = +rg[1] + 1; n < +rg[2]; n++) keys.push(code + '-' + n);
+                }
+            }
+            const found = keys.filter(k => ARTICLES[k]);
+            if (!found.length) { out.push({ text, key: null }); return; }
+            found.forEach((k, i) => out.push({ text: i === 0 ? text : '', key: k }));
+        });
+        return out;
+    }
+
     /* ── 관리 화면(법령 관리)용 파생 API ────────────────────────────────
      *  관리 화면이 이 규칙들을 자기 쪽에 복제하면 진실이 둘이 되고,
      *  이 파일이 재생성될 때 복제본은 따라오지 않는다. 전부 여기서 내보낸다.
@@ -1764,7 +1827,7 @@
         specialEduWorks,
         PAGES, NO_TITLE_ANCHOR,
         pageId, article, law, forPage, shortRef, lawUrl,
-        chipsHtml, basisChip, basisTitle, basisLine, optionsHtml, panelHtml, plainHtml, toggle, inject, resolveBasis,
+        chipsHtml, basisChip, basisTitle, basisLine, optionsHtml, panelHtml, plainHtml, toggle, inject, resolveBasis, parseBasis,
         normalize, pagesOf, reachablePages, unreachableMapKeys,
         pagesUsing, articlesWithoutMapping, danglingKeys
     };
