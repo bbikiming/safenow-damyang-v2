@@ -12,7 +12,10 @@
 (function (global) {
     'use strict';
 
-    var SKEY = 'damyangShV2';
+    /* v3 — 관리 버전 3종(단순/상세/절차)을 단순 첨부형 하나로 확정하면서
+       개인별 결과(persons)·절차 진행 상태(proc)·열람권한(privacy) 시드를 걷어냈다.
+       시드 스키마가 바뀌므로 키를 올린다(옛 브라우저의 v2 스토어가 살아남지 않게). */
+    var SKEY = 'damyangShV3';
     /* 기준일·기준연도 — DYV2.today() 단일 출처 (시연일 변경은 common.js DEMO_TODAY 한 줄) */
     var TODAY = (global.DYV2 && global.DYV2.today) ? global.DYV2.today() : '2026-07-16';
     var CURYEAR = Number(TODAY.slice(0, 4));
@@ -132,22 +135,15 @@
         ];
 
         /* 건강검진 — 일반건강검진(연1회 전 직원)·특수건강진단(반기, 유해인자 노출자).
-           개인별 상세(persons)는 권한 사용자만 열람(개인정보 보호). */
+           개인별 검진 결과는 담지 않는다 — 건강진단 결과는 민감정보(개보법 §23·산안법 §132)이고
+           사업주가 실제로 받는 법정 문서도 개인 임상기록이 아니라 집계형 결과표다.
+           이 스토어가 가진 개인 단위 값은 대상자 수·수검자 수뿐이다. */
         var health = [
             { id: 'HC-2026-01', year: 2026, type: '일반건강검진', dept: '건설과',
               agency: '담양군보건소', planned: '2026-04-10', done: '2026-04-15',
               targetCount: 24, examinedCount: 22, evidence: true,
-              followupNeeded: true, followupDone: false,
-              followupPlan: '유소견자 1명 2차 정밀검사 안내 · 고혈압 관리대상 3명 보건상담',
-              followupResult: '', owner: '건설과 · 박현장', reason: '', extraExamDate: '',
+              followupNeeded: true, followupDone: false, followupResult: '', owner: '건설과 · 박현장', reason: '', extraExamDate: '',
               carcinogen: false, targetBasis: '일반건강검진(상시근로자 대상)',
-              persons: [
-                { name: '이건설', position: '건설과장', team: '부서장', examined: '2026-04-15', result: '정상' },
-                { name: '박현장', position: '주무관', team: '안전관리팀', examined: '2026-04-15', result: '경계(고혈압)' },
-                { name: '김도현', position: '주무관', team: '안전관리팀', examined: '2026-04-12', result: '정상' },
-                { name: '이준호', position: '주무관', team: '도로관리팀', examined: '', result: '미검진' },
-                { name: '박서준', position: '주무관', team: '시설관리팀', examined: '2026-04-15', result: '유소견(2차 필요)' }
-              ],
               history: [
                 { at: '2026-03-20', actor: '박현장', event: '검진 계획 수립 · 담양군보건소 위탁' },
                 { at: '2026-04-15', actor: '담양군보건소', event: '단체검진 실시(수검 22/24)' },
@@ -156,8 +152,8 @@
             { id: 'HC-2026-02', year: 2026, type: '일반건강검진', dept: '환경과',
               agency: '국민건강보험공단(지정검진기관)', planned: '2026-03-18', done: '2026-03-22',
               targetCount: 18, examinedCount: 18, evidence: true,
-              followupNeeded: false, followupDone: false, followupPlan: '', followupResult: '',
-              owner: '환경과 · 최보건', reason: '', extraExamDate: '', persons: [],
+              followupNeeded: false, followupDone: false, followupResult: '',
+              owner: '환경과 · 최보건', reason: '', extraExamDate: '',
               carcinogen: false, targetBasis: '일반건강검진(상시근로자 대상)',
               history: [
                 { at: '2026-02-25', actor: '최보건', event: '검진 계획 수립' },
@@ -168,9 +164,9 @@
               agency: '(주)녹십자헬스케어 특수검진센터', planned: '2026-05-10', done: '2026-05-14',
               targetCount: 12, examinedCount: 9, evidence: true,
               followupNeeded: true, followupDone: false,
-              followupPlan: '염소·소음 노출 유소견자 2명 업무전환 검토 · 미수검 3명 추가검진',
+             
               followupResult: '', owner: '물순환사업소 · 서담당', reason: '교대근무자 3명 일정 미조정',
-              extraExamDate: '2026-08-05', persons: [],
+              extraExamDate: '2026-08-05',
               carcinogen: false, targetBasis: '특수건강진단 대상(염소·소음 노출자)',
               history: [
                 { at: '2026-04-15', actor: '서담당', event: '특수검진 대상자 선정(염소·소음 노출 12명)' },
@@ -180,10 +176,10 @@
             { id: 'HC-2026-04', year: 2026, type: '특수건강진단', dept: '공공시설사업소',
               agency: '(주)녹십자헬스케어 특수검진센터', planned: '2026-06-05', done: '',
               targetCount: 15, examinedCount: 0, evidence: false,
-              followupNeeded: false, followupDone: false, followupPlan: '', followupResult: '',
+              followupNeeded: false, followupDone: false, followupResult: '',
               owner: '공공시설사업소 · 한담당',
               reason: '위탁 검진기관 예약 지연 — 재예약 진행 중', extraExamDate: '',
-              persons: [],
+             
               carcinogen: false, targetBasis: '특수건강진단 대상(유해인자 노출자)',
               history: [
                 { at: '2026-05-01', actor: '한담당', event: '특수검진 대상자 선정(15명) · 예정일 2026-06-05' },
@@ -192,8 +188,8 @@
             { id: 'HC-2026-05', year: 2026, type: '일반건강검진', dept: '문화체육과',
               agency: '국민건강보험공단(지정검진기관)', planned: '2026-07-30', done: '',
               targetCount: 9, examinedCount: 0, evidence: false,   /* 미실시(예정 미래) → 수검 0 (done=''↔examinedCount=0 불변식) */
-              followupNeeded: false, followupDone: false, followupPlan: '', followupResult: '',
-              owner: '문화체육과 · 오세영', reason: '', extraExamDate: '', persons: [],
+              followupNeeded: false, followupDone: false, followupResult: '',
+              owner: '문화체육과 · 오세영', reason: '', extraExamDate: '',
               carcinogen: false, targetBasis: '일반건강검진(상시근로자 대상)',
               history: [
                 { at: '2026-06-25', actor: '오세영', event: '검진 계획 수립 · 개인별 검진 안내(예정일 2026-07-30)' }
@@ -201,8 +197,8 @@
             { id: 'HC-2026-06', year: 2026, type: '특수건강진단', dept: '건설과',
               agency: '(주)녹십자헬스케어 특수검진센터', planned: '2026-05-25', done: '2026-05-28',
               targetCount: 8, examinedCount: 8, evidence: true,
-              followupNeeded: false, followupDone: false, followupPlan: '', followupResult: '',
-              owner: '건설과 · 박현장', reason: '', extraExamDate: '', persons: [],
+              followupNeeded: false, followupDone: false, followupResult: '',
+              owner: '건설과 · 박현장', reason: '', extraExamDate: '',
               carcinogen: true, targetBasis: '특수건강진단 대상(발암성 분진 노출자)',
               history: [
                 { at: '2026-04-30', actor: '박현장', event: '특수검진 대상자 선정(분진·소음 노출 8명)' },
@@ -213,40 +209,16 @@
             { id: 'HC-2025-01', year: 2025, type: '일반건강검진', dept: '건설과',
               agency: '담양군보건소', planned: '2025-04-12', done: '2025-04-16',
               targetCount: 22, examinedCount: 21, evidence: true,
-              followupNeeded: false, followupDone: true, followupPlan: '유소견 1명 2차검사 완료',
+              followupNeeded: false, followupDone: true,
               followupResult: '2차검사 정상 종결', owner: '건설과 · 박현장', reason: '', extraExamDate: '',
               carcinogen: false, targetBasis: '일반건강검진(상시근로자 대상)',
-              persons: [], history: [
+              history: [
                 { at: '2025-04-16', actor: '담양군보건소', event: '단체검진 실시(수검 21/22)' },
                 { at: '2025-06-10', actor: '박현장', event: '사후관리 완료(2차검사 정상)' }
               ] }
         ];
 
-        /* ── 절차 진행형 데모 시드 — 주관부서(재난안전과)↔담당부서 결과제출 핸드오프 상태 예시 ──
-           procStep: 대상자선정(1) → 문진표발송(2) → 결과업로드=evidence(3) → 알림(4)
-           resultBy/resultAt: 결과 문서를 올린 주체·일자(담당부서 제출 vs 주관부서 대행) */
-        var names = function (arr) { return arr.map(function (n) { return { name: n }; }); };
-        var procSeed = {
-            /* 건설과 — 요청·제출·알림까지 완료(4/4). 담당부서 제출함: 제출 완료 */
-            'HC-2026-01': { targets: names(['이건설', '박현장', '김도현', '박서준', '이준호']), qSent: true, qSentAt: '2026-04-01', notified: true, notifiedAt: '2026-05-02', resultBy: '담당부서', resultAt: '2026-04-16' },
-            /* 환경과 — 완료(4/4) */
-            'HC-2026-02': { targets: names(['정환경', '최보건', '김지도', '정수빈']), qSent: true, qSentAt: '2026-03-01', notified: true, notifiedAt: '2026-04-06', resultBy: '담당부서', resultAt: '2026-03-24' },
-            /* 물순환사업소 — 결과 제출됨·알림 대기(3/4). 담당부서 제출함: 제출 완료 */
-            'HC-2026-03': { targets: names(['서담당', '하정수', '오수질']), qSent: true, qSentAt: '2026-04-20', notified: false, notifiedAt: '', resultBy: '담당부서', resultAt: '2026-05-16' },
-            /* 공공시설사업소 — 문진표 발송됨·결과 미제출(2/4). 담당부서 제출함: ★제출 대기(핵심 액션) */
-            'HC-2026-04': { targets: names(['한담당', '한운영', '민설비']), qSent: true, qSentAt: '2026-06-20', notified: false, notifiedAt: '' },
-            /* 문화체육과 — 문진표 발송됨·결과 미제출(2/4). 담당부서 제출함: 제출 대기 */
-            'HC-2026-05': { targets: names(['한지훈', '오세영']), qSent: true, qSentAt: '2026-07-05', notified: false, notifiedAt: '' },
-            /* 건설과 특수 — 결과 제출됨·알림 대기(3/4). 담당부서 제출함: 제출 완료 */
-            'HC-2026-06': { targets: names(['박현장', '김도현', '박서준']), qSent: true, qSentAt: '2026-05-01', notified: false, notifiedAt: '', resultBy: '담당부서', resultAt: '2026-05-29' }
-        };
-        health.forEach(function (r) {
-            var p = procSeed[r.id]; if (!p) return;
-            r.proc = { targets: p.targets, qSent: p.qSent, qSentAt: p.qSentAt, notified: p.notified, notifiedAt: p.notifiedAt };
-            if (p.resultBy) { r.resultBy = p.resultBy; r.resultAt = p.resultAt; }
-        });
-
-        return { workenv: workenv, health: health, privacy: false, seqWE: 5, seqHC: 6 };
+        return { workenv: workenv, health: health, seqWE: 5, seqHC: 6 };
     }
 
     function load() {
@@ -359,10 +331,10 @@
         var rec = { id: 'HC-' + yearOf(o.planned) + '-N' + d.seqHC, year: yearOf(o.planned), type: o.type || '일반건강검진',
             dept: o.dept || '', agency: o.agency || '미지정', planned: o.planned || '', done: '',
             targetCount: o.targetCount || 0, examinedCount: 0, evidence: false, followupNeeded: false, followupDone: false,
-            followupPlan: '', followupResult: '', owner: (o.dept || '') + ' · 담당자', reason: '', extraExamDate: '',
+            followupResult: '', owner: (o.dept || '') + ' · 담당자', reason: '', extraExamDate: '',
             carcinogen: !!o.carcinogen,
             targetBasis: o.targetBasis || ((o.type || '일반건강검진') === '특수건강진단' ? '특수건강진단 대상(유해인자 노출자)' : '일반건강검진(상시근로자 대상)'),
-            persons: [], history: [{ at: TODAY, actor: '박안전', event: (o.type || '일반건강검진') + ' 계획 등록 (예정일 ' + (o.planned || '-') + ')' }] };
+            history: [{ at: TODAY, actor: '박안전', event: (o.type || '일반건강검진') + ' 계획 등록 (예정일 ' + (o.planned || '-') + ')' }] };
         d.health.push(rec); save(); return rec;
     }
     function healthOf(id) { var a = health(); for (var i = 0; i < a.length; i++) if (a[i].id === id) return a[i]; return null; }
@@ -384,72 +356,6 @@
     }
     function hcUnexamined(r) { return Math.max(0, (r.targetCount || 0) - (r.examinedCount || 0)); }
     function hcFollowup(r) { return !!r.followupNeeded && !r.followupDone; }
-
-    /* ── 절차 진행형(3번째 탭): 대상자 선정 → 문진표 발송 → 결과 업로드 → 알림 발송 ── */
-    var PROC_STEPS = ['대상자 선정', '문진표 발송', '결과 업로드', '알림 발송'];
-    function ensureProc(r) {
-        if (!r.proc) r.proc = { targets: [], qSent: false, qSentAt: '', notified: false, notifiedAt: '' };
-        return r.proc;
-    }
-    /* 완료된 연속 단계 수(0~4) — 3단계(결과 업로드)는 proc 전용 마커 resultBy 로 판정
-       (단순/상세뷰 실시증빙 evidence·검진완료가 절차뷰 단계를 오염시키지 않도록 분리) */
-    function procStep(r) {
-        var p = r.proc || {};
-        var n = 0;
-        if (p.targets && p.targets.length) n = 1; else return 0;
-        if (p.qSent) n = 2; else return 1;
-        if (r.resultBy) n = 3; else return 2;
-        if (p.notified) n = 4; else return 3;
-        return n;
-    }
-    function setProcTargets(id, arr) {
-        var r = healthOf(id); if (!r) return null;
-        ensureProc(r).targets = (arr || []).slice();
-        pushHist(r, '대상자 ' + r.proc.targets.length + '명 선정');
-        save(); return r;
-    }
-    function sendQuestionnaire(id) {
-        var r = healthOf(id); if (!r) return null;
-        var p = ensureProc(r);
-        p.qSent = true; p.qSentAt = TODAY;
-        pushHist(r, '문진표 발송 → 대상자 ' + p.targets.length + '명 (새올 포틀릿)');
-        save(); return r;
-    }
-    function procNotify(id, to) {
-        var r = healthOf(id); if (!r) return null;
-        ensureProc(r).notified = true; r.proc.notifiedAt = TODAY;
-        pushHist(r, '결과 알림 발송 → ' + (to || (r.dept + ' 대상자')) + ' (새올 포틀릿)', '시스템');
-        save(); return r;
-    }
-    /* 결과 문서 업로드(제출) — 담당부서 제출 / 주관부서 대행 구분 기록.
-       resultBy 는 '결과 제출'만의 전용 마커(단순/상세뷰 실시증빙 evidence 와 분리).
-       결과 문서 제출과 수검 완료는 별개다. 문서가 도착했다는 사실만 기록하고
-       실시일·수검자 수는 완료 처리에서 별도로 확정한다. */
-    function submitResult(id, by, actor) {
-        var r = healthOf(id); if (!r) return null;
-        ensureProc(r);
-        r.evidence = true;
-        r.resultBy = by || '담당부서';
-        r.resultAt = TODAY;
-        pushHist(r, '검진 결과 문서 업로드 (' + r.resultBy + ')', actor || (by === '담당부서' ? r.dept : '박안전'));
-        save(); return r;
-    }
-    /* 담당부서 결과제출함 — 절차가 시작(문진표 발송)되어 결과 제출이 요청된 건 */
-    function deptInbox(dept) {
-        return health().filter(function (r) { return r.dept === dept && r.proc && r.proc.qSent; });
-    }
-    function deptInboxSummary(dept) {
-        var rows = deptInbox(dept);
-        var s = { total: rows.length, done: 0, pending: 0 };
-        rows.forEach(function (r) { if (r.resultBy) s.done++; else s.pending++; });
-        return s;
-    }
-    /* 결과 제출이 요청된 부서 목록(중복 제거, 조직도 순) — 담당부서 드롭다운 소스 */
-    function inboxDepts() {
-        var seen = {}, out = [];
-        health().forEach(function (r) { if (r.proc && r.proc.qSent && !seen[r.dept]) { seen[r.dept] = 1; out.push(r.dept); } });
-        return out;
-    }
 
     function healthSummary(rows) {
         rows = rows || health();
@@ -542,33 +448,6 @@
         save(); return r;
     }
 
-    /* ================= 개인정보 열람 권한(데모 토글) ================= */
-    function privacyOn() { return !!load().privacy; }
-    function togglePrivacy() { var d = load(); d.privacy = !d.privacy; save(); return d.privacy; }
-
-    /* ================= 건강검진 관리 버전(목록·상세 공유) =================
-       'simple'(단순 집계·첨부형, 지자체 권장) | 'detail'(상세 관리형, 보건인력 배치 사업장)
-       근거: 건강검진 결과=민감정보(개보법 §23·산안법 §132) → 지자체는 집계·증빙 중심이 법·실무상 적합 */
-    var HVIEW_KEY = 'damyangHexView';
-    function healthView() { try { return global.sessionStorage.getItem(HVIEW_KEY) || 'simple'; } catch (e) { return 'simple'; } }
-    function setHealthView(v) { try { global.sessionStorage.setItem(HVIEW_KEY, v); } catch (e) {} return v; }
-
-    /* ================= 절차 진행형 관점(주관부서↔담당부서) =================
-       'admin'(주관부서=재난안전과 중대재해팀 · 계획·대상자·문진표·알림 관리) |
-       'dept'(담당부서=대상 부서 · 결과 문서 제출) — 관점 전환(권한 기반 접근제어 시연) */
-    var PERSP_KEY = 'damyangHexPersp', PDEPT_KEY = 'damyangHexPerspDept';
-    function procRole() { try { return global.sessionStorage.getItem(PERSP_KEY) || 'admin'; } catch (e) { return 'admin'; } }
-    function setProcRole(v) { try { global.sessionStorage.setItem(PERSP_KEY, v); } catch (e) {} return v; }
-    /* 담당부서 관점의 선택 부서 — 미설정 시 '제출 대기'가 있는 첫 부서, 없으면 요청된 첫 부서 */
-    function procDept() {
-        var saved; try { saved = global.sessionStorage.getItem(PDEPT_KEY); } catch (e) {}
-        var reqDepts = inboxDepts();
-        if (saved && reqDepts.indexOf(saved) !== -1) return saved;
-        var pending = reqDepts.filter(function (d) { return deptInboxSummary(d).pending > 0; });
-        return pending[0] || reqDepts[0] || (health()[0] && health()[0].dept) || '';
-    }
-    function setProcDept(v) { try { global.sessionStorage.setItem(PDEPT_KEY, v); } catch (e) {} return v; }
-
     /* ================= 부서 목록(조직도 파생) ================= */
     function depts() {
         var out = [];
@@ -592,18 +471,9 @@
         health: health, healthOf: healthOf, addHealth: addHealth, effHealth: effHealth,
         hcUnexamined: hcUnexamined, hcFollowup: hcFollowup,
         healthSummary: healthSummary, healthLink: healthLink,
-        /* 절차 진행형 */
-        PROC_STEPS: PROC_STEPS, procStep: procStep, setProcTargets: setProcTargets,
-        sendQuestionnaire: sendQuestionnaire, procNotify: procNotify, submitResult: submitResult,
-        deptInbox: deptInbox, deptInboxSummary: deptInboxSummary, inboxDepts: inboxDepts,
-        procRole: procRole, setProcRole: setProcRole, procDept: procDept, setProcDept: setProcDept,
         /* 공용 처리 */
         attachEvidence: attachEvidence, setReason: setReason, resetDue: resetDue,
-        notify: notify, completeWorkEnv: completeWorkEnv, completeHealth: completeHealth,
-        /* 개인정보 권한 */
-        privacyOn: privacyOn, togglePrivacy: togglePrivacy,
-        /* 건강검진 관리 버전 */
-        healthView: healthView, setHealthView: setHealthView
+        notify: notify, completeWorkEnv: completeWorkEnv, completeHealth: completeHealth
     };
     global.DYSH = global.DYSH || {};
     Object.keys(api).forEach(function (k) { global.DYSH[k] = api[k]; });

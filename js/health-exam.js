@@ -1,8 +1,11 @@
 /* =====================================================================
    health-exam.js · 건강검진 목록 (HEX01-L)
    · 상단 필터(기준연도·검진 유형·부서) · 요약 카드(클릭=상태 필터)
-   · 개인정보 보호: 목록은 인원수·이행현황만 · 개인별 상세는 상세화면 권한 열람
+   · 개인정보 최소수집: 인원수·수검률·증빙만 관리하고 개인별 검진 결과는 담지 않는다
+     (건강진단 결과 = 민감정보 · 개보법 §23·산안법 §132 / 사업주 수령 문서는 집계형 결과표)
    · 완료 결과는 인력평가 「종사자의 건강진단 등 건강관리」 항목에 자동 연계
+   · 부서의 결과 문서 제출은 이 화면이 아니라 업무함(W-HLT-EXE 「검진 결과 통보서」)이 받는다
+     — 같은 문서를 올릴 자리를 두 곳에 두지 않는다
    ===================================================================== */
 (function (global) {
     'use strict';
@@ -70,21 +73,6 @@
         return '<div class="sh-sum">' + kpiHtml + fHtml + '</div>';
     }
 
-    /* 관리 버전 탭(메뉴 상단) — 단순 첨부형(지자체 권장) / 상세 관리형 */
-    function vbar() {
-        var v = S().healthView();
-        function tab(key, label, rec) {
-            return '<button type="button" class="sh-vtab' + (v === key ? ' is-active' : '') + '" role="tab" aria-selected="' + (v === key ? 'true' : 'false') + '" onclick="HEX.setView(\'' + key + '\')">' + label + (rec ? ' <span class="rec">권장</span>' : '') + '</button>';
-        }
-        var note = v === 'simple'
-            ? '<span class="sh-vnote"><b>단순 첨부형</b> — 계획·인원수·수검률·<b>결과보고서 첨부</b> 중심(개인정보 최소수집·지자체 권장). 개인별 상세는 관리하지 않습니다.</span>'
-            : v === 'detail'
-                ? '<span class="sh-vnote"><b>상세 관리형</b> — 개인별 수검 현황(권한 열람)·사후관리 계획/실적까지 관리(보건인력 배치 사업장용).</span>'
-                : '<span class="sh-vnote"><b>절차 진행형</b> — <b>대상자 선정 → 문진표 발송 → 결과 업로드 → 새올 알림</b> 4단계 절차로 진행·추적합니다.</span>';
-        return '<div class="sh-vbar"><div class="sh-vtabs" role="tablist" aria-label="건강검진 관리 버전">' +
-            tab('simple', '단순 첨부형', true) + tab('detail', '상세 관리형', false) + tab('proc', '절차 진행형', false) + '</div>' + note + '</div>';
-    }
-
     function toolbarHtml() {
         var deptOpts = ['<option value="">부서 전체</option>'].concat(
             /* 조회 범위 밖 부서는 필터 선택지에도 내지 않는다 — 목록에서 지워 놓고
@@ -109,162 +97,24 @@
 
     function render() {
         if (!state.mount) return;
-        var v = S().healthView();
-        if (v === 'proc') { renderProcList(); return; }
         var base = baseRows();
         var sum = S().healthSummary(base);
         var list = base.filter(tilePass);
 
         var linkbar =
             '<div class="sh-linkbar">' + S().icon('check', 18) + '<div>' +
-                (v === 'simple'
-                    ? '이 버전은 <b>인원수·수검률·결과보고서 증빙</b>만 관리합니다(개인정보 최소수집). '
-                    : '목록에는 <b>인원수·이행현황</b>만 표시되며, 개인별 수검 상세는 <b>보건담당 권한</b> 사용자만 상세화면에서 열람합니다(개인정보 보호). ') +
+                '이 화면은 <b>인원수·수검률·결과보고서 증빙</b>만 관리합니다 — 개인별 검진 결과는 담지 않습니다(개인정보 최소수집). ' +
                 '완료 결과·증빙은 <b>안전보건관리책임자 평가</b>의 「종사자의 건강진단 등 건강관리」 항목에 <b>집계 지표로 자동 연계</b>됩니다. ' +
                 '<a href="evl-eval.html">인력 평가로 이동 →</a></div>' +
             '</div>';
 
-        var thead, cols, rowFn;
-        if (v === 'simple') {
-            thead = '<th>대상 부서</th><th>검진 유형</th><th>위탁 검진기관</th><th>예정일 · 실시일</th>' +
-                '<th class="num">대상 인원</th><th class="num">수검률</th><th>결과보고서</th><th>사후관리</th><th>완료 상태</th><th>담당자</th>';
-            cols = 10; rowFn = rowSimple;
-        } else {
-            thead = '<th>대상 부서</th><th>검진 유형</th><th>위탁 검진기관</th><th>예정일 · 실시일</th>' +
-                '<th class="num">대상자</th><th class="num">수검자</th><th class="num">미검진</th>' +
-                '<th>실시 증빙</th><th>사후조치</th><th>완료 상태</th><th>담당자</th>';
-            cols = 11; rowFn = rowDetail;
-        }
-        var rows = list.length ? list.map(rowFn).join('') :
-            '<tr><td colspan="' + cols + '" class="sh-empty">조건에 맞는 건강검진 건이 없습니다.</td></tr>';
+        var thead = '<th>대상 부서</th><th>검진 유형</th><th>위탁 검진기관</th><th>예정일 · 실시일</th>' +
+            '<th class="num">대상 인원</th><th class="num">수검률</th><th>결과보고서</th><th>사후관리</th><th>완료 상태</th><th>담당자</th>';
+        var rows = list.length ? list.map(rowSimple).join('') :
+            '<tr><td colspan="10" class="sh-empty">조건에 맞는 건강검진 건이 없습니다.</td></tr>';
 
-        state.mount.innerHTML = vbar() + linkbar + tiles(sum) + toolbarHtml() + roNote() +
+        state.mount.innerHTML = linkbar + tiles(sum) + toolbarHtml() + roNote() +
             '<div class="sh-wrap"><table class="sh-table"><thead><tr>' + thead + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
-    }
-
-    /* ══════════ 절차 진행형 — 관점(주관부서↔담당부서) 목록 ══════════ */
-    function perspBar() {
-        var role = S().procRole();
-        function ptab(key, label) {
-            return '<button type="button" class="sh-ptab' + (role === key ? ' is-active' : '') + '" role="tab" aria-selected="' + (role === key ? 'true' : 'false') + '" onclick="HEX.setPersp(\'' + key + '\')">' + label + '</button>';
-        }
-        var deptSel = '';
-        if (role === 'dept') {
-            var cur = S().procDept();
-            var opts = S().inboxDepts().map(function (d) {
-                var s = S().deptInboxSummary(d);
-                return '<option value="' + esc(d) + '"' + (d === cur ? ' selected' : '') + '>' + esc(d) + ' (대기 ' + s.pending + '·완료 ' + s.done + ')</option>';
-            }).join('');
-            deptSel = '<span class="sh-fl">담당부서</span><select class="form-select" aria-label="담당부서 선택" onchange="HEX.setPerspDept(this.value)">' + (opts || '<option>요청된 부서 없음</option>') + '</select>';
-        }
-        var note = role === 'admin'
-            ? '<b>주관부서(재난안전과)</b> — 대상자 선정·문진표 발송·알림을 진행하고 부서별 제출 현황을 관리합니다.'
-            : '<b>담당부서</b> — 우리 부서에 요청된 검진의 <b>결과 문서를 제출(업로드)</b>합니다.';
-        return '<div class="sh-persp"><div class="sh-persp-tabs" role="tablist" aria-label="관점 전환">' +
-            ptab('admin', '주관부서 (재난안전과)') + ptab('dept', '담당부서 (결과 제출)') + '</div>' +
-            deptSel + '<span class="sh-persp-note">' + note + '</span></div>';
-    }
-    function procLinkbar(role) {
-        return '<div class="sh-linkbar">' + S().icon('check', 18) + '<div>' +
-            (role === 'dept'
-                ? '재난안전과가 요청한 검진의 <b>결과 문서를 첨부파일로 제출</b>합니다. 제출 시 <b>재난안전과에 자동 통보</b>되고, 완료 지표가 <b>안전보건관리책임자 평가</b>에 반영됩니다. '
-                : '<b>대상자 선정 → 문진표 발송 → (담당부서 결과 제출) → 알림 발송</b> 순으로 진행합니다. 결과 문서는 담당부서가 제출하며, 필요 시 <b>대행 업로드</b>도 가능합니다. ') +
-            '<a href="evl-eval.html">인력 평가로 이동 →</a></div></div>';
-    }
-    function renderProcList() {
-        var role = S().procRole();
-        if (role === 'dept') {
-            var dept = S().procDept();
-            if (dept) S().setProcDept(dept);   // 선택 부서 고정(제출 후 다른 부서로 점프 방지)
-            var rows = dept ? S().deptInbox(dept) : [];
-            var sum = S().deptInboxSummary(dept);
-            var theadD = '<th>검진 유형</th><th>위탁 검진기관</th><th>결과 제출 요청일</th><th>결과 문서</th><th>제출 상태</th><th>관리</th>';
-            var bodyD = rows.length ? rows.map(rowDeptInbox).join('') :
-                '<tr><td colspan="6" class="sh-empty">' + (dept ? esc(dept) + '에 요청된 검진 결과 제출 건이 없습니다.' : '결과 제출이 요청된 부서가 없습니다.') + '</td></tr>';
-            /* 담당부서 관점은 관리버전 탭(vbar) 미노출 — 결과 제출에만 집중(관점 바로 주관부서 복귀) */
-            state.mount.innerHTML = perspBar() + procLinkbar('dept') + deptTiles(sum) + roNote() +
-                '<div class="sh-wrap"><table class="sh-table"><thead><tr>' + theadD + '</tr></thead><tbody>' + bodyD + '</tbody></table></div>';
-            return;
-        }
-        /* 주관부서 관점 — 전체 절차 진행 목록 */
-        var base = baseRows();
-        var theadA = '<th>대상 부서</th><th>검진 유형</th><th>위탁 검진기관</th><th>진행 단계</th><th class="num">대상자</th><th>결과 제출</th><th>담당자</th>';
-        var bodyA = base.length ? base.map(rowProc).join('') :
-            '<tr><td colspan="7" class="sh-empty">조건에 맞는 건강검진 건이 없습니다.</td></tr>';
-        state.mount.innerHTML = vbar() + perspBar() + procLinkbar('admin') + procTiles(base) + toolbarHtml() + roNote() +
-            '<div class="sh-wrap"><table class="sh-table"><thead><tr>' + theadA + '</tr></thead><tbody>' + bodyA + '</tbody></table></div>';
-    }
-
-    /* 진행단계 미니 표시 */
-    function stepBar(r) {
-        var n = S().procStep(r), labels = S().PROC_STEPS;
-        return '<div class="sh-stepmini" title="' + (n) + '/4 단계 완료">' + labels.map(function (lbl, i) {
-            var done = i < n, cur = i === n;
-            return (i ? '<span class="sh-stepline' + (done ? ' on' : '') + '"></span>' : '') +
-                '<span class="sh-stepdot' + (done ? ' done' : (cur ? ' cur' : '')) + '">' + (done ? '✓' : (i + 1)) + '</span>';
-        }).join('') + '</div>';
-    }
-    function submitCell(r) {
-        if (r.resultBy) return '<span class="sh-res ok">제출 완료</span> <span style="font-size:var(--fs-12);color:var(--text-gray)">' + esc(r.resultBy) + '</span>';
-        if (r.proc && r.proc.qSent) return '<span class="sh-res warn">제출 대기</span>';
-        return '<span class="sh-res none">요청 전</span>';
-    }
-    /* 주관부서 관점 행 — 진행단계·대상자·결과제출 주체 */
-    function rowProc(r) {
-        var tCount = (r.proc && r.proc.targets) ? r.proc.targets.length : 0;
-        return '<tr onclick="HEX.detail(\'' + r.id + '\')">' +
-            '<td><a class="sh-rowlink" href="health-exam-detail.html?id=' + r.id + '" onclick="event.stopPropagation()">' + esc(r.dept) + '</a></td>' +
-            '<td>' + typeTag(r.type) + '</td>' +
-            '<td>' + esc(r.agency) + '</td>' +
-            '<td>' + stepBar(r) + '</td>' +
-            '<td class="num">' + (tCount ? tCount + '명' : '<span style="color:var(--text-gray)">미선정</span>') + '</td>' +
-            '<td>' + submitCell(r) + '</td>' +
-            '<td>' + esc(ownerName(r.owner)) + '</td></tr>';
-    }
-    /* 담당부서 관점 행 — 결과 제출함 */
-    function rowDeptInbox(r) {
-        var reqAt = (r.proc && r.proc.qSentAt) ? r.proc.qSentAt : '-';
-        var submitted = !!r.resultBy;
-        var fileCell = submitted ? '<span class="sh-attached">' + S().icon('file') + '검진결과.pdf</span>' : '<span style="color:var(--text-gray)">미제출</span>';
-        var stat = submitted ? '<span class="sh-res ok">제출 완료</span>' : '<span class="sh-res warn">제출 대기</span>';
-        var action = submitted
-            ? '<button type="button" class="sh-pill-link" onclick="event.stopPropagation();HEX.detail(\'' + r.id + '\')">보기</button>'
-            : '<button type="button" class="btn btn-primary btn-sm" onclick="event.stopPropagation();HEX.deptUpload(\'' + r.id + '\')">＋ 결과 업로드</button>';
-        return '<tr onclick="HEX.detail(\'' + r.id + '\')">' +
-            '<td>' + typeTag(r.type) + '</td>' +
-            '<td>' + esc(r.agency) + '</td>' +
-            '<td>' + esc(reqAt) + '</td>' +
-            '<td>' + fileCell + '</td>' +
-            '<td>' + stat + '</td>' +
-            '<td>' + action + '</td></tr>';
-    }
-    function procTiles(rows) {
-        var c = [0, 0, 0, 0, 0];   // [전체, ≥1, ≥2, ≥3, ≥4]
-        rows.forEach(function (r) { var n = S().procStep(r); c[0]++; for (var k = 1; k <= 4; k++) if (n >= k) c[k]++; });
-        var defs = [
-            { label: '전체', val: c[0], tone: 'info' },
-            { label: '대상자 선정', val: c[1], tone: 'neutral' },
-            { label: '문진표 발송', val: c[2], tone: 'neutral' },
-            { label: '결과 제출', val: c[3], tone: 'warning' },
-            { label: '알림 완료', val: c[4], tone: 'success' }
-        ];
-        return '<div class="sh-sum">' + defs.map(function (d) {
-            return '<div class="sh-tile is-kpi tone-' + d.tone + '">' +
-                '<span class="sh-tile-label"><span class="sh-tile-dot"></span>' + d.label + '</span>' +
-                '<span class="sh-tile-value">' + d.val + '<span class="unit">건</span></span></div>';
-        }).join('') + '</div>';
-    }
-    function deptTiles(sum) {
-        var defs = [
-            { label: '요청 전체', val: sum.total, tone: 'info' },
-            { label: '제출 대기', val: sum.pending, tone: 'warning' },
-            { label: '제출 완료', val: sum.done, tone: 'success' }
-        ];
-        return '<div class="sh-sum">' + defs.map(function (d) {
-            return '<div class="sh-tile is-kpi tone-' + d.tone + '">' +
-                '<span class="sh-tile-label"><span class="sh-tile-dot"></span>' + d.label + '</span>' +
-                '<span class="sh-tile-value">' + d.val + '<span class="unit">건</span></span></div>';
-        }).join('') + '</div>';
     }
 
     /* 공통 셀 조각 */
@@ -288,7 +138,7 @@
             '<td>' + esc(r.planned) + ' <span style="color:var(--text-gray)">/</span> ' + doneTxt + '</td>';
     }
 
-    /* 단순 첨부형 행 — 대상 인원·수검률(집계)·결과보고서 첨부 중심 */
+    /* 목록 행 — 대상 인원·수검률(집계)·결과보고서 첨부 중심 */
     function rowSimple(r) {
         var rate = r.targetCount ? Math.round(r.examinedCount / r.targetCount * 100) : 0;
         return '<tr onclick="HEX.detail(\'' + r.id + '\')">' + baseCells(r) +
@@ -300,23 +150,6 @@
             '<td>' + esc(ownerName(r.owner)) + '</td></tr>';
     }
 
-    /* 상세 관리형 행 — 대상자/수검자/미검진 인원 분해 */
-    function rowDetail(r) {
-        var unex = S().hcUnexamined(r);
-        return '<tr onclick="HEX.detail(\'' + r.id + '\')">' + baseCells(r) +
-            '<td class="num">' + r.targetCount + '</td>' +
-            '<td class="num">' + r.examinedCount + '</td>' +
-            '<td class="num"' + (unex > 0 ? ' style="color:var(--status-danger-fg);font-weight:700;"' : '') + '>' + unex + '</td>' +
-            '<td>' + eviCell(r) + '</td>' +
-            '<td>' + followupCell(r) + '</td>' +
-            '<td>' + stChip(r) + '</td>' +
-            '<td>' + esc(ownerName(r.owner)) + '</td></tr>';
-    }
-
-    function setView(v) { S().setHealthView(v); render(); }
-    function setPersp(role) { S().setProcRole(role); render(); }
-    function setPerspDept(dept) { S().setProcDept(dept); render(); }
-
     function yearOpt(y) { return '<option value="' + y + '"' + (state.year === y ? ' selected' : '') + '>' + y + '년</option>'; }
     function uniq(a) { var s = {}, o = []; a.forEach(function (x) { if (!s[x]) { s[x] = 1; o.push(x); } }); return o; }
 
@@ -326,33 +159,18 @@
     function setTile(v) { state.tile = (state.tile === v ? 'all' : v); render(); }
     function detail(id) { location.href = 'health-exam-detail.html?id=' + id; }
 
-    /* 목록 인라인 증빙 첨부 — 상세 진입 없이 실시확인서 등록(개인별 결과는 상세 권한 열람) */
+    /* 목록 인라인 증빙 첨부 — 상세 진입 없이 실시확인서·집계 결과표 등록 */
     function attach(id) {
         if (!canAct()) { V().toast('증빙 첨부은(는) 해당 부서 담당자가 수행합니다.'); return; }
         var r = S().healthOf(id); if (!r) return;
         V().openModal('실시 증빙 등록',
-            '<p style="font-size:13px;margin-bottom:10px;color:var(--text-gray);"><b>' + esc(r.dept) + ' · ' + esc(r.type) + '</b> 검진기관 실시확인서·집계 결과를 첨부합니다. (개인별 결과는 상세 권한 열람)</p>' +
+            '<p style="font-size:13px;margin-bottom:10px;color:var(--text-gray);"><b>' + esc(r.dept) + ' · ' + esc(r.type) + '</b> 검진기관 실시확인서·집계 결과표를 첨부합니다. 개인별 결과지는 첨부하지 않습니다.</p>' +
             V().uploadDrop('파일을 끌어다 놓거나 클릭하여 업로드<br><span style="font-size:12px;">업로드 시 이력이 자동 기록됩니다</span>', null, { hint: true }),
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="HEX.saveAttach(\'' + id + '\')">등록</button>');
     }
     function saveAttach(id) {
         if (!canAct()) { V().toast('증빙 첨부은(는) 해당 부서 담당자가 수행합니다.'); return; } S().attachEvidence('hc', id, '실시 증빙'); V().closeModal(); render(); V().toast('증빙이 등록되었습니다.'); }
-
-    /* 담당부서 관점 — 결과 문서 제출(목록 인라인) */
-    function deptUpload(id) {
-        var r = S().healthOf(id); if (!r) return;
-        V().openModal('검진 결과 문서 제출',
-            '<p style="font-size:13px;margin-bottom:10px;color:var(--text-gray);"><b>' + esc(r.dept) + ' · ' + esc(r.type) + '</b> 검진기관에서 받은 결과 문서를 제출합니다. 제출 시 <b>재난안전과</b>에 자동 통보됩니다.</p>' +
-            V().uploadDrop('파일을 끌어다 놓거나 클릭하여 업로드<br><span style="font-size:12px;">업로드 시 이력이 자동 기록됩니다</span>', null, { hint: true }),
-            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-            '<button type="button" class="btn btn-primary" onclick="HEX.saveDeptUpload(\'' + id + '\')">제출</button>');
-    }
-    function saveDeptUpload(id) {
-        var r = S().healthOf(id);
-        S().submitResult(id, '담당부서', r ? r.dept : '담당부서');
-        V().closeModal(); render(); V().toast('결과 문서를 제출했습니다. 재난안전과에 통보됩니다.');
-    }
 
     function openNew() {
         if (!canAct()) { V().toast('검진 계획 등록은(는) 해당 부서 담당자가 수행합니다.'); return; }
@@ -424,8 +242,8 @@
         render();
     }
 
-    global.HEX = { init: init, setView: setView, setPersp: setPersp, setPerspDept: setPerspDept,
+    global.HEX = { init: init,
         setYear: setYear, setType: setType, setDept: setDept, setTile: setTile,
-        detail: detail, attach: attach, saveAttach: saveAttach, deptUpload: deptUpload, saveDeptUpload: saveDeptUpload,
+        detail: detail, attach: attach, saveAttach: saveAttach,
         openNew: openNew, saveNew: saveNew, onTypeChange: onTypeChange, pickDept: pickDept };
 })(window);

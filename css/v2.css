@@ -1480,16 +1480,6 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
    상태 4종: 완료(success)·미완료(neutral)·보완 필요(warning)·기한 초과(danger)
    ===================================================================== */
 
-/* 관리 버전 탭(메뉴 상단) — 단순 첨부형 / 상세 관리형 세그먼트 */
-.sh-vbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
-.sh-vtabs { display: inline-flex; gap: 3px; padding: 4px; background: var(--gray-100); border-radius: var(--radius-pill); }
-.sh-vtab { border: 0; background: none; padding: 7px 15px; border-radius: var(--radius-pill); font: inherit; font-size: var(--fs-13); font-weight: 600; color: var(--text-gray); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: background .12s, color .12s; }
-.sh-vtab:hover { color: var(--main-dark); }
-.sh-vtab.is-active { background: var(--surface); color: var(--main-dark2); box-shadow: var(--shadow-sm); }
-.sh-vtab:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
-.sh-vtab .rec { font-size: var(--fs-12); font-weight: 700; color: var(--status-success-fg); background: var(--status-success-bg); border: 1px solid var(--status-success-border); border-radius: var(--radius-pill); padding: 0 6px; }
-.sh-vnote { font-size: var(--fs-12); color: var(--text-gray); }
-.sh-vnote b { color: var(--main-dark2); }
 
 /* 인력평가 연계 안내 배너(목록 상단) */
 .sh-linkbar { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; background: var(--status-info-bg); border: 1px solid var(--status-info-border); border-radius: var(--radius-button); font-size: var(--fs-13); color: var(--text-black); line-height: 1.55; margin-bottom: 14px; }
@@ -1568,52 +1558,6 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 
 /* 부서/담당자 선택 인라인 조직도는 공통 트리(.org-inline / .otr-*)를 그대로 차용 — 별도 스타일 불요 */
 
-/* 절차 진행형 — 목록 진행단계 미니 표시 */
-.sh-stepmini { display: inline-flex; align-items: center; }
-.sh-stepdot { width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: var(--fs-12); font-weight: 700; background: var(--gray-100); color: var(--text-gray); border: 1px solid var(--card-line); flex: 0 0 auto; }
-.sh-stepdot.done { background: var(--status-success-fg); color: var(--surface); border-color: var(--status-success-fg); }
-.sh-stepdot.cur { background: var(--surface); color: var(--main-dark); border-color: var(--main); box-shadow: 0 0 0 2px var(--brand-50); }
-.sh-stepline { width: 16px; height: 2px; background: var(--card-line); flex: 0 0 auto; }
-.sh-stepline.on { background: var(--status-success-fg); }
-
-/* 절차 상세 — 스텝퍼 헤더 */
-.sh-steps { display: flex; align-items: flex-start; margin-bottom: 16px; }
-.sh-steps .st { flex: 1; text-align: center; position: relative; }
-.sh-steps .st .n { width: 30px; height: 30px; border-radius: 50%; margin: 0 auto 6px; display: flex; align-items: center; justify-content: center; font-size: var(--fs-13); font-weight: 700; background: var(--gray-100); color: var(--text-gray); border: 1px solid var(--card-line); position: relative; z-index: var(--z-base); }
-.sh-steps .st.done .n { background: var(--status-success-fg); color: var(--surface); border-color: var(--status-success-fg); }
-.sh-steps .st.cur .n { background: var(--surface); color: var(--main-dark); border-color: var(--main); box-shadow: 0 0 0 3px var(--brand-50); }
-.sh-steps .st .lbl { font-size: var(--fs-12); color: var(--text-gray); font-weight: 600; }
-.sh-steps .st.cur .lbl, .sh-steps .st.done .lbl { color: var(--main-dark2); }
-.sh-steps .st::before { content: ''; position: absolute; top: 15px; left: -50%; width: 100%; height: 2px; background: var(--card-line); }
-.sh-steps .st:first-child::before { display: none; }
-.sh-steps .st.done::before, .sh-steps .st.cur::before { background: var(--status-success-fg); }
-
-/* 절차 단계 카드 · 잠금 */
-.sh-card.locked { opacity: .5; }
-.sh-card.locked .btn { pointer-events: none; }
-.sh-stepnum { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--main-dark); color: var(--surface); font-size: var(--fs-12); font-weight: 700; margin-right: 7px; }
-.sh-card.locked .sh-stepnum { background: var(--text-lightgray); }
-.sh-card.done-step .sh-stepnum { background: var(--status-success-fg); }
-
-/* 대상자 체크리스트 */
-.sh-checklist { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px; max-height: 220px; overflow-y: auto; border: 1px solid var(--card-line); border-radius: var(--radius-button); padding: 8px; }
-.sh-checkitem { display: flex; align-items: center; gap: 7px; padding: 6px 8px; border-radius: var(--radius-md); font-size: var(--fs-13); cursor: pointer; }
-.sh-checkitem:hover { background: var(--brand-50); }
-.sh-checkitem input { flex: 0 0 auto; }
-.sh-checkitem .role { color: var(--text-gray); font-size: var(--fs-12); margin-left: auto; }
-
-/* 절차 진행형 관점 전환(주관부서↔담당부서) 바 */
-.sh-persp { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 9px 12px; margin-bottom: 14px; background: var(--gray-50); border: 1px solid var(--card-line); border-radius: var(--radius-button); }
-.sh-persp-tabs { display: inline-flex; gap: 3px; padding: 3px; background: var(--gray-100); border-radius: var(--radius-pill); }
-.sh-ptab { border: 0; background: none; padding: 6px 14px; border-radius: var(--radius-pill); font: inherit; font-size: var(--fs-13); font-weight: 600; color: var(--text-gray); cursor: pointer; transition: background .12s, color .12s; }
-.sh-ptab:hover { color: var(--main-dark); }
-.sh-ptab.is-active { background: var(--surface); color: var(--main-dark2); box-shadow: var(--shadow-sm); }
-.sh-ptab:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
-.sh-persp .sh-fl { font-size: var(--fs-12); color: var(--text-gray); font-weight: 600; }
-.sh-persp .form-select { width: auto; min-width: 190px; flex: 0 0 auto; }
-.sh-persp-note { font-size: var(--fs-12); color: var(--text-gray); margin-left: auto; }
-.sh-persp-note b { color: var(--main-dark2); }
-@media (max-width: 640px) { .sh-persp-note { margin-left: 0; flex-basis: 100%; } }
 /* 상세 뒤로가기 링크(공용) — 형제 rsk-imp-detail 과 동일, 인라인 style 제거 */
 .id-back { font-size: var(--fs-13); color: var(--main-dark); text-decoration: none; font-weight: 600; }
 .id-back:hover { text-decoration: underline; }
@@ -1649,17 +1593,6 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .sh-hist-ev { font-size: var(--fs-13); color: var(--text-black); line-height: 1.5; }
 .sh-hist-actor { font-size: var(--fs-12); color: var(--text-gray); }
 
-/* 개인정보 열람 권한(데모 게이트) */
-.sh-priv-badge { font-size: var(--fs-12); font-weight: 700; padding: 3px 10px; border-radius: var(--radius-pill); }
-.sh-priv-badge.locked { background: var(--status-danger-bg); color: var(--status-danger-fg); border: 1px solid var(--status-danger-border); }
-.sh-priv-badge.open { background: var(--status-success-bg); color: var(--status-success-fg); border: 1px solid var(--status-success-border); }
-.sh-priv-mask { padding: 24px 18px; border: 1px dashed var(--status-warning-border); background: var(--status-warning-bg); border-radius: var(--radius-button); text-align: center; color: var(--text-gray); font-size: var(--fs-13); line-height: 1.6; }
-.sh-priv-mask b { color: var(--status-warning-fg); }
-.sh-priv-mask .lock-ic { display: block; margin-bottom: 8px; color: var(--status-warning-fg); }
-.sh-ptable { width: 100%; border-collapse: collapse; font-size: var(--fs-13); }
-.sh-ptable th { text-align: left; padding: 8px 10px; background: var(--surface-alt); border-bottom: 1px solid var(--card-line); font-size: var(--fs-12); color: var(--text-gray); white-space: nowrap; }
-.sh-ptable td { padding: 8px 10px; border-bottom: 1px solid var(--card-line); color: var(--text-black); }
-.sh-ptable tr:last-child td { border-bottom: none; }
 
 /* 인력평가 항목 안 연계 지표 패널 — 세부평가기준과 동일한 접힘식(details) */
 .sh-evlink { margin-top: 9px; font-size: var(--fs-12); }
@@ -4027,6 +3960,8 @@ p > .dx-note-gap { display: inline; }
 /* 2단 트리가 든 모달은 넓게 — 500px 에서는 칸이 205px 로 눌려 긴 할 일 이름이
    네 줄로 접힌다. 내용으로 폭을 정하는 기존 관례를 따른다(.table-figma 선례). */
 .modal:has(.dyp) .modal-content { max-width: 860px; }
+/* 전체메뉴 — 대메뉴 11축을 3열로 펼치므로 기본 500px 로는 한 열이 150px 로 눌린다 */
+.modal:has(.dy-sitemap) .modal-content { max-width: 920px; }
 
 .du-steps { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-bottom: 14px; }
 .du-steps li { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0;
@@ -4133,6 +4068,7 @@ p > .dx-note-gap { display: inline; }
   .du-grid, .du-conf-meta { grid-template-columns: 1fr; }
   .du-steps li { flex: 1 1 100%; }
   .modal:has(.dyp) .modal-content { max-width: 100%; }
+  .modal:has(.dy-sitemap) .modal-content { max-width: 100%; }
 }
 .dl-more-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; margin-top: 10px;
   padding: 4px 12px; background: var(--surface-alt); border: 1px solid var(--card-line);
@@ -4322,6 +4258,8 @@ p > .dx-note-gap { display: inline; }
 .cmp-c-dept2 { width: 116px; font-size: var(--fs-13); color: var(--text-gray); line-height: 1.4; }
 /* 분류 확신도가 낮은 문서 표시 — 단계 칩 옆에 붙으므로 줄바꿈을 막는다 */
 .cmp-weak { white-space: nowrap; }
+/* 원문 확인 필요 칩(cmp-docs) — 분류 확인 칩과 같은 자리·같은 줄바꿈 규칙 */
+.cmp-review { white-space: nowrap; }
 .cmp-c-dc { width: 76px; }
 /* 수행 위치 열 — 업무유형 축(2026-08-18). 목록에서 «어디서 하는 일인지»를 읽는다 */
 .cmp-c-way { width: 14%; min-width: 96px; }
