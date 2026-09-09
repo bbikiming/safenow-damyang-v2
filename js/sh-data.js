@@ -12,10 +12,13 @@
 (function (global) {
     'use strict';
 
-    /* v3 — 관리 버전 3종(단순/상세/절차)을 단순 첨부형 하나로 확정하면서
-       개인별 결과(persons)·절차 진행 상태(proc)·열람권한(privacy) 시드를 걷어냈다.
-       시드 스키마가 바뀌므로 키를 올린다(옛 브라우저의 v2 스토어가 살아남지 않게). */
-    var SKEY = 'damyangShV3';
+    /* v4 — 작업환경측정 시드를 사업장 관리(DYSITE) 식별값에 연결(siteId·마스터 이름·판정 상태).
+            WE-2026-02(하수처리장)의 소관을 물순환사업소로 바로잡았다.
+       v3 — 관리 버전 3종(단순/상세/절차)을 단순 첨부형 하나로 확정하면서
+            개인별 결과(persons)·절차 진행 상태(proc)·열람권한(privacy) 시드를 걷어냈다.
+       시드 스키마·값이 바뀌면 키를 올린다 — 안 올리면 옛 브라우저의 스토어가 살아남아
+       화면과 시드가 조용히 갈린다. */
+    var SKEY = 'damyangShV4';
     /* 기준일·기준연도 — DYV2.today() 단일 출처 (시연일 변경은 common.js DEMO_TODAY 한 줄) */
     var TODAY = (global.DYV2 && global.DYV2.today) ? global.DYV2.today() : '2026-07-16';
     var CURYEAR = Number(TODAY.slice(0, 4));
@@ -59,8 +62,14 @@
     function seed() {
         /* 작업환경측정 — 반기 1회(년·반기). 대상: 유해인자 노출 사업장/현장.
            result: '적정' | '개선 필요' | null(미측정) */
+        /* 작업환경측정 — 사업장은 사업장 관리(DYSITE)의 식별값(siteId)으로 참조한다.
+           이름(site)·판정 상태는 계획 생성 시점 스냅샷이라 함께 보존한다(SCR-WEM-001 §4-2).
+           구체 작업 위치(약품동·탈수기실·기계실)는 targetBasis 가 갖는다.
+           siteId 가 없으면 중복 계획 검사와 사업장 사용중 판정이 이름 대조로 떨어져
+           마스터와 한 글자만 달라도 조용히 어긋난다. */
         var workenv = [
-            { id: 'WE-2026-01', year: 2026, half: 'H1', dept: '물순환사업소', site: '정수장 약품동',
+            { id: 'WE-2026-01', year: 2026, half: 'H1', dept: '물순환사업소',
+              siteId: 'S01', site: '담양정수장', siteTargetState: '검토 중',
               subject: '소음·분진·염소가스 등 12종', vendor: '(주)한국산업보건환경연구원',
               planned: '2026-05-20', done: '2026-05-22', report: true,
               result: '적정', improveReq: '', improveDue: '', improveDone: false,
@@ -72,20 +81,22 @@
                 { at: '2026-05-22', actor: '(주)한국산업보건환경연구원', event: '측정 실시 완료' },
                 { at: '2026-06-10', actor: '서담당', event: '결과보고서 접수 · 결과 「적정」 확인' }
               ] },
-            { id: 'WE-2026-02', year: 2026, half: 'H1', dept: '공공시설사업소', site: '하수처리시설',
+            { id: 'WE-2026-02', year: 2026, half: 'H1', dept: '물순환사업소',
+              siteId: 'S02', site: '담양하수처리장', siteTargetState: '검토 중',
               subject: '황화수소·분진·소음 등 9종', vendor: '(주)그린환경보건원',
               planned: '2026-05-18', done: '2026-05-25', report: true,
               result: '개선 필요', improveReq: '탈수기실 국소배기장치 성능 저하 — 후드 풍속 기준 미달, 배기설비 보수 및 재측정 필요',
               improveDue: '2026-08-31', improveDone: false,
-              beforePhoto: true, afterPhoto: false, owner: '공공시설사업소 · 한담당',
+              beforePhoto: true, afterPhoto: false, owner: '물순환사업소 · 서담당',
               reason: '', expectedDone: '',
               carcinogen: false, targetBasis: '현업 종사자 · 유해인자 노출(하수처리 탈수기실)',
               history: [
-                { at: '2026-04-28', actor: '한담당', event: '측정 계획 수립 · 위탁계약 체결' },
+                { at: '2026-04-28', actor: '서담당', event: '측정 계획 수립 · 위탁계약 체결' },
                 { at: '2026-05-25', actor: '(주)그린환경보건원', event: '측정 실시 완료' },
-                { at: '2026-06-05', actor: '한담당', event: '결과보고서 접수 · 결과 「개선 필요」 · 개선기한 2026-08-31 설정' }
+                { at: '2026-06-05', actor: '서담당', event: '결과보고서 접수 · 결과 「개선 필요」 · 개선기한 2026-08-31 설정' }
               ] },
-            { id: 'WE-2026-03', year: 2026, half: 'H1', dept: '환경과', site: '자원순환센터',
+            { id: 'WE-2026-03', year: 2026, half: 'H1', dept: '환경과',
+              siteId: 'S07', site: '자원순환센터(재활용선별)', siteTargetState: '검토 중',
               subject: '분진·악취·중금속 등 8종', vendor: '(주)한국산업보건환경연구원',
               planned: '2026-07-28', done: '', report: false,
               result: null, improveReq: '', improveDue: '', improveDone: false,
@@ -95,7 +106,8 @@
               history: [
                 { at: '2026-06-20', actor: '정환경', event: '측정 계획 수립 · 위탁계약 체결(예정일 2026-07-28)' }
               ] },
-            { id: 'WE-2026-04', year: 2026, half: 'H1', dept: '건설과', site: '도로보수 작업현장',
+            { id: 'WE-2026-04', year: 2026, half: 'H1', dept: '건설과',
+              siteId: 'S09', site: '도로보수 작업현장(직영보수반)', siteTargetState: '검토 중',
               subject: '소음·진동·분진 등 6종', vendor: '(주)그린환경보건원',
               planned: '2026-06-05', done: '', report: false,
               result: null, improveReq: '', improveDue: '', improveDone: false,
@@ -107,7 +119,8 @@
                 { at: '2026-05-10', actor: '박현장', event: '측정 계획 수립 · 위탁계약 체결(예정일 2026-06-05)' },
                 { at: '2026-06-06', actor: '박현장', event: '미실시 사유 등록 · 예상 완료일 2026-07-25' }
               ] },
-            { id: 'WE-2026-05', year: 2026, half: 'H1', dept: '공공시설사업소', site: '실내수영장 기계실',
+            { id: 'WE-2026-05', year: 2026, half: 'H1', dept: '공공시설사업소',
+              siteId: 'S04', site: '담양국민체육센터(실내수영장)', siteTargetState: '검토 중',
               subject: '염소가스·습도·소음 등 5종', vendor: '(주)한국산업보건환경연구원',
               planned: '2026-06-10', done: '2026-06-12', report: true,
               result: '개선 필요', improveReq: '염소가스 농도 노출기준 초과 — 자동염소주입기 밀폐 및 배기 개선 필요',
@@ -121,7 +134,8 @@
                 { at: '2026-06-18', actor: '한담당', event: '결과보고서 접수 · 결과 「개선 필요」 · 개선기한 2026-06-30 설정' }
               ] },
             /* 전년도(2025 하반기) — 연도 필터 확인용 */
-            { id: 'WE-2025-01', year: 2025, half: 'H2', dept: '물순환사업소', site: '정수장 약품동',
+            { id: 'WE-2025-01', year: 2025, half: 'H2', dept: '물순환사업소',
+              siteId: 'S01', site: '담양정수장', siteTargetState: '검토 중',
               subject: '소음·분진·염소가스 등 12종', vendor: '(주)한국산업보건환경연구원',
               planned: '2025-11-18', done: '2025-11-20', report: true,
               result: '적정', improveReq: '', improveDue: '', improveDone: false,
