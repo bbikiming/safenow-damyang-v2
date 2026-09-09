@@ -14,22 +14,49 @@
     var state = { id: null, mount: null };
 
     function stChip(r) { var st = S().effWorkEnv(r); return '<span class="sh-st ' + st.tone + '">' + esc(st.label) + '</span>'; }
+    /* ===== 권한 (CLAUDE.md §12) — 목록과 같은 단일 출처 =====
+     * 목록에서 지운 행은 **주소로도 못 연다**. 렌더에서만 지우면 URL·콘솔로 뚫린다.
+     * 종전에는 이 상세에 게이트가 하나도 없어, 조회 전용 계층(과장·소장)이
+     * 남의 부서 건을 주소로 열고 상태까지 바꿀 수 있었다(실측 재현).
+     * 부서를 **이름**으로 저장하는 도메인이라 DYV2.deptIdOf() 로 id 를 얻는다(§3). */
+    function R() { return global.DYROLE; }
+    function did(r) { return V().deptIdOf(r && r.dept ? r.dept : ''); }
+    function inScope(r) { return !R() || R().inScope(did(r)); }
+    function canAct(r) { return !R() || R().canAct(did(r)); }
+    function roNote(r) { return R() ? R().readOnlyNote('측정 계획 등록·결과 첨부', did(r)) : ''; }
+    /* 조회 범위 밖 — 내용을 한 글자도 내지 않는다(어느 부서 건인지도 밝히지 않는다) */
+    function outOfScope() {
+        return '<div class="v2-empty">조회 범위 밖입니다 — 소속 부서 건만 볼 수 있습니다.' +
+            '<div style="margin-top:10px;"><a class="btn btn-outline" href="work-env.html">‹ 작업환경측정 목록</a></div></div>';
+    }
+    /* 조작 차단 — 버튼을 숨기는 것만으로는 전역 호출로 뚫린다 */
+    function deny(r, what) {
+        if (canAct(r)) return false;
+        toast(what + V().josa(what, '은', '는') + ' 해당 부서 담당자가 수행합니다.');
+        return true;
+    }
+
 
     function render() {
         var r = S().workEnvOf(state.id);
         if (!r) { state.mount.innerHTML = '<div class="sh-empty">해당 작업환경측정 건을 찾을 수 없습니다.</div>'; return; }
+        if (!inScope(r)) { state.mount.innerHTML = outOfScope(); return; }
         var measured = S().weMeasured(r), needImp = S().weNeedsImprove(r);
+        var may = canAct(r);
 
         /* 상단 액션 바 — 상태별 컨텍스트 액션(점진적 공개). 현 상태에 무의미한 버튼은 렌더하지 않음 */
         var acts = '';
-        if (!measured) acts += '<button type="button" class="btn btn-primary" onclick="WENVD.complete()">측정 완료 처리</button>';
-        else if (needImp) acts += '<button type="button" class="btn btn-primary" onclick="WENVD.improveDone()">개선조치 완료</button>';
-        else acts += '<span class="sh-st success" style="align-self:center;">완료 처리됨</span>';
-        acts += '<button type="button" class="btn btn-outline" onclick="WENVD.evidence()">증빙 등록</button>';
-        if (!measured || needImp) acts += '<button type="button" class="btn btn-outline" onclick="WENVD.resetDue()">기한 재설정</button>';
-        if (!measured) acts += '<button type="button" class="btn btn-outline" onclick="WENVD.reason()">미완료 사유 입력</button>';
-        acts += '<button type="button" class="btn btn-outline" onclick="WENVD.notify()">알림 발송</button>';
-        var actions = '<div class="sh-actions" style="margin-bottom:14px;">' + acts + '</div>';
+        if (!may) acts = '';
+        else {
+            if (!measured) acts += '<button type="button" class="btn btn-primary" onclick="WENVD.complete()">측정 완료 처리</button>';
+            else if (needImp) acts += '<button type="button" class="btn btn-primary" onclick="WENVD.improveDone()">개선조치 완료</button>';
+            else acts += '<span class="sh-st success" style="align-self:center;">완료 처리됨</span>';
+            acts += '<button type="button" class="btn btn-outline" onclick="WENVD.evidence()">증빙 등록</button>';
+            if (!measured || needImp) acts += '<button type="button" class="btn btn-outline" onclick="WENVD.resetDue()">기한 재설정</button>';
+            if (!measured) acts += '<button type="button" class="btn btn-outline" onclick="WENVD.reason()">미완료 사유 입력</button>';
+            acts += '<button type="button" class="btn btn-outline" onclick="WENVD.notify()">알림 발송</button>';
+        }
+        var actions = acts ? '<div class="sh-actions" style="margin-bottom:14px;">' + acts + '</div>' : roNote(r);
 
         /* 개요 */
         var overview =
@@ -123,16 +150,19 @@
 
     /* ── 증빙 등록 ── */
     function evidence() {
+        if (deny(S().workEnvOf(state.id), '결과보고서 등록')) return;
         V().openModal('결과보고서 · 증빙 등록',
             '<p style="font-size:13px;margin-bottom:10px;color:var(--text-gray);">위탁업체가 제출한 작업환경측정 결과보고서를 첨부합니다.</p>' +
             V().uploadDrop('파일을 끌어다 놓거나 클릭하여 업로드<br><span style="font-size:12px;">업로드 시 이력이 자동 기록됩니다</span>', null, { hint: true }),
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="WENVD.saveEvidence()">등록</button>');
     }
-    function saveEvidence() { S().attachEvidence('we', state.id, '결과보고서'); V().closeModal(); render(); toast('증빙이 등록되었습니다.'); }
+    function saveEvidence() {
+        if (deny(S().workEnvOf(state.id), '결과보고서 등록')) return; S().attachEvidence('we', state.id, '결과보고서'); V().closeModal(); render(); toast('증빙이 등록되었습니다.'); }
 
     /* ── 미완료 사유 ── */
     function reason() {
+        if (deny(S().workEnvOf(state.id), '미완료 사유 입력')) return;
         var r = S().workEnvOf(state.id);
         V().openModal('미완료 사유 입력',
             '<div style="margin-bottom:12px;"><label class="form-label">미완료(미실시) 사유 <span style="color:var(--status-danger-fg)">*</span></label>' +
@@ -143,6 +173,7 @@
             '<button type="button" class="btn btn-primary" onclick="WENVD.saveReason()">저장</button>');
     }
     function saveReason() {
+        if (deny(S().workEnvOf(state.id), '미완료 사유 입력')) return;
         var v = (document.getElementById('wd-reason').value || '').trim();
         if (!v) { toast('사유를 입력하세요.'); return; }
         S().setReason('we', state.id, v, document.getElementById('wd-exp').value);
@@ -151,6 +182,7 @@
 
     /* ── 기한 재설정 ── */
     function resetDue() {
+        if (deny(S().workEnvOf(state.id), '기한 재설정')) return;
         var r = S().workEnvOf(state.id);
         var isImp = r.result === '개선 필요' && !r.improveDone;
         var field = isImp ? 'improveDue' : 'planned';
@@ -163,6 +195,7 @@
             '<button type="button" class="btn btn-primary" onclick="WENVD.saveDue(\'' + field + '\')">저장</button>');
     }
     function saveDue(field) {
+        if (deny(S().workEnvOf(state.id), '기한 재설정')) return;
         var v = document.getElementById('wd-due').value;
         if (!v) { toast('날짜를 선택하세요.'); return; }
         S().resetDue('we', state.id, field, v);
@@ -171,6 +204,7 @@
 
     /* ── 알림 발송 ── */
     function notify() {
+        if (deny(S().workEnvOf(state.id), '알림 발송')) return;
         var r = S().workEnvOf(state.id);
         V().openModal('알림 발송',
             '<div style="margin-bottom:12px;"><label class="form-label" for="wd-nt-to">수신자 <span style="font-weight:400;color:var(--text-gray)">(조직도에서 선택)</span></label>' +
@@ -186,6 +220,7 @@
     }
     function pickRecipient(val) { var inp = document.getElementById('wd-nt-to'); if (inp) inp.value = val; }
     function sendNotify() {
+        if (deny(S().workEnvOf(state.id), '알림 발송')) return;
         var to = (document.getElementById('wd-nt-to').value || '').trim();
         S().notify('we', state.id, to);
         V().closeModal(); render(); toast('새올 포틀릿으로 알림을 발송했습니다.');
@@ -194,6 +229,7 @@
     /* ── 완료 처리 ── */
     /* 측정 미실시 → 결과 입력 모달(실시일=오늘·결과=적정 기본으로 최소 입력) */
     function complete() {
+        if (deny(S().workEnvOf(state.id), '측정 완료 처리')) return;
         var r = S().workEnvOf(state.id);
         if (!r.report) { toast('결과보고서를 먼저 등록하세요.'); return; }
         V().openModal('측정 완료 처리',
@@ -216,6 +252,7 @@
         document.getElementById('wd-c-imp').style.display = (sel === '개선 필요') ? '' : 'none';
     }
     function saveComplete() {
+        if (deny(S().workEnvOf(state.id), '측정 완료 처리')) return;
         var result = document.getElementById('wd-c-result').value;
         var doneDate = document.getElementById('wd-c-date').value;
         if (!doneDate) { toast('측정 실시일을 선택하세요.'); return; }
@@ -234,6 +271,7 @@
         toast(result === '적정' ? '측정 완료 · 결과 「적정」' : '측정 완료 · 「개선 필요」 등록');
     }
     function improveDone() {
+        if (deny(S().workEnvOf(state.id), '개선조치 완료')) return;
         V().openModal('개선조치 완료',
             '<div style="margin-bottom:12px;"><label class="form-label" for="wd-i-date">개선 완료일 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 '<input type="date" class="form-input" id="wd-i-date" value="' + esc(S().TODAY) + '"></div>' +
@@ -245,6 +283,7 @@
             '<button type="button" class="btn btn-primary" onclick="WENVD.saveImproveDone()">완료 처리</button>');
     }
     function saveImproveDone() {
+        if (deny(S().workEnvOf(state.id), '개선조치 완료')) return;
         var date = document.getElementById('wd-i-date').value;
         var result = (document.getElementById('wd-i-result').value || '').trim();
         if (!date || date > S().TODAY) { toast('개선 완료일을 확인하세요.'); return; }

@@ -554,7 +554,14 @@
                     return r.year === yy && r.half === half &&
                            V().deptIdOf(r.dept) === deptId;
                 });
-                if (!rows.length) return true;                 /* 측정 대상 사업장이 없다 */
+                /* 계획이 0건인 것은 «대상이 아니다» 가 아니라 «아직 등록하지 않았다» 다 —
+                   대상 여부는 이미 scopeAttr 가 정해 이 부서에 업무가 나간 것이다.
+                   true 를 돌려주면 아무것도 안 한 부서가 완료로 잡혀 회수율이 부풀고,
+                   부풀린 수치는 아무도 들여다보지 않는다(CLAUDE.md §14-2).
+                   실측(2026-H1): 대상 8부서 중 계획이 있는 곳은 4곳뿐이라
+                   나머지 4곳(문화체육과·재무과·보건소·담양읍)이 전부 완료로 잡혔다.
+                   null 은 판정 불가라 제출 기록으로 떨어지고 화면이 그 사실을 밝힌다. */
+                if (!rows.length) return null;
                 return rows.every(function (r) { return !!r.done; });
             }
         } catch (e) { return null; }
@@ -590,10 +597,15 @@
         if (need) return (t.files || []).length >= need;
         return t.status === TST.SUBMITTED;
     }
+    /* 파생 원본 전역 이름 — doneProbe 의 kind 와 1:1. deptDone 의 분기와 같은 집합이어야 한다.
+       종전에는 DEPTCHK·EDU 만 검사하고 나머지는 무조건 false 였다. 그래서 원본이 실린
+       화면에서도 「원본을 읽을 수 없습니다」로 거짓말했고, 원본이 없는데도 그 사실을
+       kind 를 하나 늘릴 때마다 손으로 적어야 했다. 표로 두면 두 곳이 갈리지 않는다. */
+    var PROBE_SRC = { DEPTCHK: 'DEPTCHK', EDU: 'DYEDU', RSK: 'DYRSK', SH: 'DYSH' };
     function probeAvailable(tpl) {
         if (tpl.profile !== 'menu' || !tpl.doneProbe) return true;
-        var k = tpl.doneProbe.split(':')[0];
-        return k === 'DEPTCHK' ? !!global.DEPTCHK : (k === 'EDU' ? !!global.DYEDU : false);
+        var g = PROBE_SRC[tpl.doneProbe.split(':')[0]];
+        return g ? !!global[g] : false;
     }
 
     /* '할 일' 판정 — 노출 전용이다. 집계(제출률)는 이 함수를 쓰지 않는다.
