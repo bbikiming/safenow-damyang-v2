@@ -173,10 +173,14 @@
         const p = rolePersona();
         if (!p || roleCanAct(deptId)) return '';
         const esc = (s) => (window.DYV2 ? window.DYV2.esc(String(s == null ? '' : s)) : s);
+        /* 조사는 DYV2.josa() 가 붙인다 — what 은 화면마다 다르고('문서 등록'·'업무 업로드'·
+           '결과 첨부' …) 받침도 갈리므로 고정 표기를 박으면 전 화면에서 어색해진다.
+           DYV2 가 아직 없으면(로드 순서상 이 파일이 먼저다) 조사를 생략한다. */
+        const js = (w) => (window.DYV2 && window.DYV2.josa ? window.DYV2.josa(w, '은', '는') : '');
         let why;
         if (p.tier === 'head') why = '총괄 책임자는 <b>전 부서</b> 진행 상황을 조회합니다. 처리는 각 부서 담당자가 수행합니다.';
-        else if (p.tier === 'super') why = '관리감독자는 소속 부서 진행 상황을 <b>조회</b>합니다. ' + esc(what) + '은(는) <b>담당자 본인</b>이 수행합니다.';
-        else why = '<b>' + esc(p.deptName || '') + '</b> 소관 건만 처리할 수 있습니다 — ' + esc(what) + '은(는) 그 부서 담당자가 수행합니다.';
+        else if (p.tier === 'super') why = '관리감독자는 소속 부서 진행 상황을 <b>조회</b>합니다. ' + esc(what) + js(what) + ' <b>담당자 본인</b>이 수행합니다.';
+        else why = '<b>' + esc(p.deptName || '') + '</b> 소관 건만 처리할 수 있습니다 — ' + esc(what) + js(what) + ' 그 부서 담당자가 수행합니다.';
         return '<div class="dy-readonly" role="note"><b>조회 전용</b> — ' + why + '</div>';
     }
     /* =========================================================================
@@ -574,7 +578,7 @@
                ※ base-targets(원료·제조물 대장)은 되살렸다가 **대시보드로 흡수**했다.
                  원문 대조 결과 제안요청서는 이 축을 SFR-020 대시보드의 「원료·제조물
                  개소 표시」로만 요구했고, 중처법 §9①·시행령 §8 어느 조문도 품목 대장
-                 작성을 명하지 않는다. 조치 의무는 이행 관리(CIT-02·03)가 이미 다룬다.
+                 작성을 명하지 않는다. 조치 의무는 법정 업무 현황(CIT-02·03)가 이미 다룬다.
                  화면은 주소로 열리며 EXT-10 자료가 오면 그 자리에 넣는다. */
             { id: 'base-targets', hidden: true, label: '원료·제조물 대장', icon: 'file',     href: 'base-targets.html' },
             { id: 'base-bulk',    hidden: true, label: '데이터 일괄등록', icon: 'file',     href: 'base-bulk.html',    screen: 'SFR-016' },
@@ -664,7 +668,7 @@
 
         /* ⑨ 업무 관리 — RFP 안전계획·의무이행 점검 / 관계법령 점검 (SFR-004·012·014)
          *   [구버전 2개 그룹을 여기로 접었다 — 2026-08-28 사용자 지시]
-         *   · 구 'docs'(업무문서: 업무 목록·이행 목록) — 신버전 이행 관리·문서 목록이
+         *   · 구 'docs'(업무문서: 업무 목록·이행 목록) — 신버전 법정 업무 현황·문서 목록이
          *     같은 데이터를 같은 목적으로 다시 그린다. 비교 시연이 끝나 **메뉴에서 뺀다**.
          *   · 구 'work'((구)업무관리: 업무 발행 관리·부서 업무함) — 라벨부터 (구)였다.
          *   지우지 않고 hidden 으로 남기는 이유는 rsk-imp 선례와 같다 — 내 할일·통계·
@@ -675,11 +679,11 @@
          *     그때 함께 옮긴 것이 내 할일의 '분류하러 가기'다 — 지금은 문서 목록으로
          *     가고, 미분류 교정(«분류 붙이기») 자체가 문서 목록 상세 안에 있다. */
         { id: 'cmp', label: '업무 관리', icon: 'check', items: [
-            { id: 'cmp-status',   label: '이행 관리',  icon: 'grid', href: 'cmp-status.html', screen: 'CMP01-T / CMP02-D / CMP04-V / SFR-014·004' },
+            { id: 'cmp-status',   label: '법정 업무 현황',  icon: 'grid', href: 'cmp-status.html', screen: 'CMP01-T / CMP02-D / CMP04-V / SFR-014·004' },
             { id: 'cmp-docs',     label: '문서 목록',  icon: 'list', href: 'cmp-docs.html',   screen: 'DOC01-L / DOC02-D / SFR-014' },
             /* hidden — 메뉴에서 뺀 화면. 주소로만 열리며 **되살리지 말 것**.
                2026-09-03 기준문서함(docs-archive)·문서 상세(doc-detail) 추가 —
-               업무 관리의 흐름을 **이행 관리 · 문서 목록 · 내 할일 셋 안에서** 끝내기로
+               업무 관리의 흐름을 **법정 업무 현황 · 문서 목록 · 내 할일 셋 안에서** 끝내기로
                했다(사용자 지시). 기준문서함이 갖고 있던 «제정·개정 원문 버전 이력»은
                대체 화면이 없다 — 없어진 사실을 화면에 적고 지어내지 않는다. */
             { id: 'docs-archive', hidden: true, label: '기준문서함', icon: 'file', href: 'docs-archive.html', screen: 'SCR-EDOC-010 / SFR-012' },
@@ -737,6 +741,10 @@
                     </a>
                 </div>
                 <div class="dy-header-actions" style="display:flex; align-items:center; gap:6px;">
+                    <button class="dy-allmenu-btn" id="dy-allmenu-btn" type="button"
+                            aria-haspopup="dialog" aria-label="전체메뉴 — 모든 화면을 한 번에 봅니다" title="전체메뉴">
+                        ${ICON.grid}<span class="dy-allmenu-label">전체메뉴</span>
+                    </button>
                     <button class="dy-help-btn" id="dy-help-btn" type="button" hidden
                             aria-label="도움말" title="이 화면 사용법">?</button>
                     <div class="dy-ntf-wrap" id="dy-ntf-wrap" style="position:relative;">
@@ -900,6 +908,53 @@
         `;
     }
 
+    /* 한 대메뉴의 (hidden 제외) 항목을 링크 목록으로 — 섹션이 바뀌면 섹션 헤더를 끼운다.
+       모바일 드로어의 «다른 메뉴»와 전체메뉴 모달이 함께 쓴다(같은 목록을 두 번 짜지 않는다). */
+    function groupLinksHtml(g, activePageId, itemCls, secCls) {
+        let prev = null;
+        return g.items.filter(it => !it.hidden).map(it => {
+            let pre = '';
+            const sec = it.section || null;
+            if (sec !== prev) {
+                if (sec) pre = `<div class="${secCls || 'dy-sidebar-section'}">${sec}</div>`;
+                prev = sec;
+            }
+            const cur = it.id === activePageId;
+            const aria = sec ? ` aria-label="${sec} ${it.label}"` : '';
+            return `${pre}<a class="${itemCls}${sec ? ' is-nested' : ''}${cur ? ' is-active' : ''}" href="${it.href || '#'}"${aria}${cur ? ' aria-current="page"' : ''}>${it.label}</a>`;
+        }).join('');
+    }
+
+    /* 전체메뉴 — 헤더 [전체메뉴] 버튼이 연다(모든 해상도).
+       대메뉴를 눌러야만 안에 무엇이 있는지 알 수 있던 구조를 보완한다 — 11개 대메뉴를
+       탐색하려면 11번 화면을 옮겨야 했다(2026-09-03 GNB 검수). 행정기관 사이트의
+       「전체메뉴」 관례와 같고, 교육 때 전체 지도를 먼저 보여 주는 자리이기도 하다.
+       내용은 NAV 파생이라 메뉴가 바뀌면 자동으로 따라온다. 권한(roleHidden)·hidden 은
+       GNB·사이드바와 같은 판정이다. */
+    let _cur = { groupId: null, pageId: null };
+    function sitemapHtml() {
+        const hidden = roleHidden();
+        const groups = NAV.filter(g => hidden.indexOf(g.id) < 0).map(g => {
+            const active = g.id === _cur.groupId;
+            const first = g.items.find(it => !it.hidden) || g.items[0];
+            return `<section class="dy-sitemap-group${active ? ' is-active' : ''}">
+                <a class="dy-sitemap-h" href="${first.href || '#'}"${active ? ' aria-current="true"' : ''}>${g.label}</a>
+                ${groupLinksHtml(g, _cur.pageId, 'dy-sitemap-item', 'dy-sitemap-sec')}
+            </section>`;
+        }).join('');
+        return `<div class="dy-sitemap">${groups}</div>`;
+    }
+    function openSitemap() {
+        if (!window.DYV2 || !window.DYV2.openModal) return;
+        window.DYV2.openModal('전체메뉴', sitemapHtml(),
+            '<button type="button" class="btn btn-outline" onclick="DYV2.closeModal()">닫기</button>',
+            { chrome: true });
+    }
+    function wireAllMenu() {
+        const btn = document.getElementById('dy-allmenu-btn');
+        if (btn) btn.addEventListener('click', openSitemap);
+    }
+
     function renderSidebar(activeGroup, activePageId) {
         /* SNB 3뎁스 렌더 (§8.5 v1.1)
          *   item.section 값이 바뀌면 섹션 헤더 삽입, 섹션→비섹션 전환 시 구분선.
@@ -941,11 +996,25 @@
                 ${externalIcon}
             </a>`;
         }).join('');
+        /* 모바일 드로어의 «다른 메뉴» — 1023px 이하에서만 보인다(CSS).
+           종전에는 드로어가 지금 대메뉴의 항목만 실어, 다른 대메뉴로 가려면 스크롤바가
+           숨겨진 GNB 띠를 옆으로 밀어야 했다(2026-09-03 GNB 검수). 데스크톱 사이드바는
+           그대로다 — 거기서는 GNB 가 항상 보이므로 같은 목록을 두 번 둘 이유가 없다.
+           roleHidden 은 GNB 와 같은 판정이라 감춘 그룹은 여기서도 나오지 않는다. */
+        const hiddenGroups = roleHidden();
+        const others = NAV
+            .filter(g => g.id !== activeGroup.id && hiddenGroups.indexOf(g.id) < 0)
+            .map(g => `<details class="dy-sidebar-group"><summary>${g.label}</summary>${groupLinksHtml(g, activePageId, 'dy-sidebar-item')}</details>`)
+            .join('');
         return html`
             <aside class="dy-sidebar" id="dy-sidebar">
                 <div class="dy-sidebar-inner">
                     <div class="dy-sidebar-title">${activeGroup.label}</div>
                     <nav class="dy-sidebar-nav">${parts}</nav>
+                    <nav class="dy-sidebar-others" aria-label="다른 메뉴">
+                        <div class="dy-sidebar-section">다른 메뉴</div>
+                        ${others}
+                    </nav>
                 </div>
             </aside>
             <div class="dy-sidebar-backdrop" id="dy-sidebar-backdrop"></div>
@@ -956,6 +1025,7 @@
         try {
             const pageId = document.body.getAttribute('data-dy-page') || 'index';
             const group = findGroup(pageId);
+            _cur = { groupId: group.id, pageId };
 
             /* 기존 레거시 chrome 제거 */
             const legacyAside = document.getElementById('sidebar');
@@ -1004,6 +1074,7 @@
             }
 
             wireMobileMenu();
+            wireAllMenu();
             wireNotification();
             wireRoleSwitcher();
 
@@ -1315,6 +1386,7 @@
         renderPagination,
         renderFilterRow,
         NAV,
+        openSitemap,
         /* 알림 내부 핸들러 (인라인 onclick 용) */
         _ntfFilter: ntfSetFilter,
         _ntfReadAll: ntfMarkAllRead,

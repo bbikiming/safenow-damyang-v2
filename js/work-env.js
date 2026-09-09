@@ -17,6 +17,8 @@
     function inScope(r) { return !R() || R().inScope(V().deptIdOf(r.dept)); }
     function canAct(deptName) { return !R() || R().canAct(deptName ? V().deptIdOf(deptName) : ''); }
     function roNote() { return R() ? R().readOnlyNote('측정 계획 등록·결과 첨부') : ''; }
+    /* 조작 차단 문구 — 조사는 DYV2.josa() 가 붙인다(라벨마다 받침이 갈려 고정 표기를 쓸 수 없다) */
+    function denyNote(what) { return what + V().josa(what, '은', '는') + ' 해당 부서 담당자가 수행합니다.'; }
 
     var state = { mount: null, year: '2026', half: '', dept: '', tile: 'all' };
 
@@ -151,7 +153,7 @@
 
     /* 목록 인라인 증빙 첨부 — 상세 진입 없이 결과보고서 등록 */
     function attach(id) {
-        if (!canAct()) { V().toast('결과 첨부은(는) 해당 부서 담당자가 수행합니다.'); return; }
+        if (!canAct()) { V().toast(denyNote('결과 첨부')); return; }
         var r = S().workEnvOf(id); if (!r) return;
         V().openModal('결과보고서 · 증빙 등록',
             '<p style="font-size:13px;margin-bottom:10px;color:var(--text-gray);"><b>' + esc(r.dept) + ' · ' + esc(r.site) + '</b> 작업환경측정 결과보고서를 첨부합니다.</p>' +
@@ -160,10 +162,10 @@
             '<button type="button" class="btn btn-primary" onclick="WENV.saveAttach(\'' + id + '\')">등록</button>');
     }
     function saveAttach(id) {
-        if (!canAct()) { V().toast('결과 첨부은(는) 해당 부서 담당자가 수행합니다.'); return; } S().attachEvidence('we', id, '결과보고서'); V().closeModal(); render(); V().toast('증빙이 등록되었습니다.'); }
+        if (!canAct()) { V().toast(denyNote('결과 첨부')); return; } S().attachEvidence('we', id, '결과보고서'); V().closeModal(); render(); V().toast('증빙이 등록되었습니다.'); }
 
     function openNew() {
-        if (!canAct()) { V().toast('측정 계획 등록은(는) 해당 부서 담당자가 수행합니다.'); return; }
+        if (!canAct()) { V().toast(denyNote('측정 계획 등록')); return; }
         V().openModal('작업환경측정 계획 등록',
             /* 대상 부서 — 조직도(DYV2.ORG) 인라인 트리에서 선택(단일 모달 규칙: 별도 모달 없이 입력 아래 펼침) */
             '<div class="ri-modal-row" style="margin-bottom:12px;"><label class="form-label" for="we-n-deptname">대상 부서 <span style="color:var(--status-danger-fg)">*</span></label>' +
@@ -211,7 +213,7 @@
         if (subj && haz && !subj.value.trim()) subj.value = haz;   // 유해인자 자동 채움(비어있을 때만)
     }
     function saveNew() {
-        if (!canAct()) { V().toast('측정 계획 등록은(는) 해당 부서 담당자가 수행합니다.'); return; }
+        if (!canAct()) { V().toast(denyNote('측정 계획 등록')); return; }
         var dept = (document.getElementById('we-n-deptname').value || '').trim();
         var siteId = document.getElementById('we-n-site').value || '';
         var siteRec = global.DYSITE && siteId ? DYSITE.siteOf(siteId) : null;

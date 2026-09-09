@@ -132,7 +132,7 @@
         var s = M().siteOf(id); if (!s) return;
         var used = M().isUsed(id);
         V().openModal(used ? '사업장 비활성화' : '사업장 사용 중지',
-            '<p style="font-size:13px;line-height:1.6;"><b>' + esc(s.name) + '</b>(' + esc(s.dept) + ')을 신규 측정계획 선택에서 제외합니다.<br>' +
+            '<p style="font-size:13px;line-height:1.6;"><b>' + esc(s.name) + '</b>(' + esc(s.dept) + ')' + V().josa(s.dept, '을', '를') + ' 신규 측정계획 선택에서 제외합니다.<br>' +
             '<span style="color:var(--text-gray);">' + (used ? '기존 측정계획이 참조하므로 삭제하지 않고 비활성화합니다.' : '참조 이력이 없어 비활성화 후 오등록이면 별도 삭제할 수 있습니다.') + '</span></p>' +
             '<label class="form-label" for="as-inactive-reason">사용 중지 사유 <span style="color:var(--status-danger-fg)">*</span></label>' +
             '<textarea class="form-textarea" id="as-inactive-reason" rows="2" placeholder="폐쇄·통합·오등록 등"></textarea>',
