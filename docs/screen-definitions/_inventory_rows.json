@@ -548,8 +548,8 @@
  {
   "scrId": "SCR-CMP-001",
   "daemenu": "업무 관리",
-  "jungmenu": "이행 관리",
-  "name": "이행 관리",
+  "jungmenu": "법정 업무 현황",
+  "name": "법정 업무 현황",
   "type": "목록",
   "route": "cmp-status.html",
   "components": "cmp-status.html, cmp-status.js, cmp-core.js, doc-progress.js, doc-taxonomy-data.js, doc-history-data.js, doc-seed-2026.js, doc-pick.js, doc-upload.js, facil-data.js, cmp-dept-docs.js",
@@ -574,7 +574,7 @@
  {
   "scrId": "SCR-DOC-007",
   "daemenu": "업무 관리",
-  "jungmenu": "이행 관리 · 문서 목록 (공통 입력창)",
+  "jungmenu": "법정 업무 현황 · 문서 목록 (공통 입력창)",
   "name": "업무 업로드 · 전년도 프리셋",
   "type": "등록·수정",
   "route": "cmp-status.html · cmp-docs.html (＋ 서류 올리기 / ＋ 문서 등록)",

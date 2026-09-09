@@ -147,8 +147,10 @@
         ownerView: [
             { kind: 'dept', id: OWNER_DEPT, includeSub: true, view: true, edit: false },
         ],
-        /* 개인정보가 담긴 명단·결과 — 전 직원 열람에서 뺀다.
-           개인 단위 열람은 이 메뉴 권한만으로 열리지 않는다(_공통_권한정의 §4 각주). */
+        /* 개인을 가리킬 수 있는 화면 — 전 직원 열람에서 뺀다.
+           근로자 명단은 이름·채용일이 실려 그대로 개인정보이고, 건강검진은
+           개인별 결과를 보관하지 않지만 부서 인원이 적으면 집계가 개인을 가리킨다
+           (_공통_권한정의 §4-2). */
         personal: [
             { kind: 'role', id: 'manager',    view: true, edit: false },
             { kind: 'role', id: 'team',       view: true, edit: true },
@@ -170,7 +172,7 @@
         /* 주관부서 조회 전용 */
         'edu-approval':  'ownerView',
         /* 개인정보 */
-        'sbm-health':    'personal',   /* 건강검진 대상자·결과 */
+        'sbm-health':    'personal',   /* 부서 인원이 적으면 대상·수검 집계가 개인을 가리킨다 */
         'edu-workers':   'personal',   /* 근로자 명단(이름·채용일·고용형태) */
         /* 전 직원 등록 */
         'opn-voice':     'openWrite',

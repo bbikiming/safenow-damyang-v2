@@ -14,6 +14,15 @@
     var state = { id: null, mount: null };
 
     function stChip(r) { var st = S().effWorkEnv(r); return '<span class="sh-st ' + st.tone + '">' + esc(st.label) + '</span>'; }
+    /* 사업장 마스터의 대상 판정 스냅샷 — 값이 없는 옛 건은 '기록 없음' 으로 드러낸다 */
+    function targetChip(r) {
+        var v = r.siteTargetState || '';
+        if (!v) return '<span class="sh-res none">기록 없음</span>';
+        var tone = v === '대상' ? 'ok' : (v === '비대상' ? 'none' : 'warn');
+        var note = v === '검토 중'
+            ? ' <span style="color:var(--text-gray);font-size:var(--fs-12);">— 법정 측정대상으로 확정되지 않았습니다(사업장 관리에서 판정)</span>' : '';
+        return '<span class="sh-res ' + tone + '">' + esc(v) + '</span>' + note;
+    }
     /* ===== 권한 (CLAUDE.md §12) — 목록과 같은 단일 출처 =====
      * 목록에서 지운 행은 **주소로도 못 연다**. 렌더에서만 지우면 URL·콘솔로 뚫린다.
      * 종전에는 이 상세에 게이트가 하나도 없어, 조회 전용 계층(과장·소장)이
@@ -63,6 +72,11 @@
             '<div class="sh-card"><div class="sh-card-h">개요 <span>' + stChip(r) + '</span></div>' +
             '<dl class="sh-kv">' +
                 '<dt>대상 부서 / 사업장</dt><dd><b>' + esc(r.dept) + '</b> · ' + esc(r.site) + '</dd>' +
+                /* 사업장의 측정대상 판정 — 계획 생성 시점 스냅샷(SCR-WEM-001 §4-3).
+                   저장만 하고 어디에도 보여주지 않으면 「전 사업장이 검토 중」이라는
+                   사실이 화면에서 사라진다(§14-12 — 미확정 갭은 드러낸다).
+                   '대상' 확정 전에는 법정 대상으로 단정하지 않는다는 것도 함께 밝힌다. */
+                '<dt>사업장 측정대상 판정</dt><dd>' + targetChip(r) + '</dd>' +
                 '<dt>측정 대상(유해인자)</dt><dd>' + esc(r.subject) + '</dd>' +
                 '<dt>위탁업체</dt><dd>' + esc(r.vendor) + '</dd>' +
                 '<dt>기준연도 · 반기</dt><dd>' + esc(r.year) + '년 · ' + (r.half === 'H2' ? '하반기' : '상반기') + '</dd>' +

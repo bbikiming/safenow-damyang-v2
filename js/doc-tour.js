@@ -12,7 +12,7 @@
 
    ※ 2026-09-01 이관 — 종전에는 은퇴한 docs-exec/docs-preset 에 실려 있어
      대메뉴 재편(16→11) 뒤 **메뉴로는 이 안내에 닿을 수 없었다**. 신버전
-     이행 관리·문서 목록으로 옮겼다. ③단계가 가리키던 «완료 처리»도 그때
+     법정 업무 현황·문서 목록으로 옮겼다. ③단계가 가리키던 «완료 처리»도 그때
      은퇴 화면에만 있었으므로 cmp-status 에 함께 구현했다.
 
    완료 판정은 전부 DYDOCS 파생이다 — 커서로 판정하면 뒤로 갈 때 체크가 풀리고,
@@ -81,7 +81,7 @@
 
     /* 화면 경로를 문구에 그대로 쓴다 — "지금 어디에 있고 다음에 어디로 가는지"를
        말해 주지 않으면 가이드를 따라가면서도 길을 잃는다. */
-    var HERE_EXEC = '업무 관리 › 이행 관리';
+    var HERE_EXEC = '업무 관리 › 법정 업무 현황';
     var HERE_LIST = '업무 관리 › 문서 목록';
     /* 흐름 보드는 제목·사람·실수치 세 줄이라 "어느 화면에서 하는 일인지"가 빠진다.
        실수치 앞에 화면 이름을 붙여 한 줄만 봐도 이동 경로가 읽히게 한다. */
@@ -116,7 +116,7 @@
             note: function () {
                 var s = D().summary(year());
                 var st = openStage();
-                return at('이행 관리', '아직 서류 없는 일 ' + s.counts.not_started + '건' + (st ? ' · 예를 들면 «' + st.name + '»' : ''));
+                return at('법정 업무 현황', '아직 서류 없는 일 ' + s.counts.not_started + '건' + (st ? ' · 예를 들면 «' + st.name + '»' : ''));
             }
         },
         {
@@ -146,8 +146,8 @@
             done: function () { return wipCount() > 0 || doneCount() > 0; },
             note: function () {
                 var d = myDoc();
-                if (!d) return at('이행 관리', '여기서 [＋ 서류 올리기] — 아직 올린 서류가 없습니다');
-                return at('이행 관리', '«' + d.title.slice(0, 20) + '» · 일 ' + d.stageIds.length + '개 진행중');
+                if (!d) return at('법정 업무 현황', '여기서 [＋ 서류 올리기] — 아직 올린 서류가 없습니다');
+                return at('법정 업무 현황', '«' + d.title.slice(0, 20) + '» · 일 ' + d.stageIds.length + '개 진행중');
             }
         },
         {
@@ -180,8 +180,8 @@
             done: function () { return doneCount() > 0; },
             note: function () {
                 var d = myDoc();
-                if (!d) return at('이행 관리', '같은 화면에서 재난안전과가 확인 — 아직 올라온 서류가 없습니다');
-                return at('이행 관리', '완료 ' + doneCount() + '건 · 확인 기다리는 중 ' + wipCount() + '건');
+                if (!d) return at('법정 업무 현황', '같은 화면에서 재난안전과가 확인 — 아직 올라온 서류가 없습니다');
+                return at('법정 업무 현황', '완료 ' + doneCount() + '건 · 확인 기다리는 중 ' + wipCount() + '건');
             }
         },
         {
@@ -199,10 +199,10 @@
                 '→ 돌아오면 검색어와 쪽이 그대로 남아 있습니다'
             ],
             /* 2026-09-03 — 문구가 은퇴한 «이행 목록·업무 목록»과 없어진 «업무문서» 대메뉴를
-               부르고 있었다. 투어는 2026-09-01 에 이미 이행 관리·문서 목록으로 옮겨 왔는데
+               부르고 있었다. 투어는 2026-09-01 에 이미 법정 업무 현황·문서 목록으로 옮겨 왔는데
                말만 옛 메뉴에 남아, 안내를 따라간 사람이 없는 메뉴를 찾게 된다. */
             desc: '두 화면이 같은 문서를 보지만 묻는 것이 다릅니다. ' +
-                  '«이행 관리» 는 «해야 할 일이 채워졌나», «문서 목록» 은 «그 문서가 어디 있나» 입니다. ' +
+                  '«법정 업무 현황» 는 «해야 할 일이 채워졌나», «문서 목록» 은 «그 문서가 어디 있나» 입니다. ' +
                   '나중에 감사나 보고로 문서를 찾을 때는 문서 목록으로 옵니다.',
             script: '한 바퀴 돌았습니다. 부서가 올리고 → 재난안전과가 확인하고 → ' +
                     '나중에 문서 목록에서 다시 찾는다. 이 세 걸음이 업무 관리의 전부입니다.',
@@ -222,7 +222,7 @@
     var T = global.DYTOUR.define({
         key: 'doc', ns: 'DOCTOUR', skey: 'dy-tour-doc-v1', steps: STEPS,
         ownerPersona: OWNER_P,
-        pageLabels: { 'cmp-status.html': '이행 관리', 'cmp-docs.html': '문서 목록' },
+        pageLabels: { 'cmp-status.html': '법정 업무 현황', 'cmp-docs.html': '문서 목록' },
         kicker: function () { return year() + '년 업무문서'; },
         flowTitle: function () { return '업무문서는 이렇게 씁니다 — ' + STEPS.length + '걸음'; },
         flowNote: function () {

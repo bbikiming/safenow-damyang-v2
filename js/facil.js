@@ -856,7 +856,7 @@
         if (!app) return;
         if (page === 'fac-list') {
             window.__facRerender = () => mountList(app); mountList(app);
-            /* 딥링크 ?no=시설물번호 — 이행 관리의 시설 상세가 «시설물 대장에서 열기»로
+            /* 딥링크 ?no=시설물번호 — 법정 업무 현황의 시설 상세가 «시설물 대장에서 열기»로
                넘길 때 쓴다. 없으면 그 버튼이 목록만 열고 끝나 막다른 길이 된다. */
             const no = new URLSearchParams(location.search).get('no');
             if (no && recOf(no)) openDetail(no);

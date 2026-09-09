@@ -2397,10 +2397,10 @@
                 /* 2026-09-03 — 기준문서함(docs-archive)을 메뉴에서 뺐다. 원문을 두는 자리는
                    문서 목록이고, **문서별 버전 이력은 기준문서함에만 있던 기능이라 대체가
                    없다.** 없어진 것을 «있는 것처럼» 적지 않는다(CLAUDE.md §14-12). */
-                '<div class="check-notice" style="margin-bottom:10px;">제정·개정 원문은 <b>문서 목록</b>에서 찾고, 제정·조치 여부·교육·점검 증빙은 <b>이행 관리</b>에서 회차별로 관리합니다. 같은 파일을 두 곳에 중복 등록하지 않습니다.</div>' +
+                '<div class="check-notice" style="margin-bottom:10px;">제정·개정 원문은 <b>문서 목록</b>에서 찾고, 제정·조치 여부·교육·점검 증빙은 <b>법정 업무 현황</b>에서 회차별로 관리합니다. 같은 파일을 두 곳에 중복 등록하지 않습니다.</div>' +
                 tbl(['관리 구분', '정본 위치', '현재 상태', '이동'], [
                     ['제정·개정 원문', '문서 목록', '<span class="chip-status neutral">문서별 버전 이력 없음 — 기준문서함 메뉴 제외</span>', '<a class="btn btn-sm btn-outline" href="cmp-docs.html">문서 찾기</a>'],
-                    ['제정·조치 여부 점검', '이행 관리', '<span class="chip-status warning">회차별 증빙 확인</span>', '<a class="btn btn-sm btn-primary" href="cmp-status.html">이행 점검</a>'],
+                    ['제정·조치 여부 점검', '법정 업무 현황', '<span class="chip-status warning">회차별 증빙 확인</span>', '<a class="btn btn-sm btn-primary" href="cmp-status.html">법정 업무 현황</a>'],
                 ]),
                 '') +
             /* 시행령 §5·§11 — 관계 법령 의무이행 점검.

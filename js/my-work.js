@@ -90,7 +90,7 @@
         opinion: 'menu.html?m=opinion&sub=voice', edu: 'edu-status.html',
         contract: 'menu.html?m=contract', order: 'menu.html?m=contract',
         /* 2026-09-03 — 기준문서함(docs-archive)은 메뉴에서 뺐다. 비상대응·재해조사는
-           전용 화면이 없으므로 그 이행을 보는 자리인 이행 관리로 보낸다. */
+           전용 화면이 없으므로 그 이행을 보는 자리인 법정 업무 현황으로 보낸다. */
         emergency: 'cmp-status.html', incident: 'cmp-status.html'
     };
 
@@ -828,8 +828,8 @@
         try { deptName = D().deptName(state.deptId) || ''; } catch (e) {}
         if (!pubs.length) {
             return '<div class="mw-empty"><b>' + esc(deptName) + '</b> 부서로 발행된 업무가 없습니다.<br>' +
-                '<span style="color:var(--text-gray);">법으로 해야 하는 일 중 아직 서류가 없는 것은 <b>이행 관리</b>에서 확인하고 올릴 수 있습니다.</span><br><br>' +
-                '<a class="btn btn-sm btn-primary" href="cmp-status.html">이행 관리 열기 ' + ICO.arrow + '</a> ' +
+                '<span style="color:var(--text-gray);">법으로 해야 하는 일 중 아직 서류가 없는 것은 <b>법정 업무 현황</b>에서 확인하고 올릴 수 있습니다.</span><br><br>' +
+                '<a class="btn btn-sm btn-primary" href="cmp-status.html">법정 업무 현황 열기 ' + ICO.arrow + '</a> ' +
                 '<a class="btn btn-sm btn-outline" href="cmp-docs.html">문서 목록 열기 ' + ICO.arrow + '</a></div>';
         }
         var counts = { all: 0, '첨부파일': 0, '전자문서': 0, '프로그램': 0 };
@@ -854,7 +854,7 @@
                     '<option value="진행"'   + (state.pubStatus === '진행' ? ' selected' : '') + '>진행</option>' +
                     '<option value=""'       + (state.pubStatus === '' ? ' selected' : '') + '>완료 포함 전체</option>' +
                 '</select>' +
-                '<a class="btn btn-sm btn-outline" href="cmp-status.html" style="margin-left:auto;">이행 관리 ' + ICO.arrow + '</a>' +
+                '<a class="btn btn-sm btn-outline" href="cmp-status.html" style="margin-left:auto;">법정 업무 현황 ' + ICO.arrow + '</a>' +
             '<a class="btn btn-sm btn-outline" href="cmp-docs.html">문서 목록 ' + ICO.arrow + '</a>' +
             '</div>';
 

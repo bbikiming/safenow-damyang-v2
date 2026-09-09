@@ -164,7 +164,7 @@
                         '<td><span class="chip-status chip-sm ' + V().toneOf(D().statusLabel(code)) + '">' +
                             esc(D().statusLabel(code)) + '</span></td>' +
                         '<td class="col-action"><a class="btn btn-sm btn-outline" href="cmp-status.html?stage=' +
-                            esc(s.id) + '&year=' + d.year + '">이행 관리 →</a></td></tr>';
+                            esc(s.id) + '&year=' + d.year + '">법정 업무 현황 →</a></td></tr>';
                 }).join('');
         }).join('') + '</tbody></table>';
     }
