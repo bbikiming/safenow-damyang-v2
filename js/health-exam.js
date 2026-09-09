@@ -21,6 +21,8 @@
     function inScope(r) { return !R() || R().inScope(V().deptIdOf(r.dept)); }
     function canAct(deptName) { return !R() || R().canAct(deptName ? V().deptIdOf(deptName) : ''); }
     function roNote() { return R() ? R().readOnlyNote('검진 계획 등록·증빙 첨부') : ''; }
+    /* 조작 차단 문구 — 조사는 DYV2.josa() 가 붙인다('증빙 첨부은(는)' 같은 표기를 내지 않는다) */
+    function denyNote(what) { return what + V().josa(what, '은', '는') + ' 해당 부서 담당자가 수행합니다.'; }
 
     var state = { mount: null, year: '2026', type: '', dept: '', tile: 'all' };
 
@@ -161,7 +163,7 @@
 
     /* 목록 인라인 증빙 첨부 — 상세 진입 없이 실시확인서·집계 결과표 등록 */
     function attach(id) {
-        if (!canAct()) { V().toast('증빙 첨부은(는) 해당 부서 담당자가 수행합니다.'); return; }
+        if (!canAct()) { V().toast(denyNote('증빙 첨부')); return; }
         var r = S().healthOf(id); if (!r) return;
         V().openModal('실시 증빙 등록',
             '<p style="font-size:13px;margin-bottom:10px;color:var(--text-gray);"><b>' + esc(r.dept) + ' · ' + esc(r.type) + '</b> 검진기관 실시확인서·집계 결과표를 첨부합니다. 개인별 결과지는 첨부하지 않습니다.</p>' +
@@ -170,10 +172,10 @@
             '<button type="button" class="btn btn-primary" onclick="HEX.saveAttach(\'' + id + '\')">등록</button>');
     }
     function saveAttach(id) {
-        if (!canAct()) { V().toast('증빙 첨부은(는) 해당 부서 담당자가 수행합니다.'); return; } S().attachEvidence('hc', id, '실시 증빙'); V().closeModal(); render(); V().toast('증빙이 등록되었습니다.'); }
+        if (!canAct()) { V().toast(denyNote('증빙 첨부')); return; } S().attachEvidence('hc', id, '실시 증빙'); V().closeModal(); render(); V().toast('증빙이 등록되었습니다.'); }
 
     function openNew() {
-        if (!canAct()) { V().toast('검진 계획 등록은(는) 해당 부서 담당자가 수행합니다.'); return; }
+        if (!canAct()) { V().toast(denyNote('검진 계획 등록')); return; }
         V().openModal('건강검진 계획 등록',
             /* 대상 부서 — 조직도(DYV2.ORG) 인라인 트리에서 선택 */
             '<div class="ri-modal-row" style="margin-bottom:12px;"><label class="form-label" for="he-n-deptname">대상 부서 <span style="color:var(--status-danger-fg)">*</span></label>' +
@@ -205,7 +207,7 @@
     }
     function pickDept(name) { var inp = document.getElementById('he-n-deptname'); if (inp) inp.value = name; }
     function saveNew() {
-        if (!canAct()) { V().toast('검진 계획 등록은(는) 해당 부서 담당자가 수행합니다.'); return; }
+        if (!canAct()) { V().toast(denyNote('검진 계획 등록')); return; }
         var dept = (document.getElementById('he-n-deptname').value || '').trim();
         var agency = (document.getElementById('he-n-agency').value || '').trim();
         var type = document.getElementById('he-n-type').value;
@@ -217,8 +219,10 @@
         if (!Number.isInteger(targetCount) || targetCount < 1) { V().toast('대상자 수를 1명 이상 입력하세요.'); return; }
         if (!planned) { V().toast('검진 예정일을 선택하세요.'); return; }
         if (type === '특수건강진단' && !targetBasis) { V().toast('특수건강진단 대상 유해인자와 배치업무를 입력하세요.'); return; }
+        /* 중복 계획 — year 는 숫자로 저장되므로 문자열과 직접 비교하면 영영 안 걸린다.
+           (실측: r.year === '2026' 은 0건, String(r.year) === '2026' 은 6건) */
         var dup = S().health().filter(function (r) {
-            return r.year === String(planned).slice(0, 4) && r.dept === dept && r.type === type && r.planned === planned;
+            return String(r.year) === String(planned).slice(0, 4) && r.dept === dept && r.type === type && r.planned === planned;
         })[0];
         if (dup) { V().toast('같은 부서·검진유형·예정일의 계획이 이미 있습니다.'); return; }
         S().addHealth({
