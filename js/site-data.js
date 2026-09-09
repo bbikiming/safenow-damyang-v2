@@ -85,10 +85,24 @@
         var d = load(); d.list = d.list.filter(function (s) { return s.id !== id; }); save();
         return { ok: true, msg: '사업장이 삭제되었습니다.' };
     }
+    /* 비활성 기록 — 정의서(SCR-ADMIN-009 §4-3)가 「사유·처리자·시각을 남긴다」고
+       약속하는데 종전에는 사유 한 줄만 저장하고 처리자·시각이 없었다. 게다가 그
+       사유조차 어느 화면에서도 다시 볼 수 없었다(옛 읽기 지점이던 관리대상 현황의
+       사업장 탭이 2026-09-03 메뉴 개편으로 없어졌다). 감사 이력이라 말하려면 세
+       값이 다 있어야 한다. 기록에 남는 이름은 DYROLE.actorLabel() 단일 출처다. */
+    function actorNow() {
+        var R = global.DYROLE;
+        return (R && R.actorLabel) ? R.actorLabel() : '시스템';
+    }
     function setActive(id, active, reason) {
         var s = siteOf(id); if (!s) return { ok: false, msg: '사업장을 찾을 수 없습니다.' };
         s.active = !!active;
-        s.inactiveReason = active ? '' : String(reason || '').trim();
+        if (active) { s.inactiveReason = ''; s.inactiveBy = ''; s.inactiveAt = ''; }
+        else {
+            s.inactiveReason = String(reason || '').trim();
+            s.inactiveBy = actorNow();
+            s.inactiveAt = (global.DYV2 && global.DYV2.today) ? global.DYV2.today() : '';
+        }
         save(); return { ok: true, msg: active ? '사업장이 다시 활성화되었습니다.' : '사업장이 비활성화되었습니다.' };
     }
     function reset() { db = { list: clone(SEED), seq: SEED.length }; save(); return db; }

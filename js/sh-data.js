@@ -246,8 +246,16 @@
     function save() { try { global.sessionStorage.setItem(SKEY, JSON.stringify(db)); } catch (e) {} }
     function reset() { db = seed(); save(); return db; }
 
+    /* 기록에 남는 이름은 화면이 조립하지 않는다 — DYROLE.actorLabel() 단일 출처
+       (doc-progress.js·work-data.js 선례). 특정인 이름을 박아 두면 소관이 부서별로
+       갈린 뒤 물순환사업소 담당자가 등록해도 재난안전과가 한 것으로 남는다 —
+       rsk-list 의 remindBy() 가 같은 이유로 하드코딩을 걷어낸 자리다(§4-3). */
+    function actorNow() {
+        var R = global.DYROLE;
+        return (R && R.actorLabel) ? R.actorLabel() : '시스템';
+    }
     function pushHist(rec, event, actor) {
-        (rec.history = rec.history || []).unshift({ at: TODAY, actor: actor || '박안전', event: event });
+        (rec.history = rec.history || []).unshift({ at: TODAY, actor: actor || actorNow(), event: event });
     }
 
     function halfOf(planned) { return (planned && Number(planned.slice(5, 7)) >= 7) ? 'H2' : 'H1'; }
@@ -297,7 +305,7 @@
             improveDone: false, beforePhoto: false, afterPhoto: false, owner: (o.dept || '') + ' · 담당자',
             reason: '', expectedDone: '', carcinogen: !!o.carcinogen,
             targetBasis: o.targetBasis || '현업 종사자 · 유해인자 노출(' + (o.dept || '해당 부서') + ')',
-            history: [{ at: TODAY, actor: '박안전', event: '측정 계획 등록 (예정일 ' + (o.planned || '-') + ')' }] };
+            history: [{ at: TODAY, actor: actorNow(), event: '측정 계획 등록 (예정일 ' + (o.planned || '-') + ')' }] };
         d.workenv.push(rec); save(); return rec;
     }
     function workEnvOf(id) { var a = workEnv(); for (var i = 0; i < a.length; i++) if (a[i].id === id) return a[i]; return null; }
@@ -348,7 +356,7 @@
             followupResult: '', owner: (o.dept || '') + ' · 담당자', reason: '', extraExamDate: '',
             carcinogen: !!o.carcinogen,
             targetBasis: o.targetBasis || ((o.type || '일반건강검진') === '특수건강진단' ? '특수건강진단 대상(유해인자 노출자)' : '일반건강검진(상시근로자 대상)'),
-            history: [{ at: TODAY, actor: '박안전', event: (o.type || '일반건강검진') + ' 계획 등록 (예정일 ' + (o.planned || '-') + ')' }] };
+            history: [{ at: TODAY, actor: actorNow(), event: (o.type || '일반건강검진') + ' 계획 등록 (예정일 ' + (o.planned || '-') + ')' }] };
         d.health.push(rec); save(); return rec;
     }
     function healthOf(id) { var a = health(); for (var i = 0; i < a.length; i++) if (a[i].id === id) return a[i]; return null; }
@@ -450,7 +458,13 @@
         if (!r.done) {
             r.done = opts.doneDate || TODAY;
             if (opts.examinedCount != null) r.examinedCount = Math.min(r.targetCount || 0, opts.examinedCount);   // 수검자 ≤ 대상자 상한
-            pushHist(r, '검진 실시 완료 (수검 ' + r.examinedCount + '/' + r.targetCount + ')');
+            /* 사후관리 대상 여부는 결과 통보서를 받는 이 시점에만 정해진다.
+               종전에는 시드 밖에서 이 값을 true 로 만드는 코드가 없어, 새로 등록한
+               검진은 유소견자가 나와도 사후관리 축이 영영 열리지 않았다(완료 버튼이
+               hcFollowup 을 보고 나오는데 그 값이 늘 false 였다). */
+            if (opts.followupNeeded != null) r.followupNeeded = !!opts.followupNeeded;
+            pushHist(r, '검진 실시 완료 (수검 ' + r.examinedCount + '/' + r.targetCount + ')'
+                + (r.followupNeeded ? ' · 사후관리 대상' : ''));
         } else if (hcUnexamined(r) > 0 && opts.examinedCount != null) {
             r.examinedCount = Math.min(r.targetCount, opts.examinedCount);
             pushHist(r, '추가검진 반영 (수검 ' + r.examinedCount + '/' + r.targetCount + ')');

@@ -242,8 +242,13 @@
             V().openModal('검진 완료 처리',
                 '<div style="margin-bottom:12px;"><label class="form-label">검진 실시일</label>' +
                     '<input type="date" class="form-input" id="hd-c-date" value="' + esc(S().TODAY) + '"></div>' +
-                '<div><label class="form-label">수검자 수 (대상 ' + r.targetCount + '명)</label>' +
-                    '<input type="number" class="form-input" id="hd-c-ex" value="' + r.targetCount + '" min="0" max="' + r.targetCount + '"></div>',
+                '<div style="margin-bottom:12px;"><label class="form-label">수검자 수 (대상 ' + r.targetCount + '명)</label>' +
+                    '<input type="number" class="form-input" id="hd-c-ex" value="' + r.targetCount + '" min="0" max="' + r.targetCount + '"></div>' +
+                /* 사후관리 대상 여부는 결과 통보서를 받는 이 시점에만 정해진다 —
+                   여기서 받지 않으면 사후관리 축이 신규 건에서 영영 열리지 않는다. */
+                '<div><label><input type="checkbox" id="hd-c-fu-need"' + (r.followupNeeded ? ' checked' : '') + '> ' +
+                    '사후관리 대상 있음 <span style="color:var(--text-gray);font-size:var(--fs-12);">— 유소견·업무제한 등 조치가 필요한 사람이 있는 경우</span></label>' +
+                    '<div class="sh-req" style="margin-top:8px;font-size:12px;">개인별 소견은 등록하지 않습니다. 대상 유무만 기록하고 조치 실적은 부서 단위로 적습니다.</div></div>',
                 '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
                 '<button type="button" class="btn btn-primary" onclick="HEXD.saveComplete()">완료 처리</button>');
         } else if (S().hcUnexamined(r) > 0) {
@@ -270,7 +275,9 @@
         var r = S().healthOf(state.id);
         if (!Number.isInteger(ex) || ex < 0 || ex > r.targetCount) { toast('수검자 수는 0명 이상 대상자 수 이하로 입력하세요.'); return; }
         if (dateEl && (!dateEl.value || dateEl.value > S().TODAY)) { toast('검진 실시일을 확인하세요.'); return; }
-        S().completeHealth(state.id, { doneDate: dateEl ? dateEl.value : undefined, examinedCount: isNaN(ex) ? undefined : ex });
+        var fuEl = document.getElementById('hd-c-fu-need');
+        S().completeHealth(state.id, { doneDate: dateEl ? dateEl.value : undefined, examinedCount: isNaN(ex) ? undefined : ex,
+            followupNeeded: fuEl ? !!fuEl.checked : undefined });
         V().closeModal(); render(); toast('검진 실시가 반영되었습니다.');
     }
     function saveFollowup() {

@@ -55,6 +55,18 @@
             '</tr></thead><tbody>' + rows + '</tbody></table></div>';
     }
 
+    /* 비활성이면 사유·처리자·시각을 함께 낸다 — 저장만 하고 감추면 「왜 껐지」를
+       물을 자리가 없다(SCR-ADMIN-009 §4-3). 옛 기록에는 처리자·시각이 없으므로
+       있는 값만 적고 없는 것은 '기록 없음' 으로 드러낸다. */
+    function inactiveCell(s) {
+        if (s.active !== false) return '<span class="chip-status success">활성</span>';
+        var meta = [s.inactiveBy || '처리자 기록 없음', s.inactiveAt || '일시 기록 없음'].join(' · ');
+        return '<span class="chip-status neutral">비활성</span>' +
+            '<div style="margin-top:4px;font-size:var(--fs-12);color:var(--text-gray);line-height:1.45;">' +
+            esc(s.inactiveReason || '사유 미기재 — 확인 필요') +
+            '<br><span style="color:var(--text-lightgray)">' + esc(meta) + '</span></div>';
+    }
+
     function rowHtml(s) {
         return '<tr>' +
             '<td>' + esc(s.dept) + '</td>' +
@@ -63,7 +75,7 @@
             '<td>' + esc(s.hazards || '-') + '</td>' +
             '<td>' + targetTag(s.targetState) + '</td>' +
             '<td>' + (s.targetBasis ? esc(s.targetBasis) : '<span style="color:var(--text-gray)">미등록</span>') + '</td>' +
-            '<td>' + (s.active === false ? '<span class="chip-status neutral">비활성</span>' : '<span class="chip-status success">활성</span>') + '</td>' +
+            '<td>' + inactiveCell(s) + '</td>' +
             '<td><button type="button" class="btn btn-sm btn-outline" onclick="DYADMSITE.openEdit(\'' + s.id + '\')">편집</button> ' +
                 (s.active === false
                     ? '<button type="button" class="btn btn-sm btn-outline" onclick="DYADMSITE.reactivate(\'' + s.id + '\')">재활성</button>'
