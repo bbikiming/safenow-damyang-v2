@@ -221,9 +221,11 @@
         if (!siteRec) { V().toast('사업장을 선택하세요.'); return; }
         if (!subject) { V().toast('측정 대상을 입력하세요.'); return; }
         if (!planned) { V().toast('측정 예정일을 선택하세요.'); return; }
+        /* 중복 계획 — year 는 숫자로 저장되므로 문자열과 직접 비교하면 영영 안 걸린다.
+           (실측: r.year === '2026' 은 0건, String(r.year) === '2026' 은 1건 — 건강검진도 같은 원인이었다) */
         var dup = S().workEnv().filter(function (r) {
             var sameSite = r.siteId ? r.siteId === siteId : (r.dept === dept && r.site === siteRec.name);
-            return sameSite && r.year === String(planned).slice(0, 4) && r.half === (Number(String(planned).slice(5, 7)) <= 6 ? 'H1' : 'H2') &&
+            return sameSite && String(r.year) === String(planned).slice(0, 4) && r.half === (Number(String(planned).slice(5, 7)) <= 6 ? 'H1' : 'H2') &&
                 String(r.subject || '').trim().replace(/\s+/g, ' ').toLowerCase() === subject.replace(/\s+/g, ' ').toLowerCase();
         })[0];
         if (dup) { V().toast('같은 반기·사업장·유해인자의 측정계획이 이미 있습니다.'); return; }
