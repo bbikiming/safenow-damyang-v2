@@ -552,7 +552,6 @@
                     '<td style="font-size:var(--fs-12);">' + esc(m.due_date || m.due || '-') + '</td>' +
                     '<td><span class="chip-status ' + st[0] + '">' + st[1] + '</span> ' + cfChip + '</td>' +
                     '<td style="font-size:var(--fs-12);">' + (ph ? '개선 후 ' + ph + '장' : '—') + '</td>' +
-                    '<td class="col-action"><button type="button" class="btn btn-sm btn-outline" onclick="DYFACIL._toImp(\'' + esc(m.id) + '\')">보기</button></td>' +
                 '</tr>';
             }).join('');
             impBlock = '<div class="fac-sec-t" style="margin-top:18px;">개선조치 내역 ' +
@@ -560,7 +559,7 @@
                 '<div style="overflow-x:auto;"><table class="table-figma">' +
                 '<thead><tr><th>유해위험요인 / 조치</th><th style="white-space:nowrap;">부서</th>' +
                 '<th style="white-space:nowrap;">기한</th><th style="white-space:nowrap;">상태</th>' +
-                '<th style="white-space:nowrap;">증빙</th><th></th></tr></thead>' +
+                '<th style="white-space:nowrap;">증빙</th></tr></thead>' +
                 '<tbody>' + rows + '</tbody></table></div>';
         }
 
@@ -842,7 +841,8 @@
         const res = sendFms(no, kind);
         V().toast(res.msg);
     };
-    DYFACIL._toImp = id => { window.location.href = 'rsk-imp-detail.html?id=' + encodeURIComponent(id); };
+    /* 개선조치는 독립 메뉴가 아니다(2026-07-30 회의) — 시설물 상세에서 개선조치 대장·상세로
+       내보내지 않는다. 내역은 위 표가 전부이고, 처리는 위험성평가·내 할일에서 한다. */
     DYFACIL._toRisk = no => {
         const r = recOf(no); if (!r) return;
         /* 위험성평가 대상으로 FACIL_NO 관통 (PRD §5-4) */

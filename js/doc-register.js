@@ -57,7 +57,7 @@
         /* 유해·위험요인 관리(rsk-proc.html)는 2026-07-21 재설계로 폐지된 화면이라 뺐다 —
            업무문서에서 연결하면 폐지 흐름으로 다시 들어가게 된다. */
         { v: 'edu', label: '안전보건교육', href: 'edu.html' },
-        { v: 'improve', label: '개선조치', href: 'rsk-imp.html' },
+        { v: 'improve', label: '개선조치', href: 'rsk-list.html' },   /* 독립 메뉴 아님 — 위험성평가 부서별 조치로 */
         { v: 'policy', label: '경영방침', href: 'menu.html?m=policy' },
         { v: 'org', label: '조직', href: 'menu.html?m=org' },
         { v: 'opinion', label: '의견청취', href: 'menu.html?m=opinion' },

@@ -160,7 +160,7 @@
             hazards: [['추락', 6], ['끼임', 4], ['전도', 3], ['감전', 2], ['온열질환', 1]],
             eduHours: { need: 96, done: 71 },
             tasks: [
-                { title: '노후 사다리 교체 개선조치 완료 보고', due: '2026-06-03', owner: '한담당', st: '기한초과', href: 'rsk-imp.html' },
+                { title: '노후 사다리 교체 개선조치 완료 보고', due: '2026-06-03', owner: '한담당', st: '기한초과', href: 'my-work.html?cat=improve' },
                 { title: '체육시설 정기 위험성평가', due: '2026-06-11', owner: '한운영', st: '진행', href: 'rsk-list.html' },
                 { title: '시설운영팀 채용시 교육 실시', due: '2026-06-20', owner: '민설비', st: '미착수', href: 'edu-hire.html' },
             ],
@@ -181,8 +181,8 @@
             eduHours: { need: 84, done: 51 },
             /* 기한 지난 건 **4개** = DEPT_RATES.water.overdue. st 는 dueSt() 가 파생한다 */
             tasks: [
-                { title: '정수장 밀폐공간 작업 개선조치 완료 보고', due: '2026-05-28', owner: '하정수', href: 'rsk-imp.html' },
-                { title: '하수처리시설 유해위험요인 조치결과 제출', due: '2026-06-05', owner: '오수질', href: 'rsk-imp.html' },
+                { title: '정수장 밀폐공간 작업 개선조치 완료 보고', due: '2026-05-28', owner: '하정수', href: 'my-work.html?cat=improve' },
+                { title: '하수처리시설 유해위험요인 조치결과 제출', due: '2026-06-05', owner: '오수질', href: 'my-work.html?cat=improve' },
                 { title: '상반기 중대산업재해 이행점검 증빙 보완', due: '2026-06-30', owner: '하정수', href: 'menu.html?m=comply' },
                 { title: '2분기 현업근로자 교육 미이수자 보강', due: '2026-07-10', owner: '서담당', href: 'edu-status.html' },
                 { title: '하반기 관리감독자 지정서 제출', due: '2026-07-17', owner: '서담당', href: 'menu.html?m=org' },
@@ -337,7 +337,7 @@
                 '<a class="btn btn-sm btn-secondary" href="menu.html?m=comply">이행관리</a></div>' +
               '<div class="card-body">' +
                 lawRow({ name: '관계 법령 의무이행 반기 점검',       basis: '시행령 §5 2항 1호', cycle: '반기 1회', st: '진행', href: 'menu.html?m=comply', due: H2_DUE, note: '상반기 완료' }) +
-                lawRow({ name: '미이행 사항 인력·예산 등 지원 조치', basis: '시행령 §5 2항 2호', cycle: '점검 후 즉시', st: '진행', href: 'rsk-imp.html', note: '개선 2건' }) +
+                lawRow({ name: '미이행 사항 인력·예산 등 지원 조치', basis: '시행령 §5 2항 2호', cycle: '점검 후 즉시', st: '진행', href: 'rsk-list.html', note: '개선 2건' }) +
                 lawRow({ name: '법정 교육 실시 확인·미실시 시 지시', basis: '시행령 §5 2항 3·4호', cycle: '반기 1회', st: '진행', href: 'edu-status.html', due: H2_DUE, note: '미달 2부서' }) +
               '</div>' +
             '</div>';
@@ -506,7 +506,7 @@
                 /* '진행 업무'라 부르면 미착수·기한초과 행까지 진행 중으로 읽힌다 — 아래 표와 같은 모수다 */
                 '<a class="dsh-hero-stat" href="my-work.html"><b>' + seed.tasks.length + '<em>건</em></b><span>부서 업무</span></a>' +
                 '<a class="dsh-hero-stat" href="edu-status.html?dept=' + E(p.deptId) + '"><b>' + eduRate(p.deptId) + '<em>%</em></b><span>교육 이수율</span></a>' +
-                '<a class="dsh-hero-stat" href="rsk-imp.html"><b>' + seed.imp.open + '<em>건</em></b><span>개선조치 미완료</span></a>' +
+                '<a class="dsh-hero-stat" href="my-work.html?cat=improve"><b>' + seed.imp.open + '<em>건</em></b><span>개선조치 미완료</span></a>' +
               '</div>' +
             '</div>';
 
@@ -588,11 +588,11 @@
                 /* 이 카드는 전부 시드다 — 위 statbox 는 실집계라 숫자가 다르다. 밝히지 않으면
                    '어느 쪽이 맞느냐'가 되고, 그 순간 두 숫자 다 못 믿게 된다. */
                 '<span class="dsh-seed-note">예시 자료 — 실집계는 위 개선조치 지연</span>' +
-                '<a class="btn btn-sm btn-secondary" href="rsk-imp.html">개선조치</a></div>' +
+                '<a class="btn btn-sm btn-secondary" href="my-work.html?cat=improve">개선조치</a></div>' +
               '<div class="card-body">' +
-                hbarRow('1주 미만',   seed.aging[0], agMax, 'green',   'rsk-imp.html') +
-                hbarRow('1~4주 경과', seed.aging[1], agMax, 'warning', 'rsk-imp.html') +
-                hbarRow('1개월 이상', seed.aging[2], agMax, 'danger',  'rsk-imp.html') +
+                hbarRow('1주 미만',   seed.aging[0], agMax, 'green',   'my-work.html?cat=improve') +
+                hbarRow('1~4주 경과', seed.aging[1], agMax, 'warning', 'my-work.html?cat=improve') +
+                hbarRow('1개월 이상', seed.aging[2], agMax, 'danger',  'my-work.html?cat=improve') +
                 (seed.aging[2] ? '<div class="dsh-law-note" style="margin:8px 0 0;"><b>1개월 이상 방치 ' + seed.aging[2] + '건</b> — 재촉 또는 기한 협의가 필요합니다.</div>' : '') +
               '</div>' +
             '</div>';

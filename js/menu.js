@@ -11,7 +11,7 @@
     const params = new URLSearchParams(location.search);
     const KEY = V.MENUS[params.get('m')] ? params.get('m') : 'policy';
 
-    // 위험성평가·작업공정·개선조치·교육은 전용 정적 화면으로 리다이렉트 (개선조치=위험성평가 정본 rsk-imp.html)
+    // 위험성평가·작업공정·개선조치·교육은 전용 정적 화면으로 리다이렉트 (개선조치는 독립 메뉴가 아니라 위험성평가 rsk-list.html 로 보낸다)
     if (KEY === 'risk' || KEY === 'hazard' || KEY === 'improve' || KEY === 'edu') {
         location.replace(V.MENUS[KEY].href);
         return;
@@ -1819,8 +1819,7 @@
                     procBody = '<div class="opn-banner warn">개선조치 진행 중 — 개선조치가 완료되면 자동으로 상태가 변경됩니다.</div>' +
                         '<div class="opn-linkcard"><div class="opn-linkcard-badges"><span class="chip-mini pdca">의견청취 연동</span> <span class="chip-mini wt-attach">' + (imp.status === '종결' ? '종결' : '조치중') + '</span></div>' +
                         '<div class="opn-linkcard-title">' + V.esc(imp.title || o.title) + '</div>' +
-                        '<div class="opn-linkcard-meta">담당 ' + V.esc(imp.owner || o.owner || '-') + ' · 예정 ' + (imp.due || '-') + '</div>' +
-                        '<button class="btn btn-sm btn-outline" onclick="location.href=\'rsk-imp.html\'">개선조치 상세 보기</button></div>' +
+                        '<div class="opn-linkcard-meta">담당 ' + V.esc(imp.owner || o.owner || '-') + ' · 예정 ' + (imp.due || '-') + '</div></div>' +
                         '<div class="opn-proc-foot"><button class="btn btn-outline" onclick="PG.opnProgress(\'' + o.id + '\')">경과 추가</button><button class="btn btn-primary" onclick="PG.opnComplete(\'' + o.id + '\')">완료 처리</button></div>';
                 } else if (o.status === '완료') {
                     procBody = '<div class="opn-banner success">처리 완료 — 의견 처리 및 조치가 완료되었습니다.</div>' +
@@ -1846,7 +1845,7 @@
                 } else {
                     linkInner = '';
                     if (o.inspectLink) { const ins = o.inspect || {}; linkInner += '<div class="opn-mini"><div class="opn-mini-badges"><span class="chip-mini wt-elec">안전점검</span> <span class="chip-mini wt">점검예정</span></div><div class="opn-mini-title">[의견청취] ' + V.esc(o.title) + '</div><div class="opn-mini-meta">담당 ' + V.esc(ins.owner || o.owner || '-') + ' · 예정 ' + (ins.date || '-') + '</div><button class="btn btn-sm btn-outline" onclick="DYV2.notReady(\'점검 상세 보기\', \'안전점검 메뉴 연동\')">바로가기</button></div>'; }
-                    if (o.link) { const imp = E.improvements().find(x => x.id === o.link) || {}; linkInner += '<div class="opn-mini"><div class="opn-mini-badges"><span class="chip-mini pdca">개선조치</span> <span class="chip-mini wt-attach">' + (imp.status === '종결' ? '종결' : '조치중') + '</span></div><div class="opn-mini-title">' + V.esc(imp.title || o.title) + '</div><div class="opn-mini-meta">' + V.esc(o.link) + ' · 예정 ' + (imp.due || '-') + '</div><button class="btn btn-sm btn-outline" onclick="location.href=\'rsk-imp.html\'">바로가기</button></div>'; }
+                    if (o.link) { const imp = E.improvements().find(x => x.id === o.link) || {}; linkInner += '<div class="opn-mini"><div class="opn-mini-badges"><span class="chip-mini pdca">개선조치</span> <span class="chip-mini wt-attach">' + (imp.status === '종결' ? '종결' : '조치중') + '</span></div><div class="opn-mini-title">' + V.esc(imp.title || o.title) + '</div><div class="opn-mini-meta">' + V.esc(o.link) + ' · 예정 ' + (imp.due || '-') + '</div></div>'; }
                 }
                 const linkCard = sectionCard('연동 정보', linkInner, '');
                 const header = '<div class="pol-detail-top"><button class="btn btn-sm btn-outline" onclick="PG.opnBack()">‹ 목록</button></div>';

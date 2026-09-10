@@ -45,7 +45,7 @@
         edu:      { label: '안전보건교육',       sfr: 'SFR-004·010',      dept: '재난안전과·각 부서',    href: 'edu.html' },  /* edu.html 은 edu-status.html 리다이렉트 스텁 */
         opinion:  { label: '의견청취',           sfr: 'SFR-011',          dept: '재난안전과 중대재해팀', href: 'menu.html?m=opinion' },
         contract: { label: '도급관리',           sfr: 'SFR-013',          dept: '회계과·각 발주부서',    href: 'menu.html?m=contract' },
-        improve:  { label: '개선조치',           sfr: 'SFR-003',          dept: '재난안전과 중대재해팀', href: 'rsk-imp.html' },
+        improve:  { label: '개선조치',           sfr: 'SFR-003',          dept: '재난안전과 중대재해팀', href: 'rsk-list.html' },  /* 개선조치는 독립 메뉴가 아니다 — 위험성평가로 */
         /* 2026-07-30 회의 — '이행관리' → '중대산업·시민재해 의무 이행점검'. 부서별 이행 여부 점검이 본질이다. */
         comply:   { label: '이행점검',           sfr: 'SFR-008·014',      dept: '재난안전과·기획예산실', href: 'menu.html?m=comply' },
     };

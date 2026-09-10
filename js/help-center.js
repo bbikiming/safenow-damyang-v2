@@ -45,14 +45,14 @@
         },
         'my-work': {
             lead: '여러 업무에서 나에게 온 할 일이 한 곳에 모입니다. 처리 방식에 따라 이 화면에서 바로 끝내거나 담당 화면으로 이동합니다.',
-            tasks: [{ t: '위험성평가 개선조치 처리', go: 'rsk-imp.html' }],
+            tasks: [{ t: '위험성평가 개선조치 처리', go: 'my-work.html?cat=improve' }],
             tour: ['RSKTOUR', 'OCCTOUR']
         },
         'rsk-list': {
             lead: '연 1회 정기 위험성평가를 주관부서가 열고, 부서가 조사·보고서를 제출하면 확인해 공문으로 마무리합니다.',
             tasks: [
                 { t: '올해 평가 생성하기', go: "RSKLIST && RSKLIST.openWizard && RSKLIST.openWizard()" },
-                { t: '부서별 제출 현황 보기', go: 'rsk-imp.html' }
+                { t: '부서별 제출 현황 보기', go: 'rsk-list.html' }
             ],
             tour: 'RSKTOUR', reset: 'RSKLIST'
         },

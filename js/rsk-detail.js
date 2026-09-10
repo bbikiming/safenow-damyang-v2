@@ -246,7 +246,7 @@
                     '<th style="width:30%;">개선조치</th><th style="width:14%;">기한</th>' +
                     '<th style="width:10%;">상태</th><th style="width:10%;"></th>' +
                 '</tr></thead><tbody>' + rows + '</tbody></table>' +
-                '<p style="font-size:12px;color:var(--text-gray);margin-top:6px;">개선조치는 <b>개선조치 메뉴(rsk-imp)</b>가 원본입니다. 부서 담당자는 <b>내 할일(rsk-my)</b>에서 완료 처리·재촉 응답을 수행합니다.</p>' +
+                '<p style="font-size:12px;color:var(--text-gray);margin-top:6px;">개선조치는 독립 메뉴가 아닙니다. 부서 담당자는 <b>내 할일</b>·<b>위험성평가 부서별 조치</b>에서 완료 처리·재촉 응답을 수행합니다.</p>' +
             '</div>';
     }
     function emSet(i, k, v) { if (EM && EM.rows[i]) EM.rows[i][k] = v; }
