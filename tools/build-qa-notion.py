@@ -45,10 +45,13 @@ import io, os, re, csv, sys, glob, subprocess
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 PLAN = os.path.join(ROOT, "docs", "planning")
 
-KIND = {"RISK": "위험성평가", "EDU": "안전보건교육", "COM": "공통 UX", "SMK": "기타 모듈 Smoke"}
+KIND = {"RISK": "위험성평가", "EDU": "안전보건교육", "COM": "공통 UX", "SMK": "기타 모듈 Smoke",
+        # 4개 메뉴 QA 시트(검수-QA시트-4메뉴-*) — 1차 세트와 한 워크스페이스에 함께 들어가도
+        # TC ID 가 겹쳐 Merge 로 덮어쓰지 않게 접두어를 따로 쓴다.
+        "FAC": "관리대상(시설물)", "CMP": "업무 관리", "RSK": "위험성평가", "EDC": "안전보건교육"}
 HEAD = ["TC ID", "구분", "우선순위", "화면·영역", "테스트 시나리오", "사전조건",
         "수행 절차", "기대 결과", "실제 결과", "결과", "테스터", "이슈번호"]
-TC_RE = re.compile(r"^\|\s*((RISK|EDU|COM|SMK)-\d{3})\s*\|")
+TC_RE = re.compile(r"^\|\s*((RISK|EDU|COM|SMK|FAC|CMP|RSK|EDC)-\d{3})\s*\|")
 DEFAULT_RESULT = "N/T"          # 노션 임포트 기본값 — 원본에 없다(위 [왜 있는가] ①)
 
 def die(msg):
@@ -58,20 +61,31 @@ def cell(x):
     """노션 셀 정규화 — 마크다운 강조와 코드 표기를 걷는다(위 변환 ②)."""
     return x.strip().replace("**", "").replace("`", "")
 
-# ── 원본·대상 찾기 ──────────────────────────────────────────────────────────
-srcs = sorted(glob.glob(os.path.join(PLAN, "검수-QA시나리오-*.md")))
-if len(srcs) != 1:
-    die("원본 QA 문서가 %d개다 — 하나여야 한다: %s" % (len(srcs), [os.path.basename(s) for s in srcs]))
-SRC = srcs[0]
-dsts = sorted(d for d in glob.glob(os.path.join(PLAN, "노션임포트-QA-*")) if os.path.isdir(d))
-if len(dsts) != 1:
-    die("노션 세트 폴더가 %d개다 — 하나여야 한다" % len(dsts))
-DST = dsts[0]
-
 args = sys.argv[1:]
 CHECK = "--check" in args
 def opt(name, default=None):
     return args[args.index(name) + 1] if name in args and args.index(name) + 1 < len(args) else default
+
+# ── 원본·대상 찾기 ──────────────────────────────────────────────────────────
+# 기본은 1차 QA 세트(원본·세트 각 1개를 자동 탐색)다. 다른 세트는 --src/--dst 로
+# 짝을 명시한다 — 자동 탐색 규칙(«하나여야 한다»)을 느슨하게 하지 않으려고 이름을 겹치지
+# 않게 둔다(검수-QA시트-* / 노션임포트-QA시트-*).
+if opt("--src") or opt("--dst"):
+    if not (opt("--src") and opt("--dst")):
+        die("--src 와 --dst 는 함께 준다")
+    SRC = os.path.join(ROOT, opt("--src")) if not os.path.isabs(opt("--src")) else opt("--src")
+    DST = os.path.join(ROOT, opt("--dst")) if not os.path.isabs(opt("--dst")) else opt("--dst")
+    if not os.path.isfile(SRC) or not os.path.isdir(DST):
+        die("--src 파일 또는 --dst 폴더가 없다")
+else:
+    srcs = sorted(glob.glob(os.path.join(PLAN, "검수-QA시나리오-*.md")))
+    if len(srcs) != 1:
+        die("원본 QA 문서가 %d개다 — 하나여야 한다: %s" % (len(srcs), [os.path.basename(s) for s in srcs]))
+    SRC = srcs[0]
+    dsts = sorted(d for d in glob.glob(os.path.join(PLAN, "노션임포트-QA-*")) if os.path.isdir(d))
+    if len(dsts) != 1:
+        die("노션 세트 폴더가 %d개다 — 하나여야 한다" % len(dsts))
+    DST = dsts[0]
 SINCE = opt("--since", "HEAD")
 IDS = [x.strip() for x in opt("--ids", "").split(",") if x.strip()]
 
@@ -118,6 +132,7 @@ CSV2 = os.path.join(DST, "2_QA-테스트케이스.csv")
 CSV2B = os.path.join(DST, "2b_QA-테스트케이스-추가분.csv")
 def rel(p):
     return os.path.relpath(p, ROOT)
+FIRST = False
 if IDS:
     delta, newly = [r for r in recs if r[0] in IDS], set()
     miss = set(IDS) - {r[0] for r in recs}
@@ -132,6 +147,10 @@ else:
         prev = {}
     delta = [r for r in recs if prev.get(r[0]) != r]
     newly = {r[0] for r in delta if r[0] not in prev}
+    # 첫 생성(커밋된 CSV 가 없다)이면 «추가분»이 곧 전건이라 뜻이 없다 — 2b 를 만들지 않는다.
+    FIRST = not prev
+    if FIRST:
+        delta, newly = [], set()
 
 # ── ④ 쓰기 ────────────────────────────────────────────────────────────────
 def write_csv(path, rows):
@@ -194,7 +213,10 @@ print("QA 노션 세트 생성 — 원본 %s" % os.path.basename(SRC))
 print("  TC %d건 %s" % (len(recs), by_kind))
 print("  추가분 %d건%s" % (len(delta), (" (신규 %d)" % len(newly)) if newly else ""))
 if not delta:
-    print("  ⚠ 추가분이 0건이다 — 2b 를 비우지 않고 그대로 둔다(지난 회차 것이 남는다)")
+    if not IDS and FIRST:
+        print("  · 첫 생성이라 추가분(2b)을 만들지 않는다 — 다음 개정부터 바뀐 TC 만 담긴다")
+    else:
+        print("  ⚠ 추가분이 0건이다 — 2b 를 비우지 않고 그대로 둔다(지난 회차 것이 남는다)")
     plan = [x for x in plan if x[0] != CSV2B]
 
 changed = 0

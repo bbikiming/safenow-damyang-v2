@@ -80,11 +80,15 @@ COMMON = ["99_미결사항목록.md", "_공통_권한정의.md", "00_화면목�
 # ⚠ 무엇을 보는지 좁혀 둔다 — 이 문서에는 「옛 대메뉴 → 지금」 매핑표처럼 **없어진 이름을
 #   적는 것이 옳은** 서술이 있다. 그래서 서술문은 보지 않고, 검수자가 실제로 **수행하는 행**
 #   두 종류만 본다: TC 표 행(`| SMK-003 | …`)과 모듈 범위표 행(`| P1 | ② … |`).
+# 4개 메뉴 QA 시트(검수-QA시트-* / 노션임포트-QA시트-*)와 6인 배포 엑셀의 원본(검수-QA엑셀-*)도
+# 같은 «실행 문서»라 함께 본다 — 엑셀은 그 원본에서 생성되므로 원본만 보면 된다
 QA_FILES = sorted(glob.glob(os.path.join(ROOT, "docs", "planning", "검수-QA시나리오-*.md"))) + \
-           sorted(glob.glob(os.path.join(ROOT, "docs", "planning", "노션임포트-QA-*", "*.md"))) + \
-           sorted(glob.glob(os.path.join(ROOT, "docs", "planning", "노션임포트-QA-*", "*.csv")))
-QA_ROW = re.compile(r"^\|\s*(?:(?:RISK|EDU|COM|SMK)-\d{3}|P[012])\s*\|")
-QA_CSV_ROW = re.compile(r"^(?:RISK|EDU|COM|SMK)-\d{3},")
+           sorted(glob.glob(os.path.join(ROOT, "docs", "planning", "검수-QA시트-*.md"))) + \
+           sorted(glob.glob(os.path.join(ROOT, "docs", "planning", "검수-QA엑셀-*.md"))) + \
+           sorted(glob.glob(os.path.join(ROOT, "docs", "planning", "노션임포트-QA*", "*.md"))) + \
+           sorted(glob.glob(os.path.join(ROOT, "docs", "planning", "노션임포트-QA*", "*.csv")))
+QA_ROW = re.compile(r"^\|\s*(?:(?:RISK|EDU|COM|SMK|FAC|CMP|RSK|EDC|RA|ED|DB|CM|BS|SB|WE|OP|EV|CP|ST|AD)-\d{3}|P[012])\s*\|")
+QA_CSV_ROW = re.compile(r"^(?:RISK|EDU|COM|SMK|FAC|CMP|RSK|EDC|RA|ED|DB|CM|BS|SB|WE|OP|EV|CP|ST|AD)-\d{3},")
 # 「그 화면은 없다」를 확인시키는 행은 위반이 아니다 — 오히려 있어야 하는 TC 다
 QA_OK = GONE_OK + ("FAIL", "없다", "보이지", "찾아본", "메뉴에 없", "없는 것")
 
