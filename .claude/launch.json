@@ -61,6 +61,30 @@
         "../프로토타입-v2-배포-20260826"
       ],
       "port": 8796
+    },
+    {
+      "name": "demo-map",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8797",
+        "--directory",
+        "../프로토타입-v2-외부시연"
+      ],
+      "port": 8797
+    },
+    {
+      "name": "demo-map-deploy",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8798",
+        "--directory",
+        "../프로토타입-v2-외부시연-배포-20260909"
+      ],
+      "port": 8798
     }
   ]
 }

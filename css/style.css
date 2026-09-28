@@ -5046,3 +5046,86 @@ select.form-select { height: var(--ctl-lg); }
   white-space: nowrap;
   border: 0;
 }
+
+/* --- 전체메뉴(헤더 버튼 + 모달) · 모바일 드로어 «다른 메뉴» (2026-09-03 GNB 검수) ---
+   · 전체메뉴는 모든 해상도에서 연다 — 대메뉴 11개 안에 무엇이 있는지 클릭 전에 볼 수 있는
+     유일한 자리다. 내용은 js/layout.js sitemapHtml() 이 NAV 에서 파생한다.
+   · 드로어의 «다른 메뉴»는 1023px 이하에서만 보인다 — 데스크톱은 GNB 가 항상 보인다. */
+.dy-allmenu-btn {
+  flex: none;
+  display: inline-flex; align-items: center; gap: var(--sp-1);
+  height: 32px; padding: 0 var(--sp-2-5) 0 var(--sp-2);
+  border: 1px solid var(--card-line);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--text-gray);
+  font-size: var(--fs-13); font-weight: var(--fw-semibold);
+  line-height: 1; cursor: pointer;
+}
+.dy-allmenu-btn svg { width: 16px; height: 16px; }
+.dy-allmenu-btn:hover { color: var(--main); border-color: var(--main); }
+.dy-allmenu-btn:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
+@media (max-width: 559px) {
+  .dy-allmenu-btn { width: 32px; padding: 0; justify-content: center; }
+  .dy-allmenu-label { display: none; }
+}
+
+.dy-sitemap {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-5) var(--sp-6);
+}
+@media (max-width: 767px) { .dy-sitemap { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 559px) { .dy-sitemap { grid-template-columns: 1fr; } }
+.dy-sitemap-group { min-width: 0; }
+.dy-sitemap-h {
+  display: block;
+  padding: var(--sp-1-5) 0;
+  margin-bottom: var(--sp-1);
+  border-bottom: 2px solid var(--main);
+  color: var(--main-dark);
+  font-size: var(--fs-14); font-weight: var(--fw-bold);
+  text-decoration: none;
+}
+.dy-sitemap-group.is-active .dy-sitemap-h { background: var(--brand-50, var(--surface-alt)); }
+.dy-sitemap-h:hover { text-decoration: underline; }
+.dy-sitemap-sec {
+  margin: var(--sp-2) 0 var(--sp-0-5);
+  font-size: var(--fs-12); font-weight: var(--fw-semibold);
+  color: var(--text-gray);
+}
+.dy-sitemap-item {
+  display: block;
+  padding: var(--sp-1-5) var(--sp-2);
+  border-radius: var(--radius-sm);
+  color: var(--text-black);
+  font-size: var(--fs-13);
+  text-decoration: none;
+}
+.dy-sitemap-item.is-nested { padding-left: var(--sp-4); }
+.dy-sitemap-item:hover { background: var(--surface-alt); color: var(--main); }
+.dy-sitemap-item.is-active { background: var(--main); color: var(--surface); font-weight: var(--fw-bold); }
+
+.dy-sidebar-others { display: none; }
+.dy-sidebar-group summary {
+  display: flex; align-items: center; gap: var(--sp-2);
+  padding: var(--sp-2-5) var(--sp-4);
+  min-height: 44px;
+  font-size: var(--fs-14); font-weight: var(--fw-semibold);
+  color: var(--text-black);
+  cursor: pointer; list-style: none;
+}
+.dy-sidebar-group summary::-webkit-details-marker { display: none; }
+.dy-sidebar-group summary::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-right: 1.5px solid var(--text-gray); border-bottom: 1.5px solid var(--text-gray);
+  transform: rotate(-45deg);
+  transition: transform 0.15s;
+  flex: none;
+}
+.dy-sidebar-group[open] summary::before { transform: rotate(45deg); }
+.dy-sidebar-group .dy-sidebar-section { margin-top: var(--sp-1); }
+@media (max-width: 1023px) {
+  .dy-sidebar-others { display: block; margin-top: var(--sp-4); padding-top: var(--sp-2); border-top: 1px solid var(--card-line); }
+}
