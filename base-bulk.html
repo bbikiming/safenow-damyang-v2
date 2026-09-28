@@ -77,7 +77,8 @@
     <script>
         function showResult() {
             document.getElementById('bulk-result').style.display = '';
-            DYV2.toast('업로드 완료 — 아래 유효성 체크 결과를 확인하세요');
+            /* 파일을 실제로 읽지 않는다 — «업로드 완료»라고 하면 없는 동작을 성공으로 말한다(§15) */
+            DYV2.toast('예시 파일의 유효성 체크 결과를 아래에 보여 줍니다 — 실제 파일 읽기는 일괄등록 연계 후 제공됩니다');
             document.getElementById('bulk-result').scrollIntoView({ behavior: 'smooth' });
         }
     </script>

@@ -682,7 +682,7 @@
                 '<input type="file" id="fac-file" accept=".xls,.xlsx" style="display:none;">' +
                 (V().fileHint ? V().fileHint() : '') +
                 '<div style="display:flex; gap:8px; margin-top:10px;">' +
-                '<button class="btn btn-outline btn-sm" onclick="DYFACIL._sim()">시드 80건으로 재적재 (시뮬레이션)</button>' +
+                '<button class="btn btn-outline btn-sm" onclick="DYFACIL._sim()">예시 대장 80건으로 다시 받기 (연계 전)</button>' +
                 '</div>' +
                 '<div id="fac-stage"></div>' +
                 '</div></div>' +
@@ -830,16 +830,50 @@
         el.focus({ preventScroll: true });
     };
     DYFACIL._detail = no => openDetail(no);
+    /* 저장을 막는 검증은 «그대로 두면 이후 계산이 틀리는 값»만이다(SCR-FAC-002 §6 FDT-05) —
+       날짜가 아닌 날짜·미래 점검일·음수 규모·음수 이용인원. 종전에는 검증이 없어 미래
+       점검일이 저장되면 주기 초과 판정과 차기 예정일이 조용히 틀렸다. */
+    function extError(x) {
+        if (x.lastInspectYmd) {
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(x.lastInspectYmd) || isNaN(new Date(x.lastInspectYmd))) return '최근 점검일이 날짜 형식이 아닙니다.';
+            if (x.lastInspectYmd > DYV2.today()) return '점검일은 미래일 수 없습니다.';
+        }
+        if (x.sizeValue !== '' && !(Number(x.sizeValue) >= 0)) return '규모 값과 단위를 올바르게 입력하세요 — 0 이상 숫자입니다.';
+        if (x.sizeValue !== '' && !x.sizeUnit) return '규모 값과 단위를 올바르게 입력하세요 — 단위가 비어 있습니다.';
+        if (x.dailyUsers !== '' && !(Number(x.dailyUsers) >= 0)) return '이용인원은 0 이상 숫자를 입력하세요.';
+        return '';
+    }
     DYFACIL._saveExt = no => {
-        saveExt(no, collectExt());
+        const x = collectExt();
+        const err = extError(x);
+        if (err) { V().toast(err); return; }
+        saveExt(no, x);
         DYV2.closeModal();
         V().toast('보완입력 저장됨');
         if (DYFACIL._reRisk) DYFACIL._reRisk();       /* 위험도 화면이면 재렌더 */
         if (window.__facRerender) window.__facRerender(); /* 목록 화면이면 재렌더 */
     };
+    /* FMS 전송은 외부 정본을 바꾸는 행위라 확인 단계를 반드시 거친다(SCR-FAC-002 §6 FDT-01).
+       종전에는 누르는 즉시 나갔다. 단일 모달 규칙이라 같은 모달 본문을 확인 화면으로 바꾸고,
+       [취소]는 상세로 돌아간다. 결재는 붙이지 않는다 — 실행자·시각은 연계 이력에 남는다. */
     DYFACIL._send = (no, kind) => {
+        const r = recOf(no); if (!r) return;
+        V().openModal('FMS 전송 확인 — ' + esc(r.facilNm),
+            '<p>이 시설물의 <b>FMS 시설물관리대장</b>을 수정 전송합니다. FMS 쪽 정본이 바뀌며, ' +
+            '되돌리려면 다시 전송해야 합니다.</p>' +
+            '<div class="fac-grid">' +
+                '<div class="fac-f"><span class="fac-f-l">시설물번호(반영키)</span><span class="fac-f-v">' + esc(r.facilNo) + '</span></div>' +
+                '<div class="fac-f"><span class="fac-f-l">인터페이스</span><span class="fac-f-v">updateBastbMaster</span></div>' +
+            '</div>' +
+            '<p class="fac-note">보완입력 값은 FMS 로 보내지 않습니다 — 그 값은 이 시스템에만 저장됩니다. ' +
+            '전송 결과와 실행자는 시설물 대장 아래 «연계·변경 이력»에 남습니다.</p>',
+            '<button class="btn btn-secondary" onclick="DYFACIL._detail(\'' + no + '\')">취소</button>' +
+            '<button class="btn btn-primary" onclick="DYFACIL._sendGo(\'' + no + '\', \'' + kind + '\')">전송</button>');
+    };
+    DYFACIL._sendGo = (no, kind) => {
         const res = sendFms(no, kind);
         V().toast(res.msg);
+        if (res.ok) { DYV2.closeModal(); if (window.__facRerender) window.__facRerender(); }
     };
     /* 개선조치는 독립 메뉴가 아니다(2026-07-30 회의) — 시설물 상세에서 개선조치 대장·상세로
        내보내지 않는다. 내역은 위 표가 전부이고, 처리는 위험성평가·내 할일에서 한다. */

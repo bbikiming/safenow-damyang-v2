@@ -907,7 +907,11 @@
         if (e.key === 'Escape') { el.blur(); return; }
         if (e.key !== 'Enter') return;
         e.preventDefault();
-        var n = parseInt(String(el.value).replace(/[^0-9]/g, ''), 10);
+        /* 첫 숫자 덩어리를 부호째 읽는다 — 종전처럼 숫자 아닌 글자를 전부 지우면
+           «-5»가 5쪽, «2.5»가 25쪽이 됐다(범위 밖·오타는 양 끝으로 붙인다는 규칙 위반).
+           쉼표는 먼저 지운다(«1,000»). «5쪽»·« 7 »처럼 곁들인 글자는 그대로 허용한다. */
+        var m = String(el.value).replace(/,/g, '').match(/-?\d+/);
+        var n = m ? parseInt(m[0], 10) : 0;
         if (!n || n < 1) n = 1;
         if (n > pages) n = pages;
         var f = fn.split('.').reduce(function (o, k) { return o && o[k]; }, window);

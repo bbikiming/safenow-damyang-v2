@@ -54,13 +54,17 @@
               options: EDUFILTER.yearOptions(all.map(function (c) { return c.date; })), on: "EDUE.setF('year', this.value)" }
         ], {
             count: list.length, unit: '건', reset: 'EDUE.resetF()',
-            actions: '<button type="button" class="btn btn-primary" onclick="EDUE.openCreate()">＋ 기타 교육 등록·진행</button>'
+            actions: E().canRegister()
+                ? '<button type="button" class="btn btn-primary" onclick="EDUE.openCreate()">＋ 기타 교육 등록·진행</button>'
+                : '<span class="file-hint">기타 교육은 각 부서 담당자가 등록합니다</span>'
         });
 
         var cards = list.length ? list.map(cardHtml).join('') :
             '<div class="edu-card"><div class="v2-empty">' +
                 (all.length ? '조건에 맞는 기타 교육이 없습니다.' : '등록된 기타 교육이 없습니다.') + '</div></div>';
-        state.mount.innerHTML = criteriaHtml() + head + cards;
+        /* 관리·감독 계층에는 등록·수정 수단 대신 누가 하는지를 밝힌다(담당자에게는 '') */
+        var ro = global.DYROLE && global.DYROLE.readOnlyNote ? global.DYROLE.readOnlyNote('기타 교육 등록·수정') : '';
+        state.mount.innerHTML = criteriaHtml() + ro + head + cards;
     }
 
     /* 해당 여부 판단 기준 — 목록 상단 상시 노출 (2026-07-30 회의).
@@ -132,6 +136,8 @@
         var shortChip = short.length
             ? '<span class="chip-status chip-sm danger" style="margin-left:6px;">법정 최소 미달 ' + short.length + '명</span>' : '';
         var lock = lockOf(c.id);
+        /* [수정]·[삭제]는 그 건을 등록한 부서 담당자(주관부서 담당자는 전 부서)에게만 낸다 */
+        var mayEdit = E().canActCourse(c);
         var workCount = (c.specialWorkNos || []).length + (c.specialWorkOtherReason ? 1 : 0);
         var workChip = c.etcType === '특별교육'
             ? '<span class="chip-status chip-sm info" style="margin-left:6px;">대상 작업 ' + workCount + '건</span>' : '';
@@ -143,6 +149,7 @@
                     (lock
                         ? '<button type="button" class="btn btn-outline btn-sm" disabled title="결재 ' + esc(lock) +
                           ' — 공문 기록이 남아 수정·삭제할 수 없습니다">🔒 ' + esc(lock) + '</button>'
+                        : !mayEdit ? ''
                         : '<button type="button" class="btn btn-outline btn-sm" onclick="EDUE.openEdit(\'' + c.id + '\')">수정</button>' +
                     '<button type="button" class="btn btn-outline btn-sm" style="border-color:var(--status-danger-border);color:var(--status-danger-fg);" onclick="EDUE.confirmRemove(\'' + c.id + '\')">삭제</button>') +
                 '</div>' +
@@ -160,12 +167,19 @@
     function setF(k, v) { state[k] = v; EDUFILTER.rerender(render); }
     function resetF() { state.fType = ''; state.q = ''; state.dept = ''; state.year = ''; render(); }
 
+    /* ===== 조작 권한 — 판정은 DYEDU(DYROLE.canAct 파생) 한 곳이다 =====
+     * 기타 교육은 각 과가 직접 등록한다. 관리·감독 계층은 조회만 하고, 부서 담당자는 자기
+     * 부서 건만, 주관부서 담당자는 전 부서 건을 처리한다. 진입·저장 양쪽에 같은 판정을 건다. */
+    function deny(deptId) { toast(E().denyMsg(deptId)); }
+    function actor() { return global.DYROLE && global.DYROLE.actorLabel ? global.DYROLE.actorLabel() : E().deptName(F && F.deptId); }
+
     /* =============== 등록 · 수정 =============== */
     function openCreate() {
-        var depts = E().deptCandidates();
+        if (!E().canRegister()) { deny(E().defaultDeptId()); return; }
         F = {
             edit: null,
-            etcType: E().etcTypes(SUP_MODE)[0], deptId: depts[0].id,
+            /* 기본 부서는 로그인한 사람의 소속 — 목록 첫 부서를 기본으로 두면 남의 부서 명의로 저장된다 */
+            etcType: E().etcTypes(SUP_MODE)[0], deptId: E().defaultDeptId(),
             date: E().today(), time: '10:00', hours: 2, instructor: '', place: '', desc: '',
             files: [], workerIds: {}, specialWorkNos: {}, specialWorkOtherReason: ''
         };
@@ -175,12 +189,13 @@
     function openEdit(courseId) {
         var c = E().courseOf(courseId); if (!c) return;
         /* **버튼을 감추는 것만으로는 부족하다** — 전역 호출로 뚫린다(CLAUDE.md §12·§4).
-           판정은 EDUDOC.lockOf 한 곳이고 여기서는 그 결과만 쓴다. */
+           권한은 DYEDU.canActCourse, 잠금은 EDUDOC.lockOf 한 곳이고 여기서는 결과만 쓴다. */
+        if (!E().canActCourse(c)) { deny(E().courseDeptOf(c)); return; }
         var lock = lockOf(courseId);
         if (lock) { toast('결재 ' + lock + ' 상태라 수정할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
         F = {
             edit: courseId,
-            etcType: c.etcType || E().etcTypes(SUP_MODE)[0], deptId: c.deptId || E().deptCandidates()[0].id,
+            etcType: c.etcType || E().etcTypes(SUP_MODE)[0], deptId: c.deptId || E().defaultDeptId(),
             date: c.date, time: c.time || '', hours: c.hours,
             instructor: c.instructor || '', place: c.place || '', desc: c.desc || '',
             files: (c.files || []).slice(), workerIds: {}, specialWorkNos: {}, specialWorkOtherReason: c.specialWorkOtherReason || ''
@@ -256,8 +271,11 @@
                 '<div><label class="form-label">부서 <span style="color:var(--status-danger-fg)">*</span></label>' +
                     '<div class="orgpick-field" id="ee-deptfield"><div style="display:flex;gap:8px;align-items:center;">' +
                         '<input type="text" class="form-input" value="' + esc(E().deptName(F.deptId)) + '" readonly aria-label="부서" style="flex:1;background:var(--gray-50);">' +
-                        '<button type="button" class="btn btn-sm btn-outline" onclick="ORGPICK.toggle(\'ee-deptfield\',\'deptId\',\'EDUE.pickDept\')">조직도</button>' +
-                    '</div></div></div>' +
+                        /* 부서는 주관부서 담당자만 고른다 — 그 밖의 담당자는 소속 부서로 고정 */
+                        (E().canPickDept() ? '<button type="button" class="btn btn-sm btn-outline" onclick="ORGPICK.toggle(\'ee-deptfield\',\'deptId\',\'EDUE.pickDept\')">조직도</button>' : '') +
+                    '</div>' +
+                    (E().canPickDept() ? '' : '<p class="file-hint">소속 부서로 등록합니다.</p>') +
+                    '</div></div>' +
             '</div>' +
             typeGuideHtml(F.etcType) + specialWorksPickerHtml() +
             '<div class="edu-modal-row-2">' +
@@ -300,7 +318,10 @@
         if (el('ee-special-other') && !el('ee-special-other').disabled) F.specialWorkOtherReason = el('ee-special-other').value.trim();
     }
     function pickType(v) { captureCreate(); F.etcType = v; renderCreate(); }
-    function pickDept(id, name) { captureCreate(); F.deptId = id; F.workerIds = {}; renderCreate(); }
+    function pickDept(id, name) {
+        if (!E().canActDept(id)) { deny(id); return; }
+        captureCreate(); F.deptId = id; F.workerIds = {}; renderCreate();
+    }
     function toggleTarget(id, on) { captureCreate(); if (on) F.workerIds[id] = true; else delete F.workerIds[id]; renderCreate(); }
     function toggleSpecialWork(no, on) { captureCreate(); if (on) F.specialWorkNos[String(no)] = true; else delete F.specialWorkNos[String(no)]; renderCreate(); }
     function toggleSpecialOther(on) { captureCreate(); F.specialWorkOtherReason = on ? (F.specialWorkOtherReason || '내용 입력 필요') : ''; renderCreate(); }
@@ -308,6 +329,10 @@
     function delFile(i) { captureCreate(); EDUFORM.delFile(F, i); renderCreate(); }
     function doCreate() {
         captureCreate();
+        /* 저장 경로에도 같은 판정 — 수정이면 원래 건과 바꾼 부서 둘 다 내 소관이어야 한다 */
+        var orig = F.edit ? E().courseOf(F.edit) : null;
+        if (orig && !E().canActCourse(orig)) { deny(E().courseDeptOf(orig)); return; }
+        if (!E().canActDept(F.deptId)) { deny(F.deptId); return; }
         /* **셀렉트에서 감추는 것만으로는 부족하다** — 전역 호출(EDUE.pickType)로 뚫린다.
            별표4 제1호의2 에 없는 유형이 관리감독자 교육으로 저장되면, 그 뒤로는 화면이
            법에 없는 의무를 이수기록으로 들고 있게 된다(CLAUDE.md §4 저장 경로 가드). */
@@ -333,7 +358,7 @@
              * 이수기록이 조용히 갈라지고, 그 상태로 공문 붙임 별지가 **옛 시간**을
              * 싣는다(CLAUDE.md §4 — syncCourseRecordHours MUST). */
             var synced = E().syncCourseRecordHours(F.edit, F.hours, F.date);
-            E().pushCourseHistory(F.edit, { type: 'STATUS', by: E().deptName(F.deptId),
+            E().pushCourseHistory(F.edit, { type: 'STATUS', by: actor(),
                 memo: '기타 교육 정보 수정 · ' + F.hours + 'h' +
                     (synced ? ' (이수기록 ' + synced + '건 시간 재반영)' : '') });
             V().closeModal();
@@ -416,7 +441,8 @@
     function confirmRemove(courseId) {
         var c = E().courseOf(courseId); if (!c) return;
         /* **버튼을 감추는 것만으로는 부족하다** — 전역 호출로 뚫린다(CLAUDE.md §12·§4).
-           판정은 EDUDOC.lockOf 한 곳이고 여기서는 그 결과만 쓴다. */
+           권한은 DYEDU.canActCourse, 잠금은 EDUDOC.lockOf 한 곳이고 여기서는 결과만 쓴다. */
+        if (!E().canActCourse(c)) { deny(E().courseDeptOf(c)); return; }
         var lock = lockOf(courseId);
         if (lock) { toast('결재 ' + lock + ' 상태라 삭제할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
         var cnt = E().enrolls(courseId).reduce(function (n, e) { return n + (e.workerIds || []).length; }, 0);
@@ -429,6 +455,10 @@
             '<button type="button" class="btn btn-primary" onclick="EDUE.doRemove(\'' + courseId + '\')">삭제</button>');
     }
     function doRemove(courseId) {
+        var c = E().courseOf(courseId);
+        if (c && !E().canActCourse(c)) { V().closeModal(); deny(E().courseDeptOf(c)); return; }
+        var lk = lockOf(courseId);
+        if (lk) { V().closeModal(); toast('결재 ' + lk + ' 상태라 삭제할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
         var r = E().removeCourse(courseId);
         V().closeModal();
         toast(r ? '기타 교육을 삭제했습니다 · 이수기록 ' + r.records + '건 회수' : '교육을 찾을 수 없습니다.');

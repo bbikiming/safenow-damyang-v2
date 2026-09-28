@@ -9,7 +9,7 @@
   "components": "layout.js, common.js, data.js",
   "existingSfr": "SFR-020",
   "defFile": "SCR-DASH-001_통합현황대시보드.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/index.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/index.html",
   "unresolvedCount": 0
  },
  {
@@ -22,7 +22,7 @@
   "components": "my-work.js, common.js, rsk-data.js, edu-data.js, work-data.js",
   "existingSfr": "MYW01-V",
   "defFile": "SCR-MYW-001_내할일.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/my-work.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/my-work.html",
   "unresolvedCount": 0
  },
  {
@@ -74,7 +74,7 @@
   "components": "layout.js, common.js, org-pick.js, material-data.js",
   "existingSfr": "없음 — 개소 표시는 SFR-020(대시보드)",
   "defFile": "SCR-BASE-003_관리대상현황_원료제조물.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/base-targets.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/base-targets.html",
   "unresolvedCount": 2
  },
  {
@@ -87,7 +87,7 @@
   "components": "layout.js, common.js",
   "existingSfr": "SFR-016",
   "defFile": "SCR-BASE-004_데이터일괄등록.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/base-bulk.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/base-bulk.html",
   "unresolvedCount": 4
  },
  {
@@ -126,7 +126,7 @@
   "components": "menu.html, menu.js, common.js, edoc.js",
   "existingSfr": "SFR-005",
   "defFile": "SCR-SBM-001_경영방침.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/menu.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/menu.html",
   "unresolvedCount": 13
  },
  {
@@ -139,7 +139,7 @@
   "components": "menu.html, menu.js, common.js, edoc.js",
   "existingSfr": "SFR-006·010",
   "defFile": "SCR-SBM-002_조직.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/menu.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/menu.html",
   "unresolvedCount": 4
  },
  {
@@ -152,7 +152,7 @@
   "components": "menu.html, menu.js, common.js, edoc.js",
   "existingSfr": "SFR-013",
   "defFile": "SCR-SBM-004_도급관리.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/menu.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/menu.html",
   "unresolvedCount": 4
  },
  {
@@ -165,7 +165,7 @@
   "components": "menu.html, menu.js, common.js, edoc.js",
   "existingSfr": "SFR-014",
   "defFile": "SCR-SBM-006_이행관리.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/menu.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/menu.html",
   "unresolvedCount": 5
  },
  {
@@ -178,7 +178,7 @@
   "components": "layout.js, rsk-proc.js, rsk-data.js, rsk-kosha.js",
   "existingSfr": "SFR-007",
   "defFile": "SCR-PRC-001_작업공정관리.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/rsk-proc.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/rsk-proc.html",
   "unresolvedCount": 4
  },
  {
@@ -191,7 +191,7 @@
   "components": "layout.js, rsk-list.js, rsk-data.js, rsk-kosha.js",
   "existingSfr": "SFR-007·003",
   "defFile": "SCR-RISK-001_정기위험성평가.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/rsk-list.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/rsk-list.html",
   "unresolvedCount": 0
  },
  {
@@ -204,7 +204,7 @@
   "components": "rsk-detail.html (리다이렉트 스텁)",
   "existingSfr": "SFR-007",
   "defFile": "SCR-RISK-002_위험성평가상세.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/rsk-detail.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/rsk-detail.html",
   "unresolvedCount": 0
  },
  {
@@ -217,7 +217,7 @@
   "components": "layout.js, rsk-exec.js, rsk-data.js",
   "existingSfr": "SFR-007",
   "defFile": "SCR-RISK-003_위험성추정.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/rsk-exec.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/rsk-exec.html",
   "unresolvedCount": 3
  },
  {
@@ -230,7 +230,7 @@
   "components": "layout.js, rsk-occ.js, rsk-data.js, org-pick.js",
   "existingSfr": "SFR-007·003",
   "defFile": "SCR-RISK-004_수시위험성평가.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/rsk-occ.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/rsk-occ.html",
   "unresolvedCount": 0
  },
  {
@@ -243,7 +243,7 @@
   "components": "layout.js, rsk-imp.js, rsk-data.js, edoc.js",
   "existingSfr": "SFR-003",
   "defFile": "SCR-IMP-001_개선조치목록.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/rsk-imp.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/rsk-imp.html",
   "unresolvedCount": 0
  },
  {
@@ -256,7 +256,7 @@
   "components": "layout.js, rsk-imp-detail.js, rsk-data.js",
   "existingSfr": "SFR-003",
   "defFile": "SCR-IMP-002_개선조치상세조치.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/rsk-imp-detail.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/rsk-imp-detail.html",
   "unresolvedCount": 0
  },
  {
@@ -269,7 +269,7 @@
   "components": "layout.js, edu-reg.js, edu-form.js, edu-data.js, doc-flow.js, edu-doc.js, edu-filter.js, edu-tour.js, org-pick.js",
   "existingSfr": "SFR-008·004",
   "defFile": "SCR-EDU-001_정기교육.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/edu-reg.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/edu-reg.html",
   "unresolvedCount": 0
  },
  {
@@ -282,7 +282,7 @@
   "components": "layout.js, edu-hire.js, edu-form.js, edu-data.js, doc-flow.js, edu-doc.js, edu-filter.js, edu-tour.js, org-pick.js",
   "existingSfr": "SFR-008·004",
   "defFile": "SCR-EDU-002_채용시교육.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/edu-hire.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/edu-hire.html",
   "unresolvedCount": 0
  },
  {
@@ -295,7 +295,7 @@
   "components": "layout.js, edu-etc.js, edu-form.js, edu-data.js, doc-flow.js, edu-doc.js, edu-filter.js, edu-tour.js, org-pick.js",
   "existingSfr": "SFR-008·004",
   "defFile": "SCR-EDU-003_기타교육.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/edu-etc.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/edu-etc.html",
   "unresolvedCount": 0
  },
  {
@@ -308,7 +308,7 @@
   "components": "layout.js, edu-reg-detail.js, edu-data.js, doc-flow.js, edu-doc.js, edu-filter.js, edu-tour.js, org-pick.js",
   "existingSfr": "SFR-004·010",
   "defFile": "SCR-EDU-004_정기교육상세.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/edu-reg-detail.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/edu-reg-detail.html",
   "unresolvedCount": 0
  },
  {
@@ -321,7 +321,7 @@
   "components": "layout.js, edu-status.js, edu-data.js, doc-flow.js, edu-doc.js, edu-filter.js, edu-tour.js, org-pick.js",
   "existingSfr": "SFR-008·004",
   "defFile": "SCR-EDU-005_이수현황.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/edu-status.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/edu-status.html",
   "unresolvedCount": 0
  },
  {
@@ -334,7 +334,7 @@
   "components": "layout.js, edu-workers.js, edu-data.js, doc-flow.js, edu-doc.js, edu-filter.js, edu-tour.js, org-pick.js",
   "existingSfr": "SFR-008",
   "defFile": "SCR-EDU-006_근로자명단관리.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/edu-workers.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/edu-workers.html",
   "unresolvedCount": 0
  },
  {
@@ -347,7 +347,7 @@
   "components": "layout.js, edu-apv-log.js, edu-data.js, doc-flow.js, edu-doc.js, edu-filter.js, edu-tour.js",
   "existingSfr": "(해당 없음)",
   "defFile": "SCR-EDU-007_결재이력.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/edu-approval.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/edu-approval.html",
   "unresolvedCount": 0
  },
  {
@@ -360,7 +360,7 @@
   "components": "layout.js, edu-reg.js, edu-form.js, edu-data.js, doc-flow.js, edu-doc.js, edu-filter.js, edu-tour.js, org-pick.js",
   "existingSfr": "SFR-008·004",
   "defFile": "SCR-EDU-001_정기교육.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/edu-sup.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/edu-sup.html",
   "unresolvedCount": 0
  },
  {
@@ -373,7 +373,7 @@
   "components": "layout.js, edu-etc.js, edu-form.js, edu-data.js, doc-flow.js, edu-doc.js, edu-filter.js, edu-tour.js, org-pick.js",
   "existingSfr": "SFR-008·004",
   "defFile": "SCR-EDU-003_기타교육.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/edu-sup-etc.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/edu-sup-etc.html",
   "unresolvedCount": 0
  },
  {
@@ -386,7 +386,7 @@
   "components": "layout.js, edu-hire.js, edu-form.js, edu-data.js, doc-flow.js, edu-doc.js, edu-filter.js, edu-tour.js, org-pick.js",
   "existingSfr": "SFR-008·004",
   "defFile": "SCR-EDU-002_채용시교육.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/edu-sup-hire.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/edu-sup-hire.html",
   "unresolvedCount": 0
  },
  {
@@ -399,7 +399,7 @@
   "components": "layout.js, common.js, org-pick.js, sh-data.js, site-data.js, work-env.js",
   "existingSfr": "WEM01-L",
   "defFile": "SCR-WEM-001_작업환경측정목록.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/work-env.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/work-env.html",
   "unresolvedCount": 0
  },
  {
@@ -412,7 +412,7 @@
   "components": "layout.js, common.js, org-pick.js, sh-data.js, work-env-detail.js",
   "existingSfr": "WEM01-D",
   "defFile": "SCR-WEM-002_작업환경측정상세.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/work-env-detail.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/work-env-detail.html",
   "unresolvedCount": 0
  },
  {
@@ -425,7 +425,7 @@
   "components": "layout.js, common.js, org-pick.js, sh-data.js, health-exam.js",
   "existingSfr": "HEX01-L",
   "defFile": "SCR-HEX-001_건강검진목록.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/health-exam.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/health-exam.html",
   "unresolvedCount": 0
  },
  {
@@ -438,7 +438,7 @@
   "components": "layout.js, common.js, org-pick.js, sh-data.js, health-exam-detail.js",
   "existingSfr": "HEX01-D",
   "defFile": "SCR-HEX-002_건강검진상세.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/health-exam-detail.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/health-exam-detail.html",
   "unresolvedCount": 0
  },
  {
@@ -451,7 +451,7 @@
   "components": "menu.html, menu.js, common.js, edoc.js",
   "existingSfr": "SFR-011·019",
   "defFile": "SCR-OPN-001_의견청취.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/menu.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/menu.html",
   "unresolvedCount": 9
  },
  {
@@ -464,7 +464,7 @@
   "components": "menu.html, menu.js, common.js, edoc.js",
   "existingSfr": "SFR-011",
   "defFile": "SCR-OPN-001_의견청취.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/menu.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/menu.html",
   "unresolvedCount": 9
  },
  {
@@ -477,7 +477,7 @@
   "components": "menu.html, menu.js, common.js, edoc.js",
   "existingSfr": "SFR-011",
   "defFile": "SCR-OPN-001_의견청취.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/menu.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/menu.html",
   "unresolvedCount": 9
  },
  {
@@ -490,7 +490,7 @@
   "components": "evl-eval.html, layout.js, common.js",
   "existingSfr": "(EVL02-E) / SFR-009",
   "defFile": "SCR-EVL-001_인력평가.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/evl-eval.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/evl-eval.html",
   "unresolvedCount": 9
  },
  {
@@ -503,7 +503,7 @@
   "components": "evl-list.html, layout.js, common.js",
   "existingSfr": "(EVL01-V) / SFR-009",
   "defFile": "SCR-EVL-001_인력평가.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/evl-list.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/evl-list.html",
   "unresolvedCount": 9
  },
  {
@@ -516,7 +516,7 @@
   "components": "evl-settings.html, layout.js, common.js",
   "existingSfr": "(EVL03-S) / SFR-009",
   "defFile": "SCR-EVL-001_인력평가.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/evl-settings.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/evl-settings.html",
   "unresolvedCount": 9
  },
  {
@@ -529,7 +529,7 @@
   "components": "layout.js, common.js, edoc.js, bgt.js",
   "existingSfr": "BGT01-V / SFR-008",
   "defFile": "SCR-BGT-001_예산총괄.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/bgt-main.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/bgt-main.html",
   "unresolvedCount": 0
  },
  {
@@ -542,7 +542,7 @@
   "components": "layout.js, common.js, edoc.js, bgt.js, bgt-settings.js",
   "existingSfr": "BGT02-S / SFR-008",
   "defFile": "SCR-BGT-002_예산기준설정.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/bgt-settings.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/bgt-settings.html",
   "unresolvedCount": 0
  },
  {
@@ -555,7 +555,7 @@
   "components": "cmp-status.html, cmp-status.js, cmp-core.js, doc-progress.js, doc-taxonomy-data.js, doc-history-data.js, doc-seed-2026.js, doc-pick.js, doc-upload.js, facil-data.js, cmp-dept-docs.js",
   "existingSfr": "CMP01-T / CMP02-D / CMP04-V / SFR-014·004",
   "defFile": "SCR-CMP-001_이행관리.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/cmp-status.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/cmp-status.html",
   "unresolvedCount": 9
  },
  {
@@ -568,7 +568,7 @@
   "components": "cmp-docs.html, cmp-docs.js, cmp-core.js, doc-progress.js, doc-taxonomy-data.js, doc-history-data.js, doc-seed-2026.js, doc-pick.js, doc-upload.js",
   "existingSfr": "DOC01-L / DOC02-D / SFR-014",
   "defFile": "SCR-CMP-002_문서목록.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/cmp-docs.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/cmp-docs.html",
   "unresolvedCount": 4
  },
  {
@@ -594,7 +594,7 @@
   "components": "layout.js, common.js, data.js",
   "existingSfr": "SFR-012",
   "defFile": "SCR-DOC-001_기준문서함.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/docs-archive.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/docs-archive.html",
   "unresolvedCount": 6
  },
  {
@@ -607,7 +607,7 @@
   "components": "docs-preset.html, doc-list.js, doc-pick.js, doc-progress.js, doc-taxonomy-data.js, doc-history-data.js, sets-data-v2.js, doc-tour.js",
   "existingSfr": "없음",
   "defFile": "SCR-DOC-002_업무목록.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/docs-preset.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/docs-preset.html",
   "unresolvedCount": 9
  },
  {
@@ -620,7 +620,7 @@
   "components": "docs-exec.html, doc-exec.js, doc-pick.js, doc-progress.js, doc-tour.js, doc-taxonomy-data.js, doc-history-data.js",
   "existingSfr": "없음",
   "defFile": "SCR-DOC-003_이행목록.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/docs-exec.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/docs-exec.html",
   "unresolvedCount": 4
  },
  {
@@ -633,7 +633,7 @@
   "components": "doc-detail.html, doc-detail.js, common.js",
   "existingSfr": "없음",
   "defFile": "SCR-DOC-004_문서상세_첨부파일.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/doc-detail.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/doc-detail.html",
   "unresolvedCount": 4
  },
  {
@@ -646,7 +646,7 @@
   "components": "doc-detail.html, doc-detail.js, edoc.js",
   "existingSfr": "없음",
   "defFile": "SCR-DOC-005_문서상세_전자문서.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/doc-detail.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/doc-detail.html",
   "unresolvedCount": 6
  },
  {
@@ -659,7 +659,7 @@
   "components": "doc-detail.html, doc-detail.js, common.js",
   "existingSfr": "없음",
   "defFile": "SCR-DOC-006_문서상세_프로그램.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/doc-detail.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/doc-detail.html",
   "unresolvedCount": 3
  },
  {
@@ -672,7 +672,7 @@
   "components": "work-admin.js, work-data.js, work-catalog.js, work-assign.js",
   "existingSfr": "WRK01-L",
   "defFile": "SCR-WRK-001_업무발행관리.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/work-admin.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/work-admin.html",
   "unresolvedCount": 0
  },
  {
@@ -685,7 +685,7 @@
   "components": "work-dept.js, work-data.js, work-assign.js",
   "existingSfr": "WRK02-L",
   "defFile": "SCR-WRK-002_부서업무함.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/work-dept.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/work-dept.html",
   "unresolvedCount": 0
  },
  {
@@ -698,7 +698,7 @@
   "components": "layout.js, common.js, data.js",
   "existingSfr": "SFR-018·019",
   "defFile": "SCR-RPT-001_현황통계.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/stats.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/stats.html",
   "unresolvedCount": 4
  },
  {
@@ -711,7 +711,7 @@
   "components": "layout.js, common.js",
   "existingSfr": "SFR-021",
   "defFile": "SCR-RPT-002_보고서제증명.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/reports.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/reports.html",
   "unresolvedCount": 4
  },
  {
@@ -724,7 +724,7 @@
   "components": "layout.js, common.js",
   "existingSfr": "없음",
   "defFile": "SCR-RPT-003_정보센터.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/info-center.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/info-center.html",
   "unresolvedCount": 4
  },
  {
@@ -737,7 +737,7 @@
   "components": "layout.js, common.js",
   "existingSfr": "SFR-015",
   "defFile": "SCR-ADMIN-001_사용자권한관리.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/admin-users.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/admin-users.html",
   "unresolvedCount": 6
  },
  {
@@ -750,7 +750,7 @@
   "components": "layout.js, common.js",
   "existingSfr": "SFR-017",
   "defFile": "SCR-ADMIN-002_알림관리.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/admin-notify.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/admin-notify.html",
   "unresolvedCount": 4
  },
  {
@@ -763,7 +763,7 @@
   "components": "admin-presets.html, common.js",
   "existingSfr": "없음",
   "defFile": "SCR-ADMIN-003_프리셋양식관리.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/admin-presets.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/admin-presets.html",
   "unresolvedCount": 7
  },
  {
@@ -776,7 +776,7 @@
   "components": "layout.js, common.js",
   "existingSfr": "SIR-001",
   "defFile": "SCR-ADMIN-004_연계관리.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/admin-integration.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/admin-integration.html",
   "unresolvedCount": 7
  },
  {
@@ -789,7 +789,7 @@
   "components": "admin-menus.html, common.js",
   "existingSfr": "ADM01-S / SFR-001·015",
   "defFile": "SCR-ADMIN-005_메뉴관리.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/admin-menus.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/admin-menus.html",
   "unresolvedCount": 8
  },
  {
@@ -802,7 +802,7 @@
   "components": "admin-roles.html, common.js",
   "existingSfr": "ADM02-S / SFR-015·001",
   "defFile": "SCR-ADMIN-006_권한관리.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/admin-roles.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/admin-roles.html",
   "unresolvedCount": 9
  },
  {
@@ -815,7 +815,7 @@
   "components": "law-map.js, law-admin.js, admin-law.js, law-sync-seed.js",
   "existingSfr": "없음(v2 신설)",
   "defFile": "SCR-ADMIN-007_법령조문관리.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/admin-law.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/admin-law.html",
   "unresolvedCount": 11
  },
  {
@@ -828,7 +828,7 @@
   "components": "law-map.js, law-admin.js, admin-law-map.js",
   "existingSfr": "없음(v2 신설)",
   "defFile": "SCR-ADMIN-008_메뉴근거매핑.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/admin-law-map.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/admin-law-map.html",
   "unresolvedCount": 8
  },
  {
@@ -841,7 +841,7 @@
   "components": "layout.js, common.js, site-data.js, admin-sites.js",
   "existingSfr": "ADM03-S / SFR-002",
   "defFile": "SCR-ADMIN-009_사업장관리.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/admin-sites.html",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/admin-sites.html",
   "unresolvedCount": 0
  },
  {
@@ -854,7 +854,7 @@
   "components": "edoc.js, edoc-templates.js, common.js",
   "existingSfr": "SFR-005 등(호출처별)",
   "defFile": "SCR-EDOC-001_F1계획서폼.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/js/edoc-templates.js",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/js/edoc-templates.js",
   "unresolvedCount": 2
  },
  {
@@ -867,7 +867,7 @@
   "components": "edoc.js, edoc-templates.js, common.js",
   "existingSfr": "엔진 공통",
   "defFile": "SCR-EDOC-002_F2실시결과폼.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/js/edoc-templates.js",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/js/edoc-templates.js",
   "unresolvedCount": 1
  },
  {
@@ -880,7 +880,7 @@
   "components": "edoc.js, edoc-templates.js, common.js",
   "existingSfr": "SFR-011 등(호출처별)",
   "defFile": "SCR-EDOC-003_F3회의록폼.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/js/edoc-templates.js",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/js/edoc-templates.js",
   "unresolvedCount": 1
  },
  {
@@ -893,7 +893,7 @@
   "components": "edoc.js, edoc-templates.js, common.js",
   "existingSfr": "SFR-004·010",
   "defFile": "SCR-EDOC-004_F4교육결과폼.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/js/edoc-templates.js",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/js/edoc-templates.js",
   "unresolvedCount": 1
  },
  {
@@ -906,7 +906,7 @@
   "components": "edoc.js, edoc-templates.js, common.js",
   "existingSfr": "SFR-005 등(호출처별)",
   "defFile": "SCR-EDOC-005_F5점검표폼.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/js/edoc-templates.js",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/js/edoc-templates.js",
   "unresolvedCount": 10
  },
  {
@@ -919,7 +919,7 @@
   "components": "edoc.js, edoc-templates.js, common.js",
   "existingSfr": "SFR-006·009·010 / SFR-013",
   "defFile": "SCR-EDOC-006_F6평가서폼.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/js/edoc-templates.js",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/js/edoc-templates.js",
   "unresolvedCount": 2
  },
  {
@@ -932,7 +932,7 @@
   "components": "edoc.js, edoc-templates.js, common.js",
   "existingSfr": "SFR-003",
   "defFile": "SCR-EDOC-007_F7조치보고폼.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/js/edoc-templates.js",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/js/edoc-templates.js",
   "unresolvedCount": 2
  },
  {
@@ -945,7 +945,7 @@
   "components": "edoc.js, common.js",
   "existingSfr": "엔진 공통",
   "defFile": "SCR-EDOC-008_온나라결재요청팝업.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/js/edoc.js",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/js/edoc.js",
   "unresolvedCount": 2
  },
  {
@@ -958,7 +958,7 @@
   "components": "edoc.js, common.js",
   "existingSfr": "COM-008(주석) / 정식 SFR-017은 admin-notify",
   "defFile": "SCR-EDOC-009_알림발송시뮬레이션.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/js/edoc.js",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/js/edoc.js",
   "unresolvedCount": 1
  },
  {
@@ -971,7 +971,7 @@
   "components": "common.js, data.js",
   "existingSfr": "없음(공통 액션)",
   "defFile": "SCR-EDOC-010_기준문서업로드모달.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/js/common.js",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/js/common.js",
   "unresolvedCount": 2
  },
  {
@@ -984,7 +984,7 @@
   "components": "layout.js",
   "existingSfr": "없음",
   "defFile": "SCR-COM-001_전역헤더.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/js/layout.js",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/js/layout.js",
   "unresolvedCount": 3
  },
  {
@@ -997,7 +997,7 @@
   "components": "layout.js",
   "existingSfr": "없음",
   "defFile": "SCR-COM-002_전역GNB.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/js/layout.js",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/js/layout.js",
   "unresolvedCount": 1
  },
  {
@@ -1010,7 +1010,7 @@
   "components": "layout.js",
   "existingSfr": "각 항목 NAV screen 메타 참조",
   "defFile": "SCR-COM-003_전역사이드바LNB.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/js/layout.js",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/js/layout.js",
   "unresolvedCount": 2
  },
  {
@@ -1023,7 +1023,7 @@
   "components": "layout.js",
   "existingSfr": "없음(정식 화면은 SFR-017)",
   "defFile": "SCR-COM-004_전역알림드롭다운.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/js/layout.js",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/js/layout.js",
   "unresolvedCount": 3
  },
  {
@@ -1036,7 +1036,7 @@
   "components": "common.js",
   "existingSfr": "없음(인프라)",
   "defFile": "SCR-COM-005_공통모달인프라.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/js/common.js",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/js/common.js",
   "unresolvedCount": 1
  },
  {
@@ -1049,7 +1049,7 @@
   "components": "layout.js, common.js",
   "existingSfr": "없음(인프라)",
   "defFile": "SCR-COM-006_전역토스트인프라.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/js/layout.js",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/js/layout.js",
   "unresolvedCount": 1
  },
  {
@@ -1062,7 +1062,7 @@
   "components": "layout.js",
   "existingSfr": "없음(인프라)",
   "defFile": "SCR-COM-007_공통페이지크롬.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/js/layout.js",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/js/layout.js",
   "unresolvedCount": 1
  },
  {
@@ -1075,7 +1075,7 @@
   "components": "law-map.js, layout.js, rsk-list.js, rsk-imp.js, rsk-imp-detail.js, rsk-exec.js, rsk-proc.js, edoc.js",
   "existingSfr": "없음(전 화면 공통)",
   "defFile": "SCR-COM-008_법령근거연계.md",
-  "file": "/Users/daonplace/Documents/업무/담양 중대재해/프로토타입-v2/js/law-map.js",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/js/law-map.js",
   "unresolvedCount": 13
  }
 ]

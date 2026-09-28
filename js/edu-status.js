@@ -125,7 +125,11 @@
                 '<td>' + d.done + '명</td>' +
                 '<td><div class="progress edu-gauge"><div class="progress-bar ' + barCls + '" style="width:' + (d.pct || 0) + '%"></div></div>' +
                     '<span class="edu-bar-txt">' + pctText + '</span></td>' +
-                '<td><button type="button" class="btn btn-outline btn-sm" onclick="EDUS.viewDept(\'' + d.deptId + '\')">상세</button></td>' +
+                /* 조회 범위 밖 부서는 [상세]를 내지 않는다 — 종전에는 버튼을 내놓고 누르면
+                   «개인 이수이력은 열람할 수 없습니다»로 거절했다(부서 합계는 그대로 보인다). */
+                '<td>' + ((!global.DYROLE || !global.DYROLE.inScope || global.DYROLE.inScope(d.deptId))
+                    ? '<button type="button" class="btn btn-outline btn-sm" onclick="EDUS.viewDept(\'' + d.deptId + '\')">상세</button>'
+                    : '<span class="edu-short" title="다른 부서의 개인 이수이력은 그 부서와 재난안전과가 봅니다">—</span>') + '</td>' +
             '</tr>';
         }).join('') : '<tr><td colspan="5"><div class="v2-empty">' +
             (all.length ? '조건에 맞는 부서가 없습니다.' : '데이터가 없습니다.') + '</div></td></tr>';
@@ -327,15 +331,24 @@
         state.mount = document.getElementById(mountId);
         if (!state.mount) return;
         var q = new URLSearchParams(location.search);
-        if (q.get('dept')) { state.fDept = q.get('dept'); state.view = 'detail'; }
-        /* 모집단 딥링크 — 예: ?cat=SUPERVISOR (관리감독자만) · ?emp=CIVIL&status=short */
-        if (q.get('cat') && E().CAT_LABEL[q.get('cat')]) { state.fCat = q.get('cat'); state.view = 'detail'; }
-        if (q.get('emp') && E().EMP_LABEL[q.get('emp')]) { state.fEmp = q.get('emp'); state.view = 'detail'; }
-        /* 하위호환 — 기존 딥링크 ?short=1 은 새 '이수 상태' 필터의 미달 값으로 매핑 */
-        if (q.get('short') === '1') { state.fStatus = 'short'; state.view = 'detail'; }
-        if (q.get('status')) { state.fStatus = q.get('status'); state.view = 'detail'; }
+        /* 딥링크도 [상세] 버튼과 같은 판정을 지난다 — 범위 밖 부서를 그대로 걸면 빈 표만 떠서
+           「조건에 맞는 대상자가 없습니다」가 그 부서에 대상자가 없다는 뜻으로 읽힌다
+           (2026-09-28 권한별 QA). 그때는 요약에 머물고 [상세]와 같은 사유를 알린다. */
+        /* 그 링크의 나머지 조건(미달 등)도 그 부서에 대한 것이라 함께 버린다 — 남기면 나중에
+           [대상자별 상세]를 눌렀을 때 영문 모를 필터가 걸려 있다 */
+        var deniedDept = q.get('dept') && !canSeePerson(q.get('dept')) ? q.get('dept') : '';
+        if (!deniedDept) {
+            if (q.get('dept')) { state.fDept = q.get('dept'); state.view = 'detail'; }
+            /* 모집단 딥링크 — 예: ?cat=SUPERVISOR (관리감독자만) · ?emp=CIVIL&status=short */
+            if (q.get('cat') && E().CAT_LABEL[q.get('cat')]) { state.fCat = q.get('cat'); state.view = 'detail'; }
+            if (q.get('emp') && E().EMP_LABEL[q.get('emp')]) { state.fEmp = q.get('emp'); state.view = 'detail'; }
+            /* 하위호환 — 기존 딥링크 ?short=1 은 새 '이수 상태' 필터의 미달 값으로 매핑 */
+            if (q.get('short') === '1') { state.fStatus = 'short'; state.view = 'detail'; }
+            if (q.get('status')) { state.fStatus = q.get('status'); state.view = 'detail'; }
+        }
         if (global.EDUDOC) global.EDUDOC.registerRefresh(render);
         render();
+        if (deniedDept) V().toast(E().deptName(deniedDept) + ' 부서원의 개인 이수이력은 열람할 수 없습니다.');
     }
     global.EDUS = {
         init: init, setView: setView, setF: setF, resetF: resetF, viewDept: viewDept,

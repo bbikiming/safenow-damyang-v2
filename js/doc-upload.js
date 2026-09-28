@@ -578,7 +578,8 @@
         if (global.CMPDOC && global.CMPDOC.render) global.CMPDOC.render();
         saved([doc], {
             title: '서류를 올렸습니다',
-            lead: '«' + doc.title + '» 을 등록했습니다.',
+            /* 조사는 제목 끝 글자에 붙인다 — «…보고» 을 처럼 띄우고 고정하면 틀린다 */
+            lead: '«' + doc.title + '»' + V().josa(doc.title, '을', '를') + ' 등록했습니다.',
             note: (extra ? esc(extra) + ' ' : '') +
                   '할 일 <b>' + (doc.stageIds || []).length + '개</b>가 진행중이 되었습니다.',
         });
@@ -597,11 +598,15 @@
     function renderP() {
         var res = presetView();
         var n = Object.keys(P.sel).length;
+        var skipped = presetSkipped();
         var body =
             '<div class="du-pre">' +
                 errBox(P.err) +
                 '<p class="du-pre-lead"><b>' + P.from + '년</b> 문서의 업무단계 선택값을 <b>' + P.to + '년</b>으로 가져옵니다. ' +
-                    '전년도 <b>진행상태·결재상태·보고일자·문서번호는 복제하지 않습니다.</b></p>' +
+                    '전년도 <b>진행상태·결재상태·보고일자·문서번호는 복제하지 않습니다.</b>' +
+                    (skipped > 0
+                        ? ' 할 일이 붙지 않은 문서(미분류·분류 제외 ' + skipped.toLocaleString() + '건)는 가져올 업무단계가 없어 목록에서 뺐습니다.'
+                        : '') + '</p>' +
                 presetBar(res) +
                 presetTable(res) +
                 presetPager(res) +
@@ -614,8 +619,19 @@
              : '<button class="btn btn-primary" disabled>문서를 선택하세요</button>');
         V().openModal('전년도 프리셋 불러오기 <span class="du-step">' + P.from + ' → ' + P.to + '</span>', body, foot);
     }
+    /* 가져올 업무단계가 있는 문서만 후보다 — 프리셋이 옮기는 핵심이 «업무단계 선택값»
+       (SCR-DOC-007 P9)인데, 종전에는 원장의 미분류·분류 제외 문서(2025년의 약 90%)까지
+       목록에 올라 «미분류»로 뜨고 고르면 할 일 없는 사본이 만들어졌다. */
+    function presetSource() {
+        return D().allDocs().filter(function (d) {
+            return d.year === P.from && (d.stageIds || []).some(function (s) { return !!D().stage(s); });
+        });
+    }
+    function presetSkipped() {
+        return D().allDocs().filter(function (d) { return d.year === P.from; }).length - presetSource().length;
+    }
     function presetView() {
-        var all = D().allDocs().filter(function (d) { return d.year === P.from; });
+        var all = presetSource();
         var list = all.filter(function (d) {
             if (P.onlySel && !P.sel[d.id]) return false;
             if (P.item && d.stageIds.every(function (s) { var st = D().stage(s); return !st || st.itemId !== P.item; })) return false;
@@ -670,14 +686,23 @@
         '</tr></thead><tbody>' +
         res.rows.map(function (d) {
             var on = !!P.sel[d.id];
+            /* 이미 대상연도로 옮겨진 원본은 잠근다 — 어느 경로(불러오기·이어받기·
+               프리셋·예시 자료)로 옮겼든 같다. 또 옮기면 그 할 일만 증빙이 부풀어
+               회차를 넘긴 «충족»이 된다(CLAUDE.md §5). 어느 문서가 됐는지 함께 적는다. */
+            var into = D().carriedInto(d.id, P.to);
             return '<tr class="' + (on ? 'is-sel' : '') + '">' +
                 '<td class="du-pre-ck"><input type="checkbox" id="dp-' + esc(d.id) + '"' + (on ? ' checked' : '') +
+                    (into ? ' disabled' : '') +
                     ' aria-label="' + esc(d.title) + ' 선택" onchange="DOCUP.selDoc(\'' + esc(d.id) + '\', this.checked)"></td>' +
                 '<td class="du-pre-t"><label for="dp-' + esc(d.id) + '">' + esc(d.title) + '</label>' +
+                    (into
+                        ? '<p class="du-dim">' + (into.origin === 'seed26' ? '예시 자료가 이미 ' : '이미 ') + P.to +
+                          '년으로 옮겼습니다 — ' + esc(into.id) + '</p>'
+                        : '') +
                     (on ? oneRow(d) : '') + '</td>' +
                 '<td>' + esc(d.date) + '</td>' +
                 '<td>' + esc(d.sr || '—') + '</td>' +
-                '<td>' + (d.stageIds.length ? d.stageIds.length + '개 단계' : '<span class="dx-nodoc">미분류</span>') + '</td>' +
+                '<td>' + d.stageIds.length + '개 단계</td>' +
             '</tr>';
         }).join('') + '</tbody></table></div>';
     }
@@ -702,7 +727,9 @@
                 '</select></label>' +
             (c.fileMode === 'keep'
                 ? '<p class="du-dim">' + P.from + '년 첨부 파일을 ' + P.to + '년 저장소로 복사하고 새 파일 ID 를 발급합니다. 원본은 바뀌지 않습니다.</p>'
-                : '<p class="du-dim">등록 후 문서 상세에서 새 파일을 올립니다.</p>') +
+                /* 종전 문구는 «등록 후 문서 상세에서 새 파일을 올립니다»였는데 두 문서 상세
+                   어디에도 파일을 덧붙이는 수단이 없다 — 없는 동작을 약속하지 않는다(§15). */
+                : '<p class="du-dim">' + P.from + '년 첨부는 가져오지 않습니다. 등록한 문서에 새 파일을 덧붙이는 기능은 파일관리 연계 적용 후 제공됩니다.</p>') +
             (n > 1 ? '<button type="button" class="du-link" onclick="DOCUP.expand(\'' + esc(d.id) + '\')">접기 ▴</button>' : '') +
         '</div>';
     }
@@ -743,6 +770,8 @@
     function resetPreF() { P.q = ''; P.item = ''; P.cycle = ''; P.sr = ''; P.month = ''; P.onlySel = false; P.page = 1; F().rerender(renderP); }
     function prePage(n) { P.page = n; renderP(); }
     function selDoc(id, on) {
+        /* 잠긴 행은 체크칸이 disabled 지만 전역 호출로는 들어온다 — 여기서 한 번 더 */
+        if (on && D().carriedInto(id, P.to)) { V().toast('이미 ' + P.to + '년으로 옮긴 문서라 다시 가져오지 않습니다.'); F().rerender(renderP); return; }
         if (on) P.sel[id] = { titleMode: P.bulk.titleMode, title: '', fileMode: P.bulk.fileMode };
         else { delete P.sel[id]; delete P.expand[id]; }
         F().rerender(renderP);
@@ -914,6 +943,12 @@
            만들고 나면 한 건씩 찾아 지우는 수밖에 없었다(§4 «CRUD 는 회수 경로까지»).
            원본은 건드리지 않는다 — 지우는 것은 방금 만든 사본뿐이다. */
         _undo = docs.map(function (d) { return d.id; });
+        /* 되돌릴 수 없으면 버튼을 내지 않고 누가 하는지를 밝힌다 — 누르면 거절하는
+           버튼을 남기면 담당자가 이유를 모른 채 두 번 누른다(판정: DYDOCS.canUndo). */
+        var undoable = docs.every(function (d) { return D().canUndo(d.id); });
+        if (!undoable) {
+            body = body.replace(/<\/div>$/, '<p class="du-saved-note">잘못 올렸다면 <b>재난안전과 담당자</b>가 문서별로 지웁니다.</p></div>');
+        }
         /* 순서가 곧 배치다 — 되돌리기가 **맨 앞**이어야 `margin-right:auto` 가
            그 뒤를 전부 오른쪽으로 민다. 가운데 두면 앞 버튼까지 왼쪽 그룹이
            되어 [닫기][되돌리기] … [열기] 라는 어색한 묶음이 나온다.
@@ -921,9 +956,13 @@
         var foot =
             /* 이 창을 닫으면 **일괄** 되돌리기 수단이 사라진다(문서별 삭제는 상세에
                남는다). 닫고 나서 찾게 하지 않으려면 버튼이 그 사실을 말해야 한다. */
-            '<button type="button" class="btn btn-outline du-undo" onclick="DOCUP.undoSaved()"' +
-                ' title="한 번에 되돌릴 수 있는 것은 지금뿐입니다 — 이 창을 닫으면 문서별로 지워야 합니다.">' +
-                '방금 만든 ' + docs.length + '건 되돌리기</button>' +
+            (undoable
+                ? '<button type="button" class="btn btn-outline du-undo" onclick="DOCUP.undoSaved()"' +
+                    ' title="' + (D().canDelete()
+                        ? '한 번에 되돌릴 수 있는 것은 지금뿐입니다 — 이 창을 닫으면 문서별로 지워야 합니다.'
+                        : '한 번에 되돌릴 수 있는 것은 지금뿐입니다 — 이 창을 닫으면 재난안전과 담당자가 문서별로 지웁니다.') + '">' +
+                    '방금 만든 ' + docs.length + '건 되돌리기</button>'
+                : '') +
             '<button type="button" class="btn btn-outline" onclick="DYV2.closeModal()">닫기</button>' +
             '<a class="btn btn-primary" href="' + esc(detailHref(docs[0], o.backTo)) + '">' +
                 (one ? '문서 상세 보기 →' : '첫 문서 열기 →') + '</a>';
@@ -936,6 +975,11 @@
         if (!_undo.length) { V().toast('되돌릴 것이 없습니다.'); return; }
         var ids = _undo.slice();
         var docs = ids.map(D().docById).filter(Boolean);
+        var deny = docs.filter(function (d) { return !D().canUndo(d.id); })[0];
+        if (deny) { V().toast(D().undoNote(deny.id)); return; }
+        /* «가져온 원본은 그대로» 는 가져온 사본(불러오기·프리셋·이어받기)에만 맞는 말이다 —
+           새로 올린 서류에는 원본이 따로 없는데 «사본뿐»이라고 말하고 있었다. */
+        var copies = docs.filter(function (d) { return !!d.presetOf; }).length;
         var files = 0, stages = {};
         docs.forEach(function (d) {
             files += (d.files || []).length;
@@ -950,8 +994,8 @@
                 }).join('') + '</ul>' +
                 '<p class="du-saved-note">함께 사라지는 것 — 첨부 <b>' + files + '건</b> · ' +
                     '할 일 <b>' + Object.keys(stages).length + '개</b>의 증빙에서 빠집니다. ' +
-                    '남은 증빙이 없는 할 일은 <b>미이행</b>으로 돌아갑니다.<br>' +
-                    '<b>가져온 원본 문서는 그대로 있습니다</b> — 지우는 것은 방금 만든 사본뿐입니다.</p>' +
+                    '남은 증빙이 없는 할 일은 <b>미이행</b>으로 돌아갑니다.' +
+                    (copies ? '<br><b>가져온 원본 문서는 그대로 있습니다</b> — 지우는 것은 방금 만든 사본뿐입니다.' : '') + '</p>' +
             '</div>',
             '<button type="button" class="btn btn-outline" onclick="DYV2.closeModal()">그대로 둡니다</button>' +
             /* 삭제 확인도 primary 다 — 이 코드베이스의 관례이고(doc-detail 의 [삭제]와
@@ -959,15 +1003,19 @@
             '<button type="button" class="btn btn-primary" onclick="DOCUP.doUndo()">' + docs.length + '건 지우기</button>');
     }
     function doUndo() {
-        var ok = 0, fail = '';
+        var ok = 0, fail = '', copies = 0;
         _undo.forEach(function (id) {
-            var r = D().removeDocument(id);
-            if (r && r.ok) ok++; else if (r) fail = r.reason;
+            var src = D().docById(id);
+            /* 삭제(removeDocument)가 아니라 되돌리기 관문을 지난다 — 등록한 본인이
+               자기 등록을 무르는 것이라 부서 담당자에게도 열린다(DYDOCS.undoDocument). */
+            var r = D().undoDocument(id);
+            if (r && r.ok) { ok++; if (src && src.presetOf) copies++; } else if (r) fail = r.reason;
         });
         _undo = [];
         V().closeModal();
         refreshScreens();
-        V().toast(ok ? ok + '건을 지웠습니다 — 원본은 그대로입니다.' : (fail || '지우지 못했습니다.'));
+        V().toast(ok ? ok + '건을 지웠습니다' + (copies ? ' — 원본은 그대로입니다.' : '.') + (fail ? ' 일부는 되돌리지 못했습니다 — ' + fail : '')
+                     : (fail || '지우지 못했습니다.'));
     }
     /* 저장·삭제 뒤 낡은 화면을 남기지 않는다 — 어느 화면에서 불렀는지 모르므로 전부 */
     function refreshScreens() {
@@ -983,16 +1031,23 @@
            종전에는 성공 토스트가 P.to 를 읽어 예외가 났고, 가져오기는 됐는데
            아무 피드백도 안 뜨는 상태가 됐다. */
         var FROM = P.from, TO = P.to;
-        /* 같은 원본 → 같은 대상연도 재실행은 조용히 중복을 쌓지 않는다(§7-4) */
-        var dup = ids.filter(function (id) {
-            return D().store().presets.some(function (p) { return p.sourceDocumentId === id && p.targetYear === TO; });
+        /* 같은 원본 → 같은 대상연도는 다시 만들지 않는다(§7-4). 종전에는 이 경로의
+           프리셋 기록(store().presets)만 보고 «그래도 다시 만들까요?»를 물어서,
+           예시 자료·불러오기·이어받기가 이미 옮긴 원본은 **묻지도 않고** 또 만들었다
+           (실측: SEED26-0001 이 옮긴 원본에서 두 번째 사본이 생겼다). 세 경로와 같은
+           판정(DYDOCS.carriedInto)으로 목록에서 잠그고, 모달이 열린 사이 생긴 것은
+           여기서 한 번 더 걸러 건너뛴 수를 알린다(법정 업무 현황 불러오기와 같다). */
+        var skipped = 0;
+        ids = ids.filter(function (id) {
+            if (D().carriedInto(id, TO)) { skipped++; return false; }
+            return true;
         });
-        if (dup.length && !global.confirm(dup.length + '건은 이미 ' + TO + '년으로 가져온 적이 있습니다. 그래도 다시 만들까요?')) return;
+        if (!ids.length) { V().toast('고른 문서는 모두 이미 ' + TO + '년으로 옮겨져 있어 새로 만들지 않았습니다.'); return; }
 
         /* 가져온 문서의 담당자는 **가져온 사람 본인**이다 — 전년도 담당자를 그대로
            복제하면 남의 이름으로 새 연도 문서를 만드는 것이 된다(소유권 규칙). */
         var OWNER = me();
-        var made = 0, missing = 0, denied = 0, madeDocs = [];
+        var made = 0, missing = 0, denied = 0, deniedWhy = '', madeDocs = [];
         ids.forEach(function (id) {
             var src = D().docById(id); if (!src) return;
             var c = P.sel[id];
@@ -1021,7 +1076,7 @@
                 files: files, presetOf: id,
                 note: FROM + '년 «' + src.title + '» 에서 가져옴',
             });
-            if (!res.ok) { denied++; return; }
+            if (!res.ok) { denied++; deniedWhy = res.reason; return; }
             var doc = res.doc;
             madeDocs.push(doc);
             D().store().presets.push({
@@ -1038,7 +1093,10 @@
         if (global.CMPST && global.CMPST.render) global.CMPST.render();
         if (global.CMPDOC && global.CMPDOC.render) global.CMPDOC.render();
         var warn = (missing ? missing + '건은 원본 첨부가 없어 <b>원본 파일 확인 필요</b>로 남았습니다. ' : '') +
-                   (denied ? denied + '건은 소유권 검증에 걸려 만들지 않았습니다. ' : '');
+                   /* 거절 사유는 저장 계층이 준 것을 그대로 쓴다 — 종전에는 무조건
+                      «소유권 검증»이라 적어, 다른 사유로 막혀도 엉뚱한 이유를 댔다. */
+                   (denied ? denied + '건은 만들지 않았습니다 — ' + V().esc(deniedWhy) + ' ' : '') +
+                   (skipped ? skipped + '건은 그 사이 이미 ' + TO + '년으로 옮겨져 건너뛰었습니다. ' : '');
         saved(madeDocs, {
             title: FROM + '년 문서를 ' + TO + '년으로 가져왔습니다',
             lead: made + '건을 ' + TO + '년 문서로 만들었습니다.',

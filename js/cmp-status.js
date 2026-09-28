@@ -80,6 +80,14 @@
            «군 단위 103개 중 1개» 같은 무의미한 분모가 나온다(딥링크 ?dept= 와
            부서 담당자 프리셋 양쪽에서 실제로 재현됐다). */
         if (!p.get('level')) S.level = S.dept ? 'L2' : 'L1';
+        /* 보기 축도 주소가 정본이다 — 종전에는 읽기만 하고 urlOf 가 쓰지 않아서,
+           누락 점검에서 항목을 누르거나(openItem) 부서 줄을 누르면(openDept) 단계별
+           보기로 옮겨 가 놓고 새로고침·주소 공유에서는 기본 보기(부서별·시설별)로
+           돌아왔다 — 누르고 왔던 할 일 줄이 화면에서 사라진다(§3-0). 값이 없으면
+           기본값으로 되돌린다(popstate 에서 옛 보기가 남지 않게). */
+        var s2 = p.get('seg2'), s3 = p.get('seg3');
+        S.seg2 = (s2 === 'stage' || s2 === 'dept') ? s2 : 'dept';
+        S.seg3 = (s3 === 'stage' || s3 === 'fac') ? s3 : 'fac';
         var st = p.get('stage');
         if (st && D().stage(st)) { S.detail = st; S.dyear = +p.get('dyear') || S.year; }
         else S.detail = '';                    /* 파라미터가 없으면 상세도 없다 — 남겨두면 뒤로가기가 닫히지 않는다 */
@@ -109,6 +117,15 @@
                «할 일»이므로 단계별 보기로 연다. 세그먼트를 명시해 들어온 경우는 존중한다. */
             if (!p.get('seg2')) S.seg2 = 'stage';
             if (!p.get('seg3')) S.seg3 = 'stage';
+            /* 부서 프리셋도 같은 실패를 낸다 — 부서 담당자가 문서 상세에서 군 단위 할 일
+               (예: 안전관리자 배치)로 넘어오면, 그 항목의 할 일은 어느 것도 내 부서에
+               걸리지 않는데 기본 부서 조건이 걸린 채 열려 목록이 0건이었다(상세를 닫는
+               순간 «조건에 맞는 할 일이 없습니다»). 프리셋은 제한이 아니라 기본값이므로
+               그 항목이 내 부서에 안 걸리면 거두고, ?dept= 로 명시해 들어온 경우만 존중한다. */
+            if (p.get('dept') == null && S.dept &&
+                !D().stagesOfItem(itemId).some(function (sg) { return D().stageDeptHit(sg, S.dept); })) {
+                S.dept = '';
+            }
         } else S.focusItem = '';
         var fc = p.get('fac');
         S.fac = (fc && facRec(fc)) ? fc : '';  /* 같은 근거 — 없는 시설번호로는 열지 않는다 */
@@ -118,6 +135,10 @@
         if (S.year !== D().defaultYear()) p.set('year', S.year);
         if (S.tab !== 'status') p.set('tab', S.tab);
         if (S.level !== 'L1') p.set('level', S.level);
+        /* 기본 보기가 아니면 싣는다. ?item= 이 있으면 readURL 이 보기를 단계별로 바꾸므로
+           그때는 기본 보기라도 명시해야 사용자가 고른 보기가 살아남는다. */
+        if (S.level === 'L2' && (S.seg2 !== 'dept' || S.focusItem)) p.set('seg2', S.seg2);
+        if (S.level === 'L3' && (S.seg3 !== 'fac' || S.focusItem)) p.set('seg3', S.seg3);
         if (S.focusItem) p.set('item', S.focusItem);
         if (S.detail) { p.set('stage', S.detail); if (S.dyear !== S.year) p.set('dyear', S.dyear); }
         if (S.fac) p.set('fac', S.fac);
@@ -1251,6 +1272,8 @@
     /* 반려는 사유가 필수다 — 단일 모달 규칙이라 같은 모달 본문을 바꿔 낸다 */
     function openReject(stageId) {
         var s = D().stage(stageId); if (!s) return;
+        /* 저장(transition)이 막지만 사유를 다 적게 한 뒤 거절하지 않도록 진입에서도 — openConfirm 과 같다 */
+        if (!D().canConfirm()) { V().toast('확인 반려는 주관부서(재난안전과) 담당자만 할 수 있습니다.'); return; }
         V().openModal('확인 반려 — 사유 기재',
             '<div class="cmp-na">' +
                 '<p class="cmp-scode">' + esc(s.id) + '</p>' +
@@ -1306,14 +1329,8 @@
        말하게 된다. 막는 것은 맞다(또 옮기면 회차를 넘어 잘못 «충족»이 뜬다) —
        다만 누가 옮겼는지는 사실대로 적는다. */
     function pulledInto(srcId, toYear) { return !!pulledBy(srcId, toYear); }
-    function pulledBy(srcId, toYear) {
-        var hit = null;
-        D().allDocs().some(function (d) {
-            if (d.presetOf === srcId && +d.year === +toYear) { hit = d; return true; }
-            return false;
-        });
-        return hit;
-    }
+    /* 판정은 DYDOCS.carriedInto 한 곳 — 이어받기·프리셋과 같은 식을 쓴다 */
+    function pulledBy(srcId, toYear) { return D().carriedInto(srcId, toYear); }
     function openPull() {
         if (!S.detail) return;
         var y = S.dyear || S.year;
@@ -1714,7 +1731,9 @@
     }
     function resetF() { S.q = ''; S.cycle = ''; S.st = ''; S.axis = ''; S.dept = ''; S.facCls = ''; S.way = ''; rerender(); }
     function setTab(t) { S.tab = t; S.detail = ''; render(); }
-    function setLevel(l) { S.level = l; S.st = ''; S.q = ''; render(); }
+    /* 계층을 옮기면 ?item= 으로 들어온 항목에서 떠난 것이다 — 남겨 두면 새로고침 때
+       readURL 이 계층을 그 항목의 계층으로 되돌려 사용자가 고른 계층을 덮는다. */
+    function setLevel(l) { S.level = l; S.st = ''; S.q = ''; S.focusItem = ''; render(); }
     function setSeg(k, v) { S[k] = v; render(); }
     function toggleItem(id) {
         var cur = S.open[id];

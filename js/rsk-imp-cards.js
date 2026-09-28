@@ -184,6 +184,17 @@
                 '<p>' + esc(c.reason || '') + '</p>' +
                 '<span class="rl-imp-return-how">담당자가 <b>완료 처리</b>를 다시 하면 확인 대기로 돌아갑니다.</span>' +
             '</div>';
+            /* 그 부서 담당자면 **이 카드에서 바로** 다시 제출한다 — 안내만 하고 수단을 내지 않으면
+               담당자는 내 할일로 옮겨 가야 했다. 내 할일과 같은 [재제출] 이름·같은 완료 창을 쓴다.
+               MYWORK 이 있는 화면(내 할일)에서는 그 화면의 버튼이 이미 하므로 중복을 피한다. */
+            if (canComplete(m) && global.MYWORK && global.MYWORK.complete
+                && !/my-work\.html$/.test(location.pathname)) {
+                out += '<div class="rl-imp-doact">' +
+                    '<button type="button" class="btn btn-primary btn-sm"' +
+                    ' onclick="MYWORK.completeFrom(\'' + esc(m.id) + '\')">재제출</button>' +
+                    '<span class="rl-imp-doact-note">반려 사유를 반영해 증빙을 보완하고 다시 제출합니다.</span>' +
+                '</div>';
+            }
         } else if (st === 'OK') {
             out += '<div class="rl-imp-cfm-ok">확인 ' + esc(c.at || '') + ' · ' + esc(c.by || '재난안전과') +
                 (c.round > 1 ? ' <span class="rl-imp-round">' + c.round + '회차 제출분</span>' : '') + '</div>';
@@ -259,7 +270,30 @@
         var p = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
         return p ? p.name : '재난안전과';
     }
+    /* ===== 완료 확인·반려·확인 취소 가드 (2026-09-28 권한별 QA §6-1) =====
+     * 확인자는 주관부서(재난안전과) **담당자**다 — rsk-list canManage() 와 같은 식이다.
+     * CTX.canConfirm 은 «이 카드에서 확인을 하는가»(수시평가 카드는 끈다)일 뿐이고, 카드는
+     * 전역 호출(IMPCARD.open)로 누구나 열 수 있으므로 **사람**을 따로 본다. 데이터 계층
+     * (DYRSK.confirmImprovement 등)은 역할을 보지 않아, 종전에는 부서 담당자가 콘솔로 자기
+     * 조치를 «확인»할 수 있었다. 공문이 올라간 뒤에는 확인 결과를 바꾸지 않는다(잠금 판정은
+     * DYRSKDOC.lockOf 한 곳 — 카드가 버튼을 감추는 조건과 같다). */
+    function canConfirmRole() {
+        var R = global.DYROLE;
+        if (!R || !R.canAct) return true;               /* 롤 스위처 없는 환경은 종전대로 */
+        return R.canAct(R.OWNER_DEPT);
+    }
+    function cfmGate(id) {
+        if (!CTX || !CTX.canConfirm || !canConfirmRole()) {
+            V().toast('완료 확인·반려는 주관부서(재난안전과) 담당자가 합니다.');
+            return null;
+        }
+        var m = D().improvementOf(id); if (!m) return null;
+        var locked = global.DYRSKDOC && m.assessment_id ? DYRSKDOC.lockOf(m.assessment_id) : null;
+        if (locked) { V().toast('공문 상신됨(' + locked + ') — 확인 결과를 변경할 수 없습니다.'); return null; }
+        return m;
+    }
     function cfmDo(id) {
+        if (!cfmGate(id)) return;
         var r = D().confirmImprovement(id, who());
         if (r && r.error) { V().toast(r.error); return; }
         CTX.cfmOpen = ''; CTX.cfmReturn = '';
@@ -267,6 +301,7 @@
         render(); bubble();
     }
     function cfmDoReturn(id) {
+        if (!cfmGate(id)) return;
         var el = document.getElementById('cfmrj-' + id);
         var r = D().returnImprovement(id, who(), (el && el.value) || '');
         if (r && r.error) { V().toast(r.error); return; }
@@ -275,6 +310,7 @@
         render(); bubble();
     }
     function cfmCancel(id) {
+        if (!cfmGate(id)) return;
         var r = D().cancelConfirm(id, who());
         if (r && r.error) { V().toast(r.error); return; }
         V().toast('확인 취소 — 확인 대기로 되돌렸습니다');
@@ -297,7 +333,12 @@
      * 판정은 여기 하나이고 목록 버튼과 카드가 같이 본다. my-work canAct() 와 같은 기준이다
      * (남의 이름으로 완료를 찍는 것은 기록 위조다). */
     function canComplete(m) {
-        if (!m || m.status === 'DONE') return false;
+        /* **할 일인지는 DYRSK.needsAction 한 곳에서** 판정한다(CLAUDE.md §4-3 MUST).
+           반려 건은 설계상 status 가 DONE 으로 남지만 담당자가 다시 제출해야 한다. 종전에는
+           status==='DONE' 이면 false 라, 정기평가 진행 카드의 [개선조치 완료 처리]가 연 부서
+           상세에 반려 건 재제출 수단이 없었다 — 막다른 길(2026-09-28 권한별 QA §6-2). */
+        if (!m) return false;
+        if (D().needsAction ? !D().needsAction(m) : m.status === 'DONE') return false;
         var R = global.DYROLE;
         if (!R || !R.current) return true;                /* 롤 스위처 없는 환경은 종전대로 */
         var p = R.current();
@@ -326,6 +367,8 @@
         var m = D().improvementOf(id); if (!m) return;
         var kind = amendKind(m);
         if (!kind) { V().toast('이 개선조치를 변경할 권한이 없습니다.'); return; }
+        /* 완료된 건은 어느 쪽도 바꾸지 않는다 — 카드가 [변경]을 내지 않는 조건과 같다 */
+        if (m.status === 'DONE') { V().toast('완료된 개선조치는 담당자·기한을 바꾸지 않습니다.'); return; }
         AMEND = id;
         V().openModal(kind === 'both' ? '담당자 · 기한 변경' : '담당자 지정',
             '<p style="font-size:var(--fs-13);margin:0 0 4px;"><b>' +
@@ -362,6 +405,12 @@
         if (!why) { V().toast('변경 사유를 입력하세요.'); var w = document.getElementById('imp-am-why'); if (w) w.focus(); return; }
         var by = (global.DYROLE && global.DYROLE.current && global.DYROLE.current().name) || '';
         var mm = D().improvementOf(AMEND);
+        /* 저장에도 여는 쪽과 같은 판정 — 창을 연 뒤 완료됐거나 권한이 바뀐 경우까지 막는다 */
+        if (!mm || !amendKind(mm) || mm.status === 'DONE') {
+            AMEND = null; V().closeModal();
+            V().toast(mm && mm.status === 'DONE' ? '완료된 개선조치는 담당자·기한을 바꾸지 않습니다.' : '이 개선조치를 변경할 권한이 없습니다.');
+            return;
+        }
         var patch = { assigned_to: g('imp-am-owner').trim() };
         /* 부서 담당자가 보낸 요청에 기한이 섞이지 않게 — 화면에 칸이 없어도 막는다 */
         if (amendKind(mm) === 'both') patch.due = g('imp-am-due');

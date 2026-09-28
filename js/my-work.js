@@ -94,6 +94,30 @@
         emergency: 'cmp-status.html', incident: 'cmp-status.html'
     };
 
+    /* 문서 원장 미분류 — 예시가 아니라 **원장에서 센다**(DYDOCS). 흐름은
+       이 카드 → 문서 목록(미분류 조건) → 문서 상세 «분류 붙이기» → 돌아오면 건수가 준다.
+       분류를 붙이는 것은 재난안전과 담당자라(DYDOCS.remapLedger) 주관부서 관점에만 낸다.
+       다 붙이면 카드는 사라지지 않고 완료로 남는다 — 할 일이 끝났다는 사실도 정보다. */
+    function unmappedCard() {
+        var DOCS = global.DYDOCS, R = global.DYROLE;
+        var owner = (R && R.OWNER_DEPT) || 'safety';
+        if (!DOCS || !DOCS.allDocs || state.deptId !== owner) return null;
+        var n = 0, yr = DOCS.BASE_YEAR;
+        try {
+            DOCS.allDocs().forEach(function (d) { if (d.origin === 'ledger' && !d.mapped && !d.excluded) n++; });
+        } catch (e) { return null; }
+        return {
+            id: 'I-UNMAPPED', cat: 'inspection',
+            title: n ? '문서 원장 미분류 ' + n.toLocaleString() + '건 분류 확인' : '문서 원장 미분류 없음 — 분류 완료',
+            sub: n ? '어느 할 일의 증빙인지 아직 안 붙은 문서입니다 — 분류를 붙여야 법정 업무 현황 판정에 들어갑니다'
+                   : '원장의 모든 문서가 할 일에 붙었거나 분류에서 제외됐습니다',
+            due: '', status: n ? 'IN_PROGRESS' : 'DONE',
+            dept: owner, dept_label: '재난안전과',
+            href: 'cmp-docs.html?year=' + (yr || '') + '&map=unmapped',
+            atype: 'menu', action: '분류하러 가기', destLabel: '문서 목록', remind: false
+        };
+    }
+
     /* 타 도메인 목업 시드 — atype: 처리 유형 / destLabel: 이동 목적지 라벨 */
     function otherSeeds() {
         return [
@@ -107,9 +131,8 @@
                  「결재하러 가기」는 없는 동작을 약속하므로 실제로 하는 일로 고친다(검수 E). */
               atype: 'menu', href: 'bgt-main.html', action: '상신 상태 보기', destLabel: '예산 총괄표' },
             /* 점검 */
-            { id: 'I-01', cat: 'inspection', title: '업무문서 안전점검 계열 16건 분류 확인',
-              due: '2026-07-19', dept: 'safety', dept_label: '재난안전과',
-              atype: 'menu', href: 'cmp-docs.html', action: '분류하러 가기', destLabel: '문서 목록' },
+            /* I-01 «업무문서 안전점검 계열 16건 분류 확인»은 지어낸 건수라 눌러도 그 16건이 어디에도
+               없었다(문서 목록 전체로 떨어졌다). 문서 원장에서 세는 카드(unmappedCard)로 바꿨다. */
             { id: 'I-02', cat: 'inspection', title: '공중이용시설 안전점검 결과 정리 (담양읍 문화의전당)',
               due: '2026-07-17', dept: 'culture', dept_label: '문화체육과',
               atype: 'menu', href: 'fac-list.html', action: '처리하러 가기', destLabel: '시설물 대장' },
@@ -297,8 +320,11 @@
                         due: c.date,
                         status: 'IN_PROGRESS',
                         dept: state.deptId, dept_label: Edu.deptName(state.deptId),
-                        href: 'edu-reg.html',
-                        atype: 'menu', action: '신청하러 가기', destLabel: '정기교육', remind: false
+                        /* 참석자 등록부는 교육 상세에서 등록한다 — 종전에는 목록(edu-reg)으로 보내
+                           담당자가 그 교육을 다시 찾아야 했고, 관리감독자 교육(SUP_REG)은 현업근로자
+                           목록으로 떨어져 아예 보이지 않았다. */
+                        href: 'edu-reg-detail.html?id=' + encodeURIComponent(c.id),
+                        atype: 'menu', action: '신청하러 가기', destLabel: '교육 상세', remind: false
                     });
                 });
                 Edu.reminders().forEach(function (r) {
@@ -315,13 +341,17 @@
                             due: sr.cycle.end,
                             status: 'IN_PROGRESS',
                             dept: state.deptId, dept_label: Edu.deptName(state.deptId),
-                            href: 'edu-reg.html',
-                            atype: 'menu', action: '자체교육 진행', destLabel: '정기교육', remind: true
+                            /* 관리감독자는 관리감독자 정기교육 화면으로 — 현업근로자 화면에는 그 교육이 없다 */
+                            href: w.category === 'SUPERVISOR' ? 'edu-sup.html' : 'edu-reg.html',
+                            atype: 'menu', action: '자체교육 진행',
+                            destLabel: w.category === 'SUPERVISOR' ? '관리감독자 정기교육' : '정기교육', remind: true
                         });
                     });
                 });
             }
         } catch (e) {}
+        var um = unmappedCard();
+        if (um) out.push(um);
         /* 타 도메인 목업 시드 — 첨부 완료한 시드는 DONE 으로 표시 */
         otherSeeds().forEach(function (s) {
             if (s.dept !== state.deptId) return;
@@ -1354,6 +1384,12 @@
             '<button type="button" class="btn btn-primary" onclick="MYWORK.doComplete(\'' + id + '\')">완료 처리</button>');
     }
     function doComplete(id) {
+        /* 저장에도 여는 쪽(complete)과 같은 판정 — 그 조치를 맡은 부서 담당자 본인만 한다.
+           판정은 IMPCARD.canComplete 단일 출처(할 일 판정 = DYRSK.needsAction · 부서 담당자 본인).
+           종전에는 저장 함수가 판정 없이 열려 있었다(2026-09-28 권한별 QA §6-1). */
+        var target = D().improvementOf(id);
+        var may = target && (global.IMPCARD && global.IMPCARD.canComplete ? global.IMPCARD.canComplete(target) : canAct());
+        if (!may) { V().closeModal(); toast('이 부서의 담당자만 완료 처리할 수 있습니다.'); return; }
         var el = function (x) { return document.getElementById(x); };
         var payload = {
             action: (el('mw-cmpl-desc') && el('mw-cmpl-desc').value || '').trim(),

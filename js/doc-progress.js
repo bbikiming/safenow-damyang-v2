@@ -623,10 +623,32 @@
         return id;
     }
 
+    /** 이 원본이 이미 toYear 문서로 옮겨졌나 — 옮긴 문서(없으면 null).
+     *  옮기는 경로가 셋(법정 업무 현황 불러오기 · 문서 목록 이어받기 · 업무 업로드
+     *  프리셋)이고 예시 자료도 presetOf 로 투영돼 있어(위 seedOf), 이 한 줄이
+     *  «시드가 옮긴 원본을 또 옮기지 못하게 한다»(CLAUDE.md §5)를 세 경로에 함께 건다. */
+    function carriedInto(srcId, toYear) {
+        var hit = null;
+        allDocs().some(function (x) {
+            if (x.presetOf === srcId && +x.year === +toYear) { hit = x; return true; }
+            return false;
+        });
+        return hit;
+    }
+
     function addDocument(d) {
         /* 소유권은 화면이 아니라 여기서 막는다 — 전역 호출로도 뚫리지 않게 */
         var own = assertOwn(d && d.dept);
         if (!own.ok) return { ok: false, reason: own.reason };
+        /* 할 일(업무단계)이 없는 문서는 만들지 않는다 — 업무 업로드는 STEP 2 에서
+           이것을 요구하는데(SCR-DOC-007 P1), 이어받기·프리셋 두 경로는 원본을 그대로
+           베껴 **미분류·분류 제외 원장 문서로 할 일 없는 사본**을 만들었다. 그 사본은
+           어느 의무의 증빙도 아니고, 붙일 수단(분류 붙이기)은 원장 문서 전용이라 영영
+           고칠 수 없다. 경로가 셋이라 화면이 아니라 여기서 막는다. */
+        var validStages = ((d && d.stageIds) || []).filter(function (s) { return !!stage(s); });
+        if (!validStages.length) {
+            return { ok: false, reason: '이 문서가 증빙하는 할 일(업무단계)이 없어 등록하지 않았습니다.' };
+        }
         var year = +(d.year || DEFAULT_YEAR);
         var doc = {
             id: d.id || nextDocId(year),
@@ -684,6 +706,38 @@
 
     function removeDocument(id) {
         if (!canDelete()) return { ok: false, reason: '문서 삭제는 주관부서(재난안전과) 담당자만 할 수 있습니다.' };
+        return dropDocument(id);
+    }
+    /* =========================================================================
+     * 방금 만든 문서 되돌리기 — 삭제와 다른 관문
+     * -------------------------------------------------------------------------
+     * 등록 결과 화면의 [방금 만든 N건 되돌리기](DOCUP.undoSaved)는 종전에 위
+     * removeDocument 를 불러, **부서 담당자가 자기가 방금 올린 서류를 물리려 하면
+     * «문서 삭제는 재난안전과 담당자만»으로 거절**됐다. 확인까지 시키고 거절하는
+     * 버튼이었고, 등록에는 되돌리기가 붙는다는 규칙(CLAUDE.md §5)이 부서 담당자에게는
+     * 성립하지 않았다.
+     *
+     * 삭제 권한을 넓히지 않는다 — 이미 있던 문서를 지우는 것은 여전히 주관부서
+     * 담당자만 한다. 여기서 여는 것은 **등록한 본인이 자기 등록을 무르는 것**뿐이고,
+     * 재난안전과가 이미 완료로 확인한 할 일이 걸려 있으면 막는다(확인의 근거를
+     * 본인이 지우는 셈이 된다). */
+    function undoDeny(d) {
+        if (!d || d.dataMode !== 'user') return '이 시스템에서 등록한 문서만 되돌립니다.';
+        if (isManager()) return '';
+        if (d.createdBy !== actor()) return '되돌리기는 그 문서를 등록한 사람만 할 수 있습니다 — 그 밖의 삭제는 재난안전과 담당자가 합니다.';
+        if ((d.stageIds || []).some(function (sid) { return statusOfStage(sid, d.year) === ST.DONE; })) {
+            return '재난안전과가 이미 완료로 확인한 할 일이 걸려 있어 되돌리지 않습니다 — 재난안전과 담당자가 처리합니다.';
+        }
+        return '';
+    }
+    function canUndo(id) { return !undoDeny(docById(id)); }
+    function undoDocument(id) {
+        var why = undoDeny(docById(id));
+        if (why) return { ok: false, reason: why };
+        return dropDocument(id);
+    }
+    /* 권한 판정 없이 지우는 몸체 — 위 두 관문만 부른다(전역에 내보내지 않는다) */
+    function dropDocument(id) {
         var list = store().docs;
         var i = -1;
         for (var k = 0; k < list.length; k++) { if (list[k].id === id) { i = k; break; } }
@@ -849,9 +903,11 @@
         /* 전이 */
         transition: transition, applyDocument: applyDocument, completedAmong: completedAmong,
         /* CRUD */
-        addDocument: addDocument, updateDocument: updateDocument,
+        addDocument: addDocument, updateDocument: updateDocument, carriedInto: carriedInto,
         remapLedger: remapLedger, mergeNearDup: mergeNearDup,
         removeDocument: removeDocument, impactOf: impactOf,
+        undoDocument: undoDocument, canUndo: canUndo,
+        undoNote: function (id) { return undoDeny(docById(id)); },
         /* 권한 */
         isManager: isManager, canUpload: canUpload, canConfirm: canConfirm,
         canDelete: canDelete, canSetNA: canSetNA, actor: actor,

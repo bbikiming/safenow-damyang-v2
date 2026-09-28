@@ -504,7 +504,15 @@
         if (!c) return [];
         if (c.sessions && c.sessions.length) return c.sessions;
         if (!c.date) return [];
-        return [{ date: c.date, start: c.time || '', end: c.endTime || '' }];
+        /* 회차 도입 전 시드는 시작 시각과 시간(h)만 있고 종료 시각이 없다 — 비워 두면 수정 창의
+           종료 칸이 빈 채 열려 아무것도 안 바꿔도 «종료가 시작보다 뒤여야» 로 저장이 막혔다.
+           시작 + 시간으로 종료를 파생한다(없는 값을 지어내는 것이 아니라 저장된 두 값의 합이다). */
+        var end = c.endTime || '';
+        if (!end && c.time && c.hours > 0) {
+            var t = String(c.time).split(':'), m = (+t[0] || 0) * 60 + (+t[1] || 0) + Math.round(c.hours * 60);
+            if (m < 24 * 60) end = ('0' + Math.floor(m / 60)).slice(-2) + ':' + ('0' + (m % 60)).slice(-2);
+        }
+        return [{ date: c.date, start: c.time || '', end: end }];
     }
     /* 회차 1건의 시간(h) — 0.1h 단위 반올림. 종료 ≤ 시작이면 0(입력 오류) */
     function sessionHours(s) {
@@ -775,6 +783,50 @@
         return out;
     }
 
+    /* ================= 조작 권한 — DYROLE.canAct 파생 (CLAUDE.md §12) =================
+     * 판정은 DYROLE.canAct 단일 출처이고, 교육 도메인이 더하는 것은 «그 건이 어느 부서
+     * 소관인가» 하나다. 부서가 비어 있는 교육 — 집합교육·여러 부서를 묶은 채용시교육 — 은
+     * 주관부서(재난안전과)가 연 건이므로 주관부서 소관으로 본다(등록 주체 = 기안 주체,
+     * SCR-EDU-001 §6 「여러 부서를 묶은 건은 주관부서 담당자만 기안한다」).
+     * 빈 값을 그대로 canAct('') 에 넘기면 «부서 없는 전사 항목»으로 읽혀 담당자 전원이
+     * 통과한다 — 부서 담당자가 재난안전과 집합교육을 수정·삭제·종료하고 공문까지 기안하던
+     * 결함이 그것이었다(2026-09-28 권한별 QA).
+     * 화면은 아래 함수만 본다. 버튼만 감추면 전역 호출로 뚫리므로 진입·저장 양쪽에 건다. */
+    function role() { return global.DYROLE; }
+    function ownerDept() { return (role() && role().OWNER_DEPT) || 'safety'; }
+    function myDept() { var r = role(); return r && r.deptId ? r.deptId() : ''; }
+    /* 교육 건의 소관 부서 */
+    function courseDeptOf(c) { return (c && c.deptId) || ownerDept(); }
+    /* 이 부서 건을 등록·수정·삭제할 수 있는가 */
+    function canActDept(deptId) {
+        var r = role();
+        if (!r || !r.canAct) return true;               /* 롤 스위처 없는 환경은 종전대로 */
+        return r.canAct(deptId || ownerDept());
+    }
+    function canActCourse(c) { return canActDept(courseDeptOf(c)); }
+    /* 등록 수단을 낼지 — 자기 부서 건이라도 등록할 수 있는 사람인가(관리·감독 계층은 조회만) */
+    function canRegister() { return canActDept(myDept() || ownerDept()); }
+    /* 부서를 고를 수 있는가 — 전 부서 건을 처리하는 주관부서 담당자만. 그 밖의 담당자는
+       소속 부서로 고정한다(남의 부서 명의로 저장되면 조회 범위 밖이라 본인 목록에서도 사라진다) */
+    function canPickDept() { return canActDept(ownerDept()); }
+    /* 등록 폼의 부서 기본값 — 로그인한 사람의 소속(후보에 있을 때). 목록 첫 부서를 기본으로
+       두면 부서 담당자가 눈치채지 못한 채 기획예산실 명의로 저장한다(수시평가 등록과 같은 규칙) */
+    function defaultDeptId() {
+        var mine = myDept(), c = deptCandidates();
+        if (mine && c.some(function (d) { return d.id === mine; })) return mine;
+        return c.length ? c[0].id : '';
+    }
+    /* 거절 사유 — 누가 하는지를 밝힌다. «권한이 없습니다»로 뭉뚱그리면 다음에 누구를
+       찾아가야 할지 모른다 */
+    function denyMsg(deptId) {
+        var r = role(), p = r && r.current ? r.current() : null;
+        if (p && p.tier !== 'staff') return '관리·감독 계층은 조회만 합니다 — 등록·수정은 담당자가 합니다.';
+        var d = deptId || ownerDept();
+        return d === ownerDept()
+            ? '재난안전과 소관이라 재난안전과 담당자가 처리합니다.'
+            : deptName(d) + ' 소관이라 그 부서 담당자 또는 재난안전과 담당자가 처리합니다.';
+    }
+
     /* ================= 메타 라벨 ================= */
     var KIND_LABEL = {
         REG_GROUP: '정기교육(집합)', REG_SELF: '정기교육(자체)',
@@ -967,6 +1019,9 @@
         ETC_TYPES: ETC_TYPES, SUP_ETC_TYPES: SUP_ETC_TYPES, etcTypes: etcTypes,
         ETC_TYPE_INFO: ETC_TYPE_INFO, etcTypeInfo: etcTypeInfo,
         kindLabel: kindLabel, catLabel: catLabel, empLabel: empLabel, srcLabel: srcLabel,
-        deptName: deptName, deptCandidates: deptCandidates
+        deptName: deptName, deptCandidates: deptCandidates,
+        /* 조작 권한 — DYROLE.canAct 파생 (부서 없는 건 = 주관부서 소관) */
+        courseDeptOf: courseDeptOf, canActDept: canActDept, canActCourse: canActCourse,
+        canRegister: canRegister, canPickDept: canPickDept, defaultDeptId: defaultDeptId, denyMsg: denyMsg
     };
 })(window);

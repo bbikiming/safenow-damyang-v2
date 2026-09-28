@@ -27,6 +27,16 @@
     function isStaff() { var p = R() && R().current(); return !p || p.tier === 'staff'; }
     /* 등록 — 자기 부서 건을 올리는 것이므로 부서 담당자면 된다 */
     function canRegister() { return isStaff(); }
+    /* 그 부서 명의로 올릴 수 있는가 — DYROLE.canAct 단일 출처(주관부서 담당자는 전 부서).
+       종전에는 담당자 여부만 봐서 부서 담당자가 남의 부서 명의로 저장할 수 있었고, 저장된
+       건은 조회 범위 밖이라 **등록한 본인 목록에서도 사라졌다**(2026-09-28 권한별 QA). */
+    function canRegisterFor(deptId) { return !R() || !R().canAct || R().canAct(deptId); }
+    /* 부서를 고를 수 있는 사람 — 전 부서 건을 받는 주관부서 담당자뿐이다 */
+    function canPickDept() { return canReview(); }
+    function deptDeny(deptId) {
+        var mine = R() && R().current ? R().current().deptName : '';
+        toast(D().deptName(deptId) + ' 수시평가는 그 부서 담당자가 등록합니다' + (mine ? ' — 소속(' + mine + ') 건으로 등록하세요.' : '.'));
+    }
     /* 검토 서명 첨부·해제 — 주관부서(재난안전과) 담당자만 */
     function canReview() {
         if (!R()) return true;
@@ -270,9 +280,13 @@
 
     /* =============== 등록 =============== */
     function openRegister(prefillDeptId, reason) {
+        /* 진입 함수에도 같은 판정 — 도움말 시트의 바로가기가 사유 선택을 거치지 않고 여기로 온다 */
+        if (!canRegister()) { toast('수시평가 등록은 부서 담당자 본인이 수행합니다.'); return; }
         var depts = D().deptCandidates();
         /* 기본 부서는 로그인한 담당자의 소속 — 자기 부서 평가를 남의 부서로 올리는 사고를 줄인다 */
         var mine = global.DYROLE && global.DYROLE.deptId ? global.DYROLE.deptId() : '';
+        /* 미리 채울 부서가 내 소관이 아니면 쓰지 않는다 — 전역 호출로 남의 부서를 넘길 수 있다 */
+        if (prefillDeptId && !canRegisterFor(prefillDeptId)) prefillDeptId = '';
         F = {
             deptId: prefillDeptId || (mine && depts.some(function (d) { return d.id === mine; }) ? mine : '') ||
                     (depts[0] && depts[0].id) || '',
@@ -384,8 +398,12 @@
             '<div class="roc-modal-row"><label class="form-label" for="roc-r-deptname">부서 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 '<div class="orgpick-field" id="roc-r-deptfield"><div style="display:flex;gap:8px;">' +
                     '<input type="text" class="form-input" id="roc-r-deptname" readonly placeholder="조직도에서 부서 선택" style="flex:1;" value="' + esc(F.deptId ? D().deptName(F.deptId) : '') + '">' +
-                    '<button type="button" class="btn btn-outline" onclick="ORGPICK.toggle(\'roc-r-deptfield\',\'deptId\',\'RSKOCC.pickDept\')">조직도</button>' +
-                '</div></div></div>' +
+                    /* 부서는 주관부서 담당자만 고른다 — 부서 담당자는 소속 부서로 고정(선택지가 하나인
+                       선택 수단은 «더 있는데 안 나온다»로 읽힌다) */
+                    (canPickDept() ? '<button type="button" class="btn btn-outline" onclick="ORGPICK.toggle(\'roc-r-deptfield\',\'deptId\',\'RSKOCC.pickDept\')">조직도</button>' : '') +
+                '</div>' +
+                (canPickDept() ? '' : '<p class="file-hint">소속 부서 건으로 등록합니다 — 다른 부서 건은 그 부서 담당자가 등록합니다.</p>') +
+                '</div></div>' +
             '<div class="roc-modal-row"><label class="form-label" for="roc-r-reason">실시 사유 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 /* 재해 사유를 고르면 전용 필수 칸이 나타나야 하므로 그 자리에서 다시 그린다.
                    재렌더 전 captureRegister() 로 적어 둔 값을 반드시 보존한다. */
@@ -429,6 +447,7 @@
     function regDelFile(i) { F.files.splice(i, 1); renderRegister(); }
     /* 조직도(ORGPICK 'deptId' 모드)에서 호출 — 표시는 부서명, 저장은 deptId */
     function pickDept(id, name) {
+        if (!canRegisterFor(id)) { deptDeny(id); return; }
         F.deptId = id;
         var inp = document.getElementById('roc-r-deptname'); if (inp) inp.value = name;
     }
@@ -516,6 +535,8 @@
         if (!canRegister()) { toast('수시평가 등록은 부서 담당자 본인이 수행합니다.'); return; }
         captureRegister();
         if (!F.deptId || !F.reason || !F.date || !F.desc) { toast('부서·사유·발생일·내용을 모두 입력하세요.'); return; }
+        /* 저장 경로에도 같은 판정 — 버튼만 감추면 전역 호출(RSKOCC.pickDept)로 뚫린다 */
+        if (!canRegisterFor(F.deptId)) { deptDeny(F.deptId); return; }
         /* 재해 건은 작업 재개 시점이 곧 법정 기한이라 비워 두면 기한을 셀 수 없다 */
         if (isAccident()) {
             if (!F.accident) { toast('재해 개요를 입력하세요.'); var a = document.getElementById('roc-r-acc'); if (a) a.focus(); return; }
@@ -602,9 +623,21 @@
         D().setOccReviewFile(id, name, by, ((atEl && atEl.value) || '').trim());
         V().closeModal(); toast('안전관리자 검토파일 등록 · 검토완료 처리'); render();
     }
+    /* 해제는 안전관리자 서명 검토본을 지우고 검토완료를 되돌린다 — 종전에는 누르는 즉시
+       지워졌다. 되돌릴 수 없는 회수이므로 무엇이 사라지는지 밝히고 한 번 확인받는다(§4 CRUD). */
     function clearReviewFile(id) {
         if (!canReview()) { toast('안전관리자 검토 서명은 주관부서(재난안전과) 담당자가 첨부합니다.'); return; }
+        var o = D().occasionalOf(id); if (!o) return;
+        V().openModal('검토파일 해제 — ' + esc(o.id || id),
+            '<p>안전관리자 검토파일을 지우고 <b>검토완료</b>를 해제합니다. 지운 파일은 되살릴 수 없으며, ' +
+            '다시 검토완료로 만들려면 서명된 검토파일을 새로 등록해야 합니다.</p>',
+            '<button class="btn btn-outline" onclick="DYV2.closeModal()">취소</button>' +
+            '<button class="btn btn-primary" onclick="RSKOCC.doClearReviewFile(\'' + esc(id) + '\')">해제</button>');
+    }
+    function doClearReviewFile(id) {
+        if (!canReview()) { toast('안전관리자 검토 서명은 주관부서(재난안전과) 담당자가 첨부합니다.'); return; }
         D().setOccReviewFile(id, '');
+        V().closeModal();
         toast('검토파일 삭제 · 검토완료 해제'); render();
     }
 
@@ -652,7 +685,7 @@
         hzPickFacil: hzPickFacil, hzClearFacil: hzClearFacil, hzNaFacil: hzNaFacil,
         openImp: openImp,
         /* 안전관리자 검토 — 서명 파일 등록이 곧 검토 완료 */
-        openReviewFile: openReviewFile, onPickReview: onPickReview, doReviewFile: doReviewFile, clearReviewFile: clearReviewFile,
+        openReviewFile: openReviewFile, onPickReview: onPickReview, doReviewFile: doReviewFile, clearReviewFile: clearReviewFile, doClearReviewFile: doClearReviewFile,
         openView: openView
     };
     wireHazardHooks();   /* 행별 uploadDrop/ORGPICK 진입점을 RSKOCC 에 붙인다 */

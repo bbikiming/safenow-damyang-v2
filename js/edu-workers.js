@@ -28,6 +28,14 @@
         var R = global.DYROLE;
         return !R || !R.inScope || R.inScope(deptId);
     }
+    /* ===== 조작 권한 — 판정은 DYEDU(DYROLE.canAct 파생) 한 곳이다 =====
+     * 명단 등록·수정·삭제는 그 부서 담당자(주관부서 담당자는 전 부서)가 한다. 관리·감독 계층은
+     * 조회만 한다. **관리감독자 지정일은 재난안전과 확인값**이라(SCR-EDU-006 §6) 주관부서
+     * 담당자만 넣거나 바꾼다 — 그 날짜가 법정 교육 의무의 기산점이다.
+     * 버튼만 감추면 전역 호출로 뚫리므로 진입·저장 함수에도 같은 판정을 건다. */
+    function deny(deptId) { toast(E().denyMsg(deptId)); }
+    function canDesignate() { return E().canActDept(''); }   /* 빈 부서 = 주관부서 소관 */
+    var DESIGNATE_DENY = '관리감독자 지정일은 재난안전과가 지정 사실을 확인해 등록합니다.';
     function render() {
         if (!state.mount) return;
         var all = E().workers().filter(function (w) { return inScope(w.deptId); });
@@ -61,8 +69,10 @@
               on: "EDUW.setF('year', this.value)" }
         ], {
             count: list.length + ' / ' + all.length, unit: '명', reset: 'EDUW.resetF()',
-            actions: '<button type="button" class="btn btn-outline btn-sm" onclick="EDUW.openExcel()">📥 엑셀 업로드</button>' +
-                '<button type="button" class="btn btn-primary" onclick="EDUW.openAdd()">＋ 직접 등록</button>'
+            actions: E().canRegister()
+                ? '<button type="button" class="btn btn-outline btn-sm" onclick="EDUW.openExcel()">📥 엑셀 업로드</button>' +
+                    '<button type="button" class="btn btn-primary" onclick="EDUW.openAdd()">＋ 직접 등록</button>'
+                : '<span class="file-hint">명단 등록은 각 부서 담당자가 합니다</span>'
         });
 
         var rows = list.length ? list.map(rowHtml).join('')
@@ -71,7 +81,9 @@
             '<div class="edu-card"><div class="edu-scroll"><table class="table-figma table-compact"><thead><tr>' +
                 '<th>이름</th><th>부서</th><th>구분</th><th>고용형태</th><th>채용일</th><th>관리감독자 지정일</th><th></th>' +
             '</tr></thead><tbody>' + rows + '</tbody></table></div></div>';
-        state.mount.innerHTML = head + table;
+        /* 관리·감독 계층에는 등록·수정 수단 대신 누가 하는지를 밝힌다(담당자에게는 '') */
+        var ro = global.DYROLE && global.DYROLE.readOnlyNote ? global.DYROLE.readOnlyNote('근로자 명단 등록·수정') : '';
+        state.mount.innerHTML = ro + head + table;
     }
     function rowHtml(w) {
         /* v1.1 §8.5: 자물쇠 제거 · 이름 옆 출처 칩 · 고용형태에 계약기간 병합 */
@@ -81,9 +93,15 @@
         var designation = w.category === 'SUPERVISOR'
             ? (w.designatedAt ? esc(w.designatedAt) : '<span class="chip-status chip-sm warning">미등록</span>')
             : '<span style="color:var(--text-gray);font-size:var(--fs-12);">해당 없음</span>';
+        /* 지정일 등록은 재난안전과 확인값이라 주관부서 담당자에게만 낸다. 다른 사람에게는 버튼
+           대신 누가 등록하는지를 밝힌다(미등록일 때만 — 등록돼 있으면 밝힐 일이 없다) */
+        var desig = w.category !== 'SUPERVISOR' ? ''
+            : canDesignate()
+                ? '<button type="button" class="btn btn-outline btn-sm" onclick="EDUW.openDesignation(\'' + w.id + '\')">지정일 등록</button> '
+                : (w.designatedAt ? '' : '<span class="file-hint">지정일은 재난안전과가 등록</span> ');
         var act = w.source === 'HR'
-            ? (w.category === 'SUPERVISOR' ? '<button type="button" class="btn btn-outline btn-sm" onclick="EDUW.openDesignation(\'' + w.id + '\')">지정일 등록</button> ' : '') +
-              '<span style="color:var(--text-gray);font-size:var(--fs-12);">인사정보 읽기 전용</span>'
+            ? desig + '<span style="color:var(--text-gray);font-size:var(--fs-12);">인사정보 읽기 전용</span>'
+            : !E().canActDept(w.deptId) ? ''
             : '<button type="button" class="btn btn-outline btn-sm" onclick="EDUW.openEdit(\'' + w.id + '\')">수정</button>' +
               ' <button type="button" class="btn btn-outline btn-sm" style="border-color:var(--status-danger-border);color:var(--status-danger-fg);" onclick="EDUW.remove(\'' + w.id + '\')">삭제</button>';
         return '<tr>' +
@@ -104,12 +122,16 @@
 
     /* =============== 등록/수정 모달 =============== */
     function openAdd() {
-        F = { mode: 'add', name: '', deptId: E().deptCandidates()[0].id, category: 'FIELD', empType: 'CONTRACT', hireDate: E().today(), designatedAt: '', contractMonths: 12 };
+        if (!E().canRegister()) { deny(E().defaultDeptId()); return; }
+        /* 기본 부서는 로그인한 사람의 소속 — 목록 첫 부서를 기본으로 두면 남의 부서 명단에 들어가고,
+           조회 범위 밖이라 등록한 본인 목록에서도 사라진다 */
+        F = { mode: 'add', name: '', deptId: E().defaultDeptId(), category: 'FIELD', empType: 'CONTRACT', hireDate: E().today(), designatedAt: '', origDesignatedAt: '', contractMonths: 12 };
         renderForm();
     }
     function openEdit(id) {
         var w = E().workerOf(id); if (!w || w.source === 'HR') { toast('인사연동 근로자는 수정할 수 없습니다.'); return; }
-        F = { mode: 'edit', id: id, name: w.name, deptId: w.deptId, category: w.category, empType: w.empType, hireDate: w.hireDate, designatedAt: w.designatedAt || '', contractMonths: w.contractMonths || 0 };
+        if (!E().canActDept(w.deptId)) { deny(w.deptId); return; }
+        F = { mode: 'edit', id: id, origDeptId: w.deptId, name: w.name, deptId: w.deptId, category: w.category, empType: w.empType, hireDate: w.hireDate, designatedAt: w.designatedAt || '', origDesignatedAt: w.designatedAt || '', contractMonths: w.contractMonths || 0 };
         renderForm();
     }
     function renderForm() {
@@ -121,8 +143,11 @@
             '<div class="edu-modal-row"><label class="form-label">부서 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 '<div class="orgpick-field" id="ew-deptfield"><div style="display:flex;gap:8px;align-items:center;">' +
                     '<input type="text" class="form-input" value="' + esc(E().deptName(F.deptId)) + '" readonly aria-label="부서" style="flex:1;background:var(--gray-50);">' +
-                    '<button type="button" class="btn btn-sm btn-outline" onclick="ORGPICK.toggle(\'ew-deptfield\',\'deptId\',\'EDUW.pickDept\')">조직도</button>' +
-                '</div></div></div>' +
+                    /* 부서는 주관부서 담당자만 고른다 — 그 밖의 담당자는 소속 부서로 고정 */
+                    (E().canPickDept() ? '<button type="button" class="btn btn-sm btn-outline" onclick="ORGPICK.toggle(\'ew-deptfield\',\'deptId\',\'EDUW.pickDept\')">조직도</button>' : '') +
+                '</div>' +
+                (E().canPickDept() ? '' : '<p class="file-hint">소속 부서 명단에 등록합니다.</p>') +
+                '</div></div>' +
             '<div class="edu-modal-row"><label class="form-label" for="ew-cat">구분</label>' +
                 '<select class="form-select" id="ew-cat">' + catOpts + '</select></div>' +
             '<div class="edu-modal-row"><label class="form-label" for="ew-emp">고용형태</label>' +
@@ -130,8 +155,13 @@
             '<div class="edu-modal-row"><label class="form-label" for="ew-hire">채용일 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 '<input type="date" class="form-input" id="ew-hire" value="' + esc(F.hireDate) + '"></div>' +
             '<div class="edu-modal-row"><label class="form-label" for="ew-designated">관리감독자 지정일</label>' +
-                '<input type="date" class="form-input" id="ew-designated" value="' + esc(F.designatedAt || '') + '">' +
-                '<div style="font-size:var(--fs-12);color:var(--text-gray);margin-top:4px;">구분이 관리감독자이면 필수이며, 재난안전과가 지정 사실을 확인해 등록합니다.</div></div>' +
+                /* 재난안전과 확인값 — 주관부서 담당자가 아니면 입력을 막고 누가 넣는지를 밝힌다 */
+                '<input type="date" class="form-input" id="ew-designated" value="' + esc(F.designatedAt || '') + '"' + (canDesignate() ? '' : ' disabled') + '>' +
+                '<div style="font-size:var(--fs-12);color:var(--text-gray);margin-top:4px;">' +
+                    (canDesignate()
+                        ? '구분이 관리감독자이면 필수이며, 재난안전과가 지정 사실을 확인해 등록합니다.'
+                        : '재난안전과가 지정 사실을 확인해 등록합니다 — 관리감독자 등록은 재난안전과 담당자에게 요청하세요.') +
+                '</div></div>' +
             /* 계약기간은 **기간제·일용일 때만** 받는다 — 공무원·공무직에게 계약기간을 물으면
                뜻이 없는 값이 저장되고, 그 값이 채용시교육 필요시간(1/4/8h) 판정에 쓰인다.
                고용형태를 바꾸면 그 값은 저장되지 않는다(doSave 에서 함께 비운다). */
@@ -151,10 +181,13 @@
         if (el('ew-cat')) F.category = el('ew-cat').value;
         if (el('ew-emp')) F.empType = el('ew-emp').value;
         if (el('ew-hire')) F.hireDate = el('ew-hire').value;
-        if (el('ew-designated')) F.designatedAt = el('ew-designated').value;
+        if (el('ew-designated') && !el('ew-designated').disabled) F.designatedAt = el('ew-designated').value;
         if (el('ew-cm')) F.contractMonths = parseFloat(el('ew-cm').value) || 0;
     }
-    function pickDept(id, name) { captureForm(); F.deptId = id; renderForm(); }
+    function pickDept(id, name) {
+        if (!E().canActDept(id)) { deny(id); return; }
+        captureForm(); F.deptId = id; renderForm();
+    }
     /* 고용형태를 바꾸면 입력칸 구성이 달라지므로 다시 그린다. 다른 칸의 입력값은
        capture 로 보존한다(모달 재렌더 전 capture — 이 코드베이스 관례).
        계약기간을 받지 않는 형태로 바꾸면 **그 값은 버린다** — 남겨 두면 공무원인데
@@ -167,9 +200,23 @@
     }
     function doSave() {
         captureForm();
+        /* 저장 경로에도 같은 판정 — 수정이면 원래 부서와 바꾼 부서 둘 다 내 소관이어야 한다 */
+        if (F.mode === 'edit' && !E().canActDept(F.origDeptId)) { deny(F.origDeptId); return; }
+        if (!E().canActDept(F.deptId)) { deny(F.deptId); return; }
         if (!F.name) { toast('이름을 입력하세요.'); return; }
         if (!F.hireDate) { toast('채용일을 입력하세요.'); return; }
-        if (F.category === 'SUPERVISOR' && !F.designatedAt) { toast('관리감독자 지정일을 입력하세요.'); return; }
+        /* 지정일을 새로 넣거나 바꾸는 것은 재난안전과 담당자만 — 바꾸지 않은 값은 기존 값으로 본다
+           (이름만 고치는 수정까지 막지 않는다). 관리감독자 구분이면 지정일이 필수이므로 결국
+           관리감독자 신규 등록은 재난안전과 담당자에게 넘어간다 */
+        var desigAfter = F.category === 'SUPERVISOR' ? (F.designatedAt || '') : '';
+        if (!canDesignate() && desigAfter !== (F.origDesignatedAt || '')) {
+            toast(DESIGNATE_DENY + (F.category === 'SUPERVISOR' ? ' 관리감독자 등록은 재난안전과 담당자에게 요청하세요.' : ''));
+            return;
+        }
+        if (F.category === 'SUPERVISOR' && !F.designatedAt) {
+            toast(canDesignate() ? '관리감독자 지정일을 입력하세요.' : DESIGNATE_DENY + ' 관리감독자 등록은 재난안전과 담당자에게 요청하세요.');
+            return;
+        }
         if (F.category === 'SUPERVISOR' && F.designatedAt > E().today()) { toast('관리감독자 지정일은 미래일 수 없습니다.'); return; }
         if (F.category !== 'SUPERVISOR') F.designatedAt = '';
         /* 계약기간은 **필수 표시(*)만 있고 검증이 없었다**(2026-09-01). 비운 채 저장하면
@@ -201,12 +248,15 @@
     }
     function remove(id) {
         var w = E().workerOf(id); if (!w) return;
+        if (!E().canActDept(w.deptId)) { deny(w.deptId); return; }
         V().openModal('근로자 삭제',
             '<p style="font-size:var(--fs-13);"><b>' + esc(w.name) + '</b> 근로자를 명단에서 제외합니다. 이력은 보존됩니다.</p>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="EDUW.doRemove(\'' + id + '\')">삭제</button>');
     }
     function doRemove(id) {
+        var w = E().workerOf(id);
+        if (w && !E().canActDept(w.deptId)) { V().closeModal(); deny(w.deptId); return; }
         E().removeWorker(id);
         V().closeModal();
         toast('근로자를 명단에서 제외했습니다.');
@@ -215,6 +265,7 @@
 
     function openDesignation(id) {
         var w = E().workerOf(id);
+        if (!canDesignate()) { toast(DESIGNATE_DENY); return; }
         if (!w || w.category !== 'SUPERVISOR') { toast('관리감독자 대상이 아닙니다.'); return; }
         V().openModal('관리감독자 지정일 등록',
             '<p style="font-size:var(--fs-13);margin-bottom:10px;"><b>' + esc(w.name) + '</b> · ' + esc(E().deptName(w.deptId)) + '</p>' +
@@ -225,6 +276,7 @@
             '<button type="button" class="btn btn-primary" onclick="EDUW.saveDesignation(\'' + id + '\')">저장</button>');
     }
     function saveDesignation(id) {
+        if (!canDesignate()) { V().closeModal(); toast(DESIGNATE_DENY); return; }
         var el = document.getElementById('ew-designation-date');
         var value = el ? el.value : '';
         if (!value) { toast('관리감독자 지정일을 입력하세요.'); return; }
@@ -235,26 +287,34 @@
 
     /* =============== 엑셀 업로드 (목업) =============== */
     function openExcel() {
-        X = { deptId: E().deptCandidates()[0].id };
+        if (!E().canRegister()) { deny(E().defaultDeptId()); return; }
+        X = { deptId: E().defaultDeptId() };
         renderExcel();
     }
     function renderExcel() {
-        V().openModal('엑셀 업로드 (목업)',
-            '<div style="font-size:var(--fs-13);">엑셀 템플릿을 업로드하면 해당 부서에 <b>4명</b>의 계약직 샘플 근로자를 추가합니다.</div>' +
+        /* §15 — 화면에 «목업»을 쓰지 않는다. 대신 무엇이 들어가는지 사실대로 밝힌다. */
+        V().openModal('엑셀 업로드',
+            '<div style="font-size:var(--fs-13);">엑셀 파일 읽기는 파일관리 연계 후 제공됩니다. 지금은 해당 부서에 <b>예시 계약직 근로자 4명</b>을 추가합니다.</div>' +
             '<div class="edu-modal-row" style="margin-top:12px;"><label class="form-label">대상 부서</label>' +
                 '<div class="orgpick-field" id="ew-xls-deptfield"><div style="display:flex;gap:8px;align-items:center;">' +
                     '<input type="text" class="form-input" value="' + esc(E().deptName(X.deptId)) + '" readonly aria-label="대상 부서" style="flex:1;background:var(--gray-50);">' +
-                    '<button type="button" class="btn btn-sm btn-outline" onclick="ORGPICK.toggle(\'ew-xls-deptfield\',\'deptId\',\'EDUW.pickExcelDept\')">조직도</button>' +
-                '</div></div></div>' +
+                    (E().canPickDept() ? '<button type="button" class="btn btn-sm btn-outline" onclick="ORGPICK.toggle(\'ew-xls-deptfield\',\'deptId\',\'EDUW.pickExcelDept\')">조직도</button>' : '') +
+                '</div>' +
+                (E().canPickDept() ? '' : '<p class="file-hint">소속 부서 명단에 추가합니다.</p>') +
+                '</div></div>' +
             '<div class="edu-modal-row"><label class="form-label">파일</label>' +
                 '<button type="button" class="btn btn-sm btn-outline" onclick="DYV2.notReady(\'엑셀 파일 선택\', \'문서관리 연계\')">＋ 파일 선택</button></div>' +
             V().fileHint(),
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="EDUW.doExcel()">업로드</button>');
     }
-    function pickExcelDept(id, name) { X.deptId = id; renderExcel(); }
+    function pickExcelDept(id, name) {
+        if (!E().canActDept(id)) { deny(id); return; }
+        X.deptId = id; renderExcel();
+    }
     function doExcel() {
         var deptId = X.deptId;
+        if (!E().canActDept(deptId)) { V().closeModal(); deny(deptId); return; }
         var sample = ['김대현', '이수정', '박준서', '최은지'].map(function (nm) {
             return {
                 name: nm, deptId: deptId, category: 'FIELD', empType: 'CONTRACT',

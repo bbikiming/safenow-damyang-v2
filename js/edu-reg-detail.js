@@ -19,6 +19,13 @@
     var state = { mount: null, courseId: null };
     var G = null; /* 참석자 등록부 등록 폼 */
 
+    /* ===== 조작 권한 — 판정은 DYEDU(DYROLE.canAct 파생) 한 곳이다 =====
+     * 종료 처리는 그 교육을 연 쪽(집합교육 = 재난안전과), 참석자 등록부·신청 취소·완료기록
+     * 정정은 그 부서 담당자(주관부서 담당자는 전 부서)가 한다. 관리·감독 계층은 조회만 한다.
+     * 버튼만 감추면 전역 호출로 뚫리므로 진입·저장 함수에도 같은 판정을 건다. */
+    function deny(deptId) { toast(E().denyMsg(deptId)); }
+    function actor() { return global.DYROLE && global.DYROLE.actorLabel ? global.DYROLE.actorLabel() : '재난안전과'; }
+
     function render() {
         if (!state.mount) return;
         var c = E().courseOf(state.courseId);
@@ -38,11 +45,12 @@
         var deptCnt = Object.keys(enrolls.reduce(function (m, e) { m[e.deptId] = 1; return m; }, {})).length;
 
         var actions = '';
+        var canApply = E().canRegister();
         if (c.status === 'OPEN') {
             actions =
-                '<button type="button" class="btn btn-outline" onclick="EDURD.openApply()">＋ 참석자 등록부 등록</button>' +
-                '<button type="button" class="btn btn-primary" data-tour="close" onclick="EDURD.closeCourse()">교육 종료 처리</button>';
-        } else if (!lockOf(c.id)) {
+                (canApply ? '<button type="button" class="btn btn-outline" onclick="EDURD.openApply()">＋ 참석자 등록부 등록</button>' : '') +
+                (E().canActCourse(c) ? '<button type="button" class="btn btn-primary" data-tour="close" onclick="EDURD.closeCourse()">교육 종료 처리</button>' : '');
+        } else if (!lockOf(c.id) && canApply) {
             actions = '<button type="button" class="btn btn-outline" onclick="EDURD.openApply()">＋ 정정 등록부 추가</button>';
         }
 
@@ -90,6 +98,10 @@
                 '<td>' + esc(e.at) + '</td>' +
                 '<td class="col-action">' + (cancelled
                     ? '<span style="font-size:var(--fs-12);color:var(--text-gray);">' + esc(e.cancelReason || '취소 사유 미기재') + '<br>' + esc(e.cancelledAt || '') + '</span>'
+                    /* 신청 취소·완료기록 정정은 그 부서 담당자(주관부서 담당자는 전 부서)만 —
+                       남의 부서 등록부를 거두는 것은 그 부서가 올린 기록을 지우는 일이다 */
+                    : !E().canActDept(e.deptId)
+                    ? ''
                     : enrollLock
                     ? '<button type="button" class="btn btn-outline btn-sm" disabled title="결재 ' + esc(enrollLock) +
                       ' — 공문에 이수자 명단이 실려 나가 취소할 수 없습니다">🔒 ' + esc(enrollLock) + '</button>'
@@ -116,14 +128,17 @@
         }).join('') : '<div style="color:var(--text-gray);font-size:var(--fs-12);padding:12px;">이력이 없습니다.</div>';
         var histCard = '<div class="edu-card"><div class="edu-card-title">이력</div><div class="edu-hist">' + hist + '</div></div>';
 
-        state.mount.innerHTML = summary + enrollTable + histCard;
+        /* 관리·감독 계층에는 처리 수단 대신 누가 하는지를 밝힌다(담당자에게는 '') */
+        var ro = global.DYROLE && global.DYROLE.readOnlyNote ? global.DYROLE.readOnlyNote('참석자 등록·종료 처리') : '';
+        state.mount.innerHTML = ro + summary + enrollTable + histCard;
     }
 
     /* =============== 참석자 등록부 등록 =============== */
     function openApply() {
-        var depts = E().deptCandidates();
         var c = E().courseOf(state.courseId);
-        G = { deptId: depts[0].id, workerIds: {}, signFile: '', actualHours: c ? c.hours : 0 };
+        if (!E().canRegister()) { deny(E().defaultDeptId()); return; }
+        /* 기본 부서는 로그인한 사람의 소속 — 목록 첫 부서를 기본으로 두면 남의 부서 명의로 저장된다 */
+        G = { deptId: E().defaultDeptId(), workerIds: {}, signFile: '', actualHours: c ? c.hours : 0 };
         renderApply();
     }
     function targetWorkers(deptId) {
@@ -151,8 +166,11 @@
             '<div class="edu-modal-row"><label class="form-label">부서 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 '<div class="orgpick-field" id="erd-applydept"><div style="display:flex;gap:8px;align-items:center;">' +
                     '<input type="text" class="form-input" value="' + esc(E().deptName(G.deptId)) + '" readonly aria-label="부서" style="flex:1;background:var(--gray-50);">' +
-                    '<button type="button" class="btn btn-sm btn-outline" onclick="ORGPICK.toggle(\'erd-applydept\',\'deptId\',\'EDURD.applyPickDept\')">조직도</button>' +
-                '</div></div></div>' +
+                    /* 부서는 주관부서 담당자만 고른다 — 그 밖의 담당자는 소속 부서로 고정 */
+                    (E().canPickDept() ? '<button type="button" class="btn btn-sm btn-outline" onclick="ORGPICK.toggle(\'erd-applydept\',\'deptId\',\'EDURD.applyPickDept\')">조직도</button>' : '') +
+                '</div>' +
+                (E().canPickDept() ? '' : '<p class="file-hint">소속 부서로 등록합니다 — 다른 부서 건은 그 부서 담당자가 등록합니다.</p>') +
+                '</div></div>' +
             '<div class="edu-modal-row"><label class="form-label">근로자 선택 <span style="color:var(--status-danger-fg)">*</span> ' +
                 '<span style="color:var(--text-gray);font-weight:var(--fw-regular);">(' + selCnt + ' / ' + ws.length + '명)</span></label>' +
                 '<div class="edu-tg-body" style="max-height:240px;">' + rows + '</div>' +
@@ -175,11 +193,15 @@
         var el = document.getElementById('erd-actual-hours');
         if (el && el.value !== '') G.actualHours = +el.value;
     }
-    function applyPickDept(id, name) { captureApply(); G.deptId = id; G.workerIds = {}; renderApply(); }
+    function applyPickDept(id, name) {
+        if (!E().canActDept(id)) { deny(id); return; }
+        captureApply(); G.deptId = id; G.workerIds = {}; renderApply();
+    }
     function applyToggle(id, on) { captureApply(); if (on) G.workerIds[id] = true; else delete G.workerIds[id]; renderApply(); }
     function applyAttachSign() { captureApply(); G.signFile = E().deptName(G.deptId) + '_서명_' + state.courseId + '.pdf'; renderApply(); }
     function applyClearSign() { captureApply(); G.signFile = ''; renderApply(); }
     function doApply() {
+        if (!E().canActDept(G.deptId)) { deny(G.deptId); return; }
         var ids = Object.keys(G.workerIds).filter(function (k) { return G.workerIds[k]; });
         if (!ids.length) { toast('근로자를 1명 이상 선택하세요.'); return; }
         if (!G.signFile) { toast('서명파일을 업로드하세요 (필수).'); return; }
@@ -215,6 +237,7 @@
     function confirmCancel(deptId) {
         var c = E().courseOf(state.courseId); if (!c) return;
         /* 버튼을 감추는 것만으로는 부족하다 — 전역 호출(EDURD.confirmCancel)로 뚫린다 */
+        if (!E().canActDept(deptId)) { deny(deptId); return; }
         var lock = lockOf(state.courseId);
         if (lock) { toast('결재 ' + lock + ' 상태라 신청을 취소할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
         var mine = E().enrolls(state.courseId).filter(function (e) { return e.deptId === deptId; });
@@ -229,17 +252,20 @@
             '<button type="button" class="btn btn-primary" onclick="EDURD.doCancel(\'' + esc(deptId) + '\')">' + (c.status === 'DONE' ? '취소이력 남기기' : '신청 취소') + '</button>');
     }
     function doCancel(deptId) {
+        if (!E().canActDept(deptId)) { V().closeModal(); deny(deptId); return; }
         var lock = lockOf(state.courseId);
         if (lock) { V().closeModal(); toast('결재 ' + lock + ' 상태라 신청을 취소할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
         var c = E().courseOf(state.courseId);
         var reason = c && c.status === 'DONE' ? ((document.getElementById('erd-cancel-reason') || {}).value || '').trim() : '';
         if (c && c.status === 'DONE' && !reason) { toast('정정 사유를 입력하세요.'); return; }
+        /* 정정의 처리자는 실제 접속자다(SCR-EDU-004 §3 — 사유·처리자·시각을 남긴다).
+           부서 담당자도 자기 부서 기록을 정정하므로 '재난안전과'로 박으면 이력이 거짓이 된다 */
         var r = c && c.status === 'DONE'
-            ? E().cancelCompletedEnroll(state.courseId, deptId, reason, '재난안전과')
+            ? E().cancelCompletedEnroll(state.courseId, deptId, reason, actor())
             : E().removeEnroll(state.courseId, deptId);
         if (r) {
             E().pushCourseHistory(state.courseId, {
-                type: 'STATUS', by: E().deptName(deptId),
+                type: 'STATUS', by: actor(),
                 memo: (c && c.status === 'DONE' ? '완료 교육기록 정정(등록취소) · 사유 ' + reason : '참석자 등록부 등록 취소') + ' · ' + r.workers + '명' + (r.records ? ' · 이수기록 ' + r.records + '건 집계 제외' : '')
             });
         }
@@ -251,6 +277,8 @@
     /* =============== 교육 종료 처리 =============== */
     function closeCourse() {
         var c = E().courseOf(state.courseId); if (!c) return;
+        /* 종료 처리는 되돌릴 수 없다 — 그 교육을 연 쪽(집합교육 = 재난안전과 담당자)만 한다 */
+        if (!E().canActCourse(c)) { deny(E().courseDeptOf(c)); return; }
         var enrolls = E().enrolls(state.courseId);
         var totalCnt = enrolls.reduce(function (n, e) { return n + (e.workerIds || []).length; }, 0);
         V().openModal('교육 종료 처리',
@@ -261,6 +289,8 @@
     }
     function doClose() {
         var c = E().courseOf(state.courseId); if (!c) return;
+        if (!E().canActCourse(c)) { V().closeModal(); deny(E().courseDeptOf(c)); return; }
+        if (c.status === 'DONE') { V().closeModal(); toast('이미 종료 처리된 교육입니다.'); return; }
         var enrolls = E().enrolls(state.courseId);
         var total = 0;
         enrolls.forEach(function (e) {
@@ -268,7 +298,7 @@
             total += (e.workerIds || []).length;
         });
         E().updateCourse(state.courseId, { status: 'DONE' });
-        E().pushCourseHistory(state.courseId, { type: 'STATUS', by: '재난안전과', memo: '교육 종료 처리 · 신청자 ' + total + '명 실제 참석시간 카운트' });
+        E().pushCourseHistory(state.courseId, { type: 'STATUS', by: actor(), memo: '교육 종료 처리 · 신청자 ' + total + '명 실제 참석시간 카운트' });
         V().closeModal();
         toast('교육 종료 · ' + total + '명 카운트 완료');
         render();

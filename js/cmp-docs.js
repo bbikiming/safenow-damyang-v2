@@ -30,6 +30,7 @@
         q: '', sr: '', year: '', status: '',
         dept: '',            /* 법정 업무 현황 L2 에서 넘어온 부서 조건 — 필터 UI 로는 내지 않는다(D-5) */
         menu: '',            /* 분야(구 대메뉴) 조건 — 현황 통계·경영방침이 넘겨 준다. 필터 UI 로는 내지 않는다 */
+        map: '',             /* 미분류 조건 — 내 할일 «미분류 N건 분류 확인» 카드가 넘겨 준다 */
         stages: [],          /* 업무단계 다중 조건 (DYPICK) */
         page: 1,
         expand: {},          /* docId → 업무단계 칩 전부 펼침 */
@@ -48,8 +49,10 @@
      * ========================================================================= */
     function readURL() {
         var p = new URLSearchParams(location.search);
-        var st = p.get('stage');
-        if (st && D().stage(st)) S.stages = [st];
+        /* 할 일 조건은 여러 개일 수 있다 — 쉼표로 이어 싣는다. 종전에는 1개일 때만
+           주소에 남아, 2개 이상 고르면 새로고침·주소 공유에서 조건이 조용히 풀렸다
+           («주소는 지금 상태를 담는다», SCR-CMP-002 §3-0). 없는 코드는 버린다. */
+        S.stages = String(p.get('stage') || '').split(',').filter(function (id) { return !!D().stage(id); });
         /* 기본 연도는 비워 두지 않는다 — 전체를 날짜 내림차순으로 보면 첫 페이지가
            2026년 현행 업무문서(이행항목 축이 없는 «이 목록 밖 문서»)로만 채워져,
            이 화면의 요점인 «어떤 할 일의 증빙인가»가 첫 화면에서 보이지 않는다.
@@ -65,6 +68,9 @@
            연도 기본값도 함께 푼다 — 분야를 보러 온 것이지 특정 연도를 보러 온 것이 아니다. */
         S.menu = p.get('menu') || '';
         if (S.menu && p.get('year') == null) S.year = '';
+        /* 미분류 조건 — 내 할일 «미분류 N건 분류 확인»이 보낸다. 조건 없이 보내면 전체 5만여 건에서
+           그 N건을 찾을 방법이 없다(종전 카드가 그랬다). */
+        S.map = p.get('map') === 'unmapped' ? 'unmapped' : '';
         /* 부서로 들어오면 연도 기본값을 풀어 준다 — 그 부서 문서를 보러 온 것이지
            특정 연도를 보러 온 것이 아니다(0건으로 맞이하지 않는다) */
         if (S.dept && p.get('year') == null) S.year = '';
@@ -77,13 +83,14 @@
     }
     function urlOf() {
         var p = new URLSearchParams();
-        if (S.stages.length === 1) p.set('stage', S.stages[0]);
+        if (S.stages.length) p.set('stage', S.stages.join(','));
         if (S.year) p.set('year', S.year);
         if (S.q) p.set('q', S.q);
         if (S.sr) p.set('sr', S.sr);
         if (S.status) p.set('status', S.status);
         if (S.dept) p.set('dept', S.dept);
         if (S.menu) p.set('menu', S.menu);
+        if (S.map) p.set('map', S.map);
         if (S.doc) p.set('doc', S.doc);
         if (S.back) p.set('back', S.back);
         var qs = p.toString();
@@ -101,6 +108,7 @@
         if (S.year && String(d.year) !== String(S.year)) return false;
         if (S.dept && d.dept !== S.dept) return false;
         if (S.menu && d.menuKey !== S.menu) return false;
+        if (S.map === 'unmapped' && !(d.origin === 'ledger' && !d.mapped && !d.excluded)) return false;
         if (S.status && d.status !== S.status) return false;
         if (S.sr && !F().match(S.sr, [d.sr])) return false;
         if (S.stages.length) {
@@ -115,7 +123,7 @@
             return String(b.date || '').localeCompare(String(a.date || ''));
         });
     }
-    function filtering() { return !!(S.q || S.sr || S.year || S.status || S.stages.length || S.dept || S.menu); }
+    function filtering() { return !!(S.q || S.sr || S.year || S.status || S.stages.length || S.dept || S.menu || S.map); }
 
     function yearOptions() {
         return [['', '연도 전체']].concat(C().years().slice().reverse().map(function (y) { return [y, y + '년']; }));
@@ -186,7 +194,9 @@
             {
                 count: list.length.toLocaleString(), unit: '건',
                 reset: 'CMPDOC.resetF()',
-                extraActive: advN + (S.stages.length ? 1 : 0),
+                /* 주소로 걸려 온 조건(분야·미분류)도 센다 — 안 세면 [필터 초기화]가 비활성이라
+                   칩의 ×로만 풀 수 있었다(«초기화도 그 조건을 함께 푼다», CLAUDE.md §17). */
+                extraActive: advN + (S.stages.length ? 1 : 0) + (S.menu ? 1 : 0) + (S.map ? 1 : 0),
                 actions: '<button type="button" class="btn btn-outline btn-sm" onclick="CMPDOC.openPick()">업무단계 고르기' +
                         (S.stages.length ? ' <b>' + S.stages.length + '</b>' : '') + '</button>' +
                     '<button type="button" class="btn btn-outline btn-sm" aria-expanded="' + (docAdvOpen() ? 'true' : 'false') +
@@ -195,7 +205,7 @@
             });
         bar += yearChips() + docAdvPanel();
 
-        return notice() + bar + deptCond() + menuCond() + stageCond() +
+        return notice() + bar + deptCond() + menuCond() + mapCond() + stageCond() +
             '<p class="cmp-cap">조건에 맞는 <b>문서 ' + list.length.toLocaleString() + '건</b> · 할 일 <b>연결 ' + lc.links.toLocaleString() + '건</b> — ' +
                 '한 문서가 여러 할 일에 걸리므로 두 수는 다릅니다.</p>' +
             (rows.length ? table(rows) : emptyBox()) +
@@ -229,6 +239,13 @@
         var total = D().allDocs().filter(function (d) { return d.menuKey === S.menu; }).length;
         return '<p class="cmp-cond"><span class="chip-mini wt-elec">분야 ' + esc(label) + ' 문서 ' + total.toLocaleString() + '건' +
             '<button type="button" class="cmp-cond-x" aria-label="분야 조건 해제" onclick="CMPDOC.setF(\'menu\',\'\')">×</button></span></p>';
+    }
+    /* 미분류 조건 칩 — 부서·분야 조건과 같은 형태. 건수는 지금 남은 미분류 수다(분류를 붙이면 준다). */
+    function mapCond() {
+        if (S.map !== 'unmapped') return '';
+        var n = D().allDocs().filter(function (d) { return d.origin === 'ledger' && !d.mapped && !d.excluded; }).length;
+        return '<p class="cmp-cond"><span class="chip-mini wt-elec">미분류 문서 ' + n.toLocaleString() + '건' +
+            '<button type="button" class="cmp-cond-x" aria-label="미분류 조건 해제" onclick="CMPDOC.setF(\'map\',\'\')">×</button></span></p>';
     }
     /* 연도 칩 — 값이 2~3개뿐이라 드롭다운은 과하다. 각 칩에 건수를 붙여
        고르기 전에 몇 건인지 보이게 한다. */
@@ -303,8 +320,14 @@
         var st = (d.stageIds || []).map(D().stage).filter(Boolean);
         /* 왜 비었는지 모르면 데이터 오류로 읽힌다 — 칩에 이유를 단다(D-11) */
         if (!st.length) {
-            if (d.origin !== 'ledger') {
+            if (d.origin === 'v2') {
                 return '<span class="chip-mini wt" title="이행항목 축이 없는 현행 업무문서입니다 — 전용 화면에서 관리하는 문서라 여기서는 연결된 할 일이 없습니다.">이 목록 밖 문서</span>';
+            }
+            /* 이 시스템에서 올린 문서인데 할 일이 없는 경우 — 저장 계층이 이제 만들지
+               않지만(addDocument), 종전 경로로 이미 생긴 것을 «이 목록 밖 문서»(현행
+               업무문서)로 잘못 부르지 않는다. */
+            if (d.origin !== 'ledger') {
+                return '<span class="chip-status chip-sm warning" title="이 시스템에서 등록한 문서인데 연결된 할 일이 없습니다 — 어느 의무의 증빙도 아닙니다.">할 일 미지정</span>';
             }
             /* «미분류»와 «분류에서 뺀 것»은 다르다 — 뺀 것은 이미 판단이 끝난
                문서라 교정 대상이 아니다. 한 칩으로 묶으면 교정할 필요가 없는 문서가
@@ -628,9 +651,20 @@
     /* 회수 경로 — 등록만 있고 지울 수단이 없으면 시연을 반복할수록 데이터가 쌓인다
      * (CLAUDE.md §4 CRUD · 검수 C-3). 판정·삭제는 전부 DYDOCS 다 — 사용자 등록분만
      * 지울 수 있고(원장 불가) 권한은 canDelete()(재난안전과 담당자) 그대로다. */
+    /* 지울 수 없는 문서에는 수단 대신 **사유**를 낸다(SCR-CMP-002 §3 예외·P11) —
+       종전에는 빈 문자열이라 부서 담당자가 자기가 올린 문서를 열어도 삭제에 대해
+       아무 말이 없어 «왜 지우는 버튼이 없지»가 됐다. */
     function removeLine(d, st) {
-        if (d.dataMode !== 'user') return '';
-        if (!D().canDelete()) return '';
+        if (d.dataMode !== 'user') {
+            var from = d.origin === 'seed26' ? '예시 자료라'
+                     : d.origin === 'v2' ? '현행 업무문서라'
+                     : '문서 원장의 실측 문서라';
+            return '<p class="cmp-cap cmp-remove">' + from + ' 이 화면에서 지우지 않습니다.</p>';
+        }
+        if (!D().canDelete()) {
+            return '<p class="cmp-cap cmp-remove">이 화면에서 등록한 문서입니다. 잘못 만들었다면 ' +
+                '<b>재난안전과 담당자</b>가 지웁니다 — 등록 직후에는 등록 결과 창의 «되돌리기»로 직접 물릴 수 있습니다.</p>';
+        }
         return '<p class="cmp-cap cmp-remove">이 문서는 이 화면에서 등록한 것입니다. 잘못 만들었다면 ' +
             '<button type="button" class="du-link" onclick="CMPDOC.askRemove(\'' + esc(d.id) + '\')">문서 삭제</button> 로 되돌립니다.</p>';
     }
@@ -691,17 +725,34 @@
                 : '<span class="chip-status chip-sm warning">미분류 — 원장 교정 대상</span>';
         }
         if (d.origin === 'v2') return '<span class="chip-mini wt">이 목록 밖 문서 — 할 일 축 없음</span>';
+        /* 할 일이 없는데 «분류완료»라고 하면 바로 옆 «연결된 할 일 없음»과 모순이다 */
+        if (!(d.stageIds || []).length) return '<span class="chip-status chip-sm warning">할 일 미지정</span>';
         return '<span class="chip-status chip-sm success">분류완료</span>';
     }
     /* 올해 이어받기 — 지난연도 문서에만 붙인다(올해 문서를 또 만들 이유가 없다) */
     function carryCard(d) {
         var y = liveYear();
         var can = D().canUpload();
+        /* 할 일이 붙지 않은 문서는 이어받지 않는다 — 이어받기는 «할 일 연결과 첨부를
+           함께 가져와» 올해 증빙을 만드는 일인데(SCR-CMP-002 §3-2), 가져올 연결이 없으면
+           어느 의무의 증빙도 아닌 사본이 생긴다. 종전에는 버튼을 내고 «등록 뒤 직접
+           골라야 합니다»라고 약속했지만 사용자 등록 문서에는 할 일을 붙이는 수단이 없어
+           그 사본은 «연결된 할 일 없음 · 분류완료»로 영영 남았다. 수단 대신 사유를 낸다. */
+        if (!(d.stageIds || []).some(function (s) { return !!D().stage(s); })) {
+            return '<div class="cmp-card">' +
+                '<h3 class="cmp-detail-h3">올해 이어받기</h3>' +
+                (d.excluded
+                    ? '<p>분류에서 뺀 문서라(' + esc(d.excluded) + ') 올해 이행 증빙으로 이어받지 않습니다.</p>'
+                    : '<p>연결된 할 일이 없어 이어받아도 어느 의무의 증빙도 되지 않습니다. ' +
+                      (D().isManager()
+                          ? '위 <b>분류 붙이기</b>로 할 일을 먼저 붙이면 이어받을 수 있습니다.'
+                          : '재난안전과 담당자가 <b>분류 붙이기</b>로 할 일을 붙이면 이어받을 수 있습니다.') + '</p>') +
+            '</div>';
+        }
         /* 이미 이어받은 원본이면 등록 버튼 대신 그 문서를 가리킨다(검수 C-2)
            — 다만 **누가 옮겼는지**는 사실대로 적는다. 예시 자료가 옮겨 둔 것을
            «내가 만들었습니다»로 쓰면 담당자가 자기 기억을 의심하게 된다. */
-        var dup = null;
-        D().allDocs().some(function (x) { if (x.presetOf === d.id && +x.year === y) { dup = x; return true; } return false; });
+        var dup = D().carriedInto(d.id, y);   /* 세 경로 공용 판정 */
         var seeded = dup && dup.origin === 'seed26';
         return '<div class="cmp-card">' +
             '<h3 class="cmp-detail-h3">올해 이어받기</h3>' +
@@ -742,9 +793,12 @@
         var src = D().docById(id);
         if (!src) return;
         var y = liveYear();
+        /* 카드가 버튼을 내지 않는 경우를 전역 호출로도 막는다 — 권한(canUpload)과
+           소유권·할 일 없음은 저장 계층(addDocument)이 다시 판정한다. */
+        if (!D().canUpload()) { V().toast('조회 전용입니다 — 문서 등록은 부서 담당자가 수행합니다.'); return; }
+        if (+src.year >= y) { V().toast('지난 연도 문서만 올해로 이어받습니다.'); return; }
         /* 같은 원본을 두 번 이어받지 않는다(검수 C-2) — 이미 만든 문서로 안내한다 */
-        var dup = null;
-        D().allDocs().some(function (d) { if (d.presetOf === id && +d.year === y) { dup = d; return true; } return false; });
+        var dup = D().carriedInto(id, y);
         if (dup) {
             S.doc = dup.id;
             render();
@@ -778,9 +832,11 @@
         /* 문구가 실제 복사 범위와 달랐다 — 제목·수발신자뿐 아니라 업무단계와
            첨부까지 가져온다(위 주석 «복사 범위는 전부»). 무엇이 딸려왔는지
            모르면 담당자가 첨부를 또 올린다. */
+        /* «할 일 1개 · 원본에 첨부 없음을 함께 가져왔습니다»로 읽혀 «없음»을 가져온
+           꼴이었다 — 가져온 것과 없는 것을 나눠 말한다. */
         V().toast(y + '년 문서로 등록했습니다 — 할 일 ' + stages.length + '개' +
-            (files.length ? ' · 첨부 ' + files.length + '건' : ' · 원본에 첨부 없음') +
-            '을 함께 가져왔습니다.');
+            (files.length ? '와 첨부 ' + files.length + '건을 함께 가져왔습니다.'
+                          : '를 함께 가져왔습니다. 원본에는 첨부가 없습니다.'));
     }
 
     /* ── 페이지 제목 줄 ── */
@@ -801,7 +857,7 @@
     function setF(k, v) { S[k] = v; S.page = 1; rerender(); }
     /* 초기화는 '연도 전체'가 아니라 **기본 연도**로 돌아간다 — 읽는 사람이 기대하는
        초기 상태가 처음 열었을 때의 화면이다. */
-    function resetF() { S.q = ''; S.sr = ''; S.year = String(D().defaultYear()); S.status = ''; S.stages = []; S.dept = ''; S.menu = ''; S.page = 1; rerender(); }
+    function resetF() { S.q = ''; S.sr = ''; S.year = String(D().defaultYear()); S.status = ''; S.stages = []; S.dept = ''; S.menu = ''; S.map = ''; S.page = 1; rerender(); }
     function expand(id) { S.expand[id] = !S.expand[id]; render(); }
     function toggleAdv() { S.adv = !docAdvOpen(); render(); }
     function go(n) { S.page = n; render(); try { window.scrollTo(0, 0); } catch (e) {} }
