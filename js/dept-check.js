@@ -259,7 +259,7 @@ var SKEY = 'dy-deptcheck-v4';   /* v4 — 경영방침 게시 회차 축을 연�
                     ? '<button type="button" class="btn btn-outline btn-sm" onclick="' + ns + '.open(\'' + esc(d.id) + '\')">확인 등록</button>'
                     : '<span class="dchk-ro">조회</span>') +
                 (st.status !== ST.DONE
-                    ? (canAct(d.id) ? ' <button type="button" class="btn btn-outline btn-sm" onclick="' + ns + '.remind(\'' + esc(d.id) + '\')">독촉</button>' : '')
+                    ? (canRemindRow(d.id) ? ' <button type="button" class="btn btn-outline btn-sm" onclick="' + ns + '.remind(\'' + esc(d.id) + '\')">독촉</button>' : '')
                     : '') +
             '</td>' +
         '</tr>';
@@ -380,11 +380,29 @@ var SKEY = 'dy-deptcheck-v4';   /* v4 — 경영방침 게시 회차 축을 연�
         ph.splice(i, 1);
         setState(key, deptId, { photos: ph });
     }
-    /* 독촉 — 회의에서 미이행 부서 대응으로 나온 수단은 전화와 알림이다 */
+    /* 독촉 권한 — 독촉 경로(이행점검·경영방침·교육·위험성평가)가 같은 판정을 쓴다(기획확인 4차
+       C-32, 2026-10-06): 주관부서와 그 부서는 보내고 총괄 책임자는 조회만 한다(DYROLE.canRemind).
+       종전에는 이 표만 canAct(담당자)로 판정해 재난안전과장·부서장은 독촉할 수 없었고, 위험성평가는
+       그 반대라 같은 «독촉»이 화면마다 다른 사람에게 열려 있었다. 자기 자신에게는 보내지 않는다 —
+       그 부서 담당자가 자기 부서를 독촉하면 받는 사람이 자기다. */
+    function canRemindRow(deptId) {
+        var R = global.DYROLE;
+        if (!R || !R.canRemind) return canAct(deptId);
+        var p = R.current ? R.current() : null;
+        if (p && p.tier === 'staff' && p.deptId === deptId) return false;
+        return R.canRemind(deptId);
+    }
+    /* 독촉 — 회의에서 미이행 부서 대응으로 나온 수단은 전화와 알림이다.
+       받는 사람은 등급으로 찾는다(DYADM.contactText — 부서 안전보건 담당자 → 부서장 대체).
+       이 표는 아직 발송 기록을 남기지 않으므로 «보냈다»고 말하지 않는다(CLAUDE.md §15). */
     function remind(key, deptId) {
-        if (!canAct(deptId)) { denied(deptId); return; }
+        if (!canRemindRow(deptId)) {
+            toast(global.DYROLE && global.DYROLE.remindDenyNote ? global.DYROLE.remindDenyNote('독촉') : '독촉 권한이 없습니다.');
+            return;
+        }
         var d = deptOf(deptId);
-        toast((d ? d.name : deptId) + ' 담당자에게 독촉 알림을 발송했습니다');
+        var who = global.DYADM && global.DYADM.contactText ? global.DYADM.contactText(deptId) : '그 부서 담당자';
+        toast((d ? d.name : deptId) + ' 독촉 · 받는 사람 ' + who + ' — 발송 기록은 알림 연계 후 남습니다');
     }
 
     global.DEPTCHK = {

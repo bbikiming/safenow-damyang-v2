@@ -102,6 +102,28 @@
         if (!worker.designatedAt) return '';
         return worker.designatedAt > (worker.hireDate || '') ? worker.designatedAt : worker.hireDate;
     }
+    /* 특별교육 이수로 채용 시 교육을 갈음한다 — 산안법 시행규칙 제26조제1항 후단(`oshr-26`):
+     *   «사업주가 … 특별교육을 실시한 때에는 해당 근로자에 대하여 … 채용 시 교육 … 을 실시한
+     *    것으로 본다.»
+     * 종전에는 채용시 이수기록만 세어, 특별교육을 받은 사람이 채용시교육 «미이수»로 찍혔다 —
+     * 법이 한 것으로 보는 교육을 안 했다고 말한 셈이다(기획확인 4차 C-27 검토, 2026-10-06).
+     * · 같은 모집단의 특별교육만 센다 — 근로자는 기타교육(ETC), 관리감독자는 관리감독자
+     *   기타교육(SUP_ETC). 남의 표의 교육으로 갈음하지 않는다.
+     * · 시간은 보지 않는다 — 조문에 시간 요건이 없고, 특별교육은 분할·단기간 단서 때문에 이
+     *   시스템이 한 건으로 시간을 판정하지 않는다(ETC_TYPE_INFO perCourseCheck:false).
+     * · **정기교육으로는 갈음하지 않는다** — 그런 규정이 없다. */
+    function specialAsHire(w) {
+        var want = w.category === 'SUPERVISOR' ? 'SUP_ETC' : 'ETC';
+        /* 채용일 전의 교육은 이 채용의 교육이 아니다 — 근무하기 전 날짜의 기록은 갈음에 쓰지 않는다
+           (관리감독자는 채용 뒤·지정 전에 받은 관리감독자 특별교육이면 «그 지위 전에 받은» 것이라 센다) */
+        var since = w.hireDate || '';
+        return records().filter(function (r) {
+            if (r.workerId !== w.id || r.kind !== 'ETC') return false;
+            if (since && r.date < since) return false;
+            var c = courseOf(r.courseId);
+            return !!c && c.kind === want && c.etcType === '특별교육';
+        }).sort(function (a, b) { return a.date.localeCompare(b.date); });
+    }
     function hireStatus(workerId) {
         var w = workerOf(workerId); if (!w) return null;
         var need = hireHours(w);
@@ -109,18 +131,26 @@
         var rec = records().filter(function (r) { return r.workerId === workerId && r.kind === 'HIRE'; });
         var doneHours = rec.reduce(function (n, r) { return n + (r.hours || 0); }, 0);
         var lastDate = rec.length ? rec.sort(function (a, b) { return b.date.localeCompare(a.date); })[0].date : '';
+        /* 채용시 기록으로 채워지지 않았을 때만 특별교육 갈음을 본다 — 둘 다 있으면 채용시 기록이 정본이다 */
+        var sp = doneHours >= need ? [] : specialAsHire(w);
+        var via = '', viaCourseId = '';
+        if (sp.length) { via = '특별교육'; viaCourseId = sp[0].courseId; lastDate = sp[0].date; }
+        var met = doneHours >= need || !!via;
         var status;
         if (!anchor) {
             /* 기준일이 없으면 이수·미이수를 말할 수 없다. 이수 기록이 있으면 그 사실만 남긴다. */
-            status = doneHours >= need ? 'UNKNOWN_DONE' : 'UNKNOWN';
-        } else if (doneHours >= need) {
+            status = met ? 'UNKNOWN_DONE' : 'UNKNOWN';
+        } else if (met) {
             /* 기준일 이전~당일이면 정상, 이후면 지연 */
             status = lastDate <= anchor ? 'BEFORE' : 'LATE_DONE';
         } else {
             status = 'NONE';
         }
         return { need: need, done: doneHours, lastDate: lastDate, status: status, anchor: anchor,
-                 anchorKind: w.category === 'SUPERVISOR' ? '지정일' : '채용일' };
+                 anchorKind: w.category === 'SUPERVISOR' ? '지정일' : '채용일',
+                 /* via — '' 채용시 이수기록 · '특별교육' 시행규칙 §26① 갈음. 갈음 건에는 채용시
+                    이수기록이 없으므로 화면이 «이수 수정»·공문 진입을 내지 않는다. */
+                 via: via, viaCourseId: viaCourseId, hireRecords: rec.length };
     }
 
     /* ================= 스토어 ================= */
@@ -660,7 +690,9 @@
     function enrolls(courseId) { return allEnrolls(courseId).filter(function (e) { return e.status !== 'CANCELLED'; }); }
     /* 그 교육에 이 부서가 이미 등록했는가 — 화면이 저장 전에 미리 묻는 창구 */
     function hasEnroll(courseId, deptId) {
-        return load().enrolls.some(function (e) { return e.courseId === courseId && e.deptId === deptId; });
+        /* 등록 취소(정정)된 등록부는 세지 않는다 — 세면 정정 뒤 같은 부서를 다시 등록할 수 없다.
+           SCR-EDU-004 §4-3 «같은 부서를 다시 등록할 수 있다»와 addEnroll 의 판정이 이미 그렇다(2026-10-06 검토). */
+        return enrolls(courseId).some(function (e) { return e.deptId === deptId; });
     }
     /* 참석자 등록부 등록.
      *
@@ -733,17 +765,43 @@
     /* 교육 정보 수정으로 시간·일자가 바뀌면 이미 쌓인 이수기록도 맞춘다.
      * (안 맞추면 교육 카드의 'Nh'와 이수현황의 '인정 Nh'가 조용히 어긋난다)
      * 반환 = 갱신된 기록 건수 */
+    /* 집합교육인가 — 인정시간이 교육 합계가 아니라 **등록부 실제 참석시간**인 교육 */
+    function isGroupCourse(c) { return !!c && (c.kind === 'REG_GROUP' || c.kind === 'SUP_REG'); }
+    /* 그 근로자가 속한 (취소되지 않은) 등록부 */
+    function enrollOfWorker(courseId, workerId) {
+        return enrolls(courseId).filter(function (e) { return (e.workerIds || []).indexOf(workerId) !== -1; })[0] || null;
+    }
     function syncCourseRecordHours(courseId, hours, dateISO) {
         var d = load(), n = 0;
+        /* 집합교육은 등록부 참석시간이 정본이다(SCR-EDU-004 §6, 기획확인 4차 3차 1-1 · 2026-10-06).
+           회차를 고쳐도 **적어 둔 참석시간은 바꾸지 않는다** — 하루만 온 사람에게 전체 시간을 주면
+           하지 않은 교육을 했다고 기록하게 된다. 참석시간을 따로 적지 않은 등록부(= 전 회차 참석)만
+           새 합계를 따른다. 이수일은 교육 일자를 따른다. 종전에는 강사·장소만 고쳐도 전원을 합계로
+           덮어써 등록부 참석시간이 조용히 사라졌다. */
+        var group = isGroupCourse(courseOf(courseId));
         d.records.forEach(function (r) {
             if (r.courseId !== courseId) return;
-            if (r.hours === hours && (!dateISO || r.date === dateISO)) return;
-            r.hours = hours;
+            var nh = hours;
+            if (group) {
+                var en = enrollOfWorker(courseId, r.workerId);
+                nh = (en && en.actualHours != null) ? +en.actualHours : hours;
+            }
+            if (r.hours === nh && (!dateISO || r.date === dateISO)) return;
+            r.hours = nh;
             if (dateISO) r.date = dateISO;
             n++;
         });
         if (n) save();
         return n;
+    }
+    /* 집합교육 합계를 줄일 때 — 적어 둔 참석시간이 새 합계보다 큰 등록부. 있으면 저장을 막는다:
+       참석시간이 교육 합계를 넘을 수는 없고, 참석시간을 시스템이 줄이면 기록을 고친 것이 된다.
+       그 부서 등록부를 먼저 정정(등록 취소 후 재등록)한다. */
+    function groupHoursConflicts(courseId, newHours) {
+        if (!isGroupCourse(courseOf(courseId))) return [];
+        return enrolls(courseId).filter(function (e) {
+            return e.actualHours != null && +e.actualHours > newHours;
+        }).map(function (e) { return { deptId: e.deptId, deptName: deptName(e.deptId), actualHours: +e.actualHours }; });
     }
     function recordKindForCourse(courseId) {
         var c = courseOf(courseId); if (!c) return 'ETC';
@@ -753,6 +811,31 @@
     }
 
     function reminders() { return load().reminders; }
+    /* 부서의 교육 «할 일» — 내 할일과 대시보드가 **같은 목록을 센다**(기획확인 4차 회신, 2026-10-06).
+     *   apply  — 접수 중인 집합교육에 그 부서 참석자 등록부가 아직 없다
+     *   remind — 독촉받은 미이수자(현재 사이클 미완료)
+     * 이수율 같은 현황은 할 일이 아니라 넣지 않는다. 종전에는 내 할일만 이 두 가지를 세고 대시보드는
+     * 예시 숫자를 써서, 같은 부서의 교육 할 일이 두 화면에서 다르게 보였다. 판정을 한 곳에 둔다. */
+    function deptTodos(deptId) {
+        var out = [];
+        if (!deptId) return out;
+        var en = enrolls();
+        courses({ status: 'OPEN' }).forEach(function (c) {
+            if (c.kind !== 'REG_GROUP' && c.kind !== 'SUP_REG') return;
+            if (en.some(function (e) { return e.courseId === c.id && e.deptId === deptId; })) return;
+            out.push({ kind: 'apply', course: c });
+        });
+        reminders().forEach(function (r) {
+            if (r.deptId !== deptId) return;
+            (r.workerIds || []).forEach(function (wid) {
+                var w = workerOf(wid); if (!w) return;
+                var sr = statusRow(w, today());
+                if (sr.complete) return;
+                out.push({ kind: 'remind', worker: w, row: sr, reminder: r });
+            });
+        });
+        return out;
+    }
     function addReminder(o) {
         var d = load();
         d.reminders.push({
@@ -1008,7 +1091,8 @@
         recordCourseCompletion: recordCourseCompletion, recordKindForCourse: recordKindForCourse,
         syncCourseRecordHours: syncCourseRecordHours,
         /* 독촉 */
-        reminders: reminders, addReminder: addReminder,
+        reminders: reminders, addReminder: addReminder, deptTodos: deptTodos,
+        groupHoursConflicts: groupHoursConflicts,
         /* 계산 */
         cycleOf: cycleOf, requiredHours: requiredHours, hireHours: hireHours, hireAnchor: hireAnchor,
         etcMinHours: etcMinHours, etcShortfall: etcShortfall, isShortTermWorker: isShortTermWorker,

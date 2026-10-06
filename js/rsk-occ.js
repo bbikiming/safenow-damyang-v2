@@ -421,8 +421,8 @@
             accidentRowsHtml() +
             '<div class="roc-modal-row"><label class="form-label">첨부파일</label>' +
                 '<div>' + fileList + '</div>' +
-                '<button type="button" class="btn btn-outline btn-sm" style="margin-top:6px;" onclick="RSKOCC.regAddFile()">＋ 파일 첨부</button>' +
-                V().fileHint() +
+                /* 업로드 칸은 전 화면 공용 모양 하나(uploadDrop) — 버튼 하나짜리를 두지 않는다(기획확인 4차 D-1) */
+                V().uploadDrop('<b>첨부파일을 끌어다 놓거나 눌러서 선택</b>', 'RSKOCC.regAddFile()', { hint: true, style: 'margin-top:6px;' }) +
             '</div>' +
             /* 수시평가는 '실시했다'로 끝나지 않는다 — 감소대책을 수립·실행해야 완결된다.
              * 여기 적은 행이 그대로 개선조치가 되어 담당자의 [개선조치] 목록에 뜬다. */
@@ -448,7 +448,18 @@
     /* 조직도(ORGPICK 'deptId' 모드)에서 호출 — 표시는 부서명, 저장은 deptId */
     function pickDept(id, name) {
         if (!canRegisterFor(id)) { deptDeny(id); return; }
+        captureRegister();
+        var prev = F.deptId;
         F.deptId = id;
+        /* 담당자는 부서에 딸려 있다(A-19) — 부서를 바꾸면 옛 부서 사람으로 고른 담당자를 비운다.
+           남겨 두면 다른 부서 사람이 조치 담당자가 되어 그 건을 볼 수 없다. */
+        var cleared = 0;
+        if (prev && prev !== id && window.ORGPICK) {
+            (F.hazards || []).forEach(function (h) {
+                if (h.owner && !ORGPICK.memberInDept(h.owner, id)) { h.owner = ''; cleared++; }
+            });
+        }
+        if (cleared) { renderRegister(); toast('부서를 바꿔 담당자 ' + cleared + '명을 비웠습니다 — 새 부서 사람 중에서 다시 고르세요.'); return; }
         var inp = document.getElementById('roc-r-deptname'); if (inp) inp.value = name;
     }
     function onReasonChange() { captureRegister(); renderRegister(); }
@@ -504,7 +515,9 @@
     /* 담당자는 조직도(ORGPICK member)로만 고른다 — 모달 안이라 별도 모달을 띄우지 않고 필드 아래 펼친다 */
     function hzPickOwner(i) {
         captureRegister();
-        window.ORGPICK && ORGPICK.toggle('roc-hz-of' + i, 'member', 'RSKOCC.hzOwnerPicked' + i);
+        /* 후보는 등록 부서 사람만(A-19). 부서를 아직 안 골랐으면 먼저 고르게 한다 */
+        if (!F.deptId) { toast('부서를 먼저 고르세요 — 담당자는 그 부서 사람 중에서 고릅니다.'); return; }
+        window.ORGPICK && ORGPICK.toggle('roc-hz-of' + i, 'member', 'RSKOCC.hzOwnerPicked' + i, { rootId: F.deptId });
     }
     function hzDelPhoto(i, n) {
         captureRegister();
@@ -545,6 +558,11 @@
         var hz = F.hazards.filter(function (h) {
             return String(h.name || '').trim() && String(h.action || '').trim();
         });
+        /* 담당자는 등록 부서 사람만(A-19) — 조직도를 좁혀도 전역 호출로 다른 값이 들어올 수 있다 */
+        if (window.ORGPICK && F.hazards.some(function (h) { return !ORGPICK.memberInDept(h.owner, F.deptId); })) {
+            toast('담당자는 ' + D().deptName(F.deptId) + ' 사람 중에서 고릅니다 — 다른 부서 사람이 지정된 행이 있습니다.');
+            return;
+        }
         /* 요인만 적고 대책이 비면 '평가는 했는데 조치는 없는' 기록이 남는다 — 그 상태로 넘기지 않는다 */
         if (!hz.length) {
             toast('유해위험요인과 위험성 감소대책을 최소 1건 입력하세요.');

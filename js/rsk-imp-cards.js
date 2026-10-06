@@ -383,7 +383,8 @@
                 '<div class="orgpick-field" id="imp-am-field"><div style="display:flex;gap:8px;align-items:center;">' +
                     '<input type="text" class="form-input" id="imp-am-owner" readonly placeholder="조직도에서 선택"' +
                         ' style="flex:1;background:var(--gray-50);" value="' + esc(m.assigned_to || '') + '">' +
-                    '<button type="button" class="btn btn-outline" onclick="ORGPICK.toggle(\'imp-am-field\',\'member\',\'IMPCARD.amendPick\')">조직도</button>' +
+                    /* 후보는 그 개선조치 부서 사람만(A-19) — 다른 부서 사람은 조회 범위 밖이라 그 건을 열 수 없다 */
+                    '<button type="button" class="btn btn-outline" onclick="ORGPICK.toggle(\'imp-am-field\',\'member\',\'IMPCARD.amendPick\',{rootId:\'' + esc(m.dept_id) + '\'})">조직도</button>' +
                 '</div></div></div>' +
             (kind === 'both'
                 ? '<div class="rl-modal-row"><label class="form-label" for="imp-am-due">기한</label>' +
@@ -411,7 +412,13 @@
             V().toast(mm && mm.status === 'DONE' ? '완료된 개선조치는 담당자·기한을 바꾸지 않습니다.' : '이 개선조치를 변경할 권한이 없습니다.');
             return;
         }
-        var patch = { assigned_to: g('imp-am-owner').trim() };
+        var owner = g('imp-am-owner').trim();
+        /* 다른 부서 사람은 저장하지 않는다(A-19) — 바꾸지 않은 옛 값은 그대로 둔다(기한만 고치는 경우) */
+        if (owner !== String(mm.assigned_to || '').trim() && global.ORGPICK && !ORGPICK.memberInDept(owner, mm.dept_id)) {
+            V().toast('담당자는 이 개선조치 부서(' + D().deptName(mm.dept_id) + ') 사람 중에서 고릅니다.');
+            return;
+        }
+        var patch = { assigned_to: owner };
         /* 부서 담당자가 보낸 요청에 기한이 섞이지 않게 — 화면에 칸이 없어도 막는다 */
         if (amendKind(mm) === 'both') patch.due = g('imp-am-due');
         var r = D().amendImprovement(AMEND, patch, why, by);
@@ -436,7 +443,10 @@
             /* 완료 확인 — **기본 false**. 수시평가 조치 상세는 확인 주체가 외부 용역
                안전관리자라 흐름이 다르므로 켜지 않는다. */
             canConfirm: !!opts.canConfirm, onChange: opts.onChange || null,
-            filter: 'all', open: '', cfmOpen: '', cfmReturn: ''
+            /* groupByDept — 여러 부서 건을 한 화면에 모을 때(확인 대기 모아 보기) 부서별 묶음
+               제목을 단다. 카드에는 부서가 찍히지 않아 묶지 않으면 어느 부서 건인지 모른다. */
+            groupByDept: !!opts.groupByDept,
+            filter: 'all', open: '', cfmOpen: '', cfmReturn: '', bulk: ''
         };
         render();
     }
@@ -445,10 +455,103 @@
         return (typeof it === 'function' ? it() : it) || [];
     }
     function filter(f) { if (!CTX) return; CTX.filter = f; CTX.open = ''; render(); }
+
+    /* ===== 일괄 확인 (기획확인 4차 회신 · 2026-10-06) =====
+     * 확인은 **건마다 저장한다** — 확인자·확인일·회차가 건마다 남고, 부서 상태는 저장하지
+     * 않고 그 부서 건들에서 파생한다. 화면은 부서 단위로 묶어 한 번에 누르게 할 뿐이다.
+     * 대상은 그 부서의 «확인 대기»뿐이다 — 반려 건은 재제출을 기다리는 중이라 빼고, 공문이
+     * 올라간 평가 건은 잠금 판정(DYRSKDOC.lockOf) 그대로 빠진다.
+     * «증빙을 열어 본 뒤 확인»(SCR-RISK-001 §4-6)은 일괄에서도 같다 — 건마다 조치 내용·사진
+     * 수·완료일·서명을 한 화면에 펼쳐 두고, 열람 체크를 해야 [확인]이 켜진다.
+     * 반려는 일괄로 하지 않는다 — 사유가 건마다 달라야 담당자가 무엇을 다시 할지 안다.
+     * 일괄 확인은 알림을 만들지 않는다(받는 사람이 할 일이 없다). */
+    function canBulk() { return !!(CTX && CTX.canConfirm && canConfirmRole()); }
+    function bulkTargets(deptId) {
+        return itemsOf().filter(function (m) {
+            if (m.status !== 'DONE' || cfmInfo(m).state !== 'WAIT') return false;
+            if (deptId && m.dept_id !== deptId) return false;
+            return !(global.DYRSKDOC && m.assessment_id && DYRSKDOC.lockOf(m.assessment_id));
+        });
+    }
+    function bulkBtn(deptId, n) {
+        if (!canBulk() || n < 2) return '';
+        return '<button type="button" class="btn btn-outline btn-sm" onclick="IMPCARD.bulkOpen(\'' + esc(deptId || '') + '\')">' +
+            '확인 대기 ' + n + '건 한 번에 확인</button>';
+    }
+    function bulkOpen(deptId) {
+        if (!canBulk()) { V().toast('완료 확인·반려는 주관부서(재난안전과) 담당자가 합니다.'); return; }
+        if (!CTX) return;
+        CTX.bulk = deptId || '*'; CTX.cfmOpen = ''; CTX.cfmReturn = '';
+        render();
+    }
+    function bulkClose() { if (!CTX) return; CTX.bulk = ''; render(); }
+    /* 체크박스는 재렌더 없이 버튼만 켠다(cfmCk 와 같다) */
+    function bulkCk() {
+        var ck = document.getElementById('imp-bulk-ck'), btn = document.getElementById('imp-bulk-ok');
+        if (ck && btn) btn.disabled = !ck.checked;
+    }
+    function bulkDo() {
+        if (!CTX || !CTX.bulk) return;
+        /* 저장에도 여는 쪽과 같은 판정 — 버튼만 감추면 전역 호출로 뚫린다 */
+        if (!canBulk()) { V().toast('완료 확인·반려는 주관부서(재난안전과) 담당자가 합니다.'); return; }
+        var ck = document.getElementById('imp-bulk-ck');
+        if (!ck || !ck.checked) { V().toast('증빙을 열람했다는 확인란에 체크하세요.'); return; }
+        var list = bulkTargets(CTX.bulk === '*' ? '' : CTX.bulk), ok = 0;
+        list.forEach(function (m) {
+            var r = D().confirmImprovement(m.id, who());
+            if (!(r && r.error)) ok++;
+        });
+        CTX.bulk = '';
+        render(); bubble();
+        V().toast(ok + '건 확인 — 확인자·확인일이 건마다 기록됐습니다');
+    }
+    function bulkView() {
+        var dep = CTX.bulk === '*' ? '' : CTX.bulk;
+        var list = bulkTargets(dep);
+        var held = itemsOf().filter(function (m) {
+            return m.status === 'DONE' && cfmInfo(m).state === 'RETURNED' && (!dep || m.dept_id === dep);
+        }).length;
+        var scope = dep ? D().deptName(dep) : '전 부서';
+        if (!list.length) {
+            return '<div class="v2-empty">한 번에 확인할 «확인 대기» 건이 없습니다.</div>';
+        }
+        var rows = list.map(function (m, i) {
+            var c = cfmInfo(m), sig = m.signature || {};
+            return '<li>' +
+                '<span class="rl-imp-bulk-no">' + (i + 1) + '</span>' +
+                '<div class="rl-imp-bulk-main">' +
+                    '<b>' + esc((m.hazard && m.hazard.name) || m.hazard_risk_factor || '-') + '</b>' +
+                    (dep ? '' : ' <span class="rl-imp-bulk-dim">' + esc(D().deptName(m.dept_id)) + '</span>') +
+                    '<p>' + esc(m.action_content || '조치 내용 없음') + '</p>' +
+                    '<p class="rl-imp-bulk-dim">개선 전 ' + photoItems(m, 'before').length + '장 · 개선 후 ' +
+                        photoItems(m, 'after').length + '장 · 완료일 ' + esc(m.completed_date || '-') +
+                        (sig.by ? ' · 전자서명 ' + esc(sig.by) : '') +
+                        (c.round > 1 ? ' · <b>재제출 ' + c.round + '회차</b> — 사진이 교체됐는지 보세요' : '') + '</p>' +
+                '</div></li>';
+        }).join('');
+        return '<div class="rl-imp-bulk">' +
+            '<p class="rl-imp-bulk-head"><b>' + esc(scope) + ' — 확인 대기 ' + list.length + '건</b></p>' +
+            '<p class="file-hint">건마다 따로 확인한 것과 같은 기록(확인자·확인일)이 남습니다. ' +
+                '반려는 건마다 사유를 달아 각 카드에서 합니다.' +
+                (held ? ' 반려 후 재제출을 기다리는 ' + held + '건은 빠졌습니다.' : '') + '</p>' +
+            '<ol class="rl-imp-bulk-list">' + rows + '</ol>' +
+            '<label class="rl-imp-cfm-ck"><input type="checkbox" id="imp-bulk-ck" onchange="IMPCARD.bulkCk()">' +
+                '<span>위 ' + list.length + '건의 조치 내용과 개선 전·후 사진을 <b>열람했습니다</b></span></label>' +
+        '</div>';
+    }
     function shot(key) { if (!CTX) return; CTX.open = (CTX.open === key) ? '' : key; render(); }
 
     function render() {
         if (!CTX) return;
+        if (CTX.bulk) {
+            var n = bulkTargets(CTX.bulk === '*' ? '' : CTX.bulk).length;
+            V().openModal(CTX.title,
+                '<div class="rl-imp-wrap">' + bulkView() + '</div>',
+                '<button type="button" class="btn btn-secondary" onclick="IMPCARD.bulkClose()">← 목록으로</button>' +
+                (n ? '<button type="button" class="btn btn-primary" id="imp-bulk-ok" disabled onclick="IMPCARD.bulkDo()">' + n + '건 확인</button>' : ''),
+                { variant: 'wide' });
+            return;
+        }
         var all = itemsOf();
         var cnt = { all: all.length, over: 0, todo: 0, done: 0 };
         all.forEach(function (m) {
@@ -474,6 +577,7 @@
                 '<div class="progress" role="img" aria-label="완료율 ' + pct + '퍼센트">' +
                     '<div class="progress-bar green" style="width:' + pct + '%;"></div></div>' +
                 (CTX.metaHtml ? '<div class="rl-imp-sum-meta">' + CTX.metaHtml + '</div>' : '') +
+                singleDeptBulk(all) +
             '</div>';
         /* 필터는 건수가 적을 땐 소음이다 — 4건 이상일 때만 낸다 */
         var chip = function (k, lab, n, tone) {
@@ -489,7 +593,8 @@
               '</div>'
             : '';
         var cards = list.length
-            ? '<div class="rl-imp-cards">' + list.map(function (m, i) { return impCard(m, i + 1); }).join('') + '</div>'
+            ? (CTX.groupByDept ? groupedCards(list)
+                : '<div class="rl-imp-cards">' + list.map(function (m, i) { return impCard(m, i + 1); }).join('') + '</div>')
             : '<div class="v2-empty">' + (cnt.all ? '이 조건에 해당하는 개선조치가 없습니다.' : CTX.emptyHtml) + '</div>';
 
         /* modal-wide 의 본문은 `display:flex; justify-content:center` 라 자식이 여럿이면
@@ -501,12 +606,44 @@
             { variant: 'wide' });
     }
 
+    /* 한 부서 화면([관리])이면 요약 아래에 그 부서 일괄 확인 버튼을 단다 */
+    function singleDeptBulk(all) {
+        if (CTX.groupByDept || !all.length) return '';
+        var dep = all[0].dept_id;
+        if (all.some(function (m) { return m.dept_id !== dep; })) return '';
+        var b = bulkBtn(dep, bulkTargets(dep).length);
+        return b ? '<div class="rl-imp-grp-act">' + b + '</div>' : '';
+    }
+    /* 여러 부서 건 — 부서별 묶음 제목 아래 카드를 놓는다(1차 점검 «부서별로 묶어 달라»).
+       정렬(기한초과 → 미완료 → 완료)은 묶음 안에서 그대로 유지된다. */
+    function groupedCards(list) {
+        var order = [], by = {};
+        list.forEach(function (m) {
+            if (!by[m.dept_id]) { by[m.dept_id] = []; order.push(m.dept_id); }
+            by[m.dept_id].push(m);
+        });
+        var no = 0;
+        return order.map(function (dep) {
+            var g = by[dep];
+            var wait = g.filter(function (m) { return m.status === 'DONE' && cfmInfo(m).state === 'WAIT'; }).length;
+            var rj = g.filter(function (m) { return m.status === 'DONE' && cfmInfo(m).state === 'RETURNED'; }).length;
+            return '<section class="rl-imp-grp" aria-label="' + esc(D().deptName(dep)) + '">' +
+                '<div class="rl-imp-grp-head"><b>' + esc(D().deptName(dep)) + '</b>' +
+                    '<span class="rl-imp-grp-cnt">확인 대기 ' + wait + '건' + (rj ? ' · 반려 ' + rj + '건' : '') + '</span>' +
+                    bulkBtn(dep, bulkTargets(dep).length) +
+                '</div>' +
+                '<div class="rl-imp-cards">' + g.map(function (m) { no++; return impCard(m, no); }).join('') + '</div>' +
+            '</section>';
+        }).join('');
+    }
+
     var AMEND = null;
     global.IMPCARD = {
         open: open, amendOpen: amendOpen, amendPick: amendPick, amendSave: amendSave, filter: filter, shot: shot, render: render, photoItems: photoItems,
         cfmToggle: cfmToggle, cfmCk: cfmCk, cfmDo: cfmDo,
         cfmReturnOpen: cfmReturnOpen, cfmReturnCancel: cfmReturnCancel, cfmDoReturn: cfmDoReturn,
         cfmCancel: cfmCancel,
+        bulkOpen: bulkOpen, bulkClose: bulkClose, bulkCk: bulkCk, bulkDo: bulkDo,
         /* 목록 화면이 CTA 문구를 같은 기준으로 정하기 위해 함께 공개한다 */
         canComplete: canComplete
     };

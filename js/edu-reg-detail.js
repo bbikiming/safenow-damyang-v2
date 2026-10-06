@@ -179,11 +179,13 @@
                 '<input type="number" class="form-input" id="erd-actual-hours" min="0.1" max="' + c.hours + '" step="0.1" value="' + esc(G.actualHours) + '">' +
                 '<p style="font-size:var(--fs-12);color:var(--text-gray);margin:4px 0 0;">선택 대상자에게 공통 적용됩니다. 교육 예정시간 ' + c.hours + 'h를 넘길 수 없습니다.</p></div>' +
             '<div class="edu-modal-row"><label class="form-label">서명파일 업로드 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                /* 업로드 칸은 전 화면 공용 모양 하나(uploadDrop) — 버튼 하나짜리를 두지 않는다
+                   (기획확인 4차 D-1, 2026-10-06). 고른 뒤에는 파일명과 [×]로 바꾼다. */
                 (G.signFile
                     ? '<span style="color:var(--main-dark);font-weight:var(--fw-bold);font-size:var(--fs-12);">' + esc(G.signFile) + '</span> ' +
-                      '<button type="button" class="btn btn-sm btn-outline" onclick="EDURD.applyClearSign()">×</button>'
-                    : '<button type="button" class="btn btn-sm btn-outline" onclick="EDURD.applyAttachSign()">＋ 서명파일 첨부</button>') +
-                V().fileHint() +
+                      '<button type="button" class="btn btn-sm btn-outline" onclick="EDURD.applyClearSign()" aria-label="서명파일 지우기">×</button>' +
+                      V().fileHint()
+                    : V().uploadDrop('<b>서명파일을 끌어다 놓거나 눌러서 선택</b>', 'EDURD.applyAttachSign()', { hint: true })) +
             '</div>';
         V().openModal('참석자 등록부 등록 · ' + esc(E().deptName(G.deptId)), body,
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +

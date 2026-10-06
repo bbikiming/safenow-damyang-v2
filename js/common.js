@@ -395,16 +395,31 @@
 
     /* ── 첨부파일 업로드 제약 (지원 형식·용량·개수) — 단일 출처 ── */
     const FILE_LIMITS = {
-        formats: 'HWP · HWPX · PDF · DOC(X) · XLS(X) · PPT(X) · JPG · PNG · ZIP',
+        formats: 'HWP · HWPX · PDF · DOC(X) · XLS(X) · PPT(X) · JPG · PNG',
         /* formats 의 기계 판독용 대응쌍 — 실제 input accept·확장자 검증에 사용 */
-        extensions: ['hwp', 'hwpx', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'jpg', 'jpeg', 'png', 'zip'],
+        extensions: ['hwp', 'hwpx', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'jpg', 'jpeg', 'png'],
         maxMB: 20, maxCount: 10,
     };
-    /* 업로드 영역 하단에 붙이는 안내 문구 HTML */
-    function fileHint() {
-        return '<p class="file-hint"><b>지원 형식</b> ' + FILE_LIMITS.formats +
-            ' <span class="fh-sep">·</span> <b>파일당 최대</b> ' + FILE_LIMITS.maxMB + 'MB' +
-            ' <span class="fh-sep">·</span> <b>최대</b> ' + FILE_LIMITS.maxCount + '개</p>';
+    /* ── 첨부 프로필 3종 — 정본은 화면정의서 `_규칙.md` §5 「첨부」 (기획확인 4차 D-1, 2026-10-06) ──
+     * 업로드 칸의 **모양은 하나**(uploadDrop)이고, 자리마다 다른 것은 받는 형식·용량·개수뿐이다.
+     * 한 개만 받는 자리(엑셀 일괄등록)도 같은 칸을 쓰고 안내만 «1개»로 바뀐다 — 간이형을 따로
+     * 만들면 모양이 다시 갈라진다(운영 점검에서 지적된 것이 바로 «자리마다 다른 업로드 칸»이었다).
+     *   general — 일반 업무 증빙 12종 · 20MB · 10개 (= FILE_LIMITS, 기본값)
+     *   image   — 이미지만 받는 칸 jpg·jpeg·png·gif · 10MB · 5개
+     *   bulk    — 일괄등록 xlsx · 20MB · 1개
+     * zip·webp 는 어느 프로필에도 없다 — 압축 안의 형식은 판정할 수 없다. */
+    const FILE_PROFILES = {
+        general: FILE_LIMITS,
+        image: { formats: 'JPG · PNG · GIF', extensions: ['jpg', 'jpeg', 'png', 'gif'], maxMB: 10, maxCount: 5 },
+        bulk:  { formats: 'XLSX(엑셀)', extensions: ['xlsx'], maxMB: 20, maxCount: 1 },
+    };
+    function limitsOf(profile) { return FILE_PROFILES[profile] || FILE_LIMITS; }
+    /* 업로드 영역 하단에 붙이는 안내 문구 HTML — profile 을 주지 않으면 일반 증빙 */
+    function fileHint(profile) {
+        const L = limitsOf(profile);
+        return '<p class="file-hint"><b>지원 형식</b> ' + L.formats +
+            ' <span class="fh-sep">·</span> <b>파일당 최대</b> ' + L.maxMB + 'MB' +
+            ' <span class="fh-sep">·</span> <b>최대</b> ' + L.maxCount + '개</p>';
     }
 
     /* ── 접근성 업로드 드롭존 — 단일 출처 (fileHint 와 동일한 §2 원칙) ──
@@ -421,6 +436,7 @@
      *               지정하면 숨은 <input type="file"> 을 함께 렌더하고 클릭·키보드·**끌어놓기**를
      *               모두 이 입력으로 연결한다. accept 는 FILE_LIMITS.extensions 파생.
      *   opts.multiple : opts.pick 과 함께 쓰면 다중 선택 허용.
+     *   opts.profile  : 'general'(기본) | 'image' | 'bulk' — 안내 문구·accept·검증을 그 프로필로 바꾼다.
      *
      *   ※ 종전에는 실제 input 을 붙이려면 화면이 드롭존 마크업을 직접 써야 해서 §2 의 예외로
      *      남아 있었다. 이 헬퍼가 실제 입력까지 감당하므로 새 화면은 예외 없이 여기만 쓰면 된다. */
@@ -437,19 +453,20 @@
     }
     /* 선택·드롭된 파일을 검증해 소비처로 넘긴다 — 형식·용량·개수 규칙은 FILE_LIMITS 단일 출처.
      * 검증을 화면마다 다시 쓰면 어떤 경로는 20MB 초과 파일을 그대로 통과시키게 된다. */
-    function acceptFiles(fileList, path, multiple) {
+    function acceptFiles(fileList, path, multiple, profile) {
         const all = Array.prototype.slice.call(fileList || []);
         if (!all.length) return;
+        const L = limitsOf(profile);
         const ok = [], bad = [];
         all.forEach(function (f) {
             const ext = (f.name.split('.').pop() || '').toLowerCase();
-            if (FILE_LIMITS.extensions.indexOf(ext) === -1) { bad.push(f.name + ' — 지원하지 않는 형식'); return; }
-            if (f.size > FILE_LIMITS.maxMB * 1024 * 1024) { bad.push(f.name + ' — ' + FILE_LIMITS.maxMB + 'MB 초과'); return; }
+            if (L.extensions.indexOf(ext) === -1) { bad.push(f.name + ' — 지원하지 않는 형식'); return; }
+            if (f.size > L.maxMB * 1024 * 1024) { bad.push(f.name + ' — ' + L.maxMB + 'MB 초과'); return; }
             ok.push({ name: f.name, size: f.size, type: f.type, _f: f });
         });
         if (bad.length) toast('첨부할 수 없는 파일 ' + bad.length + '건 — ' + bad[0]);
         if (!ok.length) return;
-        const use = multiple ? ok.slice(0, FILE_LIMITS.maxCount) : ok.slice(0, 1);
+        const use = multiple ? ok.slice(0, L.maxCount) : ok.slice(0, 1);
         const fn = _resolveFn(path);
         if (typeof fn !== 'function') return;
         /* 이미지면 썸네일을 만들어 붙인 뒤 넘긴다 — 소비처가 각자 캔버스를 돌리면
@@ -503,10 +520,10 @@
             reader.readAsDataURL(it._f);
         });
     }
-    function dropFiles(e, path, multiple) {
+    function dropFiles(e, path, multiple, profile) {
         e.preventDefault(); e.stopPropagation();
         e.currentTarget.classList.remove('is-dragover');
-        acceptFiles(e.dataTransfer && e.dataTransfer.files, path, multiple);
+        acceptFiles(e.dataTransfer && e.dataTransfer.files, path, multiple, profile);
     }
     function dropOver(e, on) {
         e.preventDefault(); e.stopPropagation();
@@ -517,22 +534,23 @@
         const style = opts.style ? ' style="' + opts.style + '"' : '';
         let desc = '', hint = '', input = '', act = onAct || "DYV2.notReady('파일 선택', '문서관리 연계')";
         let dnd = '';
+        const prof = FILE_PROFILES[opts.profile] ? opts.profile : 'general';
         if (opts.pick) {
             const fid = 'updrop-file-' + (++_dropSeq);
-            const accept = FILE_LIMITS.extensions.map(function (x) { return '.' + x; }).join(',');
+            const accept = limitsOf(prof).extensions.map(function (x) { return '.' + x; }).join(',');
             const p = esc(opts.pick), m = opts.multiple ? 'true' : 'false';
             act = "document.getElementById('" + fid + "').click()";
             input = '<input type="file" id="' + fid + '" accept="' + accept + '"' +
                 (opts.multiple ? ' multiple' : '') + ' style="display:none"' +
-                ' onchange="DYV2.acceptFiles(this.files, \'' + p + '\', ' + m + '); this.value=\'\';">';
+                ' onchange="DYV2.acceptFiles(this.files, \'' + p + '\', ' + m + ', \'' + prof + '\'); this.value=\'\';">';
             /* 드롭존이 "끌어다 놓기"를 문구로 약속하므로 실제로 받는다 */
             dnd = ' ondragover="DYV2.dropOver(event, true)" ondragleave="DYV2.dropOver(event, false)"' +
-                ' ondrop="DYV2.dropFiles(event, \'' + p + '\', ' + m + ')"';
+                ' ondrop="DYV2.dropFiles(event, \'' + p + '\', ' + m + ', \'' + prof + '\')"';
         }
         if (opts.hint) {
             const hid = 'updrop-hint-' + (++_dropSeq);
             desc = ' aria-describedby="' + hid + '"';
-            hint = fileHint().replace('class="file-hint"', 'class="file-hint" id="' + hid + '"');
+            hint = fileHint(prof).replace('class="file-hint"', 'class="file-hint" id="' + hid + '"');
         }
         return '<div class="upload-drop" role="button" tabindex="0"' + style +
             ' onclick="' + act + '" onkeydown="DYV2.dropKey(event)"' + dnd + desc + '>' +
@@ -924,7 +942,7 @@
         esc, josa, statusChip, workTypeChip, processTypeChip, pdcaChip, lawChip,
         unassignedBadge, secondReviewBadge,
         openModal, closeModal, setModalGuard, clearModalGuard, toast, openDoc,
-        docs, FILE_LIMITS, fileHint, uploadDrop, dropKey,
+        docs, FILE_LIMITS, FILE_PROFILES, fileHint, uploadDrop, dropKey,
         /* 실제 파일 선택·끌어놓기 (uploadDrop opts.pick 이 인라인으로 호출) */
         TODAY: DEMO_TODAY, today, daysTo, realToday,
         acceptFiles, dropFiles, dropOver, isImageFile,

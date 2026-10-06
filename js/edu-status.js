@@ -41,6 +41,21 @@
         var R = global.DYROLE;
         return !R || !R.inScope || R.inScope(deptId);
     }
+    /* 독촉 권한 — 독촉 경로(이행점검·경영방침·교육·위험성평가)가 같은 판정을 쓴다(DYROLE.canRemind,
+       기획확인 4차 C-32 · 2026-10-06). 종전에는 이 화면만 검사가 없어 총괄 책임자(군수)에게도
+       [일괄 독촉]이 떴다. 선택칸도 같은 판정으로 낸다 — 처리 버튼이 없는 계정에 선택칸만 남기지 않는다. */
+    function canRemindDept(deptId) {
+        var R = global.DYROLE;
+        return !R || !R.canRemind || R.canRemind(deptId);
+    }
+    function remindDeny() {
+        var R = global.DYROLE;
+        return (R && R.remindDenyNote) ? R.remindDenyNote('독촉') : '독촉 권한이 없습니다.';
+    }
+    /* 독촉 받는 사람 — 부서 안전보건 담당자 → 없으면 부서장 대체(DYADM.contactText 단일 출처) */
+    function contactOf(deptId) {
+        return (global.DYADM && global.DYADM.contactText) ? global.DYADM.contactText(deptId) : '부서 담당자';
+    }
     /* 모집단 판정 — 요약·상세가 반드시 같은 사람 집합을 본다 (단일 출처) */
     function inPopulation(w) {
         if (state.fCat && w.category !== state.fCat) return false;
@@ -190,7 +205,7 @@
             var dTone = !r.assessable ? 'warning' : (r.complete ? V().toneOf('완료') : (cyc.daysToEnd < 0 ? V().toneOf('기한초과') : (cyc.daysToEnd <= 30 ? V().toneOf('지연') : 'neutral')));
             var dTxt = !r.assessable ? cyc.reason : (r.complete ? '완료' : (cyc.daysToEnd < 0 ? '기한초과 D+' + Math.abs(cyc.daysToEnd) : 'D-' + cyc.daysToEnd));
             var ck = state.checked[w.id] ? ' checked' : '';
-            var canRemind = r.assessable && !r.complete;
+            var canRemind = r.assessable && !r.complete && canRemindDept(w.deptId);
             var ckEl = canRemind
                 ? '<input type="checkbox"' + ck + ' onchange="EDUS.toggleCheck(\'' + w.id + '\', this.checked)" aria-label="' + esc(w.name) + ' 선택">'
                 : '';
@@ -235,7 +250,9 @@
               on: "EDUS.setF('Status', this.value)" }
         ]), {
             count: list.length, unit: '명', reset: 'EDUS.resetF()',
-            actions: '<button type="button" class="btn btn-primary btn-sm" id="edus-bulk-btn" onclick="EDUS.remindBulk()">일괄 독촉 (' + selectedCount() + ')</button>' +
+            actions: (anyRemind(list)
+                    ? '<button type="button" class="btn btn-primary btn-sm" id="edus-bulk-btn" onclick="EDUS.remindBulk()">일괄 독촉 (' + selectedCount() + ')</button>'
+                    : '') +
                 '<button type="button" class="btn btn-outline btn-sm" onclick="EDUS.openReminders()">📜 독촉 이력</button>'
         });
 
@@ -263,8 +280,22 @@
     }
 
     /* =============== 독촉 =============== */
+    /* 이 목록에 내가 독촉할 수 있는 부서 사람이 하나라도 있는가 — 없으면 버튼을 내지 않는다 */
+    function anyRemind(list) {
+        return (list || []).some(function (r) { return canRemindDept(r.worker.deptId); });
+    }
+    /* 선택 중 독촉 권한이 없는 부서 사람은 빼고 센다 — 화면 밖(전역 호출)에서 넣은 선택까지 막는다 */
+    function remindIds() {
+        return Object.keys(state.checked).filter(function (k) {
+            if (!state.checked[k]) return false;
+            var w = E().workerOf(k);
+            return !!w && canRemindDept(w.deptId);
+        });
+    }
     function remindBulk() {
-        var ids = Object.keys(state.checked).filter(function (k) { return state.checked[k]; });
+        var all = Object.keys(state.checked).filter(function (k) { return state.checked[k]; });
+        var ids = remindIds();
+        if (all.length && !ids.length) { toast(remindDeny()); return; }
         if (!ids.length) { toast('미이수자를 1명 이상 선택하세요.'); return; }
         /* 부서별로 묶기 */
         var byDept = {};
@@ -279,6 +310,8 @@
                 var names = byDept[dId].map(function (wid) { return E().workerOf(wid).name; }).join(', ');
                 return '<div style="padding:6px 10px;background:var(--gray-50);border-radius:var(--radius-md);margin-bottom:4px;font-size:var(--fs-12);">' +
                     '<b>' + esc(E().deptName(dId)) + '</b> · ' + byDept[dId].length + '명 <span style="color:var(--text-gray);">(' + esc(names) + ')</span>' +
+                    /* 보내기 전에 누가 받는지 밝힌다(기획확인 4차 C-32) — 담당자가 없으면 부서장이 대신 받는다 */
+                    '<br><span style="color:var(--text-gray);">받는 사람 ' + esc(contactOf(dId)) + '</span>' +
                     '</div>';
             }).join('') + '</div>' +
             '<div class="edu-modal-row" style="margin-top:8px;"><label class="form-label" for="edus-memo">추가 메모 (선택)</label>' +
@@ -289,7 +322,9 @@
             '<button type="button" class="btn btn-primary" onclick="EDUS.doRemind()">독촉 발송</button>');
     }
     function doRemind() {
-        var ids = Object.keys(state.checked).filter(function (k) { return state.checked[k]; });
+        /* 저장에도 여는 쪽과 같은 판정 — 버튼만 감추면 전역 호출로 뚫린다 */
+        var ids = remindIds();
+        if (!ids.length) { V().closeModal(); toast(remindDeny()); return; }
         var memo = (document.getElementById('edus-memo').value || '').trim();
         var byDept = {};
         ids.forEach(function (wid) {

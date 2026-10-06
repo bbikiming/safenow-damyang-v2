@@ -302,9 +302,17 @@
                 '</div>' +
                 (E().canPickDept() ? '' : '<p class="file-hint">소속 부서 명단에 추가합니다.</p>') +
                 '</div></div>' +
-            '<div class="edu-modal-row"><label class="form-label">파일</label>' +
-                '<button type="button" class="btn btn-sm btn-outline" onclick="DYV2.notReady(\'엑셀 파일 선택\', \'문서관리 연계\')">＋ 파일 선택</button></div>' +
-            V().fileHint(),
+            /* 업로드 칸은 전 화면 공용 모양 하나(uploadDrop) — 한 개만 받는 자리도 같은 칸이고
+               안내만 일괄등록 프로필(xlsx 1개 · 20MB)로 바뀐다(기획확인 4차 D-1, 2026-10-06). */
+            '<div class="edu-modal-row"><label class="form-label">파일</label><div>' +
+                V().uploadDrop('<b>엑셀 파일을 끌어다 놓거나 눌러서 선택</b>',
+                    "DYV2.notReady('엑셀 파일 읽기', '파일관리 연계')", { hint: true, profile: 'bulk' }) +
+            '</div></div>' +
+            /* 서식에는 부서 열이 없다 — 부서는 위에서 한 번 고른다(기획확인 4차 C-4 · SCR-EDU-006 §5).
+               행마다 부서를 적게 하면 조직도와 표기가 어긋난 행이 생기고, 부서 담당자가 남의 부서
+               명단을 넣는 경로가 된다. */
+            '<p class="file-hint"><b>서식 열</b> 이름 · 구분 · 고용형태 · 채용일 · 계약기간(기간제·일용) · 관리감독자 지정일(관리감독자) — ' +
+                '부서 열은 없습니다. 형식이 맞지 않는 행은 행 번호와 사유를 보여 주고 나머지 행만 반영합니다.</p>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="EDUW.doExcel()">업로드</button>');
     }
@@ -324,8 +332,10 @@
         /* 거절된 건은 배열에서 빠지므로 «몇 건이 들어갔나»를 세어 말한다 —
            4건이라고 적어 두면 데이터 계층이 거절해도 4건이라고 말하게 된다 */
         var added = E().bulkAddWorkers(sample);
+        var skipped = sample.length - added.length;
         V().closeModal();
-        toast(E().deptName(deptId) + ' 부서에 ' + added.length + '명 엑셀 업로드 완료');
+        toast(E().deptName(deptId) + ' 부서에 ' + added.length + '명 엑셀 업로드 완료' +
+            (skipped ? ' · 제외 ' + skipped + '명(형식 오류)' : ''));
         render();
     }
 

@@ -21,6 +21,25 @@
     function inScope(r) { return !R() || R().inScope(V().deptIdOf(r.dept)); }
     function canAct(deptName) { return !R() || R().canAct(deptName ? V().deptIdOf(deptName) : ''); }
     function roNote() { return R() ? R().readOnlyNote('검진 계획 등록·증빙 첨부') : ''; }
+    /* 등록 부서 — 부서 담당자는 소속 부서로 고정하고 주관부서 담당자만 고른다(기획확인 4차 3-3,
+       2026-10-06). 교육 등록 폼과 같은 규칙이다(DYEDU.canPickDept). 종전에는 판정에 부서를 넘기지
+       않아(canAct()) 부서 담당자가 남의 부서 계획을 등록할 수 있었고, 그 건은 조회 범위 밖이라
+       등록한 본인 목록에서도 사라졌다. 작업환경측정·건강검진이 같은 규칙을 쓴다. */
+    function canPickDept() { return !R() || R().canAct(R().OWNER_DEPT); }
+    function myDeptName() {
+        var p = R() && R().current ? R().current() : null;
+        var n = p && p.deptId ? V().orgNode(p.deptId) : null;
+        return n ? n.name : '';
+    }
+    function deptFieldHtml(fieldId, inputId, onpick, value) {
+        var fixed = !canPickDept();
+        return '<div class="orgpick-field" id="' + fieldId + '"><div style="display:flex;gap:8px;">' +
+                '<input type="text" class="form-input" id="' + inputId + '" readonly placeholder="조직도에서 부서 선택" style="flex:1;" value="' + esc(value || '') + '">' +
+                (fixed ? '' : '<button type="button" class="btn btn-outline" onclick="ORGPICK.toggle(\'' + fieldId + '\',\'dept\',\'' + onpick + '\')">조직도</button>') +
+            '</div>' +
+            (fixed ? '<p class="file-hint">소속 부서 계획으로 등록합니다 — 다른 부서 계획은 그 부서 담당자가 등록합니다.</p>' : '') +
+        '</div>';
+    }
     /* 조작 차단 문구 — 조사는 DYV2.josa() 가 붙인다('증빙 첨부은(는)' 같은 표기를 내지 않는다) */
     function denyNote(what) { return what + V().josa(what, '은', '는') + ' 해당 부서 담당자가 수행합니다.'; }
 
@@ -179,10 +198,7 @@
         V().openModal('건강검진 계획 등록',
             /* 대상 부서 — 조직도(DYV2.ORG) 인라인 트리에서 선택 */
             '<div class="ri-modal-row" style="margin-bottom:12px;"><label class="form-label" for="he-n-deptname">대상 부서 <span style="color:var(--status-danger-fg)">*</span></label>' +
-                '<div class="orgpick-field" id="he-n-deptfield"><div style="display:flex;gap:8px;">' +
-                    '<input type="text" class="form-input" id="he-n-deptname" readonly placeholder="조직도에서 부서 선택" style="flex:1;" value="' + esc(state.dept || '') + '">' +
-                    '<button type="button" class="btn btn-outline" onclick="ORGPICK.toggle(\'he-n-deptfield\',\'dept\',\'HEX.pickDept\')">조직도</button>' +
-                '</div></div></div>' +
+                deptFieldHtml('he-n-deptfield', 'he-n-deptname', 'HEX.pickDept', canPickDept() ? (state.dept || '') : myDeptName()) + '</div>' +
             '<div class="ri-modal-row" style="margin-bottom:12px;"><label class="form-label" for="he-n-type">검진 유형</label>' +
                 '<select class="form-select" id="he-n-type" onchange="HEX.onTypeChange()"><option>일반건강검진</option><option>특수건강진단</option></select></div>' +
             '<div class="ri-modal-row" id="he-n-basis-row" style="margin-bottom:12px;"><label class="form-label" for="he-n-basis">대상 근거</label>' +
@@ -205,7 +221,10 @@
             ? '필수: 대상 유해인자와 배치업무'
             : '예: 사무직 / 그 밖의 근로자';
     }
-    function pickDept(name) { var inp = document.getElementById('he-n-deptname'); if (inp) inp.value = name; }
+    function pickDept(name) {
+        if (!canAct(name)) { V().toast(denyNote('다른 부서 검진 계획 등록')); return; }
+        var inp = document.getElementById('he-n-deptname'); if (inp) inp.value = name;
+    }
     function saveNew() {
         if (!canAct()) { V().toast(denyNote('검진 계획 등록')); return; }
         var dept = (document.getElementById('he-n-deptname').value || '').trim();
@@ -215,6 +234,8 @@
         var targetCount = Number(document.getElementById('he-n-target').value);
         var planned = document.getElementById('he-n-planned').value;
         if (!dept) { V().toast('대상 부서를 선택하세요.'); return; }
+        /* 저장에도 같은 판정 — 화면에서 부서를 고정해도 전역 호출로 다른 부서가 들어올 수 있다 */
+        if (!canAct(dept)) { V().toast(denyNote('다른 부서 검진 계획 등록')); return; }
         if (!agency) { V().toast('검진기관을 입력하세요.'); return; }
         if (!Number.isInteger(targetCount) || targetCount < 1) { V().toast('대상자 수를 1명 이상 입력하세요.'); return; }
         if (!planned) { V().toast('검진 예정일을 선택하세요.'); return; }

@@ -79,7 +79,9 @@
                     return m.status === 'DONE' && D().confirmState(m) !== 'OK';
                 });
             },
-            canConfirm: canManage(), canRemind: false, onChange: render
+            canConfirm: canManage(), canRemind: false, onChange: render,
+            /* 전 부서 건이 한 화면에 모이므로 부서별 묶음 제목을 단다(1차 점검 «부서별로 묶어 달라») */
+            groupByDept: true
         });
     }
 
@@ -1403,7 +1405,7 @@
                 '<div class="orgpick-field" id="rl-owner-field"><div style="display:flex;gap:8px;align-items:center;">' +
                     '<input type="text" class="form-input" id="rl-owner-name" readonly placeholder="조직도에서 담당자 선택" ' +
                         'style="flex:1;background:var(--gray-50);" value="' + esc(r.owner || '') + '">' +
-                    '<button type="button" class="btn btn-outline" onclick="ORGPICK.toggle(\'rl-owner-field\',\'member\',\'RSKLIST.pickRowOwner\')">조직도</button>' +
+                    '<button type="button" class="btn btn-outline" onclick="ORGPICK.toggle(\'rl-owner-field\',\'member\',\'RSKLIST.pickRowOwner\',{rootId:\'' + esc(deptId) + '\'})">조직도</button>' +
                 '</div></div>' +
             '</div>',
             (r.owner ? '<button type="button" class="btn btn-outline" style="margin-right:auto;" onclick="RSKLIST.clearRowOwner()">지정 해제</button>' : '') +
@@ -1426,6 +1428,10 @@
         var el = document.getElementById('rl-owner-name');
         var v = (el && el.value || '').trim();
         if (!v) { toast('조직도에서 담당자를 고르세요.'); return; }
+        /* 그 부서 사람만(A-19) — 이 행이 전달되면 그 부서 개선조치가 되고, 다른 부서 사람은 그 건을 볼 수 없다 */
+        if (global.ORGPICK && !ORGPICK.memberInDept(v, ROW.deptId)) {
+            toast('담당자는 ' + D().deptName(ROW.deptId) + ' 사람 중에서 고릅니다.'); return;
+        }
         reviewSet(ROW.deptId, ROW.i, 'owner', v);
         V().closeModal(); toast('담당자 지정: ' + v); render();
     }
@@ -1733,7 +1739,19 @@
     function canRemindDept(deptId) {
         return !global.DYROLE || !global.DYROLE.canRemind || global.DYROLE.canRemind(deptId);
     }
-    var REMIND_DENY = '재촉은 주관부서(재난안전과)와 그 부서가 합니다 — 총괄 책임자는 진행 상황을 조회합니다.';
+    /* 거절 문구는 DYROLE 단일 출처 — 독촉 경로(이행점검·경영방침·교육·위험성평가)가 같은 말을 한다 */
+    var REMIND_DENY = (global.DYROLE && global.DYROLE.remindDenyNote) ? global.DYROLE.remindDenyNote('재촉')
+        : '재촉은 주관부서(재난안전과)와 그 부서가 합니다 — 총괄 책임자는 진행 상황을 조회합니다.';
+    /* 재촉 받는 사람 — 조치 담당자가 정해진 건은 그 담당자, 담당자 미정 건은 부서 단위 수신자
+       (부서 안전보건 담당자 → 부서장 대체 — DYADM.contactText 단일 출처, 기획확인 4차 C-32).
+       담당자를 비운 채 전달되는 것이 정상이라(SCR-RISK-001 §4-5) 미정 건이 0명으로 사라지면 안 된다. */
+    function remindWho(ms, deptId) {
+        var unassigned = ms.filter(function (m) { return !String(m.assigned_to || '').trim(); }).length;
+        var dept = global.DYADM && global.DYADM.contactText ? global.DYADM.contactText(deptId) : '부서 담당자';
+        if (!unassigned) return '각 건 조치 담당자';
+        if (unassigned === ms.length) return dept;
+        return '조치 담당자 · 담당자 미정 ' + unassigned + '건은 ' + dept;
+    }
     function remindDept(deptId) {
         if (!inScopeDept(deptId)) { toast('소속 부서 소관이 아닙니다.'); return; }
         if (!canRemindDept(deptId)) { toast(REMIND_DENY); return; }
@@ -1744,7 +1762,7 @@
             D().pushImpHistory(m.id, { type: 'REMIND', by: remindBy(), memo: '기한초과 재촉 (기한 ' + (m.due || m.due_date) + ')' });
         });
         D().pushHistory(a.id, { type: 'REMIND', by: remindBy(), memo: D().deptName(deptId) + ' 기한초과 ' + ms.length + '건 재촉' });
-        toast(D().deptName(deptId) + ' 재촉 알림 발송 (' + ms.length + '건)'); render();
+        toast(D().deptName(deptId) + ' 재촉 ' + ms.length + '건 · 받는 사람 ' + remindWho(ms, deptId)); render();
     }
     function remindOne(impId) {
         var m = D().improvementOf(impId); if (!m) return;
@@ -1754,7 +1772,7 @@
         if (!D().isOverdue(m)) { toast('기한초과 건이 아닙니다.'); return; }
         D().pushImpHistory(m.id, { type: 'REMIND', by: remindBy(), memo: '기한초과 재촉 (기한 ' + (m.due || m.due_date) + ')' });
         D().pushHistory(m.assessment_id, { type: 'REMIND', by: remindBy(), memo: D().deptName(m.dept_id) + ' · ' + (m.hazard && m.hazard.name || '') + ' 재촉' });
-        toast('재촉 알림을 발송했습니다');
+        toast('재촉 · 받는 사람 ' + remindWho([m], m.dept_id));
         V().closeModal();
         render();
     }
@@ -1939,6 +1957,13 @@
             };
         }
         render();
+        /* 내 할일의 «완료 확인 대기»에서 넘어오면 확인 대기 목록을 곧바로 연다(기획확인 4차 3-5).
+           확인할 사람이 아니거나 대기 건이 없으면 열지 않는다 — 목록 화면 그대로가 맞는 답이다. */
+        if (q.get('confirm') === '1' && canManage()) {
+            var a0 = (D().assessments(state.year) || [])[0];
+            var cc = a0 && D().confirmCount ? D().confirmCount(a0.id) : null;
+            if (cc && (cc.wait || cc.returned)) openConfirmQueue();
+        }
     }
 
     global.RSKLIST = {

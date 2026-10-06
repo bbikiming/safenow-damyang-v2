@@ -16,6 +16,25 @@
     function R() { return global.DYROLE; }
     function inScope(r) { return !R() || R().inScope(V().deptIdOf(r.dept)); }
     function canAct(deptName) { return !R() || R().canAct(deptName ? V().deptIdOf(deptName) : ''); }
+    /* 등록 부서 — 부서 담당자는 소속 부서로 고정하고 주관부서 담당자만 고른다(기획확인 4차 3-3,
+       2026-10-06). 교육 등록 폼과 같은 규칙이다(DYEDU.canPickDept). 종전에는 판정에 부서를 넘기지
+       않아(canAct()) 부서 담당자가 남의 부서 계획을 등록할 수 있었고, 그 건은 조회 범위 밖이라
+       등록한 본인 목록에서도 사라졌다. 작업환경측정·건강검진이 같은 규칙을 쓴다. */
+    function canPickDept() { return !R() || R().canAct(R().OWNER_DEPT); }
+    function myDeptName() {
+        var p = R() && R().current ? R().current() : null;
+        var n = p && p.deptId ? V().orgNode(p.deptId) : null;
+        return n ? n.name : '';
+    }
+    function deptFieldHtml(fieldId, inputId, onpick, value) {
+        var fixed = !canPickDept();
+        return '<div class="orgpick-field" id="' + fieldId + '"><div style="display:flex;gap:8px;">' +
+                '<input type="text" class="form-input" id="' + inputId + '" readonly placeholder="조직도에서 부서 선택" style="flex:1;" value="' + esc(value || '') + '">' +
+                (fixed ? '' : '<button type="button" class="btn btn-outline" onclick="ORGPICK.toggle(\'' + fieldId + '\',\'dept\',\'' + onpick + '\')">조직도</button>') +
+            '</div>' +
+            (fixed ? '<p class="file-hint">소속 부서 계획으로 등록합니다 — 다른 부서 계획은 그 부서 담당자가 등록합니다.</p>' : '') +
+        '</div>';
+    }
     function roNote() { return R() ? R().readOnlyNote('측정 계획 등록·결과 첨부') : ''; }
     /* 조작 차단 문구 — 조사는 DYV2.josa() 가 붙인다(라벨마다 받침이 갈려 고정 표기를 쓸 수 없다) */
     function denyNote(what) { return what + V().josa(what, '은', '는') + ' 해당 부서 담당자가 수행합니다.'; }
@@ -155,24 +174,21 @@
     function attach(id) {
         if (!canAct()) { V().toast(denyNote('결과 첨부')); return; }
         var r = S().workEnvOf(id); if (!r) return;
-        V().openModal('결과보고서 · 증빙 등록',
+        V().openModal('결과보고서 등록',
             '<p style="font-size:13px;margin-bottom:10px;color:var(--text-gray);"><b>' + esc(r.dept) + ' · ' + esc(r.site) + '</b> 작업환경측정 결과보고서를 첨부합니다.</p>' +
             V().uploadDrop('파일을 끌어다 놓거나 클릭하여 업로드<br><span style="font-size:12px;">업로드 시 이력이 자동 기록됩니다</span>', null, { hint: true }),
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="WENV.saveAttach(\'' + id + '\')">등록</button>');
     }
     function saveAttach(id) {
-        if (!canAct()) { V().toast(denyNote('결과 첨부')); return; } S().attachEvidence('we', id, '결과보고서'); V().closeModal(); render(); V().toast('증빙이 등록되었습니다.'); }
+        if (!canAct()) { V().toast(denyNote('결과 첨부')); return; } S().attachEvidence('we', id, '결과보고서'); V().closeModal(); render(); V().toast('결과보고서가 등록되었습니다.'); }
 
     function openNew() {
         if (!canAct()) { V().toast(denyNote('측정 계획 등록')); return; }
         V().openModal('작업환경측정 계획 등록',
             /* 대상 부서 — 조직도(DYV2.ORG) 인라인 트리에서 선택(단일 모달 규칙: 별도 모달 없이 입력 아래 펼침) */
             '<div class="ri-modal-row" style="margin-bottom:12px;"><label class="form-label" for="we-n-deptname">대상 부서 <span style="color:var(--status-danger-fg)">*</span></label>' +
-                '<div class="orgpick-field" id="we-n-deptfield"><div style="display:flex;gap:8px;">' +
-                    '<input type="text" class="form-input" id="we-n-deptname" readonly placeholder="조직도에서 부서 선택" style="flex:1;" value="' + esc(state.dept || '') + '">' +
-                    '<button type="button" class="btn btn-outline" onclick="ORGPICK.toggle(\'we-n-deptfield\',\'dept\',\'WENV.pickDept\')">조직도</button>' +
-                '</div></div></div>' +
+                deptFieldHtml('we-n-deptfield', 'we-n-deptname', 'WENV.pickDept', canPickDept() ? (state.dept || '') : myDeptName()) + '</div>' +
             /* 사업장 — 사업장 마스터(시스템 관리)에서 부서별로 등록된 사업장 드롭다운 */
             '<div class="ri-modal-row" style="margin-bottom:12px;"><label class="form-label" for="we-n-site">사업장 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 '<select class="form-select" id="we-n-site" onchange="WENV.onSiteChange()"><option value="">부서를 먼저 선택하세요</option></select>' +
@@ -186,10 +202,13 @@
             '<div class="ri-modal-row"><label><input type="checkbox" id="we-n-carc"> 고용노동부 고시 30년 보존 대상 물질 기록</label></div>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="WENV.saveNew()">등록</button>');
-        if (state.dept) updateSiteOptions(state.dept);   // 목록에서 부서 필터가 걸려 있으면 사업장도 채움
+        /* 목록에서 부서 필터가 걸려 있거나 소속 부서로 고정되면 사업장도 채운다 */
+        var initDept = canPickDept() ? state.dept : myDeptName();
+        if (initDept) updateSiteOptions(initDept);
     }
     /* 부서 선택(공용 ORGPICK)에서 호출 — 부서명 세팅 + 사업장 드롭다운 갱신 */
     function pickDept(name) {
+        if (!canAct(name)) { V().toast(denyNote('다른 부서 측정 계획 등록')); return; }
         var inp = document.getElementById('we-n-deptname'); if (inp) inp.value = name;
         updateSiteOptions(name);
     }
@@ -215,6 +234,8 @@
     function saveNew() {
         if (!canAct()) { V().toast(denyNote('측정 계획 등록')); return; }
         var dept = (document.getElementById('we-n-deptname').value || '').trim();
+        /* 저장에도 같은 판정 — 화면에서 부서를 고정해도 전역 호출로 다른 부서가 들어올 수 있다 */
+        if (dept && !canAct(dept)) { V().toast(denyNote('다른 부서 측정 계획 등록')); return; }
         var siteId = document.getElementById('we-n-site').value || '';
         var siteRec = global.DYSITE && siteId ? DYSITE.siteOf(siteId) : null;
         var subject = (document.getElementById('we-n-subject').value || '').trim();

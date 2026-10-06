@@ -264,6 +264,36 @@
             }
         } catch (e) {}
 
+        /* 위험성평가 — 주관부서의 할 일: 부서가 완료한 개선조치의 «완료 확인» (기획확인 4차 3-5, 2026-10-06)
+         * 내 할일은 «내가 해야 하는 것»이다. 개선조치를 **하는** 것은 그 부서의 일이라 다른 부서 건은
+         * 여기 넣지 않지만, 그 결과를 **확인하는** 것은 주관부서 담당자의 일이라 전 부서 건을 센다.
+         * 건마다 줄을 만들면 30건이 쌓이므로 평가 1건당 한 줄로 묶고, [확인하러 가기]가 확인 대기
+         * 목록(부서별 묶음 · 일괄 확인)을 곧바로 연다. 확인 판정은 rsk-list canManage() 와 같은 식이다. */
+        try {
+            var me = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
+            var own = global.DYROLE && global.DYROLE.OWNER_DEPT;
+            if (me && own && me.tier === 'staff' && me.deptId === own && state.deptId === own) {
+                (D().assessments() || []).forEach(function (a) {
+                    var c = D().confirmCount ? D().confirmCount(a.id) : null;
+                    if (!c || !c.wait) return;
+                    out.push({
+                        id: 'RSK-CFM-' + a.id,
+                        cat: 'risk',
+                        title: a.title + ' — 개선조치 완료 확인 대기 ' + c.wait + '건',
+                        sub: '부서가 올린 조치 내용·개선 전후 사진을 보고 확인하거나 반려합니다' +
+                             (c.returned ? ' · 반려 후 재제출 대기 ' + c.returned + '건' : '') +
+                             ' — 전 건이 확인돼야 공문을 기안할 수 있습니다',
+                        due: '',
+                        status: 'IN_PROGRESS',
+                        dept: own, dept_label: D().deptName(own),
+                        href: 'rsk-list.html?year=' + a.year + '&confirm=1',
+                        atype: 'menu', action: '확인하러 가기', destLabel: '정기 위험성평가',
+                        remind: false
+                    });
+                });
+            }
+        } catch (e) {}
+
         /* 위험성평가 실데이터 — 전달받은 개선조치 (카테고리 '개선') */
         try {
             D().improvements().filter(function (m) { return m.dept_id === state.deptId; }).forEach(function (m) {
@@ -303,49 +333,43 @@
                 });
             });
         } catch (e) {}
-        /* 안전보건교육 실데이터 — 집합교육 신청 가능 · 독촉받은 미이수 */
+        /* 안전보건교육 실데이터 — 집합교육 신청 가능 · 독촉받은 미이수
+         * 무엇이 할 일인지는 DYEDU.deptTodos 한 곳이 정한다 — 대시보드가 같은 함수로 센다. */
         try {
             var Edu = global.DYEDU;
-            if (Edu) {
-                var enrolls = Edu.enrolls();
-                Edu.courses({ status: 'OPEN' }).forEach(function (c) {
-                    if (c.kind !== 'REG_GROUP' && c.kind !== 'SUP_REG') return;
-                    var applied = enrolls.some(function (e) { return e.courseId === c.id && e.deptId === state.deptId; });
-                    if (applied) return;
-                    out.push({
-                        id: 'EDU-APPLY-' + c.id,
-                        cat: 'edu',
-                        title: c.desc + ' — 참석자 등록부 등록 필요',
-                        sub: '일정 ' + c.date + ' · ' + c.hours + 'h · ' + (c.instructor || ''),
-                        due: c.date,
-                        status: 'IN_PROGRESS',
-                        dept: state.deptId, dept_label: Edu.deptName(state.deptId),
-                        /* 참석자 등록부는 교육 상세에서 등록한다 — 종전에는 목록(edu-reg)으로 보내
-                           담당자가 그 교육을 다시 찾아야 했고, 관리감독자 교육(SUP_REG)은 현업근로자
-                           목록으로 떨어져 아예 보이지 않았다. */
-                        href: 'edu-reg-detail.html?id=' + encodeURIComponent(c.id),
-                        atype: 'menu', action: '신청하러 가기', destLabel: '교육 상세', remind: false
-                    });
-                });
-                Edu.reminders().forEach(function (r) {
-                    if (r.deptId !== state.deptId) return;
-                    (r.workerIds || []).forEach(function (wid) {
-                        var w = Edu.workerOf(wid); if (!w) return;
-                        var sr = Edu.statusRow(w, Edu.TODAY);
-                        if (sr.complete) return;
+            if (Edu && Edu.deptTodos) {
+                Edu.deptTodos(state.deptId).forEach(function (t) {
+                    if (t.kind === 'apply') {
+                        var c = t.course;
                         out.push({
-                            id: 'EDU-REMIND-' + wid + '-' + r.at,
+                            id: 'EDU-APPLY-' + c.id,
                             cat: 'edu',
-                            title: w.name + ' — 안전보건교육 미이수 (독촉)',
-                            sub: '필요 ' + sr.need + 'h · 인정 ' + sr.done + 'h · 미달 ' + sr.short + 'h · ' + r.memo,
-                            due: sr.cycle.end,
+                            title: c.desc + ' — 참석자 등록부 등록 필요',
+                            sub: '일정 ' + c.date + ' · ' + c.hours + 'h · ' + (c.instructor || ''),
+                            due: c.date,
                             status: 'IN_PROGRESS',
                             dept: state.deptId, dept_label: Edu.deptName(state.deptId),
-                            /* 관리감독자는 관리감독자 정기교육 화면으로 — 현업근로자 화면에는 그 교육이 없다 */
-                            href: w.category === 'SUPERVISOR' ? 'edu-sup.html' : 'edu-reg.html',
-                            atype: 'menu', action: '자체교육 진행',
-                            destLabel: w.category === 'SUPERVISOR' ? '관리감독자 정기교육' : '정기교육', remind: true
+                            /* 참석자 등록부는 교육 상세에서 등록한다 — 종전에는 목록(edu-reg)으로 보내
+                               담당자가 그 교육을 다시 찾아야 했고, 관리감독자 교육(SUP_REG)은 현업근로자
+                               목록으로 떨어져 아예 보이지 않았다. */
+                            href: 'edu-reg-detail.html?id=' + encodeURIComponent(c.id),
+                            atype: 'menu', action: '신청하러 가기', destLabel: '교육 상세', remind: false
                         });
+                        return;
+                    }
+                    var w = t.worker, sr = t.row, r = t.reminder;
+                    out.push({
+                        id: 'EDU-REMIND-' + w.id + '-' + r.at,
+                        cat: 'edu',
+                        title: w.name + ' — 안전보건교육 미이수 (독촉)',
+                        sub: '필요 ' + sr.need + 'h · 인정 ' + sr.done + 'h · 미달 ' + sr.short + 'h · ' + r.memo,
+                        due: sr.cycle.end,
+                        status: 'IN_PROGRESS',
+                        dept: state.deptId, dept_label: Edu.deptName(state.deptId),
+                        /* 관리감독자는 관리감독자 정기교육 화면으로 — 현업근로자 화면에는 그 교육이 없다 */
+                        href: w.category === 'SUPERVISOR' ? 'edu-sup.html' : 'edu-reg.html',
+                        atype: 'menu', action: '자체교육 진행',
+                        destLabel: w.category === 'SUPERVISOR' ? '관리감독자 정기교육' : '정기교육', remind: true
                     });
                 });
             }

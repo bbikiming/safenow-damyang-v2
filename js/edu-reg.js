@@ -330,6 +330,16 @@
         var S = pr.payload;
         /* 수정 저장 — 대상자·신청 내역은 건드리지 않고 교육 정보만 갱신 */
         if (F.edit) {
+            var before = E().courseOf(F.edit) || {};
+            var prevHours = before.hours, prevDate = before.date;
+            /* 집합교육 합계를 등록부 참석시간보다 작게 줄이지 않는다 — 그 등록부를 먼저 정정한다 */
+            var cf = E().groupHoursConflicts ? E().groupHoursConflicts(F.edit, S.hours) : [];
+            if (cf.length) {
+                toast('교육시간 ' + S.hours + 'h 가 등록부 참석시간보다 적습니다 — ' +
+                    cf.map(function (x) { return x.deptName + ' ' + x.actualHours + 'h'; }).join(', ') +
+                    '. 그 등록부를 먼저 정정(등록 취소 후 재등록)하세요.');
+                return;
+            }
             E().updateCourse(F.edit, {
                 deptId: F.deptId, date: S.date, time: S.time, endTime: S.endTime,
                 sessions: S.sessions, hours: S.hours,
@@ -337,7 +347,9 @@
             });
             /* 회차를 고치면 시간이 자동으로 바뀐다 — 이미 쌓인 이수기록도 함께 맞춰야
              * 카드의 교육시간과 이수현황 인정시간이 어긋나지 않는다. */
-            var synced = E().syncCourseRecordHours(F.edit, S.hours, S.date);
+            /* 회차(시간·일자)를 바꾸지 않은 수정(강사·장소·내용·첨부)은 이수기록을 건드리지 않는다 */
+            var synced = (prevHours !== S.hours || prevDate !== S.date)
+                ? E().syncCourseRecordHours(F.edit, S.hours, S.date) : 0;
             /* 처리자는 실제 접속자다 — 자체교육은 등록 부서가 고치므로 '재난안전과'로 박으면 이력이 거짓이 된다 */
             E().pushCourseHistory(F.edit, { type: 'STATUS', by: actor(),
                 memo: '교육 정보 수정 · ' + F.sessions.length + '일 · ' + S.hours + 'h' +
@@ -409,11 +421,13 @@
                 '<div class="edu-tg-body">' + rows + '</div>' +
             '</div>' +
             '<div class="edu-modal-row"><label class="form-label">서명파일 업로드 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                /* 업로드 칸은 전 화면 공용 모양 하나(uploadDrop) — 버튼 하나짜리를 두지 않는다
+                   (기획확인 4차 D-1, 2026-10-06). 고른 뒤에는 파일명과 [×]로 바꾼다. */
                 (G.signFile
                     ? '<span style="color:var(--main-dark);font-weight:var(--fw-bold);font-size:var(--fs-12);">' + esc(G.signFile) + '</span> ' +
-                      '<button type="button" class="btn btn-sm btn-outline" onclick="EDUR.applyClearSign()">×</button>'
-                    : '<button type="button" class="btn btn-sm btn-outline" onclick="EDUR.applyAttachSign()">＋ 서명파일 첨부</button>') +
-                V().fileHint() +
+                      '<button type="button" class="btn btn-sm btn-outline" onclick="EDUR.applyClearSign()" aria-label="서명파일 지우기">×</button>' +
+                      V().fileHint()
+                    : V().uploadDrop('<b>서명파일을 끌어다 놓거나 눌러서 선택</b>', 'EDUR.applyAttachSign()', { hint: true })) +
             '</div>';
         V().openModal('참석자 등록부 등록 · ' + esc(E().deptName(G.deptId)), body,
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +

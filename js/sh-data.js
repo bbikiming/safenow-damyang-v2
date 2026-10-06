@@ -401,12 +401,28 @@
     }
 
     /* ================= 공용 처리 액션(양 모듈 공유) ================= */
-    /* 증빙/결과보고서 등록 */
+    /* 증빙/결과보고서 등록
+     * 작업환경측정 첨부는 **용도가 둘**이다(기획확인 4차 3-1, 2026-10-06):
+     *   '결과보고서' — 측정 완료 판정의 근거. 다시 올리면 이전 판을 지우지 않고 판 번호를 올린다
+     *                 (측정 결과 서류 보존 — 산안법 시행규칙 §241① 5년, 고시 물질 30년)
+     *   '개선 증빙'  — 개선 완료 판정의 근거(조치 후 증빙)
+     * 종전에는 어느 버튼으로 올려도 결과보고서로 저장돼, 개선 증빙을 올리면 «보고서가 있다»가 됐다. */
     function attachEvidence(kind, id, label) {
         var r = (kind === 'we') ? workEnvOf(id) : healthOf(id);
         if (!r) return null;
-        if (kind === 'we') r.report = true; else r.evidence = true;
-        pushHist(r, (label || '증빙파일') + ' 등록');
+        if (kind === 'we') {
+            if (label === '개선 증빙') {
+                r.afterPhoto = true;
+                pushHist(r, '개선 증빙 등록');
+            } else {
+                r.reportVersions = (r.reportVersions || (r.report ? 1 : 0)) + 1;
+                r.report = true;
+                pushHist(r, '결과보고서 등록' + (r.reportVersions > 1 ? ' · 제' + r.reportVersions + '판(이전 판 보존)' : ''));
+            }
+        } else {
+            r.evidence = true;
+            pushHist(r, (label || '증빙파일') + ' 등록');
+        }
         save(); return r;
     }
     /* 미완료(미실시) 사유 입력 */

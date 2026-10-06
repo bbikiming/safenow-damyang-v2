@@ -827,17 +827,21 @@
               '<div class="card-body">' + ratesRows + '</div>' +
             '</div>';
 
-        /* 카테고리별 잔여 업무 미니 바 — 내 할일 ?cat= 딥링크 연동 */
+        /* 카테고리별 잔여 업무 미니 바 — 내 할일 ?cat= 딥링크 연동
+           교육은 내 할일과 **같은 함수**(DYEDU.deptTodos)로 센다(기획확인 4차, 2026-10-06) —
+           종전에는 예시 숫자 2라, 같은 부서의 교육 할 일이 두 화면에서 다르게 보였다. */
+        const eduLive = !!(global.DYEDU && global.DYEDU.deptTodos);
+        const eduN = eduLive ? global.DYEDU.deptTodos(deptId).length : 2;
         const catSeed = [
             ['결재', 'approval', 2], ['개선', 'improve', c.over + c.today + c.week + c.later],
             ['점검', 'inspection', 2], ['이행', 'comply', 2],
-            ['교육', 'edu', 2], ['도급', 'contract', 2], ['평가', 'eval', 1], ['의견', 'opinion', 1],
+            ['교육', 'edu', eduN], ['도급', 'contract', 2], ['평가', 'eval', 1], ['의견', 'opinion', 1],
         ];
         const catMax = Math.max.apply(null, catSeed.map(c => c[2]));
         const catCard =
             '<div class="card">' +
               '<div class="card-header"><span class="card-title">카테고리별 잔여 업무</span>' +
-                '<span class="dsh-seed-note">개선 = 실데이터 · 그 외 예시 자료</span>' +
+                '<span class="dsh-seed-note">' + (eduLive ? '개선·교육 = 실데이터' : '개선 = 실데이터') + ' · 그 외 예시 자료</span>' +
                 '<a class="btn btn-sm btn-secondary" href="my-work.html">내 할일</a></div>' +
               '<div class="card-body">' +
                 catSeed.map(c => hbarRow(c[0], c[2], catMax, 'blue', 'my-work.html?cat=' + c[1])).join('') +

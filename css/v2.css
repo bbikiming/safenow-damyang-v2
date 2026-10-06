@@ -1667,6 +1667,10 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .edu-name { font-weight: var(--fw-bold); }
 .edu-short { color: var(--status-danger-fg); font-weight: var(--fw-bold); }
 .edu-scroll { overflow-x: auto; }
+/* 채용시교육 — 특별교육 이수로 갈음한 건(시행규칙 §26①). 상태 칩 아래 한 줄로 무엇으로 이수가
+   됐는지와 근거를 밝힌다(기획확인 4차 · 2026-10-06). */
+.edu-hire-via { margin-top: var(--sp-1); font-size: var(--fs-12); color: var(--text-gray); }
+.edu-hire-via .law-basis-line { margin-top: var(--sp-0-5); }
 .edu-bar-txt { font-size: var(--fs-12); font-weight: var(--fw-bold); color: var(--text-black); }
 .edu-gauge { display: inline-block; width: 120px; vertical-align: middle; margin-right: 6px; }
 
@@ -2758,6 +2762,34 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .rl-imp-fchip.is-danger.is-on b { color: var(--surface); }
 
 .rl-imp-cards { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+
+/* 부서별 묶음 — 여러 부서 건을 한 화면에 모은 확인 대기 목록(기획확인 4차 · 2026-10-06).
+   카드에는 부서가 찍히지 않으므로 묶음 제목이 곧 «어느 부서 건인가»다. */
+.rl-imp-grp { margin-top: var(--stack-base); }
+.rl-imp-grp-head {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-3);
+  padding-bottom: var(--sp-2); border-bottom: 1px solid var(--card-line);
+}
+.rl-imp-grp-head b { font-size: var(--fs-15); }
+.rl-imp-grp-cnt { font-size: var(--fs-12); color: var(--text-gray); }
+.rl-imp-grp-head .btn { margin-left: auto; }
+.rl-imp-grp-act { display: flex; justify-content: flex-end; margin-top: var(--sp-2-5); }
+
+/* 일괄 확인 — 건마다 증빙 요지를 펼쳐 둔다(표 대신 줄 — 375px 에서 가로 스크롤 없이) */
+.rl-imp-bulk-head { margin: 0 0 var(--sp-1); font-size: var(--fs-15); }
+.rl-imp-bulk-list { list-style: none; margin: var(--sp-3) 0 0; padding: 0; border-top: 1px solid var(--card-line); }
+.rl-imp-bulk-list li {
+  display: flex; gap: var(--sp-3); padding: var(--sp-2-5) 0;
+  border-bottom: 1px solid var(--card-line); font-size: var(--fs-13);
+}
+.rl-imp-bulk-no {
+  flex: none; width: 24px; height: 24px; border-radius: var(--radius-full);
+  background: var(--surface-alt); color: var(--text-gray);
+  display: inline-flex; align-items: center; justify-content: center; font-size: var(--fs-12);
+}
+.rl-imp-bulk-main { min-width: 0; }
+.rl-imp-bulk-main p { margin: var(--sp-1) 0 0; overflow-wrap: anywhere; }
+.rl-imp-bulk-dim { color: var(--text-gray); font-size: var(--fs-12); }
 .rl-imp-card {
   padding: 14px; border: 1px solid var(--card-line); border-left: 3px solid var(--card-line);
   border-radius: var(--radius-md); background: var(--surface);

@@ -293,6 +293,35 @@
         });
         return Object.keys(set);
     }
+    /* ===== 부서 단위 알림의 받는 사람 (기획확인 4차 C-32, 2026-10-06) =====
+     * 독촉·통지처럼 «그 부서 담당자»에게 가는 알림은 사람 이름이 아니라 **등급**으로 찾는다.
+     *   1순위 그 부서의 「부서 안전보건 담당자」(재난안전과는 그 자리가 「전담부서」 등급이다)
+     *   2순위 없으면 그 부서장(조직도의 부서장 표시) — «대체 수신»으로 밝힌다
+     *   3순위 둘 다 없으면 받는 사람 없음 — 이력에만 남고, 보냈다고 가장하지 않는다
+     * 대체 수신을 두는 이유: 담당자 등급 명단은 담양군 자료 대기(EXT-16)라 지금은 예시 2인뿐이다.
+     * 대체가 없으면 거의 모든 부서의 독촉이 0명이 되어 기능이 돌지 않는다. 부서장은 그 부서 일을
+     * 누구에게 맡길지 정하는 사람이라(배정은 중간 관리자 — CLAUDE.md §14-7) 대신 받을 자리다.
+     * 이 판정은 여기 한 곳이다 — 독촉 경로(이행점검·경영방침·교육·위험성평가)가 같은 함수를 쓴다. */
+    function deptContacts(deptId) {
+        const own = (window.DYROLE && window.DYROLE.OWNER_DEPT) || 'safety';
+        const role = roleById(deptId === own ? 'team' : 'dept_staff');
+        const inDept = {};
+        membersUnder(deptId, true).forEach(u => { inDept[u] = 1; });
+        const staff = roleMemberUids(role).filter(u => inDept[u]).map(personByUid).filter(Boolean);
+        /* 등급명의 괄호 설명(«전담부서(중대재해 총괄)»)은 한 줄 안내에서 겹괄호가 되므로 뗀다 */
+        if (staff.length) return { kind: 'staff', label: String(role.name).replace(/\s*\(.*\)\s*$/, ''), people: staff };
+        const lead = window.DYROLE && window.DYROLE.leadOf ? window.DYROLE.leadOf(deptId) : null;
+        if (lead) return { kind: 'lead', label: '부서장 대체 수신', people: [lead] };
+        return { kind: 'none', label: '받는 사람 없음', people: [] };
+    }
+    /* 독촉 확인·토스트에 쓰는 한 줄 — «누가 받는가»를 보내기 전에 밝힌다 */
+    function contactText(deptId) {
+        const c = deptContacts(deptId);
+        const names = c.people.map(p => p.name).join('·');
+        if (c.kind === 'staff') return names + '(' + c.label + ')';
+        if (c.kind === 'lead') return '부서장 ' + names + '(담당자 미지정 — 대신 받음)';
+        return '받는 사람 없음(담당자·부서장 미등록)';
+    }
     function roleMemberCountLabel(role) {
         if (!role) return '0명';
         if (role.autoAll) return '자동(전 직원)';
@@ -709,6 +738,7 @@
         groups, middleMenus, menuById, isAdminMenu,
         data, save, resetDemo,
         roles, roleById, roleMemberUids, roleMemberCountLabel, userInRole,
+        deptContacts, contactText,
         getAssignments, setAssignments, getUsage, setUsage,
         menuStatus, menuProfile, PROFILE, MENU_PROFILE, assignmentSummary, roleAppliedMenus, roleAppliedCount,
         removeRole, saveRole, addRole, assignLabel,

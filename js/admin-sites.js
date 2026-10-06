@@ -85,20 +85,24 @@
 
     function uniq(a) { var s = {}, o = []; a.forEach(function (x) { if (!s[x]) { s[x] = 1; o.push(x); } }); return o; }
     function setDept(v) { state.dept = v; render(); }
+    /* 조직도(ORGPICK 'dept')에서 고른 관할 부서 — 부서명으로 저장하는 도메인이다(§3) */
+    function pickDept(name) { var el = document.getElementById('as-dept'); if (el) el.value = name; }
 
     function formBody(s) {
         s = s || {};
-        var deptOpts = V().deptNames().map(function (d) {
-            return '<option' + (s.dept === d ? ' selected' : '') + '>' + esc(d) + '</option>';
-        }).join('');
         var typeOpts = M().TYPES.map(function (t) {
             return '<option' + (s.type === t ? ' selected' : '') + '>' + esc(t) + '</option>';
         }).join('');
         var targetOpts = M().TARGET_STATES.map(function (t) {
             return '<option' + ((s.targetState || '검토 중') === t ? ' selected' : '') + '>' + esc(t) + '</option>';
         }).join('');
+        /* 부서 선택은 공용 조직도(ORGPICK)로만 — 등록 폼에 부서 드롭다운을 두지 않는다(CLAUDE.md §3,
+           기획확인 4차 «부서·대상자 선택 UI», 2026-10-06). 목록 상단의 조회 필터만 드롭다운이다. */
         return '<div class="ri-modal-row" style="margin-bottom:12px;"><label class="form-label" for="as-dept">관할 부서 <span style="color:var(--status-danger-fg)">*</span></label>' +
-                '<select class="form-select" id="as-dept">' + deptOpts + '</select></div>' +
+                '<div class="orgpick-field" id="as-dept-field"><div style="display:flex;gap:8px;">' +
+                    '<input type="text" class="form-input" id="as-dept" readonly placeholder="조직도에서 부서 선택" style="flex:1;" value="' + esc(s.dept || '') + '">' +
+                    '<button type="button" class="btn btn-outline" onclick="ORGPICK.toggle(\'as-dept-field\',\'dept\',\'DYADMSITE.pickDept\')">조직도</button>' +
+                '</div></div></div>' +
             '<div class="ri-modal-row" style="margin-bottom:12px;"><label class="form-label" for="as-name">사업장명 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 '<input type="text" class="form-input" id="as-name" value="' + esc(s.name || '') + '" placeholder="예: 담양정수장"></div>' +
             '<div class="ri-modal-row" style="margin-bottom:12px;"><label class="form-label" for="as-type">유형</label>' +
@@ -134,6 +138,7 @@
             targetBasis: (document.getElementById('as-basis').value || '').trim(),
             note: (document.getElementById('as-note').value || '').trim()
         };
+        if (!o.dept) { V().toast('관할 부서를 조직도에서 고르세요.'); return; }
         if (!o.name) { V().toast('사업장명을 입력하세요.'); return; }
         if (o.targetState !== '검토 중' && !o.targetBasis) { V().toast('대상·비대상 판정근거를 입력하세요.'); return; }
         if (M().duplicateOf(o.dept, o.name, id || '')) { V().toast('같은 부서에 같은 이름의 사업장이 이미 있습니다.'); return; }
@@ -166,6 +171,6 @@
         render();
     }
 
-    global.DYADMSITE = { init: init, setDept: setDept, openNew: openNew, openEdit: openEdit,
+    global.DYADMSITE = { init: init, setDept: setDept, pickDept: pickDept, openNew: openNew, openEdit: openEdit,
         save: save, confirmRemove: confirmRemove, doRemove: doRemove, reactivate: reactivate };
 })(window);

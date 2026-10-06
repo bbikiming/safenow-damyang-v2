@@ -28,11 +28,13 @@
                         종전 표의 <b>주간 요약</b>을 뺀 것도 같은 이유입니다 — 필요 없어서가 아니라 <b>어느 업무 화면도 그 알림을 선언하지 않아</b> 여기 실을 근거가 없습니다.
                         <br><b>공통 시점</b> — 마감 <b>7일 전·1일 전</b>, 기한을 넘기면 <b>1일 뒤</b>, 그 뒤로는 끝날 때까지 <b>7일마다</b>.
                         다른 시점을 쓰는 업무는 그 값을 행에 그대로 적었습니다(각 화면에만 적어 두면 알림이 왜 그때 왔는지 되짚을 곳이 없습니다).
+                        <br><b>「부서 담당자」로 받는 알림</b> — 그 부서의 <b>부서 안전보건 담당자</b>가 받고(재난안전과는 전담부서), 담당자가 없으면 <b>부서장이 대신</b> 받습니다. 대신 받은 것과 받을 사람이 아무도 없던 것은 발송 이력에 그대로 밝힙니다.
+                        사람이 정해지는 알림(조치 담당자 등)도 그 사람이 아직 없으면 같은 순서로 찾습니다.
                         매일 보내지 않는 이유는 매일 오면 곧 읽지 않는 알림이 되어 정말 급한 건까지 함께 묻히기 때문입니다.
                     </div>
                     <div style="overflow-x:auto;">
                         <!-- 계열 구분 행은 표 안 그룹 머리 행의 기존 구현(.edu-group-row/.edu-group-head)을 그대로 쓴다.
-                             19행을 한 덩어리로 두면 읽히지 않고, 같은 요소로 새 클래스 계열을 만들지 않는다. -->
+                             행이 스무 개가 넘어 한 덩어리로 두면 읽히지 않고, 같은 요소로 새 클래스 계열을 만들지 않는다. -->
                         <table class="table-figma table-compact" style="min-width:640px;">
                             <!-- 채널 열 머리는 두 글자라 좁은 폭에서 세로로 쪼개진다 — 폭이 아니라 줄바꿈만 막는다. -->
                             <thead><tr><th>이벤트</th><th>시점</th><th style="white-space:nowrap;">문자</th><th style="white-space:nowrap;">메일</th><th>수신 대상</th></tr></thead>
@@ -79,7 +81,7 @@
 
                                 <tr class="edu-group-row"><td colspan="5"><div class="edu-group-head">
                                     <span class="edu-group-name">행위 계열</span>
-                                    <span class="edu-group-count">10건 · 누가 무언가를 하면 나갑니다</span>
+                                    <span class="edu-group-count">13건 · 누가 무언가를 하면 나갑니다 — 받는 사람이 할 일이 있을 때만</span>
                                 </div></td></tr>
                                 <tr data-event="업무 배정">
                                     <td style="font-weight:var(--fw-semibold);">업무 배정</td>
@@ -88,19 +90,12 @@
                                     <td><input type="checkbox" checked aria-label="업무 배정 — 메일 발송"></td>
                                     <td>배정받은 담당자</td>
                                 </tr>
-                                <tr data-event="업무 미제출 독촉">
-                                    <td style="font-weight:var(--fw-semibold);">업무 미제출 독촉</td>
-                                    <td>담당자가 보낼 때</td>
-                                    <td><input type="checkbox" checked aria-label="업무 미제출 독촉 — 문자 발송"></td>
-                                    <td><input type="checkbox" checked aria-label="업무 미제출 독촉 — 메일 발송"></td>
-                                    <td>미제출 부서 담당자</td>
-                                </tr>
-                                <tr data-event="업무 제출 확인·반려">
-                                    <td style="font-weight:var(--fw-semibold);">업무 제출 확인·반려</td>
-                                    <td>처리 즉시</td>
-                                    <td><input type="checkbox" aria-label="업무 제출 확인·반려 — 문자 발송"></td>
-                                    <td><input type="checkbox" checked aria-label="업무 제출 확인·반려 — 메일 발송"></td>
-                                    <td>제출한 담당자</td>
+                                <tr data-event="정기평가 설문조사표 제출 요청">
+                                    <td style="font-weight:var(--fw-semibold);">정기평가 설문조사표 제출 요청</td>
+                                    <td>그 부서에 양식이 처음 적용된 즉시</td>
+                                    <td><input type="checkbox" aria-label="정기평가 설문조사표 제출 요청 — 문자 발송"></td>
+                                    <td><input type="checkbox" checked aria-label="정기평가 설문조사표 제출 요청 — 메일 발송"></td>
+                                    <td>대상 부서 담당자</td>
                                 </tr>
                                 <tr data-event="위험성평가 조치기한 전달">
                                     <td style="font-weight:var(--fw-semibold);">위험성평가 조치기한 전달</td>
@@ -109,12 +104,40 @@
                                     <td><input type="checkbox" checked aria-label="위험성평가 조치기한 전달 — 메일 발송"></td>
                                     <td>부서 조치 담당자</td>
                                 </tr>
-                                <tr data-event="위험성평가 미제출 재촉">
-                                    <td style="font-weight:var(--fw-semibold);">위험성평가 미제출 재촉</td>
-                                    <td>담당자가 보낼 때</td>
-                                    <td><input type="checkbox" checked aria-label="위험성평가 미제출 재촉 — 문자 발송"></td>
-                                    <td><input type="checkbox" checked aria-label="위험성평가 미제출 재촉 — 메일 발송"></td>
-                                    <td>미제출 부서 담당자</td>
+                                <tr data-event="수시평가 개선조치 도착">
+                                    <td style="font-weight:var(--fw-semibold);">수시평가 개선조치 도착</td>
+                                    <td>다른 부서(주관부서)가 그 부서 건으로 등록한 즉시</td>
+                                    <td><input type="checkbox" aria-label="수시평가 개선조치 도착 — 문자 발송"></td>
+                                    <td><input type="checkbox" checked aria-label="수시평가 개선조치 도착 — 메일 발송"></td>
+                                    <td>그 부서 담당자</td>
+                                </tr>
+                                <tr data-event="개선조치 담당자 지정">
+                                    <td style="font-weight:var(--fw-semibold);">개선조치 담당자 지정</td>
+                                    <td>지정·변경 즉시(본인 지정은 제외)</td>
+                                    <td><input type="checkbox" aria-label="개선조치 담당자 지정 — 문자 발송"></td>
+                                    <td><input type="checkbox" checked aria-label="개선조치 담당자 지정 — 메일 발송"></td>
+                                    <td>지정된 담당자</td>
+                                </tr>
+                                <tr data-event="개선조치 완료 확인 요청">
+                                    <td style="font-weight:var(--fw-semibold);">개선조치 완료 확인 요청</td>
+                                    <td>정기평가 조치를 완료·재제출한 즉시</td>
+                                    <td><input type="checkbox" aria-label="개선조치 완료 확인 요청 — 문자 발송"></td>
+                                    <td><input type="checkbox" checked aria-label="개선조치 완료 확인 요청 — 메일 발송"></td>
+                                    <td>주관부서 담당자(전담부서)</td>
+                                </tr>
+                                <tr data-event="개선조치 확인 반려">
+                                    <td style="font-weight:var(--fw-semibold);">개선조치 확인 반려</td>
+                                    <td>반려 즉시(사유 포함)</td>
+                                    <td><input type="checkbox" checked aria-label="개선조치 확인 반려 — 문자 발송"></td>
+                                    <td><input type="checkbox" checked aria-label="개선조치 확인 반려 — 메일 발송"></td>
+                                    <td>그 조치 담당자</td>
+                                </tr>
+                                <tr data-event="위험성평가 조치기한 재촉">
+                                    <td style="font-weight:var(--fw-semibold);">위험성평가 조치기한 재촉</td>
+                                    <td>담당자가 보낼 때(기한초과 건)</td>
+                                    <td><input type="checkbox" checked aria-label="위험성평가 조치기한 재촉 — 문자 발송"></td>
+                                    <td><input type="checkbox" checked aria-label="위험성평가 조치기한 재촉 — 메일 발송"></td>
+                                    <td>조치 담당자 · 담당자 미정이면 부서 담당자</td>
                                 </tr>
                                 <tr data-event="경영방침 미게시 독촉">
                                     <td style="font-weight:var(--fw-semibold);">경영방침 미게시 독촉</td>

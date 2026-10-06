@@ -253,8 +253,16 @@
             '<td>' + esc(hs.anchor || (SUP_MODE ? '지정일 미등록' : w.hireDate)) + '</td>' +
             '<td>' + hs.need + 'h</td>' +
             '<td>' + esc(hs.lastDate || '-') + '</td>' +
-            '<td><span class="chip-status chip-sm ' + V().toneOf(stLabel) + '">' + esc(stLabel) + '</span></td>' +
-            '<td class="col-action">' + (hs.lastDate ? editBtnHtml(w) + ' ' + docBtnHtml(w) : '') + '</td>' +
+            '<td><span class="chip-status chip-sm ' + V().toneOf(stLabel) + '">' + esc(stLabel) + '</span>' +
+                /* 특별교육으로 갈음한 건 — 무엇으로 이수가 됐는지와 근거를 함께 보인다(시행규칙 §26①).
+                   근거 표기는 DYLAW 파생이다(조문 문자열을 화면이 조립하지 않는다 — CLAUDE.md §10). */
+                (hs.via === '특별교육'
+                    ? '<div class="edu-hire-via">특별교육 이수로 갈음' +
+                        (global.DYLAW && DYLAW.basisLine ? ' ' + DYLAW.basisLine('oshr-26', { compact: true }) : '') + '</div>'
+                    : '') + '</td>' +
+            /* 갈음 건에는 채용시 이수기록이 없다 — 고칠 기록도, 이 화면에서 올릴 공문도 없다
+               (특별교육의 수정·공문은 기타교육 화면 소관이다) */
+            '<td class="col-action">' + (hs.lastDate && hs.hireRecords ? editBtnHtml(w) + ' ' + docBtnHtml(w) : '') + '</td>' +
         '</tr>';
     }
     /* 이수 기록 손보기 — '취소'가 아니라 '수정'이다.
@@ -435,9 +443,15 @@
         if (el('eh-b-date')) B.date = el('eh-b-date').value || B.date;
         if (el('eh-b-time')) B.time = el('eh-b-time').value || B.time;
         if (el('eh-b-end')) B.end = el('eh-b-end').value || B.end;
-        if (el('eh-b-evidence') && el('eh-b-evidence').files && el('eh-b-evidence').files[0]) B.evidenceName = el('eh-b-evidence').files[0].name;
         if (el('eh-b-inst')) B.instructor = el('eh-b-inst').value.trim();
         if (el('eh-b-desc')) B.desc = el('eh-b-desc').value.trim();
+    }
+    /* 공용 업로드 칸의 선택 결과 — 형식·용량 검사를 마친 파일만 넘어온다(DYV2.acceptFiles) */
+    function pickEvidence(files) {
+        if (!files || !files.length) return;
+        captureBulk();
+        B.evidenceName = files[0].name;
+        renderBulk();
     }
     function renderBulk() {
         var names = B.ids.map(function (id) { var w = E().workerOf(id); return w ? w.name : id; }).join(', ');
@@ -473,8 +487,10 @@
                 '<input type="text" class="form-input" id="eh-b-inst" value="' + esc(B.instructor) + '"></div>' +
             '<div class="edu-modal-row"><label class="form-label" for="eh-b-desc">내용</label>' +
                 '<textarea class="form-textarea" id="eh-b-desc" rows="2">' + esc(B.desc) + '</textarea></div>' +
-            '<div class="edu-modal-row"><label class="form-label" for="eh-b-evidence">교육일지·서명부 증빙 <span style="color:var(--status-danger-fg)">*</span></label>' +
-                '<input class="form-input" id="eh-b-evidence" type="file" accept=".pdf,.hwp,.hwpx,.jpg,.jpeg,.png">' +
+            /* 업로드 칸은 전 화면 공용 모양 하나(uploadDrop) — 종전의 브라우저 기본 파일 입력은 형식·용량
+               검사(FILE_LIMITS)를 지나지 않았다(기획확인 4차 D-1, 2026-10-06). */
+            '<div class="edu-modal-row"><label class="form-label">교육일지·서명부 증빙 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                V().uploadDrop('<b>증빙 파일을 끌어다 놓거나 눌러서 선택</b>', '', { hint: true, pick: 'EDUH.pickEvidence' }) +
                 (B.evidenceName ? '<p style="font-size:var(--fs-12);color:var(--text-gray);margin:4px 0 0;">선택됨: ' + esc(B.evidenceName) + '</p>' : '') + '</div>';
         V().openModal('선택 교육기록 등록 · ' + B.ids.length + '명', body,
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
@@ -704,7 +720,7 @@
         init: init, setTab: setTab, setF: setF, resetF: resetF,
         toggle: toggle, toggleAll: toggleAll,
         setGroupBy: setGroupBy, toggleGroup: toggleGroup,
-        openBulk: openBulk, setBulkMode: setBulkMode, setBulkMerge: setBulkMerge, doBulk: doBulk,
+        openBulk: openBulk, setBulkMode: setBulkMode, setBulkMerge: setBulkMerge, doBulk: doBulk, pickEvidence: pickEvidence,
         /* 이수 수정(기본) → 그 안에서만 회수(삭제)로 내려간다 */
         openEditDone: openEditDone, saveEditDone: saveEditDone,
         confirmUndo: confirmUndo, doUndo: doUndo,

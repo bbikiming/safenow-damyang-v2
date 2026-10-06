@@ -308,6 +308,11 @@
         if (p.deptId === OWNER_DEPT) return true;
         return !!deptId && deptId === p.deptId;
     }
+    /* 독촉·재촉을 못 하는 사람에게 하는 말 — 독촉 경로가 같은 문장을 쓴다(기획확인 4차 C-32).
+       화면마다 거절 문구를 따로 두면 같은 규칙이 다른 말로 들린다. */
+    function roleRemindDenyNote(what) {
+        return (what || '독촉') + '은 주관부서(재난안전과)와 그 부서가 합니다 — 총괄 책임자는 진행 상황을 조회합니다.';
+    }
 
     /* 실제로 가릴 GNB 그룹 — 계층 기본값에 페르소나 예외(sysAdmin)를 얹는다 */
     function roleHidden(p) {
@@ -1421,6 +1426,7 @@
         leadOf: roleLeadOf,
         actorLabel: roleActorLabel,
         canRemind: roleCanRemind,
+        remindDenyNote: roleRemindDenyNote,
         readOnlyNote: roleReadOnlyNote,
         set: roleSet,
         open: roleOpen,

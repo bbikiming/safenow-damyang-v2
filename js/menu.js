@@ -686,7 +686,12 @@
             PG.boardPhotoPick = () => { const i = document.getElementById('board-photo-input'); if (i) i.click(); };
             PG.boardPhotoFile = file => {
                 if (!file) return;
-                if (!/^image\//.test(file.type)) { V.toast('이미지 파일만 업로드할 수 있습니다'); return; }
+                /* 이미지 칸 프로필(jpg·jpeg·png·gif · 10MB — `_규칙` §5)을 따른다. 종전 «image/*» 는
+                   webp 등 규칙 밖 형식까지 받았다(기획확인 4차 · 확장자 확정, 2026-10-06). */
+                const IP = (V.FILE_PROFILES && V.FILE_PROFILES.image) || { extensions: ['jpg', 'jpeg', 'png', 'gif'], maxMB: 10 };
+                const ext = (String(file.name || '').split('.').pop() || '').toLowerCase();
+                if (IP.extensions.indexOf(ext) === -1) { V.toast('이미지는 JPG·PNG·GIF만 올릴 수 있습니다'); return; }
+                if (file.size > IP.maxMB * 1024 * 1024) { V.toast('이미지는 파일당 ' + IP.maxMB + 'MB까지 올릴 수 있습니다'); return; }
                 const reader = new FileReader();
                 reader.onload = e => {
                     PG._boardPhoto = { name: file.name, src: e.target.result };
@@ -700,7 +705,7 @@
             PG.boardPhotoClear = () => { PG._boardPhoto = null; const z = document.getElementById('board-photo-zone'); if (z) { z.classList.remove('has-photo'); z.innerHTML = boardPhotoEmpty(); } };
             PG.boardLocAdd = ver => { PG._boardPhoto = null; PG._stackOpen('게시 등록',
                 '<div class="board-up">' +
-                '<input type="file" id="board-photo-input" accept="image/*" style="display:none" onchange="PG.boardPhotoChange(this)">' +
+                '<input type="file" id="board-photo-input" accept=".jpg,.jpeg,.png,.gif" style="display:none" onchange="PG.boardPhotoChange(this)">' +
                 '<div id="board-photo-zone" class="board-up-zone" onclick="PG.boardPhotoPick()" ondragover="event.preventDefault(); this.classList.add(\'drag\')" ondragleave="this.classList.remove(\'drag\')" ondrop="PG.boardPhotoDrop(event)">' + boardPhotoEmpty() + '</div>' +
                 '</div>' +
                 '<div class="preset-form-grid" style="margin-top:16px;">' +
@@ -1571,19 +1576,26 @@
             /* ===== 점검결과지 (협의체 점검표) — 생성·수정·조회(상세)·삭제 + 온나라 결재 + PDF ===== */
             function opnChkModal(ex) {
                 const isEdit = !!ex;
-                const DEPT4 = DEPTS.slice(0, 4);
+                /* 문항별 담당부서 선택 콜백 — ORGPICK 은 전역 함수 경로 문자열을 부르므로 문항마다 진입점을 둔다 */
+                CHK_QS.forEach((q, i) => { PG['opnChkOwnerPick' + i] = name => { const el = document.getElementById('opn-chk-owner-' + i); if (el) el.value = name; }; });
                 const catOpts = CHK_CATS.map(c => '<option' + (ex && ex.cat === c ? ' selected' : '') + '>' + c + '</option>').join('');
                 const itemsHtml = CHK_QS.map((q, i) => {
                     const saved = (ex && ex.items[i]) ? ex.items[i].r : '확인';
-                    const savedOwner = (ex && ex.items[i] && ex.items[i].owner) || DEPT4[0];
+                    const savedOwner = (ex && ex.items[i] && ex.items[i].owner) || '';
                     const savedDue = (ex && ex.items[i] && ex.items[i].due) || '2026-07-31';
                     return '<div class="opn-chk-row" style="flex-direction:column; align-items:stretch; gap:8px;">' +
                         '<div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">' +
                         '<div class="opn-chk-q">' + (i + 1) + '. ' + q + '</div><div class="opn-chk-opts">' +
                         ['확인', '미흡', '해당없음'].map(r => '<label><input type="radio" name="opn-chk-' + i + '" value="' + r + '" onchange="PG.opnChkToggleFix(' + i + ',this.value)"' + (r === saved ? ' checked' : '') + '> ' + r + '</label>').join('') + '</div></div>' +
-                        '<div id="opn-chk-fix-' + i + '" style="display:' + (saved === '미흡' ? 'flex' : 'none') + '; align-items:center; gap:8px; padding-top:8px; border-top:1px dashed var(--gray-200); flex-wrap:wrap;">' +
+                        '<div id="opn-chk-fix-' + i + '" style="display:' + (saved === '미흡' ? 'flex' : 'none') + '; align-items:flex-start; gap:8px; padding-top:8px; border-top:1px dashed var(--gray-200); flex-wrap:wrap;">' +
                         '<span style="font-size:var(--fs-12); color:var(--text-gray);">담당부서</span>' +
-                        '<select id="opn-chk-owner-' + i + '" class="opn-filter">' + DEPT4.map(d => '<option' + (savedOwner === d ? ' selected' : '') + '>' + d + '</option>').join('') + '</select>' +
+                        /* 담당부서는 공용 조직도(ORGPICK)에서 고른다 — 종전에는 화면이 자체 부서 4개를
+                           박아 두고 드롭다운으로 골랐다(CLAUDE.md §3 위반 · 기획확인 4차 «부서 선택», 2026-10-06) */
+                        '<span class="orgpick-field" id="opn-chk-ownerfield-' + i + '" style="display:inline-flex;flex-direction:column;gap:6px;flex:0 1 auto;min-width:0;">' +
+                            '<span style="display:inline-flex;gap:6px;align-items:center;">' +
+                                '<input id="opn-chk-owner-' + i + '" type="text" class="opn-filter" readonly placeholder="조직도에서 선택" value="' + savedOwner + '">' +
+                                '<button type="button" class="btn btn-sm btn-outline" onclick="ORGPICK.toggle(\'opn-chk-ownerfield-' + i + '\',\'dept\',\'PG.opnChkOwnerPick' + i + '\')">조직도</button>' +
+                            '</span></span>' +
                         '<span style="font-size:var(--fs-12); color:var(--text-gray);">기한</span>' +
                         '<input id="opn-chk-due-' + i + '" type="date" class="opn-filter" value="' + savedDue + '">' +
                         '</div>' +
@@ -1602,12 +1614,15 @@
                         const r = (document.querySelector('input[name=opn-chk-' + i + ']:checked') || {}).value || '확인';
                         const it = { q: q, r: r };
                         if (r === '미흡') {
-                            it.owner = (document.getElementById('opn-chk-owner-' + i) || {}).value || DEPT4[0];
+                            it.owner = (document.getElementById('opn-chk-owner-' + i) || {}).value || '';
                             it.due = (document.getElementById('opn-chk-due-' + i) || {}).value || '2026-07-31';
                         }
                         return it;
                     });
                     const unfit = newItems.filter(x => x.r === '미흡').length;
+                    /* 미흡 문항은 개선조치로 연계되므로 담당부서가 비면 받을 곳이 없다 */
+                    const noOwner = newItems.findIndex(x => x.r === '미흡' && !x.owner);
+                    if (noOwner !== -1) { V.toast((noOwner + 1) + '번 문항(미흡)의 담당부서를 조직도에서 고르세요'); return; }
                     if (isEdit) {
                         ex.cat = cat; ex.date = date; ex.items = newItems; ex.result = unfit ? '미흡' : '적합';
                         V.closeModal(); render(); V.toast('점검결과지가 수정되었습니다' + (unfit ? ' — 미흡 ' + unfit + '건' : ''));
@@ -1752,11 +1767,11 @@
                 const CLOUD = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14.9A7 7 0 1 1 15.7 8h1.8a4.5 4.5 0 0 1 2.5 8.2"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>';
                 const photo = sectionCard('사진 첨부',
                     /* 드롭존은 DYV2.uploadDrop() 로만 렌더 — role/tabindex/Enter·Space 활성화 배선(§2). */
+                    /* 안내 문구는 이미지 칸 프로필에서 낸다(문구를 화면에 직접 쓰지 않는다 — §2). 칸 안에
+                       버튼을 또 두지 않는다 — 칸 전체가 이미 버튼이라 겹친 버튼은 키보드로 두 번 멈춘다. */
                     V.uploadDrop(CLOUD +
-                        '<div class="dz-title">첨부할 파일을 여기에 끌어다 놓거나 파일 선택 버튼을 클릭하세요</div>' +
-                        '<button type="button" class="btn btn-sm btn-outline">파일 선택</button>' +
-                        '<div class="dz-hint">JPG, PNG, GIF 파일만 업로드 가능합니다 (최대 10MB · 최대 5장)</div>',
-                        "DYV2.notReady('사진 첨부', '문서관리 연계')"), '');
+                        '<div class="dz-title">첨부할 사진을 여기에 끌어다 놓거나 눌러서 선택하세요</div>',
+                        "DYV2.notReady('사진 첨부', '문서관리 연계')", { hint: true, profile: 'image' }), '');
                 const bar = '<div class="opn-formbar"><button class="btn btn-outline" onclick="PG.opnBack()">취소</button><button class="btn btn-primary" onclick="PG.opnSave()">등록하기</button></div>';
                 return head + writer + info + detail + photo + bar;
             }

@@ -832,6 +832,15 @@ body {
 .btn-primary:hover {
   background-color: var(--main-dark2);
 }
+/* 꺼진 주 버튼은 꺼진 것처럼 보여야 한다(2026-10-06) — 종전에는 disabled 여도 같은 색이라
+   «열람 확인에 체크해야 켜지는» 확인 버튼이 눌리는데 아무 일도 안 일어나는 것처럼 보였다.
+   .btn-success:disabled 와 같은 값을 쓴다. */
+.btn-primary:disabled,
+.btn-primary:disabled:hover {
+  background-color: var(--gray-100);
+  color: var(--text-gray);
+  cursor: not-allowed;
+}
 
 .btn-secondary {
   background-color: white;

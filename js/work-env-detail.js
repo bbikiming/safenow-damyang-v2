@@ -60,7 +60,10 @@
             if (!measured) acts += '<button type="button" class="btn btn-primary" onclick="WENVD.complete()">측정 완료 처리</button>';
             else if (needImp) acts += '<button type="button" class="btn btn-primary" onclick="WENVD.improveDone()">개선조치 완료</button>';
             else acts += '<span class="sh-st success" style="align-self:center;">완료 처리됨</span>';
-            acts += '<button type="button" class="btn btn-outline" onclick="WENVD.evidence()">증빙 등록</button>';
+            /* 첨부 용도는 상태가 정한다(기획확인 4차 3-1) — 측정 전은 결과보고서, 개선 필요는 개선 증빙.
+               끝난 건(측정 완료·적정 / 개선 완료)에는 올리지 않는다(3차 회신 A-1 연번 4). */
+            if (!measured) acts += '<button type="button" class="btn btn-outline" onclick="WENVD.evidence(\'결과보고서\')">결과보고서 등록</button>';
+            else if (needImp) acts += '<button type="button" class="btn btn-outline" onclick="WENVD.evidence(\'개선 증빙\')">개선 증빙 등록</button>';
             if (!measured || needImp) acts += '<button type="button" class="btn btn-outline" onclick="WENVD.resetDue()">기한 재설정</button>';
             if (!measured) acts += '<button type="button" class="btn btn-outline" onclick="WENVD.reason()">미완료 사유 입력</button>';
             acts += '<button type="button" class="btn btn-outline" onclick="WENVD.notify()">알림 발송</button>';
@@ -92,9 +95,10 @@
         var report =
             '<div class="sh-card"><div class="sh-card-h">용역 결과보고서 <span class="sub">위탁업체 제출 · 증빙</span></div>' +
             (r.report
-                ? '<div class="sh-photos"><div class="sh-photo has">' + S().icon('file', 26) + '<span>결과보고서.pdf</span></div>' +
+                ? '<div class="sh-photos"><div class="sh-photo has">' + S().icon('file', 26) + '<span>결과보고서.pdf' +
+                    (r.reportVersions > 1 ? ' · 제' + r.reportVersions + '판' : '') + '</span></div>' +
                   '<div style="align-self:center;font-size:13px;color:var(--text-gray);">위탁업체 결과보고서가 등록되어 있습니다.</div></div>'
-                : '<div class="sh-req">아직 결과보고서(증빙)가 등록되지 않았습니다. 위탁업체 제출 후 <b>[증빙 등록]</b>으로 첨부하세요.</div>') +
+                : '<div class="sh-req">아직 결과보고서가 등록되지 않았습니다. 위탁업체 제출 후 <b>[결과보고서 등록]</b>으로 첨부하세요.</div>') +
             '</div>';
 
         /* 결과 요약 · 개선 요구 · 개선 전후 */
@@ -162,17 +166,37 @@
             '<div class="sh-detail">' + overview + report + resultCard + pendingCard + histCard + '</div>';
     }
 
-    /* ── 증빙 등록 ── */
-    function evidence() {
-        if (deny(S().workEnvOf(state.id), '결과보고서 등록')) return;
-        V().openModal('결과보고서 · 증빙 등록',
-            '<p style="font-size:13px;margin-bottom:10px;color:var(--text-gray);">위탁업체가 제출한 작업환경측정 결과보고서를 첨부합니다.</p>' +
+    /* ── 증빙 등록 — 용도별(결과보고서 / 개선 증빙) ──
+     * 어느 용도를 받을지는 상태가 정한다: 측정 전 = 결과보고서, 개선 필요 = 개선 증빙, 끝난 건 = 받지 않음
+     * (3차 회신 A-1 연번 4 · 기획확인 4차 3-1). 여는 쪽과 저장 쪽이 같은 판정을 쓴다. */
+    var EV_PURPOSE = '결과보고서';
+    function evidenceAllowed(r, purpose) {
+        if (!r) return false;
+        var measured = S().weMeasured(r), needImp = S().weNeedsImprove(r);
+        return purpose === '개선 증빙' ? (measured && needImp) : !measured;
+    }
+    function evidence(purpose) {
+        purpose = purpose === '개선 증빙' ? '개선 증빙' : '결과보고서';
+        var r = S().workEnvOf(state.id);
+        if (deny(r, purpose + ' 등록')) return;
+        if (!evidenceAllowed(r, purpose)) { toast('끝난 건에는 증빙을 올리지 않습니다 — 최초 결과와 증빙을 그대로 보존합니다.'); return; }
+        EV_PURPOSE = purpose;
+        V().openModal(purpose + ' 등록',
+            '<p style="font-size:13px;margin-bottom:10px;color:var(--text-gray);">' +
+                (purpose === '개선 증빙'
+                    ? '개선조치를 마친 뒤의 증빙(조치 후 사진·확인서 등)을 첨부합니다. 개선 완료 판정의 근거가 됩니다.'
+                    : '위탁업체가 제출한 작업환경측정 결과보고서를 첨부합니다. 다시 올리면 이전 판은 지우지 않고 남습니다.') + '</p>' +
             V().uploadDrop('파일을 끌어다 놓거나 클릭하여 업로드<br><span style="font-size:12px;">업로드 시 이력이 자동 기록됩니다</span>', null, { hint: true }),
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="WENVD.saveEvidence()">등록</button>');
     }
     function saveEvidence() {
-        if (deny(S().workEnvOf(state.id), '결과보고서 등록')) return; S().attachEvidence('we', state.id, '결과보고서'); V().closeModal(); render(); toast('증빙이 등록되었습니다.'); }
+        var r = S().workEnvOf(state.id);
+        if (deny(r, EV_PURPOSE + ' 등록')) return;
+        if (!evidenceAllowed(r, EV_PURPOSE)) { V().closeModal(); toast('끝난 건에는 증빙을 올리지 않습니다.'); return; }
+        S().attachEvidence('we', state.id, EV_PURPOSE); V().closeModal(); render();
+        toast(EV_PURPOSE + (EV_PURPOSE === '개선 증빙' ? '이' : '가') + ' 등록되었습니다.');
+    }
 
     /* ── 미완료 사유 ── */
     function reason() {
