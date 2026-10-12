@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>통합 현황 - 담양군 중대재해예방통합관리시스템 v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="index" data-page-title="통합 현황" data-page-subtitle="대시보드 · 권한 계층(총괄 책임자·부서 관리자·업무담당자)에 따라 화면이 달라집니다 (SFR-020·017)">
+    <main>
+        <!-- 권한 계층별 대시보드 — js/dashboard.js (DYDSH) 가 DYROLE.current() 기준으로 렌더 -->
+        <div id="dsh-root"></div>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/law-map.js"></script>
+    <script src="./js/help-center.js"></script><!-- DYHELP: 화면 도움말 -->
+    <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
+    <script src="./js/data.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/rsk-kosha.js"></script>
+    <script src="./js/rsk-data.js"></script><!-- 실무자 KPI 실집계 (내 할일과 같은 원본) -->
+    <script src="./js/material-data.js"></script><!-- 원료·제조물 개소 실집계 (SFR-020 «원료·제조물 개소 표시») -->
+    <script src="./js/edu-data.js"></script><!-- 교육 이수율 실집계 (이수현황 화면과 같은 원본) -->
+    <script src="./js/dashboard.js"></script>
+</body>
+</html>

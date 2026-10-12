@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>메뉴 근거 매핑 → 법령 관리 (리다이렉트)</title>
+    <script>
+        /* 법령 관리 화면 통합 (2026-07-30): 법령·조문(ADM04) + 메뉴 근거 매핑(ADM05)
+         *   2메뉴 → admin-law.html 단일 화면의 탭 구조로 합침(사용자 결정).
+         *   이 스텁은 구 주소를 매핑 탭으로 승계한다 — ?page= 딥링크 보존.
+         *   (edu.html 리다이렉트 스텁과 같은 패턴) */
+        (function () {
+            var p = new URLSearchParams(location.search);
+            p.set('tab', 'map');
+            location.replace('admin-law.html?' + p.toString());
+        })();
+    </script>
+</head>
+<body>
+    <p style="font-family:sans-serif;padding:20px;color:#666;">
+        <a href="admin-law.html?tab=map">법령 관리 › 메뉴 근거 매핑</a>으로 이동합니다…
+    </p>
+</body>
+</html>

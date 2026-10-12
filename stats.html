@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>현황 통계 - 담양군 중대재해예방통합관리시스템 v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="stats" data-page-title="현황 통계" data-page-subtitle="통계·보고 > 현황 통계 — 문서·의견 통계 조회 · 엑셀 다운로드 (SFR-018·019)">
+    <main>
+        <div class="v2-toolbar">
+            <div class="form-group"><span class="form-label-inline">연도</span>
+                <select class="select" id="st-year"><option value="">전체</option><option value="2026" selected>2026년</option><option value="2025">2025년</option></select>
+            </div>
+            <div class="form-group"><span class="form-label-inline">기간</span>
+                <select class="select" id="st-period"><option value="">전체</option><option value="H1">상반기</option><option value="H2">하반기</option></select>
+            </div>
+            <div class="form-group"><span class="form-label-inline">대메뉴</span>
+                <select class="select" id="st-menu"><option value="">전체</option></select>
+            </div>
+            <span class="spacer"></span>
+            <button class="btn btn-secondary" id="st-download">엑셀 다운로드</button>
+        </div>
+
+        <div id="st-summary" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:16px;"></div>
+
+        <div class="dsh-grid">
+            <div class="card">
+                <div class="card-header"><span class="card-title" id="st-dist-title">대메뉴별 문서 분포</span></div>
+                <div class="card-body" id="st-dist"></div>
+            </div>
+            <div class="card">
+                <div class="card-header"><span class="card-title">처리유형 · 업무구분</span></div>
+                <div class="card-body" id="st-types"></div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+            <div class="card-header"><span class="card-title">대메뉴별 이행 현황표</span></div>
+            <div class="card-body" style="overflow-x:auto;">
+                <table class="table-figma">
+                    <thead><tr><th>대메뉴</th><th>전체</th><th>완료</th><th>진행</th><th>미시행</th><th>이행률</th></tr></thead>
+                    <tbody id="st-table"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+            <div class="card-header">
+                <span class="card-title">유해·위험요인 신고·개선제안 통계 <span class="chip-mini wt" style="margin-left:6px;">예시 자료</span></span>
+                <a class="btn btn-sm btn-secondary" href="menu.html?m=opinion&amp;sub=voice">신고 현황</a>
+            </div>
+            <div class="card-body">
+                <div id="st-opinion-summary" class="dsh-duty-sum" style="margin-bottom:12px;"></div>
+                <div style="overflow-x:auto;">
+                    <table class="table-figma">
+                        <thead><tr><th>분류</th><th>접수 건수</th><th>추진결과 등록</th><th>추진결과 등록률</th><th>판정 기준</th></tr></thead>
+                        <tbody id="st-opinion-rows"></tbody>
+                    </table>
+                </div>
+                <p style="font-size:12px;color:var(--text-gray);margin-top:10px;">추진결과 등록률은 전체 접수 건 중 추진결과가 등록된 건의 비율입니다. 등록 여부를 조치 완료로 오해하지 않도록 완료율로 표시하지 않습니다.</p>
+            </div>
+        </div>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/law-map.js"></script>
+    <script src="./js/help-center.js"></script><!-- DYHELP: 화면 도움말 -->
+    <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
+    <script src="./js/data.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/sets-data-v2.js"></script>
+    <script>
+        (function () {
+            const V = DYV2;
+            const ALL = window.DY_DOCS_V2 || [];
+            const MENUS = window.DY_MENUS_V2 || {};
+            const sel = document.getElementById('st-menu');
+            Object.keys(MENUS).forEach(k => {
+                const o = document.createElement('option'); o.value = k; o.textContent = MENUS[k].label; sel.appendChild(o);
+            });
+
+            function basisGroup(d) {
+                const b = d.legalBasis || '';
+                const c = b.indexOf('중처') >= 0;
+                const o = b.indexOf('산안') >= 0;
+                if (c && o) return '복합근거';
+                if (c) return '중처법';
+                if (o) return '산안법';
+                return '기타근거';
+            }
+            function filtered() {
+                const year = document.getElementById('st-year').value;
+                const period = document.getElementById('st-period').value;
+                const menu = sel.value;
+                return ALL.filter(d => {
+                    const date = d.updated || '';
+                    const month = Number(date.slice(5, 7));
+                    return (!year || date.slice(0, 4) === year) &&
+                        (!period || (period === 'H1' ? month <= 6 : month >= 7)) &&
+                        (!menu || d.menuKey === menu);
+                });
+            }
+            function dist(list, field, pairs) {
+                return pairs.map(([label, cls]) => {
+                    const n = list.filter(d => d[field] === label).length;
+                    return '<div class="dsh-rate-row"><span class="rate-label">' + label + '</span>' +
+                        '<div class="progress"><div class="progress-bar ' + cls + '" style="width:' + (list.length ? Math.round(n / list.length * 100) : 0) + '%"></div></div>' +
+                        '<span class="rate-num">' + n + '</span></div>';
+                }).join('');
+            }
+
+            const OPN_SEED = {
+                '2026-H1': [['위험신고', 8, 6], ['안전제안', 7, 5], ['아차사고', 5, 4], ['청취조사', 4, 2]],
+                '2026-H2': [['위험신고', 3, 1], ['안전제안', 3, 1], ['아차사고', 2, 1], ['청취조사', 1, 0]],
+                '2025-H1': [['위험신고', 6, 5], ['안전제안', 5, 4], ['아차사고', 4, 3], ['청취조사', 3, 2]],
+                '2025-H2': [['위험신고', 7, 6], ['안전제안', 4, 4], ['아차사고', 3, 2], ['청취조사', 2, 1]],
+            };
+            function opinionData() {
+                const year = document.getElementById('st-year').value || '2026';
+                const period = document.getElementById('st-period').value;
+                const halves = period ? [period] : ['H1', 'H2'];
+                const map = {};
+                halves.forEach(h => (OPN_SEED[year + '-' + h] || []).forEach(r => {
+                    if (!map[r[0]]) map[r[0]] = [r[0], 0, 0];
+                    map[r[0]][1] += r[1]; map[r[0]][2] += r[2];
+                }));
+                return Object.values(map);
+            }
+            function renderOpinionStats() {
+                const rows = opinionData();
+                const received = rows.reduce((n, r) => n + r[1], 0);
+                const done = rows.reduce((n, r) => n + r[2], 0);
+                const rate = received ? Math.round(done / received * 100) : null;
+                document.getElementById('st-opinion-summary').innerHTML =
+                    '<div class="progress"><div class="progress-bar ' + (rate == null ? 'neutral' : rate >= 80 ? 'green' : rate >= 60 ? 'warning' : 'danger') + '" style="width:' + (rate || 0) + '%"></div></div>' +
+                    '<span>접수 <b>' + received + '건</b> · 추진결과 등록 <b>' + done + '건</b> · 추진결과 등록률 <b>' + (rate == null ? '자료 없음' : rate + '%') + '</b></span>';
+                document.getElementById('st-opinion-rows').innerHTML = rows.map(r => {
+                    const pct = r[1] ? Math.round(r[2] / r[1] * 100) : null;
+                    return '<tr><td style="font-weight:600;">' + r[0] + '</td><td>' + r[1] + '</td><td>' + r[2] + '</td>' +
+                        '<td><b style="color:var(--main-dark);">' + (pct == null ? '자료 없음' : pct + '%') + '</b></td><td>추진결과 등록 여부</td></tr>';
+                }).join('') || '<tr><td colspan="5"><div class="v2-empty">선택 기간에 접수 자료가 없습니다.</div></td></tr>';
+            }
+
+            function render() {
+                const list = filtered();
+                const groups = ['중처법', '산안법', '복합근거', '기타근거'];
+                document.getElementById('st-summary').innerHTML =
+                    '<div class="statbox neutral"><div class="statbox-num">' + list.length + '</div><div class="statbox-label">조회 문서 전체</div></div>' +
+                    groups.map((g, i) => '<div class="statbox ' + (i === 1 ? 'success' : i === 3 ? 'warning' : 'info') + '"><div class="statbox-num">' + list.filter(d => basisGroup(d) === g).length + '</div><div class="statbox-label">' + g + '</div></div>').join('');
+
+                const counts = Object.keys(MENUS).map(k => [MENUS[k].label, list.filter(d => d.menuKey === k).length, k]);
+                const max = Math.max(1, ...counts.map(c => c[1]));
+                document.getElementById('st-dist-title').textContent = '대메뉴별 문서 분포 (' + list.length + '건)';
+                document.getElementById('st-dist').innerHTML = counts.sort((a, b) => b[1] - a[1]).map(([label, n, key]) =>
+                    '<div class="dsh-rate-row">' +
+                    '<span class="rate-label">' + label + '</span>' +
+                    '<div class="progress"><div class="progress-bar green" style="width:' + Math.round(n / max * 100) + '%"></div></div>' +
+                    '<span class="rate-num">' + n + '</span></div>'
+                ).join('');
+
+                document.getElementById('st-types').innerHTML =
+                    '<p style="font-size:12px; font-weight:700; color:var(--text-gray); margin-bottom:4px;">처리유형</p>' +
+                    dist(list, 'processType', [['프로그램', 'green'], ['전자문서', 'info'], ['첨부파일', 'warning']]) +
+                    '<p style="font-size:12px; font-weight:700; color:var(--text-gray); margin:12px 0 4px;">PDCA 단계</p>' +
+                    dist(list, 'pdca', [['P', 'info'], ['D', 'green'], ['C', 'warning'], ['A', 'green']]);
+
+                document.getElementById('st-table').innerHTML = Object.keys(MENUS).map(k => {
+                    const docs = list.filter(d => d.menuKey === k);
+                    const c = s => docs.filter(d => d.status === s).length;
+                    const rate = docs.length ? Math.round(c('완료') / docs.length * 100) : null;
+                    return '<tr><td style="font-weight:600;"><a href="cmp-docs.html?menu=' + k + '" style="color:var(--main-dark);">' + MENUS[k].label + '</a></td>' +
+                        '<td>' + docs.length + '</td><td>' + c('완료') + '</td><td>' + c('진행') + '</td><td>' + c('미시행') + '</td>' +
+                        '<td><b style="color:var(--main-dark);">' + (rate == null ? '대상 없음' : rate + '%') + '</b></td></tr>';
+                }).join('');
+                renderOpinionStats();
+            }
+
+            ['st-year', 'st-period', 'st-menu'].forEach(id => document.getElementById(id).addEventListener('change', render));
+            document.getElementById('st-download').addEventListener('click', () => {
+                V.notReady('통계 엑셀 내려받기', '집계 원본 확정');
+            });
+            render();
+        })();
+    </script>
+</body>
+</html>

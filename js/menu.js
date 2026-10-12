@@ -1,0 +1,2456 @@
+/* =========================================================================
+ * 안전보건관리체계 — 공통 대메뉴 화면 (v2.2 — 기획 v1 컨펌 반영: 버튼 실동작)
+ *   탭: [업무 기능](기본) · [문서]
+ *   모든 등록·점검·평가 버튼은 e-Doc 엔진(표준 폼 7종)을 호출한다.
+ *   확정 시 온나라 결재 요청 팝업 1회 · 점검 X 항목 → 개선조치 자동 등록.
+ *   위험성평가·유해·위험요인·안전보건교육은 전용 화면으로 리다이렉트.
+ * ========================================================================= */
+(function () {
+    'use strict';
+    const V = window.DYV2, E = window.EDOC, T = window.EDOC_T;
+    const params = new URLSearchParams(location.search);
+    const KEY = V.MENUS[params.get('m')] ? params.get('m') : 'policy';
+
+    // 위험성평가·작업공정·개선조치·교육은 전용 정적 화면으로 리다이렉트 (개선조치는 독립 메뉴가 아니라 위험성평가 rsk-list.html 로 보낸다)
+    if (KEY === 'risk' || KEY === 'hazard' || KEY === 'improve' || KEY === 'edu') {
+        location.replace(V.MENUS[KEY].href);
+        return;
+    }
+
+    /* ===== 조작 권한 (CLAUDE.md §12) =====
+     * 관리·감독(군수·과장·소장)은 조회만 한다 — 담당자 이름으로 대신 등록·평가하면
+     * 그건 문서 위조다. 판정은 DYROLE.canAct() 단일 출처. */
+    function canAct(deptId) { return !window.DYROLE || window.DYROLE.canAct(deptId || ''); }
+    function actGate(what) {
+        if (canAct()) return false;
+        V.toast(what + '은(는) 담당자 본인이 수행합니다 — 관리감독자는 조회만 합니다.');
+        return true;
+    }
+    const META = V.MENUS[KEY];
+    const MY_DOCS = V.byMenu(KEY);
+    const esc = V.esc;
+    const ST = V.statusChip;
+
+    /* ── 헤더 ── */
+    document.title = META.label + ' - 담양군 중대재해예방통합관리시스템 v2';
+    document.getElementById('sbm-title').textContent = META.label;
+    /* '문서 N건' 은 이 대메뉴에 걸린 **업무문서** 수인데, 화면 표에는 다른 축이
+       나온다(경영방침은 방침 버전 3건). 나란히 놓이면 "10건이라면서 3개만 보이네요"로
+       읽힌다 — 무엇을 센 숫자인지 밝힌다. */
+    document.getElementById('sbm-subtitle').textContent =
+        '안전보건관리체계 > ' + META.label + ' · ' + META.sfr + ' · 관련 업무문서 ' + MY_DOCS.length + '건';
+
+    /* ── 의견청취: 대메뉴 승격 — sub 파라미터로 3개 SNB 페이지 분기(voice/committee/council) ── */
+    const OPN_SUB_MAP = { voice: '의견청취·건의함', committee: '산업안전보건위원회', council: '협의체·점검표' };
+    let OPN_SUB = null;
+    if (KEY === 'opinion') {
+        OPN_SUB = params.get('sub');
+        if (!OPN_SUB_MAP[OPN_SUB]) OPN_SUB = 'voice';
+        const subLabel = OPN_SUB_MAP[OPN_SUB];
+        document.title = subLabel + ' - 담양군 중대재해예방통합관리시스템 v2';
+        document.getElementById('sbm-title').textContent = subLabel;
+        document.getElementById('sbm-subtitle').textContent = '의견청취 > ' + subLabel + ' · ' + META.sfr;
+    }
+
+    /* ── 탭 ── */
+    const tabs = document.querySelectorAll('#sbm-tabs .tab');
+    function showTab(name) {
+        tabs.forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+        document.querySelectorAll('[data-pane]').forEach(p => { p.style.display = p.dataset.pane === name ? '' : 'none'; });
+    }
+    tabs.forEach(t => t.addEventListener('click', () => showTab(t.dataset.tab)));
+    if (params.get('tab') === 'docs') showTab('docs');
+
+    /* ── 마크업 헬퍼 ── */
+    function statboxes(items) {
+        return '<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:16px;">' +
+            items.map(([cls, num, label]) =>
+                '<div class="statbox ' + cls + '"><div class="statbox-num">' + num + '</div><div class="statbox-label">' + label + '</div></div>').join('') + '</div>';
+    }
+    function tbl(heads, rows) {
+        return '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr>' +
+            heads.map(h => '<th>' + h + '</th>').join('') + '</tr></thead><tbody>' +
+            rows.map(r => '<tr>' + r.map(c => '<td>' + c + '</td>').join('') + '</tr>').join('') + '</tbody></table></div>';
+    }
+    function sectionCard(title, body, actionsHtml) {
+        return '<div class="card" style="margin-bottom:16px;"><div class="card-header"><span class="card-title">' + title + '</span>' +
+            (actionsHtml || '') + '</div><div class="card-body">' + body + '</div></div>';
+    }
+    /* 상태 스테퍼 (안전나우 U1) */
+    function stepper(flow, cur, rejected) {
+        if (rejected) return '<span class="flow-step rejected">반려</span>';
+        const i = flow.indexOf(cur);
+        return '<span class="flow-stepper">' + flow.map((s, j) =>
+            '<span class="flow-step ' + (j < i ? 'done' : j === i ? 'cur' : '') + '">' + s + '</span>' +
+            (j < flow.length - 1 ? '<span class="flow-arrow">›</span>' : '')).join('') + '</span>';
+    }
+    /* e-Doc 상태 칩 (저장된 인스턴스가 있으면 표시) */
+    function docStChip(id) {
+        const st = E.statusOf(id);
+        return st ? (E.STCHIP[st] || '') : '<span class="chip-mini wt">미작성</span>';
+    }
+
+    /* =====================================================================
+     * 메뉴별 업무 기능 — 모든 버튼이 실동작 (window.PG 핸들러)
+     * ===================================================================== */
+    const PG = window.PG = {};
+
+    /* =====================================================================
+     * 결재선 — 공용 조각 하나만 쓴다 (CLAUDE.md §7-1)
+     * ---------------------------------------------------------------------
+     * 종전에는 경영방침·의견청취 점검결과지가 [온나라 결재 상신]을 누르는 순간
+     * 곧바로 `결재중` 으로 넘어갔다 — **결재선을 한 번도 묻지 않았다.** 그러고는
+     * 결재 이력 모달이 「김담당 → 이팀장 → 부군수」 같은 **조직도에 없는 이름**을
+     * 고정으로 찍었다. 상신은 결재선 전체를 한 번에 넘기는 일이라 그 값이 없으면
+     * 애초에 올릴 수 없다.
+     *
+     * 그래서 상신 앞에 **결재선 지정 단계**를 하나 넣는다. 공문 기안 폼을 새로
+     * 만들지는 않는다 — 이 두 화면은 문서가 이미 있고(방침 버전 · 점검결과지)
+     * 없는 것은 결재선뿐이다. 지정과 상신을 한 모달에서 끝낸다.
+     * ===================================================================== */
+    const APPRLN = (window.DYDOC && window.DYDOC.approvalLine)
+        ? window.DYDOC.approvalLine({
+            ns: 'PG.ln', key: 'dy-sbm-apprline-v1',
+            onChange: () => { const el = document.getElementById('sbm-lnmount'); if (el) el.innerHTML = APPRLN.lineEditorHtml(); },
+        })
+        : null;
+    if (APPRLN) PG.ln = APPRLN;
+
+    /* 상신 확인 — 결재선을 고르고 [상신]을 눌러야 넘어간다.
+       onDone(snapshot) 은 도메인이 상태를 바꾸고 결재선을 저장한다. */
+    function apprSubmit(title, onDone) {
+        if (!APPRLN) { onDone(null); return; }
+        V.openModal('온나라 결재 상신 — ' + esc(title),
+            '<div class="rskdoc-send">' +
+                '<p class="file-hint">결재선을 지정해야 상신할 수 있습니다. 상신은 <b>결재선 전체를 한 번에</b> 온나라로 넘기므로 기안·검토·결재가 서로 다른 사람이어야 합니다.</p>' +
+                '<div id="sbm-lnmount">' + APPRLN.lineEditorHtml() + '</div>' +
+                '<div class="rskdoc-lock-warn" style="margin-top:10px;"><b>상신 후에는 수정할 수 없습니다.</b><br>' +
+                '<span class="file-hint">문서번호가 채번되고 결재 이력에 남습니다. 되돌리려면 반려를 받아야 합니다.</span></div>' +
+            '</div>',
+            '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+            '<button class="btn btn-primary" onclick="PG._apprGo()">상신</button>');
+        PG._apprGo = () => {
+            if (APPRLN.lineDenied()) return;      /* 버튼만 잠그면 전역 호출로 뚫린다 */
+            const snap = APPRLN.snapshot();
+            V.closeModal();
+            onDone(snap);
+        };
+    }
+    /* 결재 이력 행 — **저장된 결재선에서 파생한다.** 고정 3행을 찍지 않는다.
+       상신 사실까지만 만들고 승인·반려는 온나라 회신 몫이다(§7-4). */
+    function apprRows(appr, snap, at, done) {
+        if (!snap || !snap.line) return [];
+        const L = snap.line;
+        const label = i => (window.DYDOC ? DYDOC.stepLabel(i, L.length) : (i === L.length - 1 ? '결재' : '검토'));
+        const rows = [[at, '결재 상신', snap.by, '-']];
+        const n = (appr === '승인완료') ? L.length : Math.min(done || 0, L.length);
+        for (let i = 0; i < n; i++) rows.push([at, label(i) + ' 승인', L[i].name, i === L.length - 1 ? '승인 완료' : '-']);
+        if (appr === '반려') rows.push([at, '반려', (L[Math.min(n, L.length - 1)] || {}).name || '-', '보완 후 재상신 요망']);
+        return rows;
+    }
+
+    /* ── 결재 결과 회신 등록 (연계 전 수동 기록) ─────────────────────
+     * **경영방침은 결재 결과를 받는 도메인이다**(2026-08-28 확정 · `_공통_권한정의.md` §7-4).
+     * 가르는 기준은 「결재 결과가 후속 업무를 여는가」인데, 경영방침은 **승인완료라야
+     * 현행본이 되고** 그래야 이행점검·게시가 열린다. 회신이 없으면 새로 상신한 방침이
+     * 결재중에 갇혀 영영 현행본이 되지 못한다(2026-08-28 검수에서 발견).
+     *
+     * **자체 결재가 아니다 — 셋을 지킨다.**
+     *   ① 화면에 **연계 전 수동 기록**임을 밝힌다(결재하는 자리가 아니라 옮겨 적는 자리).
+     *   ② 승인 단계·처리자를 **그 문서 결재선에서 파생**한다 — 고정 이름 금지.
+     *   ③ 회신 등록은 결재가 아니라서 결재선과 무관하게 담당자가 한다.
+     * 같은 형태가 예산 총괄표에 있다(`js/bgt.js` recvBox·receiveOnnara).
+     *
+     * ns: 'PG.polRecv' 처럼 이 조각의 핸들러가 놓인 전역 경로. */
+    function recvBox(ns, id, appr, snap, steps) {
+        if (appr !== '결재중') return '';
+        const line = (snap && snap.line) || [];
+        const done = (steps || 0);
+        const label = i => (window.DYDOC ? DYDOC.stepLabel(i, line.length) : (i === line.length - 1 ? '결재' : '검토'));
+        const midLeft = line.length > 1 && done < line.length - 1;
+        const nextName = line[done] ? line[done].name : '';
+        return '<div class="bgt-sim-box">' +
+            '<div class="bgt-sim-head">결재 결과 회신 등록 — 연계 전 수동 기록</div>' +
+            '<p class="file-hint" style="margin-bottom:10px;">온나라가 보낸 결재 결과를 <b>옮겨 적는 자리</b>입니다 — 이 시스템이 결재하지 않습니다. ' +
+                '연계가 붙으면 온나라 응답이 대신합니다. 회신 등록은 결재가 아니라서 <b>결재선과 무관하게 담당자가</b> 합니다.</p>' +
+            '<div class="bgt-act-btns">' +
+                (midLeft ? '<button class="btn btn-sm btn-outline" onclick="' + ns + '(\'' + id + '\',\'mid\')">' +
+                    esc(label(done)) + ' 승인 회신' + (nextName ? ' (' + esc(nextName) + ')' : '') + '</button>' : '') +
+                '<button class="btn btn-sm btn-primary" onclick="' + ns + '(\'' + id + '\',\'approve\')">결재 완료 회신</button>' +
+                '<button class="btn btn-sm btn-outline" onclick="' + ns + '(\'' + id + '\',\'reject\')">반려 회신</button>' +
+            '</div>' +
+            '<div id="sbm-reject-form" style="display:none;"></div>' +
+        '</div>';
+    }
+    /* 반려 사유 인라인 입력 — 별도 모달을 띄우지 않는다(CLAUDE.md §1) */
+    function rejectInline(ns, id) {
+        const box = document.getElementById('sbm-reject-form'); if (!box) return;
+        if (box.style.display !== 'none' && box.innerHTML) { box.style.display = 'none'; box.innerHTML = ''; return; }
+        box.style.display = 'block';
+        box.innerHTML = '<div class="bgt-reject-inline">' +
+            '<label class="form-label" for="sbm-reject-reason">반려 사유 (필수)</label>' +
+            '<textarea id="sbm-reject-reason" class="form-textarea" rows="2" placeholder="온나라에서 회신된 반려 사유를 그대로 옮겨 적으세요"></textarea>' +
+            '<div class="bgt-act-btns" style="margin-top:8px;">' +
+                '<button class="btn btn-outline btn-sm" onclick="' + ns + '(\'' + id + '\',\'cancel\')">취소</button>' +
+                '<button class="btn btn-primary btn-sm" onclick="' + ns + '(\'' + id + '\',\'doReject\')">반려 회신 등록</button>' +
+            '</div></div>';
+        const ta = document.getElementById('sbm-reject-reason'); if (ta) ta.focus();
+    }
+    /* 회신 반영 — 단계·처리자를 **결재선에서 파생**한다(안전장치 ②).
+     * 반환: {ok, msg, appr} — 도메인이 상태를 받아 자기 객체에 쓴다. */
+    function applyRecv(kind, appr, snap, doneSteps, reason) {
+        const line = (snap && snap.line) || [];
+        const label = i => (window.DYDOC ? DYDOC.stepLabel(i, line.length) : (i === line.length - 1 ? '결재' : '검토'));
+        if (kind === 'mid') {
+            if (!(line.length > 1 && doneSteps < line.length - 1)) return { ok: false, msg: '중간 결재가 이미 완료되었습니다.' };
+            return { ok: true, appr: '결재중', done: doneSteps + 1, msg: label(doneSteps) + ' 승인 회신이 등록되었습니다.' };
+        }
+        if (kind === 'approve') return { ok: true, appr: '승인완료', done: line.length, msg: '결재 완료 회신이 등록되었습니다 — 현행본으로 반영됩니다.' };
+        if (kind === 'reject') {
+            const rs = String(reason || '').trim();
+            if (!rs) return { ok: false, msg: '반려 사유를 입력하세요.' };
+            return { ok: true, appr: '반려', done: doneSteps, reason: rs, msg: '반려 회신이 등록되었습니다.' };
+        }
+        return { ok: false, msg: '알 수 없는 회신 유형입니다.' };
+    }
+
+    /* 지난 문서의 결재선 — **예시 값**이다(§15). 종전에는 이력 모달이
+       「김담당 → 이팀장 → 부군수」라는 **조직도에 없는 이름**을 고정으로 찍었다.
+       실인물 uid 로 바꿔 두어야 지금 규칙과 같은 형태로 읽히고, 온나라에 넘길
+       계정 식별자가 무엇인지도 드러난다. `sample` 표시는 지우지 말 것. */
+    function sampleLine() {
+        return {
+            by: '박안전', byUid: 'u_jjt2',
+            line: [{ uid: 'u_jjt1', name: '김중대', role: '중대재해팀장', dept: '재난안전과' },
+                   { uid: 'u_safe1', name: '홍길동', role: '재난안전과장', dept: '재난안전과' }],
+            lineText: '기안 박안전 → 검토 김중대 → 결재 홍길동', sample: true,
+        };
+    }
+
+    const PROGRAM = {
+        /* ── 경영방침 [SFR-005] 전면 재개편: 버전 목록형 3탭(경영방침/이행점검/게시 현황) + 상세(PDF 미리보기) + 등록(최초/제정/개정). 마스터(근거법령·고려사항·점검표·가이드 CRUD)는 상세에서 모달로 진입(RFP 유지). ── */
+        policy() {
+            /* ===== 마스터 데이터 (RFP CRUD — 상세 배지→모달) ===== */
+            const LAWS = [
+                ['중대재해처벌법 시행령', '제4조 1호', '안전보건 목표·경영방침 수립'],
+                ['산업안전보건법', '제14조', '안전보건경영방침 설정·게시·주지'],
+                ['산업안전보건법', '제15조', '안전보건관리책임자 지정'],
+                ['산업안전보건법', '제24조', '산업안전보건위원회 운영'],
+                ['산업안전보건법', '제36조', '위험성평가 시행'],
+            ];
+            const CONSIDER = [
+                ['설정 시', '조직 규모·업종 특성에 맞는 목표 수준 설정'],
+                ['설정 시', '전년도 재해·점검 결과를 목표에 반영'],
+                ['공통', '종사자 의견을 수렴하여 목표·방침에 반영'],
+                ['점검 시', '목표 대비 달성도와 미달 원인 분석'],
+                ['점검 시', '법령 개정사항이 방침에 반영되었는지 확인'],
+            ];
+            const GUIDE = [
+                ['1', '경영방침 작성 원칙', '최고경영자(군수)의 안전보건 의지 표현 · 법규 준수·지속 개선 · 조직 특성 반영 · 전 종사자 이해 가능', '산업안전보건법 §14 · 중처법 시행령 §4-1'],
+                ['2', '목표(KPI) 설정', '측정 가능·달성 가능(SMART) · 전년 재해·점검 결과 반영 · 산출식·집계주기·책임부서 명시', '중처법 시행령 §4-1'],
+                ['3', '게시·주지 의무', '확정 후 전 종사자 게시·공지 · 도급·용역·위탁 종사자 주지 · 사업장 게시', '산업안전보건법 §14'],
+                ['4', '점검·환류', '반기 1회 이상 적정성 점검 · 보완 시 개선조치 · 법령개정·조직변경 시 갱신 · 결과를 차기 목표 반영', '중처법 시행령 §4-1'],
+            ];
+            const subT = t => '<p style="font-size:12px; font-weight:700; color:var(--main-dark2); margin:0 0 8px;">' + t + '</p>';
+            const delBtn = '<button class="btn btn-sm btn-outline" onclick="this.closest(\'tr\').remove(); DYV2.toast(\'삭제되었습니다\')">삭제</button>';
+
+            /* 설정 가이드 모달 */
+            PG.policyGuide = () => V.openModal('목표·경영방침 설정 가이드',
+                '<div style="font-size:13px; line-height:1.7;">' + GUIDE.map(s =>
+                    '<div style="display:flex; gap:10px; padding:10px 0; border-bottom:1px solid var(--card-line);">' +
+                    '<span style="flex-shrink:0; width:24px; height:24px; border-radius:6px; background:var(--main); color:var(--surface); font-weight:700; display:flex; align-items:center; justify-content:center;">' + s[0] + '</span>' +
+                    '<div><div style="font-weight:700; color:var(--main-dark2);">' + s[1] + '</div>' +
+                    '<div style="color:var(--text-black);">' + s[2] + '</div>' +
+                    '<div style="font-size:12px; color:var(--main-dark); font-weight:600; margin-top:2px;">근거: ' + s[3] + '</div></div></div>').join('') + '</div>',
+                '<button class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
+
+            /* 근거·고려사항 관리 모달 (CRUD) */
+            PG.policyBasis = () => V.openModal('근거법령·고려사항 관리',
+                subT('관련 근거·법령 ↔ 세부내용 매칭') +
+                '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>법령</th><th>조항</th><th>세부내용</th><th></th></tr></thead><tbody id="policy-law-tbody">' +
+                LAWS.map(r => '<tr><td><input value="' + r[0] + '" style="width:100%"></td><td><input value="' + r[1] + '" style="width:100%"></td><td><input value="' + r[2] + '" style="width:100%"></td><td>' + delBtn + '</td></tr>').join('') +
+                '</tbody></table></div>' +
+                '<button class="btn btn-sm btn-outline" style="margin-top:8px;" onclick="PG.policyLawAdd()">+ 법령 추가</button>' +
+                '<div style="margin-top:16px;"></div>' + subT('설정·점검 고려사항') +
+                '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>구분</th><th>고려사항</th><th></th></tr></thead><tbody id="policy-consider-tbody">' +
+                CONSIDER.map(r => '<tr><td><select><option' + (r[0] === '설정 시' ? ' selected' : '') + '>설정 시</option><option' + (r[0] === '점검 시' ? ' selected' : '') + '>점검 시</option><option' + (r[0] === '공통' ? ' selected' : '') + '>공통</option></select></td><td><input value="' + r[1] + '" style="width:100%"></td><td>' + delBtn + '</td></tr>').join('') +
+                '</tbody></table></div>' +
+                '<button class="btn btn-sm btn-outline" style="margin-top:8px;" onclick="PG.policyConsiderAdd()">+ 고려사항 추가</button>',
+                '<button class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
+                '<button class="btn btn-primary" onclick="DYV2.closeModal(); DYV2.toast(\'근거·고려사항이 저장되었습니다\')">저장</button>');
+
+            /* 점검표 관리 모달 (CRUD) — 관련 근거는 근거법령 사전(LAW_DICT)에서 선택 인용 */
+            /* 관리와 F5가 같은 마스터를 사용한다. 실제 편집기는 아래 근거 설정 화면 하나다. */
+            PG.policyChecklist = () => {
+                const v = POL.active();
+                if (!v) { V.toast('현행 경영방침이 없어 점검표를 관리할 수 없습니다'); return; }
+                PG.polChkBasis(v.ver);
+            };
+
+            /* '추가' 폼 — 단일 모달 규칙: 모달이 열려 있으면 모달 본문 안 인라인(.stack-inline)으로,
+               모달이 없으면(페이지 위) 단일 오버레이로 표시(적층 방지). */
+            PG._stackOpen = (title, body, foot) => {
+                PG._stackClose();
+                const host = document.querySelector('#v2-modal .modal-body');
+                if (host) {
+                    const panel = document.createElement('div');
+                    panel.id = 'stack-inline'; panel.className = 'stack-inline';
+                    panel.innerHTML =
+                        '<div class="stack-inline-head"><span>' + title + '</span>' +
+                        '<button type="button" class="modal-close" onclick="PG._stackClose()" aria-label="닫기">&times;</button></div>' +
+                        '<div class="stack-inline-body">' + body + '</div>' +
+                        '<div class="stack-inline-foot">' + foot + '</div>';
+                    host.appendChild(panel);
+                    panel.scrollIntoView({ block: 'nearest' });
+                    const first = panel.querySelector('input, select'); if (first) first.focus();
+                } else {
+                    /* 모달이 없는 페이지 위 — 적층이 아니므로 공용 모달 1개로 표시. */
+                    PG._stackModal = true;
+                    V.openModal(title, body, foot);
+                }
+            };
+            PG._stackClose = () => {
+                const p = document.getElementById('stack-inline'); if (p) p.remove();
+                if (PG._stackModal) { PG._stackModal = false; V.closeModal(); }
+            };
+            PG.policyLawAdd = () => PG._stackOpen('근거 법령 추가',
+                '<div class="preset-form-grid">' +
+                '<span class="k">법령</span><input id="law-add-law" type="text" placeholder="예: 산업안전보건법">' +
+                '<span class="k">조항</span><input id="law-add-art" type="text" placeholder="예: 제36조">' +
+                '<span class="k">세부내용</span><input id="law-add-detail" type="text" placeholder="방침 적용 세부내용">' +
+                '</div>',
+                '<button class="btn btn-secondary" onclick="PG._stackClose()">취소</button>' +
+                '<button class="btn btn-primary" onclick="PG.policyLawAddSave()">등록</button>');
+            PG.policyLawAddSave = () => {
+                const law = (document.getElementById('law-add-law') || {}).value || '';
+                const art = (document.getElementById('law-add-art') || {}).value || '';
+                const detail = (document.getElementById('law-add-detail') || {}).value || '';
+                const tb = document.getElementById('policy-law-tbody');
+                if (tb) { const tr = document.createElement('tr'); tr.innerHTML = '<td><input value="' + V.esc(law) + '" style="width:100%"></td><td><input value="' + V.esc(art) + '" style="width:100%"></td><td><input value="' + V.esc(detail) + '" style="width:100%"></td><td>' + delBtn + '</td>'; tb.appendChild(tr); }
+                PG._stackClose(); V.toast('근거 법령이 추가되었습니다');
+            };
+            PG.policyConsiderAdd = () => PG._stackOpen('고려사항 추가',
+                '<div class="preset-form-grid">' +
+                '<span class="k">구분</span><select id="con-add-type"><option>설정 시</option><option>점검 시</option><option>공통</option></select>' +
+                '<span class="k">고려사항</span><input id="con-add-text" type="text" placeholder="고려사항 내용을 입력하세요">' +
+                '</div>',
+                '<button class="btn btn-secondary" onclick="PG._stackClose()">취소</button>' +
+                '<button class="btn btn-primary" onclick="PG.policyConsiderAddSave()">등록</button>');
+            PG.policyConsiderAddSave = () => {
+                const ty = (document.getElementById('con-add-type') || {}).value || '설정 시';
+                const tx = (document.getElementById('con-add-text') || {}).value || '';
+                const tb = document.getElementById('policy-consider-tbody');
+                if (tb) { const tr = document.createElement('tr'); const s = '<select><option' + (ty === '설정 시' ? ' selected' : '') + '>설정 시</option><option' + (ty === '점검 시' ? ' selected' : '') + '>점검 시</option><option' + (ty === '공통' ? ' selected' : '') + '>공통</option></select>'; tr.innerHTML = '<td>' + s + '</td><td><input value="' + V.esc(tx) + '" style="width:100%"></td><td>' + delBtn + '</td>'; tb.appendChild(tr); }
+                PG._stackClose(); V.toast('고려사항이 추가되었습니다');
+            };
+            PG.policyChkItemAdd = () => PG._stackOpen('점검 항목 추가',
+                '<div class="preset-form-grid">' +
+                '<span class="k">영역</span><input id="chk-add-area" type="text" placeholder="예: 목표·KPI">' +
+                '<span class="k">점검 항목</span><input id="chk-add-item" type="text" placeholder="점검할 항목">' +
+                '<span class="k">결과유형</span><select id="chk-add-type"><option>O / X</option><option>텍스트</option></select>' +
+                '<span class="k">관련 근거</span><input id="chk-add-basis" list="pol-law-list" type="text" placeholder="근거법령 사전에서 선택 (예: 산업안전보건법 제36조)">' +
+                '</div>',
+                '<button class="btn btn-secondary" onclick="PG._stackClose()">취소</button>' +
+                '<button class="btn btn-primary" onclick="PG.policyChkItemAddSave()">등록</button>');
+            PG.policyChkItemAddSave = () => {
+                const ar = (document.getElementById('chk-add-area') || {}).value || '';
+                const it = (document.getElementById('chk-add-item') || {}).value || '';
+                const ty = (document.getElementById('chk-add-type') || {}).value || 'O / X';
+                const ba = (document.getElementById('chk-add-basis') || {}).value || '';
+                const tb = document.getElementById('policy-chk-tbody');
+                if (tb) { const tr = document.createElement('tr'); const s = '<select><option' + (ty === 'O / X' ? ' selected' : '') + '>O / X</option><option' + (ty === '텍스트' ? ' selected' : '') + '>텍스트</option></select>'; tr.innerHTML = '<td><input value="' + V.esc(ar) + '" style="width:100%"></td><td><input value="' + V.esc(it) + '" style="width:100%"></td><td>' + s + '</td><td><input value="' + V.esc(ba) + '" list="pol-law-list" style="width:100%"></td><td>' + delBtn + '</td>'; tb.appendChild(tr); }
+                PG._stackClose(); V.toast('점검 항목이 추가되었습니다');
+            };
+
+            /* ===== 점검표 관련 근거 설정 (현행본 전용 CRUD) =====
+               점검 항목별 '관련 근거(법령·조항)'를 등록·수정하고, 조문 상세를 LAW_DICT에 등록해
+               점검표·점검표 뷰어의 근거 태그 호버 툴팁에 즉시 반영. 결재 승인완료된 현행본에서만 가능. */
+            PG.polChkBasis = ver => {
+                const v = S.VERSIONS.find(x => x.ver === ver) || POL.active(); if (!v) return;
+                if (!POL.isActive(v)) { V.toast('현행(결재 승인완료) 방침에서만 점검표 근거를 등록·수정할 수 있습니다'); return; }
+                const items = (T.CHECKLIST_PRESETS && T.CHECKLIST_PRESETS.policy) || [];
+                const opts = Object.keys(T.LAW_DICT || {}).map(k => '<option value="' + V.esc(k) + '">').join('');
+                /* 행 HTML 생성 — 영역·항목·유형·근거 모두 편집 가능(추가/삭제 지원) */
+                const rowHtml = it => {
+                    const has = !!(T.LAW_DICT || {})[it.basis];
+                    const isText = it.type === '텍스트';
+                    return '<tr>' +
+                        '<td><input class="cb-area" value="' + V.esc(it.area || '') + '" style="width:100%" placeholder="영역"></td>' +
+                        '<td style="min-width:150px;"><input class="cb-item" value="' + V.esc(it.item || '') + '" style="width:100%" placeholder="점검 항목"></td>' +
+                        '<td><select class="cb-type"><option' + (isText ? '' : ' selected') + '>O / X</option><option' + (isText ? ' selected' : '') + '>텍스트</option></select></td>' +
+                        '<td style="min-width:200px;"><input class="cb-basis" list="chkb-laws" value="' + V.esc(it.basis || '') + '" style="width:100%" placeholder="예: 산업안전보건법 제36조"></td>' +
+                        '<td style="white-space:nowrap;"><span class="cb-stat chip-mini ' + (has ? 'st-done' : 'wt-attach') + '">' + (has ? '조문 등록됨' : '조문 미등록') + '</span></td>' +
+                        '<td style="white-space:nowrap;"><button class="btn btn-sm btn-outline" onclick="PG.polChkLawDetail(this)">조문 상세</button> ' +
+                        '<button class="btn btn-sm btn-outline" onclick="PG.polChkRowDel(this)" title="행 삭제">삭제</button></td>' +
+                        '</tr>';
+                };
+                PG._chkbRowHtml = rowHtml;
+                const rows = items.map(rowHtml).join('');
+                V.openModal('점검표 관련 근거 설정 — 현행본 v' + v.ver,
+                    '<datalist id="chkb-laws">' + opts + '</datalist>' +
+                    '<p style="font-size:12px; color:var(--text-gray); margin:0 0 10px; line-height:1.6;">각 점검 항목의 <b>관련 근거(법령·조항)</b>를 등록·수정하고, 하단 [+ 점검 항목 추가]로 <b>행을 추가</b>하거나 [삭제]로 <b>제거</b>할 수 있습니다. [조문 상세]에서 조·항·내용을 등록하면 점검표·점검표 뷰어의 근거 태그에 <b>호버 툴팁</b>으로 표시됩니다. <b>결재 승인완료된 현행본에서만</b> 가능합니다.</p>' +
+                    '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>영역</th><th>점검 항목</th><th>유형</th><th>관련 근거</th><th>조문</th><th></th></tr></thead><tbody id="pol-chkb-tbody">' + rows + '</tbody></table></div>' +
+                    '<button class="btn btn-sm btn-outline" style="margin-top:8px;" onclick="PG.polChkRowAdd()">+ 점검 항목 추가</button>',
+                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+                    '<button class="btn btn-primary" onclick="PG.polChkBasisSave()">저장</button>');
+            };
+            PG.polChkRowAdd = () => {
+                const tb = document.getElementById('pol-chkb-tbody');
+                if (!tb || !PG._chkbRowHtml) return;
+                const tmp = document.createElement('tbody');
+                tmp.innerHTML = PG._chkbRowHtml({ area: '', item: '', type: 'O / X', basis: '' });
+                const tr = tmp.firstElementChild;
+                tb.appendChild(tr);
+                const f = tr.querySelector('.cb-area'); if (f) f.focus();
+            };
+            PG.polChkRowDel = btn => { const tr = btn.closest('tr'); if (tr) tr.remove(); };
+            PG.polChkBasisSave = () => {
+                const tb = document.getElementById('pol-chkb-tbody');
+                if (!tb) { V.closeModal(); return; }
+                const list = [];
+                let invalid = null;
+                Array.prototype.slice.call(tb.querySelectorAll('tr')).forEach(tr => {
+                    const area = ((tr.querySelector('.cb-area') || {}).value || '').trim();
+                    const item = ((tr.querySelector('.cb-item') || {}).value || '').trim();
+                    const type = ((tr.querySelector('.cb-type') || {}).value || 'O / X').trim();
+                    const basis = ((tr.querySelector('.cb-basis') || {}).value || '').trim();
+                    if (!area && !item) return; // 빈 행 제외
+                    if (!item && !invalid) invalid = tr.querySelector('.cb-item');
+                    list.push({ area: area, item: item, type: type, basis: basis });
+                });
+                if (invalid) { V.toast('점검 항목명을 입력하세요'); invalid.focus(); return; }
+                if (!list.length) { V.toast('점검 항목을 1건 이상 등록하세요'); return; }
+                /* 마스터를 바꾸기 전에 기존 작성·확정 문서에 당시 항목을 고정한다. */
+                if (window.EDOC && EDOC.freezeChecklist) {
+                    EDOC.freezeChecklist('EDOC-경영방침점검-', (T.CHECKLIST_PRESETS && T.CHECKLIST_PRESETS.policy) || []);
+                }
+                T.CHECKLIST_PRESETS = T.CHECKLIST_PRESETS || {};
+                T.CHECKLIST_PRESETS.policy = list;
+                V.closeModal(); render(); V.toast('점검표 마스터가 저장되었습니다 — 새 문서부터 적용됩니다');
+            };
+            PG.polChkLawDetail = btn => {
+                const tr = btn.closest('tr'); if (!tr) return;
+                PG._cldRow = tr;
+                const key = ((tr.querySelector('.cb-basis') || {}).value || '').trim();
+                const itemName = ((tr.querySelector('.cb-item') || {}).value || '').trim();
+                const d = (T.LAW_DICT || {})[key] || {};
+                PG._stackOpen('조문 상세 등록 · 점검 항목 「' + V.esc(itemName) + '」',
+                    '<div class="preset-form-grid">' +
+                    '<span class="k">근거 표기</span><input id="cld-key" type="text" value="' + V.esc(key) + '" placeholder="예: 산업안전보건법 제36조">' +
+                    '<span class="k">법령</span><input id="cld-law" type="text" value="' + V.esc(d.law || '') + '" placeholder="예: 산업안전보건법">' +
+                    '<span class="k">조항</span><input id="cld-art" type="text" value="' + V.esc(d.art || '') + '" placeholder="예: 제36조">' +
+                    '<span class="k">호</span><input id="cld-clause" type="text" value="' + V.esc(d.clause || '') + '" placeholder="예: 제1호 (없으면 비움)">' +
+                    '<span class="k">조문 제목</span><input id="cld-title" type="text" value="' + V.esc(d.title || '') + '" placeholder="예: 위험성평가의 실시">' +
+                    '<span class="k">조문 내용</span><textarea id="cld-text" rows="3" style="width:100%; resize:vertical;" placeholder="조문 본문을 입력하세요">' + V.esc(d.text || '') + '</textarea>' +
+                    '</div>',
+                    '<button class="btn btn-secondary" onclick="PG._stackClose()">취소</button>' +
+                    '<button class="btn btn-primary" onclick="PG.polChkLawDetailSave()">저장</button>');
+            };
+            PG.polChkLawDetailSave = () => {
+                const key = ((document.getElementById('cld-key') || {}).value || '').trim();
+                if (!key) { V.toast('근거 표기를 입력하세요'); return; }
+                T.LAW_DICT = T.LAW_DICT || {};
+                T.LAW_DICT[key] = {
+                    law: ((document.getElementById('cld-law') || {}).value || '').trim(),
+                    art: ((document.getElementById('cld-art') || {}).value || '').trim(),
+                    clause: ((document.getElementById('cld-clause') || {}).value || '').trim(),
+                    title: ((document.getElementById('cld-title') || {}).value || '').trim(),
+                    text: ((document.getElementById('cld-text') || {}).value || '').trim(),
+                };
+                const tr = PG._cldRow;
+                if (tr) {
+                    const inp = tr.querySelector('.cb-basis'); if (inp) inp.value = key;
+                    const stat = tr.querySelector('.cb-stat'); if (stat) { stat.className = 'cb-stat chip-mini st-done'; stat.textContent = '조문 등록됨'; }
+                }
+                PG._stackClose(); V.toast('조문 상세가 등록되었습니다 — 근거 태그 호버 시 표시됩니다');
+            };
+
+            /* ===== SSOT (window.POLICY_STATE) ===== */
+            if (!window.POLICY_STATE) {
+                window.POLICY_STATE = {
+                    tab: 'policy', view: 'list', ver: null, draftType: null, draftVer: null,
+                    VERSIONS: [
+                        { ver: '2.0', type: '제정', title: '담양군 안전·보건 경영방침', goal: '군민과 종사자의 생명·안전을 최우선으로 하는 안전 담양',
+                          details: ['중대산업재해·중대시민재해 ZERO', '정기 위험성평가 이행률 100%', '안전보건교육 이수율 95% 이상'],
+                          inspector: '재난안전과 · 재난안전과장 / 홍길동', effDate: '2026-02-03', appr: '승인완료',
+                          inspections: [{ half: '2026 상반기', date: '2026-06-22', result: '적합', inspector: '홍길동' }],
+                          postings: [{ id: 'L1', loc: '군청 본관 1층 게시판', photo: '본관 1층 게시판 게시 사진', date: '2026-02-05', status: '게시완료' },
+                                     { id: 'L2', loc: '내부망(새올) 전자게시', photo: '새올 전자게시 화면 캡처', date: '2026-02-03', status: '게시완료' }],
+                          evidence: [{ id: 'E1', name: '경영방침_2026.pdf', kind: '본문' }, { id: 'E2', name: '의견수렴결과.xlsx', kind: '의견수렴' }],
+                          postedDate: '2026-02-05', pdf: { docNo: '온나라-2026-3174', issued: '2026-02-03', signer: '담양군수 김담양' } },
+                        { ver: '1.1', type: '개정', title: '담양군 안전·보건 경영방침', goal: '안전한 일터, 건강한 담양',
+                          details: ['중대재해 ZERO 유지', '위험성평가 이행률 100%', '안전보건교육 이수율 90% 이상'], inspector: '재난안전과 · 재난안전과장 / 홍길동',
+                          effDate: '2025-07-01', appr: '승인완료', inspections: [{ half: '2025 하반기', date: '2025-12-10', result: '보완 필요', inspector: '홍길동' }],
+                          postings: [{ id: 'L1', loc: '군청 본관 1층 게시판', photo: '본관 1층 게시판 게시 사진', date: '2025-07-03', status: '게시완료' }],
+                          evidence: [{ id: 'E1', name: '개정_방침_v1.1.pdf', kind: '본문' }], postedDate: '2025-07-03',
+                          pdf: { docNo: '온나라-2025-2210', issued: '2025-07-01', signer: '담양군수 김담양' } },
+                        { ver: '1.0', type: '최초', title: '담양군 안전·보건 경영방침', goal: '안전 담양 원년 — 중대재해 예방 체계 구축',
+                          details: ['중대재해 예방 관리체계 구축', '위험성평가 도입'], inspector: '재난안전과 · 재난안전과장 / 홍길동',
+                          effDate: '2024-03-01', appr: '승인완료', inspections: [], postings: [], evidence: [], postedDate: '',
+                          pdf: { docNo: '온나라-2024-1102', issued: '2024-03-01', signer: '담양군수 김담양' } },
+                    ],
+                };
+            }
+            const S = window.POLICY_STATE;
+            /* 시드 버전은 결재선 없이 '승인완료'만 갖고 있었다 — 이력이 통째로 비어 화면이
+               무엇을 보여주는지 전달되지 않는다. 예시 값으로 채우되 예시임을 표시한다. */
+            S.VERSIONS.forEach(v => {
+                if (v.appr !== '미상신' && !v.approval) { v.approval = sampleLine(); v.apprAt = (v.pdf && v.pdf.issued) || v.effDate; }
+            });
+            S.VERSIONS.sort((a, b) => parseFloat(b.ver) - parseFloat(a.ver));
+            const POL = {
+                cur: () => S.VERSIONS.find(v => v.ver === S.ver) || S.VERSIONS[0] || null,
+                lastInspection: v => (v && v.inspections && v.inspections.length) ? v.inspections[v.inspections.length - 1] : null,
+                /* 현행본 = 결재 승인완료된 확정 문서 중 가장 최근 시행본 (버전 숫자 아님) */
+                active: () => {
+                    const ap = S.VERSIONS.filter(v => v.appr === '승인완료');
+                    if (!ap.length) return null;
+                    return ap.slice().sort((a, b) => (b.effDate || '').localeCompare(a.effDate || ''))[0];
+                },
+                isActive: v => { const a = POL.active && POL.active(); return !!a && !!v && a.ver === v.ver; },
+                nextVer: type => {
+                    if (!S.VERSIONS.length || type === '최초') return '1.0';
+                    const c = parseFloat(S.VERSIONS[0].ver);
+                    return type === '제정' ? (Math.floor(c) + 1) + '.0' : (Math.round((c + 0.1) * 10) / 10).toFixed(1);
+                },
+            };
+            /* 칩 유틸 */
+            const apprColor = a => ({ '미상신': 'neutral', '결재중': 'info', '승인완료': 'success', '반려': 'danger' }[a] || 'neutral');
+            const apprChip = a => '<span class="chip-status ' + apprColor(a) + '">' + (a || '미상신') + '</span>';
+            const checkChip = v => { const i = POL.lastInspection(v); return i ? '<span class="chip-status success">점검완료 · ' + i.date + '</span>' : '<span class="chip-status neutral">미점검</span>'; };
+            const typeChip = t => '<span class="chip-mini ' + (t === '제정' ? 'wt-elec' : t === '개정' ? 'wt' : 'st-done') + '">' + t + '</span>';
+            /* 현행이 아닌 버전은 둘로 갈린다 — **아직 결재를 못 받은 신규본**과 **지나간 이력**이다.
+               둘을 다 '이력'이라고 부르면 방금 만든 방침이 과거 것으로 읽혀, 담당자가 상신해야
+               한다는 사실을 놓친다. 판정 기준은 현행본의 시행일이다. */
+            const isPending = v => {
+                if (!v) return false;
+                const a = POL.active && POL.active();
+                if (a && a.ver === v.ver) return false;
+                /* **결재 상태로 판정한다** — 시행일로 재면 승인완료된 옛 버전까지 대기로 잡힌다
+                   (실제로 그 오류를 냈다). 승인을 받은 적 없는 것만 '결재 대기'다. */
+                return v.appr !== '승인완료';
+            };
+            const stateChip = v => {
+                const lb = POL.isActive(v) ? '현행' : (isPending(v) ? '결재 대기' : '이력');
+                return '<span class="chip-status ' + V.toneOf(lb) + '">' + lb + '</span>';
+            };
+            const resultChip = r => '<span class="chip-status ' + (r === '적합' ? 'success' : r === '부적합' ? 'danger' : 'warning') + '">' + r + '</span>';
+
+            /* ===== 라우터 ===== */
+            PG.go = (tab, view, ver) => { if (tab) S.tab = tab; if (view) S.view = view; if (ver !== undefined) S.ver = ver; render(); };
+            PG.polTab = name => PG.go(name, 'list', null);
+            PG.polOpen = ver => PG.go(S.tab, 'detail', ver);
+            PG.polBack = () => PG.go(S.tab, 'list', null);
+            PG.polGoBoard = () => PG.go('board', 'list', null);
+
+            /* 등록(최초/제정/개정) */
+            PG.polNew = () => {
+                if (!S.VERSIONS.length) { S.draftType = '최초'; S.draftVer = '1.0'; PG.go('policy', 'form'); return; }
+                PG._stackOpen('경영방침 등록',
+                    '<p style="font-size:13px; color:var(--text-gray); margin-bottom:14px;">현재 최신본 <b>v' + S.VERSIONS[0].ver + '</b> 기준으로 새 버전을 만듭니다. 구분을 선택하세요.</p>' +
+                    '<div style="display:flex; gap:10px;">' +
+                    '<button type="button" class="pol-kind-btn" onclick="PG.polNewKind(\'개정\')"><b>개정</b><span>v' + POL.nextVer('개정') + ' · +0.1</span><small>소폭 보완·갱신</small></button>' +
+                    '<button type="button" class="pol-kind-btn" onclick="PG.polNewKind(\'제정\')"><b>제정</b><span>v' + POL.nextVer('제정') + ' · +1.0</span><small>전면 재수립</small></button>' +
+                    '</div>',
+                    '<button class="btn btn-secondary" onclick="PG._stackClose()">취소</button>');
+            };
+            PG.polNewKind = type => { S.draftType = type; S.draftVer = POL.nextVer(type); PG._stackClose(); PG.go('policy', 'form'); };
+            const goalEditRow = val => '<div class="goal-row"><input type="text" value="' + V.esc(val) + '" placeholder="세부 방침을 입력하세요"><button type="button" class="goal-del" onclick="this.closest(\'.goal-row\').remove()" aria-label="삭제">×</button></div>';
+            PG.polGoalAdd = () => { const l = document.getElementById('pol-form-goals'); if (!l) return; l.insertAdjacentHTML('beforeend', goalEditRow('')); const ii = l.querySelectorAll('input'); if (ii.length) ii[ii.length - 1].focus(); };
+            PG.polPickInspector = () => E.openOrgTree('pol-form-inspector');
+            PG.polSave = () => {
+                const goal = ((document.getElementById('pol-form-goal') || {}).value || '').trim();
+                if (!goal) { V.toast('목표를 입력하세요'); return; }
+                const details = Array.from(document.querySelectorAll('#pol-form-goals input')).map(i => i.value.trim()).filter(Boolean);
+                const inspector = (document.getElementById('pol-form-inspector') || {}).value || '';
+                const v = { ver: S.draftVer, type: S.draftType, title: '담양군 안전·보건 경영방침', goal, details, inspector,
+                    effDate: '2026-06-24', appr: '미상신', inspections: [], postings: [], evidence: [], postedDate: '',
+                    pdf: { docNo: '(상신 전)', issued: '-', signer: '담양군수' } };
+                S.VERSIONS.unshift(v); S.draftType = null; S.draftVer = null;
+                PG.go('policy', 'detail', v.ver);
+                V.toast('경영방침 v' + v.ver + ' (' + v.type + ') 등록 완료');
+            };
+            PG.polRevise = () => PG.polNewKind('개정');
+            PG.polEnact = () => PG.polNewKind('제정');
+
+            /* 온나라 결재 — 상태를 임의로 바꾸던 전역 `polApprSet` 은 제거했다(2026-08-28).
+               검증 없이 결재 상태를 세팅할 수 있어 결재선·회신 규칙을 통째로 우회했다.
+               상태는 상신(polOnnara)과 회신 등록(polRecv) 두 경로로만 바뀐다. */
+            /* 결재 결과 회신 등록 — 단계·처리자는 결재선에서 파생한다(recvBox·applyRecv 주석). */
+            PG.polRecv = (ver, kind) => {
+                const v = S.VERSIONS.find(x => x.ver === ver); if (!v) return;
+                if (kind === 'reject') { rejectInline('PG.polRecv', ver); return; }
+                if (kind === 'cancel') { rejectInline('PG.polRecv', ver); return; }
+                let reason = '';
+                if (kind === 'doReject') {
+                    const ta = document.getElementById('sbm-reject-reason');
+                    reason = ta ? ta.value.trim() : '';
+                    kind = 'reject';
+                }
+                const r = applyRecv(kind, v.appr, v.approval, v.recvDone || 0, reason);
+                if (!r.ok) { V.toast(r.msg); return; }
+                v.appr = r.appr;
+                v.recvDone = r.done;
+                if (r.reason) v.rejectReason = r.reason;
+                V.toast(r.msg);
+                if (r.appr === '결재중') { PG.polApprHistory(ver); }   /* 중간 승인 — 모달 유지 */
+                else { V.closeModal(); }
+                render();
+            };
+            /* 상신 전에 **결재선을 지정한다** — 종전에는 누르는 즉시 결재중이 됐다.
+               결재선은 그 방침 버전에 저장하고 이력·팝업이 같은 값 하나를 읽는다. */
+            PG.polOnnara = ver => {
+                if (actGate('경영방침 결재 상신')) return;
+                const v = S.VERSIONS.find(x => x.ver === ver); if (!v) return;
+                apprSubmit('경영방침 v' + ver, snap => {
+                    v.appr = '결재중';
+                    v.apprAt = V.today() + ' 09:00';
+                    v.approval = snap;
+                    v.recvDone = 0;          /* 재상신이면 회신 진행도 초기화 */
+                    v.rejectReason = '';
+                    v.docNo = E.onnaraPopup('경영방침 v' + ver, '', snap);
+                    render();
+                });
+            };
+            PG.polApprHistory = ver => {
+                const v = ver ? S.VERSIONS.find(x => x.ver === ver) : POL.active();
+                const rows = v ? apprRows(v.appr, v.approval, v.apprAt || V.today(), v.recvDone || 0) : [];
+                V.openModal('온나라 결재 ' + (v && v.appr === '결재중' ? '상태 — 회신 등록' : '이력') + (v ? ' — v' + v.ver + (v.docNo ? ' · ' + v.docNo : '') : ''),
+                    (rows.length
+                        ? '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>일시</th><th>처리</th><th>처리자</th><th>비고</th></tr></thead><tbody>' +
+                          rows.map(r => '<tr><td>' + esc(r[0]) + '</td><td>' + esc(r[1]) + '</td><td>' + esc(r[2]) + '</td><td>' + esc(r[3]) + '</td></tr>').join('') +
+                          '</tbody></table></div>' +
+                          ((v && v.approval && v.approval.sample) ? '<p style="margin-top:8px;">' + V.sampleChip('지난 버전의 결재선은 예시 값입니다') + '</p>' : '') +
+                          '<p class="file-hint" style="margin-top:10px;">결재 완료·반려는 <b>온나라에서</b> 판단합니다 — 진행 상황은 온나라에서 문서번호로 확인하세요.</p>' +
+                          (v ? recvBox('PG.polRecv', v.ver, v.appr, v.approval, v.recvDone || 0) : '')
+                        : '<div class="v2-empty">결재 이력이 없습니다 — 상신하면 이력이 기록됩니다.</div>'),
+                    '<button class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
+            };
+
+            /* PDF 미리보기 */
+            const pdfPaper = v => '<div class="pdf-paper">' +
+                '<div class="pdf-head"><span>' + (v.pdf.signer || '담양군') + '</span><span>문서번호 ' + (v.pdf.docNo || '-') + '</span></div>' +
+                '<div class="pdf-title">' + V.esc(v.title) + ' <span class="pdf-ver">v' + v.ver + '</span></div>' +
+                '<div class="pdf-slogan">' + V.esc(v.goal) + '</div>' +
+                '<div class="pdf-sec">세부 방침</div><ol class="pdf-list">' + (v.details || []).map(d => '<li>' + V.esc(d) + '</li>').join('') + '</ol>' +
+                '<div class="pdf-sign">시행일 ' + (v.effDate || '-') + '<br><br><b>' + (v.pdf.signer || '담양군수') + '</b> (직인)</div>' +
+                '</div>';
+            PG.polPdfDownload = () => V.notReady('PDF 내려받기', '문서 출력 연계');
+            PG.polPdfClose = () => V.closeModal();
+            /* 문서 미리보기 — 공용 모달 'wide' 변형(자작 오버레이 폐지, 단일 모달 규칙 §1). */
+            PG.polPdfFull = ver => {
+                const v = S.VERSIONS.find(x => x.ver === ver) || POL.cur(); if (!v) return;
+                V.openModal('경영방침 v' + v.ver + ' 문서 미리보기', pdfPaper(v), '', {
+                    variant: 'wide',
+                    headHtml: '<button class="btn btn-sm btn-outline" onclick="PG.polPdfDownload()">PDF 다운로드</button>',
+                });
+            };
+
+            /* 게시(상세) — 좌측 사진(세로형) + 우측 정보(제목·게시일·내용), 사진 클릭 시 전체화면 */
+            const baCard = (ver, p, editable) => {
+                const thumb = p.photoSrc
+                    ? '<button type="button" class="post-thumb" onclick="PG.boardPhotoView(\'' + ver + '\',\'' + p.id + '\')" aria-label="사진 확대 보기"><img src="' + p.photoSrc + '" alt="게시 사진"><span class="post-thumb-zoom">확대</span></button>'
+                    : '<div class="post-thumb empty"><span class="pt-tx">' + V.esc(p.photo || '게시 사진') + '</span></div>';
+                return '<div class="ba-card"><div class="post-row">' + thumb +
+                    '<div class="post-info">' +
+                    '<div class="post-info-head"><span class="post-title">' + V.esc(p.loc) + '</span>' +
+                    '<span style="display:flex; gap:6px; align-items:center;"><span class="chip-status ' + (p.status === '게시완료' ? 'success' : 'neutral') + '">' + p.status + '</span>' +
+                    (editable ? '<button type="button" class="ba-del" onclick="PG.boardLocDel(\'' + ver + '\',\'' + p.id + '\')" aria-label="삭제">×</button>' : '') + '</span></div>' +
+                    '<div class="post-meta"><span class="post-meta-k">게시일</span>' + (p.date || '-') + '</div>' +
+                    '<div class="post-meta post-meta-note"><span class="post-meta-k">내용</span>' + (p.note ? V.esc(p.note) : '<span class="post-empty">-</span>') + '</div>' +
+                    '</div></div></div>';
+            };
+            /* 게시 사진 전체화면 보기 (라이트박스) */
+            PG.boardPhotoClose = () => V.closeModal();
+            /* 사진 확대 — 공용 모달 'lightbox' 변형(자작 오버레이 폐지). */
+            PG.boardPhotoView = (ver, id) => {
+                const v = S.VERSIONS.find(x => x.ver === ver); const p = v && (v.postings || []).find(x => x.id === id);
+                if (!p || !p.photoSrc) return;
+                V.openModal(V.esc(p.loc) + ' — 게시 사진',
+                    '<img src="' + p.photoSrc + '" alt="게시 사진 — ' + V.esc(p.loc) + '">',
+                    V.esc(p.loc) + ' · 게시일 ' + (p.date || '-'),
+                    { variant: 'lightbox' });
+            };
+
+            /* 사진 업로드 영역 — 빈 상태 / 미리보기 상태 */
+            const boardPhotoEmpty = () =>
+                '<div class="board-up-title">게시된 경영방침 사진을 첨부하세요</div>' +
+                '<div class="board-up-sub">이곳을 <b>클릭</b>하거나 파일을 <b>끌어다 놓으세요</b> · JPG · PNG</div>' +
+                '<button type="button" class="btn btn-primary board-up-btn" onclick="event.stopPropagation(); PG.boardPhotoPick()">사진 파일 첨부</button>';
+            const boardPhotoPreview = p =>
+                '<div class="board-up-preview"><img src="' + p.src + '" alt="게시 사진 미리보기"></div>' +
+                '<div class="board-up-fname">' + V.esc(p.name) + '</div>' +
+                '<div class="board-up-actions"><button type="button" class="btn btn-sm btn-outline" onclick="event.stopPropagation(); PG.boardPhotoPick()">다시 선택</button>' +
+                '<button type="button" class="btn btn-sm btn-outline" onclick="event.stopPropagation(); PG.boardPhotoClear()">제거</button></div>';
+            PG._boardPhoto = null;
+            PG.boardPhotoPick = () => { const i = document.getElementById('board-photo-input'); if (i) i.click(); };
+            PG.boardPhotoFile = file => {
+                if (!file) return;
+                /* 이미지 칸 프로필(jpg·jpeg·png·gif · 10MB — `_규칙` §5)을 따른다. 종전 «image/*» 는
+                   webp 등 규칙 밖 형식까지 받았다(기획확인 4차 · 확장자 확정, 2026-10-06). */
+                const IP = (V.FILE_PROFILES && V.FILE_PROFILES.image) || { extensions: ['jpg', 'jpeg', 'png', 'gif'], maxMB: 10 };
+                const ext = (String(file.name || '').split('.').pop() || '').toLowerCase();
+                if (IP.extensions.indexOf(ext) === -1) { V.toast('이미지는 JPG·PNG·GIF만 올릴 수 있습니다'); return; }
+                if (file.size > IP.maxMB * 1024 * 1024) { V.toast('이미지는 파일당 ' + IP.maxMB + 'MB까지 올릴 수 있습니다'); return; }
+                const reader = new FileReader();
+                reader.onload = e => {
+                    PG._boardPhoto = { name: file.name, src: e.target.result };
+                    const z = document.getElementById('board-photo-zone');
+                    if (z) { z.classList.add('has-photo'); z.innerHTML = boardPhotoPreview(PG._boardPhoto); }
+                };
+                reader.readAsDataURL(file);
+            };
+            PG.boardPhotoChange = inp => PG.boardPhotoFile(inp.files && inp.files[0]);
+            PG.boardPhotoDrop = ev => { ev.preventDefault(); const z = document.getElementById('board-photo-zone'); if (z) z.classList.remove('drag'); PG.boardPhotoFile(ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files[0]); };
+            PG.boardPhotoClear = () => { PG._boardPhoto = null; const z = document.getElementById('board-photo-zone'); if (z) { z.classList.remove('has-photo'); z.innerHTML = boardPhotoEmpty(); } };
+            PG.boardLocAdd = ver => { PG._boardPhoto = null; PG._stackOpen('게시 등록',
+                '<div class="board-up">' +
+                '<input type="file" id="board-photo-input" accept=".jpg,.jpeg,.png,.gif" style="display:none" onchange="PG.boardPhotoChange(this)">' +
+                '<div id="board-photo-zone" class="board-up-zone" onclick="PG.boardPhotoPick()" ondragover="event.preventDefault(); this.classList.add(\'drag\')" ondragleave="this.classList.remove(\'drag\')" ondrop="PG.boardPhotoDrop(event)">' + boardPhotoEmpty() + '</div>' +
+                '</div>' +
+                '<div class="preset-form-grid" style="margin-top:16px;">' +
+                '<span class="k">게시 위치 <span class="req">필수</span></span><input id="board-add-loc" type="text" placeholder="예: 군청 본관 1층 게시판">' +
+                '<span class="k">게시일 <span class="req">필수</span></span><input id="board-add-date" type="date">' +
+                '<span class="k">게시 내용 <span class="opt">선택</span></span><textarea id="board-add-note" rows="2" style="width:100%; resize:vertical;" placeholder="게시 관련 메모 (선택)"></textarea>' +
+                '</div>',
+                '<button class="btn btn-secondary" onclick="PG._stackClose()">취소</button>' +
+                '<button class="btn btn-primary" onclick="PG.boardLocSave(\'' + ver + '\')">등록</button>'); };
+            PG.boardLocSave = ver => {
+                const v = S.VERSIONS.find(x => x.ver === ver); if (!v) return;
+                const locEl = document.getElementById('board-add-loc');
+                const dateEl = document.getElementById('board-add-date');
+                [locEl, dateEl].forEach(el => el && el.classList.remove('field-invalid'));
+                const loc = ((locEl || {}).value || '').trim();
+                const date = (dateEl || {}).value || '';
+                if (!loc) { V.toast('게시 위치를 입력하세요'); if (locEl) { locEl.classList.add('field-invalid'); locEl.focus(); } return; }
+                if (!date) { V.toast('게시일을 선택하세요'); if (dateEl) { dateEl.classList.add('field-invalid'); dateEl.focus(); } return; }
+                const note = ((document.getElementById('board-add-note') || {}).value || '').trim();
+                const ph = PG._boardPhoto;
+                v.postings = v.postings || [];
+                v.postings.push({ id: 'L' + (v.postings.length + 1) + '-' + v.postings.length, loc, photo: ph ? ph.name : '게시 사진', photoSrc: ph ? ph.src : '', note, date, status: '게시완료' });
+                v.postedDate = date; PG._boardPhoto = null;
+                PG._stackClose(); render(); V.toast('게시 항목이 등록되었습니다');
+            };
+            PG.boardLocDel = (ver, id) => { const v = S.VERSIONS.find(x => x.ver === ver); if (v) v.postings = (v.postings || []).filter(p => p.id !== id); render(); V.toast('게시 항목이 삭제되었습니다'); };
+            PG.evidenceAdd = ver => PG._stackOpen('증빙 추가',
+                '<div class="preset-form-grid">' +
+                '<span class="k">구분</span><select id="evi-add-kind"><option>본문</option><option>의견수렴</option><option>기타</option></select>' +
+                '<span class="k">파일</span>' + DYV2.uploadDrop('증빙 파일 첨부', null, { style: 'padding:14px;' }) +
+                '<span class="k">파일명</span><input id="evi-add-name" type="text" placeholder="예: 의견수렴결과.xlsx"></div>',
+                '<button class="btn btn-secondary" onclick="PG._stackClose()">취소</button>' +
+                '<button class="btn btn-primary" onclick="PG.evidenceSave(\'' + ver + '\')">등록</button>');
+            PG.evidenceSave = ver => {
+                const v = S.VERSIONS.find(x => x.ver === ver); if (!v) return;
+                const kind = (document.getElementById('evi-add-kind') || {}).value || '기타';
+                const name = ((document.getElementById('evi-add-name') || {}).value || '').trim() || '증빙_' + ((v.evidence || []).length + 1);
+                v.evidence = v.evidence || [];
+                v.evidence.push({ id: 'E' + (v.evidence.length + 1) + '-' + v.evidence.length, name, kind });
+                PG._stackClose(); render(); V.toast('증빙이 추가되었습니다');
+            };
+            PG.evidenceDel = (ver, id) => { const v = S.VERSIONS.find(x => x.ver === ver); if (v) v.evidence = (v.evidence || []).filter(e => e.id !== id); render(); V.toast('증빙이 삭제되었습니다'); };
+
+            /* 이행점검 (F5) */
+            PG.polCheckWrite = ver => {
+                const v = S.VERSIONS.find(x => x.ver === ver) || POL.active(); if (!v) return;
+                if (!POL.isActive(v)) { V.toast('현행(결재 승인완료) 방침만 이행 점검을 작성할 수 있습니다'); return; }
+                E.openForm({ id: 'EDOC-경영방침점검-' + v.ver, title: '경영방침 수립·이행 점검표 (v' + v.ver + ')', form: 'F5',
+                    ctx: { menuLabel: '경영방침 · 반기', checklist: T.CHECKLIST_PRESETS.policy, attachList: [{ name: '반기점검_현장사진.jpg', desc: '점검 현장 사진', date: '2026-06-22' }] },
+                    fields: { owner: v.inspector || '' }, onChange: render });
+            };
+            /* 완료된 이행 점검표 읽기 뷰어 (안전나우 패턴: 영역별 섹션 + 적합/부적합 요약 + 인쇄/PDF) */
+            PG.checkSheet = (ver, idx) => {
+                const v = S.VERSIONS.find(x => x.ver === ver); const ins = v && v.inspections && v.inspections[idx]; if (!ins) return;
+                const items = (T.CHECKLIST_PRESETS && T.CHECKLIST_PRESETS.policy) || [];
+                const xWant = ins.result === '부적합' ? 2 : ins.result === '보완 필요' ? 1 : 0;
+                let xUsed = 0;
+                const rows = items.map((it, i) => {
+                    if (it.type === '텍스트') return { area: it.area, item: it.item, basis: it.basis, kind: 'text', text: (i % 2 ? '법령 개정사항을 방침에 반영 완료 — 추가 조치 없음.' : '안전점검 실시율 87%(목표 100%) 미달 — 미시행 부서 독려 필요.') };
+                    let res = 'O';
+                    if (xUsed < xWant) { res = 'X'; xUsed++; }
+                    return { area: it.area, item: it.item, basis: it.basis, kind: 'ox', res };
+                });
+                const fit = rows.filter(r => r.kind === 'ox' && r.res === 'O').length;
+                const unfit = rows.filter(r => r.kind === 'ox' && r.res === 'X').length;
+                const txt = rows.filter(r => r.kind === 'text').length;
+                const areas = [];
+                rows.forEach(r => { let g = areas.find(a => a.area === r.area); if (!g) { g = { area: r.area, items: [] }; areas.push(g); } g.items.push(r); });
+                const body =
+                    '<div class="sheet-meta"><span>점검일 <b>' + ins.date + '</b></span><span>점검자 <b>' + (ins.inspector || '-') + '</b></span><span>종합 결과 ' + resultChip(ins.result) + '</span></div>' +
+                    '<div class="sheet-summary"><span class="sheet-sum ok"><b>' + fit + '</b> 적합</span><span class="sheet-sum bad"><b>' + unfit + '</b> 부적합</span><span class="sheet-sum txt"><b>' + txt + '</b> 텍스트</span></div>' +
+                    areas.map(g => '<div class="sheet-area"><div class="sheet-area-head">' + g.area + '</div>' +
+                        g.items.map(r => '<div class="sheet-item">' +
+                            '<div class="sheet-item-q"><span class="sheet-q-text">' + V.esc(r.item) + '</span>' +
+                            EDOC.lawTag(r.basis) + '</div>' +
+                            (r.kind === 'ox'
+                                ? '<div class="sheet-item-r">' + (r.res === 'O' ? '<span class="chip-status success">O · 적합</span>' : '<span class="chip-status danger">X · 부적합</span>') + '</div>'
+                                : '<div class="sheet-item-r"><span class="chip-mini wt-elec">텍스트</span><div class="sheet-text">' + V.esc(r.text) + '</div></div>') +
+                            '</div>').join('') + '</div>').join('') +
+                    (unfit ? '<p style="font-size:12px; color:var(--status-danger-fg); margin-top:12px;">부적합 ' + unfit + '건은 개선조치(IMP)로 자동 등록되었습니다.</p>' : '');
+                V.openModal('이행 점검표 — v' + ver + ' · ' + ins.half, body,
+                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
+                    '<button class="btn btn-outline" onclick="window.print()">인쇄</button>' +
+                    '<button class="btn btn-primary" onclick="DYV2.notReady(\'PDF 내려받기\', \'문서 출력 연계\')">PDF 다운로드</button>');
+            };
+
+            /* ===== 서브탭 바 ===== */
+            const subtabs = '<div class="psub-tabs">' +
+                [['policy', '경영방침'], ['check', '이행 점검'], ['board', '게시 현황']].map(t => '<button type="button" class="psub-tab' + (S.tab === t[0] ? ' is-active' : '') + '" onclick="PG.polTab(\'' + t[0] + '\')">' + t[1] + '</button>').join('') +
+                '</div>';
+
+            /* ===== 뷰 빌더 ===== */
+            function renderListPolicy() {
+                if (!S.VERSIONS.length) return subtabs + sectionCard('경영방침', '<div style="text-align:center; padding:44px 20px; color:var(--text-gray);">등록된 경영방침이 없습니다.<br><br><button class="btn btn-primary" onclick="PG.polNew()">최초 등록</button></div>', '');
+                const body = '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>버전</th><th>상태</th><th>방침명</th><th>반기 점검</th><th>온나라 결재 상태</th></tr></thead><tbody>' +
+                    S.VERSIONS.map(v => '<tr style="cursor:pointer;" onclick="PG.polOpen(\'' + v.ver + '\')"><td><b>v' + v.ver + '</b> ' + typeChip(v.type) + '</td><td>' + stateChip(v) + '</td><td>' + V.esc(v.title) + '</td><td>' + checkChip(v) + '</td><td>' + apprChip(v.appr) + '</td></tr>').join('') +
+                    '</tbody></table></div>';
+                return subtabs + sectionCard('경영방침 (' + S.VERSIONS.length + '건)', body, '<button class="btn btn-sm btn-primary" onclick="PG.polNew()">+ 등록</button>');
+            }
+            function renderListCheck() {
+                const act = POL.active();
+                const notice = '<div class="check-notice">결재 승인완료된 <b>현행본만</b> 이행 점검을 작성할 수 있습니다. 이전 버전은 <b>점검 이력 열람만</b> 가능합니다.' +
+                    (act ? ' 현행본: <b>v' + act.ver + '</b>' : ' (현행본 없음 — 결재 승인 후 점검 가능)') + '</div>';
+                const body = notice + '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>버전</th><th>상태</th><th>방침명</th><th>점검 여부</th><th>점검일</th><th>점검 결과</th><th>점검표</th></tr></thead><tbody>' +
+                    S.VERSIONS.map(v => {
+                        const i = POL.lastInspection(v); const idx = i ? v.inspections.length - 1 : -1;
+                        const isAct = POL.isActive(v);
+                        const action = i
+                            ? '<button class="btn btn-sm btn-outline" onclick="event.stopPropagation(); PG.checkSheet(\'' + v.ver + '\',' + idx + ')">점검표 보기</button>'
+                            : (isAct
+                                ? '<button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); PG.polCheckWrite(\'' + v.ver + '\')">점검 작성</button>'
+                                : '<span style="font-size:12px; color:var(--text-gray);">이력 없음</span>');
+                        return '<tr style="cursor:pointer;" onclick="PG.polOpen(\'' + v.ver + '\')"><td><b>v' + v.ver + '</b></td><td>' + stateChip(v) + '</td><td>' + V.esc(v.title) + '</td><td>' + (i ? '<span class="chip-status success">완료</span>' : '<span class="chip-status neutral">미점검</span>') + '</td><td>' + (i ? i.date : '-') + '</td><td>' + (i ? resultChip(i.result) : '-') + '</td><td>' + action + '</td></tr>';
+                    }).join('') +
+                    '</tbody></table></div>';
+                const foot = act ? '<button class="btn btn-sm btn-outline" onclick="PG.polChkBasis(\'' + act.ver + '\')">점검표 근거 설정</button><button class="btn btn-sm btn-primary" onclick="PG.polCheckWrite(\'' + act.ver + '\')">현행본 이행점검 작성</button>' : '';
+                return subtabs + sectionCard('이행 점검 (반기)', body, foot);
+            }
+            /* 게시 현황 — 2026-07-30 회의로 **기준 단위를 버전에서 부서로** 바꿨다.
+             * 종전에는 버전별 게시 건수(1~2건)만 셌는데, 실제 의무는 전 부서·사업장이
+             * 각자 게시하는 것이라 그 수를 세는 건 의미가 없었다.
+             *   참석자1 "모든 부서를 다 적으셔야 돼요 … 그 부서에 사업장이 있어요.
+             *            그 사업장마다 다 붙여야 돼요."
+             *   참석자4 "과 쭈르륵 사업소 쭈르륵 해가지고 돼 있는지 안 돼 있는지 체크리스트"
+             * 부서 축 표는 의무 이행점검과 같은 엔진(DEPTCHK)을 쓴다 — 회의 결론이
+             * "경영방침 원본은 계획에서, 게시 여부는 이행점검에서 확인"이라 축이 같기 때문이다. */
+            /* 회차 축 — 게시 확인은 연 단위다(dept-check.js v3 주석 참고) */
+            /* 게시 확인의 **회차 축은 방침 버전**이다 (dept-check.js v3 주석과 같은 근거).
+             * 연도만 넣으면 방침을 개정해도 옛 방침 게시 기록이 그대로 '게시함'으로 남아,
+             * 새 방침을 아직 안 붙인 부서가 완료로 보인다. 방침이 바뀌면 다시 붙여야 하므로
+             * 현행본 버전이 바뀌는 순간 게시 현황도 처음부터 다시 받는 것이 맞다.
+             * 현행본이 없으면(승인 0건) 게시를 물을 대상 자체가 없다. */
+            const BOARD_KEY = (function () {
+                const a = POL.active && POL.active();
+                return 'policy-post|v' + (a ? a.ver : '-');
+            })();
+            const boardOpts = () => ({
+                ns: 'PG.POLCHK', title: '경영방침 게시 확인',
+                labels: { DONE: '게시', TODO: '미게시', NA: '해당없음' }, statusLabel: '게시 여부', rateLabel: '게시율',
+                placeLabel: '게시 위치', placePlaceholder: '예: 군청 본관 1층 게시판 / 내부망 전자게시',
+                evidenceLabel: '게시 사진', onChange: render,
+            });
+            PG.POLCHK = {
+                open: (id) => DEPTCHK.open(BOARD_KEY, id, boardOpts()),
+                setStatus: (v) => DEPTCHK.setStatus(v),
+                addPhoto: (files) => DEPTCHK.addPhoto(files),
+                mDelPhoto: (i) => DEPTCHK.mDelPhoto(i),
+                save: () => DEPTCHK.save(),
+                delPhoto: (id, i) => { DEPTCHK.delPhoto(BOARD_KEY, id, i); render(); },
+                remind: (id) => DEPTCHK.remind(BOARD_KEY, id),
+            };
+            function renderListBoard() {
+                const act = POL.active();
+                const body =
+                    '<p style="font-size:var(--fs-12); color:var(--text-gray); margin-bottom:10px;">' +
+                        '현행 경영방침 <b>v' + (act ? act.ver : '-') + '</b>' + (act ? ' · ' + V.esc(act.title) : '') +
+                        ' 을 <b>전 부서·사업장이 게시</b>했는지 확인합니다. ' +
+                        '<b>게시 자체를 명시한 조문은 없습니다</b> — 시행령 제4조제1호는 목표·경영방침을 <b>설정할 것</b>만 정하고, 게시는 그 설정이 실제로 구성원에게 닿았는지 확인하는 <b>이행 수단</b>입니다. ' +
+                        '게시로 등록하려면 <b>게시 위치와 게시 사진</b>이 있어야 합니다. ' +
+                        '이 결과는 <a href="menu.html?m=comply" style="color:var(--main-dark); font-weight:700;">의무 이행점검</a>의 부서별 이행 현황과 같은 축을 씁니다.</p>' +
+                    DEPTCHK.render(Object.assign({ key: BOARD_KEY }, boardOpts()));
+                return subtabs + sectionCard('부서별 게시 현황', body, '');
+            }
+            function renderDetail(v) {
+                if (!v) return renderListPolicy();
+                const editable = POL.isActive(v);
+                const infoGrid = '<div class="preset-form-grid">' +
+                    '<span class="k">버전</span><div><b>v' + v.ver + '</b> ' + typeChip(v.type) + ' ' + stateChip(v) + '</div>' +
+                    '<span class="k">방침 제호</span><div>' + V.esc(v.title) + '</div>' +
+                    '<span class="k">시행일</span><div>' + (v.effDate || '-') + '</div>' +
+                    '<span class="k">목표</span><div style="font-weight:700; color:var(--main-dark2);">' + V.esc(v.goal) + '</div>' +
+                    '<span class="k">세부 방침</span><ol style="margin:0; padding-left:18px;">' + (v.details || []).map(d => '<li>' + V.esc(d) + '</li>').join('') + '</ol>' +
+                    '<span class="k">점검자</span><div>' + V.esc(v.inspector || '-') + '</div>' +
+                    '<span class="k">반기 점검</span><div>' + checkChip(v) + '</div>' +
+                    '<span class="k">온나라 결재</span><div style="display:flex; gap:8px; align-items:center;">' + apprChip(v.appr) + '<button class="btn btn-sm btn-outline" onclick="PG.polApprHistory(\'' + v.ver + '\')">이력</button></div>' +
+                    '</div>' +
+                    '<div class="pol-badges" style="margin-top:14px;">' +
+                    '<button type="button" class="pol-badge" onclick="PG.policyGuide()">ⓘ 작성 가이드</button>' +
+                    '</div>';
+                const pdfPanel = '<div class="pol-pdf-wrap"><div class="pol-pdf-tools"><span style="font-size:12px; font-weight:700; color:var(--text-gray);">PDF 미리보기</span><span style="display:flex; gap:6px;"><button class="btn btn-sm btn-outline" onclick="PG.polPdfFull(\'' + v.ver + '\')">전체화면</button><button class="btn btn-sm btn-primary" onclick="PG.polPdfDownload()">PDF 다운로드</button></span></div>' + pdfPaper(v) + '</div>';
+                const checkSec = sectionCard('반기 이행 점검 ' + (editable ? '' : '이력 (열람 전용)'),
+                    (v.inspections && v.inspections.length ? '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>회차</th><th>점검일</th><th>점검자</th><th>결과</th><th></th></tr></thead><tbody>' + v.inspections.map((i, idx) => '<tr><td>' + i.half + '</td><td>' + i.date + '</td><td>' + (i.inspector || '-') + '</td><td>' + resultChip(i.result) + '</td><td><button class="btn btn-sm btn-outline" onclick="PG.checkSheet(\'' + v.ver + '\',' + idx + ')">점검표 보기</button></td></tr>').join('') + '</tbody></table></div>' : '<p style="color:var(--text-gray); font-size:13px;">점검 이력이 없습니다.</p>') +
+                    (editable ? '' : (isPending(cur)
+                        ? '<p class="lock-note">아직 <b>결재를 받지 않은 방침</b>입니다. 점검·게시는 결재가 승인완료된 현행본에서만 합니다 — 먼저 상신하세요.</p>'
+                        : '<p class="lock-note">지나간 버전입니다. 점검 이력 열람만 가능하며 신규 점검 작성·수정은 현행본에서만 할 수 있습니다.</p>')),
+                    editable ? '<button class="btn btn-sm btn-outline" onclick="PG.polChkBasis(\'' + v.ver + '\')">점검표 근거 설정</button><button class="btn btn-sm btn-primary" onclick="PG.polCheckWrite(\'' + v.ver + '\')">이행점검 작성</button>' : '');
+                /* 게시 여부는 **부서 전수 체크리스트([게시 현황] 탭)** 가 단일 출처다(2026-07-30 회의).
+                   버전별 게시 카드를 여기 남겨 두면 같은 화면에서 '게시율 0%'와 '게시완료 2건'이
+                   동시에 보인다 — 구 카드를 지우고 그 탭으로 보낸다. */
+                const boardSec = sectionCard('게시 현황',
+                    '<div class="pol-board-moved">게시 여부는 <b>부서별 전수 점검</b>으로 관리합니다 — ' +
+                        '상단 <b>[게시 현황]</b> 탭에서 과·사업소별 게시 여부·위치·게시사진을 확인·등록하세요.' +
+                        '<button class="btn btn-sm btn-outline" style="margin-left:10px;" onclick="PG.polGoBoard()">게시 현황 탭 열기</button></div>' +
+                    '<div class="attach-list" style="margin-top:16px;"><div class="attach-list-head">관련 증빙 (방침 본문·의견수렴 등)</div><div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>파일명</th><th>구분</th>' + (editable ? '<th></th>' : '') + '</tr></thead><tbody>' + (v.evidence || []).map(e => '<tr><td>' + V.esc(e.name) + '</td><td><span class="chip-mini wt">' + e.kind + '</span></td>' + (editable ? '<td><button class="btn btn-sm btn-outline" onclick="PG.evidenceDel(\'' + v.ver + '\',\'' + e.id + '\')">삭제</button></td>' : '') + '</tr>').join('') + '</tbody></table></div>' + (editable ? '<button class="btn btn-sm btn-outline" style="margin-top:8px;" onclick="PG.evidenceAdd(\'' + v.ver + '\')">+ 증빙 추가</button>' : '') + '</div>',
+                    '');
+                const header = '<div class="pol-detail-top"><button class="btn btn-sm btn-outline" onclick="PG.polBack()">‹ 목록</button>' +
+                    '<div class="pol-detail-actions"><button class="btn btn-sm btn-outline" onclick="PG.polRevise()">개정</button><button class="btn btn-sm btn-outline" onclick="PG.polEnact()">제정</button>' +
+                    ((v.appr === '미상신' || v.appr === '반려')
+                        /* 상신은 **기안 행위**다 — 결재선을 붙인 뒤로는 조회 전용 계층이 누르면
+                           그 사람이 기안자로 온나라에 올라간다. 권한이 없으면 버튼을 내지 않고
+                           **누가 하는지**를 대신 밝힌다(CLAUDE.md §12 · 2026-08-28 검수 B-2). */
+                        ? (canAct()
+                            ? '<button class="btn btn-sm btn-primary" onclick="PG.polOnnara(\'' + v.ver + '\')">온나라 결재 상신</button>'
+                            : '<span class="opn-muted" style="font-size:var(--fs-12); align-self:center;">상신은 <b>담당자</b>가 합니다 — 관리·감독 계층은 조회만 합니다.</span>')
+                        : '') + '</div></div>';
+                const main = sectionCard('경영방침 v' + v.ver + ' 상세', '<div class="pol-detail-grid"><div class="pol-detail-info">' + infoGrid + '</div>' + pdfPanel + '</div>', '');
+                return subtabs + header + main + checkSec + boardSec;
+            }
+            function renderForm() {
+                const body = '<div class="pol-detail-top"><button class="btn btn-sm btn-outline" onclick="PG.polBack()">‹ 취소</button><div style="font-weight:700;">경영방침 ' + S.draftType + ' 등록 · <span class="chip-mini wt-elec">v' + S.draftVer + '</span></div></div>' +
+                    '<div class="preset-form-grid" style="margin-top:8px;">' +
+                    '<span class="k">목표</span><input id="pol-form-goal" type="text" placeholder="경영방침 목표(슬로건)를 입력하세요">' +
+                    '<span class="k">세부 방침</span><div><div id="pol-form-goals" class="goal-list">' + goalEditRow('') + '</div><button type="button" class="btn btn-sm btn-outline" style="margin-top:8px;" onclick="PG.polGoalAdd()">+ 세부 방침 추가</button></div>' +
+                    '<span class="k">점검자</span><div class="orgpick-field"><div style="display:flex; gap:8px; align-items:center;"><input id="pol-form-inspector" type="text" value="재난안전과 · 재난안전과장 / 홍길동" readonly style="flex:1;"><button type="button" class="btn btn-sm btn-outline" onclick="PG.polPickInspector()">조직도</button></div></div>' +
+                    '</div>' +
+                    '<div style="display:flex; justify-content:flex-end; gap:8px; margin-top:18px;"><button class="btn btn-outline" onclick="PG.polBack()">취소</button><button class="btn btn-primary" onclick="PG.polSave()">저장</button></div>';
+                return subtabs + sectionCard('경영방침 등록', body, '');
+            }
+
+            /* ===== 디스패치 ===== */
+            const cur = POL.cur();
+            if (S.tab === 'policy') return S.view === 'form' ? renderForm() : S.view === 'detail' ? renderDetail(cur) : renderListPolicy();
+            if (S.tab === 'check') return S.view === 'detail' ? renderDetail(cur) : renderListCheck();
+            return S.view === 'detail' ? renderDetail(cur) : renderListBoard();
+        },
+
+        /* ── 조직 [SFR-006·009·010]: 선임 등록 → 수행평가(F6) → 후속조치(F7) ── */
+        org() {
+            /* `source` 는 표에서 열을 지운 뒤 아무도 읽지 않지만 남겨 둔다 — 공사가 들어오는 갈래가
+               직접 등록 하나뿐이라 지금은 모든 행이 같은 값이어서 보여줄 값이 없을 뿐, 출처를 구분해야
+               한다는 축 자체는 옳다. 나중에 공사정보 연계가 붙으면 두 경로의 자료를 출처 없이 섞지
+               않도록 이 자리에서 축을 되살린다(조직 화면 정의서 §6). */
+            if (!window.ORG_CONSTRUCTION_STATE) {
+                window.ORG_CONSTRUCTION_STATE = [
+                    { id: 'CONST-01', owner: '담양군', name: '군도 5호선 정비공사', from: '2026-03-02', to: '2026-10-30', amount: '12.4억 원', manager: '김안전', status: '완료', source: '직접 등록' },
+                    { id: 'CONST-02', owner: '담양군', name: '정수장 내진보강 공사', from: '2026-06-01', to: '2026-12-20', amount: '8.7억 원', manager: '', status: '미시행', source: '직접 등록' },
+                ];
+            }
+            const construction = window.ORG_CONSTRUCTION_STATE;
+            /* 선임 현황도 공사 목록과 같이 상태 배열로 둔다 — 종전에는 표가 하드코딩이라
+               [선임 등록]을 눌러 저장해도 표가 그대로였고 «선임 등록 완료» 알림만 떴다.
+               선임 공백은 그 자체가 법정 의무 미이행이라, 등록했는데 반영되지 않으면
+               담당자는 선임이 끝난 줄 알고 공백을 그대로 둔다. */
+            if (!window.ORG_APPOINT_STATE) {
+                window.ORG_APPOINT_STATE = [
+                    { kind: '안전관리자', name: '김안전', date: '2025-03-02', cert: '산업안전기사', paper: true },
+                    { kind: '보건관리자', name: '이보건', date: '2025-03-02', cert: '간호사', paper: true },
+                    { kind: '안전보건관리책임자', name: '홍길동', date: '2025-01-02', cert: '재난안전과장', paper: false },
+                    { kind: '관리감독자 (도시과)', name: '', date: '', cert: '', paper: false },
+                ];
+            }
+            const appoint = window.ORG_APPOINT_STATE;
+            const staffing = [
+                { role: '안전관리자', required: 1, note: '예시 기준값' },
+                { role: '보건관리자', required: 1, note: '예시 기준값' },
+                { role: '산업보건의', required: null, note: '법령 배치 기준 미등록' },
+            ];
+            /* 현재 선임 인원은 선임 현황에서 센다 — 상수로 두면 선임을 등록해도 배치 점검이
+               움직이지 않아, 같은 화면의 두 표가 서로 다른 현황을 주장한다. 판정(미달·완료)이
+               그 수치에 걸려 있으므로 어긋나면 «미달인데 완료»가 생긴다. */
+            staffing.forEach(x => {
+                x.current = appoint.filter(a => a.name && a.kind.indexOf(x.role) === 0).length;
+            });
+            const staffShort = staffing.filter(x => x.required != null && x.current < x.required).length;
+            const staffPending = staffing.filter(x => x.required == null).length;
+            /* 담당자는 이 화면의 명단이 아니라 조직도(DYV2.ORG 단일 출처)에서 고른다 — 직접 입력하면
+               같은 사람이 여러 표기로 쌓여 부서별 집계가 어긋난다(조직 화면 정의서 §6). 종전에는
+               placeholder 만 「조직도에서 선택」이라 적어 두고 실제로는 자유 입력이라, 없는 동작을
+               문구로 약속하고 있었다.
+               ※ 트리는 모달 본문 안 인라인 패널(.org-inline)로 펼친다 — 새 모달을 쌓지 않는다.
+                 menu.html 은 js/org-pick.js 를 싣지 않아 ORGPICK 전역이 없는 페이지이므로, 같은
+                 DYV2.orgFlat() 파생·같은 트리 마크업을 쓰는 EDOC.openOrgTree 로 떨어진다. 없는
+                 전역을 부르면 버튼이 조용히 죽어 «조직도에서 선택»이 다시 빈 약속이 된다. */
+            PG.orgPickName = () => {
+                if (window.ORGPICK) ORGPICK.toggle('org-ap-field', 'member', 'PG.orgAppointPick');
+                else E.openOrgTree('org-ap-name');
+            };
+            /* 프로토타입은 파일 실물을 저장하지 않는다 — 첨부했다는 «사실»만 잡는다.
+               DOM 클래스로 판정하면 그 클래스가 실재하는지에 기대게 되고, 없으면 조용히
+               항상 미첨부가 된다(CLAUDE.md §7-1 — 없는 클래스는 오류 없이 그냥 넘어간다). */
+            PG.orgApPaper = () => {
+                PG._apPaper = true;
+                const box = document.getElementById('org-ap-paper');
+                if (box) box.innerHTML = '<span class="chip-status success chip-sm">선임계 첨부됨</span>' +
+                    ' <span class="rl-ro-none">파일 실물은 파일관리 연계 후 보관됩니다</span>';
+                V.toast('선임계를 첨부했습니다 — 파일 실물은 연계 후 보관됩니다.');
+            };
+            PG.orgAppointPick = label => { const el = document.getElementById('org-ap-name'); if (el) el.value = label; };
+            /* 버튼만 감추면 전역 호출로 뚫린다 — 저장 경로에도 같은 가드를 둔다(CLAUDE.md §12). */
+            PG.orgAppoint = (kind) => {
+                if (actGate('선임 등록')) return;
+                const today = DYV2.today();
+                PG._apKind = kind || '';
+                PG._apPaper = false;
+                V.openModal('안전·보건관리자 선임 등록',
+                    '<div class="preset-form-grid">' +
+                    '<span class="k">구분 <span class="req">*</span></span><select class="form-select" id="org-ap-kind"><option value="">선택하세요</option><option>안전관리자</option><option>보건관리자</option><option>안전보건관리책임자</option><option>관리감독자</option></select>' +
+                    '<span class="k">성명 <span class="req">*</span></span>' +
+                    '<div class="orgpick-field" id="org-ap-field"><div style="display:flex; gap:8px; align-items:center;">' +
+                        '<input type="text" id="org-ap-name" readonly placeholder="[조직도]에서 대상자를 고르세요" style="flex:1; background:var(--surface-alt);">' +
+                        '<button type="button" class="btn btn-sm btn-outline" onclick="PG.orgPickName()">조직도</button>' +
+                    '</div></div>' +
+                    /* 선임일 기본값을 특정 날짜로 박아 두면 기준일이 움직일 때 미래 날짜가 기본이 된다. */
+                    '<span class="k">선임일 <span class="req">*</span></span><input type="date" id="org-ap-date" value="' + today + '" max="' + today + '">' +
+                    '<span class="k">자격</span><input type="text" id="org-ap-cert" placeholder="예: 산업안전기사">' +
+                    '<span class="k">선임계 첨부</span>' +
+                    '<div><div id="org-ap-paper">' +
+                    DYV2.uploadDrop('선임 신고서·자격증 사본 첨부', 'PG.orgApPaper()', { style: 'padding:14px;' }) +
+                    '</div></div></div>',
+                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+                    '<button class="btn btn-primary" onclick="PG.orgAppointSave()">등록</button>');
+            };
+            /* 필수값 검증 — 종전에는 [등록]이 곧바로 «선임 등록 완료» 알림을 띄워, 아무것도 고르지 않아도
+               선임을 마친 것처럼 말했다. 선임 공백은 그 자체가 법정 의무 미이행이라 빈 등록이 그것을 덮는다. */
+            PG.orgAppointSave = () => {
+                const val = k => ((document.getElementById(k) || {}).value || '').trim();
+                const kind = val('org-ap-kind'), name = val('org-ap-name'), date = val('org-ap-date');
+                if (!kind) { V.toast('구분을 고르세요.'); return; }
+                if (!name) { V.toast('조직도에서 대상자를 고르세요.'); return; }
+                if (!date) { V.toast('선임일을 입력하세요.'); return; }
+                /* 아직 오지 않은 날로 선임할 수 없다 — 미래 선임을 허용하면 «지금 선임돼 있다»가 거짓이 된다. */
+                if (date > DYV2.today()) { V.toast('아직 오지 않은 날로 선임할 수 없습니다.'); return; }
+                /* 현황에 반영하고 나서 알린다 — 알림만 내고 표가 그대로면 «등록했다»가 거짓이 된다
+                   (조직 화면 정의서 §4-2 «현황에 반영하고 신고 안내를 낸다»). */
+                const slot = appoint.find(a => a.kind === kind) || appoint.find(a => !a.name && a.kind.indexOf(kind) === 0);
+                /* 선임계는 파일 연계 전이라 실물을 보관하지 않는다 — 첨부했다는 사실만 남기고
+                   미첨부는 현황에 그대로 드러낸다. 첨부 여부를 안 남기면 «미첨부»가 영원히 미첨부다. */
+                const paper = !!PG._apPaper;
+                if (slot) { slot.name = name; slot.date = date; slot.cert = val('org-ap-cert'); slot.paper = paper; }
+                else { appoint.push({ kind: kind, name: name, date: date, cert: val('org-ap-cert'), paper: paper }); }
+                V.closeModal();
+                E.notify('선임 등록 완료 — 고용노동부 선임 신고 안내', '메일');
+                render();
+            };
+            PG.orgEval = () => actGate('수행평가 작성') ? null : E.openForm({
+                id: 'EDOC-수행평가-2026H1', title: '2026 상반기 안전보건관리책임자등 수행평가', form: 'F6',
+                ctx: { menuLabel: '조직 · 반기', scorelist: T.SCORE_PRESETS.org }, onChange: render,
+            });
+            PG.orgFollow = () => actGate('후속조치 등록') ? null : E.openForm({
+                id: 'EDOC-후속조치-2026H1', title: '수행평가 후속 조치 (포상·인사 반영)', form: 'F7',
+                ctx: { menuLabel: '조직' }, source: '2026 상반기 수행평가 — 판정 미흡 1건',
+                fields: { source: '수행평가: 예산·인력 지원의 충분성 — 보완 판정' }, onChange: render,
+            });
+            PG.orgStaffComplete = () => {
+                if (actGate('선임 현황 점검 완료')) return;
+                if (staffShort) { V.toast('법정 배치 기준 미달 ' + staffShort + '건으로 선임 현황 점검을 완료할 수 없습니다.'); return; }
+                if (staffPending) { V.toast('배치 기준 미등록 ' + staffPending + '건이 있어 완료 확정할 수 없습니다.'); return; }
+                V.toast('선임 현황 점검을 완료했습니다.');
+            };
+            PG.orgConstForm = id => {
+                if (actGate('공사 등록·수정')) return;
+                const row = construction.find(x => x.id === id);
+                V.openModal(row ? '공사별 안전관리자 현황 수정' : '공사 직접 등록',
+                    '<div class="preset-form-grid">' +
+                    '<span class="k">발주처</span><input id="org-c-owner" type="text" value="' + esc(row ? row.owner : '담양군') + '">' +
+                    '<span class="k">공사명 <span class="req">*</span></span><input id="org-c-name" type="text" value="' + esc(row ? row.name : '') + '">' +
+                    '<span class="k">공사기간 <span class="req">*</span></span><div style="display:flex;gap:6px;"><input id="org-c-from" type="date" value="' + esc(row ? row.from : DYV2.today()) + '"><input id="org-c-to" type="date" value="' + esc(row ? row.to : '') + '"></div>' +
+                    '<span class="k">공사금액</span><input id="org-c-amount" type="text" value="' + esc(row ? row.amount : '') + '" placeholder="예: 5.2억 원">' +
+                    '<span class="k">안전관리자</span><input id="org-c-manager" type="text" value="' + esc(row ? row.manager : '') + '" placeholder="조직도 선택 결과">' +
+                    '</div>',
+                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+                    '<button class="btn btn-primary" onclick="PG.orgConstSave(\'' + (id || '') + '\')">저장</button>');
+            };
+            PG.orgConstSave = id => {
+                if (actGate('공사 등록·수정')) return;
+                const val = key => (document.getElementById(key).value || '').trim();
+                const name = val('org-c-name'), from = val('org-c-from'), to = val('org-c-to');
+                if (!name) { V.toast('공사명을 입력하세요.'); return; }
+                if (!from || !to || from > to) { V.toast('공사기간을 확인하세요.'); return; }
+                let row = construction.find(x => x.id === id);
+                const data = { owner: val('org-c-owner'), name: name, from: from, to: to, amount: val('org-c-amount'), manager: val('org-c-manager') };
+                if (row) Object.assign(row, data);
+                else construction.push(Object.assign({ id: 'CONST-' + String(construction.length + 1).padStart(2, '0'), status: '미시행', source: '직접 등록' }, data));
+                V.closeModal(); V.toast(row ? '공사 현황을 수정했습니다.' : '공사를 직접 등록했습니다.'); render();
+            };
+            PG.orgConstCheck = id => {
+                if (actGate('공사 점검')) return;
+                const row = construction.find(x => x.id === id); if (!row) return;
+                if (row.status === '미시행') { row.status = '진행'; V.toast('공사별 선임 점검을 시작했습니다.'); render(); return; }
+                if (row.status === '진행' && !row.manager) { V.toast('안전관리자가 미선임이므로 점검을 완료할 수 없습니다.'); return; }
+                if (row.status === '진행') { row.status = '완료'; V.toast('공사별 선임 점검을 완료했습니다.'); render(); return; }
+                V.toast('이미 완료된 점검입니다.');
+            };
+            const team = (name, n) => '<div style="border:1px solid var(--card-line); border-radius:var(--radius-md); padding:10px 14px; text-align:center; background:var(--surface);"><div style="font-size:12px; font-weight:700;">' + name + '</div><div style="font-size:12px; color:var(--text-gray);">' + n + '명</div></div>';
+            /* 조직도 요약 — 단일 출처(DYV2.ORG) 파생 실인원 · 조회 전용 */
+            const orgTotal = (V.orgTotal ? V.orgTotal() : 0);
+            const jjtN = (V.orgCount ? V.orgCount('jjt', false) : 0);
+            const mayorN = (V.orgCount ? V.orgCount('n_mayor', false) : 1);
+            const deptCards = (V.orgFlat ? V.orgFlat() : [])
+                .map(d => team(d.dept, d.members.length)).join('');
+            /* 부서 등록 갭은 감추지 않는다 — 명단이 다 확보되지 않은 것과 조직이 그만큼인 것은 다르다. */
+            const orgGap = (window.DEPTCHK && DEPTCHK.gap) ? DEPTCHK.gap() : null;
+            /* [조직도 동기화] 버튼을 제거했다 — 행정포털 조직도 연계는 아직 구현돼 있지 않아
+               «동기화 완료» 알림은 일어나지 않은 일을 알린 것이다. 연계 관리 화면이 같은 시스템을
+               «연계 이력 미구현»으로 밝히고 있어 두 화면이 반대를 말하고 있었고, 조직 화면 정의서도
+               조직도 현황을 조회 전용으로 정한다. 조직도 데이터 자체는 그대로이며 바뀐 것은
+               «밖에서 동기화된다»는 주장뿐이다. */
+            return sectionCard('조직도 현황',
+                '<div class="check-notice" style="margin-bottom:10px;">조직도는 이 시스템의 사용자·조직 관리에 등록된 명단(현재 ' + orgTotal + '명' +
+                (orgGap ? ' · 부서 ' + orgGap.registered + ' / ' + orgGap.expected + '개 등록' : '') +
+                ')에서 그대로 파생합니다. <b>행정포털 조직도 연계는 아직 구현되지 않아</b> 밖에서 명단이 자동으로 들어오거나 맞춰지는 경로가 없습니다 — 조직이 개편되면 사용자·조직 관리에서 먼저 반영해야 이 화면이 따라옵니다.</div>' +
+                '<div style="display:flex; flex-direction:column; align-items:center; gap:10px;">' +
+                team('군수 (경영책임자)', mayorN) +
+                '<div style="width:1px; height:14px; background:var(--card-line);"></div>' +
+                team('재난안전과 중대재해팀 (전담조직)', jjtN) +
+                '<div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; width:100%; margin-top:4px;">' +
+                deptCards + '</div></div>') +
+            sectionCard('안전관리자·보건관리자 선임 현황',
+                tbl(['구분', '성명', '자격', '선임일', '선임계', '상태'], appoint.map(x => [
+                    esc(x.kind), x.name ? esc(x.name) : '<span class="badge-unassigned">미선임</span>',
+                    x.cert ? esc(x.cert) : '-', x.date || '-',
+                    /* 첨부 없는 선임을 그대로 드러낸다 — 감추면 서류가 영영 오지 않는다(정의서 §6). */
+                    /* 표준 배지(chip-status + toneOf)를 직접 쓴다 — 이 화면이 두루 쓰는 ST()는
+                       완료/진행/그 밖 셋만 아는 옛 헬퍼라 첨부와 미첨부가 같은 색으로 나온다.
+                       서류 공백을 색으로 구분하지 못하면 열을 만든 이유가 없어진다. */
+                    !x.name ? '-' : (function (lb) {
+                        return '<span class="chip-status ' + DYV2.toneOf(lb) + ' chip-sm">' + lb + '</span>';
+                    })(x.paper ? '첨부' : '미첨부'),
+                    x.name ? ST('완료')
+                        : (canAct() ? '<button class="btn btn-sm btn-primary" onclick="PG.orgAppoint(\'' + x.kind + '\')">선임 등록</button>'
+                                    : '<span class="rl-ro-none">조회</span>'),
+                ])),
+                canAct() ? '' : '<p class="rl-ro-none">' + DYROLE.readOnlyNote('선임 등록') + '</p>') +
+            sectionCard('법정 배치인원 자동 점검',
+                '<div class="check-notice" style="margin-bottom:10px;">법령 배치 기준과 현재 선임 인원을 직역별로 비교합니다. 미달이거나 기준이 미등록된 경우 이 점검의 <b>완료 확정만</b> 차단하고 다른 업무는 막지 않습니다.</div>' +
+                tbl(['직역', '법정 기준', '현재 선임', '판정', '기준 출처'], staffing.map(x => [
+                    x.role,
+                    x.required == null ? '<span class="chip-mini wt">미등록</span>' : x.required + '명',
+                    x.current + '명',
+                    x.required == null ? '<span class="chip-status warning">판정 대기</span>' : (x.current >= x.required ? ST('완료') : '<span class="chip-status danger">미달</span>'),
+                    x.note,
+                ])),
+                (!canAct() ? '' : '<button class="btn btn-sm btn-primary" onclick="PG.orgStaffComplete()"' + ((staffShort || staffPending) ? ' disabled title="미달·기준 미등록을 해소한 뒤 완료할 수 있습니다"' : '') + '>점검 완료 확정</button>')) +
+            sectionCard('공사별 안전관리자 선임 현황',
+                '<div class="check-notice" style="margin-bottom:10px;">공사 자료는 담당자가 직접 등록한 것만 표시합니다. 계약 시스템에서 자동으로 들어오는 경로가 없으므로 등록하지 않은 공사는 이 목록에 나타나지 않습니다 — 대상 공사를 먼저 확인해 등록해야 합니다. 안전관리자 미선임 공사는 점검을 완료할 수 없습니다.</div>' +
+                tbl(['발주처', '공사명', '공사기간', '공사금액', '안전관리자', '점검', '관리'], construction.map(x => [
+                    x.owner, x.name, x.from + '<br>~ ' + x.to, x.amount || '-',
+                    x.manager || '<span class="badge-unassigned">미선임</span>',
+                    ST(x.status),
+                    (canAct()
+                        ? '<button class="btn btn-sm btn-outline" onclick="PG.orgConstForm(\'' + x.id + '\')">수정</button> ' +
+                          '<button class="btn btn-sm btn-primary" onclick="PG.orgConstCheck(\'' + x.id + '\')">' + (x.status === '미시행' ? '점검 시작' : x.status === '진행' ? '완료' : '확인') + '</button>'
+                        : '<span class="rl-ro-none">조회</span>'),
+                ])),
+                (canAct() ? '<button class="btn btn-sm btn-primary" onclick="PG.orgConstForm()">+ 공사 직접 등록</button>' : '')) +
+            sectionCard('수행평가 · 후속조치 (반기) ' + docStChip('EDOC-수행평가-2026H1'),
+                '<p style="font-size:12px; color:var(--text-gray);">경영책임자가 안전보건관리책임자등의 업무 수행을 반기 1회 평가하고, 미흡 판정은 후속 조치(포상·인사)로 이어집니다.</p>',
+                (canAct()
+                    ? '<div style="display:flex; gap:6px;">' +
+                      '<button class="btn btn-sm btn-primary" onclick="PG.orgEval()">수행평가 작성</button>' +
+                      '<button class="btn btn-sm btn-outline" onclick="PG.orgFollow()">후속조치 등록</button></div>'
+                    : '<p class="rl-ro-none">' + DYROLE.readOnlyNote('수행평가·후속조치 작성') + '</p>'));
+        },
+
+        /* ── 의견청취 [SFR-011]: 1메뉴 3탭(의견청취·건의함 / 산업안전보건위원회 / 협의체·점검표) — 기획 v0.1 + RFP 보완(접수경로·부서별·안건이행·점검결과지 CRUD) ── */
+        opinion() {
+            /* ===== 시각/이력 헬퍼 ===== */
+            const PROTO_TODAY = DYV2.today();  /* 오늘 단일 출처 (구 '2026-07-02' 하드코딩 제거) */
+            const pad2 = n => String(n).padStart(2, '0');
+            const nowStamp = () => { const d = new Date(); return PROTO_TODAY + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()); };
+            const addDays = (dateStr, n) => { const dt = new Date((dateStr || PROTO_TODAY) + 'T00:00:00Z'); if (isNaN(dt.getTime())) return '2026-07-31'; dt.setUTCDate(dt.getUTCDate() + n); return dt.toISOString().slice(0, 10); };
+            const pushHist = (o, stage, text) => { o.history = o.history || []; o.history.push({ stage: stage, actor: '박안전', text: text || '', at: nowStamp() }); };
+            /* 레거시 레코드(status:'처리중', plan/progress/result) → 5단계 상태 + history[] 마이그레이션 (최초 1회) */
+            function migrateVoice(o) {
+                if (o.status === '처리중') o.status = o.link ? '개선조치중' : '점검중';
+                if (!o.history) {
+                    const h = [{ stage: '접수', actor: '박안전', text: '의견 접수 — ' + (o.via || '온라인') + ' 경로', at: (o.date || PROTO_TODAY) + ' 09:00' }];
+                    if (o.plan) h.push({ stage: o.link ? '개선조치 생성' : '현장점검 생성', actor: '박안전', text: o.plan, at: (o.date || PROTO_TODAY) + ' 10:00' });
+                    (o.progress || []).forEach(p => h.push({ stage: '경과', actor: '박안전', text: p.text, at: (p.date || o.date || PROTO_TODAY) + ' 11:00' }));
+                    if (o.status === '완료' && o.result) h.push({ stage: '완료', actor: '박안전', text: o.result, at: (o.date || PROTO_TODAY) + ' 15:00' });
+                    if (o.status === '반려' && o.rejectReason) h.push({ stage: '반려', actor: '박안전', text: o.rejectReason, at: (o.date || PROTO_TODAY) + ' 15:00' });
+                    o.history = h;
+                }
+                if (o.inspectLink && !o.inspect) o.inspect = { kind: '특별점검', date: addDays(o.date, 3), owner: o.owner || '재난안전과' };
+                if (o.status === '완료') { o.completedAt = o.completedAt || ((o.date || PROTO_TODAY) + ' 15:00'); o.completedBy = o.completedBy || '박안전'; }
+            }
+            /* ===== SSOT (window.OPINION_STATE) ===== */
+            if (!window.OPINION_STATE) {
+                const named = [
+                    { id: 'OPN-24', cat: '아차사고', title: '지게차 후진 중 충돌 위험 상황 발생', author: '박작업', date: '2026-04-22', status: '접수대기', via: '온라인', location: '물류창고 하역장', content: '지게차 후진 시 후방 작업자와 충돌 위험. 후방 감지센서·유도자 배치 필요.', inspectLink: false, link: '', plan: '', progress: [], result: '' },
+                    { id: 'OPN-23', cat: '안전제안', title: '용접작업장 환기시설 개선 제안', author: '이기술', date: '2026-04-21', status: '처리중', via: '온라인', location: '정비동 용접실', content: '용접 흄 배기 불량. 국소배기장치 증설 제안.', inspectLink: true, link: '', plan: '용접실 국소배기장치 현장 점검 예정', progress: [], result: '' },
+                    { id: 'OPN-22', cat: '위험신고', title: '2층 계단 난간 흔들림 현상', author: '최안전', date: '2026-04-20', status: '처리중', via: '온라인', location: '본관 2층 계단', content: '난간 고정부 풀림으로 흔들림. 낙상 위험.', inspectLink: false, link: 'IMP-204', plan: '난간 고정부 전수 점검 및 재시공', progress: [{ date: '2026-04-22', text: '현장 점검 완료 — 3개소 고정부 풀림 확인' }], result: '' },
+                    { id: 'OPN-21', cat: '청취조사', title: '야간작업 피로도 관련 의견', author: '정근로', date: '2026-04-19', status: '처리중', via: '오프라인', location: '-', content: '야간 연속작업 피로 누적. 교대 주기 단축 검토 요청.', inspectLink: true, link: '', plan: '', progress: [], result: '' },
+                    { id: 'OPN-20', cat: '안전제안', title: '안전모 턱끈 자동잠금 장치 도입 제안', author: '한제안', date: '2026-04-18', status: '완료', via: '온라인', location: '전 현장', content: '턱끈 미체결 방지 자동잠금 버클 도입 제안.', inspectLink: false, link: '', plan: '시범 도입 후 확대', progress: [{ date: '2026-04-25', text: '시범 물량 20개 도입' }], result: '시범 운영 양호 — 전 현장 확대 적용 완료' },
+                    { id: 'OPN-19', cat: '아차사고', title: '자재 낙하 위험 상황 (B구역)', author: '강현장', date: '2026-04-17', status: '완료', via: '오프라인', location: 'B구역 자재적치장', content: '적치 높이 초과로 낙하 위험. 적치 기준 재정비.', inspectLink: false, link: 'IMP-198', plan: '적치 높이 기준 표지 부착·재배치', progress: [{ date: '2026-04-19', text: '적치 재배치 완료' }], result: '적치 기준 표지 부착 및 일일 점검 체계 수립 완료' },
+                    { id: 'OPN-18', cat: '위험신고', title: '전기배선 피복 손상 발견', author: '오전기', date: '2026-04-16', status: '완료', via: '오프라인', location: '기계실 분전반', content: '배선 피복 손상으로 감전 위험.', inspectLink: false, link: 'IMP-195', plan: '손상 배선 즉시 교체', progress: [{ date: '2026-04-16', text: '긴급 차단 후 교체' }], result: '손상 배선 전량 교체 완료' },
+                    { id: 'OPN-17', cat: '청취조사', title: '보호구 착용 불편사항 의견', author: '윤작업', date: '2026-04-15', status: '반려', via: '온라인', location: '-', content: '보호장갑 사이즈 부족 의견.', inspectLink: false, link: '', plan: '', progress: [], result: '', rejectReason: '규격 보호구 비치 완료 — 기존 조치와 중복' },
+                ];
+                const fCat = ['안전제안', '위험신고', '아차사고', '청취조사'];
+                const fSt = ['완료', '완료', '접수대기', '처리중'];
+                const fDept = ['재난안전과', '행정과', '환경과', '도시과'];
+                const fTitle = ['배수로 덮개 파손 신고', '휴게실 환기 개선 제안', '고소작업 안전대 부착설비 요청', '중장비 신호수 배치 건의', '소화기 비치 위치 의견', '미끄럼 방지 매트 설치 제안', '분진 마스크 지급 요청', '경고표지 추가 설치 신고'];
+                const seed = named.slice();
+                for (let k = 0; k < 16; k++) {
+                    const n = 16 - k;
+                    const mo = 3 - (k % 3);
+                    const dy = 28 - k;
+                    seed.push({ id: 'OPN-' + (n < 10 ? '0' + n : n), cat: fCat[k % 4], title: fTitle[k % 8], author: '종사자' + (k + 1), date: '2026-0' + mo + '-' + (dy < 10 ? '0' + dy : dy), status: fSt[k % 4], via: (k % 2 ? '온라인' : '오프라인'), location: '-', content: '(현장 종사자 등록 의견)', owner: (fSt[k % 4] === '접수대기' ? '' : fDept[k % 4]), inspectLink: (k % 3 === 0), link: (fSt[k % 4] === '완료' ? 'IMP-' + (180 + k) : ''), plan: '', progress: [], result: '' });
+                }
+                ['', '재난안전과', '도시과', '재난안전과', '행정과', '재난안전과', '도시과', '재난안전과'].forEach((d, i) => { if (named[i]) named[i].owner = d; });
+                window.OPINION_STATE = {
+                    tab: 'voice', view: 'list', id: null, page: 1, fcat: '', fstatus: '', fdept: '',
+                    VOICES: seed,
+                    COMMITTEE: {
+                        members: [
+                            { role: '위원장(사용자대표)', dept: '재난안전과', position: '과장', name: '홍길동' },
+                            { role: '사용자위원', dept: '행정과', position: '과장', name: '김행정' },
+                            { role: '근로자대표', dept: '환경과', position: '주무관', name: '이근로' },
+                            { role: '근로자위원', dept: '도시과', position: '주무관', name: '박작업' },
+                            { role: '간사', dept: '재난안전과', position: '중대재해팀장', name: '정안전' },
+                        ],
+                        meetings: [
+                            { round: '2026 2분기', type: '정기', date: '2026-06-25', place: '군청 상황실', attendeeList: [{ dept: '재난안전과', position: '과장', name: '홍길동' }, { dept: '행정과', position: '과장', name: '김행정' }, { dept: '환경과', position: '주무관', name: '이근로' }, { dept: '도시과', position: '주무관', name: '박작업' }, { dept: '재난안전과', position: '중대재해팀장', name: '정안전' }], agenda: '위험성평가 결과 공유, 의견청취 처리 현황, 하반기 점검계획', decisions: ['하반기 정기 점검계획 확정', '의견청취 처리 지연 건 부서별 조치 지시', '위험성평가 미조치 항목 개선 요구'], status: '확정' },
+                            { round: '2026 1분기', type: '정기', date: '2026-03-20', place: '군청 대회의실', attendeeList: [{ dept: '재난안전과', position: '과장', name: '홍길동' }, { dept: '행정과', position: '과장', name: '김행정' }, { dept: '환경과', position: '주무관', name: '이근로' }], agenda: '2026 안전보건 목표, 예산 심의', decisions: ['2026 안전보건 목표 승인', '안전보건 예산안 심의 통과'], status: '확정' },
+                            { round: '2025 4분기', type: '정기', date: '2025-12-18', place: '군청 상황실', attendeeList: [{ dept: '재난안전과', position: '과장', name: '홍길동' }, { dept: '재난안전과', position: '중대재해팀장', name: '정안전' }], agenda: '연간 안전보건 실적 보고', decisions: ['연간 실적 보고 채택', '차년도 개선 방향 논의'], status: '확정' },
+                        ],
+                        agendaItems: [
+                            { agenda: '위험성평가 미조치 항목 개선', dept: '도시과', due: '2026-07-15', status: '진행' },
+                            { agenda: '의견청취 처리 지연 건 해소', dept: '재난안전과', due: '2026-06-30', status: '완료' },
+                            { agenda: '노후 시설 안전점검 강화', dept: '행정과', due: '2026-07-31', status: '지연' },
+                            { agenda: '하반기 안전보건교육 계획 수립', dept: '행정과', due: '2026-07-10', status: '진행' },
+                        ],
+                    },
+                    COUNCIL: {
+                        cycle: '월간',
+                        members: [
+                            { role: '협의체 의장', dept: '재난안전과', position: '중대재해팀장', name: '정안전' },
+                            { role: '도급인 측', dept: '회계과', position: '주무관', name: '서회계' },
+                            { role: '수급인 측', dept: '(주)안전건설', position: '현장소장', name: '강현장' },
+                            { role: '수급인 측', dept: '(주)클린환경', position: '반장', name: '오환경' },
+                        ],
+                        results: [
+                            { round: '2026-06', date: '2026-06-15', content: '5월 합동순회점검 결과 공유, 하절기 온열질환 예방대책 논의', result: '온열질환 예방 그늘막·아이스조끼 현장 배치 완료', status: '완료' },
+                            { round: '2026-05', date: '2026-05-14', content: '4월 협의체 운영 결과 점검, 수급인 안전교육 이수 현황 점검', result: '미이수자 3명 추가 교육 실시 완료', status: '완료' },
+                            { round: '2026-04', date: '2026-04-16', content: '신규 수급업체 (주)클린환경 합류 안내, 작업장 순회점검 주기 조정 논의', result: '순회점검 주기 월 2회로 조정 — 시행 여부 후속 확인 필요', status: '진행중' },
+                        ],
+                        checklists: [
+                            { id: 'CHK-06', cat: '용역', date: '2026-06-20', inspector: '정안전', result: '미흡', appr: '미상신', items: [
+                                { q: '도급 시 안전·보건 협의체를 구성·운영하였는가', r: '확인' },
+                                { q: '작업장 합동 순회점검(2일 1회)을 실시하였는가', r: '미흡', note: '6월 1회 누락' },
+                                { q: '수급인에게 안전·보건 정보를 사전 제공하였는가', r: '확인' },
+                                { q: '종사자 의견청취를 실시하고 결과를 반영하였는가', r: '확인' },
+                            ] },
+                            { id: 'CHK-05', cat: '구매설치', date: '2026-06-18', inspector: '정안전', result: '적합', appr: '승인완료', items: [
+                                { q: '설치 작업 위험성평가를 실시하였는가', r: '확인' },
+                                { q: '안전작업 절차서를 공유하였는가', r: '확인' },
+                            ] },
+                            { id: 'CHK-04', cat: '위탁사업', date: '2026-05-30', inspector: '정안전', result: '적합', appr: '미상신', items: [
+                                { q: '위탁 종사자 안전교육 이수를 확인하였는가', r: '확인' },
+                            ] },
+                            { id: 'CHK-03', cat: '기타', date: '2026-05-15', inspector: '정안전', result: '미흡', appr: '반려', items: [
+                                { q: '안전보건 협의체 결과를 게시·공유하였는가', r: '미흡', note: '게시 누락' },
+                            ] },
+                        ],
+                    },
+                };
+            }
+            const S = window.OPINION_STATE;
+            /* 시드 점검결과지의 결재선도 예시 값이다 — 없으면 이력이 통째로 빈다(§15) */
+            (S.COUNCIL && S.COUNCIL.checklists ? S.COUNCIL.checklists : []).forEach(c => {
+                if (c.appr !== '미상신' && !c.approval) { c.approval = sampleLine(); c.apprAt = (c.date || V.today()) + ' 14:10'; }
+            });
+            if (!S._migrated) { S.VOICES.forEach(migrateVoice); S._migrated = true; }
+            /* SNB(sub 파라미터)가 곧 현재 탭 — 탭 간 이동은 SNB 페이지 이동으로 일어남 */
+            if (OPN_SUB) S.tab = OPN_SUB;
+            const PER = 8;
+            const CATS = ['아차사고', '안전제안', '위험신고', '청취조사'];
+            const DEPTS = ['재난안전과', '행정과', '환경과', '도시과', '미배정'];
+            const CHK_CATS = ['용역', '구매설치', '위탁사업', '기타'];
+            const CHK_QS = ['도급 시 안전·보건 협의체를 구성·운영하였는가', '작업장 합동 순회점검을 주기적으로 실시하였는가', '수급인에게 안전·보건 정보를 사전 제공하였는가', '종사자 의견청취를 실시하고 결과를 반영하였는가', '안전보건 협의체 결과를 게시·공유하였는가'];
+            /* 5단계 상태 (DESIGN-TOKENS §5): 접수대기 → 점검중 | 개선조치중 → 완료 (+반려) */
+            const ST_ORDER = ['접수대기', '점검중', '개선조치중', '완료', '반려'];
+            const ST_COLOR = { '접수대기': 'neutral', '점검중': 'info', '개선조치중': 'warning', '완료': 'success', '반려': 'danger' };
+            const catChip = c => '<span class="chip-status ' + ({ '아차사고': 'warning', '안전제안': 'info', '위험신고': 'purple', '청취조사': 'success' }[c] || 'neutral') + '">' + c + '</span>';
+            const stChip = st => '<span class="chip-status ' + (ST_COLOR[st] || 'neutral') + '">' + st + '</span>';
+            /* 개선조치중 의견: 연계된 개선조치가 종결되면 자동으로 완료 전이 (렌더 시점 동기화) */
+            function syncAutoTransition() {
+                const imps = E.improvements();
+                S.VOICES.forEach(o => {
+                    if (o.status === '개선조치중' && o.link) {
+                        const imp = imps.find(x => x.id === o.link);
+                        if (imp && imp.status === '종결') {
+                            o.status = '완료';
+                            o.completedAt = nowStamp(); o.completedBy = '박안전';
+                            o.result = o.result || ('개선조치 ' + o.link + ' 종결 — 조치 완료');
+                            pushHist(o, '완료', '개선조치 ' + o.link + ' 완료 — 자동 전이');
+                        }
+                    }
+                });
+            }
+            syncAutoTransition();
+            const apprColor = a => ({ '미상신': 'neutral', '결재중': 'info', '승인완료': 'success', '반려': 'danger' }[a] || 'neutral');
+            const apprChip = a => '<span class="chip-status ' + apprColor(a) + '">' + (a || '미상신') + '</span>';
+            const chkResultChip = r => (r === '미흡' ? '<span class="chip-status danger">미흡</span>' : '<span class="chip-status success">적합</span>');
+            const chkItemChip = r => (r === '확인' ? '<span class="chip-status success">확인</span>' : r === '미흡' ? '<span class="chip-status danger">미흡</span>' : '<span class="chip-status neutral">해당없음</span>');
+            const chkPdfPaper = c => '<div class="pdf-paper">' +
+                '<div class="pdf-head"><span>담양군 의견청취·협의체 점검결과지</span><span>문서번호 ' + c.id + '</span></div>' +
+                '<div class="pdf-title">' + V.esc(c.cat) + ' 점검결과지</div>' +
+                '<div class="pdf-slogan">점검일 ' + c.date + ' · 점검자 ' + V.esc(c.inspector) + ' · 종합결과 ' + c.result + '</div>' +
+                '<div class="pdf-sec">점검 항목</div><ol class="pdf-list">' + c.items.map(it => '<li>' + V.esc(it.q) + ' — <b>' + it.r + '</b>' + (it.note ? ' (' + V.esc(it.note) + ')' : '') + '</li>').join('') + '</ol>' +
+                '<div class="pdf-sign">시행일 ' + c.date + '<br><br><b>담양군수</b> (직인)</div>' +
+                '</div>';
+            const linkChips = o => (o.inspectLink ? '<span class="chip-mini wt-elec"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:3px;" aria-hidden="true"><path d="M9 15a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M15 9a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/></svg>안전점검 연동</span> ' : '') + (o.link ? '<span class="chip-mini pdca"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:3px;" aria-hidden="true"><path d="M9 15a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M15 9a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/></svg>개선조치 연동</span>' : '');
+            const find = id => S.VOICES.find(x => x.id === id);
+            const nextNum = arr => { let m = 0; arr.forEach(x => { const g = /(\d+)$/.exec(x.id || ''); if (g && +g[1] > m) m = +g[1]; }); return m + 1; };
+
+            /* ===== 라우터 ===== */
+            PG.opnGo = (tab, view, id) => { if (tab) S.tab = tab; if (view) S.view = view; if (id !== undefined) S.id = id; render(); };
+            PG.opnTab = name => PG.opnGo(name, 'list', null);
+            PG.opnOpen = id => PG.opnGo(S.tab, 'detail', id);
+            PG.opnBack = () => PG.opnGo(S.tab, 'list', null);
+            PG.opnNew = () => PG.opnGo('voice', 'form', null);
+            PG.opnPage = p => { S.page = p < 1 ? 1 : p; render(); };
+            PG.opnSetKw = v => { S.fkw = v; S.page = 1; render(); };
+            PG.opnSetCat = v => { S.fcat = v; S.page = 1; render(); };
+            PG.opnSetStatus = v => { S.fstatus = v; S.page = 1; render(); };
+            PG.opnSetDept = v => { S.fdept = v; S.page = 1; render(); };
+            PG.opnVia = via => {
+                const author = document.getElementById('opn-author');
+                if (!author) return;
+                const online = via === '온라인';
+                author.readOnly = online;
+                author.value = online ? '김대표' : '';
+                author.placeholder = online ? 'SSO 로그인 사용자 자동 입력' : '서면·구두 의견 제출자명 입력';
+            };
+            /* 화면 내 2차 탭 (위원회 3탭 / 협의체 2탭) — 탭 상태는 페이지 내 유지 */
+            PG.opnCmtTab = t => { S.cmtTab = t; render(); };
+            PG.opnCnlTab = t => { S.cnlTab = t; render(); };
+
+            /* ===== 의견 등록 (온라인 / 오프라인 담당자 대리 입력) ===== */
+            PG.opnSave = () => {
+                const cat = (document.getElementById('opn-cat') || {}).value || '';
+                const via = (document.getElementById('opn-via') || {}).value || '온라인';
+                const author = ((document.getElementById('opn-author') || {}).value || '').trim();
+                const title = ((document.getElementById('opn-title') || {}).value || '').trim();
+                const loc = ((document.getElementById('opn-loc') || {}).value || '').trim();
+                const content = ((document.getElementById('opn-content') || {}).value || '').trim();
+                if (!cat) { V.toast('분류를 선택하세요'); return; }
+                if (via === '오프라인' && !author) { V.toast('오프라인 의견 제출자명을 입력하세요'); return; }
+                if (!title) { V.toast('제목을 입력하세요'); return; }
+                if (!content) { V.toast('상세내용을 입력하세요'); return; }
+                const writer = author || (via === '온라인' ? '김대표' : '(현장 종사자)');
+                const rec = { id: 'OPN-' + nextNum(S.VOICES), cat: cat, title: title, location: loc || '-', content: content, author: writer, date: PROTO_TODAY, status: '접수대기', via: via, owner: '', inspectLink: false, inspect: null, link: '', result: '', history: [] };
+                pushHist(rec, '접수', '의견 접수 — ' + via + ' 경로');
+                S.VOICES.unshift(rec);
+                S.page = 1; PG.opnGo('voice', 'list', null);
+                E.notify('의견 접수 알림 — "' + title + '" (' + via + ' 접수, 의견청취 담당)', '문자');
+                V.toast('의견이 등록되었습니다' + (via === '오프라인' ? ' (담당자 대리 등록)' : ''));
+            };
+
+            /* ===== 처리: 상세 화면 인라인 '처리 카드'에서 조치 방법 선택 → 상태 전이 ===== */
+            const deptOf = s => (String(s || '').split(' · ')[0] || s || '').trim();
+            const valOf = elId => ((document.getElementById(elId) || {}).value || '').trim();
+            /* 라디오 선택 시: 카드 강조 토글 + 인라인 폼 펼침 + 저장 버튼 활성화 */
+            PG.opnActSel = radio => {
+                document.querySelectorAll('.opn-act-opt').forEach(opt => {
+                    const on = opt.getAttribute('data-act') === radio.value;
+                    opt.classList.toggle('on', on);
+                    const form = opt.querySelector('.opn-act-form'); if (form) form.hidden = !on;
+                });
+                const btn = document.getElementById('opn-act-save'); if (btn) btn.disabled = false;
+            };
+            PG.opnActSave = id => {
+                const o = find(id); if (!o) return;
+                const act = (document.querySelector('input[name=opn-act]:checked') || {}).value;
+                if (!act) { V.toast('조치 방법을 선택하세요'); return; }
+                if (act === 'inspect') {
+                    const kind = valOf('opn-i-kind') || '특별점검';
+                    const date = valOf('opn-i-date') || addDays(PROTO_TODAY, 7);
+                    const owner = valOf('opn-i-owner');
+                    const note = valOf('opn-i-note');
+                    o.status = '점검중'; o.inspectLink = true; o.owner = deptOf(owner) || o.owner;
+                    o.inspect = { kind: kind, date: date, owner: owner };
+                    pushHist(o, '현장점검 생성', '현장점검 생성 — ' + kind + ' · 담당 ' + owner + ' · 예정 ' + date + (note ? ' · 확인사항: ' + note : ''));
+                    render(); V.toast('현장점검이 생성되었습니다 — 안전점검 연동');
+                } else if (act === 'improve') {
+                    const owner = valOf('opn-m-owner');
+                    const due = valOf('opn-m-due') || addDays(PROTO_TODAY, 14);
+                    const desc = valOf('opn-m-desc');
+                    if (!desc) { V.toast('개선 내용을 입력하세요'); return; }
+                    const imp = E.addImprovement({ title: desc.split('\n')[0], sourceMenu: '의견청취', sourceDoc: o.id, owner: owner, due: due });
+                    o.status = '개선조치중'; o.link = imp.id; o.owner = deptOf(owner) || o.owner;
+                    pushHist(o, '개선조치 생성', '개선조치 ' + imp.id + ' 생성 — 담당 ' + owner + ' · 예정 ' + due);
+                    render(); V.toast('개선조치 ' + imp.id + ' 생성 — 개선조치 메뉴에 집계');
+                } else if (act === 'reject') {
+                    const reason = valOf('opn-r-reason');
+                    if (!reason) { V.toast('반려 사유를 입력하세요'); return; }
+                    if (!window.confirm('반려 처리하시겠습니까? 되돌리려면 재처리해야 합니다.')) return;
+                    o.status = '반려'; o.rejectReason = reason;
+                    pushHist(o, '반려', reason);
+                    render(); V.toast('반려 처리되었습니다');
+                }
+            };
+            /* 경과 추가 — 이력에만 기록 */
+            PG.opnProgress = id => {
+                const o = find(id); if (!o) return;
+                V.openModal('경과 추가 — ' + V.esc(o.title),
+                    '<div class="preset-form-grid"><span class="k">경과 내용</span><textarea id="opn-prog" placeholder="진행 상황을 입력하세요"></textarea></div>',
+                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button><button class="btn btn-primary" id="opn-prog-save">추가</button>');
+                document.getElementById('opn-prog-save').addEventListener('click', () => {
+                    const t = ((document.getElementById('opn-prog') || {}).value || '').trim();
+                    if (!t) { V.toast('경과 내용을 입력하세요'); return; }
+                    pushHist(o, '경과', t);
+                    V.closeModal(); render(); V.toast('경과가 추가되었습니다');
+                });
+            };
+            /* 완료 처리 — 수동 완료(데모) */
+            PG.opnComplete = id => {
+                const o = find(id); if (!o) return;
+                V.openModal('완료 처리 — ' + V.esc(o.title),
+                    '<div class="preset-form-grid"><span class="k">처리 결과</span><textarea id="opn-result" placeholder="처리 결과를 입력하세요">' + V.esc(o.result || '') + '</textarea></div>',
+                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button><button class="btn btn-primary" id="opn-done-save">완료 처리</button>');
+                document.getElementById('opn-done-save').addEventListener('click', () => {
+                    o.result = ((document.getElementById('opn-result') || {}).value || '').trim();
+                    o.status = '완료'; o.completedAt = nowStamp(); o.completedBy = '박안전';
+                    pushHist(o, '완료', o.result || '조치 완료');
+                    V.closeModal(); render();
+                    E.notify('의견 처리 결과 회신 — "' + o.title + '" 조치 완료', '문자');
+                    V.toast('완료 처리되었습니다 — 작성자에게 결과 회신');
+                });
+            };
+            /* 재처리 — 완료/반려를 접수대기로 되돌림 */
+            PG.opnReopen = id => {
+                const o = find(id); if (!o) return;
+                if (!window.confirm('처리를 취소하고 접수대기 상태로 되돌리시겠습니까?')) return;
+                o.status = '접수대기'; o.inspectLink = false; o.inspect = null; o.link = ''; o.rejectReason = ''; o.result = ''; o.completedAt = null; o.completedBy = null;
+                pushHist(o, '재처리', '처리를 취소하고 접수대기로 되돌림');
+                render(); V.toast('접수대기로 되돌렸습니다');
+            };
+
+            /* ===== 위원회 회의록 (목록 클릭 → 상세 페이지) / 협의체 공유 ===== */
+            PG.opnMeetingOpen = round => PG.opnGo('committee', 'mdetail', round);
+            /* 회의록 작성/편집 — 참석자는 작성 시에만 조직도에서 클릭 즉시 토글 */
+            PG.opnMtgFormOpen = round => { S.mtgDraft = null; PG.opnGo('committee', 'mform', (round == null ? '__new__' : round)); };
+            PG.opnMtgFormCancel = () => { S.mtgDraft = null; PG.opnGo('committee', 'list', null); };
+            function attChipsHtml() {
+                return (S.mtgDraft && S.mtgDraft.attendees.length) ? S.mtgDraft.attendees.map((a, ix) => '<span class="att-chip">' + V.esc(a.name) + ' <span class="att-sub">' + V.esc(a.dept) + (a.position ? (' ' + V.esc(a.position)) : '') + '</span><button type="button" class="att-chip-x" onclick="PG.opnMtgRemAtt(' + ix + ')" aria-label="참석자 제외">&times;</button></span>').join('') : '<span class="att-empty">아래 조직도에서 참석자를 클릭해 추가하세요.</span>';
+            }
+            function syncAtt() {
+                const chips = document.getElementById('mtg-att-chips'); if (chips) chips.innerHTML = attChipsHtml();
+                const cnt = document.getElementById('mtg-att-count'); if (cnt) cnt.textContent = (S.mtgDraft ? S.mtgDraft.attendees.length : 0);
+                document.querySelectorAll('.org-inline .otr-member').forEach(b => b.classList.toggle('on', !!(S.mtgDraft && S.mtgDraft.attendees.some(a => a.dept === b.dataset.dept && a.name === b.dataset.name))));
+            }
+            PG.opnMtgTogAtt = (btn, dept, role, name) => {
+                if (!S.mtgDraft) return;
+                const i = S.mtgDraft.attendees.findIndex(a => a.dept === dept && a.name === name);
+                if (i >= 0) S.mtgDraft.attendees.splice(i, 1); else S.mtgDraft.attendees.push({ dept: dept, position: role, name: name });
+                syncAtt();
+            };
+            PG.opnMtgRemAtt = ix => { if (!S.mtgDraft) return; S.mtgDraft.attendees.splice(ix, 1); syncAtt(); };
+            /* 의결사항 — 세부 방침(goalEditRow)과 동일한 행 추가/삭제 패턴, 저장 시점에 DOM에서 직접 수집 */
+            const decisionRow = val => '<div class="goal-row"><input type="text" class="mf-decision" value="' + V.esc(val) + '" placeholder="의결사항을 입력하세요"><button type="button" class="goal-del" onclick="this.closest(\'.goal-row\').remove()" aria-label="삭제">×</button></div>';
+            PG.opnMtgDecisionAdd = () => { const l = document.getElementById('mf-decisions'); if (!l) return; l.insertAdjacentHTML('beforeend', decisionRow('')); const ii = l.querySelectorAll('input'); if (ii.length) ii[ii.length - 1].focus(); };
+            PG.opnMtgFormSave = () => {
+                const round = ((document.getElementById('mf-round') || {}).value || '').trim();
+                if (!round) { V.toast('회차를 입력하세요'); return; }
+                const editing = S.mtgDraft && S.mtgDraft.key !== '__new__';
+                const decisions = Array.prototype.slice.call(document.querySelectorAll('#mf-decisions .mf-decision')).map(i => i.value.trim()).filter(Boolean);
+                const linkAgenda = !!(document.getElementById('mf-link-agenda') || {}).checked;
+                const rec = { round: round, type: (document.getElementById('mf-type') || {}).value || '정기', date: (document.getElementById('mf-date') || {}).value || '-', place: ((document.getElementById('mf-place') || {}).value || '').trim() || '-', attendeeList: (S.mtgDraft ? S.mtgDraft.attendees.slice() : []), agenda: ((document.getElementById('mf-agenda') || {}).value || '').trim() || '-', decisions: decisions, status: '작성' };
+                if (editing) { const ix = S.COMMITTEE.meetings.findIndex(x => x.round === S.mtgDraft.key); if (ix >= 0) { rec.status = S.COMMITTEE.meetings[ix].status || '작성'; S.COMMITTEE.meetings[ix] = rec; } else S.COMMITTEE.meetings.unshift(rec); }
+                else { S.COMMITTEE.meetings.unshift(rec); }
+                S.mtgDraft = null;
+                if (linkAgenda && decisions.length) {
+                    const due = addDays(rec.date, 30);
+                    decisions.forEach(d => S.COMMITTEE.agendaItems.push({ agenda: d, dept: '재난안전과', due: due, status: '진행' }));
+                }
+                PG.opnGo('committee', 'mdetail', rec.round);
+                V.toast('회의록이 ' + (editing ? '수정' : '작성') + '되었습니다' + (linkAgenda && decisions.length ? ' — 의결사항 ' + decisions.length + '건이 안건 부서이행 현황에 등록되었습니다' : ''));
+            };
+            PG.opnMtgConfirm = round => {
+                const mt = (S.COMMITTEE.meetings || []).find(x => x.round === round); if (!mt) return;
+                if (!window.confirm('이 회의록을 확정하시겠습니까? 확정 후에는 편집할 수 없습니다.')) return;
+                mt.status = '확정'; render(); V.toast('회의록이 확정되었습니다');
+            };
+
+            /* ===== 위원 구성 / 안건 부서이행 / 협의체 운영 — 관리(CRUD) ===== */
+            function memberModal(scope, i) {
+                const isCouncil = scope === 'council';
+                const list = isCouncil ? S.COUNCIL.members : S.COMMITTEE.members;
+                const ex = i >= 0 ? list[i] : null;
+                const roles = isCouncil ? ['협의체 의장', '도급인 측', '수급인 측', '근로자대표', '기타'] : ['위원장(사용자대표)', '사용자위원', '근로자대표', '근로자위원', '간사'];
+                const roleOpts = roles.map(rr => '<option' + (ex && ex.role === rr ? ' selected' : '') + '>' + rr + '</option>').join('');
+                const memOrgVal = ex ? (ex.dept + ' · ' + ex.position + ' / ' + ex.name) : '';
+                V.openModal((ex ? '위원 수정' : '위원 추가') + ' — ' + (isCouncil ? '안전보건 협의체' : '산업안전보건위원회'),
+                    '<div class="preset-form-grid">' +
+                    '<span class="k">구분</span><select id="mem-role">' + roleOpts + '</select>' +
+                    '<span class="k">위원(조직도)</span><div class="orgpick-field"><div style="display:flex; gap:8px; align-items:center;"><input id="mem-org" type="text" readonly value="' + V.esc(memOrgVal) + '" placeholder="조직도에서 위원을 선택하세요" style="flex:1;"><button type="button" class="btn btn-sm btn-outline" onclick="EDOC.openOrgTree(\'mem-org\')">조직도</button></div></div>' +
+                    '</div>' +
+                    '<p style="font-size:var(--fs-12); color:var(--text-gray); margin:10px 0 0;">조직도에서 위원을 선택하면 부서·직책·성명이 자동 입력됩니다.</p>',
+                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button><button class="btn btn-primary" id="mem-save">저장</button>');
+                document.getElementById('mem-save').addEventListener('click', () => {
+                    const picked = ((document.getElementById('mem-org') || {}).value || '').trim();
+                    if (!picked) { V.toast('조직도에서 위원을 선택하세요'); return; }
+                    const parts = picked.split(' · ');
+                    const rest = (parts[1] || '').split(' / ');
+                    const dept = (parts[0] || '').trim() || '-';
+                    const position = (rest[0] || '').trim() || '-';
+                    const name = (rest[1] || '').trim();
+                    if (!name) { V.toast('조직도에서 위원을 선택하세요'); return; }
+                    const rec = { role: (document.getElementById('mem-role') || {}).value, dept: dept, position: position, name: name };
+                    if (ex) list[i] = rec; else list.push(rec);
+                    V.closeModal(); render(); V.toast('위원이 ' + (ex ? '수정' : '추가') + '되었습니다');
+                    if (!isCouncil) { const emp = list.filter(m => /근로자/.test(m.role)).length, usr = list.filter(m => /사용자|위원장/.test(m.role)).length; if (emp !== usr) setTimeout(() => V.toast('참고: 근로자(' + emp + ')·사용자(' + usr + ') 위원 수가 다릅니다 (산안법 §24 노사 동수 권고)'), 900); }
+                });
+            }
+            PG.opnMemberAdd = scope => memberModal(scope, -1);
+            PG.opnMemberEdit = (scope, i) => memberModal(scope, i);
+            PG.opnMemberDel = (scope, i) => { const list = scope === 'council' ? S.COUNCIL.members : S.COMMITTEE.members; if (!window.confirm('이 위원을 삭제하시겠습니까?')) return; list.splice(i, 1); render(); V.toast('위원이 삭제되었습니다'); };
+            function agendaModal(i) {
+                const list = S.COMMITTEE.agendaItems; const ex = i >= 0 ? list[i] : null;
+                const stOpts = ['진행', '완료', '지연'].map(s => '<option' + (ex && ex.status === s ? ' selected' : '') + '>' + s + '</option>').join('');
+                V.openModal((ex ? '안건 이행 수정' : '안건 추가') + ' — 산업안전보건위원회',
+                    '<div class="preset-form-grid">' +
+                    '<span class="k">의결 안건</span><input id="ag-agenda" type="text" value="' + V.esc(ex ? ex.agenda : '') + '" placeholder="위원회 의결 안건">' +
+                    '<span class="k">담당부서(조직도)</span><div class="orgpick-field"><div style="display:flex; gap:8px; align-items:center;"><input id="ag-dept" type="text" readonly value="' + V.esc(ex ? ex.dept : '') + '" placeholder="조직도에서 담당부서를 선택하세요" style="flex:1;"><button type="button" class="btn btn-sm btn-outline" onclick="EDOC.openOrgTree(\'ag-dept\')">조직도</button></div></div>' +
+                    '<span class="k">이행기한</span><input id="ag-due" type="date" value="' + (ex ? ex.due : '2026-07-31') + '">' +
+                    '<span class="k">이행상태</span><select id="ag-status">' + stOpts + '</select></div>' +
+                    '<p style="font-size:var(--fs-12); color:var(--text-gray); margin:10px 0 0;">조직도에서 담당자를 선택하면 소속 부서가 담당부서로 지정됩니다.</p>',
+                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button><button class="btn btn-primary" id="ag-save">저장</button>');
+                document.getElementById('ag-save').addEventListener('click', () => {
+                    const agenda = ((document.getElementById('ag-agenda') || {}).value || '').trim();
+                    if (!agenda) { V.toast('의결 안건을 입력하세요'); return; }
+                    const deptRaw = ((document.getElementById('ag-dept') || {}).value || '').trim();
+                    if (!deptRaw) { V.toast('조직도에서 담당부서를 선택하세요'); return; }
+                    const dept = (deptRaw.split(' · ')[0] || deptRaw).trim();
+                    const rec = { agenda: agenda, dept: dept, due: (document.getElementById('ag-due') || {}).value || '-', status: (document.getElementById('ag-status') || {}).value };
+                    if (ex) list[i] = rec; else list.push(rec);
+                    V.closeModal(); render(); V.toast('안건 이행 현황이 ' + (ex ? '수정' : '추가') + '되었습니다');
+                });
+            }
+            PG.opnAgendaAdd = () => agendaModal(-1);
+            PG.opnAgendaEdit = i => agendaModal(i);
+            PG.opnAgendaDel = i => { if (!window.confirm('이 안건을 삭제하시겠습니까?')) return; S.COMMITTEE.agendaItems.splice(i, 1); render(); V.toast('안건이 삭제되었습니다'); };
+            PG.opnCouncilCycle = () => {
+                V.openModal('협의체 운영 주기 변경',
+                    '<div class="preset-form-grid"><span class="k">운영 주기</span><select id="co-cycle">' + ['월간', '분기', '반기', '수시'].map(c => '<option' + (S.COUNCIL.cycle === c ? ' selected' : '') + '>' + c + '</option>').join('') + '</select></div>',
+                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button><button class="btn btn-primary" id="co-cycle-save">저장</button>');
+                document.getElementById('co-cycle-save').addEventListener('click', () => { S.COUNCIL.cycle = (document.getElementById('co-cycle') || {}).value; V.closeModal(); render(); V.toast('운영 주기가 변경되었습니다'); });
+            };
+
+            /* ===== 협의체 운영 결과 기록 — 단일 모달 CRUD (라이트, 회의록만큼 무겁게 만들지 않음) ===== */
+            function councilResultModal(i) {
+                const list = S.COUNCIL.results || (S.COUNCIL.results = []);
+                const ex = i >= 0 ? list[i] : null;
+                const stOpts = ['진행중', '완료'].map(s => '<option' + (ex && ex.status === s ? ' selected' : '') + '>' + s + '</option>').join('');
+                V.openModal((ex ? '운영 결과 수정' : '운영 결과 등록') + ' — 안전보건 협의체',
+                    '<div class="preset-form-grid">' +
+                    '<span class="k">회차</span><input id="cr-round" type="text" value="' + V.esc(ex ? ex.round : '') + '" placeholder="예: 2026-07">' +
+                    '<span class="k">일자</span><input id="cr-date" type="date" value="' + (ex ? ex.date : '2026-06-30') + '">' +
+                    '<span class="k">참석·논의 내용</span><textarea id="cr-content" placeholder="참석 현황 및 논의 내용을 입력하세요">' + V.esc(ex ? ex.content : '') + '</textarea>' +
+                    '<span class="k">결과 요약</span><textarea id="cr-result" placeholder="협의 결과를 입력하세요">' + V.esc(ex ? ex.result : '') + '</textarea>' +
+                    '<span class="k">상태</span><select id="cr-status">' + stOpts + '</select>' +
+                    '</div>',
+                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button><button class="btn btn-primary" id="cr-save">저장</button>');
+                document.getElementById('cr-save').addEventListener('click', () => {
+                    const round = ((document.getElementById('cr-round') || {}).value || '').trim();
+                    if (!round) { V.toast('회차를 입력하세요'); return; }
+                    const rec = { round: round, date: (document.getElementById('cr-date') || {}).value || '-', content: ((document.getElementById('cr-content') || {}).value || '').trim(), result: ((document.getElementById('cr-result') || {}).value || '').trim(), status: (document.getElementById('cr-status') || {}).value };
+                    if (ex) list[i] = rec; else list.unshift(rec);
+                    V.closeModal(); render(); V.toast('협의체 운영 결과가 ' + (ex ? '수정' : '등록') + '되었습니다');
+                });
+            }
+            PG.opnResultAdd = () => councilResultModal(-1);
+            PG.opnResultEdit = i => councilResultModal(i);
+            PG.opnResultDel = i => { if (!window.confirm('이 운영 결과를 삭제하시겠습니까?')) return; S.COUNCIL.results.splice(i, 1); render(); V.toast('운영 결과가 삭제되었습니다'); };
+
+            /* ===== 점검결과지 (협의체 점검표) — 생성·수정·조회(상세)·삭제 + 온나라 결재 + PDF ===== */
+            function opnChkModal(ex) {
+                const isEdit = !!ex;
+                /* 문항별 담당부서 선택 콜백 — ORGPICK 은 전역 함수 경로 문자열을 부르므로 문항마다 진입점을 둔다 */
+                CHK_QS.forEach((q, i) => { PG['opnChkOwnerPick' + i] = name => { const el = document.getElementById('opn-chk-owner-' + i); if (el) el.value = name; }; });
+                const catOpts = CHK_CATS.map(c => '<option' + (ex && ex.cat === c ? ' selected' : '') + '>' + c + '</option>').join('');
+                const itemsHtml = CHK_QS.map((q, i) => {
+                    const saved = (ex && ex.items[i]) ? ex.items[i].r : '확인';
+                    const savedOwner = (ex && ex.items[i] && ex.items[i].owner) || '';
+                    const savedDue = (ex && ex.items[i] && ex.items[i].due) || '2026-07-31';
+                    return '<div class="opn-chk-row" style="flex-direction:column; align-items:stretch; gap:8px;">' +
+                        '<div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">' +
+                        '<div class="opn-chk-q">' + (i + 1) + '. ' + q + '</div><div class="opn-chk-opts">' +
+                        ['확인', '미흡', '해당없음'].map(r => '<label><input type="radio" name="opn-chk-' + i + '" value="' + r + '" onchange="PG.opnChkToggleFix(' + i + ',this.value)"' + (r === saved ? ' checked' : '') + '> ' + r + '</label>').join('') + '</div></div>' +
+                        '<div id="opn-chk-fix-' + i + '" style="display:' + (saved === '미흡' ? 'flex' : 'none') + '; align-items:flex-start; gap:8px; padding-top:8px; border-top:1px dashed var(--gray-200); flex-wrap:wrap;">' +
+                        '<span style="font-size:var(--fs-12); color:var(--text-gray);">담당부서</span>' +
+                        /* 담당부서는 공용 조직도(ORGPICK)에서 고른다 — 종전에는 화면이 자체 부서 4개를
+                           박아 두고 드롭다운으로 골랐다(CLAUDE.md §3 위반 · 기획확인 4차 «부서 선택», 2026-10-06) */
+                        '<span class="orgpick-field" id="opn-chk-ownerfield-' + i + '" style="display:inline-flex;flex-direction:column;gap:6px;flex:0 1 auto;min-width:0;">' +
+                            '<span style="display:inline-flex;gap:6px;align-items:center;">' +
+                                '<input id="opn-chk-owner-' + i + '" type="text" class="opn-filter" readonly placeholder="조직도에서 선택" value="' + savedOwner + '">' +
+                                '<button type="button" class="btn btn-sm btn-outline" onclick="ORGPICK.toggle(\'opn-chk-ownerfield-' + i + '\',\'dept\',\'PG.opnChkOwnerPick' + i + '\')">조직도</button>' +
+                            '</span></span>' +
+                        '<span style="font-size:var(--fs-12); color:var(--text-gray);">기한</span>' +
+                        '<input id="opn-chk-due-' + i + '" type="date" class="opn-filter" value="' + savedDue + '">' +
+                        '</div>' +
+                        '</div>';
+                }).join('');
+                V.openModal((isEdit ? '점검결과지 수정' : '점검결과지 생성') + ' — 의견청취·협의체 점검표',
+                    '<div class="preset-form-grid"><span class="k">점검 구분</span><select id="opn-chk-cat">' + catOpts + '</select>' +
+                    '<span class="k">점검일</span><input id="opn-chk-date" type="date" value="' + (ex ? ex.date : '2026-06-30') + '"></div>' +
+                    '<div style="margin-top:12px; font-size:var(--fs-12); color:var(--text-gray);">문항별로 확인 / 미흡 / 해당없음을 선택하세요. 미흡 선택 시 담당부서·기한을 지정하며, 확정 시 개선조치로 자동 연계됩니다.</div>' +
+                    '<div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">' + itemsHtml + '</div>',
+                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button><button class="btn btn-primary" id="opn-chk-save">' + (isEdit ? '수정 저장' : '점검결과지 등록') + '</button>');
+                document.getElementById('opn-chk-save').addEventListener('click', () => {
+                    const cat = (document.getElementById('opn-chk-cat') || {}).value;
+                    const date = (document.getElementById('opn-chk-date') || {}).value || '2026-06-30';
+                    const newItems = CHK_QS.map((q, i) => {
+                        const r = (document.querySelector('input[name=opn-chk-' + i + ']:checked') || {}).value || '확인';
+                        const it = { q: q, r: r };
+                        if (r === '미흡') {
+                            it.owner = (document.getElementById('opn-chk-owner-' + i) || {}).value || '';
+                            it.due = (document.getElementById('opn-chk-due-' + i) || {}).value || '2026-07-31';
+                        }
+                        return it;
+                    });
+                    const unfit = newItems.filter(x => x.r === '미흡').length;
+                    /* 미흡 문항은 개선조치로 연계되므로 담당부서가 비면 받을 곳이 없다 */
+                    const noOwner = newItems.findIndex(x => x.r === '미흡' && !x.owner);
+                    if (noOwner !== -1) { V.toast((noOwner + 1) + '번 문항(미흡)의 담당부서를 조직도에서 고르세요'); return; }
+                    if (isEdit) {
+                        ex.cat = cat; ex.date = date; ex.items = newItems; ex.result = unfit ? '미흡' : '적합';
+                        V.closeModal(); render(); V.toast('점검결과지가 수정되었습니다' + (unfit ? ' — 미흡 ' + unfit + '건' : ''));
+                    } else {
+                        S.COUNCIL.checklists.unshift({ id: 'CHK-' + String(nextNum(S.COUNCIL.checklists)).padStart(2, '0'), cat: cat, date: date, inspector: '정안전', result: unfit ? '미흡' : '적합', appr: '미상신', items: newItems });
+                        if (unfit) { newItems.forEach(it => { if (it.r === '미흡') E.addImprovement({ title: '[협의체 점검 미흡] ' + it.q, sourceMenu: '의견청취·협의체', sourceDoc: cat + ' 점검표', owner: it.owner, due: it.due }); }); }
+                        V.closeModal(); render(); V.toast('점검결과지가 등록되었습니다' + (unfit ? ' — 미흡 ' + unfit + '건 개선조치 연계' : ''));
+                    }
+                });
+            }
+            PG.opnChkToggleFix = (i, val) => { const el = document.getElementById('opn-chk-fix-' + i); if (el) el.style.display = val === '미흡' ? 'flex' : 'none'; };
+            PG.opnChkNew = () => opnChkModal(null);
+            PG.opnChkEdit = id => {
+                const c = S.COUNCIL.checklists.find(x => x.id === id); if (!c) return;
+                if (c.appr === '결재중' || c.appr === '승인완료') { V.toast('결재중·승인완료된 점검결과지는 수정할 수 없습니다'); return; }
+                opnChkModal(c);
+            };
+            PG.opnChkOpen = id => PG.opnGo('council', 'cdetail', id);
+            PG.opnChkDel = id => {
+                const c = S.COUNCIL.checklists.find(x => x.id === id); if (!c) return;
+                if (c.appr === '결재중' || c.appr === '승인완료') { V.toast('결재중·승인완료된 점검결과지는 삭제할 수 없습니다'); return; }
+                if (!window.confirm('이 점검결과지를 삭제하시겠습니까? 삭제 후 되돌릴 수 없습니다.')) return;
+                S.COUNCIL.checklists = S.COUNCIL.checklists.filter(x => x.id !== id); PG.opnGo('council', 'list', null); V.toast('점검결과지가 삭제되었습니다');
+            };
+            /* 상신 전에 **결재선을 지정한다** — 종전에는 누르는 즉시 결재중이 됐다. */
+            PG.opnChkOnnara = id => {
+                if (actGate('점검결과지 결재 상신')) return;
+                const c = S.COUNCIL.checklists.find(x => x.id === id); if (!c) return;
+                apprSubmit('의견청취 점검결과지 ' + id, snap => {
+                    c.appr = '결재중';
+                    c.apprAt = (c.date || V.today()) + ' 14:10';
+                    c.approval = snap;
+                    c.docNo = E.onnaraPopup('의견청취 점검결과지 ' + id, '', snap);
+                    render();
+                });
+            };
+            /* 결재 이력 — **저장된 결재선에서 파생한다.** 종전에는 '중대재해팀장'·'부군수'를
+               고정으로 찍었는데 그 사람들은 이 문서의 결재선이 아니었다. */
+            PG.opnChkApprHistory = id => {
+                const c = S.COUNCIL.checklists.find(x => x.id === id);
+                const rows = c ? apprRows(c.appr, c.approval, c.apprAt || ((c.date || V.today()) + ' 14:10')) : [];
+                if (c && c.appr === '반려' && c.rejectReason && rows.length > 1) rows[rows.length - 1][3] = c.rejectReason;
+                const body = rows.length
+                    ? '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>일시</th><th>처리</th><th>처리자</th><th>비고</th></tr></thead><tbody>' +
+                      rows.map(r => '<tr><td>' + esc(r[0]) + '</td><td>' + esc(r[1]) + '</td><td>' + esc(r[2]) + '</td><td>' + esc(r[3]) + '</td></tr>').join('') +
+                      '</tbody></table></div>' +
+                      ((c && c.approval && c.approval.sample) ? '<p style="margin-top:8px;">' + V.sampleChip('지난 점검결과지의 결재선은 예시 값입니다') + '</p>' : '') +
+                      '<p class="file-hint" style="margin-top:10px;">결재 완료·반려는 <b>온나라에서 회신</b>됩니다 — 진행 상황은 온나라에서 문서번호로 확인하세요.</p>'
+                    : '<div class="v2-empty">결재 이력이 없습니다 — 상신하면 이력이 기록됩니다.</div>';
+                V.openModal('온나라 결재 이력' + (c ? ' — ' + c.id + (c.docNo ? ' · ' + c.docNo : '') : ''), body,
+                    '<button class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
+            };
+            PG.opnChkPdfDownload = () => V.notReady('PDF 내려받기', '문서 출력 연계');
+            PG.opnChkPdfClose = () => V.closeModal();
+            /* 문서 미리보기 — polPdfFull 과 동일 패턴(2-4: 미리보기 UI 1패턴 통일). */
+            PG.opnChkPdfFull = id => {
+                const c = S.COUNCIL.checklists.find(x => x.id === id); if (!c) return;
+                V.openModal('점검결과지 ' + c.id + ' 문서 미리보기', chkPdfPaper(c), '', {
+                    variant: 'wide',
+                    headHtml: '<button class="btn btn-sm btn-outline" onclick="PG.opnChkPdfDownload()">PDF 다운로드</button>',
+                });
+            };
+
+            /* ===== 페이지별 상단 통계 ===== */
+            /* 탭① 의견청취·건의함 — 상태별 카운트 바 (클릭 시 목록 필터, 전체=해제) */
+            function voiceCountBar() {
+                const cnt = st => S.VOICES.filter(o => o.status === st).length;
+                const segs = [
+                    ['', '전체', S.VOICES.length],
+                    ['접수대기', '접수대기', cnt('접수대기')],
+                    ['점검중', '점검중', cnt('점검중')],
+                    ['개선조치중', '개선조치중', cnt('개선조치중')],
+                    ['완료', '완료', cnt('완료')],
+                ];
+                return '<div class="opn-countbar">' + segs.map(s =>
+                    '<button type="button" class="opn-count' + (S.fstatus === s[0] ? ' is-active' : '') + '" onclick="PG.opnSetStatus(\'' + s[0] + '\')">' +
+                    '<span class="opn-count-n">' + s[2] + '</span><span class="opn-count-l">' + s[1] + '</span></button>').join('') + '</div>';
+            }
+            /* 탭② 위원회 — 미니 지표 */
+            function committeeStat() {
+                const C = S.COMMITTEE;
+                const meetN = (C.meetings || []).length;
+                const ag = C.agendaItems || [];
+                const agDone = ag.filter(a => a.status === '완료').length;
+                const agLate = ag.filter(a => a.status === '지연').length;
+                return statboxes([['info', meetN + '회', '올해 회의 개최'], ['success', agDone + '/' + ag.length + '건', '안건 이행'], ['danger', agLate + '건', '이행 지연']]);
+            }
+            /* 탭③ 협의체·점검표 — 미니 지표 */
+            function councilStat() {
+                const cl = S.COUNCIL.checklists || [];
+                const unfit = cl.filter(c => c.result === '미흡').length;
+                const wait = cl.filter(c => c.appr === '결재중').length;
+                return statboxes([['info', cl.length + '건', '점검결과지'], ['danger', unfit + '건', '미흡'], ['warning', wait + '건', '결재 대기']]);
+            }
+
+            /* ===== 탭1: 의견청취·건의함 목록 ===== */
+            function renderVoiceList() {
+                let list = S.VOICES.slice();
+                if (S.fkw && S.fkw.trim()) { const kw = S.fkw.trim(); list = list.filter(o => (o.title || '').indexOf(kw) !== -1 || (o.author || '').indexOf(kw) !== -1); }
+                if (S.fcat) list = list.filter(o => o.cat === S.fcat);
+                if (S.fstatus) list = list.filter(o => o.status === S.fstatus);
+                if (S.fdept) list = list.filter(o => (o.owner || '미배정') === S.fdept);
+                const tot = list.length;
+                const pages = Math.max(1, Math.ceil(tot / PER));
+                if (S.page > pages) S.page = pages;
+                const start = (S.page - 1) * PER;
+                const pageRows = list.slice(start, start + PER);
+                const kwSearch = '<input type="text" class="opn-filter" style="width:170px;" placeholder="제목, 작성자 검색" value="' + V.esc(S.fkw || '') + '" onchange="PG.opnSetKw(this.value)" onkeydown="if(event.key===\'Enter\')PG.opnSetKw(this.value)">';
+                const catFilter = '<select onchange="PG.opnSetCat(this.value)" class="opn-filter" style="margin-left:6px;"><option value="">전체 분류</option>' + CATS.map(c => '<option' + (S.fcat === c ? ' selected' : '') + '>' + c + '</option>').join('') + '</select>';
+                const stFilter = '<select onchange="PG.opnSetStatus(this.value)" class="opn-filter" style="margin-left:6px;"><option value="">전체 상태</option>' + ['접수대기', '점검중', '개선조치중', '완료', '반려'].map(s => '<option' + (S.fstatus === s ? ' selected' : '') + '>' + s + '</option>').join('') + '</select>';
+                const deptFilter = '<select onchange="PG.opnSetDept(this.value)" class="opn-filter" style="margin-left:6px;"><option value="">전체 부서</option>' + DEPTS.map(d => '<option' + (S.fdept === d ? ' selected' : '') + '>' + d + '</option>').join('') + '</select>';
+                const body = pageRows.length ? pageRows.map(o => '<tr style="cursor:pointer;" onclick="PG.opnOpen(\'' + o.id + '\')"><td>' + catChip(o.cat) + '</td><td><b>' + V.esc(o.title) + '</b> ' + linkChips(o) + '</td><td>' + V.esc(o.author) + '</td><td class="opn-hide-sm">' + (o.owner ? V.esc(o.owner) : '<span class="opn-muted">미배정</span>') + '</td><td>' + o.date + '</td><td>' + stChip(o.status) + '</td></tr>').join('') : '<tr><td colspan="6" style="text-align:center; color:var(--text-gray); padding:30px;">해당 조건의 의견이 없습니다.</td></tr>';
+                let pager = '';
+                if (tot > 0) {
+                    let btns = '';
+                    for (let p = 1; p <= pages; p++) btns += '<button class="opn-page-btn' + (p === S.page ? ' is-active' : '') + '" onclick="PG.opnPage(' + p + ')">' + p + '</button>';
+                    pager = '<div class="opn-pager"><span class="opn-pager-info">총 ' + tot + '건 중 ' + (start + 1) + '-' + (start + pageRows.length) + '건</span><span class="opn-pager-btns">' + (S.page > 1 ? '<button class="opn-page-btn" onclick="PG.opnPage(' + (S.page - 1) + ')">‹</button>' : '') + btns + (S.page < pages ? '<button class="opn-page-btn" onclick="PG.opnPage(' + (S.page + 1) + ')">›</button>' : '') + '</span></div>';
+                }
+                const actions = '<span style="display:flex; align-items:center; gap:0; flex-wrap:wrap;">' + kwSearch + catFilter + stFilter + deptFilter + '<button class="btn btn-sm btn-primary" style="margin-left:8px;" onclick="PG.opnNew()">+ 의견 등록</button></span>';
+                return sectionCard('의견청취 · 건의함', '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>분류</th><th>제목</th><th>작성자</th><th class="opn-hide-sm">담당부서</th><th>등록일</th><th>상태</th></tr></thead><tbody>' + body + '</tbody></table></div>' + pager, actions);
+            }
+
+            /* ===== 탭1: 의견 등록 폼 (온·오프라인 병행) ===== */
+            function renderVoiceForm() {
+                const head = '<div class="opn-form-head"><button class="btn btn-sm btn-outline" onclick="PG.opnBack()">‹ 목록</button><h2>의견 등록</h2></div>';
+                const writer = sectionCard('등록자 정보',
+                    '<div class="opn-form-grid">' +
+                    '<div class="opn-field"><label class="opn-flabel">등록 담당자</label><div class="opn-readonly">김대표</div></div>' +
+                    '<div class="opn-field"><label class="opn-flabel">담당 부서</label><div class="opn-readonly">재난안전과 중대재해팀</div></div>' +
+                    '</div>', '');
+                const info = sectionCard('의견 정보',
+                    '<div class="opn-form-grid">' +
+                    '<div class="opn-field"><label class="opn-flabel" for="opn-cat">분류 <span class="req">*</span></label><select id="opn-cat" class="opn-select"><option value="">선택하세요</option>' + CATS.map(c => '<option>' + c + '</option>').join('') + '</select></div>' +
+                    '<div class="opn-field"><label class="opn-flabel" for="opn-via">접수경로</label><select id="opn-via" class="opn-select" onchange="PG.opnVia(this.value)"><option value="온라인">온라인(본인 등록)</option><option value="오프라인">오프라인(담당자 대리)</option></select></div>' +
+                    '<div class="opn-field"><label class="opn-flabel" for="opn-author">제출자</label><input id="opn-author" class="opn-input" type="text" value="김대표" readonly placeholder="SSO 로그인 사용자 자동 입력"></div>' +
+                    '<div class="opn-field"><label class="opn-flabel" for="opn-loc">발생장소</label><input id="opn-loc" class="opn-input" type="text" maxlength="50" placeholder="발생 장소를 입력하세요" oninput="var c=document.getElementById(\'cnt-loc\');if(c)c.textContent=this.value.length+\'/50\';"><div class="opn-counter" id="cnt-loc">0/50</div></div>' +
+                    '<div class="opn-field full"><label class="opn-flabel" for="opn-title">제목 <span class="req">*</span></label><input id="opn-title" class="opn-input" type="text" maxlength="50" placeholder="제목을 입력하세요" oninput="var c=document.getElementById(\'cnt-title\');if(c)c.textContent=this.value.length+\'/50\';"><div class="opn-counter" id="cnt-title">0/50</div></div>' +
+                    '</div>', '');
+                const detail = sectionCard('상세 내용 <span class="req">*</span>',
+                    '<div class="opn-field"><textarea id="opn-content" class="opn-textarea" maxlength="500" placeholder="상세 내용을 입력하세요" oninput="var c=document.getElementById(\'cnt-content\');if(c)c.textContent=this.value.length+\'/500\';"></textarea><div class="opn-counter" id="cnt-content">0/500</div></div>' +
+                    '<p style="font-size:var(--fs-12); color:var(--text-gray); margin:10px 0 0;">근로자는 온라인으로 직접 등록하며, 오프라인(서면·구두) 접수는 담당자가 대리 등록합니다.</p>', '');
+                const CLOUD = '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14.9A7 7 0 1 1 15.7 8h1.8a4.5 4.5 0 0 1 2.5 8.2"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>';
+                const photo = sectionCard('사진 첨부',
+                    /* 드롭존은 DYV2.uploadDrop() 로만 렌더 — role/tabindex/Enter·Space 활성화 배선(§2). */
+                    /* 안내 문구는 이미지 칸 프로필에서 낸다(문구를 화면에 직접 쓰지 않는다 — §2). 칸 안에
+                       버튼을 또 두지 않는다 — 칸 전체가 이미 버튼이라 겹친 버튼은 키보드로 두 번 멈춘다. */
+                    V.uploadDrop(CLOUD +
+                        '<div class="dz-title">첨부할 사진을 여기에 끌어다 놓거나 눌러서 선택하세요</div>',
+                        "DYV2.notReady('사진 첨부', '문서관리 연계')", { hint: true, profile: 'image' }), '');
+                const bar = '<div class="opn-formbar"><button class="btn btn-outline" onclick="PG.opnBack()">취소</button><button class="btn btn-primary" onclick="PG.opnSave()">등록하기</button></div>';
+                return head + writer + info + detail + photo + bar;
+            }
+
+            /* ===== 탭1: 상세 — 2:1 레이아웃 + 상태별 처리 카드 (민원처리형) ===== */
+            const OWNERS = ['재난안전과 · 홍길동', '재난안전과 · 김안전', '건설과 · 박현장', '환경과 · 최보건'];
+            const INSPECT_KINDS = ['특별점검', '일상점검', '주간점검', '합동점검', '순회점검'];
+            const ownerOpts = () => OWNERS.map(p => '<option>' + p + '</option>').join('');
+            const HIST_DOT = { '접수': 'neutral', '현장점검 생성': 'info', '개선조치 생성': 'warning', '경과': 'info', '완료': 'success', '반려': 'danger', '재처리': 'neutral' };
+            function renderVoiceDetail(o) {
+                if (!o) return renderVoiceList();
+                /* ① 의견 정보 */
+                const infoCard = sectionCard(o.id + ' · 의견 상세',
+                    '<div class="preset-form-grid">' +
+                    '<span class="k">분류 / 상태</span><div style="display:flex; gap:6px; align-items:center;">' + catChip(o.cat) + stChip(o.status) + '</div>' +
+                    '<span class="k">제목</span><div style="font-weight:var(--fw-bold);">' + V.esc(o.title) + '</div>' +
+                    '<span class="k">작성자 / 경로</span><div>' + V.esc(o.author) + ' · ' + V.esc(o.via || '온라인') + '</div>' +
+                    '<span class="k">작성일</span><div>' + o.date + '</div>' +
+                    '<span class="k">담당부서</span><div>' + (o.owner ? V.esc(o.owner) : '<span class="opn-muted">미배정</span>') + '</div>' +
+                    '<span class="k">발생장소</span><div>' + V.esc(o.location || '-') + '</div>' +
+                    '<span class="k">상세내용</span><div>' + V.esc(o.content || '-') + '</div>' +
+                    '<span class="k">첨부 사진</span><div><span class="opn-muted">첨부된 사진이 없습니다</span></div>' +
+                    '</div>', '');
+                /* ② 처리 카드 (상태별 5-view) */
+                const procHead = '<div class="opn-proc-head"><span class="opn-proc-title">처리</span><span class="opn-proc-status">현재 상태 ' + stChip(o.status) + '</span></div>';
+                let procBody;
+                if (o.status === '접수대기') {
+                    const opt = (val, name, desc, form) =>
+                        '<div class="opn-act-opt" data-act="' + val + '">' +
+                        '<label class="opn-act-head"><input type="radio" name="opn-act" value="' + val + '" onchange="PG.opnActSel(this)"><span class="opn-act-name">' + name + '</span><span class="opn-act-desc">' + desc + '</span></label>' +
+                        '<div class="opn-act-form" id="opn-actf-' + val + '" hidden>' + form + '</div></div>';
+                    const inspectForm = '<div class="opn-inl-grid">' +
+                        '<label>점검 종류<select id="opn-i-kind">' + INSPECT_KINDS.map((k, ix) => '<option' + (ix === 0 ? ' selected' : '') + '>' + k + '</option>').join('') + '</select></label>' +
+                        '<label>점검 예정일<input type="date" id="opn-i-date" value="' + addDays(PROTO_TODAY, 7) + '"></label>' +
+                        '<label>담당자<select id="opn-i-owner">' + ownerOpts() + '</select></label></div>' +
+                        '<label class="opn-inl-full">점검 시 확인사항<textarea id="opn-i-note">' + V.esc(o.content || '') + '</textarea></label>';
+                    const improveForm = '<div class="opn-inl-grid">' +
+                        '<label>담당자<select id="opn-m-owner">' + ownerOpts() + '</select></label>' +
+                        '<label>완료 예정일<input type="date" id="opn-m-due" value="' + addDays(PROTO_TODAY, 14) + '"></label></div>' +
+                        '<label class="opn-inl-full">개선 내용<textarea id="opn-m-desc">' + V.esc(o.title || '') + '</textarea></label>';
+                    const rejectForm = '<label class="opn-inl-full">반려 사유<textarea id="opn-r-reason" placeholder="반려 사유를 입력하세요"></textarea></label>' +
+                        '<div class="opn-banner danger" style="margin-top:8px;">반려 사유가 기록되며, 되돌리려면 재처리해야 합니다.</div>';
+                    procBody = '<div class="opn-banner warn">접수 대기 중 — 의견을 검토하고 조치 방법을 선택하세요.</div>' +
+                        '<div class="opn-act-list">' +
+                        opt('inspect', '현장점검 실시', '안전점검이 자동 생성됩니다.', inspectForm) +
+                        opt('improve', '개선조치 바로 생성', '개선조치 메뉴에 조치 항목이 자동 생성됩니다.', improveForm) +
+                        opt('reject', '반려', '반려 사유를 기록하고 종결합니다.', rejectForm) +
+                        '</div>' +
+                        '<div class="opn-proc-foot"><button class="btn btn-primary" id="opn-act-save" disabled onclick="PG.opnActSave(\'' + o.id + '\')">저장</button></div>';
+                } else if (o.status === '점검중') {
+                    const ins = o.inspect || {};
+                    procBody = '<div class="opn-banner info">현장점검 진행 중 — 점검이 완료되면 자동으로 상태가 변경됩니다.</div>' +
+                        '<div class="opn-linkcard"><div class="opn-linkcard-badges"><span class="chip-mini wt-elec">안전점검 연동</span> <span class="chip-mini wt">점검예정</span></div>' +
+                        '<div class="opn-linkcard-title">[의견청취] ' + V.esc(o.title) + '</div>' +
+                        '<div class="opn-linkcard-meta">' + V.esc(ins.kind || '특별점검') + ' · 담당 ' + V.esc(ins.owner || o.owner || '-') + ' · 예정 ' + (ins.date || '-') + '</div>' +
+                        '<button class="btn btn-sm btn-outline" onclick="DYV2.notReady(\'점검 상세 보기\', \'안전점검 메뉴 연동\')">점검 상세 보기</button></div>' +
+                        '<div class="opn-proc-foot"><button class="btn btn-outline" onclick="PG.opnProgress(\'' + o.id + '\')">경과 추가</button><button class="btn btn-primary" onclick="PG.opnComplete(\'' + o.id + '\')">완료 처리</button></div>';
+                } else if (o.status === '개선조치중') {
+                    const imp = E.improvements().find(x => x.id === o.link) || {};
+                    procBody = '<div class="opn-banner warn">개선조치 진행 중 — 개선조치가 완료되면 자동으로 상태가 변경됩니다.</div>' +
+                        '<div class="opn-linkcard"><div class="opn-linkcard-badges"><span class="chip-mini pdca">의견청취 연동</span> <span class="chip-mini wt-attach">' + (imp.status === '종결' ? '종결' : '조치중') + '</span></div>' +
+                        '<div class="opn-linkcard-title">' + V.esc(imp.title || o.title) + '</div>' +
+                        '<div class="opn-linkcard-meta">담당 ' + V.esc(imp.owner || o.owner || '-') + ' · 예정 ' + (imp.due || '-') + '</div></div>' +
+                        '<div class="opn-proc-foot"><button class="btn btn-outline" onclick="PG.opnProgress(\'' + o.id + '\')">경과 추가</button><button class="btn btn-primary" onclick="PG.opnComplete(\'' + o.id + '\')">완료 처리</button></div>';
+                } else if (o.status === '완료') {
+                    procBody = '<div class="opn-banner success">처리 완료 — 의견 처리 및 조치가 완료되었습니다.</div>' +
+                        '<div class="opn-done-summary"><div><span class="opn-done-k">처리 완료일</span><b>' + (o.completedAt || '-') + '</b></div><div><span class="opn-done-k">처리자</span><b>' + V.esc(o.completedBy || '-') + '</b></div></div>' +
+                        (o.result ? '<div class="opn-proc-note">' + V.esc(o.result) + '</div>' : '') +
+                        '<div class="opn-proc-foot"><button class="btn btn-outline" onclick="PG.opnReopen(\'' + o.id + '\')">재처리</button></div>';
+                } else { /* 반려 */
+                    procBody = '<div class="opn-banner danger">반려 처리됨 — 반려 사유가 기록되었습니다.</div>' +
+                        '<div class="opn-proc-note">' + V.esc(o.rejectReason || '-') + '</div>' +
+                        '<div class="opn-proc-foot"><button class="btn btn-outline" onclick="PG.opnReopen(\'' + o.id + '\')">재처리</button></div>';
+                }
+                const procCard = '<div class="card opn-proc-card"><div class="card-body">' + procHead + procBody + '</div></div>';
+                /* ④ 처리 이력 */
+                const hist = (o.history || []);
+                const histCard = sectionCard('처리 이력',
+                    hist.length
+                        ? '<ul class="opn-hist">' + hist.map(h => '<li class="opn-hist-item"><span class="opn-hist-dot ' + (HIST_DOT[h.stage] || 'neutral') + '"></span><div class="opn-hist-body"><div class="opn-hist-head"><span class="opn-hist-stage">' + V.esc(h.stage) + '</span><span class="opn-hist-at">' + V.esc(h.at) + '</span></div>' + (h.text ? '<div class="opn-hist-text">' + V.esc(h.text) + '</div>' : '') + '<div class="opn-hist-actor">' + V.esc(h.actor) + '</div></div></li>').join('') + '</ul>'
+                        : '<p class="opn-muted" style="font-size:var(--fs-13);">처리 이력이 없습니다.</p>', '');
+                /* ⑤ 연동 정보 */
+                let linkInner;
+                if (!o.inspectLink && !o.link) {
+                    linkInner = '<div class="opn-linkempty"><span>조치 선택 후 연동 정보가 표시됩니다</span></div>';
+                } else {
+                    linkInner = '';
+                    if (o.inspectLink) { const ins = o.inspect || {}; linkInner += '<div class="opn-mini"><div class="opn-mini-badges"><span class="chip-mini wt-elec">안전점검</span> <span class="chip-mini wt">점검예정</span></div><div class="opn-mini-title">[의견청취] ' + V.esc(o.title) + '</div><div class="opn-mini-meta">담당 ' + V.esc(ins.owner || o.owner || '-') + ' · 예정 ' + (ins.date || '-') + '</div><button class="btn btn-sm btn-outline" onclick="DYV2.notReady(\'점검 상세 보기\', \'안전점검 메뉴 연동\')">바로가기</button></div>'; }
+                    if (o.link) { const imp = E.improvements().find(x => x.id === o.link) || {}; linkInner += '<div class="opn-mini"><div class="opn-mini-badges"><span class="chip-mini pdca">개선조치</span> <span class="chip-mini wt-attach">' + (imp.status === '종결' ? '종결' : '조치중') + '</span></div><div class="opn-mini-title">' + V.esc(imp.title || o.title) + '</div><div class="opn-mini-meta">' + V.esc(o.link) + ' · 예정 ' + (imp.due || '-') + '</div></div>'; }
+                }
+                const linkCard = sectionCard('연동 정보', linkInner, '');
+                const header = '<div class="pol-detail-top"><button class="btn btn-sm btn-outline" onclick="PG.opnBack()">‹ 목록</button></div>';
+                return header + '<div class="opn-detail-grid"><div class="opn-detail-main">' + infoCard + procCard + '</div><div class="opn-detail-side">' + histCard + linkCard + '</div></div>';
+            }
+
+            /* ===== 탭2: 산업안전보건위원회 운영 ===== */
+            function renderCommittee() {
+                const C = S.COMMITTEE;
+                const memRows = C.members.map((m, i) => '<tr><td>' + V.esc(m.role) + '</td><td>' + V.esc(m.dept) + '</td><td>' + V.esc(m.position) + '</td><td>' + V.esc(m.name) + '</td><td><button class="btn btn-sm btn-outline" onclick="PG.opnMemberEdit(\'committee\',' + i + ')">수정</button> <button class="btn btn-sm btn-outline" onclick="PG.opnMemberDel(\'committee\',' + i + ')">삭제</button></td></tr>').join('');
+                const memCard = sectionCard('위원 구성 현황 <span class="chip-mini wt" style="margin-left:6px;">산안법 §24</span>',
+                    '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>구분</th><th>부서</th><th>직책</th><th>성명</th><th>관리</th></tr></thead><tbody>' + memRows + '</tbody></table></div><p style="font-size:var(--fs-12); color:var(--text-gray); margin:8px 0 0;">근로자·사용자 대표 동수 구성 (산안법 §24)</p>',
+                    '<button class="btn btn-sm btn-primary" onclick="PG.opnMemberAdd(\'committee\')">+ 위원 추가</button>');
+                const agStChip = s => '<span class="chip-status ' + (s === '완료' ? 'success' : s === '지연' ? 'danger' : 'info') + '">' + s + '</span>';
+                const agRows = (C.agendaItems || []).map((a, i) => '<tr><td>' + V.esc(a.agenda) + '</td><td>' + V.esc(a.dept) + '</td><td>' + a.due + '</td><td>' + agStChip(a.status) + '</td><td><button class="btn btn-sm btn-outline" onclick="PG.opnAgendaEdit(' + i + ')">수정</button> <button class="btn btn-sm btn-outline" onclick="PG.opnAgendaDel(' + i + ')">삭제</button></td></tr>').join('');
+                const agendaCard = sectionCard('안건 부서이행 현황 <span class="chip-mini wt" style="margin-left:6px;">산안법 §24</span>',
+                    '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>의결 안건</th><th>담당부서</th><th>이행기한</th><th>이행상태</th><th>관리</th></tr></thead><tbody>' + agRows + '</tbody></table></div>',
+                    '<button class="btn btn-sm btn-primary" onclick="PG.opnAgendaAdd()">+ 안건 추가</button>');
+                const meetHead = '<tr><th>회차</th><th>유형</th><th>일시</th><th>참석</th><th>주요 안건</th><th>상태</th></tr>';
+                const meetBody = C.meetings.map(mt => '<tr style="cursor:pointer;" onclick="PG.opnMeetingOpen(\'' + mt.round + '\')"><td><b>' + mt.round + '</b></td><td><span class="chip-mini wt-elec">' + mt.type + '</span></td><td>' + mt.date + '</td><td>' + (mt.attendeeList || []).length + '명</td><td><span class="opn-agenda">' + V.esc(mt.agenda) + '</span></td><td><span class="chip-status ' + (mt.status === '확정' ? 'success' : 'info') + '">' + (mt.status || '작성') + '</span></td></tr>').join('');
+                const meetCard = sectionCard('회의록 (정기·수시) <span class="opn-muted" style="font-size:var(--fs-12); font-weight:400;">— 행 클릭 시 상세 보기</span>', '<div style="overflow-x:auto;"><table class="table-figma"><thead>' + meetHead + '</thead><tbody>' + meetBody + '</tbody></table></div>', '<button class="btn btn-sm btn-primary" onclick="PG.opnMtgFormOpen(null)">회의록 작성</button>');
+                const cmtTab = S.cmtTab || 'member';
+                const tabBar = '<div class="psub-tabs opn-inpage-tabs">' + [['member', '위원 구성'], ['agenda', '안건 부서이행'], ['meeting', '회의록']].map(t => '<button type="button" class="psub-tab' + (cmtTab === t[0] ? ' is-active' : '') + '" onclick="PG.opnCmtTab(\'' + t[0] + '\')">' + t[1] + '</button>').join('') + '</div>';
+                const pane = cmtTab === 'agenda' ? agendaCard : cmtTab === 'meeting' ? meetCard : memCard;
+                return tabBar + pane;
+            }
+
+            /* ===== 탭2: 회의록 상세 보기 페이지 ===== */
+            function renderMeetingDetail(round) {
+                const mt = (S.COMMITTEE.meetings || []).find(x => x.round === round);
+                if (!mt) return renderCommittee();
+                const isFixed = mt.status === '확정';
+                const info = '<div class="preset-form-grid">' +
+                    '<span class="k">회차</span><div><b>' + mt.round + '</b> <span class="chip-mini wt-elec">' + mt.type + '</span></div>' +
+                    '<span class="k">일시</span><div>' + mt.date + '</div>' +
+                    '<span class="k">장소</span><div>' + V.esc(mt.place || '-') + '</div>' +
+                    '<span class="k">참석자 (' + (mt.attendeeList || []).length + '명)</span><div class="att-list">' + ((mt.attendeeList || []).length ? (mt.attendeeList).map(a => '<span class="att-chip att-chip-ro">' + V.esc(a.name) + ' <span class="att-sub">' + V.esc(a.dept) + (a.position ? (' ' + V.esc(a.position)) : '') + '</span></span>').join('') : '<span class="att-empty">등록된 참석자가 없습니다.</span>') + '</div>' +
+                    '<span class="k">주요 안건</span><div>' + V.esc(mt.agenda) + '</div>' +
+                    '<span class="k">의결사항</span>' + ((mt.decisions && mt.decisions.length) ? '<ol style="margin:0; padding-left:18px;">' + mt.decisions.map(d => '<li>' + V.esc(d) + '</li>').join('') + '</ol>' : '<div class="opn-muted" style="font-size:var(--fs-13);">등록된 의결사항이 없습니다.</div>') +
+                    '<span class="k">상태</span><div><span class="chip-status ' + (isFixed ? 'success' : 'info') + '">' + (mt.status || '작성') + '</span></div>' +
+                    '</div>';
+                const acts = isFixed
+                    ? '<span class="opn-muted" style="font-size:var(--fs-12); align-self:center;">확정된 회의록입니다 — 편집할 수 없습니다.</span>'
+                    : '<button class="btn btn-sm btn-outline" onclick="PG.opnMtgFormOpen(\'' + mt.round + '\')">편집</button>' +
+                      '<button class="btn btn-sm btn-primary" onclick="PG.opnMtgConfirm(\'' + mt.round + '\')">확정 처리</button>';
+                const header = '<div class="pol-detail-top"><button class="btn btn-sm btn-outline" onclick="PG.opnGo(\'committee\',\'list\',null)">‹ 목록</button>' +
+                    '<div class="pol-detail-actions">' + acts + '</div></div>';
+                return header + sectionCard(mt.round + ' 산업안전보건위원회 회의록', info, '');
+            }
+
+            /* ===== 탭2: 회의록 작성/편집 폼 — 참석자는 조직도 클릭 즉시 토글 ===== */
+            function renderMeetingForm(round) {
+                const editing = round != null && round !== '__new__';
+                const mt = editing ? (S.COMMITTEE.meetings || []).find(x => x.round === round) : null;
+                const dkey = editing ? round : '__new__';
+                if (!S.mtgDraft || S.mtgDraft.key !== dkey) S.mtgDraft = { key: dkey, attendees: mt ? (mt.attendeeList || []).slice() : [] };
+                const orgHtml = (window.EDOC.ORG_TREE || []).map(d => { const open = d.members.some(m => S.mtgDraft.attendees.some(a => a.dept === d.dept && a.name === m[1])); return '<div class="otr-dept" data-dept="' + V.esc(d.dept) + '"><button type="button" class="otr-deptbtn" onclick="EDOC._orgToggle(this)"><span class="otr-arrow">' + (open ? '▾' : '▸') + '</span> ' + V.esc(d.dept) + ' <span class="otr-count">' + d.members.length + '명</span></button><div class="otr-members" style="display:' + (open ? 'block' : 'none') + ';">' + d.members.map(m => { const on = S.mtgDraft.attendees.some(a => a.dept === d.dept && a.name === m[1]); return '<button type="button" class="otr-member' + (on ? ' on' : '') + '" data-dept="' + V.esc(d.dept) + '" data-name="' + V.esc(m[1]) + '" onclick="PG.opnMtgTogAtt(this,\'' + V.esc(d.dept) + '\',\'' + V.esc(m[0]) + '\',\'' + V.esc(m[1]) + '\')"><span class="otr-role">' + V.esc(m[0]) + '</span><span class="otr-name">' + V.esc(m[1]) + '</span></button>'; }).join('') + '</div></div>'; }).join('');
+                const body =
+                    '<div class="opn-form-grid">' +
+                    '<div class="opn-field"><label class="opn-flabel" for="mf-round">회차 <span class="req">*</span></label><input id="mf-round" class="opn-input" type="text" value="' + V.esc(mt ? mt.round : '2026 3분기') + '" placeholder="예: 2026 3분기"></div>' +
+                    '<div class="opn-field"><label class="opn-flabel" for="mf-type">유형</label><select id="mf-type" class="opn-select"><option' + (mt && mt.type === '정기' ? ' selected' : '') + '>정기</option><option' + (mt && mt.type === '수시' ? ' selected' : '') + '>수시</option></select></div>' +
+                    '<div class="opn-field"><label class="opn-flabel" for="mf-date">일시</label><input id="mf-date" class="opn-input" type="date" value="' + (mt ? mt.date : '2026-06-30') + '"></div>' +
+                    '<div class="opn-field"><label class="opn-flabel" for="mf-place">장소</label><input id="mf-place" class="opn-input" type="text" value="' + V.esc(mt ? mt.place : '') + '" placeholder="회의 장소"></div>' +
+                    '<div class="opn-field full"><label class="opn-flabel" for="mf-agenda">주요 안건</label><input id="mf-agenda" class="opn-input" type="text" value="' + V.esc(mt ? mt.agenda : '') + '" placeholder="주요 안건"></div>' +
+                    '</div>' +
+                    '<div style="margin-top:16px;"><label class="opn-flabel">참석자 (<span id="mtg-att-count">' + S.mtgDraft.attendees.length + '</span>명)</label>' +
+                    '<div id="mtg-att-chips" class="att-list" style="margin:8px 0;">' + attChipsHtml() + '</div>' +
+                    '<div class="org-inline"><div class="org-inline-search"><input type="text" placeholder="부서·이름 검색" oninput="EDOC._orgFilter(this)"></div><div class="org-inline-body">' + orgHtml + '</div></div>' +
+                    '<p style="font-size:var(--fs-12); color:var(--text-gray); margin:8px 0 0;">조직도에서 이름을 클릭하면 즉시 추가되고, 다시 누르거나 칩의 ×로 제외됩니다.</p></div>' +
+                    '<div style="margin-top:16px;"><label class="opn-flabel">의결사항</label>' +
+                    '<div id="mf-decisions" class="goal-list" style="margin-top:8px;">' + ((mt && mt.decisions && mt.decisions.length) ? mt.decisions.map(decisionRow).join('') : decisionRow('')) + '</div>' +
+                    '<button type="button" class="btn btn-sm btn-outline" style="margin-top:8px;" onclick="PG.opnMtgDecisionAdd()">+ 의결사항 추가</button>' +
+                    '<label style="display:flex; align-items:center; gap:8px; margin-top:14px; font-size:var(--fs-13); color:var(--text-black); cursor:pointer;"><input type="checkbox" id="mf-link-agenda"> 의결사항을 안건 부서이행 현황에 등록</label>' +
+                    '</div>';
+                const header = '<div class="opn-form-head"><button class="btn btn-sm btn-outline" onclick="PG.opnMtgFormCancel()">‹ 취소</button><h2>' + (editing ? '회의록 편집' : '회의록 작성') + '</h2></div>';
+                const bar = '<div class="opn-formbar"><button class="btn btn-outline" onclick="PG.opnMtgFormCancel()">취소</button><button class="btn btn-primary" onclick="PG.opnMtgFormSave()">' + (editing ? '저장' : '작성 완료') + '</button></div>';
+                return header + sectionCard(editing ? '회의록 편집' : '회의록 작성', body, '') + bar;
+            }
+
+            /* ===== 탭3: 안전보건 협의체 · 점검표 ===== */
+            function renderCouncil() {
+                const C = S.COUNCIL;
+                const coRows = C.members.map((m, i) => '<tr><td>' + V.esc(m.role) + '</td><td>' + V.esc(m.dept) + '</td><td>' + V.esc(m.position) + '</td><td>' + V.esc(m.name) + '</td><td><button class="btn btn-sm btn-outline" onclick="PG.opnMemberEdit(\'council\',' + i + ')">수정</button> <button class="btn btn-sm btn-outline" onclick="PG.opnMemberDel(\'council\',' + i + ')">삭제</button></td></tr>').join('');
+                const memCard = sectionCard('안전보건 협의체 운영 <span class="chip-mini wt" style="margin-left:6px;">산안법 §64</span>',
+                    '<div class="preset-form-grid" style="margin-bottom:12px;"><span class="k">운영 주기</span><div style="display:flex; gap:8px; align-items:center;">' + C.cycle + ' <button class="btn btn-sm btn-outline" onclick="PG.opnCouncilCycle()">주기 변경</button></div></div>' +
+                    '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>구분</th><th>부서/소속</th><th>직책</th><th>성명</th><th>관리</th></tr></thead><tbody>' + coRows + '</tbody></table></div>',
+                    '<button class="btn btn-sm btn-primary" onclick="PG.opnMemberAdd(\'council\')">+ 위원 추가</button>');
+                const resRows = (C.results || []).map((r, i) => '<tr><td>' + V.esc(r.round) + '</td><td>' + r.date + '</td><td>' + V.esc(r.content) + '</td><td>' + V.esc(r.result) + '</td><td><span class="chip-status ' + (r.status === '완료' ? 'success' : 'info') + '">' + r.status + '</span></td><td><button class="btn btn-sm btn-outline" onclick="PG.opnResultEdit(' + i + ')">수정</button> <button class="btn btn-sm btn-outline" onclick="PG.opnResultDel(' + i + ')">삭제</button></td></tr>').join('');
+                const resultCard = sectionCard('협의체 운영 결과 <span class="chip-mini wt" style="margin-left:6px;">산안법 §64</span>',
+                    '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>회차</th><th>일자</th><th>참석·논의 내용</th><th>결과 요약</th><th>상태</th><th>관리</th></tr></thead><tbody>' + (resRows || '<tr><td colspan="6" style="text-align:center; color:var(--text-gray); padding:20px;">등록된 운영 결과가 없습니다.</td></tr>') + '</tbody></table></div>',
+                    '<button class="btn btn-sm btn-primary" onclick="PG.opnResultAdd()">+ 운영 결과 등록</button>');
+                const chkRows = C.checklists.map(c => {
+                    const editableRow = (c.appr === '미상신' || c.appr === '반려');
+                    const acts = '<button class="btn btn-sm btn-outline" onclick="PG.opnChkOpen(\'' + c.id + '\')">조회</button>' +
+                        (editableRow ? ' <button class="btn btn-sm btn-outline" onclick="PG.opnChkEdit(\'' + c.id + '\')">수정</button> <button class="btn btn-sm btn-outline" onclick="PG.opnChkDel(\'' + c.id + '\')">삭제</button>' : '');
+                    return [c.cat, c.date, c.inspector, (c.result === '미흡' ? '<span class="chip-status danger">미흡 ' + c.items.filter(i => i.r === '미흡').length + '건</span>' : '<span class="chip-status success">적합</span>'), apprChip(c.appr), acts];
+                });
+                const chkCard = sectionCard('의견청취 점검표 <span class="chip-mini wt" style="margin-left:6px;">용역·구매설치·위탁사업·기타</span>', tbl(['점검 구분', '점검일', '점검자', '결과', '온나라 결재', ''], chkRows), '<button class="btn btn-sm btn-primary" onclick="PG.opnChkNew()">+ 점검결과지 생성</button>');
+                const cnlTab = S.cnlTab || 'council';
+                const tabBar = '<div class="psub-tabs opn-inpage-tabs">' + [['council', '협의체 운영'], ['check', '점검표']].map(t => '<button type="button" class="psub-tab' + (cnlTab === t[0] ? ' is-active' : '') + '" onclick="PG.opnCnlTab(\'' + t[0] + '\')">' + t[1] + '</button>').join('') + '</div>';
+                const pane = cnlTab === 'check' ? chkCard : (memCard + resultCard);
+                return tabBar + pane;
+            }
+
+            /* ===== 탭3: 점검결과지 상세 (온나라 결재 + PDF 미리보기) — 다른 메뉴와 동일 패턴 ===== */
+            function renderCouncilDetail(id) {
+                const c = S.COUNCIL.checklists.find(x => x.id === id);
+                if (!c) return renderCouncil();
+                const editable = (c.appr === '미상신' || c.appr === '반려');
+                const info = '<div class="preset-form-grid">' +
+                    '<span class="k">점검 구분</span><div><b>' + V.esc(c.cat) + '</b></div>' +
+                    '<span class="k">점검일</span><div>' + c.date + '</div>' +
+                    '<span class="k">점검자</span><div>' + V.esc(c.inspector) + '</div>' +
+                    '<span class="k">종합 결과</span><div>' + chkResultChip(c.result) + '</div>' +
+                    '<span class="k">온나라 결재</span><div style="display:flex; gap:8px; align-items:center;">' + apprChip(c.appr) + '<button class="btn btn-sm btn-outline" onclick="PG.opnChkApprHistory(\'' + c.id + '\')">이력</button></div>' +
+                    '<span class="k">점검 항목</span><div>' + c.items.map((it, i) => '<div class="opn-chk-row" style="margin-bottom:6px;"><div class="opn-chk-q">' + (i + 1) + '. ' + V.esc(it.q) + (it.note ? ' <span style="color:var(--status-danger-fg); font-size:var(--fs-12);">(' + V.esc(it.note) + ')</span>' : '') + '</div><div>' + chkItemChip(it.r) + '</div></div>').join('') + '</div>' +
+                    '</div>';
+                const pdfPanel = '<div class="pol-pdf-wrap"><div class="pol-pdf-tools"><span style="font-size:var(--fs-12); font-weight:700; color:var(--text-gray);">PDF 미리보기</span><span style="display:flex; gap:6px;"><button class="btn btn-sm btn-outline" onclick="PG.opnChkPdfFull(\'' + c.id + '\')">전체화면</button><button class="btn btn-sm btn-primary" onclick="PG.opnChkPdfDownload()">PDF 다운로드</button></span></div>' + chkPdfPaper(c) + '</div>';
+                let acts = '<div class="pol-detail-actions">';
+                if (editable) {
+                    acts += '<button class="btn btn-sm btn-outline" onclick="PG.opnChkEdit(\'' + c.id + '\')">수정</button>';
+                    acts += canAct()
+                        ? '<button class="btn btn-sm btn-primary" onclick="PG.opnChkOnnara(\'' + c.id + '\')">온나라 결재 상신</button>'
+                        : '<span class="opn-muted" style="font-size:var(--fs-12); align-self:center;">상신은 <b>담당자</b>가 합니다 — 관리·감독 계층은 조회만 합니다.</span>';
+                } else {
+                    acts += '<span class="opn-muted" style="font-size:var(--fs-12); align-self:center;">' + (c.appr === '승인완료' ? '결재 승인 완료' : '결재 진행 중') + ' — 수정하려면 반려 후 진행하세요.</span>';
+                }
+                acts += '</div>';
+                const header = '<div class="pol-detail-top"><button class="btn btn-sm btn-outline" onclick="PG.opnGo(\'council\',\'list\',null)">‹ 목록</button>' + acts + '</div>';
+                const main = sectionCard('점검결과지 ' + c.id + ' · ' + V.esc(c.cat), '<div class="pol-detail-grid"><div class="pol-detail-info">' + info + '</div>' + pdfPanel + '</div>', '');
+                return header + main;
+            }
+
+            /* ===== 디스패치 (탭 전환은 SNB 페이지 이동으로 일어남) ===== */
+            if (S.tab === 'committee') return committeeStat() + (S.view === 'mform' ? renderMeetingForm(S.id) : S.view === 'mdetail' ? renderMeetingDetail(S.id) : renderCommittee());
+            if (S.tab === 'council') return councilStat() + (S.view === 'cdetail' ? renderCouncilDetail(S.id) : renderCouncil());
+            /* 기본: voice */
+            if (S.view === 'form') return renderVoiceForm();
+            if (S.view === 'detail') return renderVoiceDetail(find(S.id));
+            return voiceCountBar() + renderVoiceList();
+        },
+
+        /* ── 도급관리 [SFR-013]: 사업 직접 등록 → 적격 평가 → 점검표 → 수급인 평가 ── */
+        contract() {
+            /* 사업 목록을 모듈 전역 상태로 올린다 — 조직 화면의 «공사 직접 등록»과 같은 방식이다.
+               계약 시스템에서 사업 정보를 받아오는 경로가 없어 직접 등록이 사업이 들어오는 유일한
+               경로인데, 목록이 하드코딩 배열이면 [등록]을 눌러도 목록이 그대로다. 그러면 «있다고
+               선언한 유일한 경로»가 죽은 채로 남아, 없는 기능을 있는 것처럼 말하게 된다. */
+            /* 시드의 계약기간도 등록 폼과 같은 «시작일 ~ 종료일» 표기다 — 한 열에 월 단위와 일 단위가
+               섞이면 읽는 사람이 형식 차이를 자료의 차이로 읽고, 중복 확인(사업명·업체·기간)도 표기가
+               갈린 행끼리는 영영 맞지 않는다. */
+            if (!window.CONTRACT_BIZ_STATE) {
+                /* 담양군 계약정보시스템(gyeyak.damyang.go.kr) 공개 목록에서 옮겨 적은 실제 계약이다.
+                   id 는 그 시스템의 「번호」를 그대로 쓴다 — 우리가 새로 채번하면 원본과 대조할 수 없다.
+                   ⚠ period 는 10건 중 1건만 채워져 있다. 지어낸 것이 아니라 «목록 화면에 계약기간 열이
+                   없어서» 그렇다(계약기간·준공일은 건별 상세에만 있다). 빈 채로 두어야 «기간을 모르면
+                   반기 점검 대상을 판정할 수 없다»는 사실이 화면에 그대로 드러난다.
+                   ⚠ 전부 「용역」이다 — 공사·구매설치·위탁 구분의 실자료를 아직 받지 못했다. 없는 구분을
+                   지어내 채우지 않는다. */
+                window.CONTRACT_BIZ_STATE = [
+                    { id: '4173', name: '2026년 담양군 마을상수도 기술진단용역 추진, 감독공무원 지명 및 임명', cat: '용역', dept: '물순환사업소', co: '(주)우리종합기술', signed: '2026-08-11', period: '2026-08-14 ~ 2027-08-13', amount: '61000000', src: 'gyeyak' },
+                    { id: '4172', name: '2026년도 의원 연구단체 정책개발연구용역 계약 추진', cat: '용역', dept: '의회사무과', co: '(사)한국행정발전연구원', signed: '2026-07-30', period: '', amount: '20460000', src: 'gyeyak' },
+                    { id: '4171', name: '담양군보건소 이전신축 조성사업 교통성검토 용역', cat: '용역', dept: '보건소', co: '(주)우리이엔티', signed: '2026-07-28', period: '', amount: '22000000', src: 'gyeyak' },
+                    { id: '4170', name: '2026년 담양공공하수처리시설 정밀안전점검 용역 시행', cat: '용역', dept: '물순환사업소', co: '(주)태성기술개발', signed: '2026-07-27', period: '', amount: '16300000', src: 'gyeyak' },
+                    { id: '4169', name: '2026년 고서공공하수처리시설 외 1개소 하반기 정기안전점검용역 시행', cat: '용역', dept: '물순환사업소', co: '주식회사 길성이앤시', signed: '2026-07-24', period: '', amount: '11200000', src: 'gyeyak' },
+                    { id: '4168', name: '가사문학면 학선리 개선동마을 등 3개소 소규모수도시설 지하수영향조사 용역', cat: '용역', dept: '물순환사업소', co: '(주)우진엔지니어링', signed: '2026-07-17', period: '', amount: '19980000', src: 'gyeyak' },
+                    { id: '4167', name: '창평면 용수리 부동제 여수로 정비공사 폐기물처리용역 - 도급액', cat: '용역', dept: '본청', co: '(주)금성환경산업', signed: '2026-07-07', period: '', amount: '1555000', src: 'gyeyak' },
+                    { id: '4166', name: '농어촌 생활용수(창평지구) 개발사업 폐기물처리용역(1차)', cat: '용역', dept: '물순환사업소', co: '(주)대림환경', signed: '2026-07-06', period: '', amount: '58700000', src: 'gyeyak' },
+                    { id: '4165', name: '담양, 고서, 무증, 태암 공공하수도 재해복구사업 실시설계 용역', cat: '용역', dept: '물순환사업소', co: '(주)진성기술단', signed: '2026-07-01', period: '', amount: '16100000', src: 'gyeyak' },
+                    { id: '4164', name: '담양읍 백동리(251-15) 하수관로 정비사업 설계안정성검토', cat: '용역', dept: '물순환사업소', co: '(주)태성기술개발', signed: '2026-07-01', period: '', amount: '7500000', src: 'gyeyak' },
+                ];
+            }
+            const biz = window.CONTRACT_BIZ_STATE;
+
+            /* 수급인 평가 목록은 등록된 사업의 수급업체에서 파생한다.
+               ① 평가는 업체 단위로 묶는다 — 사업마다 다시 평가하면 같은 업체의 점수가 여러 개가 되어
+                  어느 것이 그 업체의 수준인지 알 수 없다.
+               ② 목록을 따로 하드코딩해 두면 새로 등록한 사업의 업체가 평가 목록에 영영 나타나지 않아
+                  등록 직후의 «평가를 진행하세요» 안내가 다시 죽은 경로가 된다. */
+            const vendorList = () => {
+                const out = [];
+                biz.forEach(b => {
+                    if (!b.co) return;   /* 업체 미상은 지어내지 않는다 — 사업만 목록에 남는다 */
+                    const v = out.find(x => x.co === b.co);
+                    if (v) v.biz.push(b.name); else out.push({ co: b.co, biz: [b.name] });
+                });
+                return out;
+            };
+
+            PG.conAdd = () => {
+                if (actGate('도급사업 등록')) return;
+                V.openModal('도급·용역·위탁 사업 등록',
+                    '<div class="edoc-linkcard"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:3px;" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>계약 시스템에서 사업 정보를 받아오는 경로가 없습니다. 아래 항목을 직접 입력해 등록하세요.</div>' +
+                    '<div class="preset-form-grid">' +
+                    '<span class="k">사업명 <span class="req">*</span></span><input type="text" id="cn-name" placeholder="계약 건명 그대로 입력">' +
+                    /* 구분 기본값을 «공사»로 열어 두면 아무것도 고르지 않은 사람의 사업이 조용히 공사가 된다.
+                       사업 성격에 따라 점검 항목의 무게가 달라지므로(정의서 §4-1) 고르게 하고 비면 막는다. */
+                    '<span class="k">구분 <span class="req">*</span></span><select class="form-select" id="cn-cat"><option value="">선택하세요</option><option>공사</option><option>용역</option><option>구매설치</option><option>위탁</option><option>기타</option></select>' +
+                    '<span class="k">수급업체 <span class="req">*</span></span><input type="text" id="cn-co" placeholder="계약 상대자">' +
+                    /* 계약기간을 «2026-03 ~ 2026-11» 한 칸으로 받으면 «시작이 종료보다 늦을 수 없다»(정의서 §5-1)를
+                       확인할 방법이 없다. 같은 파일의 공사 직접 등록(조직 화면)처럼 시작·종료를 나눠 받는다. */
+                    '<span class="k">계약기간 <span class="req">*</span></span><div style="display:flex; gap:6px;"><input type="date" id="cn-from" aria-label="계약 시작일"><input type="date" id="cn-to" aria-label="계약 종료일"></div>' +
+                    /* 정의서 §5-1 은 계약금액을 «숫자만 · 음수 불가»로 정한다. «5.2억 원» 같은 자유 문자열로 받으면
+                       음수인지조차 판정할 수 없어 그 검증이 죽는다 — 원 단위 숫자로 받고 표시할 때 자릿수를 넣는다. */
+                    '<span class="k">계약금액</span><input type="text" id="cn-amt" inputmode="numeric" placeholder="예: 520000000 (원 단위 숫자)"></div>',
+                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+                    '<button class="btn btn-primary" onclick="PG.conSave()">등록</button>');
+            };
+            /* 등록 폼 검증 — 정의서 §5-1. 직접 등록이 사업이 들어오는 유일한 경로라 여기서 걸러
+               내지 못한 값은 대조할 원본 없이 그대로 목록에 남는다. 종전에는 필수 세 개만 보고 통과시켜
+               시작일이 종료일보다 늦어도, 계약금액이 음수여도 «사업을 등록했습니다»가 떴다. */
+            const NAME_MAX = 100;
+            PG.conSave = () => conSaveDo(false);
+            PG.conSaveForce = () => conSaveDo(true);
+            PG.conDupClose = () => { const p = document.getElementById('cn-dup'); if (p) p.remove(); };
+            function conSaveDo(force) {
+                PG.conDupClose();
+                const val = k => ((document.getElementById(k) || {}).value || '').trim();
+                const name = val('cn-name'), cat = val('cn-cat'), co = val('cn-co');
+                const from = val('cn-from'), to = val('cn-to'), amt = val('cn-amt').replace(/,/g, '');
+                if (!name) { V.toast('사업명을 입력하세요.'); return; }
+                if (name.length > NAME_MAX) { V.toast('사업명은 ' + NAME_MAX + '자 이내로 입력하세요.'); return; }
+                if (!cat) { V.toast('사업 구분을 고르세요.'); return; }
+                if (!co) { V.toast('수급업체명을 입력하세요.'); return; }
+                if (co.length > NAME_MAX) { V.toast('수급업체명은 ' + NAME_MAX + '자 이내로 입력하세요.'); return; }
+                if (!from || !to) { V.toast('계약 기간을 확인하세요 — 시작일과 종료일을 모두 입력하세요.'); return; }
+                if (from > to) { V.toast('계약 기간을 확인하세요 — 시작일이 종료일보다 늦습니다.'); return; }
+                if (amt && !/^\d+$/.test(amt)) { V.toast('계약금액은 숫자로 입력하세요.'); return; }
+                const period = from + ' ~ ' + to;
+                /* 중복은 막지 않고 확인을 받는다(정의서 §5-1). 판정 축도 사업명 하나가 아니라
+                   «사업명·수급업체·기간» 셋이다. 이름만 보고 거부하면 해마다 같은 이름으로 다시
+                   계약하는 사업(청사 경비·미화 용역 등)을 두 번째 해부터 등록할 수 없고, 직접 등록이
+                   유일한 경로라 그 사업이 화면에서 통째 사라진다 — 점검하지 않은 현장이 없는 현장이 된다. */
+                if (!force && biz.some(b => b.name === name && b.co === co && b.period === period)) { conDupAsk(); return; }
+                /* 계약정보시스템에서 옮겨 적은 계약과 직접 등록한 사업이 한 목록에 섞인다.
+                   출처를 행마다 남겨야 연계가 열렸을 때 무엇을 교체하고 무엇을 남길지 가릴 수 있다.
+                   계약관서(dept)는 등록 폼이 받지 않는다 — 조직도에 등재된 부서가 11개뿐이라
+                   본청·의회사무과·보건소를 고를 수 없고, 고르게 하면 없는 부서를 지어내게 된다. */
+                biz.push({
+                    id: 'CON-' + String(biz.length + 1).padStart(2, '0'),
+                    name: name, cat: cat, dept: '', co: co, period: period, amount: amt, src: 'manual',
+                });
+                V.closeModal(); V.toast('사업을 등록했습니다 — 수급인 안전보건 수준 평가를 진행하세요'); render();
+            }
+            /* 확인은 새 모달이 아니라 등록 모달 본문 안 인라인 패널이다(단일 모달 규칙).
+               모달 위에 모달을 쌓으면 닫기·ESC·백드롭의 대상이 모호해지고 부모 모달이 가려
+               «무엇을 그대로 등록하는지» 맥락을 잃는다. */
+            function conDupAsk() {
+                const host = document.querySelector('#v2-modal .modal-body');
+                if (!host) { conSaveDo(true); return; }
+                const panel = document.createElement('div');
+                panel.id = 'cn-dup'; panel.className = 'stack-inline';
+                panel.innerHTML =
+                    '<div class="stack-inline-head"><span>같은 사업이 이미 등록되어 있습니다</span>' +
+                    '<button type="button" class="modal-close" onclick="PG.conDupClose()" aria-label="닫기">&times;</button></div>' +
+                    '<div class="stack-inline-body">사업명·수급업체·계약기간이 모두 같은 사업이 이미 목록에 있습니다. 그대로 등록할까요?' +
+                        '<p style="font-size:var(--fs-12); color:var(--text-gray); margin:8px 0 0;">계약 자료를 받아오는 경로가 없어 같은 계약이 두 번 들어와도 막아 줄 다른 수단이 없습니다. 실제로 두 건이면 그대로 등록하고, 아니면 취소하고 기간·업체를 확인하세요.</p></div>' +
+                    '<div class="stack-inline-foot"><button class="btn btn-sm btn-secondary" onclick="PG.conDupClose()">취소</button>' +
+                        '<button class="btn btn-sm btn-primary" onclick="PG.conSaveForce()">그대로 등록</button></div>';
+                host.appendChild(panel);
+                panel.scrollIntoView({ block: 'nearest' });
+            }
+            /* 사업명·업체명은 담당자가 직접 입력한 값이라 따옴표가 섞일 수 있다.
+               onclick 에 이름을 실어 보내지 않고 행 id·업체 순번만 넘긴다. */
+            PG.conCheck = id => {
+                const row = biz.find(x => x.id === id); if (!row) return;
+                if (actGate('도급 점검표 작성')) return;
+                /* 점검표를 사업명으로 식별하면 «같은 이름 다른 계약»(해마다 다시 계약하는 용역) 두 건이
+                   한 점검표를 나눠 쓰게 된다 — 올해 점검표를 쓰면 작년 행까지 작성완료로 보인다.
+                   등록 행 id 는 재사용되지 않으므로 문서를 사업 1건에 고정할 수 있다. */
+                E.openForm({
+                    id: 'EDOC-도급점검-' + row.id, title: '도급사업 안전보건 점검표 — ' + row.name, form: 'F5',
+                    ctx: { menuLabel: '도급관리 · 반기', checklist: T.CHECKLIST_PRESETS.contract }, onChange: render,
+                });
+            };
+            PG.conEval = ix => {
+                const v = vendorList()[ix]; if (!v) return;
+                if (actGate('수급인 평가 작성')) return;
+                E.openForm({
+                    id: 'EDOC-수급인평가-' + v.co, title: '수급인 안전보건 수준 평가 — ' + v.co, form: 'F6',
+                    ctx: { menuLabel: '도급관리', scorelist: T.SCORE_PRESETS.contract }, onChange: render,
+                });
+            };
+            PG.conPledge = () => actGate('안전보건 서약서 첨부') ? null : V.openModal('안전보건 서약서 첨부',
+                DYV2.uploadDrop('서약서·계약서 사본을 첨부하세요 (다중 가능)', null, { hint: true }),
+                '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+                '<button class="btn btn-primary" onclick="DYV2.closeModal(); DYV2.toast(\'서약서가 첨부되었습니다\')">업로드</button>');
+
+            const cat = c => '<span class="chip-mini pdca" style="white-space:nowrap;">' + esc(c) + '</span>';
+            /* 계약금액은 원 단위 숫자로 저장한다(정의서 §5-1). 표시할 때만 자릿수를 넣고, 숫자가 아닌
+               옛 값이 남아 있으면 고쳐 쓰지 않고 그대로 보여 준다 — 지어낸 해석을 붙이지 않는다. */
+            const amtText = a => {
+                const v = String(a == null ? '' : a).trim();
+                if (!v) return '-';
+                const t = /^\d+$/.test(v) ? Number(v).toLocaleString('ko-KR') + '원' : esc(v);
+                return '<span style="white-space:nowrap;">' + t + '</span>';
+            };
+            /* 계약기간은 계약정보시스템 «목록» 화면에 없다(건별 상세에만 있다). 빈칸으로 두면
+               «기간이 없는 계약»으로 읽히므로 모른다는 사실을 그대로 적고, 대신 아는 값(계약일)을
+               같이 보여 준다 — 없는 기간을 계약일로 대신 채우면 반기 판정이 조용히 틀어진다. */
+            const periodText = b => {
+                const v = String(b.period == null ? '' : b.period).trim();
+                if (v) return '<span style="white-space:nowrap;">' + esc(v) + '</span>';
+                return '<span class="rl-ro-none">기간 미확인</span>'
+                    + (b.signed ? '<div style="font-size:var(--fs-12); color:var(--text-gray);">계약일 ' + esc(b.signed) + '</div>' : '');
+            };
+            /* 출처와 계약관서를 값 옆에 남긴다 — 옮겨 적은 계약과 직접 등록한 사업이 한 목록에
+               섞이므로, 구분이 없으면 연계가 열렸을 때 무엇을 교체할지 가릴 수 없다. */
+            const srcLine = b => '<div style="font-size:var(--fs-12); color:var(--text-gray); margin-top:3px;">'
+                + (b.dept ? esc(b.dept) + ' · ' : '')
+                + (b.src === 'gyeyak' ? '계약정보시스템 ' + esc(b.id) : '직접 등록')
+                + '</div>';
+            const vendors = vendorList();
+            const noPeriod = biz.filter(b => !String(b.period == null ? '' : b.period).trim()).length;
+            const checkTodo = biz.filter(b => !E.statusOf('EDOC-도급점검-' + b.id)).length;
+            const evalTodo = vendors.filter(v => !E.statusOf('EDOC-수급인평가-' + v.co)).length;
+            /* 요약 수치는 전부 아래 목록에서 센다. 사업이 들어오는 경로가 직접 등록 하나뿐인데 고정값을
+               쓰면 요약과 목록이 영원히 다른 현황을 주장한다(종전: 목록 4건 옆에 «진행 사업 12»).
+               «연간 누계»·«진행/종료» 축은 계약 이력을 넘겨주는 연계가 없어 어디에서도 셀 수 없으므로
+               지어내지 않고 뺀다. 미작성·미평가는 감추지 않고 그대로 센다 — 남은 일이기 때문이다. */
+            return statboxes([
+                ['info', biz.length, '등록 사업'],
+                ['neutral', vendors.length, '수급업체'],
+                [checkTodo ? 'warning' : 'success', checkTodo, '점검표 미작성'],
+                [evalTodo ? 'danger' : 'success', evalTodo, '수급인 미평가'],
+            ]) +
+            sectionCard('도급·용역·위탁 사업 목록',
+                '<div class="check-notice" style="margin-bottom:10px;">목록은 <b>담양군 계약정보시스템 공개 목록에서 옮겨 적은 계약</b>과 담당자가 직접 등록한 사업으로 채워집니다. 자동으로 받아오는 연계는 없으므로 옮겨 적지 않은 계약은 이 목록에도, 위 요약에도 잡히지 않습니다 — <b>위 수치는 모두 이 목록에서 센 값</b>입니다.'
+                + (noPeriod ? ' 계약기간은 계약정보시스템 <b>목록 화면에 없어</b> 건별 상세를 열어야 확인됩니다 — 현재 <b>' + noPeriod + '건</b>이 미확인이라 그 사업은 반기 점검 대상을 판정하지 못합니다.' : '')
+                + '</div>' +
+                (biz.length
+                    ? tbl(['사업명', '구분', '수급업체', '계약기간', '계약금액', '점검표', '서약서'],
+                        biz.map(b => [
+                            '<b>' + esc(b.name) + '</b> ' + docStChip('EDOC-도급점검-' + b.id) + srcLine(b),
+                            /* 기간은 한 값이다 — 줄이 갈리면 «2026-03-02»와 «2026-11-30» 두 날짜로 읽힌다.
+                               표는 이미 가로 스크롤 래퍼 안이라 줄바꿈을 막아도 본문이 밀리지 않는다. */
+                            cat(b.cat), esc(b.co), periodText(b), amtText(b.amount),
+                            /* 같은 행의 [첨부]·[평가 작성]과 같은 기준으로 건다 — 여기만 무조건 그리면
+                               군수·과장에게 활성 버튼이 보이고 «눌러야 거절»한다. 한 행 안에서 기준이
+                               갈리면 무엇이 내 권한인지 표가 알려주지 못한다. */
+                            (canAct() ? '<button class="btn btn-sm btn-primary" onclick="PG.conCheck(\'' + b.id + '\')">점검표 작성</button>' : '<span class="rl-ro-none">조회</span>'),
+                            (canAct() ? '<button class="btn btn-sm btn-secondary" onclick="PG.conPledge()">첨부</button>' : '<span class="rl-ro-none">조회</span>'),
+                        ]))
+                    : '<div class="v2-empty">등록된 도급·용역·위탁 사업이 없습니다.<br><span style="font-size:var(--fs-12);">목록이 비어 있는 것은 사업이 없다는 뜻이 아니라 아직 등록하지 않았다는 뜻입니다.</span></div>'),
+                (canAct() ? '<button class="btn btn-sm btn-primary" onclick="PG.conAdd()">+ 사업 등록</button>' : '')) +
+            sectionCard('수급인 안전보건 수준 평가',
+                (vendors.length
+                    ? tbl(['업체', '대상 사업', '평가 시점', '상태', ''], vendors.map((v, ix) => [
+                        esc(v.co), v.biz.map(esc).join('<br>'), '계약 전 적격심사 + 반기',
+                        docStChip('EDOC-수급인평가-' + v.co),
+                        (canAct() ? '<button class="btn btn-sm btn-primary" onclick="PG.conEval(' + ix + ')">평가 작성</button>' : '<span class="rl-ro-none">조회</span>'),
+                    ]))
+                    : '<div class="v2-empty">평가 대상 업체가 없습니다.<br><span style="font-size:var(--fs-12);">사업을 등록하면 그 수급업체가 평가 대상으로 올라옵니다.</span></div>') +
+                '<p style="font-size:var(--fs-12); color:var(--text-gray); margin-top:8px;">평가는 <b>업체 단위</b>로 묶습니다 — 사업마다 다시 평가하면 같은 업체의 점수가 여러 개가 되어 어느 것이 그 업체의 수준인지 알 수 없습니다. 아직 평가하지 않은 업체도 목록에 그대로 두어 남은 일이 드러나게 합니다.</p>');
+        },
+
+        /* ── 개선조치 [SFR-003]: 전 메뉴 자동 유입 → 담당 지정 → 계획 → 완료 보고 → 확인 → 종결 ── */
+        improve() {
+            const dyn = E.improvements();
+            const aDocs = V.docs().filter(d => d.pdca === 'A');
+
+            PG.impNext = id => {
+                const imp = E.improvements().find(x => x.id === id);
+                if (!imp) return;
+                if (imp.status === '접수') {
+                    E.openForm({
+                        id: 'EDOC-' + id, title: '조치 계획 — ' + imp.title, form: 'F7',
+                        ctx: { menuLabel: '개선조치' }, source: '발생원: ' + imp.sourceMenu + (imp.sourceDoc ? ' · ' + imp.sourceDoc : ''),
+                        fields: { source: imp.sourceMenu + ' — ' + imp.title, due: imp.due, owner: imp.owner },
+                        onChange: () => { E.advanceImprovement(id); render(); },
+                    });
+                } else if (imp.status === '진행') {
+                    V.openModal('조치 완료 보고 — ' + esc(imp.title),
+                        '<div class="preset-form-grid">' +
+                        '<span class="k">조치 결과</span><textarea placeholder="완료된 조치 내용"></textarea>' +
+                        '<span class="k">완료 사진</span>' + DYV2.uploadDrop('조치 전·후 사진 첨부', null, { style: 'padding:14px;' }) + '</div>',
+                        '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+                        '<button class="btn btn-primary" onclick="DYV2.closeModal(); EDOC.advanceImprovement(\'' + id + '\'); PG._r(); DYV2.toast(\'완료 보고 — 확인자 검토 대기\')">완료 보고</button>');
+                } else {
+                    E.advanceImprovement(id); render();
+                    if (E.improvements().find(x => x.id === id).status === '종결') E.notify('개선조치 종결 — ' + imp.title + ' (확인자 검토 완료)', '시스템');
+                }
+            };
+            PG._r = render;
+            PG.impPrevent = () => E.openForm({
+                id: 'EDOC-재발방지-' + (dyn.length + 1), title: '재발방지대책 등록', form: 'F7',
+                ctx: { menuLabel: '개선조치' }, onChange: render,
+            });
+
+            const NEXT_LABEL = { '접수': '조치 계획 등록', '계획': '진행 처리', '진행': '완료 보고', '완료확인': '확인·종결' };
+            const dynRows = dyn.map(i => [
+                '<b>' + esc(i.title) + '</b>',
+                '<span class="chip-mini pdca">' + esc(i.sourceMenu) + '</span>',
+                i.owner, i.due || '-',
+                stepper(E.IMP_FLOW, i.status),
+                i.status === '종결' ? '<span class="chip-mini st-done">종결</span>'
+                    : '<button class="btn btn-sm btn-primary" onclick="PG.impNext(\'' + i.id + '\')">' + NEXT_LABEL[i.status] + '</button>',
+            ]);
+            return statboxes([
+                ['danger', dyn.filter(i => i.status !== '종결').length, '처리 중 (실시간)'],
+                ['success', dyn.filter(i => i.status === '종결').length, '종결 (실시간)'],
+                ['neutral', aDocs.length, '조치 문서 마스터'],
+                ['info', aDocs.filter(d => d.status === '완료').length, '마스터 완료'],
+            ]) +
+            sectionCard('개선조치 처리 목록 — 전 메뉴 자동 유입 (실시간)',
+                (dynRows.length
+                    ? tbl(['조치 사항', '발생원', '담당', '기한', '처리 단계', ''], dynRows)
+                    : '<div class="v2-empty">아직 유입된 개선조치가 없습니다.<br><span style="font-size:12px;">위험성평가 X 판정 · 점검표 X 항목 · 의견청취 조치 분기에서 자동 생성됩니다 — 직접 만들어 보세요.</span></div>') +
+                '<p style="font-size:12px; color:var(--text-gray); margin-top:8px;">유입 경로: 위험성평가 부적정(X) · 각 메뉴 점검표 X 항목 · 의견청취/신고 "개선조치 생성" 분기 · 수행평가 미흡</p>',
+                '<button class="btn btn-sm btn-primary" onclick="PG.impPrevent()">+ 재발방지대책 등록</button>') +
+            sectionCard('조치 문서 마스터 (엑셀 분류본 ' + aDocs.length + '건)',
+                tbl(['문서명', '발생 메뉴', '주기', '상태'],
+                    aDocs.slice(0, 8).map(d => [esc(d.name), d.daemenu === '확인필요' ? V.unassignedBadge() : '<span class="chip-mini pdca">' + esc(d.daemenu) + '</span>', esc(d.cycle), ST(d.status)])) +
+                /* 2026-09-03 — «업무문서 > 이행문서»는 대메뉴도 화면도 없는 이름이었다.
+                   지금 전체를 보는 자리는 업무 관리 > 문서 목록이다. */
+                '<p style="font-size:12px; color:var(--text-gray); margin-top:8px;">외 ' + (aDocs.length - 8) + '건 — <a href="cmp-docs.html" style="color:var(--main-dark);">업무 관리 &gt; 문서 목록</a>에서 전체 조회</p>');
+        },
+
+        /* ── 의무 이행점검 [SFR-008·014] ──────────────────────────────────
+         * 2026-07-30 회의: 이 화면의 본질은 "부서·사업장이 실제로 했는지 훑는 것"이다.
+         *   참석자1 "안전보건 관리 체계 안에 산업 시민 재해 이행 점검을 넣어야 돼요.
+         *            그 안에 경영 방침도 있고 교육도 있고 다 있어요. 그걸 연계시키게끔"
+         * 그래서 §4/§5 조문 축(기존) 위에 **부서 전수 축(신규)** 을 얹는다.
+         * 중대재해처벌법은 중대산업재해(§4·§5)와 중대시민재해(§9·시행령 §10·§11) 두 축이고
+         * 담양군은 양쪽 다 적용 대상이라 부서 점검도 두 축으로 나눈다(CLAUDE.md §10 검증 6문 ④).
+         * 관계 법령 목록이 오기 전에는 확인된 공통 항목만 쓰고 목록 미완결을 표시한다. */
+        comply() {
+            PG.cmpCheck = () => E.openForm({
+                id: 'EDOC-의무이행점검-2026H1', title: '2026 상반기 의무이행 점검표 (중처법 시행령 §4·§5)', form: 'F5',
+                ctx: { menuLabel: '이행관리 · 반기', checklist: T.CHECKLIST_PRESETS.comply }, onChange: render,
+            });
+            /* 반기 마감 보고 상신 — **결재선을 묻고 검사한 뒤** 올린다.
+             * 종전에는 이 버튼이 결재선을 묻지도 검사하지도 않고 곧바로 안내 팝업을 띄웠고,
+             * 팝업은 **검증되지 않은 기본 결재선**을 「상신 완료」로 인쇄했다 — 재난안전과장이
+             * 누르면 「기안 홍길동 → 검토 김중대 → **결재 홍길동**」처럼 기안자와 결재자가
+             * 같은 결재선이 올라간 것처럼 보였다(2026-08-28 검수 B-1).
+             * 회차도 '2026 상반기' 로 박혀 있어 다른 반기를 골라도 그대로였다.
+             *
+             * 이행점검은 **결재 결과를 받지 않는 도메인**이다(공통 §7-4) — 결재 결과가
+             * 후속 업무를 열지 않으므로 `결재중` 하나만 만들고 진행은 온나라에서 확인한다. */
+            PG.cmpClose = () => {
+                if (actGate('반기 마감 상신')) return;
+                const per = periodLabel(S.period);
+                if (S.closed && S.closed[S.period]) { V.toast(per + ' 마감 보고는 이미 상신되었습니다.'); return; }
+                apprSubmit(per + ' 의무이행 점검 마감 보고', snap => {
+                    S.closed = S.closed || {};
+                    S.closed[S.period] = Object.assign({ at: V.today(), status: '결재중' }, snap);
+                    S.closed[S.period].docNo = E.onnaraPopup(per + ' 의무이행 점검 마감 보고', '', snap);
+                    render();
+                });
+            };
+            /* 관계 법령 목록은 담양군 제공 자료다. 미수신 대체 동작과 요청 범위를 안내한다. */
+            PG.cmpLawList = () => V.openModal('관계 법령 목록 — 외부 준비 안내',
+                '<p style="font-size:13px; line-height:1.7;">중처법 시행령 §5①·§11①은 "안전·보건 관계 법령"을 ' +
+                '<b>"해당 사업장(또는 공중이용시설)에 적용되는 것으로서 안전·보건 확보에 관련되는 법령"</b>이라고 ' +
+                '정의만 하고 <b>목록을 주지 않습니다</b>. 따라서 담양군이 직접 목록을 확정해야 합니다.</p>' +
+                '<p style="font-size:12px; color:var(--text-gray); margin-top:10px;">관리대상 유형별로 검토가 필요한 예시 — ' +
+                '아래는 <b>확정 목록이 아니라 검토 출발점</b>이며, 실제 적용 여부는 시설 종별·규모에 따라 갈립니다.</p>' +
+                '<ul style="font-size:12px; line-height:1.9; color:var(--text-black); margin:8px 0 0 18px;">' +
+                '<li><b>사업장(정수장·하수처리장 등)</b> — 산업안전보건법, 화학물질관리법, 위험물안전관리법, 고압가스 안전관리법</li>' +
+                '<li><b>공중이용시설(청사·체육관·문화시설)</b> — 시설물의 안전 및 유지관리에 관한 특별법, 건축물관리법, 소방시설 설치 및 관리에 관한 법률, 전기안전관리법, 승강기 안전관리법</li>' +
+                '<li><b>도로·공원 시설</b> — 도로법, 어린이놀이시설 안전관리법</li>' +
+                '</ul>' +
+                '<p style="font-size:12px; color:var(--status-warning-fg); margin-top:12px;">' +
+                '담양군 제공 범위 — ① 적용 법령 ② 법령별 점검 항목·증빙 ③ 점검 주체(부서) ④ 위탁 점검 여부. ' +
+                '수신 전에는 확인된 공통 항목만 운영하고 목록 미완결을 계속 표시합니다.</p>',
+                '<button class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
+            /* ── 부서별 이행 현황 (전수) ── */
+            window.COMPLY_STATE = window.COMPLY_STATE || { axis: 'industrial' };
+            const S = window.COMPLY_STATE;
+            S.axis = S.axis || 'industrial';
+            /* 회차 축 — 이행점검은 **반기**다. key 에 회차가 없으면 상·하반기가
+               한 행을 공유해 5월에 찍은 이행이 11월 업무를 완료로 만든다.
+               기본값은 오늘이 속한 반기(DYV2.today() 파생 — 시드에 박지 않는다). */
+            const _t = DYV2.today();
+            S.period = S.period || (_t.slice(0, 4) + (+_t.slice(5, 7) <= 6 ? '-H1' : '-H2'));
+            PG.cmpPeriod = (v) => { S.period = v; render(); };
+            /* 회차 표기는 한 곳에서 — 상신 제목·버튼 문구가 갈리지 않게 한다 */
+            const periodLabel = (v) => String(v || '').replace(/^(\d{4})-H([12])$/, (m, y, h) => y + ' ' + (h === '1' ? '상반기' : '하반기'));
+            const periodOpts = [];
+            [+_t.slice(0, 4), +_t.slice(0, 4) - 1].forEach(y => {
+                periodOpts.push({ v: y + '-H2', label: y + '년 하반기' });
+                periodOpts.push({ v: y + '-H1', label: y + '년 상반기' });
+            });
+            const AXES = {
+                industrial: { key: 'comply-industrial', label: '중대산업재해 이행점검',
+                              note: '종사자 안전·보건 확보의무(중처법 §4·§5) 이행 여부를 부서·사업장 단위로 점검합니다.' },
+                citizen:    { key: 'comply-citizen',    label: '중대시민재해 이행점검',
+                              note: '공중이용시설·원료제조물 이용자 안전 확보의무(중처법 §9 · 시행령 §10·§11) 이행 여부를 점검합니다.' },
+            };
+            const axis = AXES[S.axis];
+            const cmpKey = axis.key + '|' + S.period;
+            PG.cmpAxis = (a) => { S.axis = a; render(); };
+            /* DEPTCHK 위임 래퍼 — 표의 버튼이 부르는 전역 진입점 */
+            const cmpOpts = () => ({
+                ns: 'PG.CMPCHK', title: axis.label + ' 확인 등록',
+                placeLabel: '점검 결과·비고', placePlaceholder: '예: 점검표 작성 완료 · 지적 없음',
+                evidenceLabel: '증빙 사진·문서', onChange: render,
+            });
+            PG.CMPCHK = {
+                open: (id) => DEPTCHK.open(cmpKey, id, cmpOpts()),
+                setStatus: (v) => DEPTCHK.setStatus(v),
+                addPhoto: (files) => DEPTCHK.addPhoto(files),
+                mDelPhoto: (i) => DEPTCHK.mDelPhoto(i),
+                save: () => DEPTCHK.save(),
+                delPhoto: (id, i) => { DEPTCHK.delPhoto(cmpKey, id, i); render(); },
+                remind: (id) => DEPTCHK.remind(cmpKey, id),
+            };
+            const axisTabs =
+                '<div class="tabs" style="margin-bottom:12px;">' +
+                    Object.keys(AXES).map(k =>
+                        '<button type="button" class="tab' + (S.axis === k ? ' is-active' : '') +
+                        '" onclick="PG.cmpAxis(\'' + k + '\')">' + AXES[k].label + '</button>').join('') +
+                '</div>' +
+                '<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">' +
+                    '<span style="font-size:var(--fs-12); font-weight:700; color:var(--text-gray);">점검 회차</span>' +
+                    '<select class="form-select" style="width:auto; min-width:150px;" onchange="PG.cmpPeriod(this.value)">' +
+                    periodOpts.map(o => '<option value="' + o.v + '"' + (S.period === o.v ? ' selected' : '') + '>' + o.label + '</option>').join('') +
+                    '</select>' +
+                '</div>';
+
+            return sectionCard('부서별 이행 현황 (전수 점검)',
+                axisTabs +
+                '<p style="font-size:var(--fs-12); color:var(--text-gray); margin-bottom:10px;">' + axis.note +
+                ' 이행으로 등록하려면 <b>증빙</b>이 있어야 하고, <b>해당없음</b>은 사유를 적어야 합니다 — ' +
+                '사유 없는 해당없음은 미이행과 함께 관리 대상으로 남습니다.</p>' +
+                DEPTCHK.render(Object.assign({ key: cmpKey }, cmpOpts())),
+                '') +
+            sectionCard('안전보건관리체계 점검 (반기) ' + docStChip('EDOC-의무이행점검-2026H1'),
+                '<p style="font-size:12px; color:var(--text-gray);">중처법 시행령 <b>§4</b>(안전보건관리체계 구축·이행) 항목별 이행 여부를 점검합니다. 각 항목에는 해당 메뉴의 실데이터가 근거로 연결되며, <b>X(미이행) 항목은 확정 시 개선조치로 자동 등록</b>됩니다.</p>' +
+                tbl(['항목', '근거 메뉴', '근거 현황'], [
+                    ['§4-1 목표·경영방침 수립', '<a href="menu.html?m=policy" style="color:var(--main-dark); font-weight:700;">경영방침</a>', '2026 방침 수립 · 점검 ' + (E.statusOf('EDOC-경영방침점검-2026H1') || '미작성')],
+                    ['§4-3 유해·위험요인 확인·개선', '<a href="rsk-list.html" style="color:var(--main-dark); font-weight:700;">위험성평가</a>', '정기 1회 · 수시 2회 실시'],
+                    ['§4-5 책임자 평가·관리', '<a href="menu.html?m=org" style="color:var(--main-dark); font-weight:700;">조직</a>', '수행평가 ' + (E.statusOf('EDOC-수행평가-2026H1') || '미작성')],
+                    ['§4-7 종사자 의견청취', '<a href="menu.html?m=opinion" style="color:var(--main-dark); font-weight:700;">의견청취</a>', '접수·처리 운영 중'],
+                ]),
+                '<div style="display:flex; gap:6px;">' +
+                '<button class="btn btn-sm btn-primary" onclick="PG.cmpCheck()">점검표 작성</button>' +
+                ((S.closed && S.closed[S.period])
+                    ? '<span class="opn-muted" style="font-size:var(--fs-12); align-self:center;">' +
+                        periodLabel(S.period) + ' 마감 보고 <b>상신됨</b>' + (S.closed[S.period].docNo ? ' · ' + esc(S.closed[S.period].docNo) : '') + ' — ' + esc(S.closed[S.period].lineText || '') +
+                        ' · 결재 진행은 온나라에서 문서번호로 확인하세요</span>'
+                    : (canAct()
+                        ? '<button class="btn btn-sm btn-outline" onclick="PG.cmpClose()">반기 마감 · 온나라 상신</button>'
+                        : '<span class="opn-muted" style="font-size:var(--fs-12); align-self:center;">상신은 <b>담당자</b>가 합니다 — 관리·감독 계층은 조회만 합니다.</span>')) +
+                '</div>') +
+            sectionCard('중대재해 예방 매뉴얼·업무처리절차 점검',
+                /* 2026-09-03 — 기준문서함(docs-archive)을 메뉴에서 뺐다. 원문을 두는 자리는
+                   문서 목록이고, **문서별 버전 이력은 기준문서함에만 있던 기능이라 대체가
+                   없다.** 없어진 것을 «있는 것처럼» 적지 않는다(CLAUDE.md §14-12). */
+                '<div class="check-notice" style="margin-bottom:10px;">제정·개정 원문은 <b>문서 목록</b>에서 찾고, 제정·조치 여부·교육·점검 증빙은 <b>법정 업무 현황</b>에서 회차별로 관리합니다. 같은 파일을 두 곳에 중복 등록하지 않습니다.</div>' +
+                tbl(['관리 구분', '정본 위치', '현재 상태', '이동'], [
+                    ['제정·개정 원문', '문서 목록', '<span class="chip-status neutral">문서별 버전 이력 없음 — 기준문서함 메뉴 제외</span>', '<a class="btn btn-sm btn-outline" href="cmp-docs.html">문서 찾기</a>'],
+                    ['제정·조치 여부 점검', '법정 업무 현황', '<span class="chip-status warning">회차별 증빙 확인</span>', '<a class="btn btn-sm btn-primary" href="cmp-status.html">법정 업무 현황</a>'],
+                ]),
+                '') +
+            /* 시행령 §5·§11 — 관계 법령 의무이행 점검.
+             * §4(체계 구축)와 완전히 다른 의무다. 이 영역이 없으면 화면이 "§5를
+             * 이행한다"고 주장만 하고 실제로는 §4만 점검하게 된다. */
+            sectionCard('관계 법령 의무이행 점검 <span class="chip-status warning" style="margin-left:6px;">목록 미등록</span>',
+                '<p style="font-size:12px; color:var(--text-gray);">중처법 시행령 <b>§5</b>(종사자 · 반기 1회) · <b>§11</b>(공중이용시설 이용자 · 연 1회)이 요구하는 점검입니다. ' +
+                '§4가 "우리 기관이 체계를 갖췄나"라면, 여기는 <b>"개별 관계 법령을 실제로 지켰나"</b>입니다. ' +
+                '두 조문 모두 관계 법령을 <b>정의만 하고 목록을 주지 않으므로</b>, 담양군 관리대상에 적용되는 법령 목록을 기관이 직접 확정해야 점검이 성립합니다.</p>' +
+                tbl(['점검 항목', '주기', '현황'], [
+                    ['§5-1 관계 법령 의무이행 점검 (종사자)', '반기 1회', '<span class="chip-status warning">관계 법령 목록 미등록</span>'],
+                    ['§5-3 유해·위험작업 안전보건교육 실시 점검', '반기 1회', '<a href="edu-status.html" style="color:var(--main-dark); font-weight:700;">이수현황</a> 연결 가능'],
+                    ['§11-1 관계 법령 의무이행 점검 (공중이용시설)', '연 1회', '<span class="chip-status warning">관계 법령 목록 미등록</span>'],
+                    ['§11-3 시설 안전관리자 의무교육 이수 점검', '연 1회', '<span class="chip-status warning">기관 대상자 명단 미수신</span>'],
+                ]),
+                '<button class="btn btn-sm btn-primary" onclick="PG.cmpLawList()">관계 법령 목록이란</button>') +
+            sectionCard('안전보건 예산 편성·집행',
+                '<p style="font-size:12px; color:var(--text-gray);">예산 편성·집행·집행률 관리는 <b>예산관리</b> 대메뉴로 이관되었습니다. 총괄표에서 기관·시설별 진행 현황을 확인하세요.</p>',
+                '<a class="btn btn-sm btn-primary" href="bgt-main.html">예산 총괄표 바로가기</a>');
+        },
+    };
+
+    /* ── 문서 탭: 세트 단위 그룹 테이블 (setlist.js 공통 컴포넌트 · 해당 메뉴 고정) ── */
+    (function renderDocs() {
+        const pane = document.getElementById('pane-docs');
+        if (!pane) return; /* 문서 탭 제거됨 — 업무문서 메뉴에서 통합 조회 */
+        window.DYSETLIST.render(pane, { menuKey: KEY, hideTabs: true });
+        pane.insertAdjacentHTML('beforeend',
+            '<p style="font-size:12px; color:var(--text-gray); margin-top:4px;">' +
+                '전 메뉴 통합 보기는 <a href="cmp-docs.html?menu=' + KEY + '" style="color:var(--main-dark); font-weight:700;">업무 관리 &gt; 문서 목록</a>에서.' +
+            '</p>');
+    })();
+
+    function render() {
+        const pane = document.getElementById('pane-program');
+        pane.innerHTML = PROGRAM[KEY] ? PROGRAM[KEY]() : '<div class="v2-empty">전용 기능 정의 없음</div>';
+    }
+    render();
+})();

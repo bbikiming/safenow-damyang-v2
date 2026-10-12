@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>평가 설정 - 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+    <style>
+        /* ─── EVL03-S 전용 ─── */
+
+        .evl-tabs { display: flex; align-items: center; gap: 4px; border-bottom: 1px solid var(--card-line); }
+        .evl-tab {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 10px 18px; font-size: 14px; font-weight: 600;
+            color: var(--text-gray); background: transparent;
+            border: none; border-bottom: 2px solid transparent;
+            cursor: pointer; margin-bottom: -1px;
+            transition: all .15s ease; text-decoration: none;
+        }
+        .evl-tab:hover { color: var(--main-dark); }
+        .evl-tab.is-active { color: var(--main-dark2); border-bottom-color:var(--main-dark); }
+
+        /* 안내 */
+        .evl-note {
+            display: flex; align-items: flex-start; gap: 10px;
+            padding: 12px 16px;
+            background: var(--status-warning-bg);
+            border: 1px solid var(--status-warning-border);
+            border-radius: var(--radius-button);
+            font-size: 12px; color: var(--status-warning-fg);
+        }
+        .evl-note svg { flex-shrink: 0; margin-top: 1px; }
+
+        /* 서브 탭 */
+        .evl-subtabs {
+            display: inline-flex;
+            border: 1px solid var(--card-line);
+            border-radius: var(--radius-button);
+            overflow: hidden;
+            background: white;
+        }
+        .evl-subtab {
+            padding: 8px 16px;
+            font-size: 13px; font-weight: 600;
+            color: var(--text-gray);
+            background: white;
+            border: none;
+            border-right: 1px solid var(--card-line);
+            cursor: pointer;
+        }
+        .evl-subtab:last-child { border-right: none; }
+        .evl-subtab.is-active {
+            background: var(--main);
+            color: white;
+        }
+        .evl-subpane { display: none; }
+        .evl-subpane.is-active { display: block; }
+
+        /* 카드 */
+        .evl-card {
+            background: white;
+            border: 1px solid var(--card-line);
+            border-radius: var(--radius-card);
+            overflow: hidden;
+        }
+        .evl-card + .evl-card { margin-top: 14px; }
+        .evl-card-head {
+            padding: 16px 22px;
+            border-bottom: 1px solid var(--card-line);
+            display: flex; align-items: center; justify-content: space-between;
+            background: #fafbfb;
+            gap: 12px;
+        }
+        .evl-card-head h3 {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 15px; font-weight: 700; color: var(--main-dark2);
+            letter-spacing: -0.3px;
+        }
+        .evl-card-head h3 .role-badge {
+            font-size: 12px; font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 999px;
+        }
+        .evl-card-head h3 .role-badge.responsible { background: var(--brand-100); color: var(--main-dark); }
+        .evl-card-head h3 .role-badge.supervisor  { background: var(--status-info-bg); color: var(--status-info-fg); }
+        .evl-card-head .desc { font-size: 12px; color: var(--text-gray); margin-top: 2px; }
+        .evl-card-head .total {
+            font-size: 13px;
+            color: var(--main-dark2);
+            font-weight: 700;
+        }
+        .evl-card-head .total strong { font-weight: 700; }
+
+        /* 항목 행 */
+        .evl-item-row {
+            display: grid;
+            grid-template-columns: 50px 1fr 90px;
+            gap: 14px;
+            align-items: center;
+            padding: 14px 22px;
+            border-bottom: 1px solid var(--card-line);
+        }
+        .evl-item-row:last-child { border-bottom: none; }
+        .evl-item-row:hover { background: var(--brand-50); }
+        .evl-item-row .num {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 32px; height: 32px;
+            border-radius: 8px;
+            background: var(--brand-100);
+            color: var(--main-dark);
+            font-size: 13px; font-weight: 700;
+        }
+        .evl-card.supervisor .evl-item-row .num {
+            background: var(--status-info-bg);
+            color: var(--status-info-fg);
+        }
+        .evl-item-row .body {
+            min-width: 0;
+        }
+        .evl-item-row .title {
+            font-size: 14px; font-weight: 700; color: var(--text-black);
+            margin-bottom: 4px;
+        }
+        .evl-item-row .criteria {
+            font-size: 12px; color: var(--text-gray); line-height: 1.5;
+        }
+        .evl-item-row .score-cell {
+            font-size: 22px; font-weight: 700;
+            color: var(--main-dark2);
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+        .evl-item-row .score-cell .unit {
+            font-size: 12px; color: var(--text-gray);
+            font-weight: 500;
+            margin-left: 2px;
+        }
+        .evl-item-row .pct-bar {
+            height: 6px;
+            background: var(--gray-100);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .evl-item-row .pct-bar > div {
+            height: 100%; background: var(--main);
+            border-radius: 999px;
+        }
+        .evl-card.supervisor .evl-item-row .pct-bar > div { background: var(--status-info-fg); }
+        .evl-item-row .pct-text {
+            font-size: 12px; color: var(--text-gray);
+            margin-top: 4px; text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .evl-mini-btn {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 5px 12px;
+            font-size: 12px; font-weight: 600;
+            border: 1px solid var(--card-line);
+            color: var(--text-black);
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .evl-mini-btn:hover { border-color:var(--main-dark); color:var(--main-dark); background: var(--brand-50); }
+        .evl-mini-btn.danger {
+            color: var(--status-danger-fg);
+            border-color: var(--status-danger-border);
+        }
+        .evl-mini-btn.danger:hover { background: var(--status-danger-bg); border-color: var(--status-danger-fg); }
+
+        /* 사이클 카드 */
+        .evl-cycle-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+            padding: 18px 22px;
+        }
+        .evl-cycle-card {
+            border: 1px solid var(--card-line);
+            border-radius: var(--radius-button);
+            padding: 16px 18px;
+            background: white;
+            display: flex; flex-direction: column; gap: 8px;
+            position: relative;
+        }
+        .evl-cycle-card.active {
+            border-color:var(--main-dark);
+            background: var(--brand-50);
+        }
+        .evl-cycle-card.upcoming {
+            border-color: var(--status-info-border);
+            background: var(--status-info-bg);
+        }
+        .evl-cycle-head {
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .evl-cycle-title {
+            font-size: 16px; font-weight: 700;
+            color: var(--main-dark2);
+            letter-spacing: -0.3px;
+        }
+        .evl-cycle-title .half {
+            font-size: 12px; font-weight: 700;
+            padding: 1px 8px;
+            background: var(--gray-100);
+            color: var(--text-gray);
+            border-radius: 999px;
+            margin-left: 6px;
+        }
+        .evl-cycle-card.active .evl-cycle-title .half {
+            background: var(--main); color: white;
+        }
+        .evl-cycle-card.upcoming .evl-cycle-title .half {
+            background: var(--status-info-fg); color: white;
+        }
+        .evl-cycle-status {
+            display: inline-flex; align-items: center; gap: 3px;
+            padding: 2px 8px;
+            font-size: 12px; font-weight: 700;
+            border-radius: 5px;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+        .evl-cycle-status.active   { background: var(--status-success-bg); color: var(--status-success-fg); border-color: var(--status-success-border); }
+        .evl-cycle-status.upcoming { background: var(--status-info-bg); color: var(--status-info-fg); border-color: var(--status-info-border); }
+        .evl-cycle-status.closed   { background: var(--status-neutral-bg); color: var(--status-neutral-fg); border-color: var(--status-neutral-border); }
+
+        .evl-cycle-dates {
+            font-size: 13px; color: var(--text-black);
+        }
+        .evl-cycle-dates strong { font-weight: 700; }
+        .evl-cycle-meta {
+            font-size: 12px; color: var(--text-gray);
+        }
+        .evl-cycle-meta .badge-num {
+            color: var(--main-dark);
+            font-weight: 700;
+        }
+        .evl-cycle-actions {
+            display: flex; gap: 6px;
+            margin-top: 6px;
+            padding-top: 8px;
+            border-top: 1px solid var(--card-line);
+        }
+        .evl-cycle-card.active .evl-cycle-actions,
+        .evl-cycle-card.upcoming .evl-cycle-actions {
+            border-top-color: rgba(0,0,0,0.08);
+        }
+
+        /* 매핑 규칙 리스트 */
+        .evl-rule-list {
+            display: flex; flex-direction: column;
+            padding: 8px 0;
+        }
+        .evl-rule-row {
+            display: grid;
+            grid-template-columns: 50px 1fr 140px 140px 80px;
+            gap: 14px;
+            align-items: center;
+            padding: 12px 22px;
+            border-bottom: 1px solid var(--card-line);
+        }
+        .evl-rule-row:last-child { border-bottom: none; }
+        .evl-rule-row:hover { background: var(--brand-50); }
+        .evl-rule-row .priority {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 32px; height: 32px;
+            border-radius: 50%;
+            background: var(--main);
+            color: white;
+            font-size: 13px; font-weight: 700;
+        }
+        .evl-rule-row.fallback .priority { background: var(--text-lightgray); }
+        .evl-rule-row .title {
+            font-size: 14px; font-weight: 700; color: var(--text-black);
+        }
+        .evl-rule-row .desc {
+            font-size: 12px; color: var(--text-gray);
+            margin-top: 2px;
+        }
+        .evl-rule-row .arrow {
+            display: inline-flex; align-items: center; gap: 4px;
+            font-size: 12px; color: var(--text-gray);
+        }
+        .evl-rule-row .arrow .chip {
+            display: inline-flex; align-items: center;
+            padding: 2px 8px;
+            border-radius: 5px;
+            background: var(--gray-100);
+            color: var(--text-black);
+            font-weight: 600;
+        }
+        .evl-rule-row .source {
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 5px;
+            background: var(--brand-100);
+            color: var(--main-dark);
+            font-weight: 700;
+            text-align: center;
+        }
+        .evl-rule-row .source.alt   { background: var(--status-info-bg); color: var(--status-info-fg); }
+        .evl-rule-row .source.manual { background: var(--status-warning-bg); color: var(--status-warning-fg); }
+
+        /* 항목 편집 모달 — 공용 DYV2.openModal 로 전환(§1). 자작 백드롭·헤더·푸터 CSS 폐지. */
+        .evl-form-row { margin-bottom: 14px; }
+        .evl-form-row .label {
+            display: block;
+            font-size: 13px; font-weight: 600;
+            color: var(--text-black);
+            margin-bottom: 6px;
+        }
+        .evl-form-row .label .req { color: var(--status-danger-fg); margin-left: 2px; }
+        .evl-form-row input,
+        .evl-form-row select,
+        .evl-form-row textarea {
+            width: 100%;
+            padding: 8px 12px;
+            font-size: 13px;
+            border: 1px solid var(--card-line);
+            border-radius: var(--radius-button);
+            outline: none;
+            font-family: inherit;
+        }
+        .evl-form-row textarea { min-height: 88px; resize: vertical; }
+        .evl-form-row input:focus,
+        .evl-form-row select:focus,
+        .evl-form-row textarea:focus {
+            border-color:var(--main-dark);
+            box-shadow: 0 0 0 3px rgba(32, 159, 132, 0.12);
+        }
+        .evl-form-hint { font-size: 12px; color: var(--text-gray); margin-top: 4px; }
+        .evl-form-grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        @media (max-width: 1023px) {
+            .evl-item-row {
+                grid-template-columns: 50px 1fr 90px;
+            }
+            .evl-item-row > div:nth-child(4),
+            .evl-item-row > div:nth-child(5) {
+                grid-column: 2 / 4;
+            }
+            .evl-cycle-grid { grid-template-columns: 1fr; }
+            .evl-rule-row {
+                grid-template-columns: 50px 1fr;
+            }
+            .evl-rule-row > div:nth-child(3),
+            .evl-rule-row > div:nth-child(4),
+            .evl-rule-row > div:nth-child(5) {
+                grid-column: 2 / 3;
+            }
+            .evl-form-grid-2 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body data-dy-page="evl-settings" data-page-title="평가 설정" data-page-subtitle="인력·예산 > 인력 평가 > 평가 설정 — 평가 항목 마스터 · 역할별 배점 관리 (SFR-009)">
+    <main>
+
+        <!-- ─── 안내 ─── -->
+        <div class="evl-note">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span><strong>CEO·GM·SHM 접근 가능.</strong> 여기서 편집한 평가 항목·<strong>세부평가기준</strong>은 <strong>평가화면에 그대로 반영</strong>됩니다(단일 출처). 진행 중(임시저장)인 평가는 다음 열람 시 반영.</span>
+        </div>
+
+        <!-- ===========================================================
+             ▼ 평가 항목 마스터
+        =========================================================== -->
+        <div class="evl-subpane is-active" data-subpane="items">
+
+            <!-- 안전보건관리책임자 (8항목) -->
+            <div class="evl-card" id="role-R">
+                <div class="evl-card-head">
+                    <div>
+                        <h3>안전보건관리책임자 <span class="role-badge responsible">RESPONSIBLE · 8항목</span></h3>
+                        <div class="desc">부서장 평가 — 산안법 §15 안전보건관리책임자 직무 8개 영역</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:14px;">
+                        <button class="evl-mini-btn" type="button" onclick="window.openItemModal('R')">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            항목 추가
+                        </button>
+                    </div>
+                </div>
+                <div class="evl-item-row">
+                    <span class="num">1</span>
+                    <div class="body">
+                        <div class="title">안전보건 경영방침 수립 및 시행</div>
+                        <div class="criteria">방침 수립 여부 · 결재 완료 · 전 부서 공유 · 정기 점검 실시 여부 종합 평가</div>
+                    </div>
+                    <div class="score-cell">15<span class="unit">점</span></div>
+                    <div>
+                        <div class="pct-bar"><div style="width:15%;"></div></div>
+                        <div class="pct-text">15%</div>
+                    </div>
+                    <div style="text-align:right;"><button class="evl-mini-btn" type="button" onclick="window.openItemModal('R', 1)">편집</button></div>
+                </div>
+                <div class="evl-item-row">
+                    <span class="num">2</span>
+                    <div class="body">
+                        <div class="title">안전보건 목표 설정 및 달성 노력</div>
+                        <div class="criteria">KPI 5종 설정 여부 · 달성률 70% 이상 시 만점</div>
+                    </div>
+                    <div class="score-cell">10<span class="unit">점</span></div>
+                    <div>
+                        <div class="pct-bar"><div style="width:10%;"></div></div>
+                        <div class="pct-text">10%</div>
+                    </div>
+                    <div style="text-align:right;"><button class="evl-mini-btn" type="button" onclick="window.openItemModal('R', 2)">편집</button></div>
+                </div>
+                <div class="evl-item-row">
+                    <span class="num">3</span>
+                    <div class="body">
+                        <div class="title">안전보건관리체계 구축</div>
+                        <div class="criteria">전담조직 운영 · 안전·보건관리자 선임 · 관리감독자 지정 적정성</div>
+                    </div>
+                    <div class="score-cell">15<span class="unit">점</span></div>
+                    <div>
+                        <div class="pct-bar"><div style="width:15%;"></div></div>
+                        <div class="pct-text">15%</div>
+                    </div>
+                    <div style="text-align:right;"><button class="evl-mini-btn" type="button" onclick="window.openItemModal('R', 3)">편집</button></div>
+                </div>
+                <div class="evl-item-row">
+                    <span class="num">4</span>
+                    <div class="body">
+                        <div class="title">안전보건 예산 편성 및 집행</div>
+                        <div class="criteria">예산 편성 결재 완료 · 집행률 60% 이상 시 만점 · 영수증 첨부율</div>
+                    </div>
+                    <div class="score-cell">10<span class="unit">점</span></div>
+                    <div>
+                        <div class="pct-bar"><div style="width:10%;"></div></div>
+                        <div class="pct-text">10%</div>
+                    </div>
+                    <div style="text-align:right;"><button class="evl-mini-btn" type="button" onclick="window.openItemModal('R', 4)">편집</button></div>
+                </div>
+                <div class="evl-item-row">
+                    <span class="num">5</span>
+                    <div class="body">
+                        <div class="title">안전관리자 등 인력 배치 및 관리</div>
+                        <div class="criteria">법정 인원 충족률 100% · 자격증 보유율 · 강제선임 0건 시 만점</div>
+                    </div>
+                    <div class="score-cell">10<span class="unit">점</span></div>
+                    <div>
+                        <div class="pct-bar"><div style="width:10%;"></div></div>
+                        <div class="pct-text">10%</div>
+                    </div>
+                    <div style="text-align:right;"><button class="evl-mini-btn" type="button" onclick="window.openItemModal('R', 5)">편집</button></div>
+                </div>
+                <div class="evl-item-row">
+                    <span class="num">6</span>
+                    <div class="body">
+                        <div class="title">위험성평가·점검 실시 및 결과 관리</div>
+                        <div class="criteria">정기 위험성평가 시행률 · 안전점검 실시율 · 개선조치 이행률 종합</div>
+                    </div>
+                    <div class="score-cell">15<span class="unit">점</span></div>
+                    <div>
+                        <div class="pct-bar"><div style="width:15%;"></div></div>
+                        <div class="pct-text">15%</div>
+                    </div>
+                    <div style="text-align:right;"><button class="evl-mini-btn" type="button" onclick="window.openItemModal('R', 6)">편집</button></div>
+                </div>
+                <div class="evl-item-row">
+                    <span class="num">7</span>
+                    <div class="body">
+                        <div class="title">도급사업 안전보건 관리</div>
+                        <div class="criteria">도급계약 평가율 · 협의체 운영 횟수 · 안전관리자 충족률</div>
+                    </div>
+                    <div class="score-cell">10<span class="unit">점</span></div>
+                    <div>
+                        <div class="pct-bar"><div style="width:10%;"></div></div>
+                        <div class="pct-text">10%</div>
+                    </div>
+                    <div style="text-align:right;"><button class="evl-mini-btn" type="button" onclick="window.openItemModal('R', 7)">편집</button></div>
+                </div>
+                <div class="evl-item-row">
+                    <span class="num">8</span>
+                    <div class="body">
+                        <div class="title">종사자 의견청취 및 반영</div>
+                        <div class="criteria">의견청취 처리율 80% 이상 · 산업안전보건위원회 운영 · 의결사항 이행</div>
+                    </div>
+                    <div class="score-cell">15<span class="unit">점</span></div>
+                    <div>
+                        <div class="pct-bar"><div style="width:15%;"></div></div>
+                        <div class="pct-text">15%</div>
+                    </div>
+                    <div style="text-align:right;"><button class="evl-mini-btn" type="button" onclick="window.openItemModal('R', 8)">편집</button></div>
+                </div>
+            </div>
+
+            <!-- 관리감독자 (5항목) -->
+            <div class="evl-card supervisor" id="role-S">
+                <div class="evl-card-head">
+                    <div>
+                        <h3>관리감독자 <span class="role-badge supervisor">SUPERVISOR · 5항목</span></h3>
+                        <div class="desc">팀장·과장 평가 — 산안법 §16 관리감독자 직무 5개 영역</div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:14px;">
+                        <button class="evl-mini-btn" type="button" onclick="window.openItemModal('S')">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            항목 추가
+                        </button>
+                    </div>
+                </div>
+                <div class="evl-item-row">
+                    <span class="num">1</span>
+                    <div class="body">
+                        <div class="title">작업 전 안전점검 실시</div>
+                        <div class="criteria">TBM 실시율 · 작업장 일일 점검 기록 · 점검 누락 시 감점</div>
+                    </div>
+                    <div class="score-cell">25<span class="unit">점</span></div>
+                    <div>
+                        <div class="pct-bar"><div style="width:25%;"></div></div>
+                        <div class="pct-text">25%</div>
+                    </div>
+                    <div style="text-align:right;"><button class="evl-mini-btn" type="button" onclick="window.openItemModal('S', 1)">편집</button></div>
+                </div>
+                <div class="evl-item-row">
+                    <span class="num">2</span>
+                    <div class="body">
+                        <div class="title">종사자 안전수칙 교육 및 관리</div>
+                        <div class="criteria">정기교육 이수율 · 신규자 교육 완료 · 안전수칙 게시</div>
+                    </div>
+                    <div class="score-cell">20<span class="unit">점</span></div>
+                    <div>
+                        <div class="pct-bar"><div style="width:20%;"></div></div>
+                        <div class="pct-text">20%</div>
+                    </div>
+                    <div style="text-align:right;"><button class="evl-mini-btn" type="button" onclick="window.openItemModal('S', 2)">편집</button></div>
+                </div>
+                <div class="evl-item-row">
+                    <span class="num">3</span>
+                    <div class="body">
+                        <div class="title">위험요인 발견 및 보고</div>
+                        <div class="criteria">위험요인 발견 보고 건수 · 개선조치 요청 적극성</div>
+                    </div>
+                    <div class="score-cell">20<span class="unit">점</span></div>
+                    <div>
+                        <div class="pct-bar"><div style="width:20%;"></div></div>
+                        <div class="pct-text">20%</div>
+                    </div>
+                    <div style="text-align:right;"><button class="evl-mini-btn" type="button" onclick="window.openItemModal('S', 3)">편집</button></div>
+                </div>
+                <div class="evl-item-row">
+                    <span class="num">4</span>
+                    <div class="body">
+                        <div class="title">안전장비·보호구 착용 관리</div>
+                        <div class="criteria">보호구 비치율 · 착용 점검 횟수 · 미착용 적발 시 감점</div>
+                    </div>
+                    <div class="score-cell">15<span class="unit">점</span></div>
+                    <div>
+                        <div class="pct-bar"><div style="width:15%;"></div></div>
+                        <div class="pct-text">15%</div>
+                    </div>
+                    <div style="text-align:right;"><button class="evl-mini-btn" type="button" onclick="window.openItemModal('S', 4)">편집</button></div>
+                </div>
+                <div class="evl-item-row">
+                    <span class="num">5</span>
+                    <div class="body">
+                        <div class="title">사고 발생 시 응급조치 및 보고</div>
+                        <div class="criteria">사고·아차사고 보고 시점 · 응급조치 적정성 · 재발방지대책 수립</div>
+                    </div>
+                    <div class="score-cell">20<span class="unit">점</span></div>
+                    <div>
+                        <div class="pct-bar"><div style="width:20%;"></div></div>
+                        <div class="pct-text">20%</div>
+                    </div>
+                    <div style="text-align:right;"><button class="evl-mini-btn" type="button" onclick="window.openItemModal('S', 5)">편집</button></div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- ============================================================
+         평가 항목 편집 모달
+    ============================================================ -->
+    <div id="toast" class="toast" role="status"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/law-map.js"></script>
+    <script src="./js/help-center.js"></script><!-- DYHELP: 화면 도움말 -->
+    <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
+    <script src="./js/common.js"></script>
+    <script src="./js/evl-data.js"></script>
+    <script>
+    (function () {
+        'use strict';
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            if (!t) return;
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(window.__toastTimer);
+            window.__toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+        }
+
+        /* 항목 데이터는 단일 출처 DYEVL(js/evl-data.js) — 역할 키 매핑만 유지.
+           평가화면(evl-eval)과 동일 항목·세부평가기준을 편집하며 sessionStorage로 반영. */
+        const RK = { R: 'RESPONSIBLE', S: 'SUPERVISOR' };
+        function roleItems(role) { return window.DYEVL.items(RK[role]); }
+
+        /* HTML escape (사용자 입력 안전 삽입) */
+        function esc(s) {
+            return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+        }
+
+        const ROLE_NAME = { R: '안전보건관리책임자', S: '관리감독자' };
+        let itemCtx = null; // { role, no, mode: 'add' | 'edit' }
+
+        function cardOf(role) { return document.getElementById('role-' + role); }
+        function listOf(role) {
+            const card = cardOf(role); if (!card) return null;
+            let list = card.querySelector('.evl-item-list');
+            if (!list) {
+                card.querySelectorAll('.evl-item-row').forEach(r => r.remove()); // 정적 행 제거 → DYEVL 단일 출처 렌더
+                list = document.createElement('div');
+                list.className = 'evl-item-list';
+                card.appendChild(list);
+            }
+            return list;
+        }
+        function rowMarkup(role, no, item) {
+            return '<span class="num">' + no + '</span>' +
+                '<div class="body"><div class="title">' + esc(item.title) + '</div>' +
+                '<div class="criteria">' + esc(item.criteria) + '</div></div>' +
+                '<div style="text-align:right;"><button class="evl-mini-btn" type="button" onclick="window.openItemModal(\'' + role + '\', ' + no + ')">편집</button></div>';
+        }
+        function renderRole(role) {
+            const list = listOf(role); if (!list) return;
+            const arr = roleItems(role);
+            list.innerHTML = arr.map((it, i) => '<div class="evl-item-row">' + rowMarkup(role, i + 1, it) + '</div>').join('');
+            const badge = cardOf(role).querySelector('.role-badge');
+            if (badge) badge.textContent = (role === 'R' ? 'RESPONSIBLE · ' : 'SUPERVISOR · ') + arr.length + '항목';
+        }
+
+        /* 항목 추가/편집 모달 — no 가 있으면 편집, 없으면 추가.
+         * 자작 백드롭(.evl-modal-backdrop)을 폐지하고 공용 DYV2.openModal 경유(CLAUDE.md §1 MUST). */
+        window.openItemModal = function (role, no) {
+            const arr = roleItems(role);
+            const item = no ? arr[no - 1] : null;
+            const rno = no || arr.length + 1;
+            itemCtx = { role, no: rno, mode: no ? 'edit' : 'add' };
+            const title = no ? `${ROLE_NAME[role]} 제${no}항목 편집` : `${ROLE_NAME[role]} 항목 추가`;
+            const esc = DYV2.esc;
+            DYV2.openModal(title,
+                '<div class="evl-form-grid-2">' +
+                    '<div class="evl-form-row"><label class="label" for="item-role">역할</label>' +
+                        '<select id="item-role" class="form-select" disabled>' +
+                        '<option value="R"' + (role === 'R' ? ' selected' : '') + '>안전보건관리책임자 (RESPONSIBLE)</option>' +
+                        '<option value="S"' + (role === 'S' ? ' selected' : '') + '>관리감독자 (SUPERVISOR)</option>' +
+                        '</select></div>' +
+                    '<div class="evl-form-row"><label class="label" for="item-no">항목 번호</label>' +
+                        '<input type="number" id="item-no" value="' + rno + '" readonly></div>' +
+                '</div>' +
+                '<div class="evl-form-row"><label class="label" for="item-title">항목명<span class="req">*</span></label>' +
+                    '<input type="text" id="item-title" value="' + esc(item ? item.title : '') + '"></div>' +
+                '<div class="evl-form-row"><label class="label" for="item-criteria">평가 기준 (가이드)</label>' +
+                    '<textarea id="item-criteria">' + esc(item ? item.criteria : '') + '</textarea>' +
+                    '<div class="evl-form-hint">평가자에게 표시되는 평가 기준 안내문</div></div>',
+                '<button class="btn btn-outline" type="button" onclick="window.closeItemModal()">취소</button>' +
+                '<button class="btn btn-primary" type="button" onclick="window.saveItem()">저장</button>');
+            const t = document.getElementById('item-title'); if (t && itemCtx.mode === 'add') t.focus();
+        };
+        window.closeItemModal = function () { DYV2.closeModal(); };
+
+        window.saveItem = function () {
+            const title = document.getElementById('item-title').value.trim();
+            const criteria = document.getElementById('item-criteria').value.trim();
+            if (!title) { showToast('항목명을 입력하세요.'); return; }
+            if (!itemCtx) { window.closeItemModal(); return; }
+            const rk = RK[itemCtx.role];
+            if (itemCtx.mode === 'add') window.DYEVL.addItem(rk, { title, criteria });
+            else window.DYEVL.updateItem(rk, itemCtx.no - 1, { title, criteria });
+            renderRole(itemCtx.role);
+            window.closeItemModal();
+            showToast('저장되었습니다 — 평가화면에 반영됩니다.');
+        };
+
+        /* 백드롭 클릭·ESC 종료는 DYV2.openModal 이 자체 배선하므로 별도 처리 불요. */
+
+        /* 초기 렌더 — 단일 출처 DYEVL 에서 항목 마스터 렌더(정적 행 대체) */
+        renderRole('R');
+        renderRole('S');
+
+        /* 평가 현황 '템플릿 →' 딥링크: ?role=R|S → 해당 역할 항목 마스터로 스크롤·강조 */
+        (function deepLinkRole() {
+            const role = new URLSearchParams(location.search).get('role');
+            if (role !== 'R' && role !== 'S') return;
+            const el = document.getElementById('role-' + role);
+            if (!el) return;
+            requestAnimationFrame(() => {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                el.style.transition = 'box-shadow .3s ease';
+                el.style.boxShadow = '0 0 0 3px var(--main)';
+                setTimeout(() => { el.style.boxShadow = ''; }, 1800);
+            });
+        })();
+    })();
+    </script>
+</body>
+</html>

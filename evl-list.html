@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>평가 현황 - 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+    <style>
+        /* ─── EVL01-V / EVL01-L 전용 ─── */
+
+        /* 서브 탭 (POL과 동일 패턴) */
+        .evl-tabs {
+            display: flex; align-items: center; gap: 4px;
+            border-bottom: 1px solid var(--card-line);
+        }
+        .evl-tab {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 10px 18px;
+            font-size: 14px; font-weight: 600;
+            color: var(--text-gray);
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            margin-bottom: -1px;
+            transition: all .15s ease;
+        }
+        .evl-tab:hover { color: var(--main-dark); }
+        .evl-tab.is-active {
+            color: var(--main-dark2);
+            border-bottom-color:var(--main-dark);
+        }
+        .evl-pane { display: none; }
+        .evl-pane.is-active { display: block; }
+
+        /* 사이클 셀렉터 */
+        .evl-cycle-bar {
+            display: flex; align-items: center; gap: 14px;
+            padding: 14px 22px;
+            background: white;
+            border: 1px solid var(--card-line);
+            border-radius: var(--radius-card);
+        }
+        .evl-cycle-label {
+            display: flex; align-items: center; gap: 8px;
+            font-size: 14px; font-weight: 700;
+            color: var(--main-dark2);
+        }
+        .evl-cycle-label .icon {
+            width: 32px; height: 32px;
+            border-radius: 8px;
+            background: var(--brand-100);
+            color: var(--main-dark);
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .evl-half-toggle {
+            display: inline-flex;
+            border: 1px solid var(--card-line);
+            border-radius: var(--radius-button);
+            overflow: hidden;
+        }
+        .evl-half-toggle button {
+            padding: 7px 16px;
+            font-size: 13px; font-weight: 600;
+            color: var(--text-gray);
+            background: white;
+            border: none;
+            cursor: pointer;
+            border-right: 1px solid var(--card-line);
+        }
+        .evl-half-toggle button:last-child { border-right: none; }
+        .evl-half-toggle button.is-active {
+            background: var(--main-dark);
+            color: white;
+        }
+        .evl-cycle-meta {
+            margin-left: auto;
+            font-size: 12px;
+            color: var(--text-gray);
+        }
+        .evl-cycle-meta strong { color: var(--text-black); font-weight: 700; }
+        .evl-cycle-meta .dday {
+            display: inline-flex; align-items: center;
+            padding: 3px 9px;
+            margin-left: 8px;
+            border-radius: 999px;
+            background: var(--status-warning-bg);
+            color: var(--status-warning-fg);
+            border: 1px solid var(--status-warning-border);
+            font-weight: 700;
+        }
+        .evl-cycle-meta .dday.done { background: var(--status-success-bg); color: var(--status-success-fg); border-color: var(--status-success-border); }
+        .evl-cycle-meta .dday.upcoming { background: var(--status-info-bg); color: var(--status-info-fg); border-color: var(--status-info-border); }
+
+        /* KPI 그리드 */
+        .evl-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            background: white;
+            border: 1px solid var(--card-line);
+            border-radius: var(--radius-card);
+            overflow: hidden;
+        }
+        .evl-kpi-cell {
+            padding: 20px 24px;
+            display: flex; flex-direction: column; gap: 8px;
+            border-right: 1px solid var(--card-line);
+            min-height: 130px; justify-content: center;
+        }
+        .evl-kpi-cell:last-child { border-right: none; }
+        .evl-kpi-head {
+            display: flex; align-items: center; justify-content: space-between; gap: 8px;
+        }
+        .evl-kpi-title { font-size: 15px; font-weight: 600; color: var(--text-black); }
+        .evl-kpi-icon {
+            width: 30px; height: 30px;
+            border-radius: 8px;
+            display: inline-flex; align-items: center; justify-content: center;
+            background: var(--brand-100);
+            color: var(--main-dark);
+        }
+        .evl-kpi-icon.success { background: var(--status-success-bg); color: var(--status-success-fg); }
+        .evl-kpi-icon.info    { background: var(--status-info-bg);    color: var(--status-info-fg); }
+        .evl-kpi-icon.warn    { background: var(--status-warning-bg); color: var(--status-warning-fg); }
+        .evl-kpi-value {
+            font-size: 26px; font-weight: 700; color:var(--main-dark);
+            line-height: 1; letter-spacing: -0.8px;
+        }
+        .evl-kpi-value .small {
+            font-size: 14px; font-weight: 600; color: var(--text-gray);
+            margin-left: 2px;
+        }
+        .evl-kpi-value.success { color: var(--status-success-fg); }
+        .evl-kpi-value.info    { color: var(--status-info-fg); }
+        .evl-kpi-value.warning { color: var(--status-warning-fg); }
+        .evl-kpi-sub { font-size: 12px; color: var(--text-gray); }
+        .evl-kpi-sub strong { color: var(--text-black); font-weight: 700; }
+
+        /* 마감 임박 배너 */
+        .evl-alert-banner {
+            display: flex; align-items: center; gap: 14px;
+            padding: 14px 20px;
+            background: var(--status-warning-bg);
+            border: 1px solid var(--status-warning-border);
+            border-radius: var(--radius-button);
+        }
+        .evl-alert-banner .icon {
+            width: 38px; height: 38px;
+            border-radius: 10px;
+            background: white;
+            color: var(--status-warning-fg);
+            display: inline-flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .evl-alert-banner .msg { flex: 1; font-size: 14px; color: var(--status-warning-fg); }
+        .evl-alert-banner .msg strong { font-weight: 700; }
+        .evl-alert-banner .msg .sub { display: block; font-size: 12px; color: var(--text-gray); margin-top: 2px; }
+        .evl-alert-banner .btn { flex-shrink: 0; }
+
+        /* 역할별 카드 */
+        .evl-role-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+        .evl-role-card {
+            background: white;
+            border: 1px solid var(--card-line);
+            border-radius: var(--radius-card);
+            padding: 20px 22px;
+            position: relative;
+            overflow: hidden;
+        }
+        .evl-role-card::before {
+            content: ""; position: absolute;
+            top: 0; left: 0; right: 0; height: 3px;
+            background: var(--main);
+        }
+        .evl-role-card.supervisor::before { background: var(--status-info-fg); }
+
+        .evl-role-head {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .evl-role-title {
+            font-size: 16px; font-weight: 700; color: var(--main-dark2);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .evl-role-title .badge-num {
+            background: var(--brand-100);
+            color: var(--main-dark);
+            font-size: 12px; font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 999px;
+        }
+        .evl-role-card.supervisor .evl-role-title .badge-num {
+            background: var(--status-info-bg);
+            color: var(--status-info-fg);
+        }
+        .evl-role-progress-bar {
+            display: flex; align-items: center; gap: 8px;
+        }
+        .evl-role-progress-bar .track {
+            flex: 1;
+            height: 8px; border-radius: 999px;
+            background: var(--gray-100);
+            overflow: hidden;
+        }
+        .evl-role-progress-bar .fill {
+            height: 100%; border-radius: 999px;
+            background: var(--main);
+        }
+        .evl-role-card.supervisor .evl-role-progress-bar .fill { background: var(--status-info-fg); }
+        .evl-role-progress-bar .pct {
+            font-size: 13px; font-weight: 700;
+            color: var(--text-black);
+            min-width: 36px; text-align: right;
+        }
+
+        .evl-role-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 14px;
+        }
+        .evl-role-stat-cell {
+            padding: 12px;
+            background: #fafbfb;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .evl-role-stat-num {
+            font-size: 22px; font-weight: 700;
+            color: var(--main-dark2);
+            line-height: 1;
+        }
+        .evl-role-stat-num.success { color: var(--status-success-fg); }
+        .evl-role-stat-num.info    { color: var(--status-info-fg); }
+        .evl-role-stat-label {
+            font-size: 12px; color: var(--text-gray);
+            margin-top: 4px; font-weight: 600;
+        }
+        .evl-role-avg {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-top: 14px;
+            padding: 12px 16px;
+            background: var(--brand-50);
+            border-radius: var(--radius-button);
+        }
+        .evl-role-card.supervisor .evl-role-avg {
+            background: var(--status-info-bg);
+        }
+        .evl-role-avg-label { font-size: 12px; color: var(--text-gray); font-weight: 600; }
+        .evl-role-avg-value {
+            font-size: 22px; font-weight: 700;
+            color: var(--main-dark2);
+            letter-spacing: -0.5px;
+        }
+        .evl-role-avg-value .unit {
+            font-size: 13px; font-weight: 600;
+            color: var(--text-gray);
+            margin-left: 2px;
+        }
+
+        /* 부서별 진행률은 dept-bar 글로벌 사용 */
+
+        /* 평가 결과 배지 */
+        .evl-result {
+            display: inline-flex; align-items: center;
+            padding: 2px 8px;
+            font-size: 12px; font-weight: 700;
+            border-radius: 5px;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+        .evl-result.excellent {
+            background: var(--status-info-bg);
+            color: var(--status-info-fg);
+            border-color: var(--status-info-border);
+        }
+        .evl-result.good {
+            background: var(--status-success-bg);
+            color: var(--status-success-fg);
+            border-color: var(--status-success-border);
+        }
+        .evl-result.improve {
+            background: var(--status-warning-bg);
+            color: var(--status-warning-fg);
+            border-color: var(--status-warning-border);
+        }
+        .evl-result.insufficient {
+            background: var(--status-danger-bg);
+            color: var(--status-danger-fg);
+            border-color: var(--status-danger-border);
+        }
+
+        /* 평가 역할 chip */
+        .evl-role-chip {
+            display: inline-flex; align-items: center;
+            padding: 2px 8px;
+            font-size: 12px; font-weight: 700;
+            border-radius: 5px;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+        .evl-role-chip.responsible {
+            background: var(--brand-100);
+            color: var(--main-dark);
+            border-color: var(--status-success-border);
+        }
+        .evl-role-chip.supervisor {
+            background: var(--status-info-bg);
+            color: var(--status-info-fg);
+            border-color: var(--status-info-border);
+        }
+
+        /* 점수 cell */
+        .evl-score {
+            font-size: 14px; font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            color: var(--text-black);
+        }
+        .evl-score.excellent { color: var(--status-info-fg); }
+        .evl-score.good      { color: var(--status-success-fg); }
+        .evl-score.improve   { color: var(--status-warning-fg); }
+        .evl-score.insufficient { color: var(--status-danger-fg); }
+        .evl-score-empty {
+            color:var(--text-gray);
+            font-weight: 500;
+            font-size: 12px;
+        }
+
+        /* 결재 상태 chip */
+        .evl-approval {
+            display: inline-flex; align-items: center; gap: 3px;
+            padding: 1px 6px;
+            font-size: 12px; font-weight: 700;
+            border-radius: 4px;
+            background: var(--gray-100);
+            color: var(--text-gray);
+        }
+        .evl-approval.requested { background: var(--status-warning-bg); color: var(--status-warning-fg); }
+        .evl-approval.approved  { background: var(--status-success-bg); color: var(--status-success-fg); }
+
+        /* 결과 카운트 */
+        .evl-meta-row { display: flex; align-items: center; gap: 12px; }
+        .evl-meta-count { font-size: 14px; color: var(--text-gray); }
+        .evl-meta-count strong { color:var(--main-dark); font-weight: 700; }
+
+        /* (일괄 생성 모달 CSS 삭제 — 마크업·호출부 없는 사문화 코드였음. 모달은 DYV2.openModal §1) */
+        .evl-form-row { margin-bottom: 14px; }
+        .evl-form-row .label {
+            display: block;
+            font-size: 13px; font-weight: 600;
+            color: var(--text-black);
+            margin-bottom: 6px;
+        }
+        .evl-form-row select,
+        .evl-form-row input {
+            width: 100%;
+            padding: 8px 12px;
+            font-size: 13px;
+            border: 1px solid var(--card-line);
+            border-radius: var(--radius-button);
+            outline: none;
+        }
+        .evl-form-row select:focus,
+        .evl-form-row input:focus {
+            border-color:var(--main-dark);
+            box-shadow: 0 0 0 3px rgba(32, 159, 132, 0.12);
+        }
+        .evl-preview-box {
+            padding: 14px;
+            background: var(--brand-50);
+            border: 1px solid var(--status-success-border);
+            border-radius: var(--radius-button);
+            font-size: 13px;
+            color: var(--text-black);
+            line-height: 1.6;
+        }
+        .evl-preview-box strong { color: var(--main-dark2); font-weight: 700; }
+
+        @media (max-width: 1023px) {
+            .evl-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+            .evl-role-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body data-dy-page="evl-status" data-page-title="평가 현황" data-page-subtitle="인력·예산 > 인력 평가 > 평가 현황 — 안전보건관리책임자·관리감독자 반기 평가 현황 (SFR-009)">
+    <main>
+
+        <!-- ============================================================
+             ▼ 평가 현황 (EVL01-V) — KPI 대시보드
+        ============================================================ -->
+        <div class="evl-pane is-active" data-pane="status">
+
+            <!-- 사이클 셀렉터 -->
+            <div class="evl-cycle-bar">
+                <span class="evl-cycle-label">
+                    <span class="icon">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    </span>
+                    <select id="evl-year" class="select" style="border:none; padding:4px 24px 4px 4px; font-size:15px; font-weight:700; background-position:right 4px center;" onchange="window.EVLS.render()">
+                        <option>2026년</option>
+                        <option>2025년</option>
+                        <option>2024년</option>
+                    </select>
+                </span>
+                <div class="evl-half-toggle" id="evl-half">
+                    <button type="button" class="is-active" data-half="H1">상반기</button>
+                    <button type="button" data-half="H2">하반기</button>
+                    <button type="button" data-half="ALL">전체</button>
+                </div>
+                <span class="evl-cycle-meta" id="evl-meta"></span>
+            </div>
+
+            <!-- 평가 사이클 요약 KPI -->
+            <section class="evl-kpi-grid" id="evl-kpi"></section>
+
+            <!-- 마감 임박 배너 (미시작 있고 진행 중 사이클일 때만) -->
+            <div id="evl-banner"></div>
+
+            <!-- 역할별 평가 진행 -->
+            <section>
+                <h2 style="font-size:18px; font-weight:700; color:var(--main-dark2); margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                    <span style="display:block; width:4px; height:18px; background:var(--main); border-radius:2px;"></span>
+                    역할별 평가 진행
+                </h2>
+                <div class="evl-role-grid" id="evl-roles"></div>
+            </section>
+
+            <!-- 부서별 진행률 -->
+            <section class="card">
+                <div class="card-header">
+                    <h2 class="card-title">부서별 평가 진행률</h2>
+                    <span class="text-muted" id="evl-dept-head" style="font-size:13px;"></span>
+                </div>
+                <div class="card-body">
+                    <div class="dept-bar-list" id="evl-depts"></div>
+                </div>
+            </section>
+        </div>
+
+    </main>
+
+    <div id="toast" class="toast" role="status"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/law-map.js"></script>
+    <script src="./js/help-center.js"></script><!-- DYHELP: 화면 도움말 -->
+    <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
+    <script src="./js/common.js"></script>
+    <script>
+    (function () {
+        'use strict';
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            if (!t) { alert(msg); return; }
+            t.textContent = msg;
+            t.classList.add('show');
+            clearTimeout(window.__toastTimer);
+            window.__toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+        }
+
+        /* ══════════════════════════════════════════════════════════
+         * 사이클별 예시 데이터셋 (— 연도·반기 선택 시 전환)
+         *   role: { items, total(대상), done, prog(진행중), notStart, avg(완료자 평균점수) }
+         *   depts: [부서명, 완료, 대상, 중점(★)]
+         * ══════════════════════════════════════════════════════════ */
+        const CY = {
+            '2026-H1': { period: '2026-04-01 ~ 2026-06-30', deadline: '2026-06-30 (금)', dday: '마감 D-15', ddayKind: 'warn',
+                resp: { items: 8, total: 12, done: 7, prog: 3, notStart: 2, avg: 82 },
+                sup:  { items: 5, total: 20, done: 11, prog: 5, notStart: 4, avg: 78 },
+                avgProgress: '3.2/8항목', notNote: '보건소·담양읍 외 4건',
+                depts: [['건설과',7,7,1],['공공시설사업소',8,9,1],['기획예산실',3,4,0],['재무과',2,3,0],['물순환사업소',2,3,1],['환경과',1,2,0],['문화체육과',1,2,1],['담양읍',1,3,0],['보건소',0,2,0]] },
+            '2026-H2': { period: '2026-10-01 ~ 2026-12-31', deadline: '2026-12-31 (수)', dday: '개시 예정', ddayKind: 'upcoming',
+                resp: { items: 8, total: 12, done: 0, prog: 0, notStart: 12, avg: 0 },
+                sup:  { items: 5, total: 20, done: 0, prog: 0, notStart: 20, avg: 0 },
+                avgProgress: '0/8항목', notNote: '하반기 사이클 개시 전',
+                depts: [['건설과',0,7,1],['공공시설사업소',0,9,1],['기획예산실',0,4,0],['재무과',0,3,0],['물순환사업소',0,3,1],['환경과',0,2,0],['문화체육과',0,2,1],['담양읍',0,3,0],['보건소',0,2,0]] },
+            '2025-H2': { period: '2025-10-01 ~ 2025-12-31', deadline: '2025-12-31', dday: '마감 완료', ddayKind: 'done',
+                resp: { items: 8, total: 12, done: 12, prog: 0, notStart: 0, avg: 85 },
+                sup:  { items: 5, total: 20, done: 19, prog: 0, notStart: 1, avg: 80 },
+                avgProgress: '—', notNote: '환경과 1건 미시작 종결',
+                depts: [['건설과',7,7,1],['공공시설사업소',9,9,1],['기획예산실',4,4,0],['재무과',3,3,0],['물순환사업소',3,3,1],['환경과',1,2,0],['문화체육과',2,2,1],['담양읍',3,3,0],['보건소',2,2,0]] },
+            '2025-H1': { period: '2025-04-01 ~ 2025-06-30', deadline: '2025-06-30', dday: '마감 완료', ddayKind: 'done',
+                resp: { items: 8, total: 12, done: 12, prog: 0, notStart: 0, avg: 83 },
+                sup:  { items: 5, total: 20, done: 20, prog: 0, notStart: 0, avg: 79 },
+                avgProgress: '—', notNote: '전 부서 완료',
+                depts: [['건설과',7,7,1],['공공시설사업소',9,9,1],['기획예산실',4,4,0],['재무과',3,3,0],['물순환사업소',3,3,1],['환경과',2,2,0],['문화체육과',2,2,1],['담양읍',3,3,0],['보건소',2,2,0]] },
+            '2024-H2': { period: '2024-10-01 ~ 2024-12-31', deadline: '2024-12-31', dday: '마감 완료', ddayKind: 'done',
+                resp: { items: 8, total: 11, done: 11, prog: 0, notStart: 0, avg: 81 },
+                sup:  { items: 5, total: 18, done: 18, prog: 0, notStart: 0, avg: 77 },
+                avgProgress: '—', notNote: '전 부서 완료',
+                depts: [['건설과',6,6,1],['공공시설사업소',8,8,1],['기획예산실',4,4,0],['재무과',3,3,0],['물순환사업소',3,3,1],['환경과',2,2,0],['문화체육과',2,2,1],['담양읍',3,3,0],['보건소',1,1,0]] },
+            '2024-H1': { period: '2024-04-01 ~ 2024-06-30', deadline: '2024-06-30', dday: '마감 완료', ddayKind: 'done',
+                resp: { items: 8, total: 11, done: 10, prog: 0, notStart: 1, avg: 78 },
+                sup:  { items: 5, total: 18, done: 17, prog: 0, notStart: 1, avg: 75 },
+                avgProgress: '—', notNote: '도입 초기(2건 미시작 종결)',
+                depts: [['건설과',6,6,1],['공공시설사업소',7,8,1],['기획예산실',4,4,0],['재무과',3,3,0],['물순환사업소',2,3,1],['환경과',2,2,0],['문화체육과',2,2,1],['담양읍',3,3,0],['보건소',1,1,0]] },
+        };
+
+        const HALF_LABEL = { H1: '상반기', H2: '하반기', ALL: '전체' };
+        const pct = (d, t) => t ? Math.round(d / t * 100) : 0;
+
+        const SVG = {
+            users: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+            check: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+            clock: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+            warn:  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.29 3.86-8.4 14.74A2 2 0 0 0 3.62 22h16.76a2 2 0 0 0 1.73-3.4L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+            bell:  '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+        };
+
+        /* '전체' — 해당 연도 상·하반기 합산 */
+        function aggregate(year) {
+            const a = CY[year + '-H1'], b = CY[year + '-H2'];
+            if (!a || !b) return a || b || null;
+            const mergeRole = (r1, r2) => ({
+                items: r1.items, total: r1.total + r2.total, done: r1.done + r2.done,
+                prog: r1.prog + r2.prog, notStart: r1.notStart + r2.notStart,
+                avg: (r1.done + r2.done) ? Math.round((r1.avg * r1.done + r2.avg * r2.done) / (r1.done + r2.done)) : 0,
+            });
+            const depts = a.depts.map((d, i) => [d[0], d[1] + b.depts[i][1], d[2] + b.depts[i][2], d[3]]);
+            return { period: year + ' 연간 (상·하반기 합산)', deadline: '연간', dday: '연간 합산', ddayKind: 'upcoming',
+                resp: mergeRole(a.resp, b.resp), sup: mergeRole(a.sup, b.sup),
+                avgProgress: '—', notNote: '상·하반기 합산', depts };
+        }
+
+        function selected() {
+            const year = (document.getElementById('evl-year').value || '2026년').replace('년', '');
+            const half = document.querySelector('#evl-half button.is-active').dataset.half;
+            const data = half === 'ALL' ? aggregate(year) : (CY[year + '-' + half] || null);
+            return { year, half, data };
+        }
+
+        /* ─── 렌더러 ─── */
+        function render() {
+            const { year, half, data } = selected();
+            const meta$ = document.getElementById('evl-meta');
+            const kpi$ = document.getElementById('evl-kpi');
+            const banner$ = document.getElementById('evl-banner');
+            const roles$ = document.getElementById('evl-roles');
+            const depts$ = document.getElementById('evl-depts');
+            const depthead$ = document.getElementById('evl-dept-head');
+
+            if (!data) {
+                meta$.innerHTML = '해당 사이클 데이터 없음';
+                kpi$.innerHTML = ''; banner$.innerHTML = ''; roles$.innerHTML = '';
+                depts$.innerHTML = '<div style="padding:20px; color:var(--text-gray);">표시할 데이터가 없습니다.</div>';
+                depthead$.textContent = '';
+                return;
+            }
+
+            const target = data.resp.total + data.sup.total;
+            const done = data.resp.done + data.sup.done;
+            const prog = data.resp.prog + data.sup.prog;
+            const notStart = data.resp.notStart + data.sup.notStart;
+            const comp = pct(done, target);
+
+            /* 사이클 메타 */
+            const ddayCls = data.ddayKind === 'done' ? 'dday done' : (data.ddayKind === 'upcoming' ? 'dday upcoming' : 'dday');
+            meta$.innerHTML = '평가 기간 <strong>' + data.period + '</strong><span class="' + ddayCls + '">' + data.dday + '</span>';
+
+            /* KPI 4종 */
+            kpi$.innerHTML =
+                kpiCell('대상자', '', SVG.users, target + '<span class="small">명</span>',
+                    '책임자 <strong>' + data.resp.total + '</strong> · 감독자 <strong>' + data.sup.total + '</strong>') +
+                kpiCell('완료', 'success', SVG.check, done + '<span class="small">명</span>',
+                    '진행률 <strong>' + comp + '%</strong>', comp) +
+                kpiCell('진행 중', 'info', SVG.clock, prog + '<span class="small">명</span>',
+                    prog ? ('평균 진행 <strong>' + data.avgProgress + '</strong>') : '<span style="color:var(--text-gray);">임시저장 없음</span>') +
+                kpiCell('미시작', 'warn', SVG.warn, notStart + '<span class="small">명</span>', data.notNote);
+
+            /* 마감 배너 — 진행 중 사이클 + 미시작 있을 때만 */
+            if (data.ddayKind === 'warn' && notStart > 0 && half !== 'ALL') {
+                banner$.innerHTML =
+                    '<div class="evl-alert-banner"><span class="icon">' + SVG.bell + '</span>' +
+                    '<span class="msg"><strong>반기 평가 ' + data.dday + '</strong> — 미시작 ' + notStart + '건이 있습니다.' +
+                    '<span class="sub">' + year + '년 ' + HALF_LABEL[half] + ' 평가 사이클 마감일: ' + data.deadline + '</span></span>' +
+                    '<button class="btn btn-primary" type="button" onclick="window.location.href=\'evl-eval.html\'">미시작 평가 시작 →</button></div>';
+            } else {
+                banner$.innerHTML = '';
+            }
+
+            /* 역할별 카드 */
+            roles$.innerHTML =
+                roleCard('안전보건관리책임자', 'R', data.resp, false) +
+                roleCard('관리감독자', 'S', data.sup, true);
+
+            /* 부서별 진행률 */
+            depthead$.textContent = '전체 ' + data.depts.length + '개 부서 · ' + year + ' ' + HALF_LABEL[half];
+            depts$.innerHTML = data.depts.map(d => {
+                const p = pct(d[1], d[2]);
+                const fillCls = p === 0 ? 'dept-bar-fill danger' : (p < 60 ? 'dept-bar-fill warning' : 'dept-bar-fill');
+                const valStyle = p === 0 ? ' style="color:var(--status-danger-fg);"' : '';
+                return '<div class="dept-bar-item">' +
+                    '<span class="dept-bar-name">' + d[0] + (d[3] ? ' ★' : '') + '</span>' +
+                    '<div class="dept-bar-track"><div class="' + fillCls + '" style="width:' + p + '%;"></div></div>' +
+                    '<span class="dept-bar-value"' + valStyle + '>' + d[1] + '/' + d[2] + '</span></div>';
+            }).join('');
+        }
+
+        function kpiCell(title, kind, icon, value, sub, prog) {
+            const bar = (prog !== undefined)
+                ? '<div class="progress" style="height:6px; margin-top:2px;"><div class="progress-bar green" style="width:' + prog + '%;"></div></div>'
+                : '';
+            return '<div class="evl-kpi-cell"><div class="evl-kpi-head">' +
+                '<span class="evl-kpi-title">' + title + '</span>' +
+                '<span class="evl-kpi-icon ' + kind + '">' + icon + '</span></div>' +
+                '<div class="evl-kpi-value ' + (kind === 'warn' ? 'warning' : kind) + '">' + value + '</div>' +
+                bar + '<div class="evl-kpi-sub">' + sub + '</div></div>';
+        }
+
+        function roleCard(name, roleKey, r, isSup) {
+            const p = pct(r.done, r.total);
+            return '<div class="evl-role-card' + (isSup ? ' supervisor' : '') + '">' +
+                '<div class="evl-role-head"><div class="evl-role-title">' + name +
+                '<span class="badge-num">' + r.items + '항목</span></div>' +
+                '<a class="text-muted" href="evl-settings.html?role=' + roleKey + '" style="font-size:12px;">템플릿 →</a></div>' +
+                '<div class="evl-role-progress-bar"><span class="pct" style="min-width:0; padding-right:6px;">' + r.done + ' / ' + r.total + '</span>' +
+                '<div class="track"><div class="fill" style="width:' + p + '%;"></div></div><span class="pct">' + p + '%</span></div>' +
+                '<div class="evl-role-stats">' +
+                '<div class="evl-role-stat-cell"><div class="evl-role-stat-num success">' + r.done + '</div><div class="evl-role-stat-label">완료</div></div>' +
+                '<div class="evl-role-stat-cell"><div class="evl-role-stat-num info">' + r.prog + '</div><div class="evl-role-stat-label">진행중</div></div>' +
+                '<div class="evl-role-stat-cell"><div class="evl-role-stat-num" style="color:var(--status-warning-fg);">' + r.notStart + '</div><div class="evl-role-stat-label">미시작</div></div></div>' +
+                '<div class="evl-role-avg"><span class="evl-role-avg-label">완료자 평균 점수</span>' +
+                '<span class="evl-role-avg-value">' + (r.avg || '—') + (r.avg ? '<span class="unit">/100</span>' : '') + '</span></div></div>';
+        }
+
+        /* ─── 반기 토글 ─── */
+        document.querySelectorAll('#evl-half button').forEach(b => {
+            b.addEventListener('click', () => {
+                document.querySelectorAll('#evl-half button').forEach(x => x.classList.remove('is-active'));
+                b.classList.add('is-active');
+                render();
+            });
+        });
+
+        window.EVLS = { render };
+        render();
+
+    })();
+    </script>
+</body>
+</html>

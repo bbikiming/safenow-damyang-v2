@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>정기 위험성평가 → 통합 목록 (리다이렉트)</title>
+    <script>
+        /* v1.1 §6.1: 정기평가는 연 1건 → 목록·상세 통합. rsk-detail은 rsk-list로 리다이렉트하는 하위호환 스텁. */
+        (function () {
+            var q = new URLSearchParams(location.search);
+            var id = q.get('id') || '';
+            var year = '';
+            var m = /RA-(\d{4})-/.exec(id);
+            if (m) year = m[1];
+            var url = 'rsk-list.html' + (year ? '?year=' + year : '');
+            location.replace(url);
+        })();
+    </script>
+</head>
+<body>
+    <p style="font-family:sans-serif;padding:20px;color:var(--text-gray);">
+        통합 목록(<a href="rsk-list.html">rsk-list.html</a>)으로 이동합니다…
+    </p>
+</body>
+</html>

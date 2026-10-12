@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>부서 업무함 — 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="work-dept"
+      data-page-title="부서 업무함"
+      data-page-subtitle="이전 버전 화면 — 부서 업무는 «대시보드 &gt; 내 할일»에서 봅니다 (메뉴에서 제외 · 주소로만 열립니다)">
+    <main>
+        <div id="wkd-root"></div>
+    </main>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/law-map.js"></script>
+    <script src="./js/help-center.js"></script><!-- DYHELP: 화면 도움말 -->
+    <script src="./js/policy-open.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/org-pick.js"></script>
+    <script src="./js/dept-check.js"></script>
+    <script src="./js/edu-data.js"></script>
+    <script src="./js/sh-data.js"></script><!-- 작업환경측정 완료 파생 원본 (doneProbe SH:workenv) -->
+    <script src="./js/work-catalog.js"></script>
+    <script src="./js/work-data.js"></script>
+    <script src="./js/work-assign.js"></script>
+    <script src="./js/work-dept.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            window.WKDEPT.init('wkd-root');
+        });
+    </script>
+</body>
+</html>

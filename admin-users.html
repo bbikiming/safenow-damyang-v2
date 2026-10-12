@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>사용자 관리 - 담양군 중대재해예방통합관리시스템 v2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="admin-users" data-page-title="사용자 관리" data-page-subtitle="시스템 관리 > 사용자 관리 — 행정포털 계정·조직도 연계 예정 · 사용자별 실효 권한 역조회 (SFR-015)">
+    <main>
+        <!-- 계정·조직도의 출처와 «아직 연계가 없다»는 사실을 한 자리에서 밝힌다.
+             종전에는 '마지막 동기화: 2026-06-11 06:00' 이라는 임의 시각과 [조직도 동기화] 버튼이 있었다.
+             연계 관리(SCR-ADMIN-004 §6)는 행정포털을 「연계 이력 미구현」으로 두는데, 두 화면이
+             같은 시스템을 두고 반대를 주장하면 어느 쪽이 사실인지 알 수 없다.
+             동기화할 원본이 없으므로 버튼도 두지 않는다 — 눌러도 거절하는 버튼은 이유를 알려 주지 못한다. -->
+        <div class="card" style="margin-bottom:16px;">
+            <div class="card-body" style="display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+                <span class="chip-status neutral chip-sm">연계 이력 미구현</span>
+                <div style="flex:1 1 320px; min-width:0; font-size:var(--fs-13); color:var(--text-gray); line-height:1.7;">
+                    계정·부서는 <b>행정포털(SSO·조직도)</b>에서 받기로 되어 있으나 그 연계가 아직 붙지 않았습니다.
+                    그래서 <b>이 화면의 조직·사용자 명단은 예시 자료</b>이며, 마지막 동기화 시각도 표시하지 않습니다 —
+                    임의 날짜를 적어 두면 <b>한 번도 받지 않은 상태</b>와 <b>받았는데 0건인 상태</b>를 구분할 수 없게 됩니다.
+                    외부 시스템의 연결 상태는 <b>연계 관리</b> 한 자리에서 봅니다.
+                </div>
+                <a class="btn btn-secondary btn-sm" href="admin-integration.html">연계 관리로 이동</a>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px;">
+            <div class="card-header" style="gap:10px;flex-wrap:wrap;">
+                <span class="card-title">조직 직접 등록 <span class="chip-mini wt" style="margin-left:6px;">행정포털 미등록 조직만</span></span>
+                <span class="spacer" style="flex:1;"></span>
+                <button class="btn btn-outline btn-sm" onclick="admOrgMergeCandidates()">병합 후보 확인</button>
+                <button class="btn btn-primary btn-sm" onclick="admOrgForm()">+ 부서 직접 등록</button>
+            </div>
+            <div class="card-body">
+                <div class="check-notice" style="margin-bottom:12px;"><b>행정포털에 없는 조직만 직접 등록합니다.</b> 출처가 <b>연계</b>인 노드는 행정포털에서 받은 것으로 보아 읽기 전용이며, 연계 전인 지금 표에 있는 값은 예시 자료입니다. 직접 등록 노드는 삭제하지 않고 사용 중지로 참조를 보존합니다 — 지우면 그 부서를 참조하던 인원·권한·업무 기록이 함께 끊어집니다.</div>
+                <div style="overflow-x:auto;">
+                    <table class="table-figma">
+                        <thead><tr><th>부서명</th><th>상위 노드</th><th>유형</th><th>출처</th><th>상태</th><th>관리</th></tr></thead>
+                        <tbody id="adm-org-rows"></tbody>
+                    </table>
+                </div>
+                <p style="font-size:var(--fs-12);color:var(--text-gray);margin-top:10px;">본개발은 부서 식별값을 기준으로 소속 인원·권한·업무 참조를 유지합니다.</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">사용자 목록</span>
+                <div class="search-bar"><input class="search-input" type="text" placeholder="성명·부서 검색"><button class="search-submit" type="button">검색</button></div>
+            </div>
+            <div class="card-body" style="overflow-x:auto;">
+                <table class="table-figma">
+                    <thead><tr><th>성명</th><th>부서 (조직도 연동)</th><th>권한</th><th>담당 대메뉴</th><th>최근 접속</th><th></th></tr></thead>
+                    <tbody>
+                        <tr data-uname="박안전"><td style="font-weight:600;">박안전</td><td>재난안전과 중대재해팀</td><td class="perm-cell"></td><td>전체</td><td>2026-06-11 09:12</td><td><button class="btn btn-sm btn-outline" onclick="admAccess('박안전')">접근 메뉴</button></td></tr>
+                        <tr data-uname="김중대"><td style="font-weight:600;">김중대</td><td>재난안전과 중대재해팀</td><td class="perm-cell"></td><td>전 업무 메뉴 (총괄)</td><td>2026-06-11 08:47</td><td><button class="btn btn-sm btn-outline" onclick="admAccess('김중대')">접근 메뉴</button></td></tr>
+                        <tr data-uname="이보건"><td style="font-weight:600;">이보건</td><td>보건소</td><td class="perm-cell"></td><td>안전보건교육</td><td>2026-06-10 17:30</td><td><button class="btn btn-sm btn-outline" onclick="admAccess('이보건')">접근 메뉴</button></td></tr>
+                        <tr data-uname="최회계"><td style="font-weight:600;">최회계</td><td>회계과</td><td class="perm-cell"></td><td>도급관리</td><td>2026-06-09 11:05</td><td><button class="btn btn-sm btn-outline" onclick="admAccess('최회계')">접근 메뉴</button></td></tr>
+                        <tr data-uname="정환경"><td style="font-weight:600;">정환경</td><td>환경과</td><td class="perm-cell"></td><td>유해·위험요인 관리</td><td>2026-06-08 14:21</td><td><button class="btn btn-sm btn-outline" onclick="admAccess('정환경')">접근 메뉴</button></td></tr>
+                        <tr data-uname="한열람"><td style="font-weight:600;">한열람</td><td>기획예산실</td><td class="perm-cell"></td><td>-</td><td>2026-06-02 10:00</td><td><button class="btn btn-sm btn-outline" onclick="admAccess('한열람')">접근 메뉴</button></td></tr>
+                    </tbody>
+                </table>
+                <p style="font-size:12px; color:var(--text-gray); margin-top:10px;">‘권한’·‘담당 대메뉴’는 권한 관리(등급)·메뉴 관리(개별 지정)의 산출값입니다(읽기 전용). [접근 메뉴]에서 사용자별 실효 권한을 근거와 함께 확인할 수 있습니다.</p>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+            <div class="card-header"><span class="card-title">권한 등급</span>
+                <a class="btn btn-sm btn-outline" href="admin-roles.html">권한 관리로 이동</a>
+            </div>
+            <div class="card-body" style="overflow-x:auto;">
+                <table class="table-figma">
+                    <thead><tr><th>등급</th><th>구성원</th><th>적용 메뉴</th><th>설명</th></tr></thead>
+                    <tbody id="adm-grade-rows"></tbody>
+                </table>
+                <p style="font-size:12px; color:var(--text-gray); margin-top:10px;">등급 구성·적용은 <b>권한 관리</b>에서, 메뉴별 접근·수정 권한은 <b>메뉴 관리</b>에서 설정합니다. 부서별 업무 담당자는 등급이 아니라 메뉴별 개별 지정으로 처리합니다.</p>
+            </div>
+        </div>
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/law-map.js"></script>
+    <script src="./js/help-center.js"></script><!-- DYHELP: 화면 도움말 -->
+    <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
+    <script src="./js/data.js"></script>
+    <script src="./js/common.js"></script>
+    <script src="./js/adm-perm.js"></script>
+    <script>
+    (function () {
+        'use strict';
+        var orgRows = [
+            { id: 'LINK-01', name: '재난안전과', parent: '행정국', type: '부서', source: '연계', active: true },
+            { id: 'LINK-02', name: '재난안전과 중대재해팀', parent: '재난안전과', type: '팀', source: '연계', active: true },
+            { id: 'LOCAL-01', name: '중대재해 예방 TF', parent: '재난안전과', type: '임시조직', source: '직접 등록', active: true }
+        ];
+        var orgSeq = 1;
+        function permChip(label) {
+            var cls = 'wt';
+            if (label === '시스템 관리자') cls = 'wt-program';
+            else if (label === '전담부서(중대재해 총괄)') cls = 'wt-elec';
+            else if (label === '메뉴별 지정' || label === '군수' || label === '부군수·국장' || label === '과장·팀장') cls = 'pdca';
+            return '<span class="chip-mini ' + cls + '">' + (window.DYV2 ? DYV2.esc(label) : label) + '</span>';
+        }
+        function fillPerms() {
+            if (!window.DYADM) return;
+            document.querySelectorAll('tr[data-uname]').forEach(function (row) {
+                var uid = DYADM.uidOf(row.getAttribute('data-uname'));
+                var cell = row.querySelector('.perm-cell');
+                if (cell && uid) cell.innerHTML = permChip(DYADM.primaryRole(uid));
+            });
+        }
+        function fillGrades() {
+            if (!window.DYADM) return;
+            var tb = document.getElementById('adm-grade-rows');
+            if (!tb) return;
+            tb.innerHTML = DYADM.roles().map(function (r) {
+                var ac = DYADM.roleAppliedCount(r.id);
+                var menu = ac.all ? '<span class="chip-mini wt-program">전체 메뉴</span>' : '<span class="chip-mini wt">' + ac.n + '개</span>';
+                return '<tr><td><span class="chip-mini ' + (r.protected ? 'wt-program' : 'pdca') + '">' + DYV2.esc(r.name) + '</span>' +
+                    (r.protected ? ' <span class="chip-mini wt">보호</span>' : '') + '</td>' +
+                    '<td>' + DYV2.esc(DYADM.roleMemberCountLabel(r)) + '</td>' +
+                    '<td>' + menu + '</td>' +
+                    '<td style="font-size:12px; color:var(--text-gray);">' + DYV2.esc(r.desc || '') + '</td></tr>';
+            }).join('');
+        }
+        function renderOrgRows() {
+            var tb = document.getElementById('adm-org-rows');
+            if (!tb) return;
+            tb.innerHTML = orgRows.map(function (r) {
+                var linked = r.source === '연계';
+                var state = r.mergedTo ? '<span class="chip-mini wt">병합됨</span>'
+                    : r.active ? '<span class="chip-mini st-done">사용</span>' : '<span class="chip-mini st-todo">사용 중지</span>';
+                var actions = linked
+                    ? '<span style="font-size:12px;color:var(--text-gray);">읽기 전용</span>'
+                    : '<button class="btn btn-sm btn-outline" onclick="admOrgForm(\'' + r.id + '\')">수정</button> ' +
+                      '<button class="btn btn-sm btn-outline" onclick="admOrgToggle(\'' + r.id + '\')">' + (r.active ? '사용 중지' : '사용') + '</button>';
+                return '<tr><td style="font-weight:600;">' + DYV2.esc(r.name) + (r.mergedTo ? '<br><span style="font-size:12px;color:var(--text-gray);">' + DYV2.esc(r.mergedTo) + '으로 승계</span>' : '') + '</td>' +
+                    '<td>' + DYV2.esc(r.parent) + '</td><td>' + DYV2.esc(r.type) + '</td>' +
+                    '<td><span class="chip-mini ' + (linked ? 'wt-elec' : 'pdca') + '">' + DYV2.esc(r.source) + '</span></td>' +
+                    '<td>' + state + '</td><td>' + actions + '</td></tr>';
+            }).join('');
+        }
+        window.admOrgForm = function (id) {
+            var row = orgRows.filter(function (r) { return r.id === id; })[0] || null;
+            var body = '<div class="preset-form-grid">' +
+                '<span class="k">부서명 <span class="req">*</span></span><input id="adm-org-name" type="text" value="' + DYV2.esc(row ? row.name : '') + '" placeholder="행정포털에 없는 부서명">' +
+                '<span class="k">상위 노드 <span class="req">*</span></span><select id="adm-org-parent"><option>재난안전과</option><option>행정국</option><option>담양군</option></select>' +
+                '<span class="k">유형 <span class="req">*</span></span><select id="adm-org-type"><option>부서</option><option>팀</option><option>임시조직</option></select>' +
+                '<span class="k">출처</span><input type="text" value="직접 등록" readonly>' +
+            '</div>';
+            DYV2.openModal(row ? '조직 직접 등록 수정' : '조직 직접 등록', body,
+                '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+                '<button class="btn btn-primary" onclick="admOrgSave(\'' + (id || '') + '\')">저장</button>');
+            if (row) {
+                document.getElementById('adm-org-parent').value = row.parent;
+                document.getElementById('adm-org-type').value = row.type;
+            }
+        };
+        window.admOrgSave = function (id) {
+            var name = (document.getElementById('adm-org-name').value || '').trim();
+            var parent = document.getElementById('adm-org-parent').value;
+            var type = document.getElementById('adm-org-type').value;
+            if (!name) { DYV2.toast('부서명을 입력하세요.'); return; }
+            var duplicate = orgRows.some(function (r) { return r.id !== id && r.name === name && r.active; });
+            if (duplicate) { DYV2.toast('같은 이름의 사용 중인 조직이 있습니다.'); return; }
+            var row = orgRows.filter(function (r) { return r.id === id; })[0];
+            if (row) { row.name = name; row.parent = parent; row.type = type; }
+            else { orgSeq += 1; orgRows.push({ id: 'LOCAL-' + String(orgSeq).padStart(2, '0'), name: name, parent: parent, type: type, source: '직접 등록', active: true }); }
+            DYV2.closeModal(); renderOrgRows(); DYV2.toast(row ? '조직 정보를 수정했습니다.' : '조직을 직접 등록했습니다.');
+        };
+        window.admOrgToggle = function (id) {
+            var row = orgRows.filter(function (r) { return r.id === id && r.source === '직접 등록'; })[0];
+            if (!row) return;
+            row.active = !row.active; renderOrgRows();
+            DYV2.toast(row.active ? '조직을 다시 사용합니다.' : '참조를 보존하고 조직을 사용 중지했습니다.');
+        };
+        window.admOrgMergeCandidates = function () {
+            var direct = orgRows.filter(function (r) { return r.source === '직접 등록' && r.active && !r.mergedTo; })[0];
+            if (!direct) { DYV2.toast('확인할 병합 후보가 없습니다.'); return; }
+            var target = orgRows.filter(function (r) { return r.id === 'LINK-02'; })[0];
+            var body = '<div class="check-notice"><b>자동 병합하지 않습니다.</b> 이름과 상위 조직이 유사한 후보를 담당자가 확인합니다.</div>' +
+                '<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;margin-top:14px;">' +
+                '<div class="admm-note"><b>' + DYV2.esc(direct.name) + '</b><br><span class="chip-mini pdca">직접 등록</span></div>' +
+                '<b>→</b><div class="admm-note"><b>' + DYV2.esc(target.name) + '</b><br><span class="chip-mini wt-elec">연계</span></div></div>' +
+                '<p style="font-size:12px;color:var(--text-gray);margin-top:10px;">병합 시 소속 인원·권한·업무 참조는 연계 부서 식별값으로 승계되고 병합 이력을 남깁니다.</p>';
+            DYV2.openModal('조직 병합 후보', body,
+                '<button class="btn btn-secondary" onclick="DYV2.closeModal()">별도 유지</button>' +
+                '<button class="btn btn-primary" onclick="admOrgMerge(\'' + direct.id + '\',\'' + target.id + '\')">병합·승계</button>');
+        };
+        window.admOrgMerge = function (fromId, toId) {
+            var from = orgRows.filter(function (r) { return r.id === fromId; })[0];
+            var to = orgRows.filter(function (r) { return r.id === toId; })[0];
+            if (!from || !to) return;
+            from.active = false; from.mergedTo = to.name;
+            DYV2.closeModal(); renderOrgRows(); DYV2.toast('부서 참조를 ' + to.name + '으로 승계했습니다.');
+        };
+        /* 사용자별 실효 권한 역조회 (합집합 · 근거 표기) — DYADM.effectiveForUser 사용 */
+        window.admAccess = function (uname) {
+            if (!window.DYADM) return;
+            var uid = DYADM.uidOf(uname);
+            if (!uid) return;
+            var eff = DYADM.effectiveForUser(uid);
+            var menus = DYADM.middleMenus();
+            var acc = menus.filter(function (m) { return eff[m.id].view || eff[m.id].edit; });
+            var rows = acc.map(function (m) {
+                var e = eff[m.id];
+                var reason = e.reasons.map(function (r) { return r.via; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).join(', ');
+                return '<tr><td>' + DYV2.esc(m.groupLabel) + '</td><td style="font-weight:600;">' + DYV2.esc(m.label) + '</td>' +
+                    '<td style="text-align:center;">' + (e.view ? '<b style="color:var(--main-dark);">O</b>' : '<span style="color:var(--text-gray);">-</span>') + '</td>' +
+                    '<td style="text-align:center;">' + (e.edit ? '<b style="color:var(--main-dark);">O</b>' : '<span style="color:var(--text-gray);">-</span>') + '</td>' +
+                    '<td style="font-size:12px; color:var(--text-gray);">' + DYV2.esc(reason) + '</td></tr>';
+            }).join('');
+            var body =
+                '<p style="font-size:13px; margin-bottom:12px;"><b>' + DYV2.esc(uname) + '</b> · 접근 가능 <b>' + acc.length + '</b>개 / 전체 ' + menus.length + '개 메뉴</p>' +
+                '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>대메뉴</th><th>중메뉴</th><th style="width:52px;">보기</th><th style="width:52px;">수정</th><th>근거</th></tr></thead>' +
+                '<tbody>' + (rows || '<tr><td colspan="5" style="text-align:center; color:var(--text-gray); padding:16px;">접근 가능한 메뉴가 없습니다.</td></tr>') + '</tbody></table></div>' +
+                '<p style="font-size:12px; color:var(--text-gray); margin-top:10px;">여러 경로(등급 경유·개별 지정)로 권한이 겹치면 높은 권한이 적용됩니다(합집합). 미표시 메뉴는 기본 차단입니다.</p>';
+            DYV2.openModal(DYV2.esc(uname) + ' — 접근 메뉴 (실효 권한)', body,
+                '<button class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
+        };
+        function init() { fillPerms(); fillGrades(); renderOrgRows(); }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+        else init();
+    })();
+    </script>
+</body>
+</html>

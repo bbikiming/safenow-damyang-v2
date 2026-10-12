@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>업무 발행 관리 — 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="work-admin"
+      data-page-title="업무 발행 관리"
+      data-page-subtitle="이전 버전 화면 — 업무 발행·배정은 «업무 관리»로 옮겨 갑니다 (메뉴에서 제외 · 주소로만 열립니다)">
+    <main>
+        <div id="wk-root"></div>
+    </main>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/law-map.js"></script>
+    <script src="./js/help-center.js"></script><!-- DYHELP: 화면 도움말 -->
+    <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
+    <script src="./js/common.js"></script>
+    <script src="./js/org-pick.js"></script>
+    <script src="./js/dept-check.js"></script><!-- 이행점검 완료 파생 원본 (doneProbe) -->
+    <script src="./js/edu-data.js"></script><!-- 교육 완료 파생 원본 (doneProbe) -->
+    <script src="./js/sh-data.js"></script><!-- 작업환경측정 완료 파생 원본 (doneProbe SH:workenv) -->
+    <script src="./js/work-catalog.js"></script><!-- 업무 카탈로그 (DYWORKT) -->
+    <script src="./js/work-data.js"></script><!-- 발행 엔진 (DYWORK) -->
+    <script src="./js/work-assign.js"></script><!-- 배정 패널 (WKASSIGN, 공유) -->
+    <script src="./js/work-admin.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            window.WKADM.init('wk-root');
+        });
+    </script>
+</body>
+</html>
