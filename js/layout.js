@@ -390,11 +390,8 @@
         { id: 'n3', cat: 'compliance', catLabel: '이행',       time: '08:00',
           title: '의무이행 점검표 반기 마감 기한 초과 (D+8)', href: 'menu.html?m=comply',
           work: 'my-work.html?cat=comply', basis: 'cse-5' },
-        { id: 'n4', cat: 'inspection', catLabel: '점검',       time: '어제 18:00',
-          /* 2026-09-03 — 종전 목적지 기준문서함(docs-archive)은 메뉴에서 뺐다.
-             미분류 교정은 문서 목록에서 한다. */
-          title: '업무문서 안전점검 계열 16건 분류 확인 요청', href: 'cmp-docs.html',
-          work: 'my-work.html?cat=inspection', basis: 'cse-5' },
+        /* n4 «업무문서 안전점검 계열 16건 분류 확인 요청»은 2026-10-12 에 걷었다 —
+           분류는 업무목록 엑셀이 정하고 이 시스템에서 하지 않는다. */
         { id: 'n5', cat: 'risk',       catLabel: '위험성평가', time: '어제 14:30',
           title: '물순환사업소 개선조치 기한초과 재촉', href: 'my-work.html?dept=water&cat=improve',
           work: 'my-work.html?dept=water&cat=improve', basis: 'cse-4-3' },
@@ -583,7 +580,7 @@
                ※ base-targets(원료·제조물 대장)은 되살렸다가 **대시보드로 흡수**했다.
                  원문 대조 결과 제안요청서는 이 축을 SFR-020 대시보드의 「원료·제조물
                  개소 표시」로만 요구했고, 중처법 §9①·시행령 §8 어느 조문도 품목 대장
-                 작성을 명하지 않는다. 조치 의무는 법정 업무 현황(CIT-02·03)가 이미 다룬다.
+                 작성을 명하지 않는다. 조치 의무는 이행 관리(CIT-02·03)가 이미 다룬다.
                  화면은 주소로 열리며 EXT-10 자료가 오면 그 자리에 넣는다. */
             { id: 'base-targets', hidden: true, label: '원료·제조물 대장', icon: 'file',     href: 'base-targets.html' },
             { id: 'base-bulk',    hidden: true, label: '데이터 일괄등록', icon: 'file',     href: 'base-bulk.html',    screen: 'SFR-016' },
@@ -673,7 +670,7 @@
 
         /* ⑨ 업무 관리 — RFP 안전계획·의무이행 점검 / 관계법령 점검 (SFR-004·012·014)
          *   [구버전 2개 그룹을 여기로 접었다 — 2026-08-28 사용자 지시]
-         *   · 구 'docs'(업무문서: 업무 목록·이행 목록) — 신버전 법정 업무 현황·문서 목록이
+         *   · 구 'docs'(업무문서: 업무 목록·이행 목록) — 신버전 이행 관리·문서 목록이
          *     같은 데이터를 같은 목적으로 다시 그린다. 비교 시연이 끝나 **메뉴에서 뺀다**.
          *   · 구 'work'((구)업무관리: 업무 발행 관리·부서 업무함) — 라벨부터 (구)였다.
          *   지우지 않고 hidden 으로 남기는 이유는 rsk-imp 선례와 같다 — 내 할일·통계·
@@ -681,14 +678,14 @@
          *   그 화면들이 '대시보드' 사이드바를 달고 뜬다(findGroup 폴백).
          *   ※ 기준문서함(docs-archive)은 2026-08-28 재편 때 «신버전에 대응 화면이 없다»는
          *     이유로 정식 항목으로 살렸다가, **2026-09-03 사용자 지시로 메뉴에서 뺐다.**
-         *     그때 함께 옮긴 것이 내 할일의 '분류하러 가기'다 — 지금은 문서 목록으로
-         *     가고, 미분류 교정(«분류 붙이기») 자체가 문서 목록 상세 안에 있다. */
+         *     그때 함께 옮긴 내 할일의 '분류하러 가기'와 문서 목록의 미분류 교정(«분류 붙이기»)은
+         *     2026-10-12 에 걷었다 — 분류는 업무목록 엑셀이 정하고 이 시스템에서 하지 않는다. */
         { id: 'cmp', label: '업무 관리', icon: 'check', items: [
-            { id: 'cmp-status',   label: '법정 업무 현황',  icon: 'grid', href: 'cmp-status.html', screen: 'CMP01-T / CMP02-D / CMP04-V / SFR-014·004' },
+            { id: 'cmp-status',   label: '이행 관리',  icon: 'grid', href: 'cmp-status.html', screen: 'CMP01-T / CMP02-D / CMP04-V / SFR-014·004' },
             { id: 'cmp-docs',     label: '문서 목록',  icon: 'list', href: 'cmp-docs.html',   screen: 'DOC01-L / DOC02-D / SFR-014' },
             /* hidden — 메뉴에서 뺀 화면. 주소로만 열리며 **되살리지 말 것**.
                2026-09-03 기준문서함(docs-archive)·문서 상세(doc-detail) 추가 —
-               업무 관리의 흐름을 **법정 업무 현황 · 문서 목록 · 내 할일 셋 안에서** 끝내기로
+               업무 관리의 흐름을 **이행 관리 · 문서 목록 · 내 할일 셋 안에서** 끝내기로
                했다(사용자 지시). 기준문서함이 갖고 있던 «제정·개정 원문 버전 이력»은
                대체 화면이 없다 — 없어진 사실을 화면에 적고 지어내지 않는다. */
             { id: 'docs-archive', hidden: true, label: '기준문서함', icon: 'file', href: 'docs-archive.html', screen: 'SCR-EDOC-010 / SFR-012' },

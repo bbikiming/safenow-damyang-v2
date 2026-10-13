@@ -91,7 +91,7 @@ const BACK_ALLOWLIST = new Set([
    된다. 2026-09-03 에 js/help-center.js 를 뺐다: 도움말의 «자주 하는 일» 바로가기가
    실제 화면 이동인데(go: 'xxx.html') 그 13개가 한 번도 검사되지 않고 있었다. */
 const DATA_FILES = new Set(['js/screen-defs-data.js', 'js/doc-history-data.js', 'js/law-map.js',
-    'js/doc-taxonomy-data.js', 'js/doc-seed-2026.js', 'js/cmp-dept-docs.js', 'js/law-admin-seed.js',
+    'js/doc-taxonomy-data.js', 'js/doc-confirmed-data.js', 'js/cmp-dept-docs.js', 'js/law-admin-seed.js',
     'js/law-plain.js', 'js/law-sync-seed.js', 'js/policy-open.js']);
 
 const htmlFiles = fs.readdirSync(ROOT).filter(f => f.endsWith('.html'));

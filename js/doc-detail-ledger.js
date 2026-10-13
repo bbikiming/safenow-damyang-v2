@@ -68,7 +68,7 @@
                 '<div class="dd-head-chips">' + srcChip(d) +
                     '<span class="chip-status chip-sm ' + V().toneOf(d.status) + '">' + esc(d.status) + '</span>' +
                     (d.nearDup ? '<span class="chip-status chip-sm warning">중복 의심</span>' : '') +
-                    (d.origin === 'ledger' && !d.mapped ? '<span class="chip-status chip-sm warning">미분류</span>' : '') +
+                    (d.origin === 'ledger' && !d.mapped ? '<span class="chip-status chip-sm warning">' + (d.deptCheck ? '부서 확인 필요' : '미분류') + '</span>' : '') +
                 '</div>' +
                 /* 이 화면의 주제목이다 — 페이지에 h1 이 없으면 읽기 순서가 h2 부터
                    시작해 보조기술이 문서 제목을 잡지 못한다 */
@@ -101,11 +101,10 @@
                     m('운영주기', d.cycle ? esc(d.cycle) : '<span class="dx-nodoc">미기재</span>') +
                     /* 출처를 틀리게 말하면 그 자체가 거짓 자료가 된다 — 원장 실측
                        원장 실측 전건이 «사용자 등록»으로 뜨던 결함을 여기서 막는다.
-                       판정 순서는 좁은 것부터다(seed26 → real → demo → 등록분). */
-                    m('데이터 구분', d.origin === 'seed26'
-                        ? '<b>예시 자료</b> <span class="dx-nodoc">— 2026년 실적은 2025년 실측 패턴에서 규칙으로 만든 자료입니다(tools/build-doc-seed-2026.py). 실제 제출 기록이 아닙니다.</span>'
-                        : d.dataMode === 'real'
-                        ? '<b>문서 원장 실측</b> <span class="dx-nodoc">— ' + esc(d.year) + '년 담양군 문서 원장에서 그대로 가져온 실제 기록입니다.</span>'
+                       판정 순서는 좁은 것부터다(real → demo → 등록분). */
+                    m('데이터 구분', d.dataMode === 'real'
+                        ? '<b>문서 원장 실측</b> <span class="dx-nodoc">— ' + esc(d.year) + '년 담양군 문서 원장에서 그대로 가져온 실제 기록입니다' +
+                          (d.statusSource === 'confirmed-list' ? '(연도별 확정문서목록).' : '.') + '</span>'
                         : d.dataMode === 'demo'
                         ? '예시 값 <span class="dx-nodoc">— 출처·상태는 문서 ID 해시로 고정 배정된 값이며 실서비스에서는 온나라·전자문서·파일관리 어댑터의 원천 상태로 대체됩니다</span>'
                         : '사용자 등록') +
@@ -164,7 +163,7 @@
                         '<td><span class="chip-status chip-sm ' + V().toneOf(D().statusLabel(code)) + '">' +
                             esc(D().statusLabel(code)) + '</span></td>' +
                         '<td class="col-action"><a class="btn btn-sm btn-outline" href="cmp-status.html?stage=' +
-                            esc(s.id) + '&year=' + d.year + '">법정 업무 현황 →</a></td></tr>';
+                            esc(s.id) + '&year=' + d.year + '">이행 관리 →</a></td></tr>';
                 }).join('');
         }).join('') + '</tbody></table>';
     }

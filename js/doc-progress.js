@@ -22,18 +22,20 @@
        v2(2026-08-25): 원장 문서 id 체계가 바뀌었다(DOC-2025-1366 → DOC-2025-000001).
        옛 키를 그대로 두면 관리자 교정(fix)·중복 병합이 **이제 없는 문서 id** 를
        가리킨 채 남아, 화면이 «교정 N건»이라 말하는데 대상이 없는 상태가 된다.
-       조용히 끊기는 종류라 눈으로는 안 잡힌다. */
-    var SKEY = 'dy-docs-v2';
+       조용히 끊기는 종류라 눈으로는 안 잡힌다.
+       v3(2026-09-28): 확정문서목록 수용 — 원장이 «문서×단계» 행 단위에서 «문서» 단위로
+       묶이면서 2025 문서 id 가 다시 매겨졌고, 2026 예시 자료 id 가 사라졌다. 같은 이유로 올린다. */
+    var SKEY = 'dy-docs-v3';
     var BASE_YEAR = 2025;             /* 원장 연도 */
     var DEFAULT_YEAR = 2026;          /* 기준연도 기본값 (지시서 §5-2) */
     /* ── 시연 기준연도 — 발주처 확정 2026-08-18 ──────────────────────────────
      * "기준 연도는 실제처럼 2025년으로 채워주고 2026년은 대부분 미이행으로 해줘"
      *
-     * 아래 defaultYear() 는 «진행이 있는 최신 연도»를 파생한다. 2026 예시 자료가
-     * 붙으면서 그 규칙이 2026 을 돌려주게 됐는데, 그러면 화면 5곳(법정 업무 현황·문서
+     * 아래 defaultYear() 는 «진행이 있는 최신 연도»를 파생한다. 2026 상반기 실측이
+     * 붙으면서 그 규칙이 2026 을 돌려주는데, 그러면 화면 5곳(이행 관리·문서
      * 목록·이행 목록·업무 업로드·업무문서 투어)의 기본 연도가 **한꺼번에** 2026
-     * 으로 움직인다. 시연 서사는 «작년 실적(실측)을 먼저 보고, 올해로 바꾸면
-     * 아직 대부분 미이행»이라 기본값은 2025 다.
+     * 으로 움직인다. 2026 은 상반기·6개 부서뿐이고 2025 만 20개 부서 전체라
+     * 기본값은 2025 다(2026-09-28 확정문서목록 수용 후에도 유지).
      *
      * DEMO_TODAY(§11) 와 같은 자리다 — 시연일에 이 한 줄만 바꾼다. 0 으로 두면
      * 파생 규칙(실서비스 동작)으로 돌아간다. */
@@ -41,18 +43,24 @@
 
     var T = function () { return global.DYDOCT || { ITEMS: [], STAGES: [] }; };
     var H = function () { return global.DYDOCH || { DOCS: [], META: {} }; };
-    /* 2026 예시 자료(생성물, js/doc-seed-2026.js). **없어도 돌아간다** — 로드하지
-       않은 화면·실서비스에서는 빈 값이라 종전 동작 그대로다. */
-    var Y26 = function () { return global.DYDOC2026 || null; };
-    /* 시드는 «오늘»을 박아 두고 만들어졌다. DEMO_TODAY(§11)를 옮기면 회차 기한과
-       지연 판정만 다시 계산되고 시드 문서 수는 그대로라 진행이 실제보다 뒤처져
-       보인다. 자동 보정은 하지 않는다(그러면 시드가 규칙 밖에서 움직인다) —
-       대신 어긋난 사실을 콘솔에 남겨 «시드를 다시 생성하라»를 알린다. */
-    var _staleWarned = false;
-    function seedStale() {
-        var sd = Y26();
-        if (!sd || !sd.META) return false;
-        return sd.META.today !== today();
+    /* 연도별 확정 업무문서(생성물, js/doc-confirmed-data.js) — 2021 하반기·2022~2024·
+       2026 상반기. **없어도 돌아간다** — 로드하지 않은 화면에서는 2025 원장만 본다.
+       종전 2026 예시 자료(DYDOC2026, 규칙으로 만든 시드)를 대체했다(2026-09-28). */
+    var CF = function () { return global.DYDOCC || null; };
+
+    /* 수록 범위 — 연도마다 다르다(2025 만 20개 부서 전체, 나머지는 6개 부서·반기).
+       없는 문서가 «안 했다»가 아니라 «수집 범위 밖»임을 화면이 말하려면 이 값을
+       한 곳에서 받아야 한다. 확정 목록을 로드하지 않은 화면은 null. */
+    function coverage(year) {
+        var c = CF() && CF().COVER ? CF().COVER[String(+year)] : null;
+        if (!c) return null;
+        return {
+            year: +year, label: c.label, period: c.period, from: c.from, to: c.to,
+            depts: c.depts.slice(), deptCount: c.depts.length, docs: c.docs, stages: c.stages,
+            /* 부분 수록 — 반기만 있거나 부서가 원장 전체보다 적다 */
+            partial: !!c.period || !c.inLedger,
+            periodText: c.period === 'H1' ? '상반기(1~6월)만' : c.period === 'H2' ? '하반기(7~12월)만' : '',
+        };
     }
     var V = function () { return global.DYV2; };
     var R = function () { return global.DYROLE; };
@@ -157,30 +165,25 @@
 
     /* =========================================================================
      * 문서 축 — 세 출처를 하나의 배열로 (UX설계 §5-3)
-     *   2025 원장(20개 부서) + DY_DOCS_V2 426 + 2026 예시 자료 + 사용자 등록분
+     *   2025 원장(20개 부서) + DY_DOCS_V2 426 + 연도별 확정 문서 + 사용자 등록분
      *   6만행이 넘으므로 파생 인덱스까지 한 번에 만들고 캐시한다(실측 49ms).
      * ========================================================================= */
     var _cache = null;
     function build() {
         if (_cache) return _cache;
-        if (!_staleWarned && seedStale()) {
-            _staleWarned = true;
-            try {
-                console.warn('[DYDOCS] 2026 예시 자료의 기준일(' + Y26().META.today +
-                    ')이 DEMO_TODAY(' + today() + ')와 다릅니다 — ' +
-                    'python3 tools/build-doc-seed-2026.py 로 다시 생성하세요.');
-            } catch (e) {}
-        }
         var docs = [];
 
         /* (1) 2025 문서 원장 — 생성물(20개 부서). 종전 3,830건은 재난안전과
                한 부서뿐이라 «부서 축 없음»이었으나 지금은 전건이 부서를 갖는다.
                관리자 교정(store().fix)은 원본을 고치지 않고 여기서 **덧씌운다**. */
         var FX = store().fix || {};
-        H().DOCS.forEach(function (d) {
+        /* 원장 연도(2025)와 연도별 확정 문서가 **같은 모양**으로 들어온다 — 둘 다
+           담양군 온나라 원장 실측이라 origin 은 'ledger' 하나다. 연도와 statusSource 로
+           갈린다(ledger-2025 · confirmed-list). 관리자 교정(fix)도 양쪽에 똑같이 걸린다. */
+        function pushLedger(d) {
             var fx = FX[d.id];
             docs.push({
-                id: d.id, title: d.title, sr: d.sr, date: d.date, year: 2025,
+                id: d.id, title: d.title, sr: d.sr, date: d.date, year: +d.year || BASE_YEAR,
                 stageIds: (fx && fx.stageIds) ? fx.stageIds : d.stageIds, cycle: d.cycle,
                 fixedAt: fx && fx.at ? fx.at : null, fixedBy: fx && fx.by ? fx.by : null,
                 mergedInto: fx && fx.mergedInto ? fx.mergedInto : null,
@@ -190,12 +193,17 @@
                 mapConf: d.mapConf || '',           /* sure·weak·vague — weak 이 진짜 위험 */
                 excluded: d.excluded || '',         /* 제외사유 — 적용 법령 밖·집행 행정문서·참고수신·타 기관 소관·자치사무(v4.0 5종) */
                 review: d.review || null,           /* 원문 확인 필요 {type, what, cand} — 원장 v4.0 신규 열 */
+                /* 부서 확인 필요 {cand:[단계]} — 문서목록은 단계를 붙였는데 확정 목록에 없다.
+                   판정에서 빠진다(단계가 없다). 관리자가 교정해 단계를 붙이면 그 값이 이긴다. */
+                deptCheck: (fx && fx.stageIds && fx.stageIds.length) ? null : (d.deptCheck || null),
+                confirmedOnly: !!d.confirmedOnly,  /* 확정 목록에만 있고 문서목록에는 없던 문서 */
                 origin: 'ledger', dataMode: d.dataMode || 'real',
                 statusSource: d.statusSource || 'ledger-2025',
                 nearDup: (fx && fx.mergedInto) ? null : (d.nearDup || null),
                 mapped: ((fx && fx.stageIds) ? fx.stageIds : d.stageIds).length > 0,
             });
-        });
+        }
+        H().DOCS.forEach(pushLedger);
 
         /* (2) 현행 업무문서 426 — 전자문서 폼·전용화면 진입점을 보존한다 */
         (global.DY_DOCS_V2 || []).forEach(function (d) {
@@ -212,29 +220,10 @@
             });
         });
 
-        /* (3) 2026 예시 자료 — 규칙으로 만든 올해 실적(tools/build-doc-seed-2026.py).
-               2025 원장(1)과 섞이지 않게 origin·dataMode 로 구분한다. 파일을 로드
-               하지 않으면 이 블록은 통째로 건너뛴다. */
-        var sd = Y26();
-        if (sd && sd.DOCS) {
-            sd.DOCS.forEach(function (d) {
-                docs.push({
-                    id: d.id, title: d.title, sr: d.sr || '', date: d.date, year: +sd.META.year,
-                    stageIds: (d.stageIds || []).slice(), cycle: d.cycle || '',
-                    src: d.src || 'onnara', status: d.st || '',
-                    dept: d.dept || '', assignee: '',   /* 부서는 원본 2025 문서에서 이어받는다 */
-                    dir: d.dir || null,
-                    origin: 'seed26', dataMode: 'demo', statusSource: 'demo-seed-2026',
-                    nearDup: null, mapped: (d.stageIds || []).length > 0,
-                    /* 어느 2025 문서에서 왔는지를 **presetOf 로 투영**한다. 화면의
-                       «전년도 불러오기»·«올해 이어받기» 중복 검사가 이 필드를 보고
-                       있어(cmp-status pulledInto · cmp-docs carry), 여기 실어 두면
-                       두 화면을 고치지 않고도 «시드가 이미 옮긴 문서»를 또 옮기는
-                       일이 막힌다. 안 막으면 그 단계만 회차를 넘어 «충족»이 뜬다. */
-                    presetOf: d.seedOf || null,
-                });
-            });
-        }
+        /* (3) 연도별 확정 문서 — 2021 하반기·2022~2024·2026 상반기(6개 부서).
+               확정문서목록(tools/build-confirmed-docs.py)이 출처이고 원장과 같은
+               실측이다. 파일을 로드하지 않으면 이 블록은 통째로 건너뛴다. */
+        if (CF() && CF().DOCS) CF().DOCS.forEach(pushLedger);
 
         /* (4) 사용자 등록분 (업로드·프리셋) */
         store().docs.forEach(function (d) { docs.push(d); });
@@ -311,7 +300,8 @@
     /* =========================================================================
      * 진행상태 — StageProgress
      *   2025 의 기본값은 원자료 `취합상태` 의 투영(st2025)이지 합성이 아니다.
-     *   그 밖의 연도는 비어서 출발한다 — 그 빈 상태가 프리셋의 존재 이유다.
+     *   그 밖의 연도도 **문서 존재**로 판정한다 — 연도별 확정 문서가 실측이기 때문이다
+     *   (종전에는 2026 예시 자료의 ST 폴백이었다).
      * ========================================================================= */
     function pkey(stageId, year) { return stageId + '|' + year; }
     function progOf(stageId, year) { return store().prog[pkey(stageId, year)] || null; }
@@ -323,23 +313,21 @@
         if (year === BASE_YEAR) {
             var s = stage(stageId);
             if (s && s.st2025) return s.st2025;   /* v3 CSV 취합상태 투영(하위호환) */
-            /* ── v3.3 부터는 취합상태 열이 없다 ────────────────────────────────
-             * 분류기준 v3.3 은 「취합상태」를 빼고 **문서 목록 자체**로 판정하는
-             * 방식으로 바뀌었다(v4.0 도 같다). 그 열을 되살리면 분류기준이 뺀 축을 우리가
-             * 부활시키는 것이고, 코드 비대칭(그 뒤 생긴 단계는 값이 없다)도 생긴다.
-             *
-             * 그래서 **문서 존재**로 판정한다. 다만 «완료»는 만들지 않는다 —
-             * 완료는 주관부서 담당자가 증빙을 확인해야 붙는 것이고(§5 MUST),
-             * 2025년에 이 시스템에서 확인한 사람은 없다. 문서가 있으면 «진행중»,
-             * 없으면 «미이행»이 사실이다.
-             * 비해당도 만들지 않는다 — 사유를 대고 뺀 사람이 없기 때문이다. */
-            return documentIdsOfStage(stageId, year).length > 0 ? ST.WIP : ST.NONE;
         }
-        /* 2026 예시 자료 — st2025 와 **같은 방식**의 폴백이다. 저장소 override 가
-           있으면 그쪽이 이기므로(위) 사용자가 바꾼 값은 시드가 덮지 않는다. */
-        var sd = Y26();
-        if (sd && sd.ST && year === +sd.META.year && sd.ST[stageId]) return sd.ST[stageId];
-        return ST.NONE;
+        /* ── v3.3 부터는 취합상태 열이 없다 ────────────────────────────────
+         * 분류기준 v3.3 은 「취합상태」를 빼고 **문서 목록 자체**로 판정하는
+         * 방식으로 바뀌었다(v4.0 도 같다). 그 열을 되살리면 분류기준이 뺀 축을 우리가
+         * 부활시키는 것이고, 코드 비대칭(그 뒤 생긴 단계는 값이 없다)도 생긴다.
+         *
+         * 그래서 **문서 존재**로 판정한다. 다만 «완료»는 만들지 않는다 —
+         * 완료는 주관부서 담당자가 증빙을 확인해야 붙는 것이고(§5 MUST),
+         * 2025년에 이 시스템에서 확인한 사람은 없다. 문서가 있으면 «진행중»,
+         * 없으면 «미이행»이 사실이다.
+         * 비해당도 만들지 않는다 — 사유를 대고 뺀 사람이 없기 때문이다. */
+        /* 연도별 확정 문서(2021~2024·2026)도 같은 규칙이다 — 실측이고, 이 시스템에서
+           확인한 사람이 없으므로 문서가 있으면 «진행중»까지다. 사용자 등록분도
+           업로드 직후는 진행중이라(§5) 같은 결과가 된다. */
+        return documentIdsOfStage(stageId, year).length > 0 ? ST.WIP : ST.NONE;
     }
     function statusLabel(code) { return ST_LABEL[code] || ST_LABEL[ST.NONE]; }
     function stageRecord(stageId, year) {
@@ -624,7 +612,7 @@
     }
 
     /** 이 원본이 이미 toYear 문서로 옮겨졌나 — 옮긴 문서(없으면 null).
-     *  옮기는 경로가 셋(법정 업무 현황 불러오기 · 문서 목록 이어받기 · 업무 업로드
+     *  옮기는 경로가 셋(이행 관리 불러오기 · 문서 목록 이어받기 · 업무 업로드
      *  프리셋)이고 예시 자료도 presetOf 로 투영돼 있어(위 seedOf), 이 한 줄이
      *  «시드가 옮긴 원본을 또 옮기지 못하게 한다»(CLAUDE.md §5)를 세 경로에 함께 건다. */
     function carriedInto(srcId, toYear) {
@@ -880,7 +868,7 @@
         /* 상수 */
         ST: ST, ST_ORDER: ST_ORDER, SRC: SRC, SRC_ORDER: SRC_ORDER,
         DIR: DIR, DIR_ORDER: DIR_ORDER, dirOf: dirOf, srText: srText,
-        BASE_YEAR: BASE_YEAR, DEFAULT_YEAR: DEFAULT_YEAR, SKEY: SKEY, seedStale: seedStale,
+        BASE_YEAR: BASE_YEAR, DEFAULT_YEAR: DEFAULT_YEAR, SKEY: SKEY, coverage: coverage,
         defaultYear: defaultYear, yearsWithData: yearsWithData, presetSourceYear: presetSourceYear,
         /* 소유권 */
         canOwn: canOwn, ownerRootId: ownerRootId, assertOwn: assertOwn,

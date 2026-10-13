@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>운영 서버 2권한 실습</title>
+<style>
+  @page { size: A4 landscape; margin: 9mm 10mm; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", sans-serif; font-size: 8.6pt; line-height: 1.32; color: #111; background: #fff; }
+  .page { max-width: 277mm; margin: 0 auto; }
+  header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #1d4ed8; padding-bottom: 4px; margin-bottom: 6px; }
+  h1 { font-size: 15pt; margin: 0; }
+  .meta { font-size: 8.5pt; color: #333; text-align: right; }
+  .meta b { font-family: Consolas, monospace; }
+  h2 { font-size: 10pt; margin: 5px 0 3px; color: #1d4ed8; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid #9ca3af; padding: 2px 5px; vertical-align: top; }
+  th { background: #eef2ff; font-weight: 700; text-align: left; white-space: nowrap; }
+  .grid { display: grid; grid-template-columns: 1.55fr 1fr; gap: 8px; }
+  .pw { display: inline-block; width: 34mm; border-bottom: 1px solid #111; height: 1.1em; }
+  ul { margin: 2px 0 0; padding-left: 15px; }
+  li { margin: 0; }
+  .b { background: #dbeafe; padding: 0 4px; border-radius: 3px; font-weight: 700; white-space: nowrap; }
+  .g { background: #dcfce7; padding: 0 4px; border-radius: 3px; font-weight: 700; white-space: nowrap; }
+  .steps td:nth-child(1) { width: 5mm; text-align: center; font-weight: 700; }
+  .steps td:nth-child(2) { width: 13mm; white-space: nowrap; }
+  .steps td:nth-child(3) { width: 44mm; }
+  .steps td:nth-child(5) { width: 62mm; }
+  .steps td:nth-child(6) { width: 18mm; }
+  .warn { border: 1.5px solid #dc2626; background: #fef2f2; padding: 4px 7px; border-radius: 4px; }
+  footer { margin-top: 5px; font-size: 8.5pt; }
+  @media screen { body { padding: 16px; background: #f3f4f6; } .page { background: #fff; padding: 12px 16px; box-shadow: 0 1px 4px rgba(0,0,0,.15); } }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+  @media screen and (max-width: 767px) { .grid { grid-template-columns: 1fr; } .page { overflow-x: auto; } }
+</style>
+</head>
+<body>
+<div class="page">
+<header>
+  <h1>운영 서버 2권한 실습 — 원페이퍼</h1>
+  <div class="meta">2026-10-08 · 군청 PC<br>주소 <b>https://safety.damyang.go.kr/login</b> · Microsoft Edge</div>
+</header>
+
+<div class="grid">
+  <div>
+    <h2>① 계정 — 엣지 창 두 개를 나란히</h2>
+    <table>
+      <tr><th>창</th><th>권한</th><th>아이디</th><th>비밀번호</th><th>부서</th><th>할 수 있는 것</th></tr>
+      <tr><td>일반 창</td><td><span class="b">🟦 재난안전과 담당자</span></td><td>QA박안전1</td><td><span class="pw"></span></td><td>재난안전과</td><td>전 부서 조회·등록·확인·상신·독촉</td></tr>
+      <tr><td>InPrivate 창<br>(Ctrl+Shift+N)</td><td><span class="g">🟩 부서 담당자</span></td><td>QA하정수1</td><td><span class="pw"></span></td><td>물순환사업소</td><td>내 부서 일만</td></tr>
+      <tr><td>로그인 안 함</td><td>결재선 검토·결재</td><td>QA박안전2 · 3</td><td>—</td><td>재난안전과</td><td>공문 결재선에서 고르기만</td></tr>
+    </table>
+    <ul>
+      <li>비밀번호는 개발자에게 받은 값을 적는다 · <b>5번 틀리면 잠김</b> → 개발자에게 해제 요청</li>
+      <li>로그인 <b>30분</b> 뒤 끊김 · 5분 전부터 맨 위 [연장] · 로그인 후 두 창 오른쪽 위 <b>이름·부서</b>가 표와 같은지 확인</li>
+    </ul>
+  </div>
+  <div>
+    <h2>② 지킬 것 (운영 서버)</h2>
+    <div class="warn">
+      <ul>
+        <li>만드는 것은 이름을 <b>«현장_»</b>으로 시작</li>
+        <li>[독촉]·[재촉]·[알림 발송]은 <b>8번에서 1번만</b> — 실제 직원에게 간다</li>
+        <li>정기 위험성평가는 <b>보기만</b>(한 해 1건)</li>
+        <li>남이 만든 데이터는 손대지 않기</li>
+        <li>🟩 창에 <b>남의 부서 것을 바꾸는 버튼</b>이 보이면 누르지 말고 캡처</li>
+      </ul>
+    </div>
+    <div style="margin-top:4px">엣지: IE 모드 끄기 · 배율 <b>Ctrl+0</b> · 팝업 «항상 허용» · 비밀번호 저장 «안 함»</div>
+  </div>
+</div>
+
+<h2>③ 실습 — <span class="b">🟦 일반 창</span> · <span class="g">🟩 InPrivate 창</span></h2>
+<table class="steps">
+  <tr><th>#</th><th>누가</th><th>메뉴</th><th>해 볼 것</th><th>✔ 이러면 정상</th><th>결과</th></tr>
+  <tr><td>1</td><td>🟦🟩</td><td>맨 위 메뉴 · [전체메뉴]</td><td>두 창의 메뉴 개수 비교</td><td>🟩에는 «시스템 관리»가 없다</td><td></td></tr>
+  <tr><td>2</td><td>🟦🟩</td><td>대시보드 &gt; 통합 현황 · 내 할일</td><td>숫자 칸 제목과 탭 비교</td><td>🟦 «전사 범위», 🟩 «내 부서» · 탭 숫자 = 목록 건수</td><td></td></tr>
+  <tr><td>3</td><td>🟦🟩</td><td>위험성평가 &gt; 정기 위험성평가</td><td><b>보기만</b> (만들지 않는다)</td><td>🟩는 내 부서 줄만 · [정기평가 생성]·[공문 기안] 없음</td><td></td></tr>
+  <tr><td>4</td><td>🟩→🟦</td><td>위험성평가 &gt; 수시 위험성평가</td><td>🟩 [수시평가 등록] → 내용 «현장_수시», 요인 1행·개선 전 사진·담당자 본인 → [등록] · 🟦 그 건에 [＋ 검토파일 등록]</td><td>🟩 부서 칸 «소속 부서» 고정 · 🟦 «검토완료» · 🟩에는 [검토파일 등록] 없음</td><td></td></tr>
+  <tr><td>5</td><td>🟩</td><td>대시보드 &gt; 내 할일</td><td>4번 개선조치 카드 [완료 처리] → 조치 내용·완료일·개선 후 사진</td><td>빈칸이면 버튼 비활성 · 서명 칸에 내 이름 자동</td><td></td></tr>
+  <tr><td>6</td><td>🟦→🟩</td><td>안전보건교육 &gt; 교육 현황·관리 &gt; 근로자 명단 관리</td><td>🟦 [직접 등록] → [조직도] 물순환사업소, «현장_근로자A», 기간제 6개월 · 🟩 «현장_근로자B» 등록</td><td>🟩 등록 창에 [조직도] 없음 · 🟩 목록에 남의 부서 사람 없음</td><td></td></tr>
+  <tr><td>7</td><td>🟩→🟦</td><td>안전보건교육 &gt; 현업근로자 &gt; 정기교육 [자체교육]</td><td>🟩 [자체교육 등록·진행] → «현장_자체», 대상자 근로자A, 증빙 첨부 · 🟦 상세에서 증빙 내려받기</td><td>🟩 부서 고정 · 🟩 카드에 [삭제]·[공문 기안] 없음 · 🟦 파일 열림</td><td></td></tr>
+  <tr><td>8</td><td>🟦</td><td>안전보건교육 &gt; 교육 현황·관리 &gt; 이수현황</td><td>[대상자별 상세] → «현장_근로자B» 체크 → [일괄 독촉 (1)] <b>1번만</b> · 🟩 알림(종) 확인</td><td>독촉 이력에 1줄 · 🟩 알림 도착 여부 메모</td><td></td></tr>
+  <tr><td>9</td><td>🟦→🟩</td><td>작업환경·건강 &gt; 작업환경측정</td><td>🟦 [측정 계획 등록] 물순환사업소 «현장_소음» · 🟩 상세 → [증빙 등록] → [측정 완료 처리]</td><td>🟩 목록에 내 부서 줄만 · 🟦 «첨부됨»</td><td></td></tr>
+  <tr><td>10</td><td>🟩→🟦</td><td>안전보건관리체계 &gt; 이행점검</td><td>🟩 [확인 등록] → «이행» 증빙 없이 저장 → 증빙·비고 넣고 저장 · 🟦 표 확인(<b>[독촉] 누르지 않기</b>)</td><td>«증빙 없이는 이행으로 등록할 수 없습니다» · 🟩 남의 부서 줄은 조회만</td><td></td></tr>
+  <tr><td>11</td><td>🟩→🟦</td><td>의견청취 &gt; 의견청취·건의함</td><td>🟩 [+ 의견 등록] «현장_난간 흔들림» · 🟦 조치 방법 저장 → [완료 처리]</td><td>접수대기 → 점검중 → 완료 · 🟩에 처리 결과 보임</td><td></td></tr>
+  <tr><td>12</td><td>🟩→🟦</td><td>업무 관리 &gt; 이행 관리</td><td>🟩 [누락 점검] → [＋ 결과 등록] 있는 할 일 → 파일·«현장_점검 결과»·내부 문서 → 등록 · 🟦 문서 목록에서 «현장_» 검색</td><td>그 할 일이 «이행» · 🟦 문서 목록에 보임</td><td></td></tr>
+  <tr><td>13</td><td>🟦🟩</td><td>관리대상 &gt; 시설물 대장</td><td>목록 아래 «전체 M건» 비교 · 아무 줄 상세</td><td>두 창의 M이 같다</td><td></td></tr>
+</table>
+
+<footer><b>④ 문제가 나면</b> — 번호·화면·한 일·기대·실제를 적고 <b>Win+Shift+S</b> 캡처 · 오류면 <b>F12</b> → 콘솔 빨간 줄 캡처 · 끝나면 «현장_» 데이터 목록을 개발자에게 넘겨 삭제 요청</footer>
+</div>
+</body>
+</html>

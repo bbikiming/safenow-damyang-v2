@@ -21,10 +21,21 @@ QA 인원이 6명이고 위험성평가·안전보건교육은 **전원이 같�
   · 결함 기록 시트를 따로 두지 않는다 — 실패한 줄에 메모·사진을 바로 남기고,
     모으는 일은 취합 스크립트(tools/collect-qa-xlsx.py)가 한다.
 
+[사람마다 다른 값 — 2026-09-29 서버 QA]
+  서버에서는 사람마다 계정·부서가 다르다. 원본 줄에는 치환어를 쓰고 파일마다 채운다.
+  · 박안전N · 하정수N · {내 부서} · {이름} — 배정 표의 «재난안전과 계정 · 부서 계정 · 내 부서» 칸
+  · {진행자} · {진행자 부서} · {대상 부서} — 기본값 «정기평가 진행자 · 진행자 몫 부서»
+  · «누구로»가 «진행자: …» 인 줄은 진행자 파일에만 들어간다(한 해 1건뿐인 정기평가를 6명이
+    함께 진행하기 때문 — 만들기·전달·상신은 한 사람만 한다). 다른 사람 파일은 번호가 건너뛴다.
+  · 파일 절 안의 «### 안내: 제목» 은 공통 안내에서 첫 낱말이 같은 절을 그 파일만 바꾼다
+    (첫 낱말이 없는 절이면 새로 더한다). 서버용 파일과 프로토타입용 파일이 한 원본에 섞여 있을 수 있다.
+  · 치환어 바로 뒤에 조사를 붙이지 않는다 — 값마다 받침이 달라(담양읍을 · 건설과를) 틀린 조사가 된다.
+
 [멈추는 조건] 원본에 형식 오류가 있으면 **파일을 한 개도 쓰지 않는다** — 칸 수가 6이 아니거나,
 번호가 중복·접두어 불일치이거나, «누구로»가 계정 표에 없거나, «어디서»의 메뉴 경로가
 실제 메뉴(js/layout.js NAV)와 다르거나, «N번» 참조가 없는 줄을 가리키거나,
-배정 표가 스모크 파일을 빠뜨리거나 두 번 주면.
+배정 표가 스모크 파일을 빠뜨리거나 두 번 주면, 치환어를 채울 값이 없거나 치환어 뒤에 조사가
+붙어 있으면, 진행자 줄을 빼고 나니 누군가에게 빈 시트·없는 «N번»이 생기면.
 """
 import io, os, re, sys, datetime, unicodedata
 
@@ -57,7 +68,9 @@ def is_sep(l):
     return bool(re.match(r"^\|[\s\-:|]+\|\s*$", l.strip()))
 
 meta, assign, guide, files = {}, [], [], []
-sec = cur_file = cur_sheet = cur_guide = None
+assign_head, assign_info = None, {}
+sec = cur_file = cur_sheet = cur_guide = cur_fguide = None
+RULE = re.compile(r"^-{3,}$")          # 절 사이 가로줄 — 안내 문단으로 들어가면 «• ---»로 찍힌다
 i = 0
 while i < len(lines):
     l = lines[i]
@@ -65,20 +78,25 @@ while i < len(lines):
     m3 = re.match(r"^### (.+)$", l)
     if m2:
         title = m2.group(1).strip()
-        cur_sheet = cur_guide = None
+        cur_sheet = cur_guide = cur_fguide = None
         mf = re.match(r"^파일:\s*(.+?)\s*\((\w+)\s*·\s*(상세|스모크)\)$", title)
         sec = {"기본값": "meta", "배정": "assign", "안내": "guide"}.get(title)
         if mf:
             sec = "file"
-            cur_file = {"name": mf.group(1), "code": mf.group(2), "kind": mf.group(3), "desc": [], "sheets": []}
+            cur_file = {"name": mf.group(1), "code": mf.group(2), "kind": mf.group(3), "desc": [], "sheets": [], "guide": []}
             files.append(cur_file)
         i += 1; continue
     if m3 and sec == "guide":
         cur_guide = (m3.group(1).strip(), []); guide.append(cur_guide); i += 1; continue
     if m3 and sec == "file":
+        mg = re.match(r"^안내:\s*(.+)$", m3.group(1).strip())
+        if mg:
+            cur_sheet = None
+            cur_fguide = (mg.group(1).strip(), []); cur_file["guide"].append(cur_fguide); i += 1; continue
         ms = re.match(r"^시트:\s*(.+)$", m3.group(1).strip())
         if not ms:
-            die("%d행 — 파일 절 안의 ### 는 «시트: 이름» 이어야 한다" % (i + 1))
+            die("%d행 — 파일 절 안의 ### 는 «시트: 이름» 또는 «안내: 제목» 이어야 한다" % (i + 1))
+        cur_fguide = None
         cur_sheet = {"name": ms.group(1).strip(), "desc": [], "rows": []}
         cur_file["sheets"].append(cur_sheet); i += 1; continue
 
@@ -88,8 +106,11 @@ while i < len(lines):
             meta[c[0]] = c[1]
     elif sec == "assign" and l.startswith("|") and not is_sep(l):
         c = cells(l)
-        if c[0] != "이름":
+        if c[0] == "이름":
+            assign_head = c
+        else:
             assign.append((c[0], [x.strip() for x in c[1].split(",") if x.strip()]))
+            assign_info[c[0]] = dict(zip(assign_head or [], c))
     elif sec == "guide" and cur_guide is not None:
         if l.startswith("|"):
             tbl = []
@@ -98,8 +119,18 @@ while i < len(lines):
                     tbl.append(cells(lines[i]))
                 i += 1
             cur_guide[1].append(("table", tbl)); continue
-        if l.strip():
+        if l.strip() and not RULE.match(l.strip()):
             cur_guide[1].append(("p", l.strip()))
+    elif sec == "file" and cur_fguide is not None:
+        if l.startswith("|"):
+            tbl = []
+            while i < len(lines) and lines[i].startswith("|"):
+                if not is_sep(lines[i]):
+                    tbl.append(cells(lines[i]))
+                i += 1
+            cur_fguide[1].append(("table", tbl)); continue
+        if l.strip() and not RULE.match(l.strip()):
+            cur_fguide[1].append(("p", l.strip()))
     elif sec == "file":
         if l.startswith(">"):
             (cur_sheet if cur_sheet is not None else cur_file)["desc"].append(l.lstrip("> ").strip())
@@ -141,6 +172,86 @@ at = guide_table(ACCOUNTS_SECTION)
 if not at or at[0][0] != "이름":
     die("안내의 «%s» 절에서 계정 표(이름 · 누구 · 주로 하는 것)를 찾지 못했다" % ACCOUNTS_SECTION)
 ACCOUNTS = [r[0] for r in at[1:]]
+
+# ── 사람마다 다른 값 ─────────────────────────────────────────────────────────
+LEAD = meta.get("정기평가 진행자", "").strip()
+LEAD_DEPT = meta.get("진행자 몫 부서", "").strip()
+LEAD_TAG = "진행자:"
+ROLE_OF = {"박안전N": "재난안전과", "하정수N": "담당 공무원", "QA시스템관리": "시스템 관리"}     # «누구로» 칸에 계정과 함께 보이는 권한
+TOKEN_RE = re.compile(r"\{[^{}]+\}|박안전N|하정수N")
+# 치환어 바로 뒤의 조사 — 값마다 받침이 달라 틀린 조사가 된다(담양읍를 · 하정수3로). 에·의·에서·도·만은 괜찮다.
+JOSA_RE = re.compile(r"(\{[^{}]+\}|박안전N|하정수N)(으로|로|은|는|이|가|을|를|와|과|이나|나|이다|이고|이라)(?![가-힣])")
+
+def no_detail(person):
+    """배정 표 «상세 파일» 칸이 «제외»면 위험성평가·교육 상세 파일을 받지 않는다(둘러보기 전용 인원)"""
+    return assign_info.get(person, {}).get("상세 파일", "").strip() == "제외"
+
+def tokens_for(person):
+    info = assign_info.get(person, {})
+    t = {"{이름}": person}
+    for tok, col in (("박안전N", "재난안전과 계정"), ("하정수N", "부서 계정"), ("{내 부서}", "내 부서")):
+        if info.get(col):
+            t[tok] = info[col]
+    if LEAD:
+        t["{진행자}"] = LEAD
+    if LEAD_DEPT:
+        t["{진행자 부서}"] = LEAD_DEPT
+        depts = [assign_info.get(n, {}).get("내 부서", "") for n, _ in assign if not no_detail(n)]
+        if all(depts):
+            t["{대상 부서}"] = " · ".join(depts + [LEAD_DEPT])
+    return t
+
+def subst(text, person):
+    t = tokens_for(person)
+    out = TOKEN_RE.sub(lambda m: t.get(m.group(0), m.group(0)), str(text))
+    left = sorted(set(TOKEN_RE.findall(out)))
+    if left:
+        die("%s 의 파일에서 치환어 %s 를 채울 값이 없다 — 배정 표 칸(재난안전과 계정·부서 계정·내 부서)과 "
+            "기본값(정기평가 진행자·진행자 몫 부서)을 확인하라" % (person, ", ".join(left)))
+    return out
+
+def lead_only(r):
+    return r[1].startswith(LEAD_TAG)
+
+def who_of(r):
+    return r[1][len(LEAD_TAG):].strip() if lead_only(r) else r[1]
+
+def sheets_for(f, person):
+    """그 사람이 받는 줄 — 진행자 줄은 진행자 파일에만"""
+    return [(s, [r for r in s["rows"] if not lead_only(r) or person == LEAD]) for s in f["sheets"]]
+
+def file_accounts(f):
+    for t, blocks in f["guide"]:
+        if ACCOUNTS_SECTION in t:
+            for k, v in blocks:
+                if k == "table" and v and v[0][0] == "이름":
+                    return [r[0] for r in v[1:]]
+    return ACCOUNTS
+
+def gkey(t):
+    return t.split()[0]
+
+def guide_for(f):
+    """공통 안내 + 파일별 안내. 첫 낱말이 같은 절은 바꾸고, 없는 절은 바로 앞 파일 절 뒤에 더한다."""
+    fo = f["guide"]
+    if not fo:
+        return guide
+    gkeys = {gkey(t) for t, _ in guide}
+    at_key = {gkey(t): k for k, (t, _) in enumerate(fo)}
+    out, used = [], set()
+    def run_new(j):
+        while j < len(fo) and gkey(fo[j][0]) not in gkeys:
+            out.append(fo[j]); used.add(j); j += 1
+    for gi, (t, b) in enumerate(guide):
+        k = at_key.get(gkey(t))
+        if k is None:
+            out.append((t, b))
+        else:
+            out.append(fo[k]); used.add(k); run_new(k + 1)
+        if gi == 0:
+            run_new(0)        # 파일 절 맨 앞의 새 절은 공통 첫 절(하는 법) 바로 뒤에
+    out += [fo[k] for k in range(len(fo)) if k not in used]
+    return out
 
 # 실제 메뉴 경로 — «어디서»가 화면과 다른 이름을 쓰면 테스터가 메뉴를 못 찾는다
 def nav_paths():
@@ -194,8 +305,14 @@ extra = [m for m in given if m not in smoke]
 dup = sorted({m for m in given if given.count(m) > 1})
 if missing or extra or dup:
     die("배정 표가 스모크 파일과 맞지 않는다 — 빠짐 %s · 없는 메뉴 %s · 두 번 %s" % (missing, extra, dup))
+smoke_of = {n: ms for n, ms in assign}
+def people_of(f):
+    return [p for p in names if (f["kind"] == "상세" and not no_detail(p)) or f["name"] in smoke_of[p]]
+if LEAD and LEAD not in names:
+    die("기본값 «정기평가 진행자» «%s» 가 배정 표 이름이 아니다" % LEAD)
 for f in files:
     nums = []
+    accts = file_accounts(f)
     if not f["sheets"]:
         die("«%s» 에 시트가 없다" % f["name"])
     for s in f["sheets"]:
@@ -216,24 +333,54 @@ for f in files:
             nums.append(n)
             if not all(r[1:6]):
                 die("%s 에 빈 칸이 있다(누구로·어디서·확인할 것·해 볼 것·이러면 성공은 모두 채운다)" % tid)
-            for w in [x.strip() for x in who.split("→")]:
-                if w not in ACCOUNTS:
-                    die("%s «누구로»의 «%s» 가 계정 표(%s)에 없다" % (tid, w, ", ".join(ACCOUNTS)))
+            for w in [x.strip() for x in who_of(r).split("→")]:
+                if w not in accts:
+                    die("%s «누구로»의 «%s» 가 계정 표(%s)에 없다" % (tid, w, ", ".join(accts)))
+            if lead_only(r) and not LEAD:
+                die("%s 는 진행자 줄인데 기본값에 «정기평가 진행자»가 없다" % tid)
             if " > " in where and where not in VALID_PATHS:
                 die("%s «어디서» «%s» 가 실제 메뉴 경로가 아니다 — js/layout.js NAV 를 확인하라" % (tid, where))
-    for s in f["sheets"]:
-        for r in s["rows"]:
-            cur = int(r[0].split("-")[1])
-            for txt in r[4:6]:
-                for mm in re.finditer(r"(\d+)번(?!\s*시트)", txt):
-                    ref = int(mm.group(1))
-                    if ref not in nums or ref >= cur:
-                        die("%s 가 가리키는 «%d번» 이 이 파일의 앞 줄이 아니다" % (r[0], ref))
+    # 치환어 뒤 조사 — 원본 전체(줄·설명·파일 안내)
+    texts = [(r[0], x) for s in f["sheets"] for r in s["rows"] for x in r[1:]]
+    texts += [("설명", x) for x in f["desc"] + [d for s in f["sheets"] for d in s["desc"]]]
+    texts += [("안내 " + t, v if k == "p" else " ".join(" ".join(row) for row in v))
+              for t, blocks in f["guide"] for k, v in blocks]
+    for where, x in texts:
+        m = JOSA_RE.search(x)
+        if m:
+            die("«%s» %s — 치환어 «%s» 뒤에 조사 «%s» 가 붙어 있다. 값마다 받침이 달라 틀린 조사가 된다 "
+                "— «박안전N 계정으로», «내 부서({내 부서})를» 처럼 쓴다" % (f["name"], where, m.group(1), m.group(2)))
+    # 사람마다 — 진행자 줄을 뺀 뒤에도 시트가 비지 않고 «N번»이 그 사람 파일의 앞 줄을 가리키는가
+    for p in people_of(f):
+        got = sheets_for(f, p)
+        pn = {int(r[0].split("-")[1]) for _, rows in got for r in rows}
+        for s, rows in got:
+            if not rows:
+                die("«%s / %s» 가 %s 에게는 빈 시트다(진행자 줄만 있다)" % (f["name"], s["name"], p))
+            for r in rows:
+                cur = int(r[0].split("-")[1])
+                for txt in r[4:6]:
+                    for mm in re.finditer(r"(\d+)번(?!\s*시트)", txt):
+                        ref = int(mm.group(1))
+                        if ref not in pn or ref >= cur:
+                            die("%s 가 가리키는 «%d번» 이 %s 파일의 앞 줄이 아니다(진행자 줄이면 다른 사람 파일에는 없다)" % (r[0], ref, p))
+        # 치환 값이 다 있는가 — 쓰기 전에 멈춘다
+        for s, rows in got:
+            for r in rows:
+                for x in r:
+                    subst(x, p)
+            for d in s["desc"]:
+                subst(d, p)
+        for t, blocks in guide_for(f):
+            for k, v in blocks:
+                subst(v if k == "p" else " ".join(" ".join(row) for row in v), p)
 
 total = {f["name"]: sum(len(s["rows"]) for s in f["sheets"]) for f in files}
 print("QA 엑셀 원본 — %s" % os.path.relpath(SRC, ROOT))
 for f in files:
-    print("  %-10s %s %3d줄 · 시트 %d" % (f["name"], f["kind"], total[f["name"]], len(f["sheets"])))
+    lead_n = sum(1 for s in f["sheets"] for r in s["rows"] if lead_only(r))
+    print("  %-10s %s %3d줄 · 시트 %d%s" % (f["name"], f["kind"], total[f["name"]], len(f["sheets"]),
+          " (진행자 %s 만: %d줄 — 나머지는 %d줄)" % (LEAD, lead_n, total[f["name"]] - lead_n) if lead_n else ""))
 print("  결과 값: %s" % " · ".join(RESULT_NAMES))
 print("  인원 %d명: %s" % (len(names), ", ".join("%s(%s)" % (n, "·".join(ms)) for n, ms in assign)))
 if CHECK:
@@ -267,7 +414,7 @@ center = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
 HEAD = ["번호", "누구로", "어디서", "확인할 것", "해 볼 것", "이러면 성공",
         "결과 ▼", "메모 (실패·오류·문의일 때)", "사진 (필요할 때 붙여넣기)"]
-WIDTH = [5, 11, 24, 20, 38, 38, 10, 26, 22]
+WIDTH = [5, 14, 24, 20, 38, 38, 10, 26, 22]
 COL_RESULT, COL_MEMO, COL_PHOTO = 7, 8, 9
 HEAD_ROW, FIRST_ROW = 3, 4
 
@@ -318,6 +465,10 @@ def build(f, person, gen_date):
     menu, code = f["name"], f["code"]
     fname = "%s %s %s.xlsx" % (PREFIX, menu, person)
     sheet_names = [s["name"] for s in f["sheets"]]
+    got = sheets_for(f, person)
+    n_rows = sum(len(rows) for _, rows in got)
+    uses_acct = any(TOKEN_RE.search(x) for s in f["sheets"] for r in s["rows"] for x in r[1:2])
+    lead_n = sum(1 for s in f["sheets"] for r in s["rows"] if lead_only(r))
 
     # ── 안내 ──
     ws = wb.active; ws.title = "안내"
@@ -331,9 +482,14 @@ def build(f, person, gen_date):
     r = 3
     url = meta.get("테스트 주소", "")
     info = [("메뉴", menu + (" (자세히 보는 파일)" if f["kind"] == "상세" else " (훑어보는 파일)"), False),
-            ("담당자", person, False),
-            ("이 파일", " ".join(f["desc"]), False),
-            ("줄 수", "%d줄" % total[menu], False),
+            ("담당자", person, False)]
+    if uses_acct:
+        info.append(("내 계정", subst("박안전N (재난안전과 담당자) · 하정수N (내 부서 {내 부서} 담당 공무원)", person), False))
+    if lead_n:
+        info.append(("정기평가 진행자", "나 — 진행자만 하는 줄 %d개가 이 파일에 들어 있습니다(«누구로»에 «(진행자)»)" % lead_n
+                     if person == LEAD else "%s — 진행자만 하는 줄 %d개는 진행자 파일에만 있어서 번호가 건너뜁니다" % (LEAD, lead_n), False))
+    info += [("이 파일", subst(" ".join(f["desc"]), person), False),
+            ("줄 수", "%d줄" % n_rows, False),
             ("시트", " → ".join(sheet_names), False),
             ("테스트 주소", url, True),
             ("브라우저", None, True),
@@ -362,7 +518,9 @@ def build(f, person, gen_date):
         r += 1
     ws.add_data_validation(dv_browser); ws.add_data_validation(dv_device)
     r += 1
-    for sec_title, blocks in guide:
+    for sec_title, blocks in guide_for(f):
+        sec_title = subst(sec_title, person)
+        blocks = [(k, subst(v, person) if k == "p" else [[subst(x, person) for x in row] for row in v]) for k, v in blocks]
         ws.cell(row=r, column=1, value=sec_title).font = f_sec
         ws.row_dimensions[r].height = 24; r += 1
         for kind, val in blocks:
@@ -404,13 +562,13 @@ def build(f, person, gen_date):
 
     # ── 시나리오 시트 ──
     ranges = []
-    for s in f["sheets"]:
+    for s, srows in got:
         wt = wb.create_sheet(s["name"])
         wt.sheet_properties.tabColor = "70AD47"
         t = wt.cell(row=1, column=1, value="%s — %s" % (menu, s["name"])); t.font = f_title
         wt.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(HEAD))
         wt.row_dimensions[1].height = 28
-        banner = " ".join(s["desc"]) or "위에서부터 차례로 하세요."
+        banner = subst(" ".join(s["desc"]), person) or "위에서부터 차례로 하세요."
         b = wt.cell(row=2, column=1, value="🗂 " + banner); b.font = f_banner; b.fill = fill_banner; b.alignment = wrap
         wt.merge_cells(start_row=2, start_column=1, end_row=2, end_column=len(HEAD))
         fit_row(wt, 2, [(banner, sum(WIDTH))], 24)
@@ -421,7 +579,13 @@ def build(f, person, gen_date):
             wt.column_dimensions[get_column_letter(k)].width = WIDTH[k - 1]
         wt.row_dimensions[HEAD_ROW].height = 30
         r0 = FIRST_ROW
-        for k, x in enumerate(s["rows"]):
+        shown = []
+        for x in srows:
+            who = " → ".join(subst(w, person) + ("(%s)" % ROLE_OF[w] if w in ROLE_OF else "")
+                             for w in [y.strip() for y in who_of(x).split("→")])
+            who += ("\n진행자만" if lead_only(x) else "")
+            shown.append([x[0], who] + [subst(v, person) for v in x[2:]])
+        for k, x in enumerate(shown):
             rr = r0 + k
             vals = [int(x[0].split("-")[1]), x[1], x[2], clean(x[3]),
                     clean(steps_text(x[4])), clean(x[5]), None, None, None]
@@ -433,13 +597,13 @@ def build(f, person, gen_date):
                     c.fill = fill_input
             wt.cell(row=rr, column=1).font = f_bold
             wt.cell(row=rr, column=4).font = f_bold
-            if k and s["rows"][k - 1][1] == x[1]:
+            if k and shown[k - 1][1] == x[1]:
                 wt.cell(row=rr, column=2).font = f_dim
-            if k and s["rows"][k - 1][2] == x[2]:
+            if k and shown[k - 1][2] == x[2]:
                 wt.cell(row=rr, column=3).font = f_dim
             wt.cell(row=rr, column=COL_RESULT).font = Font(name=FONT, size=10.5, bold=True)
             fit_row(wt, rr, [(vals[j], WIDTH[j]) for j in (1, 2, 3, 4, 5)], 34)
-        r1 = r0 + len(s["rows"]) - 1
+        r1 = r0 + len(shown) - 1
         H, I = get_column_letter(COL_RESULT), get_column_letter(COL_MEMO)
         wt.add_data_validation(result_dv(["%s%d:%s%d" % (H, r0, H, r1)]))
         result_rules(wt, "%s%d:%s%d" % (H, r0, H, r1))
@@ -575,8 +739,7 @@ if __name__ == "__main__":
     gen_date = datetime.date.today().isoformat()
     made = []
     os.makedirs(OUT, exist_ok=True)
-    smoke_of = {n: ms for n, ms in assign}
-    plan = [(f, p) for p in names for f in files if f["kind"] == "상세" or f["name"] in smoke_of[p]]
+    plan = [(f, p) for p in names for f in files if p in people_of(f)]
     for f, person in plan:
         fname, wb, cached = build(f, person, gen_date)
         d = os.path.join(OUT, person)

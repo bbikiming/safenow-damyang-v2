@@ -421,9 +421,10 @@
      * 열은 전부 override 다 — 채우지 않은 단계는 taskType='UNKNOWN' 이고 CTA 는
      * 종전 «＋ 새 문서 등록» 그대로다. 그래야 177행을 다 채우기 전에도 배포된다.
      *
-     * [UNKNOWN 을 숨기지 않는다]
-     * §19 가 임의 확정을 금지하므로 «아직 정하지 않았다»가 산출물이다. 화면은
-     * 그 사실과 `typeNote`(무엇을 확인해야 하는지)를 함께 보여준다.
+     * [UNKNOWN 은 화면에 «분류 작업 상태»로 내지 않는다 (2026-10-12)]
+     * 종전에는 «수행 위치 확인 필요»·«초안»과 `typeNote` 를 화면에 보였다. 분류는
+     * 업무목록 엑셀이 정하므로 화면은 실제로 하는 일(문서 등록)만 말한다.
+     * 값 자체(taskType·typeConf·typeNote)는 데이터에 그대로 둔다.
      *
      * [연결메뉴는 여기서 해석한다]
      * CSV 168행에는 기능코드(RSK_REGULAR)만 있고 메뉴 id 는 코드표 한 줄에만 있다.
@@ -433,7 +434,7 @@
         PROGRAM:        { key: 'PROGRAM',        label: '전용 화면',   cta: '바로가기',        tone: 'info' },
         ELECTRONIC_DOC: { key: 'ELECTRONIC_DOC', label: '공문·문서',   cta: '＋ 업무문서 작성', tone: 'neutral' },
         ATTACHMENT:     { key: 'ATTACHMENT',     label: '결과 등록',   cta: '＋ 결과 등록',    tone: 'purple' },
-        UNKNOWN:        { key: 'UNKNOWN',        label: '수행 위치 확인 필요', cta: '＋ 새 문서 등록', tone: 'warning' },
+        UNKNOWN:        { key: 'UNKNOWN',        label: '문서 등록',   cta: '＋ 새 문서 등록', tone: 'neutral' },
     };
     /* 기능코드 → 실제 메뉴. CSV 가 아니라 여기(코드) 한 곳에서만 메뉴 id 를 안다.
        상태 LIVE = 지금 갈 수 있다 / PLANNED = 화면은 있으나 완료판정 미작성 /
@@ -609,7 +610,7 @@
      * 이 수를 숨기고 이행률만 내면 분모가 틀린 비율을 정답처럼 보여주게 된다.
      */
     function deptStats(name, year) {
-        var stages = T().STAGES, applied = 0, withDoc = 0, extra = 0, docs = 0;
+        var stages = T().STAGES, applied = 0, withDoc = 0, extra = 0, docs = 0, ev = 0;
         var hit = {};
         D().allDocs().forEach(function (d) {
             if (d.dept !== name) return;
@@ -619,6 +620,9 @@
                «보유 업무문서»로 찍힌다(검수 2026-09-08). deptList 와 같은 기준(원장·시드·등록분). */
             if (d.origin === 'v2') return;
             docs++;
+            /* 이행 증빙 문서 — 할 일에 연결된 문서만. 표가 이 수를 보이고 문서 목록(cmp-docs)도
+               같은 문서만 싣는다(2026-10-12) — 둘이 다른 수를 세면 건수를 눌렀을 때 어긋난다. */
+            if ((d.stageIds || []).some(function (sid) { return !!D().stage(sid); })) ev++;
             (d.stageIds || []).forEach(function (sid) { hit[sid] = 1; });
         });
         stages.forEach(function (s) {
@@ -639,13 +643,13 @@
            실제로는 판정할 자료가 없는 것이다(원장이 다른 이름으로 부르거나 그 해
            문서가 없다). 대상이 아닌 것을 완료로 세지 않는 것과 같은 이유다. */
         var usable = applied > 0 && docs > 0 && extra <= applied;
-        return { applied: applied, withDoc: withDoc, extra: extra, docs: docs,
+        return { applied: applied, withDoc: withDoc, extra: extra, docs: docs, ev: ev,
                  covered: covered, usable: usable,
                  pct: usable ? Math.round(withDoc / applied * 100) : null };
     }
 
     /* 부서별 문서 보유량 — 5개년 원장 집계(js/cmp-dept-docs.js).
-       ⚠ **법정 업무 현황 표에서는 쓰지 않는다.** 이 집계는 폴더 안의 파일을 세고
+       ⚠ **이행 관리 표에서는 쓰지 않는다.** 이 집계는 폴더 안의 파일을 세고
        원장은 온나라 문서 1건을 세어 **단위가 다르다** — 건설과 2025 가 원장
        5,057 인데 이 집계로는 29,813 이다(6배). 한 칸에 섞으면 시드가 실린
        4개 부서만 자릿수가 커져 «그 부서가 일을 많이 했다»로 읽힌다.

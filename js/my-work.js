@@ -90,33 +90,9 @@
         opinion: 'menu.html?m=opinion&sub=voice', edu: 'edu-status.html',
         contract: 'menu.html?m=contract', order: 'menu.html?m=contract',
         /* 2026-09-03 — 기준문서함(docs-archive)은 메뉴에서 뺐다. 비상대응·재해조사는
-           전용 화면이 없으므로 그 이행을 보는 자리인 법정 업무 현황으로 보낸다. */
+           전용 화면이 없으므로 그 이행을 보는 자리인 이행 관리로 보낸다. */
         emergency: 'cmp-status.html', incident: 'cmp-status.html'
     };
-
-    /* 문서 원장 미분류 — 예시가 아니라 **원장에서 센다**(DYDOCS). 흐름은
-       이 카드 → 문서 목록(미분류 조건) → 문서 상세 «분류 붙이기» → 돌아오면 건수가 준다.
-       분류를 붙이는 것은 재난안전과 담당자라(DYDOCS.remapLedger) 주관부서 관점에만 낸다.
-       다 붙이면 카드는 사라지지 않고 완료로 남는다 — 할 일이 끝났다는 사실도 정보다. */
-    function unmappedCard() {
-        var DOCS = global.DYDOCS, R = global.DYROLE;
-        var owner = (R && R.OWNER_DEPT) || 'safety';
-        if (!DOCS || !DOCS.allDocs || state.deptId !== owner) return null;
-        var n = 0, yr = DOCS.BASE_YEAR;
-        try {
-            DOCS.allDocs().forEach(function (d) { if (d.origin === 'ledger' && !d.mapped && !d.excluded) n++; });
-        } catch (e) { return null; }
-        return {
-            id: 'I-UNMAPPED', cat: 'inspection',
-            title: n ? '문서 원장 미분류 ' + n.toLocaleString() + '건 분류 확인' : '문서 원장 미분류 없음 — 분류 완료',
-            sub: n ? '어느 할 일의 증빙인지 아직 안 붙은 문서입니다 — 분류를 붙여야 법정 업무 현황 판정에 들어갑니다'
-                   : '원장의 모든 문서가 할 일에 붙었거나 분류에서 제외됐습니다',
-            due: '', status: n ? 'IN_PROGRESS' : 'DONE',
-            dept: owner, dept_label: '재난안전과',
-            href: 'cmp-docs.html?year=' + (yr || '') + '&map=unmapped',
-            atype: 'menu', action: '분류하러 가기', destLabel: '문서 목록', remind: false
-        };
-    }
 
     /* 타 도메인 목업 시드 — atype: 처리 유형 / destLabel: 이동 목적지 라벨 */
     function otherSeeds() {
@@ -131,8 +107,8 @@
                  「결재하러 가기」는 없는 동작을 약속하므로 실제로 하는 일로 고친다(검수 E). */
               atype: 'menu', href: 'bgt-main.html', action: '상신 상태 보기', destLabel: '예산 총괄표' },
             /* 점검 */
-            /* I-01 «업무문서 안전점검 계열 16건 분류 확인»은 지어낸 건수라 눌러도 그 16건이 어디에도
-               없었다(문서 목록 전체로 떨어졌다). 문서 원장에서 세는 카드(unmappedCard)로 바꿨다. */
+            /* I-01 «업무문서 안전점검 계열 16건 분류 확인»과 그 뒤를 이은 «문서 원장 미분류 N건 분류 확인»
+               카드는 2026-10-12 에 걷었다 — 분류는 업무목록 엑셀이 정하고 이 시스템에서 하지 않는다. */
             { id: 'I-02', cat: 'inspection', title: '공중이용시설 안전점검 결과 정리 (담양읍 문화의전당)',
               due: '2026-07-17', dept: 'culture', dept_label: '문화체육과',
               atype: 'menu', href: 'fac-list.html', action: '처리하러 가기', destLabel: '시설물 대장' },
@@ -374,8 +350,6 @@
                 });
             }
         } catch (e) {}
-        var um = unmappedCard();
-        if (um) out.push(um);
         /* 타 도메인 목업 시드 — 첨부 완료한 시드는 DONE 으로 표시 */
         otherSeeds().forEach(function (s) {
             if (s.dept !== state.deptId) return;
@@ -882,8 +856,8 @@
         try { deptName = D().deptName(state.deptId) || ''; } catch (e) {}
         if (!pubs.length) {
             return '<div class="mw-empty"><b>' + esc(deptName) + '</b> 부서로 발행된 업무가 없습니다.<br>' +
-                '<span style="color:var(--text-gray);">법으로 해야 하는 일 중 아직 서류가 없는 것은 <b>법정 업무 현황</b>에서 확인하고 올릴 수 있습니다.</span><br><br>' +
-                '<a class="btn btn-sm btn-primary" href="cmp-status.html">법정 업무 현황 열기 ' + ICO.arrow + '</a> ' +
+                '<span style="color:var(--text-gray);">법으로 해야 하는 일 중 아직 서류가 없는 것은 <b>이행 관리</b>에서 확인하고 올릴 수 있습니다.</span><br><br>' +
+                '<a class="btn btn-sm btn-primary" href="cmp-status.html">이행 관리 열기 ' + ICO.arrow + '</a> ' +
                 '<a class="btn btn-sm btn-outline" href="cmp-docs.html">문서 목록 열기 ' + ICO.arrow + '</a></div>';
         }
         var counts = { all: 0, '첨부파일': 0, '전자문서': 0, '프로그램': 0 };
@@ -908,7 +882,7 @@
                     '<option value="진행"'   + (state.pubStatus === '진행' ? ' selected' : '') + '>진행</option>' +
                     '<option value=""'       + (state.pubStatus === '' ? ' selected' : '') + '>완료 포함 전체</option>' +
                 '</select>' +
-                '<a class="btn btn-sm btn-outline" href="cmp-status.html" style="margin-left:auto;">법정 업무 현황 ' + ICO.arrow + '</a>' +
+                '<a class="btn btn-sm btn-outline" href="cmp-status.html" style="margin-left:auto;">이행 관리 ' + ICO.arrow + '</a>' +
             '<a class="btn btn-sm btn-outline" href="cmp-docs.html">문서 목록 ' + ICO.arrow + '</a>' +
             '</div>';
 

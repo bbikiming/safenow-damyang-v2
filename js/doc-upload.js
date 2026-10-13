@@ -45,6 +45,7 @@
             dupWith: null,          /* 중복 후보 문서 id */
             dupMode: '',            /* 'append' 기존 문서에 파일 추가 | 'new' 새 문서 */
             stageIds: [],
+            fromPrev: null,         /* 작년 서류로 채웠으면 그 원본 id — 저장 시 presetOf 로 남는다 */
             err: '', fieldErr: {},  /* 배너 + **필드 단위** 오류 (aria-invalid 연결) */
         };
     }
@@ -111,7 +112,7 @@
     function dirty() {
         if (W) {
             captureStep1();
-            return !!(W.files.length || String(W.title).trim() ||
+            return !!(W.files.length || String(W.title).trim() || W.fromPrev ||
                 W.stageIds.join(',') !== (W._prefill || ''));
         }
         if (P) return Object.keys(P.sel).length > 0;
@@ -170,6 +171,7 @@
             /* ① 대안 경로는 **시작 시점**에 낸다. 종전에는 폼 맨 아래(921px)에 있어
                   스크롤해야 보였고, 다 채운 뒤에 알면 입력한 것을 버려야 했다. */
             startPaths() +
+            fromPrevBox() +
             /* ⑤ 첨부는 필수인데 종전에는 * 표시가 없었다 — 나머지 네 필드에는 있고
                   유효성은 파일을 막는다. 라벨을 밖으로 빼 표시를 붙인다. */
             '<label class="form-label" for="du-drop">증빙 파일 <span class="du-req">*</span></label>' +
@@ -191,6 +193,74 @@
             (dup ? dupBox(dup) : '') +
         '</div>';
     }
+    /* =========================================================================
+     * 작년 서류로 채우기 (2026-09-28)
+     * -------------------------------------------------------------------------
+     * 할 일에서 [결과 등록]으로 들어오면 **그 할 일에 작년에 올린 서류**를 골라
+     * 이 폼을 채운다 — 제목(연도만 올해로)·수발신자·문서 종류·할 일.
+     *
+     * [가져오기와 무엇이 다른가] 불러오기·프리셋·이어받기 세 경로는 **그대로
+     * 복사**한다. 제목 말고는 고칠 칸이 없고, 올해 서류 파일을 붙일 수도 없었다
+     * (2025 원장은 메타데이터뿐이라 사본에 파일이 없다). 올해 증빙은 올해 파일이다.
+     * 여기서는 폼을 채울 뿐이고 담당자가 파일을 붙이고 바뀐 칸을 고친 뒤
+     * [이대로 등록]으로 저장한다 — 순서(파일 → 할 일 → 확인)는 그대로다.
+     *
+     * [중복] 같은 원본을 올해로 두 번 옮기지 않는다 — 판정은 세 경로와 같은
+     * DYDOCS.carriedInto 한 곳이고, 저장 시 presetOf 로 원본을 남겨 네 경로가
+     * 서로를 본다.
+     * ========================================================================= */
+    function prevDocsForStages() {
+        var py = prevYear();
+        if (!py || !W.stageIds.length) return [];
+        return D().allDocs().filter(function (d) {
+            return +d.year === +py && (d.stageIds || []).some(function (s) { return W.stageIds.indexOf(s) >= 0; });
+        }).sort(function (a, b) { return String(b.date || '').localeCompare(String(a.date || '')); });
+    }
+    function fromPrevBox() {
+        if (W.fromPrev) {
+            var src = D().docById(W.fromPrev);
+            return '<div class="du-start du-from">' +
+                '<span class="chip-status chip-sm success">작년 서류로 채움</span>' +
+                '<span class="du-start-t">' + prevYear() + '년 «' + esc(src ? src.title : W.fromPrev) + '»' +
+                    V().josa(src ? src.title : '', '을', '를') + ' 바탕으로 채웠습니다 — 바뀐 칸만 고치고 올해 파일을 붙이세요.</span>' +
+                '<button type="button" class="btn btn-outline btn-sm" onclick="DOCUP.clearFrom()">연결 해제</button>' +
+            '</div>';
+        }
+        var list = prevDocsForStages();
+        if (!list.length) return '';
+        var opts = list.slice(0, 50).map(function (d) {
+            var dup = D().carriedInto(d.id, W.year);
+            return '<option value="' + esc(d.id) + '"' + (dup ? ' disabled' : '') + '>' +
+                esc(d.title) + (d.date ? ' · ' + esc(d.date) : '') + (dup ? ' (이미 올해로 옮김)' : '') + '</option>';
+        }).join('');
+        return '<div class="du-start du-from">' +
+            '<label class="du-start-t" for="du-from">' + prevYear() + '년 이 할 일에 올린 서류 <b>' + list.length +
+                '건</b> — 하나를 고르면 폼이 채워지고, 바뀐 칸만 고치면 됩니다</label>' +
+            '<select class="form-select" id="du-from" onchange="DOCUP.fillFrom(this.value)">' +
+                '<option value="">작년 서류 고르기</option>' + opts +
+            '</select>' +
+        '</div>';
+    }
+    function fillFrom(id) {
+        if (!id || !W) return;
+        captureStep1();
+        var src = D().docById(id);
+        if (!src) return;
+        if (D().carriedInto(id, W.year)) { V().toast('이 서류는 이미 ' + W.year + '년으로 옮겨져 있습니다.'); return; }
+        W.title = String(src.title || '').split(String(src.year)).join(String(W.year));
+        if (src.sr) W.sr = src.sr;
+        if (src.dir && D().DIR[src.dir]) W.dir = src.dir;
+        (src.stageIds || []).forEach(function (s) {
+            if (D().stage(s) && W.stageIds.indexOf(s) < 0) W.stageIds.push(s);
+        });
+        W.fromPrev = id;
+        delete W.fieldErr['du-title'];
+        checkDup();
+        renderW();
+        V().toast('작년 서류로 채웠습니다 — 보고일자와 파일은 올해 것으로 넣으세요.');
+    }
+    function clearFrom() { if (!W) return; captureStep1(); W.fromPrev = null; renderW(); }
+
     /* 프리셋의 원본연도는 '기준연도 직전 연도'다 — 2025 로 하드코딩하면 2025년
        화면에서 "2025년 문서에서 가져오기"라는 말이 안 되는 안내가 나온다. */
     function prevYear() { return D().presetSourceYear(W ? W.year : D().defaultYear()); }
@@ -549,6 +619,11 @@
                 doc = a.doc; extra = r.reason + ' 새 문서로 등록했습니다.';
             }
         } else {
+            /* 채우는 사이 다른 경로가 같은 원본을 옮겼으면 두 번 만들지 않는다 */
+            if (W.fromPrev && D().carriedInto(W.fromPrev, W.year)) {
+                W.err = '고른 작년 서류는 그 사이 ' + W.year + '년으로 이미 옮겨졌습니다 — 연결을 해제하고 등록하세요.';
+                renderW(); return;
+            }
             var res = D().addDocument(payload());
             if (!res.ok) { W.err = res.reason; W.fieldErr['du-org'] = res.reason; renderW(); focusFirstError(); return; }
             doc = res.doc;
@@ -561,7 +636,9 @@
         return {
             title: String(W.title).trim(), sr: W.sr, dir: W.dir, date: W.date, year: W.year,
             stageIds: W.stageIds.slice(), src: W.src,
-            dept: W.dept, assignee: W.assignee, assigneeUid: W.assigneeUid, note: W.note,
+            dept: W.dept, assignee: W.assignee, assigneeUid: W.assigneeUid,
+            note: W.note || (W.fromPrev ? prevYear() + '년 문서(' + W.fromPrev + ')를 바탕으로 작성' : ''),
+            presetOf: W.fromPrev || null,
             files: W.files.map(function (f) { return { id: fileId(), name: f.name, size: f.size, at: D().today() }; }),
         };
     }
@@ -605,7 +682,7 @@
                 '<p class="du-pre-lead"><b>' + P.from + '년</b> 문서의 업무단계 선택값을 <b>' + P.to + '년</b>으로 가져옵니다. ' +
                     '전년도 <b>진행상태·결재상태·보고일자·문서번호는 복제하지 않습니다.</b>' +
                     (skipped > 0
-                        ? ' 할 일이 붙지 않은 문서(미분류·분류 제외 ' + skipped.toLocaleString() + '건)는 가져올 업무단계가 없어 목록에서 뺐습니다.'
+                        ? ' 할 일이 붙지 않은 문서 ' + skipped.toLocaleString() + '건은 가져올 업무단계가 없어 목록에서 뺐습니다.'
                         : '') + '</p>' +
                 presetBar(res) +
                 presetTable(res) +
@@ -696,7 +773,7 @@
                     ' aria-label="' + esc(d.title) + ' 선택" onchange="DOCUP.selDoc(\'' + esc(d.id) + '\', this.checked)"></td>' +
                 '<td class="du-pre-t"><label for="dp-' + esc(d.id) + '">' + esc(d.title) + '</label>' +
                     (into
-                        ? '<p class="du-dim">' + (into.origin === 'seed26' ? '예시 자료가 이미 ' : '이미 ') + P.to +
+                        ? '<p class="du-dim">이미 ' + P.to +
                           '년으로 옮겼습니다 — ' + esc(into.id) + '</p>'
                         : '') +
                     (on ? oneRow(d) : '') + '</td>' +
@@ -800,7 +877,7 @@
      * 검색해 찾아야 했다. 문서 상세의 «올해 이어받기»만 예외적으로 상세로
      * 이동하고 있었는데, 같은 일을 하는 네 경로가 서로 다르게 끝난 셈이다.
      *
-     * **자동으로 튕기지 않는다.** 법정 업무 현황에서 불러온 사람은 그 화면에 남고 싶을
+     * **자동으로 튕기지 않는다.** 이행 관리에서 불러온 사람은 그 화면에 남고 싶을
      * 수 있어, 강제 이동하면 하던 일의 맥락을 잃는다. 대신 «갈 수 있게» 한다 —
      * 1건이면 주 버튼이 곧 그 문서이고, 여러 건이면 목록에서 고른다.
      *
@@ -824,7 +901,7 @@
     var BACKS = {
         'docs-preset.html': '업무 목록',
         'docs-exec.html': '이행 목록',
-        'cmp-status.html': '법정 업무 현황',
+        'cmp-status.html': '이행 관리',
         'cmp-docs.html': '문서 목록',
     };
     function backTarget(raw) {
@@ -843,7 +920,7 @@
         if (inWorkDocs()) {
             return 'doc-detail.html?id=' + encodeURIComponent(doc.id) + '&back=' + encodeURIComponent(back);
         }
-        /* backTo 를 여기서도 넘긴다 — 종전에는 이 분기가 그것을 버려, 법정 업무 현황에서
+        /* backTo 를 여기서도 넘긴다 — 종전에는 이 분기가 그것을 버려, 이행 관리에서
            불러온 사람이 문서를 열면 **돌아갈 길이 없었다**(GNB 로 다시 들어가야
            했고 보고 있던 단계 상세는 잃었다).
            호출자가 backTo 를 안 주면 **지금 화면**이 기본값이다(새 등록·프리셋
@@ -1036,7 +1113,7 @@
            예시 자료·불러오기·이어받기가 이미 옮긴 원본은 **묻지도 않고** 또 만들었다
            (실측: SEED26-0001 이 옮긴 원본에서 두 번째 사본이 생겼다). 세 경로와 같은
            판정(DYDOCS.carriedInto)으로 목록에서 잠그고, 모달이 열린 사이 생긴 것은
-           여기서 한 번 더 걸러 건너뛴 수를 알린다(법정 업무 현황 불러오기와 같다). */
+           여기서 한 번 더 걸러 건너뛴 수를 알린다(이행 관리 불러오기와 같다). */
         var skipped = 0;
         ids = ids.filter(function (id) {
             if (D().carriedInto(id, TO)) { skipped++; return false; }
@@ -1109,6 +1186,7 @@
         open: open, cancel: cancel, next: next, prev: prev, submit: submit,
         addFiles: addFiles, delFile: delFile, onTitle: onTitle, pickOwner: pickOwner, setDup: setDup,
         onPick: onPick, clearStages: clearStages,
+        fillFrom: fillFrom, clearFrom: clearFrom,
         openPreset: openPreset, closePreset: closePreset, runPreset: runPreset, dirty: dirty,
         setPreF: setPreF, resetPreF: resetPreF, prePage: prePage,
         selDoc: selDoc, clearSel: clearSel, expand: expand, setOne: setOne, setBulk: setBulk,

@@ -381,10 +381,7 @@
                 (d.nearDup ? ' <span class="chip-status chip-sm warning">중복 의심</span>' : '') +
                 /* 현행 업무문서(v2)는 세트 축이라 이행항목 매핑이 애초에 없다 —
                    '미분류' 배지를 붙이면 교정해야 할 것처럼 읽힌다 */
-                (d.origin === 'ledger' && !d.mapped ? ' <span class="chip-status chip-sm warning">의무 연결 필요</span>' : '') +
-                /* 2026 실적은 규칙으로 만든 예시 자료다 — 표시가 없으면 실측 원장과
-                   같은 줄에서 실제 제출 기록으로 읽힌다(정렬이 최신순이라 위에 온다) */
-                (d.origin === 'seed26' ? ' <span class="chip-mini wt" title="2026년 실적은 2025년 실측 패턴에서 규칙으로 만든 예시 자료입니다. 실제 제출 기록이 아닙니다.">예시 자료</span>' : '') +
+                (d.origin === 'ledger' && !d.mapped ? ' <span class="chip-status chip-sm warning">' + (d.deptCheck ? '부서 확인 필요' : '의무 연결 필요') + '</span>' : '') +
                 '<span class="dl-sr">' + (d.sr ? esc(d.sr) : '<span class="dx-nodoc">상대 기관 미기재</span>') + '</span>' +
             '</td>' +
             '<td><span class="chip-status chip-sm ' + V().toneOf(D().SRC[d.src] ? D().SRC[d.src].label : '') + '">' +

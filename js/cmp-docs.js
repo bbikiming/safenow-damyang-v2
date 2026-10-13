@@ -11,7 +11,7 @@
  *   합쳐 준다. 이 파일은 거르고 그릴 뿐 자체 문서 배열을 만들지 않는다.
  *
  *   [딥링크]
- *   ?stage={stageId}&year={y}  — 법정 업무 현황 상세의 '지난연도 전체 보기' 수신
+ *   ?stage={stageId}&year={y}  — 이행 관리 상세의 '지난연도 전체 보기' 수신
  *   ?doc={docId}               — 문서 상세로 바로 진입
  * ========================================================================= */
 (function (global) {
@@ -28,9 +28,8 @@
     var S = {
         mount: null,
         q: '', sr: '', year: '', status: '',
-        dept: '',            /* 법정 업무 현황 L2 에서 넘어온 부서 조건 — 필터 UI 로는 내지 않는다(D-5) */
+        dept: '',            /* 이행 관리 L2 에서 넘어온 부서 조건 — 필터 UI 로는 내지 않는다(D-5) */
         menu: '',            /* 분야(구 대메뉴) 조건 — 현황 통계·경영방침이 넘겨 준다. 필터 UI 로는 내지 않는다 */
-        map: '',             /* 미분류 조건 — 내 할일 «미분류 N건 분류 확인» 카드가 넘겨 준다 */
         stages: [],          /* 업무단계 다중 조건 (DYPICK) */
         page: 1,
         expand: {},          /* docId → 업무단계 칩 전부 펼침 */
@@ -56,7 +55,7 @@
         /* 기본 연도는 비워 두지 않는다 — 전체를 날짜 내림차순으로 보면 첫 페이지가
            2026년 현행 업무문서(이행항목 축이 없는 «이 목록 밖 문서»)로만 채워져,
            이 화면의 요점인 «어떤 할 일의 증빙인가»가 첫 화면에서 보이지 않는다.
-           기준은 법정 업무 현황 화면과 같은 DYDOCS.defaultYear()(데이터가 있는 최신 연도)다. */
+           기준은 이행 관리 화면과 같은 DYDOCS.defaultYear()(데이터가 있는 최신 연도)다. */
         S.year = p.get('year') != null ? p.get('year') : String(D().defaultYear());
         S.q = p.get('q') || '';
         S.sr = p.get('sr') || '';
@@ -68,15 +67,12 @@
            연도 기본값도 함께 푼다 — 분야를 보러 온 것이지 특정 연도를 보러 온 것이 아니다. */
         S.menu = p.get('menu') || '';
         if (S.menu && p.get('year') == null) S.year = '';
-        /* 미분류 조건 — 내 할일 «미분류 N건 분류 확인»이 보낸다. 조건 없이 보내면 전체 5만여 건에서
-           그 N건을 찾을 방법이 없다(종전 카드가 그랬다). */
-        S.map = p.get('map') === 'unmapped' ? 'unmapped' : '';
         /* 부서로 들어오면 연도 기본값을 풀어 준다 — 그 부서 문서를 보러 온 것이지
            특정 연도를 보러 온 것이 아니다(0건으로 맞이하지 않는다) */
         if (S.dept && p.get('year') == null) S.year = '';
         var doc = p.get('doc');
         S.doc = (doc && D().docById(doc)) ? doc : '';   /* 없으면 상세도 없다 — 뒤로가기 닫힘의 전제 */
-        /* 다른 화면(법정 업무 현황 등)에서 문서를 열러 왔다면 그 화면으로 돌아갈 수
+        /* 다른 화면(이행 관리 등)에서 문서를 열러 왔다면 그 화면으로 돌아갈 수
            있어야 한다 — 없으면 GNB 로 다시 들어가야 하고 보고 있던 자리를 잃는다.
            허용 목록은 DOCUP 단일 출처다(외부 URL 주입 차단). */
         S.back = p.get('back') || '';
@@ -90,7 +86,6 @@
         if (S.status) p.set('status', S.status);
         if (S.dept) p.set('dept', S.dept);
         if (S.menu) p.set('menu', S.menu);
-        if (S.map) p.set('map', S.map);
         if (S.doc) p.set('doc', S.doc);
         if (S.back) p.set('back', S.back);
         var qs = p.toString();
@@ -108,7 +103,6 @@
         if (S.year && String(d.year) !== String(S.year)) return false;
         if (S.dept && d.dept !== S.dept) return false;
         if (S.menu && d.menuKey !== S.menu) return false;
-        if (S.map === 'unmapped' && !(d.origin === 'ledger' && !d.mapped && !d.excluded)) return false;
         if (S.status && d.status !== S.status) return false;
         if (S.sr && !F().match(S.sr, [d.sr])) return false;
         if (S.stages.length) {
@@ -118,19 +112,33 @@
         if (S.q && !F().match(S.q, [d.title, d.id, d.sr])) return false;
         return true;
     }
+    /* 이 화면이 싣는 문서 — **이행 증빙 문서만**(2026-10-12 사용성 검토).
+       원장 5만여 건의 대부분은 어느 할 일에도 연결되지 않은 일반 행정문서(재난 알림·
+       물품 집행 등)라, 전부 실으면 증빙을 찾으러 온 담당자가 첫 화면부터 «연결된 할 일
+       없음» 수십 줄을 지나야 했다. 연결 여부는 업무목록 엑셀이 정한다(§5).
+       예외 — 분야 조건(?menu=)은 현행 업무문서(할 일 축 없음)를 보러 오는 경로라 그 문서를
+       함께 싣는다. 문서를 주소(?doc=)로 직접 열면 연결이 없어도 상세는 열린다. */
+    function evidence(d) {
+        return (d.stageIds || []).some(function (sid) { return !!D().stage(sid); });
+    }
+    function pool() {
+        return D().allDocs().filter(function (d) {
+            return evidence(d) || (S.menu && d.origin === 'v2' && d.menuKey === S.menu);
+        });
+    }
     function view() {
-        return D().allDocs().filter(match).sort(function (a, b) {
+        return pool().filter(match).sort(function (a, b) {
             return String(b.date || '').localeCompare(String(a.date || ''));
         });
     }
-    function filtering() { return !!(S.q || S.sr || S.year || S.status || S.stages.length || S.dept || S.menu || S.map); }
+    function filtering() { return !!(S.q || S.sr || S.year || S.status || S.stages.length || S.dept || S.menu); }
 
     function yearOptions() {
         return [['', '연도 전체']].concat(C().years().slice().reverse().map(function (y) { return [y, y + '년']; }));
     }
     function statusOptions() {
         var seen = {};
-        D().allDocs().forEach(function (d) { if (d.status) seen[d.status] = 1; });
+        pool().forEach(function (d) { if (d.status) seen[d.status] = 1; });
         return [['', '결재상태 전체']].concat(Object.keys(seen).sort().map(function (s) { return [s, s]; }));
     }
 
@@ -145,35 +153,35 @@
     }
     function rerender() { F().rerender(render); }
 
+    /* 연도별 수록 범위 — 2025 만 20개 부서 전체이고 나머지 연도는 6개 부서의 확정 문서뿐이다.
+       연도 조건을 걸었을 때만 그 해를 말한다(전체 연도에서는 연도별로 다르다는 사실만). */
+    function coverNote() {
+        var cv = S.year && D().coverage ? D().coverage(S.year) : null;
+        if (cv) {
+            return cv.partial
+                ? '<p><b>' + esc(cv.label) + V().josa(cv.label, '은', '는') + ' 일부만 수록돼 있습니다</b> — ' +
+                  (cv.periodText ? cv.periodText + ' · ' : '') + cv.deptCount + '개 부서(' + esc(cv.depts.join('·')) + ')의 ' +
+                  '확정 문서 ' + cv.docs.toLocaleString() + '건입니다. 그 밖의 부서·기간 서류는 수집 범위 밖입니다.</p>'
+                : '';
+        }
+        return D().coverage && D().coverage(D().BASE_YEAR)
+            ? '<p>연도마다 수록 범위가 다릅니다 — <b>' + D().BASE_YEAR + '년은 20개 부서 원장 전체</b>이고, ' +
+              '2021년 하반기~2024년·2026년 상반기는 6개 부서의 확정 문서만 있습니다.</p>'
+            : '';
+    }
     function notice() {
-        var all = D().allDocs();
+        var all = pool();
         var lc = C().linkCounts(all);
-        var led = all.filter(function (d) { return d.origin === 'ledger'; });
-        var un = led.filter(function (d) { return !d.mapped && !d.excluded; }).length;
-        var ex = led.filter(function (d) { return !!d.excluded; }).length;
-        var wk = led.filter(function (d) { return d.mapConf === 'weak'; }).length;
-        var rv = led.filter(function (d) { return !!d.review; }).length;
-        /* 제외사유 어휘는 원장에서 센다 — 문구에 박아 두면 원장을 갈아끼울 때 옛 종류로 남는다
-           (실제로 2종이던 것이 v4.0 에서 5종이 됐다) */
-        var kinds = [];
-        led.forEach(function (d) { if (d.excluded && kinds.indexOf(d.excluded) < 0) kinds.push(d.excluded); });
+        var led = D().allDocs().filter(function (d) { return d.origin === 'ledger'; });
         /* 접어도 남는 한 줄은 «설명»이 아니라 «지금 상태»여야 한다(§14-12) */
-        var lead = '업무문서 <b>' + all.length.toLocaleString() + '건</b> · 할 일 연결 <b>' + lc.links.toLocaleString() + '건</b>' +
-            (un ? ' · <b>미분류 ' + un.toLocaleString() + '건</b>' : '') +
-            (rv ? ' · <b>원문 확인 ' + rv.toLocaleString() + '건</b>' : '');
+        var lead = '이행 증빙 문서 <b>' + all.length.toLocaleString() + '건</b> · 할 일 연결 <b>' + lc.links.toLocaleString() + '건</b>';
         var rest =
             '<p><b>한 문서가 여러 할 일에 연결되므로 이행현황의 문서 합계는 실제 문서 수보다 큽니다.</b> ' +
                 '두 숫자를 함께 적어 오해를 막습니다 — 위 수치는 화면에서 센 값이지 고정값이 아닙니다.</p>' +
             '<p>결재 완료 PDF·본문은 아직 없습니다 — 온나라 연동 전이라 <b>문서명·수발신자·보고일자·생산등록번호</b>만 있습니다.</p>' +
-            '<p>2025년 문서 원장 ' + led.length.toLocaleString() + '건 중 <b>미분류 ' + un.toLocaleString() + '건</b>은 ' +
-                '어느 할 일의 증빙인지 아직 붙지 않은 문서입니다 — 이행 판정에 들어가지 않습니다. ' +
-                '<b>분류 제외 ' + ex.toLocaleString() + '건</b>은 ' + esc(kinds.join(' · ')) + '(으)로 분류 단계에서 판단이 끝난 문서라 교정 대상이 아닙니다 — ' +
-                '적용 법령이 중대재해처벌법·산업안전보건법 2종으로 좁혀져(분류기준 v4.0) 재난안전법·개별 시설법 문서와 계약·재정 집행 절차가 여기 들어갑니다. ' +
-                '<b>분류 확인 ' + wk.toLocaleString() + '건</b>은 할 일이 붙어 있으나 원장에서 «애매»로 표시된 문서라 ' +
-                '이행 판정에는 들어가되 확인이 필요합니다. ' +
-                '<b>원문 확인 ' + rv.toLocaleString() + '건</b>은 제목만으로 판정할 수 없어 담양군에서 원문을 열어 확인할 문서입니다 — ' +
-                '할 일이 붙은 것은 판정에 들어가되 확인 대상이고, 안 붙은 것은 확인 뒤 상세의 후보 단계에 붙입니다.</p>' +
-            '<p>할 일 하나하나에 증빙이 갖춰졌는지는 <a href="cmp-status.html">업무 관리 &gt; 법정 업무 현황</a>에서 봅니다. 여기는 <b>문서 1건</b>을 찾습니다.</p>' +
+            '<p>문서 원장 ' + led.length.toLocaleString() + '건 중 <b>할 일에 연결된 문서만</b> 싣습니다 — 연결되지 않은 일반 행정문서는 이행 판정과 무관해 이 목록에 넣지 않습니다.</p>' +
+            coverNote() +
+            '<p>할 일 하나하나에 증빙이 갖춰졌는지는 <a href="cmp-status.html">업무 관리 &gt; 이행 관리</a>에서 봅니다. 여기는 <b>문서 1건</b>을 찾습니다.</p>' +
             ((global.DYROLE && global.DYROLE.readOnlyNote) ? (global.DYROLE.readOnlyNote('문서 등록') || '') : '');
         return V().notice('cmp-docs', lead, rest);
     }
@@ -194,9 +202,9 @@
             {
                 count: list.length.toLocaleString(), unit: '건',
                 reset: 'CMPDOC.resetF()',
-                /* 주소로 걸려 온 조건(분야·미분류)도 센다 — 안 세면 [필터 초기화]가 비활성이라
+                /* 주소로 걸려 온 조건(분야)도 센다 — 안 세면 [필터 초기화]가 비활성이라
                    칩의 ×로만 풀 수 있었다(«초기화도 그 조건을 함께 푼다», CLAUDE.md §17). */
-                extraActive: advN + (S.stages.length ? 1 : 0) + (S.menu ? 1 : 0) + (S.map ? 1 : 0),
+                extraActive: advN + (S.stages.length ? 1 : 0) + (S.menu ? 1 : 0),
                 actions: '<button type="button" class="btn btn-outline btn-sm" onclick="CMPDOC.openPick()">업무단계 고르기' +
                         (S.stages.length ? ' <b>' + S.stages.length + '</b>' : '') + '</button>' +
                     '<button type="button" class="btn btn-outline btn-sm" aria-expanded="' + (docAdvOpen() ? 'true' : 'false') +
@@ -205,10 +213,10 @@
             });
         bar += yearChips() + docAdvPanel();
 
-        return notice() + bar + deptCond() + menuCond() + mapCond() + stageCond() +
+        return notice() + bar + deptCond() + menuCond() + stageCond() +
             '<p class="cmp-cap">조건에 맞는 <b>문서 ' + list.length.toLocaleString() + '건</b> · 할 일 <b>연결 ' + lc.links.toLocaleString() + '건</b> — ' +
                 '한 문서가 여러 할 일에 걸리므로 두 수는 다릅니다.</p>' +
-            (rows.length ? table(rows) : emptyBox()) +
+            (rows.length ? table(rows, hasStatus(list)) : emptyBox()) +
             pager(pages, list.length);
     }
     /* 부서 조건 — 2025 원장이 20개 부서를 갖게 되면서 **드롭다운이 성립한다.**
@@ -218,7 +226,7 @@
      * 고르기 전에 몇 건인지 보이면 0건짜리를 고르는 헛걸음이 없다. */
     function deptOptions() {
         var by = {};
-        D().allDocs().forEach(function (d) { if (d.dept) by[d.dept] = (by[d.dept] || 0) + 1; });
+        pool().forEach(function (d) { if (d.dept) by[d.dept] = (by[d.dept] || 0) + 1; });
         var names = Object.keys(by).sort();
         return [['', '부서 전체']].concat(names.map(function (n) {
             return [n, n + ' (' + by[n].toLocaleString() + ')'];
@@ -226,7 +234,7 @@
     }
     function deptCond() {
         if (!S.dept) return '';
-        var total = D().allDocs().filter(function (d) { return d.dept === S.dept; }).length;
+        var total = pool().filter(function (d) { return d.dept === S.dept; }).length;
         return '<p class="cmp-cond"><span class="chip-mini wt-elec">' + esc(S.dept) + ' 문서 ' + total.toLocaleString() + '건' +
             '<button type="button" class="cmp-cond-x" aria-label="부서 조건 해제" onclick="CMPDOC.setF(\'dept\',\'\')">×</button></span></p>';
     }
@@ -236,21 +244,14 @@
         if (!S.menu) return '';
         var M = (global.DY_MENUS_V2 || {})[S.menu];
         var label = (M && M.label) || S.menu;
-        var total = D().allDocs().filter(function (d) { return d.menuKey === S.menu; }).length;
+        var total = pool().filter(function (d) { return d.menuKey === S.menu; }).length;
         return '<p class="cmp-cond"><span class="chip-mini wt-elec">분야 ' + esc(label) + ' 문서 ' + total.toLocaleString() + '건' +
             '<button type="button" class="cmp-cond-x" aria-label="분야 조건 해제" onclick="CMPDOC.setF(\'menu\',\'\')">×</button></span></p>';
-    }
-    /* 미분류 조건 칩 — 부서·분야 조건과 같은 형태. 건수는 지금 남은 미분류 수다(분류를 붙이면 준다). */
-    function mapCond() {
-        if (S.map !== 'unmapped') return '';
-        var n = D().allDocs().filter(function (d) { return d.origin === 'ledger' && !d.mapped && !d.excluded; }).length;
-        return '<p class="cmp-cond"><span class="chip-mini wt-elec">미분류 문서 ' + n.toLocaleString() + '건' +
-            '<button type="button" class="cmp-cond-x" aria-label="미분류 조건 해제" onclick="CMPDOC.setF(\'map\',\'\')">×</button></span></p>';
     }
     /* 연도 칩 — 값이 2~3개뿐이라 드롭다운은 과하다. 각 칩에 건수를 붙여
        고르기 전에 몇 건인지 보이게 한다. */
     function yearChips() {
-        var all = D().allDocs();
+        var all = pool();
         var byYear = {};
         all.forEach(function (d) { if (d.year) byYear[d.year] = (byYear[d.year] || 0) + 1; });
         var years = Object.keys(byYear).map(Number).sort(function (a, b) { return b - a; });
@@ -291,20 +292,21 @@
             }).join('') +
             ' <button type="button" class="du-link" onclick="CMPDOC.clearStages()">모두 지우기</button></p>';
     }
-    function table(rows) {
+    /* 결재상태 열은 **값이 있는 문서가 하나라도 있을 때만** 둔다 — 원장 문서는 결재상태를
+       갖고 있지 않아(온나라 연동 전) 열 전체가 «—» 로 찼다. 빈 열은 정보 없이 폭만 쓴다.
+       판정은 지금 조건의 전건으로 한다 — 쪽마다 열이 생겼다 사라지면 안 된다. */
+    function hasStatus(list) { return list.some(function (d) { return !!d.status; }); }
+    function table(rows, showSt) {
         return '<div class="cmp-wrap"><table class="table-figma table-compact cmp-table"><thead><tr>' +
             '<th class="cmp-c-main">문서명</th><th class="cmp-c-stg">업무단계</th><th class="cmp-c-dept2">부서</th>' +
             '<th class="cmp-c-ac">수발신자</th>' +
-            '<th class="cmp-num cmp-c-rd">보고일자</th><th class="cmp-c-st">결재상태</th>' +
-        '</tr></thead><tbody>' + rows.map(row).join('') + '</tbody></table></div>';
+            '<th class="cmp-num cmp-c-rd">보고일자</th>' + (showSt ? '<th class="cmp-c-st">결재상태</th>' : '') +
+        '</tr></thead><tbody>' + rows.map(function (d) { return row(d, showSt); }).join('') + '</tbody></table></div>';
     }
-    function row(d) {
+    function row(d, showSt) {
         /* 행 전체가 진입 타깃(와이어프레임 tr.stg) — 칩·버튼 클릭에는 양보한다 */
         return '<tr class="cmp-stg cmp-rowlink" onclick="CMPDOC.rowOpen(event, \'' + esc(d.id) + '\')"><td class="cmp-c-main">' +
                 '<button type="button" class="cmp-slink" onclick="CMPDOC.openDoc(\'' + esc(d.id) + '\')">' + esc(d.title) + '</button>' +
-                (d.origin === 'seed26'
-                    ? ' <span class="chip-mini wt" title="2026년 실적은 2025년 실측 패턴에서 규칙으로 만든 예시 자료입니다. 실제 제출 기록이 아닙니다.">예시 자료</span>'
-                    : '') +
                 '<span class="cmp-scode">' + esc(d.id) + ' · ' + esc(d.year) + '년</span></td>' +
             '<td class="cmp-c-stg">' + stageChips(d) + '</td>' +
             '<td class="cmp-c-dept2">' + (d.dept ? esc(d.dept) : '<span class="cmp-dim">—</span>') + '</td>' +
@@ -312,7 +314,8 @@
                붙으면 기관명이 잘린다. 내부 문서만 그 사실을 낸다(값이 비므로). */
             '<td class="cmp-c-ac">' + (D().srText(d) ? esc(D().srText(d)) : '<span class="cmp-dim">—</span>') + '</td>' +
             '<td class="cmp-num">' + esc(d.date || '—') + '</td>' +
-            '<td><span class="chip-status chip-sm ' + V().toneOf(d.status) + '">' + esc(d.status || '—') + '</span></td></tr>';
+            (showSt ? '<td><span class="chip-status chip-sm ' + V().toneOf(d.status) + '">' + esc(d.status || '—') + '</span></td>' : '') +
+            '</tr>';
     }
     /* 2개 초과는 +N 으로 접고 **클릭하면 인라인으로 펼친다** — hover 툴팁은 쓰지
        않는다(터치에서 열 방법이 없고 스크린리더가 읽지 못한다, §7). */
@@ -329,46 +332,23 @@
             if (d.origin !== 'ledger') {
                 return '<span class="chip-status chip-sm warning" title="이 시스템에서 등록한 문서인데 연결된 할 일이 없습니다 — 어느 의무의 증빙도 아닙니다.">할 일 미지정</span>';
             }
-            /* «미분류»와 «분류에서 뺀 것»은 다르다 — 뺀 것은 이미 판단이 끝난
-               문서라 교정 대상이 아니다. 한 칩으로 묶으면 교정할 필요가 없는 문서가
-               섞여 «할 일이 이만큼 남았다»가 부풀어 보인다. */
-            if (d.excluded) {
-                return '<span class="chip-mini wt" title="' + esc(d.excluded) +
-                    ' — 분류기준 적용 범위 밖이거나 이행 증빙이 아니라고 분류 단계에서 뺀 문서입니다. 교정 대상이 아닙니다.">분류 제외</span>' +
-                    reviewChip(d);
-            }
-            return '<span class="chip-status chip-sm warning" title="2025년 원장에 분류가 빠진 문서입니다. 문서를 열어 «분류 붙이기»로 교정합니다.">미분류</span>' +
-                reviewChip(d);
+            /* 원장 문서에 할 일이 없으면 사실만 적는다 — 미분류·분류 제외·부서 확인 같은
+               분류 작업 상태는 화면에 내지 않는다(2026-10-12, 분류는 업무목록 엑셀이 정한다). */
+            return '<span class="cmp-dim">연결된 할 일 없음</span>';
         }
         var open = !!S.expand[d.id];
         var show = open ? st : st.slice(0, 2);
         var more = st.length - show.length;
-        /* 단계는 붙었는데 확신이 낮은 것. 미분류와 달리 «붙어 있으니 맞다»로 읽히기
-           쉬워, 이행 판정에 그대로 들어가는 만큼 눈에 보여야 한다. «모호»는 대개
-           미분류와 겹쳐 따로 찍지 않는다. */
-        var weak = d.mapConf === 'weak'
-            ? ' <span class="chip-status chip-sm warning cmp-weak" title="원장 분류 단계에서 «애매»로 표시된 문서입니다. ' +
-              '할 일 연결은 되어 있으나 확신이 낮아 이행 판정에 그대로 쓰기 전에 확인이 필요합니다.">분류 확인</span>'
-            : '';
         /* 목록의 칩도 상세와 같이 눌린다(D-7) — 같은 칩이 자리에 따라 다르게 동작하면 안 된다 */
         return show.map(function (s) {
             return '<a class="chip-mini wt-elec" title="' + esc(s.name) + ' 이행 상세로"' +
                 ' href="cmp-status.html?stage=' + encodeURIComponent(s.id) + '&year=' + d.year + '">' + esc(s.name) + '</a>';
         }).join(' ') +
-            weak + reviewChip(d) +
             (more > 0
                 ? ' <button type="button" class="chip-mini wt cmp-more" onclick="CMPDOC.expand(\'' + esc(d.id) + '\')" aria-expanded="false">+' + more + '</button>'
                 : (open && st.length > 2
                     ? ' <button type="button" class="chip-mini wt cmp-more" onclick="CMPDOC.expand(\'' + esc(d.id) + '\')" aria-expanded="true">접기</button>'
                     : ''));
-    }
-    /* 원문 확인 필요 — 제목만으로 판정할 수 없어 원문을 열어 볼 문서(원장 v4.0 신규 열).
-       할 일이 붙었든 안 붙었든 제외됐든 붙는다 — 확인 결과에 따라 판정이 바뀌는 문서라
-       세 갈래 어디에 있어도 보여야 한다. 무엇을 볼지는 상세 카드가 말한다. */
-    function reviewChip(d) {
-        if (!d.review) return '';
-        return ' <span class="chip-status chip-sm warning cmp-review" title="원문 확인 필요 — ' + esc(d.review.type) +
-            '. 상세에서 무엇을 확인할지와 해당 시 붙을 후보 단계를 봅니다.">원문 확인</span>';
     }
     function emptyBox() {
         return '<div class="v2-empty"><b>조건에 맞는 문서가 없습니다.</b><br>조회 조건을 지우면 전체 목록이 나옵니다.' +
@@ -437,79 +417,9 @@
     }
     function clearStages() { S.stages = []; S.page = 1; render(); }
 
-    /* ── 미분류 교정 «분류 붙이기» ──────────────────────────────────────────
-     * 2026-09-03 이관. 종전에는 은퇴한 업무 목록(docs-preset)에만 있어, 이 화면이
-     * «미분류 — 원장 교정 대상»이라고 말해 놓고 **고칠 자리가 메뉴 어디에도 없었다**.
-     * 판정·저장은 DYDOCS.remapLedger 그대로이고 선택기도 같은 DYPICK 이다 —
-     * 담당자가 같은 과업을 두 번 배우지 않는다(CLAUDE.md §5). */
-    var RM = null;                     /* {docId, stageIds[]} — 선택값은 이 화면이 든다 */
-    function openRemap(id) {
-        if (!D().isManager()) { V().toast('미분류 교정은 주관부서(재난안전과) 담당자만 할 수 있습니다.'); return; }
-        var d = D().docById(id); if (!d) return;
-        RM = { docId: id, stageIds: (d.stageIds || []).slice() };
-        global.DYPICK.reset('');
-        renderRemap();
-    }
-    function renderRemap() {
-        var d = D().docById(RM.docId);
-        V().openModal('업무단계 지정 · 미분류 교정',
-            '<div class="cmp-pick">' +
-                /* 삭제 확인 모달과 같은 어휘를 쓴다 — 새 클래스를 지어내면 규칙 없는
-                   클래스가 되어 조용히 무스타일로 뜬다(CLAUDE.md §7-1). */
-                '<p><b>' + esc(d.title) + '</b><span class="cmp-scode">' +
-                    esc(d.date || '일자 미기재') + (d.sr ? ' · ' + esc(d.sr) : '') + '</span></p>' +
-                global.DYPICK.render({ ns: 'CMPDOC.remapPick', multi: true, stages: RM.stageIds, height: 260 }) +
-                '<p class="cmp-cap">선택 <b>' + RM.stageIds.length + '</b>개 — 이 문서가 그 할 일의 <b>증빙</b>이 됩니다.</p>' +
-            '</div>',
-            '<button class="btn btn-outline" onclick="CMPDOC.closeRemap()">취소</button>' +
-            '<button class="btn btn-primary" onclick="CMPDOC.saveRemap()">저장</button>');
-    }
-    /* DYPICK 콜백 — 위 pick() 과 같은 계약(stage/all/clear) */
-    function remapPick(kind, a, b) {
-        if (!RM) return;
-        if (kind === 'stage') {
-            var i = RM.stageIds.indexOf(a);
-            if (b && i < 0) RM.stageIds.push(a);
-            if (!b && i >= 0) RM.stageIds.splice(i, 1);
-        } else if (kind === 'all') {
-            (a || []).forEach(function (id) {
-                var j = RM.stageIds.indexOf(id);
-                if (b && j < 0) RM.stageIds.push(id);
-                if (!b && j >= 0) RM.stageIds.splice(j, 1);
-            });
-        } else if (kind === 'clear') { RM.stageIds = []; }
-        F().rerender(renderRemap);
-    }
-    /* 선택기는 한 벌뿐이라 목록의 조건 트리와 상태를 공유한다 — 닫을 때 비워 두지
-       않으면 뒤에 있던 트리가 엉뚱한 단계를 고른 것처럼 보인다. */
-    function closeRemap() { global.DYPICK.reset(''); RM = null; V().closeModal(); }
-    function saveRemap() {
-        if (!RM) return;
-        if (!RM.stageIds.length) { V().toast('업무단계를 하나 이상 선택해야 저장됩니다.'); return; }
-        var r = D().remapLedger(RM.docId, RM.stageIds);
-        if (!r.ok) { V().toast(r.reason); return; }
-        V().closeModal(true);
-        RM = null;
-        global.DYPICK.reset('');
-        render();
-        V().toast('업무단계 ' + r.doc.stageIds.length + '개를 지정했습니다 — 이 문서가 그 할 일의 증빙으로 붙었습니다.');
-    }
-    /* 상세 오른쪽 칸 맨 위 — «미분류»라고 말하는 자리 바로 옆에 고치는 수단을 둔다 */
-    function remapCard(d) {
-        if (d.origin !== 'ledger' || d.mapped || d.excluded) return '';
-        return '<div class="cmp-card">' +
-            '<h3 class="cmp-detail-h3">분류 붙이기</h3>' +
-            /* 상태 이름을 단정하지 않는다 — 저장은 DYDOCS 상태축을 «진행중»으로 두지만
-               법정 업무 현황이 보여 주는 것은 판정축(이행/미이행)이라 회차가 차면 «이행»으로 뜬다.
-               둘은 다른 축이므로(CLAUDE.md §5) 화면에 없는 상태 이름을 약속하지 않는다. */
-            '<p>원자료에 분류가 비어 있는 문서라 <b>이행 판정에 들어가지 않습니다.</b> ' +
-                '이 문서가 증빙하는 할 일(업무단계)을 고르면 그 할 일의 <b>증빙</b>으로 붙고 법정 업무 현황의 판정에 함께 셉니다.</p>' +
-            (D().isManager()
-                ? '<button type="button" class="btn btn-primary" onclick="CMPDOC.openRemap(\'' + esc(d.id) + '\')">업무단계 지정</button>'
-                : '<p class="cmp-cap"><b>조회 전용</b> — 원장 교정은 주관부서(재난안전과) 담당자가 수행합니다.</p>') +
-        '</div>';
-    }
-
+    /* 미분류 교정(«분류 붙이기»)·원문 확인·부서 확인 카드는 2026-10-12 사용자 지시로 걷었다 —
+       문서와 할 일의 연결은 업무목록 엑셀이 정하고, 이 시스템에서 분류하지 않는다.
+       저장 계층(DYDOCS.remapLedger)은 그대로 둔다. 되살리지 말 것. */
     /* =========================================================================
      * ⑤ 문서 상세
      * ========================================================================= */
@@ -541,8 +451,6 @@
         '<section class="card">' +
             '<header class="card-header cmp-doc-h">' +
                 '<span class="chip-mini wt">' + esc(d.year) + '년 문서</span>' +
-                /* 시드 표시는 아래 업무단계 줄의 mapChip 이 이미 낸다 — 여기 또
-                   부르면 같은 칩이 한 헤더에 두 번 뜬다. */
                 '<h2 class="cmp-detail-h">' + esc(d.title) +
                     /* 제목 수정은 DOCUP 이 그린다 — 업무문서 상세와 같은 모달·검사·
                        권한을 쓴다(§7). 권한이 없으면 아무것도 나오지 않는다. */
@@ -557,7 +465,6 @@
                             return '<a class="chip-mini wt-elec" href="cmp-status.html?stage=' + encodeURIComponent(s.id) + '&year=' + d.year + '">' + esc(s.name) + '</a>';
                           }).join(' ')
                         : '<span class="cmp-dim">연결된 할 일 없음</span>') +
-                    ' ' + mapChip(d) +
                 '</p>' +
             '</header>' +
             /* 문서 정보는 **열에 가두지 않는다** — 문서 전체에 대한 값이라 한쪽 열에
@@ -572,41 +479,12 @@
                         '결재 완료본을 여기서 보려면 온나라 연동이 필요합니다 — 그럴듯한 미리보기를 대신 그리지 않습니다.</p></div>' +
                 '</div>' +
                 '<div class="cmp-two-r">' +
-                    reviewCard(d) +
-                    remapCard(d) +
                     (past ? carryCard(d) : '') +
                     thisYearCard(d, st) +
                     removeLine(d, st) +
                 '</div>' +
             '</div>' +
         '</section>';
-    }
-    /* 원문 확인 필요 — 원장 v4.0 이 제목만으로 판정할 수 없는 문서에 «무엇을 볼지»와
-     * «확인되면 붙을 단계»를 적어 두었다. 화면이 지어내는 값이 아니라 원장의 열 그대로다.
-     * 후보 단계 코드는 그 할 일의 이행 상세로 이어 준다(막다른 길을 두지 않는다).
-     * 확인 결과 이행 증빙이 맞으면 «분류 붙이기»(미분류)로 붙인다 — 별도 수단을 만들지 않는다. */
-    function reviewCard(d) {
-        var r = d.review;
-        if (!r) return '';
-        var known = {};
-        (T().STAGES || []).forEach(function (s) { known[s.id] = s; });
-        var cand = String(r.cand || '').replace(/[A-Z]{3}-\d{2}-\d{2}/g, function (code) {
-            var s = known[code];
-            if (!s) return esc(code);
-            return '<a class="chip-mini wt-elec" title="' + esc(s.name) + ' 이행 상세로" href="cmp-status.html?stage=' +
-                encodeURIComponent(code) + '&year=' + d.year + '">' + esc(code) + '</a>';
-        });
-        return '<div class="cmp-card">' +
-            '<h3 class="cmp-detail-h3">원문 확인 필요 <span class="chip-status chip-sm warning">' + esc(r.type) + '</span></h3>' +
-            '<p>제목만으로는 이행 증빙인지 판정할 수 없어 <b>원문·첨부를 열어 확인할 문서</b>입니다. ' +
-                (d.mapped ? '지금은 할 일이 붙어 있어 판정에 들어갑니다 — 확인 결과 아니면 연결을 해제합니다. '
-                          : d.excluded ? '지금은 분류 제외입니다 — 확인 결과 이행 증빙이면 아래 후보 단계에 붙여 분류 대상으로 복귀합니다. '
-                          : '지금은 미분류입니다 — 확인 결과 이행 증빙이면 아래 후보 단계로 «분류 붙이기»를 합니다. ') + '</p>' +
-            '<dl class="cmp-dl">' +
-                (r.what ? '<div><dt>원문에서 확인할 것</dt><dd>' + esc(r.what) + '</dd></div>' : '') +
-                (r.cand ? '<div><dt>해당 시 업무단계(후보)</dt><dd>' + cand + '</dd></div>' : '') +
-            '</dl>' +
-        '</div>';
     }
     /* 문서 정보 — 종전에는 헤더 한 줄에 압축돼 있어 **담당부서·데이터 구분이
      * 보이지 않았고**, 그걸 보려면 업무문서 쪽 상세로 넘어가야 했다. 업무관리에서
@@ -626,9 +504,7 @@
                 row('기준연도', esc(d.year) + '년') +
                 /* 출처를 틀리게 말하면 그 자체가 거짓 자료가 된다(원장 실측 5만여 건이
                    «사용자 등록»으로 뜨던 결함). 좁은 것부터 판정한다. */
-                row('데이터 구분', d.origin === 'seed26'
-                    ? '<b>예시 자료</b> ' + dim('— 2026년 실적은 2025년 실측 패턴에서 규칙으로 만든 자료입니다. 실제 제출 기록이 아닙니다.')
-                    : d.dataMode === 'real'
+                row('데이터 구분', d.dataMode === 'real'
                     ? '<b>문서 원장 실측</b> ' + dim('— ' + d.year + '년 담양군 문서 원장에서 그대로 가져온 실제 기록입니다.')
                     : d.dataMode === 'demo' ? '예시 값'
                     : '사용자 등록') +
@@ -656,8 +532,7 @@
        아무 말이 없어 «왜 지우는 버튼이 없지»가 됐다. */
     function removeLine(d, st) {
         if (d.dataMode !== 'user') {
-            var from = d.origin === 'seed26' ? '예시 자료라'
-                     : d.origin === 'v2' ? '현행 업무문서라'
+            var from = d.origin === 'v2' ? '현행 업무문서라'
                      : '문서 원장의 실측 문서라';
             return '<p class="cmp-cap cmp-remove">' + from + ' 이 화면에서 지우지 않습니다.</p>';
         }
@@ -694,10 +569,10 @@
     }
     /* 돌아가는 줄 — 두 목적지가 **한 줄에** 온다.
      *   ‹ 문서 목록으로   : 이 화면 안에서 상세를 닫는다(늘 있다)
-     *   ‹ 법정 업무 현황으로     : 왔던 화면으로 나간다(다른 메뉴에서 온 경우만)
+     *   ‹ 이행 관리로     : 왔던 화면으로 나간다(다른 메뉴에서 온 경우만)
      * 세로로 쌓으면 둘 다 «‹»로 시작해 어느 쪽이 어디로 가는지 헷갈리고 제목이
      * 아래로 밀린다. 한 줄에 두고 구분자로 갈라 «지금 어디서 왔는지»를 보인다.
-     * 조사는 josa() 가 붙인다 — 「법정 업무 현황(으)로」 같은 표기를 내지 않는다. */
+     * 조사는 josa() 가 붙인다 — 「이행 관리(으)로」 같은 표기를 내지 않는다. */
     function backLine() {
         var close = '<button type="button" class="du-link" onclick="CMPDOC.closeDoc()">‹ 문서 목록으로</button>';
         var out = '';
@@ -712,23 +587,6 @@
         }
         return '<p class="cmp-back">' + out + close + '</p>';
     }
-    function mapChip(d) {
-        /* 2026 실적은 규칙으로 만든 예시 자료다 — 실제 제출 기록과 구분되지 않으면
-           보는 사람이 «담양군이 올해 이만큼 했다»로 읽는다(CLAUDE.md: 그럴듯하게
-           채우지 말고 드러낸다). */
-        if (d.origin === 'seed26') {
-            return '<span class="chip-mini wt" title="2026년 실적은 2025년 실측 패턴에서 규칙으로 만든 예시 자료입니다. 실제 제출 기록이 아닙니다.">예시 자료</span>';
-        }
-        if (d.origin === 'ledger') {
-            return d.mapped
-                ? '<span class="chip-status chip-sm success">분류완료</span>'
-                : '<span class="chip-status chip-sm warning">미분류 — 원장 교정 대상</span>';
-        }
-        if (d.origin === 'v2') return '<span class="chip-mini wt">이 목록 밖 문서 — 할 일 축 없음</span>';
-        /* 할 일이 없는데 «분류완료»라고 하면 바로 옆 «연결된 할 일 없음»과 모순이다 */
-        if (!(d.stageIds || []).length) return '<span class="chip-status chip-sm warning">할 일 미지정</span>';
-        return '<span class="chip-status chip-sm success">분류완료</span>';
-    }
     /* 올해 이어받기 — 지난연도 문서에만 붙인다(올해 문서를 또 만들 이유가 없다) */
     function carryCard(d) {
         var y = liveYear();
@@ -741,26 +599,15 @@
         if (!(d.stageIds || []).some(function (s) { return !!D().stage(s); })) {
             return '<div class="cmp-card">' +
                 '<h3 class="cmp-detail-h3">올해 이어받기</h3>' +
-                (d.excluded
-                    ? '<p>분류에서 뺀 문서라(' + esc(d.excluded) + ') 올해 이행 증빙으로 이어받지 않습니다.</p>'
-                    : '<p>연결된 할 일이 없어 이어받아도 어느 의무의 증빙도 되지 않습니다. ' +
-                      (D().isManager()
-                          ? '위 <b>분류 붙이기</b>로 할 일을 먼저 붙이면 이어받을 수 있습니다.'
-                          : '재난안전과 담당자가 <b>분류 붙이기</b>로 할 일을 붙이면 이어받을 수 있습니다.') + '</p>') +
+                '<p>연결된 할 일이 없는 문서라 올해 이행 증빙으로 이어받지 않습니다.</p>' +
             '</div>';
         }
-        /* 이미 이어받은 원본이면 등록 버튼 대신 그 문서를 가리킨다(검수 C-2)
-           — 다만 **누가 옮겼는지**는 사실대로 적는다. 예시 자료가 옮겨 둔 것을
-           «내가 만들었습니다»로 쓰면 담당자가 자기 기억을 의심하게 된다. */
+        /* 이미 이어받은 원본이면 등록 버튼 대신 그 문서를 가리킨다(검수 C-2) */
         var dup = D().carriedInto(d.id, y);   /* 세 경로 공용 판정 */
-        var seeded = dup && dup.origin === 'seed26';
         return '<div class="cmp-card">' +
             '<h3 class="cmp-detail-h3">올해 이어받기</h3>' +
             (dup
-                ? (seeded
-                    ? '<p><span class="chip-status chip-sm neutral">시드가 이미 옮김</span> ' + y +
-                      '년 예시 자료가 이 문서를 이미 올해로 옮겨 두었습니다 — 또 만들면 회차를 넘습니다.</p>'
-                    : '<p><span class="chip-status chip-sm success">이어받기 완료</span> 이 문서로 이미 <b>' + y + '년</b> 문서를 만들었습니다.</p>') +
+                ? '<p><span class="chip-status chip-sm success">이어받기 완료</span> 이 문서로 이미 <b>' + y + '년</b> 문서를 만들었습니다.</p>' +
                   '<button type="button" class="btn btn-outline" onclick="CMPDOC.openDoc(\'' + esc(dup.id) + '\')">만든 문서 보기</button>'
                 : '<p>이 문서를 바탕으로 <b>' + y + '년</b> 문서를 만듭니다. 업무단계 ' +
                     ((d.stageIds || []).length || 0) + '개' + (d.sr ? '·수발신자' : '') +
@@ -769,7 +616,7 @@
                   '<p class="cmp-cap"><b>본문·결재문서는 복제하지 않습니다</b> — 온나라 연동 전이라 원본이 없고 결재는 새로 받습니다.' +
                     ((d.stageIds || []).length ? '' : ' 이 문서에는 연결된 할 일이 없어 등록 뒤 직접 골라야 합니다.') + '</p>' +
                   (can
-                      ? '<button type="button" class="btn btn-primary" onclick="CMPDOC.carry(\'' + esc(d.id) + '\')">📄 올해 문서로 등록</button>'
+                      ? '<button type="button" class="btn btn-primary" onclick="CMPDOC.carry(\'' + esc(d.id) + '\')">올해 문서로 등록</button>'
                       : '<p class="cmp-cap"><b>조회 전용</b> — 문서 등록은 부서 담당자가 수행합니다.</p>')) +
         '</div>';
     }
@@ -857,7 +704,7 @@
     function setF(k, v) { S[k] = v; S.page = 1; rerender(); }
     /* 초기화는 '연도 전체'가 아니라 **기본 연도**로 돌아간다 — 읽는 사람이 기대하는
        초기 상태가 처음 열었을 때의 화면이다. */
-    function resetF() { S.q = ''; S.sr = ''; S.year = String(D().defaultYear()); S.status = ''; S.stages = []; S.dept = ''; S.menu = ''; S.map = ''; S.page = 1; rerender(); }
+    function resetF() { S.q = ''; S.sr = ''; S.year = String(D().defaultYear()); S.status = ''; S.stages = []; S.dept = ''; S.menu = ''; S.page = 1; rerender(); }
     function expand(id) { S.expand[id] = !S.expand[id]; render(); }
     function toggleAdv() { S.adv = !docAdvOpen(); render(); }
     function go(n) { S.page = n; render(); try { window.scrollTo(0, 0); } catch (e) {} }
@@ -880,7 +727,6 @@
             global.DOCUP.editTitle(id, function () { render(); });
         },
         askRemove: askRemove, doRemove: doRemove,
-        openRemap: openRemap, remapPick: remapPick, closeRemap: closeRemap, saveRemap: saveRemap,
         state: S,
     };
 }(window));
