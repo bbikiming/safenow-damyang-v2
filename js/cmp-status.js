@@ -168,8 +168,30 @@
         if (S.st) { var j = C().judge(s, S.year); if (!j || j.key !== S.st) return false; }
         if (S.way && (s.taskType || 'UNKNOWN') !== S.way) return false;
         if (S.axis) { if (C().axesOf(s.itemId).indexOf(S.axis) < 0) return false; }
-        if (S.dept && !D().stageDeptHit(s, S.dept)) return false;
+        if (S.dept && !deptRelated(s)) return false;
         return true;
+    }
+    /* 부서 조건이 남기는 할 일 (2026-10-13) — 적용 대상 문구가 그 부서를 가리키거나,
+       **그 부서가 그 해 이 할 일의 문서를 냈거나**. 문구에만 기대면 그 부서가 실제로
+       문서를 낸 할 일이 숨는다(문구 추정이 안 맞는 경우). 문구로 알 수 없고 문서도 없는
+       할 일은 기본으로 빼되, 단계별 보기에서는 «해당 여부 미정 n개도 보기»로 펼친다. */
+    var _dhas = { key: '', map: null };
+    function deptHas(name, sid) {
+        var k = S.year + '|' + name;
+        if (_dhas.key !== k) {
+            var m = {};
+            D().allDocs().forEach(function (d) {
+                if (d.dept !== name || +d.year !== +S.year) return;
+                (d.stageIds || []).forEach(function (id) { m[id] = 1; });
+            });
+            _dhas = { key: k, map: m };
+        }
+        return !!_dhas.map[sid];
+    }
+    function deptRelated(s) {
+        if (!S.dept) return true;
+        if (D().stageDeptHit(s, S.dept) || deptHas(S.dept, s.id)) return true;
+        return !!(S.dUnk && S.level === 'L2' && S.seg2 === 'stage');
     }
     function viewStages() { return levelStages().filter(stageMatch); }
     function filtering() { return !!(S.q || S.cycle || S.st || S.axis || S.dept || S.way); }
@@ -430,7 +452,7 @@
             if (S.cycle) { var cy = C().cycleOf(s2); if (S.cycle === '__ev' ? cy.need > 0 : cy.cc !== S.cycle) return false; }
             if (S.axis && C().axesOf(s2.itemId).indexOf(S.axis) < 0) return false;
             if (S.way && (s2.taskType || 'UNKNOWN') !== S.way) return false;
-            if (S.dept && !D().stageDeptHit(s2, S.dept)) return false;
+            if (S.dept && !deptRelated(s2)) return false;
             return true;
         });
         var cnt = { ok: 0, no: 0, cev: 0, ctg: 0, na: 0 };
@@ -514,7 +536,7 @@
     var MINI = {
         l1: '이행항목을 누르면 하위 할 일이 펼쳐지고, 할 일 줄을 누르면 상세로 들어갑니다.',
         dept: '부서별 보기 — <b>부서 줄을 누르면 그 부서의 할 일 목록</b>으로 들어갑니다. 보유 업무문서 건수를 누르면 그 부서 문서를 봅니다.',
-        l2stage: '단계별 보기 — 한 할 일을 부서들이 얼마나 이행했는지 봅니다. 할 일 줄을 누르면 상세로 들어갑니다.',
+        l2stage: '단계별 보기 — 할 일마다 문서가 있는 부서 수와 적용 대상을 봅니다. 할 일 줄을 누르면 부서별 현황이 있는 상세로 들어갑니다.',
         fac: '관리대상별 보기 — 시설마다 적용 법령이 달라 적용 단계가 가변입니다. <b>행을 누르면</b> 그 시설 상세로, <b>적용 단계 칩을 누르면</b> 그 할 일 상세로 들어갑니다.',
         l3stage: '단계별 보기 — 시설·공사에 적용되는 할 일을 이행항목별로 봅니다.',
     };
@@ -739,48 +761,108 @@
                 ? '<b>' + esc(m.excluded.join('·')) + '</b>는 폴더 라벨과 실제 내용이 달라 <b>집계에서 뺐습니다</b>. ' : '') +
             '나머지 부서는 이 화면에서 등록한 문서만 셉니다.</p>';
     }
-    /* ── L2 단계별 보기 — 부서 이행 도트 ─────────────────────────────────── */
-    function deptDotTable(list) {
-        if (!list.length) return emptyBox();
-        var depts = C().deptList();
-        /* 도트 한 칸 = 한 부서. 이제 세 값이 실제로 갈린다 —
-           적용 대상 아님(추정) · 적용인데 서류 없음 · 이행. */
+    /* ── L2 단계별 보기 — 문서 있는 부서 · 적용 대상 ───────────────────────
+     * 종전에는 할 일마다 부서 도트 23칸을 그렸다(와이어프레임). 2026-10-13 걷었다 —
+     *   ① 도트에 부서 이름이 없어 «어느 부서가 빠졌나»를 마우스를 올려야 알았고
+     *      인쇄·캡처에서는 아예 읽을 수 없었다.
+     *   ② 해당/비해당 색은 적용대상 **문구 추정**인데, 부서 단위 할 일 70개 중
+     *      부서를 알 수 있는 문구(«전 부서»)는 23개뿐이다. 나머지는 «현업종사자 배치
+     *      부서» 같은 문구라 부서 이름 매칭이 거의 0곳이다 — 추정을 색으로 칠하면 사실로 읽힌다.
+     * 그래서 목록에는 **센 값(문서 있는 부서)과 기준표 문구(적용 대상)**만 둔다.
+     * 부서별 내역은 할 일 상세의 «부서별 현황»(deptBreakdown)에서 본다. */
+    function deptDocMap() {
         var byDept = {};
-        depts.forEach(function (dp) { byDept[dp.name] = {}; });
+        C().deptList().forEach(function (dp) { byDept[dp.name] = {}; });
         D().allDocs().forEach(function (d) {
             if (!d.dept || !byDept[d.dept]) return;
             if (+d.year !== +S.year) return;
-            (d.stageIds || []).forEach(function (sid) { byDept[d.dept][sid] = 1; });
+            (d.stageIds || []).forEach(function (sid) { byDept[d.dept][sid] = (byDept[d.dept][sid] || 0) + 1; });
         });
+        return byDept;
+    }
+    /* 적용 대상이 «전 부서»인가 — 이때만 «문서 없는 부서»를 셀 수 있다 */
+    function allDeptTarget(s) { return /(전\s*부서|각\s*부서|전체\s*부서)/.test(String(s.target || '')); }
+    /* 한 부서의 상태 — 글자로 말한다. 해당 여부를 모르면 모른다고 한다. */
+    function deptState(s, name, has) {
+        if (has) return ['success', '문서 있음'];
+        if (D().stageDeptHit(s, name)) return ['warning', '문서 없음'];
+        return ['neutral', '해당 여부 미정'];
+    }
+    /* 부서를 골랐을 때 숨긴 «해당 여부 미정» 할 일 — 몇 개인지 밝히고 펼칠 수 있게 한다 */
+    function unkNote(me) {
+        var n = C().stagesOfLevel('L2').filter(function (s) {
+            return !D().stageDeptHit(s, me) && !deptHas(me, s.id);
+        }).length;
+        if (!n) return '';
+        return '<p class="cmp-cap">' + (S.dUnk
+            ? '«해당 여부 미정» ' + n + '개를 함께 보고 있습니다 — 적용 대상 문구로 ' + esc(me) + V().josa(me, '이', '가') + ' 해야 하는 일인지 알 수 없고 그 해 문서도 없는 할 일입니다. '
+            : '적용 대상 문구에 ' + esc(me) + V().josa(me, '이', '가') + ' 없고 그 해 문서도 없는 할 일 ' + n + '개는 빼 두었습니다 — 해당 여부를 알 수 없는 할 일입니다. ') +
+            '<button type="button" class="du-link" onclick="CMPST.toggleUnk()">' + (S.dUnk ? '다시 빼기' : '«해당 여부 미정» ' + n + '개도 보기') + '</button></p>';
+    }
+    function toggleUnk() { S.dUnk = !S.dUnk; render(); }
+    function deptDotTable(list) {
+        if (!list.length) return emptyBox();
+        var byDept = deptDocMap();
+        var names = Object.keys(byDept);
+        var me = (S.dept && byDept[S.dept]) ? S.dept : '';
         var rows = list.map(function (s) {
             var cy = C().cycleOf(s);
-            var done = 0, ap = 0;
-            /* 도트는 시각 요소다 — title 만 두면 스크린리더에 아무것도 읽히지 않는다(D-10). */
-            var dots = depts.map(function (dp) {
-                var on = D().stageDeptHit(s, dp.name), hs = !!byDept[dp.name][s.id];
-                if (on) { ap++; if (hs) done++; }
-                var cls = on ? (hs ? 'ok' : 'na') : (hs ? 'extra' : '');
-                var lab = dp.name + ' — ' + (on ? (hs ? '이행' : '적용(추정) · 서류 없음')
-                                               : (hs ? '추정 밖인데 서류 있음' : '적용 대상 아님(추정)'));
-                return '<i class="' + cls + '" role="img" aria-label="' + esc(lab) + '" title="' + esc(lab) + '"></i>';
-            }).join('');
+            var n = names.filter(function (nm) { return byDept[nm][s.id]; }).length;
+            var mine = me ? deptState(s, me, !!byDept[me][s.id]) : null;
             return '<tr class="cmp-stg cmp-rowlink" onclick="CMPST.rowOpen(event, \'' + esc(s.id) + '\')"><td class="cmp-c-main">' +
                     '<button type="button" class="cmp-slink" onclick="CMPST.openDetail(\'' + esc(s.id) + '\')">' + esc(s.name) + '</button>' +
                     '<span class="cmp-scode">' + esc(s.id) + '</span></td>' +
                 '<td class="cmp-c-cy' + (cy.need ? '' : ' cmp-dim') + '">' + esc(cy.label) + '</td>' +
-                '<td><div class="cmp-dots">' + dots + '</div></td>' +
-                '<td class="cmp-num' + (ap ? '' : ' cmp-dim') + '">' + (ap ? done + ' / ' + ap : '—') + '</td>' +
+                (mine ? '<td class="cmp-c-me"><span class="chip-status chip-sm ' + mine[0] + '">' + mine[1] + '</span></td>' : '') +
+                '<td class="cmp-num cmp-c-n2' + (n ? '' : ' cmp-dim') + '">' + n + '곳</td>' +
+                '<td class="cmp-c-tgt">' + (s.target ? esc(s.target) : '<span class="cmp-dim">미정</span>') + '</td>' +
                 '</tr>';
         }).join('');
         return '<div class="cmp-wrap"><table class="table-figma table-compact cmp-table"><thead><tr>' +
-            '<th class="cmp-c-main">할 일(업무단계)</th><th class="cmp-c-cy">이행주기</th><th class="cmp-c-dots-h">부서 이행 현황</th>' +
-            '<th class="cmp-num cmp-c-n2">이행 부서</th>' +
+            '<th class="cmp-c-main">할 일(업무단계)</th><th class="cmp-c-cy">이행주기</th>' +
+            (me ? '<th class="cmp-c-me">' + esc(me) + '</th>' : '') +
+            '<th class="cmp-num cmp-c-n2">문서 있는 부서</th><th class="cmp-c-tgt">적용 대상</th>' +
         '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
-        '<p class="cmp-legend cmp-cap"><span class="cmp-dot-k"><i class="ok"></i> 이행</span>' +
-            '<span class="cmp-dot-k"><i class="na"></i> 적용(추정) · 서류 없음</span>' +
-            '<span class="cmp-dot-k"><i class="extra"></i> 추정 밖인데 서류 있음</span>' +
-            '<span class="cmp-dot-k"><i></i> 적용 대상 아님(추정)</span>' +
-            ' 부서 ' + depts.length + '개 — 「이행 부서」의 분모는 <b>적용대상 문구 추정</b>입니다.</p>';
+        '<p class="cmp-cap">«문서 있는 부서»는 ' + S.year + '년 문서를 센 값입니다. «적용 대상»은 법령 기준표의 문구 그대로이고, ' +
+            '부서별 소관표가 정해지지 않아 «전 부서»가 아닌 할 일은 어느 부서가 빠졌는지 셀 수 없습니다' +
+            '. 부서별 내역은 할 일을 눌러 상세에서 봅니다.</p>' +
+            (me ? unkNote(me) : '');
+    }
+
+    /* 할 일 상세 — 부서별 현황. 센 값(문서 있는 부서)과, 적용 대상이 «전 부서»일 때만
+       «문서 없는 부서»를 보인다. 부서 이름을 누르면 아래 문서 목록이 그 부서로 좁혀진다. */
+    function deptBreakdown(s, y) {
+        var cnt = {};
+        C().docsOfStage(s.id, y).forEach(function (d) { if (d.dept) cnt[d.dept] = (cnt[d.dept] || 0) + 1; });
+        var has = Object.keys(cnt).sort(function (a, b) { return cnt[b] - cnt[a] || a.localeCompare(b); });
+        /* 부서 단위 할 일만 «빠진 부서»를 말한다 — 군·관리대상 단위는 부서마다 하는 일이 아니다 */
+        var lv = C().levelOf(s), dlevel = lv.level === 'L2';
+        var lvLabel = (C().LEVELS.filter(function (l) { return l.id === lv.level; })[0] || {}).label || '';
+        var all = dlevel && allDeptTarget(s);
+        var miss = all ? C().deptList().map(function (d) { return d.name; }).filter(function (n) { return !cnt[n]; }) : [];
+        var chipBtn = function (n) {
+            var on = S.docDept === n;
+            return '<button type="button" class="cmp-dchip' + (on ? ' is-on' : '') + '" aria-pressed="' + on + '" ' +
+                'data-dept="' + esc(n) + '" aria-label="' + esc(n) + ' 문서 ' + cnt[n] + '건' + (on ? ' — 선택됨, 누르면 풀림' : ' — 이 부서 문서만 보기') + '" ' +
+                'onclick="CMPST.deptChip(this.getAttribute(\'data-dept\'))">' +
+                esc(n) + ' <b>' + cnt[n] + '</b></button>';
+        };
+        return '<div class="cmp-dept-box">' +
+            '<div class="cmp-dept-box-h"><h3 class="cmp-detail-h3">부서별 현황 <span class="cmp-dim">· ' + y + '년</span></h3>' +
+                '<span class="cmp-cap">적용 대상: ' + (s.target ? esc(s.target) : '미정') + '</span></div>' +
+            '<div class="cmp-dept-row"><span class="cmp-dept-k">문서 있는 부서 <b>' + has.length + '곳</b></span>' +
+                '<span class="cmp-dept-v">' + (has.length ? has.map(chipBtn).join('') : '<span class="cmp-dim">없음</span>') + '</span></div>' +
+            (!dlevel
+                ? '<p class="cmp-cap">' + esc(lvLabel) + ' 할 일이라 부서마다 해야 하는 일이 아닙니다 — 위 부서는 이 일의 문서를 낸 부서입니다.</p>'
+                : all
+                ? '<div class="cmp-dept-row"><span class="cmp-dept-k">문서 없는 부서 <b>' + miss.length + '곳</b></span>' +
+                    '<span class="cmp-dept-v">' + (miss.length ? miss.map(function (n) { return '<span class="cmp-dchip is-miss">' + esc(n) + '</span>'; }).join('') : '<span class="cmp-dim">없음</span>') + '</span></div>'
+                : '<p class="cmp-cap">적용 대상 문구(«' + esc(s.target || '미정') + '»)만으로는 어느 부서가 빠졌는지 셀 수 없습니다 — 부서별 소관표가 정해지면 표시됩니다.</p>') +
+            (all && dlevel ? '<p class="cmp-cap">부서 명단은 문서 원장·시스템 조직도에 있는 ' + C().deptList().length +
+                '곳 기준입니다 — 나머지 부서는 명단을 받지 못해 여기 나오지 않습니다.</p>' : '') +
+            (has.length ? '<p class="cmp-cap">부서 이름을 누르면 아래 문서가 그 부서 것만 남습니다' +
+                (S.docDept ? ' — 지금 <b>' + esc(S.docDept) + '</b> 문서만 보고 있습니다. 한 번 더 누르면 풀립니다' : '') + '.</p>' : '') +
+        '</div>';
     }
 
     /* ── L3 관리대상별 보기 ─────────────────────────────────────────────────
@@ -1003,6 +1085,7 @@
                     '</span>' +
                 '</div>' +
                 (live ? '' : '<p class="cmp-cap"><b>' + y + '년은 지난 연도입니다.</b> 소급 등록을 막기 위해 등록 버튼을 내지 않습니다 — 조회만 됩니다.</p>') +
+                deptBreakdown(s, y) +
                 docBlock(docs, y) +
                 gapBox(s, y, canReg, prev, prevN) +
                 (prev
@@ -1142,15 +1225,16 @@
     function docBar(all, shown) {
         var fields = [{ type: 'search', id: 'cmp-docq', value: S.docQ,
                         placeholder: '문서명·수발신자로 찾기', on: "CMPST.docF('Q', this.value)" }];
-        var dept = docOpts(all, 'dept', '부서 전체');
-        if (dept) fields.push({ type: 'select', id: 'cmp-docdept', value: S.docDept, label: '부서',
-                                options: dept, on: "CMPST.docF('Dept', this.value)" });
+        /* 부서 고르기는 바로 위 «부서별 현황»의 부서 칩이 맡는다(2026-10-13) — 같은 축을
+           칩과 드롭다운 두 컨트롤로 묻지 않는다(§14-12). 고른 부서는 칩에 표시되고
+           «필터 초기화»가 함께 푼다. */
         var st = docOpts(all, 'status', '결재상태 전체');
         if (st) fields.push({ type: 'select', id: 'cmp-docst', value: S.docSt, label: '결재상태',
                               options: st, on: "CMPST.docF('St', this.value)" });
         return F().bar(fields, {
             count: shown.length, unit: '건',
             reset: 'CMPST.docClear()',
+            extraActive: S.docDept ? 1 : 0,   /* 부서 칩으로 건 조건도 «필터 초기화 (n)»에 센다 */
         });
     }
     /* 문서가 없으면 조건 때문인지 애초에 없는지를 가른다 — 같은 빈 화면이라도
@@ -1758,6 +1842,15 @@
         F().rerender(render);              /* 검색어 타이핑 중 포커스·캐럿 보존 */
     }
     function docClear() { docReset(); render(); }
+    /* 부서 칩 — 다시 그린 뒤 같은 칩으로 포커스를 돌려준다. 통째로 다시 그리는 화면이라
+       돌려주지 않으면 키보드 사용자가 칩을 누를 때마다 페이지 맨 앞으로 튕긴다. */
+    function deptChip(name) {
+        docF('Dept', S.docDept === name ? '' : name);
+        try {
+            var el = S.mount.querySelector('.cmp-dchip[data-dept="' + String(name).replace(/"/g, '\\"') + '"]');
+            if (el) el.focus();
+        } catch (e) {}
+    }
     /* 등록 마법사 — 단계 프리필. 연도는 지금 보고 있는 연도(상세면 상세 연도) */
     function openReg(stageId) {
         var y = S.detail ? (S.dyear || S.year) : S.year;
@@ -2097,6 +2190,17 @@
         }
         var lvId = C().LEVELS.filter(function (l) { return l.id === S.level; })[0];
         var vs = viewStages();
+        if (S.level === 'L2' && S.seg2 === 'stage') {
+            /* 화면이 보여 주는 두 칸(문서 있는 부서 · 고른 부서 상태)을 파일에도 싣는다 */
+            var map = deptDocMap(), nms = Object.keys(map), me = (S.dept && map[S.dept]) ? S.dept : '';
+            var headL2 = STAGE_HEAD.concat(['문서 있는 부서 수(실측)']).concat(me ? [me + ' 상태'] : []);
+            var rowsL2 = vs.map(function (s) {
+                var c = stageCells(s).concat([nms.filter(function (n) { return map[n][s.id]; }).length]);
+                return me ? c.concat([deptState(s, me, !!map[me][s.id])[1]]) : c;
+            });
+            return V().tableFile(['이행관리', lvId ? lvId.short : S.level, y + '년'].concat(expCond()),
+                headL2, rowsL2, expNote((lvId ? lvId.label : S.level) + ' — 단계별 보기', vs.length));
+        }
         return V().tableFile(['이행관리', lvId ? lvId.short : S.level, y + '년'].concat(expCond()),
             STAGE_HEAD, vs.map(stageCells), expNote((lvId ? lvId.label : S.level) + ' — 단계별 보기', vs.length));
     }
@@ -2117,7 +2221,7 @@
         toggleItem: toggleItem, toggleAdv: toggleAdv,
         openDetail: openDetail, closeDetail: closeDetail, setDetailYear: setDetailYear, rowOpen: rowOpen,
         openDept: openDept, openItem: openItem,
-        docGo: docGo, docF: docF, docClear: docClear,
+        docGo: docGo, docF: docF, docClear: docClear, deptChip: deptChip, toggleUnk: toggleUnk,
         openPull: openPull, pullQ: pullQ, pullSel: pullSel, pullAll: pullAll, pullNone: pullNone,
         pullField: pullField, pullRun: pullRun,
         openNA: openNA, saveNA: saveNA, clearNA: clearNA, openReg: openReg,

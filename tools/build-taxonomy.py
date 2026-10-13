@@ -46,7 +46,11 @@
   우리가 같은 값을 재현하면 그릇이 맞는 것이다. 어긋나면 파일을 쓰지 않는다.
   (개수를 EXPECT 로 박아 두지 않는다 — 2026-08-18 사고. 엑셀의 자기 집계와 대조한다.)
 
-  실행: python3 tools/build-taxonomy.py --xlsx <경로> [--carry data/…v3.csv]
+  실행: python3 tools/build-taxonomy.py --xlsx <경로> [--overlay <94단계 기준표>] [--carry data/…v3.csv]
+
+  ④ 94단계 덮어쓰기(--overlay, 2026-10-13) — 위 셋으로 88단계 그릇을 검증한 뒤 별도
+     기준표 엑셀로 덮어쓴다. 기존 단계의 변경은 「04_반영내역」과 칸 단위로 같아야 하고
+     법정주기는 바뀌면 안 되며, 결과는 그 파일의 자기 집계(단계·항목·분모)와 같아야 한다.
 """
 
 import argparse
@@ -163,6 +167,111 @@ def load_xlsx(path):
         if nm:
             docs[nm] += 1
     return rows, truth, status, docs, gen, version, scope
+
+
+# ── 94단계 기준표 덮어쓰기 (2026-10-13) ─────────────────────────────────────
+# 2026-10-06 컨설팅(법률) 회신으로 경영책임자의 반기·연 1회 «점검» 의무가 별도
+# 업무단계 6개로 분리됐다(88 → 94). 원본은 대시보드 엑셀이 아니라 별도 기준표
+# 엑셀이라, 88단계 대시보드로 먼저 그릇을 검증한 뒤 이 기준표로 **덮어쓴다**.
+#   · 기존 88단계에서 바뀐 칸은 「04_반영내역」과 칸 단위로 같아야 한다(그 밖의 변경 0).
+#   · 법정주기는 바뀌면 안 된다(회신: 행위 단계는 «상시» 유지, 점검은 신설 단계로 분리).
+#   · 단계 수·이행률 분모·항목별 단계 수는 그 파일의 자기 집계(00·02·03 시트)와 같아야 한다.
+# 문서–단계 연결 480건은 이 파일에 없다(어느 문서인지 목록이 없다) — 신설 6단계는
+# 문서 0건으로 시작한다. 목록을 받으면 확정목록 쪽 생성기에서 붙인다.
+OV_COLS = ['법정 이행항목명', '하위 업무단계명', '법령근거', '법정주기', '수행시점조건',
+           '이행의무 유형', '이행 방식 유형', 'EVENT 생성방식', '주기코드', '이행단위',
+           '이행률 포함', '조문상 의무성']
+CODE_RE = re.compile(r'^[A-Z]{3}-\d{2}-\d{2}$')
+
+
+def load_overlay(path):
+    import openpyxl
+    wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
+    rows, new = [], []
+    for r in sheet_rows(wb['01_기준표_94단계']):
+        if not CODE_RE.match(r['업무단계코드']):
+            continue                                   # 「법령 계열」 구분 행
+        r['하위 업무단계명'] = r.pop('업무단계명')         # 대시보드 기준표와 열 이름을 맞춘다
+        if r.get('EVENT 생성방식') == '—':
+            r['EVENT 생성방식'] = ''                    # 시트의 «—» 는 값 없음이다
+        rows.append(r)
+        if r.get('구분') == '신설':
+            new.append(r['업무단계코드'])
+    changes = {}
+    for r in sheet_rows(wb['04_반영내역']):
+        if CODE_RE.match(r['업무단계코드']) and r.get('수정 열'):
+            blank = lambda v: '' if v == '(공란)' else v     # 시트는 빈 칸을 «(공란)» 으로 적는다
+            changes[(r['업무단계코드'], r['수정 열'])] = (blank(r.get('현재값', '')), blank(r.get('변경값', '')))
+    stated = {}
+    for r in wb['00_안내'].iter_rows(values_only=True):
+        k, v = norm(r[0]), norm(r[1] if len(r) > 1 else '')
+        if k == '업무단계':
+            stated['stages'] = int(re.match(r'(\d+)', v).group(1))
+        if k == '법정 이행항목':
+            stated['items'] = int(re.match(r'(\d+)', v).group(1))
+    per_item = {}
+    for r in wb['02_법정이행항목별'].iter_rows(min_row=3, values_only=True):
+        if norm(r[1]) and isinstance(r[2], int):
+            per_item[norm(r[1])] = (r[2], r[3])
+    rate = [norm(r[0]) for r in wb['03_이행률_분모34단계'].iter_rows(min_row=3, values_only=True)
+            if CODE_RE.match(norm(r[0]))]
+    return rows, new, changes, stated, per_item, rate
+
+
+def verify_overlay(base, ov):
+    rows, new, changes, stated, per_item, rate = ov
+    errs = []
+    b = {r['업무단계코드']: r for r in base}
+    o = {r['업무단계코드']: r for r in rows}
+    gone = sorted(set(b) - set(o))
+    if gone:
+        errs.append('94단계 기준표에서 빠진 기존 단계: ' + ', '.join(gone))
+    added = sorted(set(o) - set(b))
+    if added != sorted(new):
+        errs.append('신설 표시(구분=신설)와 실제 추가 단계가 다름: %s / %s' % (added, sorted(new)))
+    seen = {}
+    for code in sorted(set(b) & set(o)):
+        for col in OV_COLS:
+            x, y = b[code].get(col, ''), o[code].get(col, '')
+            if x != y:
+                seen[(code, col)] = (x, y)
+    for k, (x, y) in seen.items():
+        if k[1] == '법정주기':
+            errs.append('법정주기가 바뀜(바뀌면 안 된다): %s' % k[0])
+        elif k not in changes:
+            errs.append('반영내역에 없는 변경: %s %s' % k)
+        elif changes[k] != (x, y):
+            errs.append('반영내역과 값이 다름: %s %s' % k)
+    for k in changes:
+        if k not in seen:
+            errs.append('반영내역에 있는데 기준표에 반영 안 됨: %s %s' % k)
+    print('\n=== ④ 94단계 덮어쓰기 대조 ===')
+    print('  기존 %d · 신설 %d (%s) · 변경 칸 %d (반영내역 %d) — %s' % (
+        len(set(b) & set(o)), len(added), ', '.join(added), len(seen), len(changes),
+        dict(Counter(c for _, c in seen))))
+    return errs
+
+
+def verify_overlay_self(stages, items, ov):
+    """덮어쓴 결과가 94단계 파일의 자기 집계(00·02·03 시트)와 같은가."""
+    rows, new, changes, stated, per_item, rate = ov
+    errs = []
+    if stated.get('stages') != len(stages):
+        errs.append('업무단계 수 %d ≠ 안내 시트 %s' % (len(stages), stated.get('stages')))
+    if stated.get('items') != len(items):
+        errs.append('이행항목 수 %d ≠ 안내 시트 %s' % (len(items), stated.get('items')))
+    got_rate = sorted(s['id'] for s in stages if s['inRate'])
+    if got_rate != sorted(rate):
+        errs.append('이행률 분모 %d단계 ≠ 03 시트 %d단계' % (len(got_rate), len(rate)))
+    for it in items:
+        want = per_item.get(it['name'])
+        n_rate = sum(1 for s in stages if s['itemId'] == it['id'] and s['inRate'])
+        if not want or want != (len(it['stageIds']), n_rate):
+            errs.append('항목별 단계 수 불일치: %s (재현 %d/%d · 시트 %s)' % (
+                it['name'], len(it['stageIds']), n_rate, want))
+    print('  자기 집계: 단계 %d · 항목 %d · 이행률 분모 %d — %s' % (
+        len(stages), len(items), len(got_rate), '✓' if not errs else '✗'))
+    return errs
 
 
 def load_carry(path):
@@ -336,6 +445,7 @@ def main():
     ap.add_argument('--xlsx', required=True)
     ap.add_argument('--carry', default=os.path.join(ROOT, 'data', '담양군_안전보건_문서분류기준_v3.csv'))
     ap.add_argument('--version', default='', help='「대시보드」 시트에서 못 읽을 때만 쓴다')
+    ap.add_argument('--overlay', default='', help='94단계 기준표 엑셀 — 88단계 검증 뒤 이 기준표로 덮어쓴다')
     ap.add_argument('--force', action='store_true', help='검증 실패해도 쓴다(권장하지 않음)')
     a = ap.parse_args()
 
@@ -367,17 +477,33 @@ def main():
               dict(Counter(c.split('-')[0] for c in dropped)))
 
     errs = verify(stages, truth, status, docs)
+
+    # ── 94단계 덮어쓰기 — 88단계 그릇이 엑셀과 맞는 것을 확인한 뒤에만 ──────────
+    overlay = ''
+    if a.overlay:
+        ov = load_overlay(a.overlay)
+        errs += verify_overlay(xrows, ov)
+        stages, items = build(ov[0], carry, gen)
+        errs += verify_overlay_self(stages, items, ov)
+        overlay = os.path.basename(a.overlay)
+        series = Counter(s['id'].split('-')[0] for s in stages)
+        print('  덮어쓴 결과: 이행항목 %d · 업무단계 %d · 계열 %s · 이행률 분모 %d' % (
+            len(items), len(stages), dict(series), sum(1 for s in stages if s['inRate'])))
+
     if errs and not a.force:
         print('\n검증 실패 — 파일을 쓰지 않습니다:')
         for e in sorted(set(errs))[:10]:
             print('  ·', e)
         sys.exit(1)
 
+    if overlay:
+        scope = '%d개 업무단계 · 적용 법령 = 산업안전보건법 · 중대재해처벌법 2종 · 2026-10-06 컨설팅 회신 반영' % len(stages)
     meta = {'source': os.path.basename(a.xlsx), 'sheet': '기준표', 'version': version,
             'scope': scope,
             'items': len(items), 'stages': len(stages),
             'series': dict(sorted(series.items())),
             'carriedFrom': os.path.basename(a.carry) if carry else '',
+            'overlay': overlay,
             'rateDenominator': sum(1 for s in stages if s['inRate'])}
     hdr = '''/* =========================================================================
  * 업무문서 분류 %s — 법정 이행항목 %d · 하위 업무단계 %d (DYDOCT)
@@ -395,9 +521,13 @@ def main():
  *
  *   [이어받은 값] paths·doneRule·typeConf·typeNote·target·actor·ex 는 엑셀에 없는
  *   **우리 판단**이라 v3 CSV 에서 코드로 이어받았다. 없는 단계는 비어 있다.
- * ========================================================================= */
+%s * ========================================================================= */
 ''' % (version, len(items), len(stages), os.path.basename(a.xlsx), scope,
-       len(items), len(stages), meta['rateDenominator'], len(stages))
+       len(items), len(stages), meta['rateDenominator'], len(stages),
+       (' *\n *   [88 → 94] 기준표 덮어쓰기: %s\n'
+        ' *   2026-10-06 컨설팅 회신 — 반기·연 1회 점검 의무를 신설 6단계로 분리, 법령근거 23·\n'
+        ' *   수행시점조건 6칸 보강, 법정주기 무변경. 신설 단계의 문서 연결(480건)은 아직 없다.\n' % overlay)
+       if overlay else '')
 
     body = 'window.DYDOCT = {\n  META: ' + json.dumps(meta, ensure_ascii=False, indent=2) + ',\n'
     body += '  ITEMS: [\n' + ',\n'.join('    ' + json.dumps(x, ensure_ascii=False) for x in items) + '\n  ],\n'

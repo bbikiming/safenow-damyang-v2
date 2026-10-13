@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>업무 관리 확인 가이드</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --brand: #2D9270; --brand-dark: #0F3D2E; --brand-soft: #E7F4EE; --brand-line: #BFE0D1;
+    --ink: #1B2420; --ink-2: #44514B; --ink-3: #6B7A73; --line: #DCE3DF; --paper: #FFFFFF; --sunken: #F4F7F5;
+    --mark: #E8590C; --mark-soft: #FFF1E8;
+    --ok-bg: #E6F4EC; --ok-fg: #1E7A4C; --ok-bd: #A9D8BE;
+    --bad-bg: #FDECEC; --bad-fg: #C2342F; --bad-bd: #F2B8B5;
+    --info-bg: #E8F2FC; --info-fg: #1F65A8; --info-bd: #B5D3F0;
+    --mute-bg: #F1F3F2; --mute-fg: #5F6B66; --mute-bd: #D4DAD7;
+    --r-sm: 6px; --r-md: 10px; --r-lg: 14px;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { /* 인쇄물이라 화면에서도 종이색을 유지한다 */ } }
+  :root[data-theme="dark"] {}
+
+  @page { size: A4; margin: 14mm 14mm 16mm;
+    @bottom-center { content: counter(page) " / " counter(pages); font: 500 8.5pt Pretendard, sans-serif; color: #8A9690; }
+    @bottom-left { content: "담양군 중대재해예방 통합관리시스템 · 업무 관리 확인 가이드"; font: 500 8pt Pretendard, sans-serif; color: #A3ADA8; }
+  }
+  
+
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; background: var(--sunken); color: var(--ink);
+    font-family: Pretendard, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    font-size: 10.5pt; line-height: 1.62; word-break: keep-all; overflow-wrap: anywhere; }
+  .doc { max-width: 210mm; margin: 0 auto; }
+  section.sheet { background: var(--paper); padding: 0; }
+  @media screen {
+    body { padding: 24px 16px 64px; }
+    section.sheet { padding: 16mm 14mm; margin: 0 auto 20px; border-radius: 6px; box-shadow: 0 2px 10px rgba(15,61,46,.08); }
+  }
+  @media screen and (max-width: 560px) { section.sheet { padding: 22px 16px; } }
+  @media print { body { background: #fff; } section.sheet + section.sheet { break-before: page; } }
+
+  h1, h2, h3, h4 { margin: 0; color: var(--brand-dark); line-height: 1.3; letter-spacing: -0.01em; }
+  h2 { font-size: 17pt; font-weight: 800; margin-bottom: 4mm; }
+  h3 { font-size: 12.5pt; font-weight: 700; margin: 6mm 0 2.5mm; }
+  p { margin: 0 0 2.5mm; }
+  b, strong { font-weight: 700; color: var(--ink); }
+  .lead { color: var(--ink-2); font-size: 10.5pt; margin-bottom: 5mm; }
+  .muted { color: var(--ink-3); }
+  .small { font-size: 9pt; }
+
+  /* 섹션 머리 */
+  .sec-head { display: flex; align-items: baseline; gap: 3mm; border-bottom: 2px solid var(--brand); padding-bottom: 2.5mm; margin-bottom: 5mm; }
+  .sec-no { font: 800 10pt Pretendard, sans-serif; color: #fff; background: var(--brand); border-radius: 99px; padding: 1px 9px; flex: none; transform: translateY(-2px); }
+  .sec-head h2 { margin: 0; }
+
+  /* 표지 */
+  .cover { min-height: 260mm; display: flex; flex-direction: column; }
+  @media screen { .cover { min-height: auto; } }
+  .cover-top { background: var(--brand-dark); color: #fff; border-radius: var(--r-lg); padding: 12mm 11mm 10mm; position: relative; overflow: hidden; }
+  .cover-top::after { content: ""; position: absolute; right: -30mm; top: -30mm; width: 90mm; height: 90mm; border-radius: 50%; background: rgba(95,184,151,.18); }
+  .eyebrow { font-size: 9.5pt; font-weight: 600; color: #9FD8C0; letter-spacing: .02em; margin-bottom: 4mm; position: relative; }
+  .cover h1 { color: #fff; font-size: 27pt; font-weight: 800; line-height: 1.22; margin-bottom: 4mm; position: relative; }
+  .cover .sub { color: #D6EEE3; font-size: 11.5pt; line-height: 1.55; position: relative; margin: 0; }
+  .cover-meta { display: flex; flex-wrap: wrap; gap: 2mm 6mm; margin-top: 7mm; position: relative; font-size: 9.5pt; color: #BFE3D3; }
+  .cover-meta b { color: #fff; font-weight: 600; }
+
+  .todo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; margin: 8mm 0 6mm; }
+  @media screen and (max-width: 560px) { .todo { grid-template-columns: 1fr; } }
+  .todo-card { border: 1px solid var(--line); border-radius: var(--r-md); padding: 5mm 4.5mm; background: #fff; }
+  .todo-n { display: inline-flex; width: 7mm; height: 7mm; border-radius: 50%; background: var(--brand-soft); color: var(--brand-dark); font-weight: 800; font-size: 10pt; align-items: center; justify-content: center; margin-bottom: 3mm; }
+  .todo-card h4 { font-size: 11.5pt; margin-bottom: 2mm; }
+  .todo-card p { font-size: 9.5pt; color: var(--ink-2); margin: 0; }
+
+  .facts { border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
+  .facts dl { display: grid; grid-template-columns: 34mm 1fr; margin: 0; }
+  .facts dt, .facts dd { margin: 0; padding: 3mm 4.5mm; border-top: 1px solid var(--line); font-size: 10pt; }
+  .facts dt { background: var(--sunken); color: var(--ink-2); font-weight: 600; }
+  .facts dl > :nth-child(1), .facts dl > :nth-child(2) { border-top: 0; }
+  @media screen and (max-width: 560px) { .facts dl { grid-template-columns: 1fr; } .facts dd { border-top: 0; padding-top: 0; } }
+  .mono { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 9.5pt; background: var(--sunken); padding: 0 4px; border-radius: 4px; }
+  .cover-foot { margin-top: auto; padding-top: 8mm; display: flex; justify-content: space-between; align-items: flex-end; gap: 8mm; font-size: 9pt; color: var(--ink-3); }
+  .cover-foot > span:first-child { white-space: nowrap; }
+  .cover-foot > span:last-child { text-align: right; }
+
+  /* 알림 상자 */
+  .note { border-radius: var(--r-md); padding: 4mm 5mm; margin: 4mm 0; font-size: 10pt; border: 1px solid; }
+  .note p:last-child { margin-bottom: 0; }
+  .note-title { font-weight: 700; margin-bottom: 1.5mm; display: block; }
+  .note.brand { background: var(--brand-soft); border-color: var(--brand-line); }
+  .note.brand .note-title { color: var(--brand-dark); }
+  .note.warn { background: var(--mark-soft); border-color: #F7C9AC; }
+  .note.warn .note-title { color: #B4440A; }
+  .note.plain { background: var(--sunken); border-color: var(--line); }
+
+  /* 확정 / 추정 비교 */
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; margin: 3mm 0 5mm; }
+  @media screen and (max-width: 560px) { .split { grid-template-columns: 1fr; } }
+  .split-card { border-radius: var(--r-md); padding: 4.5mm 5mm; border: 1px solid var(--line); }
+  .split-card .tag { display: inline-block; font-size: 8.5pt; font-weight: 700; padding: 0 8px; border-radius: 99px; margin-bottom: 2mm; }
+  .split-card h4 { font-size: 11.5pt; margin-bottom: 1.5mm; }
+  .split-card p { font-size: 9.5pt; color: var(--ink-2); margin: 0; }
+  .split-card.sure { background: #fff; }
+  .split-card.sure .tag { background: var(--ok-bg); color: var(--ok-fg); border: 1px solid var(--ok-bd); }
+  .split-card.guess { background: var(--mark-soft); border-color: #F7C9AC; }
+  .split-card.guess .tag { background: #fff; color: #B4440A; border: 1px solid #F7C9AC; }
+
+  /* 상태 표 */
+  table { border-collapse: collapse; width: 100%; }
+  .tbl { font-size: 9.5pt; border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
+  .tbl th { background: var(--sunken); color: var(--ink-2); font-weight: 700; text-align: left; padding: 2.5mm 3mm; border-bottom: 1px solid var(--line); }
+  .tbl td { padding: 2.2mm 3mm; border-top: 1px solid var(--line); vertical-align: top; }
+  .tbl tr:first-child td { border-top: 0; }
+  .wrap-x { overflow-x: auto; }
+  .chip { display: inline-block; white-space: nowrap; font-size: 9pt; font-weight: 700; padding: 1px 9px; border-radius: 99px; border: 1px solid; }
+  .chip.ok { background: var(--ok-bg); color: var(--ok-fg); border-color: var(--ok-bd); }
+  .chip.bad { background: var(--bad-bg); color: var(--bad-fg); border-color: var(--bad-bd); }
+  .chip.info { background: var(--info-bg); color: var(--info-fg); border-color: var(--info-bd); }
+  .chip.mute { background: var(--mute-bg); color: var(--mute-fg); border-color: var(--mute-bd); }
+  .chip.step { background: var(--info-bg); color: var(--info-fg); border-color: transparent; border-radius: 4px; font-weight: 600; }
+
+  /* 두 화면 관계 */
+  .flow { display: grid; grid-template-columns: 1fr 12mm 1fr; align-items: stretch; margin: 3mm 0 2mm; }
+  @media screen and (max-width: 560px) { .flow { grid-template-columns: 1fr; } .flow .arrow { transform: rotate(90deg); height: 10mm; } }
+  .flow-box { border: 1.5px solid var(--brand); border-radius: var(--r-md); padding: 4mm 4.5mm; background: #fff; }
+  .flow-box .where { font-size: 8.5pt; color: var(--ink-3); font-weight: 600; }
+  .flow-box h4 { font-size: 13pt; margin: .5mm 0 2mm; }
+  .flow-box .path { display: flex; align-items: center; gap: 2mm; flex-wrap: wrap; font-size: 9.5pt; font-weight: 600; color: var(--ink-2); margin-bottom: 2mm; }
+  .flow-box .path span { background: var(--sunken); border-radius: 4px; padding: 0 6px; }
+  .flow-box p { font-size: 9.5pt; color: var(--ink-2); margin: 0; }
+  .arrow { display: flex; align-items: center; justify-content: center; color: var(--brand); font-size: 16pt; font-weight: 800; }
+
+  /* 단계 */
+  .step { margin-top: 7mm; }
+  .step:first-of-type { margin-top: 0; }
+  .step-head { display: flex; align-items: center; gap: 3mm; margin-bottom: 2.5mm; }
+  .step-badge { flex: none; font: 800 9pt Pretendard, sans-serif; color: var(--brand-dark); background: var(--brand-soft); border: 1px solid var(--brand-line); border-radius: 99px; padding: 1px 9px; }
+  .step-head h3 { margin: 0; }
+  .crumb { font-size: 9.5pt; color: var(--ink-2); margin-bottom: 3mm; }
+  .crumb b { color: var(--brand-dark); }
+  figure { margin: 0 0 3mm; break-inside: avoid; }
+  figure img { display: block; width: auto; max-width: 100%; margin: 0 auto; height: auto; border: 1px solid var(--line); border-radius: var(--r-sm); background: #fff; }
+  @media screen { figure img { width: 100%; max-height: none !important; } }
+  figcaption { font-size: 8.5pt; color: var(--ink-3); margin-top: 1.5mm; }
+  .shot-s { max-width: 150mm; }
+
+  .callouts { list-style: none; margin: 0; padding: 0; display: grid; gap: 2mm; }
+  .callouts li { display: grid; grid-template-columns: 6.5mm 1fr; gap: 2mm; font-size: 9.8pt; align-items: start; }
+  .callouts.two { grid-template-columns: 1fr 1fr; column-gap: 6mm; }
+  @media screen and (max-width: 560px) { .callouts.two { grid-template-columns: 1fr; } }
+  .num { width: 5.6mm; height: 5.6mm; border-radius: 50%; background: var(--mark); color: #fff; font-weight: 800; font-size: 8.5pt; display: inline-flex; align-items: center; justify-content: center; margin-top: .6mm; }
+  .keep { break-inside: avoid; }
+
+  .dots { display: flex; flex-wrap: wrap; gap: 2mm 5mm; font-size: 9.3pt; margin: 2mm 0; }
+  .dot { display: inline-block; width: 3.2mm; height: 3.2mm; border-radius: 1mm; vertical-align: -0.4mm; margin-right: 1.4mm; }
+  .dot.ok { background: #2D9270; }
+  .dot.na { background: #F4B9A0; }
+  .dot.ex { background: #fff; border: 1.6px solid #2D9270; }
+  .dot.no { background: #E6EAE8; }
+
+  .check { list-style: none; margin: 0; padding: 0; }
+  .check li { position: relative; padding-left: 6mm; margin-bottom: 1.6mm; font-size: 9.8pt; }
+  .check li::before { content: ""; position: absolute; left: 0; top: 1.4mm; width: 3.2mm; height: 3.2mm; border: 1.4px solid var(--brand); border-radius: 1mm; }
+
+  /* 판단 사례 */
+  .cases { display: grid; grid-template-columns: 1fr 1fr; gap: 3mm; margin: 2mm 0 4mm; }
+  @media screen and (max-width: 560px) { .cases { grid-template-columns: 1fr; } }
+  .case { border: 1px solid var(--line); border-radius: var(--r-md); padding: 3.5mm 4mm; background: #fff; break-inside: avoid; }
+  .case .k { font-size: 8.5pt; font-weight: 700; color: var(--mark); }
+  .case h4 { font-size: 10.5pt; margin: .5mm 0 1.5mm; color: var(--ink); }
+  .case p { font-size: 9.3pt; color: var(--ink-2); margin: 0; }
+  .case .mark-as { display: inline-block; margin-top: 2mm; font-size: 8.5pt; font-weight: 700; color: var(--brand-dark); background: var(--brand-soft); border-radius: 4px; padding: 0 6px; }
+
+  /* 기록표 */
+  .log th { font-size: 8.5pt; }
+  .log td { height: 14mm; padding: 1.5mm 2mm; font-size: 8.5pt; color: var(--ink-3); }
+  .log .ex td { color: var(--ink-2); background: #FBFCFB; font-size: 8.5pt; }
+  .log .opts { white-space: nowrap; line-height: 1.7; }
+  .box { display: inline-block; width: 2.8mm; height: 2.8mm; border: 1px solid #8A9690; border-radius: .6mm; vertical-align: -.3mm; margin-right: 1mm; }
+  .box.on { background: var(--brand); border-color: var(--brand); }
+
+  .faq dt { font-weight: 700; color: var(--brand-dark); margin-top: 4mm; font-size: 10.5pt; }
+  .faq dt::before { content: "Q. "; color: var(--brand); }
+  .faq dd { margin: 1.2mm 0 0; color: var(--ink-2); font-size: 9.8pt; }
+
+  .contact { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; margin-top: 6mm; }
+  @media screen and (max-width: 560px) { .contact { grid-template-columns: 1fr; } }
+  .sched { font-size: 9.5pt; }
+  .sched td:first-child { white-space: nowrap; font-weight: 700; color: var(--brand-dark); width: 30mm; }
+  .g-head { border-bottom: 2px solid var(--brand); padding-bottom: 4mm; margin-bottom: 5mm; }
+  .eyebrow-d { font-size: 9.5pt; font-weight: 600; color: var(--brand); margin-bottom: 1.5mm; }
+  .g-title { font-size: 24pt; font-weight: 800; margin-bottom: 2mm; }
+  .g-sub { color: var(--ink-2); margin: 0; font-size: 11pt; }
+  .tasks { display: grid; grid-template-columns: repeat(3,1fr); gap: 3.5mm; margin: 2mm 0 6mm; }
+  @media screen and (max-width: 560px) { .tasks { grid-template-columns: 1fr; } }
+  .task { border: 1.5px solid var(--brand-line); border-radius: var(--r-md); padding: 4.5mm 4mm; background: #fff; display: flex; flex-direction: column; }
+  .task-n { align-self: flex-start; font-weight: 800; font-size: 9pt; color: #fff; background: var(--brand); border-radius: 99px; padding: 0 9px; margin-bottom: 2.5mm; }
+  .task h4 { font-size: 12.5pt; margin-bottom: 1.5mm; }
+  .task p { font-size: 9.5pt; color: var(--ink-2); margin: 0 0 3mm; flex: 1; }
+  .task-where { font-size: 9pt; background: var(--sunken); border-radius: 5px; padding: 1.5mm 2.5mm; margin-bottom: 1.5mm; }
+  .task-sheet { font-size: 9pt; background: #FFF8DC; border: 1px solid #F0E2A8; border-radius: 5px; padding: 1.5mm 2.5mm; }
+  .jd { display: inline-block; white-space: nowrap; font-weight: 700; font-size: 9.5pt; padding: 1px 10px; border-radius: 5px; background: var(--brand-soft); color: var(--brand-dark); border: 1px solid var(--brand-line); }
+  .jd.bad { background: var(--bad-bg); color: var(--bad-fg); border-color: var(--bad-bd); }
+  .jd.mute { background: var(--mute-bg); color: var(--mute-fg); border-color: var(--mute-bd); }
+  .chip.warn { background: #FFF1E8; color: #B4440A; border-color: #F7C9AC; }
+  .tbl.map td, .tbl.judge td { vertical-align: middle; }
+  .xl-tip { margin-top: 4mm; font-size: 9.8pt; background: #FFF8DC; border: 1px solid #F0E2A8; border-left: 4px solid #D9B53A; border-radius: var(--r-sm); padding: 3mm 4mm; }
+  .yl { background: #FFF1B8; padding: 0 4px; border-radius: 3px; }
+  table.xl { font-size: 8.8pt; border: 1px solid #C9D1CD; }
+  table.xl th { background: var(--brand); color: #fff; font-weight: 700; padding: 1.8mm 2mm; border: 1px solid #C9D1CD; text-align: left; }
+  table.xl td { padding: 1.8mm 2mm; border: 1px solid #DCE3DF; }
+  table.xl td.in { background: #FFF8DC; }
+  table.xl td:nth-child(2), table.xl th:nth-child(1) { white-space: nowrap; }
+  table.xl tr.gray td { background: #EEF1F0; color: #6B7A73; }
+  .sec-no { min-width: 7mm; text-align: center; }
+</style>
+</head>
+<body>
+<div class="doc">
+
+<!-- 1쪽 · 한눈에 -->
+<section class="sheet">
+  <div class="g-head">
+    <div class="eyebrow-d">담양군 중대재해예방 통합관리시스템 · 업무 관리</div>
+    <h1 class="g-title">업무 관리 확인 가이드</h1>
+    <p class="g-sub">문서 분류 결과가 시스템에 어떻게 들어가 있는지, 어디서 어떻게 보시면 되는지 정리했습니다.</p>
+  </div>
+
+  <h3 style="margin-top:0">이렇게 세 가지를 보시면 됩니다</h3>
+  <div class="tasks">
+    <div class="task">
+      <span class="task-n">확인 1</span>
+      <h4>문서가 없는 할 일</h4>
+      <p>군 전체에서 문서가 한 건도 없는 할 일이 무엇인지</p>
+      <div class="task-where">이행 관리 › <b>누락 점검</b></div>
+    </div>
+    <div class="task">
+      <span class="task-n">확인 2</span>
+      <h4>한 부서만 빠진 할 일</h4>
+      <p>다른 부서는 문서가 있는데 <b>특정 부서만 비어 있는</b> 할 일</p>
+      <div class="task-where">이행 관리 › <b>부서 단위</b> › 부서 이름 칸</div>
+    </div>
+    <div class="task">
+      <span class="task-n">확인 3</span>
+      <h4>붙은 문서가 맞는지</h4>
+      <p>할 일에 붙은 문서가 <b>그 일의 증빙이 맞는지</b></p>
+      <div class="task-where">할 일 상세 › <b>부서별 현황</b></div>
+    </div>
+  </div>
+
+  <h3>메뉴</h3>
+  <figure><img style="max-height:44mm" src="img/s0-menu.png" alt="업무 관리 메뉴 위치"></figure>
+  <table class="tbl">
+    <tbody>
+      <tr><td style="width:44mm"><b>업무 관리 › 이행 관리</b></td><td>법에서 정한 <b>할 일</b>마다 문서가 붙어 있는지 봅니다.</td></tr>
+      <tr><td><b>업무 관리 › 문서 목록</b></td><td>할 일에 연결된 <b>문서</b>를 찾아봅니다. 문서 번호(DOC-…)도 여기서 봅니다.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="note plain small" style="margin-top:5mm">
+    <span class="note-title">먼저 알아 두실 점</span>
+    <p>· 할 일은 <b>94개</b>입니다. 10월 6일 컨설팅 회신으로 반기·연 1회 <b>점검 단계 6개</b>가 새로 생겼습니다.<br>
+    · 문서와 할 일의 연결은 온나라 문서 <b>제목</b>을 보고 붙인 것이라 틀린 곳이 있을 수 있습니다.<br>
+    · 기준연도는 <b>2025년</b>입니다(20개 부서 전체). 다른 해는 6개 부서 문서만 들어 있습니다.<br>
+    · 확인하실 때는 <b>보기만</b> 하시면 됩니다. 등록·비해당 버튼은 누르지 않으셔도 됩니다.</p>
+  </div>
+</section>
+
+<!-- 2쪽 · 확인 1 -->
+<section class="sheet">
+  <div class="sec-head"><span class="sec-no">1</span><h2>확인 1 · 문서가 없는 할 일</h2></div>
+  <p class="crumb">업무 관리 › 이행 관리 › <b>누락 점검</b> 탭</p>
+  <figure><img style="max-height:112mm" src="img/h1-gap.png" alt="누락 점검 화면"></figure>
+  <ol class="callouts two">
+    <li><span class="num">1</span><span><b>누락 점검</b> 탭을 누릅니다. 숫자가 문서 없는 할 일 수입니다.</span></li>
+    <li><span class="num">2</span><span>할 일 이름입니다. 누르면 상세가 열립니다.</span></li>
+    <li><span class="num">3</span><span><span class="chip bad">□ 미이행</span> — 해야 하는 일인데 문서가 없습니다.</span></li>
+    <li><span class="num">4</span><span><span class="chip info">조건 확인</span> — 일이 생겼을 때만 하는 일입니다.</span></li>
+  </ol>
+
+  <h3>이렇게 읽으시면 됩니다</h3>
+  <table class="tbl map">
+    <thead><tr><th style="width:36mm">화면</th><th>뜻</th></tr></thead>
+    <tbody>
+      <tr><td><span class="chip bad">□ 미이행</span></td><td>하지 않았거나, 했는데 온나라 문서가 없거나, 다른 제목으로 있어 연결이 안 된 경우입니다.</td></tr>
+      <tr><td><span class="chip info">조건 확인</span></td><td>그해에 사유·대상(예: 산업재해, 해당 시설·공사)이 없었다면 문서가 없는 것이 맞습니다.</td></tr>
+      <tr><td><span class="chip bad">□ 2년 연속</span></td><td>지난해에도 문서가 없었습니다.</td></tr>
+    </tbody>
+  </table>
+  <p class="small muted" style="margin-top:2mm">새로 생긴 점검 6단계는 문서 연결이 반영되기 전에는 여기에 미이행으로 보일 수 있습니다.</p>
+</section>
+
+<!-- 3쪽 · 확인 2 (들어가기) -->
+<section class="sheet">
+  <div class="sec-head"><span class="sec-no">2</span><h2>확인 2 · 한 부서만 빠진 할 일</h2></div>
+  <p class="lead">확인 1은 <b>군 전체에서</b> 문서가 없는 일만 보여 줍니다. 다른 부서는 했는데 <b>한 부서만 빠진 일</b>은 부서를 골라서 봅니다.</p>
+  <div class="step">
+    <div class="step-head"><span class="step-badge">STEP 1</span><h3>부서 단위 누르기</h3></div>
+    <p class="crumb">이행 관리 › 오른쪽 위 <b>부서 단위</b></p>
+    <figure><img src="img/d1-tab.png" alt="부서 단위 탭"></figure>
+  </div>
+  <div class="step">
+    <div class="step-head"><span class="step-badge">STEP 2</span><h3>확인할 부서 줄 누르기</h3></div>
+    <figure><img style="max-height:112mm" src="img/d2-deptrow.png" alt="부서별 표"></figure>
+    <ol class="callouts">
+      <li><span class="num">1</span><span>부서 줄을 누르면 그 부서의 할 일 목록이 열립니다. 예: 물순환사업소</span></li>
+      <li><span class="num">2</span><span>이 두 칸이 실제로 센 숫자입니다. 오른쪽 칸은 참고만 해 주세요.</span></li>
+    </ol>
+  </div>
+</section>
+
+<!-- 4쪽 · 확인 2 (읽기) -->
+<section class="sheet">
+  <div class="step">
+    <div class="step-head"><span class="step-badge">STEP 3</span><h3>부서 이름 칸만 보세요</h3></div>
+    <p class="crumb">고른 부서 이름으로 칸이 하나 생깁니다. 그 칸의 글자가 그 부서 상태입니다.</p>
+    <figure><img src="img/n3-mine.png" alt="고른 부서 칸"></figure>
+    <ol class="callouts">
+      <li><span class="num">1</span><span>그 부서 상태입니다 — <span class="chip ok">문서 있음</span> 또는 <span class="chip warn">문서 없음</span></span></li>
+      <li><span class="num">2</span><span>그 부서 일인지 알 수 없는 할 일은 빼 두었습니다. 눌러서 함께 볼 수 있습니다.</span></li>
+    </ol>
+  </div>
+
+  <h3>이렇게 읽으시면 됩니다</h3>
+  <table class="tbl map">
+    <thead><tr><th style="width:42mm">부서 칸</th><th>뜻</th></tr></thead>
+    <tbody>
+      <tr><td><span class="chip warn">문서 없음</span></td><td>그 부서가 해야 할 일로 보이는데 문서가 없습니다. <b>이 줄이 확인할 곳입니다.</b></td></tr>
+      <tr><td><span class="chip ok">문서 있음</span></td><td>그 부서 문서가 붙어 있습니다. 맞는 문서인지는 할 일 이름을 눌러 <b>확인 3</b>에서 봅니다.</td></tr>
+      <tr><td><b>«해당 여부 미정»</b> (②를 눌렀을 때)</td><td>기준표 문구만으로는 그 부서 일인지 알 수 없는 할 일입니다. 보통은 넘어가셔도 됩니다.</td></tr>
+    </tbody>
+  </table>
+  <p class="small muted" style="margin-top:2mm">할 일 코드는 할 일 이름 아래 회색 글씨입니다(예: IND-03-04).</p>
+</section>
+
+<!-- 5쪽 · 확인 3 -->
+<section class="sheet">
+  <div class="sec-head"><span class="sec-no">3</span><h2>확인 3 · 붙은 문서가 맞는지</h2></div>
+  <p class="crumb">할 일 이름을 누르면 상세가 열리고, 오른쪽에 <b>부서별 현황</b>이 나옵니다 — 예: 유해·위험요인 파악(종사자 설문조사)</p>
+  <figure><img style="max-height:128mm" src="img/n5-deptbox.png" alt="할 일 상세의 부서별 현황"></figure>
+  <ol class="callouts two">
+    <li><span class="num">1</span><span>이 일의 문서를 낸 부서입니다. 숫자는 문서 건수입니다.</span></li>
+    <li><span class="num">2</span><span>부서 이름을 누르면 그 부서 문서만 남습니다. 다시 누르면 풀립니다.</span></li>
+    <li><span class="num">3</span><span>문서가 없는 부서입니다. «전 부서» 할 일일 때만 나옵니다.</span></li>
+    <li><span class="num">4</span><span>남은 문서의 <b>제목</b>을 보고 이 일의 증빙이 맞는지 봅니다.</span></li>
+  </ol>
+
+  <h3>이럴 때는 연결이 틀렸을 수 있습니다</h3>
+  <ul class="check">
+    <li>제목이 이 일과 관련 없어 보일 때 (예: 수질검사 결과 보고가 «원료·제조물 점검»에 붙음)</li>
+    <li>같은 공문이 지나치게 많이 붙어 있을 때</li>
+    <li>연 1회 하는 일이 아닌데 문서가 1건뿐일 때</li>
+    <li>실제로 한 일인데 문서가 보이지 않을 때 — 연결이 빠졌을 수 있습니다</li>
+  </ul>
+  <p class="small muted" style="margin-top:3mm">③ «문서 없는 부서»는 확인 2에도 쓸 수 있습니다. «전 부서» 할 일이면 빠진 부서 이름이 여기서 바로 보입니다. 문서 번호(DOC-…)는 <b>문서 목록</b>에서 그 문서를 누르면 제목 아래에 나옵니다.</p>
+</section>
+
+</div>
+</body>
+</html>

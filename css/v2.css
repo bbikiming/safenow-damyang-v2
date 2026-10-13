@@ -4361,17 +4361,23 @@ p > .dx-note-gap { display: inline; }
 .cmp-dl dd { margin: 0; font-size: var(--fs-13); color: var(--text-black); line-height: 1.65; word-break: break-word; }
 
 /* ── 부서 이행 도트 ───────────────────────────────────────────────────── */
-.cmp-dots { display: flex; gap: 3px; flex-wrap: wrap; max-width: 260px; }
-.cmp-dots i { display: block; width: 11px; height: 11px; border-radius: var(--radius-xs); background: var(--gray-200); }
-.cmp-dots i.ok { background: var(--main); }
-.cmp-dots i.na { background: var(--status-warning-border); }
-/* 추정 밖인데 서류가 있는 칸 — 적용대상 추정이 틀렸다는 표시라 «이행»과 다른 색이어야 한다 */
-.cmp-dots i.extra { background: var(--surface); border: 2px solid var(--main); }
-.cmp-dot-k { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; }
-.cmp-dot-k i { display: inline-block; width: 9px; height: 9px; border-radius: var(--radius-xs); background: var(--gray-200); }
-.cmp-dot-k i.ok { background: var(--main); }
-.cmp-dot-k i.na { background: var(--status-warning-border); }
-.cmp-dot-k i.extra { background: var(--surface); box-shadow: inset 0 0 0 2px var(--main); }
+/* L2 단계별 보기 — 2026-10-13 부서 도트를 걷고 «문서 있는 부서 · 적용 대상» 두 칸으로 바꿨다 */
+.cmp-c-me { white-space: nowrap; }
+.cmp-c-tgt { color: var(--text-gray); font-size: var(--fs-13); }
+/* 할 일 상세 — 부서별 현황 */
+.cmp-dept-box { border: 1px solid var(--card-line); border-radius: var(--radius-md); padding: var(--sp-3) var(--sp-4); margin: 0 0 var(--stack-base); background: var(--surface); }
+.cmp-dept-box-h { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-3); flex-wrap: wrap; margin-bottom: var(--sp-2); }
+.cmp-dept-row { display: flex; gap: var(--sp-3); align-items: flex-start; padding: var(--sp-2) 0; border-top: 1px solid var(--card-line); }
+.cmp-dept-k { flex: none; width: 128px; font-size: var(--fs-13); color: var(--text-gray); padding-top: var(--sp-1); }
+.cmp-dept-k b { color: var(--text-black); }
+.cmp-dept-v { display: flex; flex-wrap: wrap; gap: var(--sp-1-5); }
+.cmp-dchip { display: inline-flex; align-items: center; gap: var(--sp-1); min-height: var(--ctl-sm); padding: 0 var(--sp-2-5); border: 1px solid var(--card-line); border-radius: var(--radius-pill); background: var(--surface); font-size: var(--fs-13); color: var(--text-black); cursor: pointer; }
+.cmp-dchip b { color: var(--main-dark); }
+.cmp-dchip:hover { border-color: var(--main); }
+.cmp-dchip.is-on { background: var(--main); border-color: var(--main); color: var(--surface); }
+.cmp-dchip.is-on b { color: var(--surface); }
+.cmp-dchip.is-miss { cursor: default; background: var(--status-warning-bg); border-color: var(--status-warning-border); color: var(--status-warning-fg); }
+@media (max-width: 767px) { .cmp-dept-row { flex-direction: column; gap: var(--sp-1); } .cmp-dept-k { width: auto; } .cmp-dchip { min-height: 44px; } }  /* 터치 타깃 44px(§9) */
 .cmp-srctag { margin-left: 6px; vertical-align: middle; }
 .cmp-warn { color: var(--status-warning-fg); font-weight: var(--fw-semibold); }
 
