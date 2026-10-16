@@ -491,7 +491,13 @@
         const targets = items.filter(function (it) { return it._f && isImageFile(it); });
         let left = targets.length;
         const finish = function () {
-            items.forEach(function (it) { delete it._f; });   /* File 은 직렬화되지 않는다 — 저장 전에 뗀다 */
+            /* File 은 직렬화되지 않는다 — 저장 전에 뗀다. 다만 **내용을 읽어야 하는 소비처**(엑셀 반입 —
+               DYXLSX)가 있어 같은 참조를 열거되지 않는 `file` 로 남긴다. 열거되지 않으므로 JSON 저장에는
+               실리지 않는다 — 기존 소비처의 저장 형태는 그대로다. */
+            items.forEach(function (it) {
+                if (it._f) Object.defineProperty(it, 'file', { value: it._f, enumerable: false, configurable: true });
+                delete it._f;
+            });
             cb(items);
         };
         if (!left) return finish();

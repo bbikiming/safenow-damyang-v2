@@ -934,17 +934,15 @@
 
         /* ── 조직 [SFR-006·009·010]: 선임 등록 → 수행평가(F6) → 후속조치(F7) ── */
         org() {
-            /* `source` 는 표에서 열을 지운 뒤 아무도 읽지 않지만 남겨 둔다 — 공사가 들어오는 갈래가
-               직접 등록 하나뿐이라 지금은 모든 행이 같은 값이어서 보여줄 값이 없을 뿐, 출처를 구분해야
-               한다는 축 자체는 옳다. 나중에 공사정보 연계가 붙으면 두 경로의 자료를 출처 없이 섞지
-               않도록 이 자리에서 축을 되살린다(조직 화면 정의서 §6). */
-            if (!window.ORG_CONSTRUCTION_STATE) {
-                window.ORG_CONSTRUCTION_STATE = [
-                    { id: 'CONST-01', owner: '담양군', name: '군도 5호선 정비공사', from: '2026-03-02', to: '2026-10-30', amount: '12.4억 원', manager: '김안전', status: '완료', source: '직접 등록' },
-                    { id: 'CONST-02', owner: '담양군', name: '정수장 내진보강 공사', from: '2026-06-01', to: '2026-12-20', amount: '8.7억 원', manager: '', status: '미시행', source: '직접 등록' },
-                ];
-            }
-            const construction = window.ORG_CONSTRUCTION_STATE;
+            /* 공사 목록은 도급관리와 **같은 원장**(DYCON)에서 온다 — 점검 유형이 «공사»이고 아직 끝나지 않은 계약(2026-10-15).
+               종전에는 이 화면이 자기 배열(ORG_CONSTRUCTION_STATE)을 따로 들고 있어 같은 공사의 금액·기간이 두 화면에서
+               갈릴 수 있었다(조직 정의서 §6 «연계 범위는 도급관리와 같은 원장을 쓴다»). */
+            const C = window.DYCON;
+            const OC = PG._orgC || (PG._orgC = { page: 1 });
+            const dutyRank = { required: 0, unknown: 1, none: 2 };
+            const construction = C.rows()
+                .filter(r => r.cat === '공사' && r.cancel !== 'Y' && !C.ended(r))
+                .sort((a, b) => (dutyRank[C.mgrDuty(a)] - dutyRank[C.mgrDuty(b)]) || String(C.startOf(a)).localeCompare(String(C.startOf(b))));
             /* 선임 현황도 공사 목록과 같이 상태 배열로 둔다 — 종전에는 표가 하드코딩이라
                [선임 등록]을 눌러 저장해도 표가 그대로였고 «선임 등록 완료» 알림만 떴다.
                선임 공백은 그 자체가 법정 의무 미이행이라, 등록했는데 반영되지 않으면
@@ -1055,40 +1053,67 @@
                 if (staffPending) { V.toast('배치 기준 미등록 ' + staffPending + '건이 있어 완료 확정할 수 없습니다.'); return; }
                 V.toast('선임 현황 점검을 완료했습니다.');
             };
+            /* 수정 — e호조·옮겨 적은 계약은 **안전관리자만** 고친다(공사명·기간·금액은 원장 값 — 다음 반입에 덮인다).
+               직접 등록한 공사는 전부 고친다. 새 공사는 같은 원장에 직접 등록분으로 들어가 도급관리에도 보인다. */
             PG.orgConstForm = id => {
                 if (actGate('공사 등록·수정')) return;
-                const row = construction.find(x => x.id === id);
+                const row = id ? C.get(id) : null;
+                const ro = row && row.src !== 'manual';
+                const amt = row && typeof row.amount === 'number' ? String(row.amount) : '';
                 V.openModal(row ? '공사별 안전관리자 현황 수정' : '공사 직접 등록',
+                    (ro ? '<div class="edoc-linkcard">e호조에서 받은 공사는 <b>안전관리자만</b> 고칩니다 — 공사명·기간·금액은 e호조 원장 값이라 여기서 고쳐도 다음 반입에 덮입니다. 착공일은 도급관리에서 넣습니다.</div>'
+                        : (row ? '' : '<div class="edoc-linkcard">e호조에서 받은 공사는 목록에 이미 있습니다. 여기는 e호조에 없는 공사를 담는 자리이고, 도급관리 목록에도 함께 나타납니다.</div>')) +
                     '<div class="preset-form-grid">' +
-                    '<span class="k">발주처</span><input id="org-c-owner" type="text" value="' + esc(row ? row.owner : '담양군') + '">' +
-                    '<span class="k">공사명 <span class="req">*</span></span><input id="org-c-name" type="text" value="' + esc(row ? row.name : '') + '">' +
-                    '<span class="k">공사기간 <span class="req">*</span></span><div style="display:flex;gap:6px;"><input id="org-c-from" type="date" value="' + esc(row ? row.from : DYV2.today()) + '"><input id="org-c-to" type="date" value="' + esc(row ? row.to : '') + '"></div>' +
-                    '<span class="k">공사금액</span><input id="org-c-amount" type="text" value="' + esc(row ? row.amount : '') + '" placeholder="예: 5.2억 원">' +
-                    '<span class="k">안전관리자</span><input id="org-c-manager" type="text" value="' + esc(row ? row.manager : '') + '" placeholder="조직도 선택 결과">' +
-                    '</div>',
+                    '<span class="k">발주처</span>' + (ro ? '<div>' + esc(row.owner) + '</div>' : '<input id="org-c-owner" type="text" value="' + esc(row ? row.owner : '담양군') + '">') +
+                    '<span class="k">공사명 <span class="req">*</span></span>' + (ro ? '<div>' + esc(row.name) + '</div>' : '<input id="org-c-name" type="text" value="' + esc(row ? row.name : '') + '">') +
+                    '<span class="k">공사기간 <span class="req">*</span></span>' + (ro ? '<div>' + esc(C.startOf(row) + ' ~ ' + (row.end || '?')) + '</div>'
+                        : '<div style="display:flex;gap:6px;"><input id="org-c-from" type="date" value="' + esc(row ? row.start : DYV2.today()) + '"><input id="org-c-to" type="date" value="' + esc(row ? row.end : '') + '"></div>') +
+                    '<span class="k">공사금액</span>' + (ro ? '<div>' + (amt ? Number(amt).toLocaleString('ko-KR') + '원' : '-') + '</div>'
+                        : '<input id="org-c-amount" type="text" inputmode="numeric" value="' + esc(amt) + '" placeholder="예: 520000000 (원 단위 숫자)">') +
+                    '<span class="k">안전관리자</span><input id="org-c-manager" type="text" value="' + esc(row ? row.mgr : '') + '" placeholder="시공사가 선임한 안전관리자">' +
+                    '</div>' +
+                    '<p style="font-size:var(--fs-12); color:var(--text-gray); margin-top:8px;">건설공사 현장의 안전관리자 선임은 <b>공사금액 50억원 이상</b>에만 걸리는 <b>시공사의 의무</b>입니다(산업안전보건법 시행령 별표3). 담양군은 확인하는 쪽입니다.</p>',
                     '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
                     '<button class="btn btn-primary" onclick="PG.orgConstSave(\'' + (id || '') + '\')">저장</button>');
             };
             PG.orgConstSave = id => {
                 if (actGate('공사 등록·수정')) return;
-                const val = key => (document.getElementById(key).value || '').trim();
-                const name = val('org-c-name'), from = val('org-c-from'), to = val('org-c-to');
+                const val = key => ((document.getElementById(key) || {}).value || '').trim();
+                const row = id ? C.get(id) : null;
+                if (row && row.src !== 'manual') {
+                    C.setMgr(id, val('org-c-manager'));
+                    V.closeModal(); V.toast('안전관리자를 저장했습니다.'); render(); return;
+                }
+                const name = val('org-c-name'), from = val('org-c-from'), to = val('org-c-to'), amt = val('org-c-amount').replace(/,/g, '');
                 if (!name) { V.toast('공사명을 입력하세요.'); return; }
                 if (!from || !to || from > to) { V.toast('공사기간을 확인하세요.'); return; }
-                let row = construction.find(x => x.id === id);
-                const data = { owner: val('org-c-owner'), name: name, from: from, to: to, amount: val('org-c-amount'), manager: val('org-c-manager') };
-                if (row) Object.assign(row, data);
-                else construction.push(Object.assign({ id: 'CONST-' + String(construction.length + 1).padStart(2, '0'), status: '미시행', source: '직접 등록' }, data));
-                V.closeModal(); V.toast(row ? '공사 현황을 수정했습니다.' : '공사를 직접 등록했습니다.'); render();
+                if (amt && (!/^\d+$/.test(amt) || Number(amt) <= 0)) { V.toast('공사금액을 원 단위 숫자로 입력하세요.'); return; }
+                const data = { owner: val('org-c-owner') || '담양군', name: name, signed: from, start: from, end: to, amount: amt ? Number(amt) : '', mgr: val('org-c-manager') };
+                if (row) C.updateManual(id, data);
+                else C.addManual(Object.assign({ cat: '공사', kind: '공사' }, data));
+                V.closeModal(); V.toast(row ? '공사 현황을 수정했습니다.' : '공사를 직접 등록했습니다 — 도급관리 목록에도 함께 나타납니다.'); render();
             };
+            /* 완료 차단은 선임 의무가 있는 공사(50억 이상)에서만 — 의무가 없는 공사를 «미선임»으로 막지 않는다(조직 정의서 §4-5). */
             PG.orgConstCheck = id => {
                 if (actGate('공사 점검')) return;
-                const row = construction.find(x => x.id === id); if (!row) return;
-                if (row.status === '미시행') { row.status = '진행'; V.toast('공사별 선임 점검을 시작했습니다.'); render(); return; }
-                if (row.status === '진행' && !row.manager) { V.toast('안전관리자가 미선임이므로 점검을 완료할 수 없습니다.'); return; }
-                if (row.status === '진행') { row.status = '완료'; V.toast('공사별 선임 점검을 완료했습니다.'); render(); return; }
+                const row = C.get(id); if (!row) return;
+                if (row.mgrSt === '미시행') { C.setMgr(id, null, '진행'); V.toast('공사별 선임 점검을 시작했습니다.'); render(); return; }
+                if (row.mgrSt === '진행' && C.mgrDuty(row) === 'required' && !row.mgr) { V.toast('안전관리자가 미선임이므로 점검을 완료할 수 없습니다.'); return; }
+                if (row.mgrSt === '진행') { C.setMgr(id, null, '완료'); V.toast('공사별 선임 점검을 완료했습니다.'); render(); return; }
                 V.toast('이미 완료된 점검입니다.');
             };
+            PG.orgConstPage = p => { OC.page = p; render(); };
+            const OCP = 15, ocPages = Math.max(1, Math.ceil(construction.length / OCP));
+            if (OC.page > ocPages) OC.page = ocPages;
+            const ocRows = construction.slice((OC.page - 1) * OCP, OC.page * OCP);
+            const mgrCell = x => {
+                const d = C.mgrDuty(x);
+                if (d === 'required') return x.mgr ? esc(x.mgr) : '<span class="badge-unassigned">미선임</span>';
+                if (d === 'unknown') return '<span class="chip-status warning chip-sm">판정 불가 — 금액 확인 필요</span>' + (x.mgr ? '<div>' + esc(x.mgr) + '</div>' : '');
+                return (x.mgr ? esc(x.mgr) + ' ' : '') + '<span class="rl-ro-none">선임 의무 없음 (50억 미만)</span>';
+            };
+            const ocSrc = x => x.src === 'ehojo' ? 'e호조 ' + esc(x.mngNo) : x.src === 'gyeyak' ? '계약정보시스템 ' + esc(x.srcNo) : '직접 등록';
+            const ocReq = construction.filter(x => C.mgrDuty(x) === 'required');
             const team = (name, n) => '<div style="border:1px solid var(--card-line); border-radius:var(--radius-md); padding:10px 14px; text-align:center; background:var(--surface);"><div style="font-size:12px; font-weight:700;">' + name + '</div><div style="font-size:12px; color:var(--text-gray);">' + n + '명</div></div>';
             /* 조직도 요약 — 단일 출처(DYV2.ORG) 파생 실인원 · 조회 전용 */
             const orgTotal = (V.orgTotal ? V.orgTotal() : 0);
@@ -1140,16 +1165,23 @@
                 ])),
                 (!canAct() ? '' : '<button class="btn btn-sm btn-primary" onclick="PG.orgStaffComplete()"' + ((staffShort || staffPending) ? ' disabled title="미달·기준 미등록을 해소한 뒤 완료할 수 있습니다"' : '') + '>점검 완료 확정</button>')) +
             sectionCard('공사별 안전관리자 선임 현황',
-                '<div class="check-notice" style="margin-bottom:10px;">공사 자료는 담당자가 직접 등록한 것만 표시합니다. 계약 시스템에서 자동으로 들어오는 경로가 없으므로 등록하지 않은 공사는 이 목록에 나타나지 않습니다 — 대상 공사를 먼저 확인해 등록해야 합니다. 안전관리자 미선임 공사는 점검을 완료할 수 없습니다.</div>' +
-                tbl(['발주처', '공사명', '공사기간', '공사금액', '안전관리자', '점검', '관리'], construction.map(x => [
-                    x.owner, x.name, x.from + '<br>~ ' + x.to, x.amount || '-',
-                    x.manager || '<span class="badge-unassigned">미선임</span>',
-                    ST(x.status),
-                    (canAct()
-                        ? '<button class="btn btn-sm btn-outline" onclick="PG.orgConstForm(\'' + x.id + '\')">수정</button> ' +
-                          '<button class="btn btn-sm btn-primary" onclick="PG.orgConstCheck(\'' + x.id + '\')">' + (x.status === '미시행' ? '점검 시작' : x.status === '진행' ? '완료' : '확인') + '</button>'
-                        : '<span class="rl-ro-none">조회</span>'),
-                ])),
+                '<div class="check-notice" style="margin-bottom:10px;">공사는 도급관리와 <b>같은 계약 원장</b>에서 옵니다 — e호조에서 반입한 계약과 직접 등록한 계약 가운데 점검 유형이 «공사»이고 아직 끝나지 않은 것입니다(' + construction.length.toLocaleString() + '건). ' +
+                    '안전관리자 선임은 <b>공사금액 50억원 이상</b> 공사에만 걸리는 <b>시공사의 의무</b>라(산업안전보건법 시행령 별표3) 그 공사만 «미선임»으로 보이고 점검 완료를 막습니다 — 지금 ' + ocReq.length + '건입니다. ' +
+                    '안전관리자는 e호조에 없어 직접 넣습니다. 현장대리인·감독공무원은 다른 지위라 넣지 않습니다.</div>' +
+                (construction.length
+                    ? tbl(['발주처', '공사명', '공사기간', '공사금액', '안전관리자', '점검', '관리'], ocRows.map(x => [
+                        esc(x.owner || '담양군'),
+                        esc(x.name) + '<div style="font-size:var(--fs-12); color:var(--text-gray);">' + (x.dept ? esc(x.dept) + ' · ' : '') + ocSrc(x) + '</div>',
+                        esc(C.startOf(x) || '?') + '<br>~ ' + esc(x.end || '?') + (x.startFix ? '' : (x.src === 'ehojo' ? '<div style="font-size:var(--fs-12); color:var(--text-gray);">계약일 기준</div>' : '')),
+                        typeof x.amount === 'number' && x.amount > 0 ? x.amount.toLocaleString('ko-KR') + '원' : '-',
+                        mgrCell(x),
+                        ST(x.mgrSt),
+                        (canAct()
+                            ? '<button class="btn btn-sm btn-outline" onclick="PG.orgConstForm(\'' + x.id + '\')">수정</button> ' +
+                              '<button class="btn btn-sm btn-primary" onclick="PG.orgConstCheck(\'' + x.id + '\')">' + (x.mgrSt === '미시행' ? '점검 시작' : x.mgrSt === '진행' ? '완료' : '확인') + '</button>'
+                            : '<span class="rl-ro-none">조회</span>'),
+                    ])) + V.pager({ page: OC.page, pages: ocPages, total: construction.length, fn: 'PG.orgConstPage', label: '공사 목록 페이지' })
+                    : '<div class="v2-empty">진행 중인 공사가 없습니다.<br><span style="font-size:var(--fs-12);">도급관리에서 e호조 계약대장을 반입하거나 공사를 직접 등록하면 여기에 나타납니다.</span></div>'),
                 (canAct() ? '<button class="btn btn-sm btn-primary" onclick="PG.orgConstForm()">+ 공사 직접 등록</button>' : '')) +
             sectionCard('수행평가 · 후속조치 (반기) ' + docStChip('EDOC-수행평가-2026H1'),
                 '<p style="font-size:12px; color:var(--text-gray);">경영책임자가 안전보건관리책임자등의 업무 수행을 반기 1회 평가하고, 미흡 판정은 후속 조치(포상·인사)로 이어집니다.</p>',
@@ -2003,111 +2035,305 @@
             return voiceCountBar() + renderVoiceList();
         },
 
-        /* ── 도급관리 [SFR-013]: 사업 직접 등록 → 적격 평가 → 점검표 → 수급인 평가 ── */
+        /* ── 도급관리 [SFR-007·013]: e호조 계약대장 반입·직접 등록 → 점검 대상 판정 → 반기 점검표·위험성평가 실시 확인 → 수급인 평가 ──
+           계약 원장은 DYCON(js/contract-ledger.js) 하나다 — 조직 › 공사별 안전관리자 선임 현황도 같은 원장을 읽는다.
+           근거: 도급관리 정의서 §4·§5·§6, docs/planning/전달-개발-e호조계약대장-회신-20261015-v1.md */
         contract() {
-            /* 사업 목록을 모듈 전역 상태로 올린다 — 조직 화면의 «공사 직접 등록»과 같은 방식이다.
-               계약 시스템에서 사업 정보를 받아오는 경로가 없어 직접 등록이 사업이 들어오는 유일한
-               경로인데, 목록이 하드코딩 배열이면 [등록]을 눌러도 목록이 그대로다. 그러면 «있다고
-               선언한 유일한 경로»가 죽은 채로 남아, 없는 기능을 있는 것처럼 말하게 된다. */
-            /* 시드의 계약기간도 등록 폼과 같은 «시작일 ~ 종료일» 표기다 — 한 열에 월 단위와 일 단위가
-               섞이면 읽는 사람이 형식 차이를 자료의 차이로 읽고, 중복 확인(사업명·업체·기간)도 표기가
-               갈린 행끼리는 영영 맞지 않는다. */
-            if (!window.CONTRACT_BIZ_STATE) {
-                /* 담양군 계약정보시스템(gyeyak.damyang.go.kr) 공개 목록에서 옮겨 적은 실제 계약이다.
-                   id 는 그 시스템의 「번호」를 그대로 쓴다 — 우리가 새로 채번하면 원본과 대조할 수 없다.
-                   ⚠ period 는 10건 중 1건만 채워져 있다. 지어낸 것이 아니라 «목록 화면에 계약기간 열이
-                   없어서» 그렇다(계약기간·준공일은 건별 상세에만 있다). 빈 채로 두어야 «기간을 모르면
-                   반기 점검 대상을 판정할 수 없다»는 사실이 화면에 그대로 드러난다.
-                   ⚠ 전부 「용역」이다 — 공사·구매설치·위탁 구분의 실자료를 아직 받지 못했다. 없는 구분을
-                   지어내 채우지 않는다. */
-                window.CONTRACT_BIZ_STATE = [
-                    { id: '4173', name: '2026년 담양군 마을상수도 기술진단용역 추진, 감독공무원 지명 및 임명', cat: '용역', dept: '물순환사업소', co: '(주)우리종합기술', signed: '2026-08-11', period: '2026-08-14 ~ 2027-08-13', amount: '61000000', src: 'gyeyak' },
-                    { id: '4172', name: '2026년도 의원 연구단체 정책개발연구용역 계약 추진', cat: '용역', dept: '의회사무과', co: '(사)한국행정발전연구원', signed: '2026-07-30', period: '', amount: '20460000', src: 'gyeyak' },
-                    { id: '4171', name: '담양군보건소 이전신축 조성사업 교통성검토 용역', cat: '용역', dept: '보건소', co: '(주)우리이엔티', signed: '2026-07-28', period: '', amount: '22000000', src: 'gyeyak' },
-                    { id: '4170', name: '2026년 담양공공하수처리시설 정밀안전점검 용역 시행', cat: '용역', dept: '물순환사업소', co: '(주)태성기술개발', signed: '2026-07-27', period: '', amount: '16300000', src: 'gyeyak' },
-                    { id: '4169', name: '2026년 고서공공하수처리시설 외 1개소 하반기 정기안전점검용역 시행', cat: '용역', dept: '물순환사업소', co: '주식회사 길성이앤시', signed: '2026-07-24', period: '', amount: '11200000', src: 'gyeyak' },
-                    { id: '4168', name: '가사문학면 학선리 개선동마을 등 3개소 소규모수도시설 지하수영향조사 용역', cat: '용역', dept: '물순환사업소', co: '(주)우진엔지니어링', signed: '2026-07-17', period: '', amount: '19980000', src: 'gyeyak' },
-                    { id: '4167', name: '창평면 용수리 부동제 여수로 정비공사 폐기물처리용역 - 도급액', cat: '용역', dept: '본청', co: '(주)금성환경산업', signed: '2026-07-07', period: '', amount: '1555000', src: 'gyeyak' },
-                    { id: '4166', name: '농어촌 생활용수(창평지구) 개발사업 폐기물처리용역(1차)', cat: '용역', dept: '물순환사업소', co: '(주)대림환경', signed: '2026-07-06', period: '', amount: '58700000', src: 'gyeyak' },
-                    { id: '4165', name: '담양, 고서, 무증, 태암 공공하수도 재해복구사업 실시설계 용역', cat: '용역', dept: '물순환사업소', co: '(주)진성기술단', signed: '2026-07-01', period: '', amount: '16100000', src: 'gyeyak' },
-                    { id: '4164', name: '담양읍 백동리(251-15) 하수관로 정비사업 설계안정성검토', cat: '용역', dept: '물순환사업소', co: '(주)태성기술개발', signed: '2026-07-01', period: '', amount: '7500000', src: 'gyeyak' },
-                ];
-            }
-            const biz = window.CONTRACT_BIZ_STATE;
-
-            /* 수급인 평가 목록은 등록된 사업의 수급업체에서 파생한다.
-               ① 평가는 업체 단위로 묶는다 — 사업마다 다시 평가하면 같은 업체의 점수가 여러 개가 되어
-                  어느 것이 그 업체의 수준인지 알 수 없다.
-               ② 목록을 따로 하드코딩해 두면 새로 등록한 사업의 업체가 평가 목록에 영영 나타나지 않아
-                  등록 직후의 «평가를 진행하세요» 안내가 다시 죽은 경로가 된다. */
-            const vendorList = () => {
-                const out = [];
-                biz.forEach(b => {
-                    if (!b.co) return;   /* 업체 미상은 지어내지 않는다 — 사업만 목록에 남는다 */
-                    const v = out.find(x => x.co === b.co);
-                    if (v) v.biz.push(b.name); else out.push({ co: b.co, biz: [b.name] });
-                });
-                return out;
+            const C = window.DYCON;
+            const rd = C.roundOf();
+            const all = C.rows();
+            const S = PG._con || (PG._con = { tab: '', q: '', cat: '', dept: '', legal: '', flag: false, wide: false, page: 1, sel: {} });
+            /* 기본 탭은 «미판정» — 들어왔을 때 남은 판단이 바로 보여야 한다. 미판정이 없으면 «전체». */
+            if (!S.tab) S.tab = all.some(r => r.judge === '미판정') ? '미판정' : '전체';
+            const PAGE = 25;
+            const conCheckId = r => 'EDOC-도급점검-' + r.id + '-' + rd.key;
+            const conRiskNext = r => {
+                const base = 'EDOC-도급위험성-' + r.id + '-';
+                if (E.statusOf(base + '최초') !== '확정') return { id: base + '최초', kind: '최초', btn: '위험성평가 확인' };
+                let n = 1;
+                while (E.statusOf(base + '수시-' + n) === '확정') n++;
+                return { id: base + '수시-' + n, kind: '수시', btn: E.statusOf(base + '수시-' + n) ? '수시 확인 이어서' : '수시 확인 추가' };
+            };
+            /* 반입·판정은 주관부서 담당자, 점검·착공일은 그 계약 감독부서 담당자(주관부서 포함) — 버튼과 저장 양쪽에 건다. */
+            const manageGate = what => {
+                if (C.canManage()) return false;
+                V.toast(what + V.josa(what, '은', '는') + ' 주관부서(재난안전과) 담당자가 합니다 — ' + (canAct() ? '감독부서는 판정된 계약의 점검표를 작성합니다.' : '관리감독자는 조회만 합니다.'));
+                return true;
+            };
+            const rowGate = (r, what) => {
+                if (C.canActRow(r)) return false;
+                V.toast(what + V.josa(what, '은', '는') + ' ' + (r.dept ? r.dept + ' ' : '감독부서 ') + '담당자가 합니다' + (canAct() ? '' : ' — 관리감독자는 조회만 합니다.'));
+                return true;
             };
 
+            /* ── 조건 ── */
+            const match = (r, skipTab) => {
+                if (!skipTab && S.tab !== '전체' && r.judge !== S.tab) return false;
+                if (S.q) {
+                    const q = S.q.toLowerCase();
+                    if (![r.name, r.co, r.mngNo, r.srcNo, r.dept].some(x => String(x || '').toLowerCase().indexOf(q) >= 0)) return false;
+                }
+                if (S.cat && r.cat !== S.cat) return false;
+                if (S.dept && r.dept !== S.dept) return false;
+                if (S.legal) {
+                    const L = C.legal(r);
+                    if (S.legal === 'unknown') { if (L.state !== 'unknown') return false; }
+                    else if (S.legal === 'none') { if (L.state !== 'none') return false; }
+                    else if (!L.items.some(i => i.k === S.legal)) return false;
+                }
+                if (S.flag && !(C.flagged(r) || r.missing || r.changed)) return false;
+                /* 기본 보기는 이번 회차와 기간이 겹치는 계약 — 기간이 뒤집혀 판정할 수 없는 계약은 빼지 않는다(숨기면 고칠 기회가 없다) */
+                if (!S.wide && C.inRound(r, rd) === false) return false;
+                return true;
+            };
+            const base = all.filter(r => match(r, true));
+            const list = base.filter(r => match(r)).sort((a, b) => String(C.startOf(b)).localeCompare(String(C.startOf(a))));
+            const pages = Math.max(1, Math.ceil(list.length / PAGE));
+            if (S.page > pages) S.page = pages;
+            const pageRows = list.slice((S.page - 1) * PAGE, S.page * PAGE);
+            const reRender = () => { render(); };
+            PG.conTab = t => { S.tab = t; S.page = 1; S.sel = {}; reRender(); };
+            PG.conSet = (k, v) => { S[k] = v; S.page = 1; reRender(); };
+            PG.conQ = el => { S.q = el.value; S.page = 1; const pos = el.selectionStart; reRender(); const n = document.getElementById('cn-q'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) { /* 무시 */ } } };
+            PG.conReset = () => { Object.assign(S, { q: '', cat: '', dept: '', legal: '', flag: false, wide: false, page: 1, sel: {} }); reRender(); };
+            PG.conPage = p => { S.page = p; reRender(); };
+            PG.conSel = (id, on) => { if (on) S.sel[id] = true; else delete S.sel[id]; reRender(); };
+            PG.conSelAll = () => { list.forEach(r => { S.sel[r.id] = true; }); reRender(); };
+            PG.conSelClear = () => { S.sel = {}; reRender(); };
+            const selIds = Object.keys(S.sel).filter(id => C.get(id));
+
+            /* ── e호조 계약대장 파일 반입 (정의서 §5-4·§6) ── */
+            PG.conImport = () => {
+                if (manageGate('e호조 계약대장 반입')) return;
+                PG._conFile = null;
+                V.openModal('e호조 계약대장 올리기',
+                    '<div class="edoc-linkcard">e호조에서 내려받은 <b>계약대장 엑셀</b>을 올립니다. 같은 계약대장관리번호는 같은 계약으로 보고 값만 바꿉니다 — 계약이 두 번 쌓이지 않습니다.</div>' +
+                    V.uploadDrop('계약대장 엑셀을 끌어다 놓거나 클릭해 고르세요', null, { pick: 'PG.conImportPick', profile: 'bulk', hint: true, style: 'padding:18px;' }) +
+                    '<div id="cn-imp-file" style="margin:8px 0; font-size:var(--fs-12); color:var(--text-gray);">고른 파일 없음</div>' +
+                    '<div class="preset-form-grid">' +
+                        '<span class="k">추출 기준일 <span class="req">*</span></span><input type="date" id="cn-imp-date" max="' + V.today() + '">' +
+                    '</div>' +
+                    '<ul style="font-size:var(--fs-12); color:var(--text-gray); margin:10px 0 0; padding-left:18px; line-height:1.7;">' +
+                        '<li>받는 칸 — ' + Object.values(C.COLS).join(' · ') + ' (하나라도 없으면 파일 전체를 받지 않습니다)</li>' +
+                        '<li>받아 두는 칸 — ' + Object.values(C.KEEP).join(' · ') + ' · 재무 집행 칸(지급·선급 등)은 받지 않습니다</li>' +
+                        '<li>반입은 점검이 아닙니다 — 새 계약은 «미판정»으로 오르고 판정한 계약에만 점검표가 생깁니다</li>' +
+                        '<li>이번 파일에 없는 계약은 지우지 않고 «최근 파일에 없음»으로 둡니다 · 판정·착공일 등 이 화면에서 정한 값은 덮지 않습니다</li>' +
+                    '</ul>',
+                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+                    '<button class="btn btn-primary" id="cn-imp-run" onclick="PG.conImportRun()">반입</button>');
+            };
+            PG.conImportPick = files => {
+                const f = files && files[0]; if (!f) return;
+                PG._conFile = f.file || null;
+                const box = document.getElementById('cn-imp-file');
+                if (box) box.innerHTML = '고른 파일 — <b>' + esc(f.name) + '</b> (' + Math.max(1, Math.round(f.size / 1024)).toLocaleString() + 'KB)';
+                /* 추출 기준일 기본값은 파일 저장일 — 오늘보다 늦으면 오늘로 붙인다 */
+                const el = document.getElementById('cn-imp-date');
+                if (el && !el.value && PG._conFile && PG._conFile.lastModified) {
+                    const d = new Date(PG._conFile.lastModified - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+                    el.value = d > V.today() ? V.today() : d;
+                }
+            };
+            PG.conImportRun = () => {
+                if (manageGate('e호조 계약대장 반입')) return;
+                const f = PG._conFile;
+                const date = ((document.getElementById('cn-imp-date') || {}).value || '').trim();
+                if (!f) { V.toast('계약대장 엑셀 파일을 고르세요.'); return; }
+                if (!date) { V.toast('추출 기준일을 입력하세요 — 목록이 언제 기준인지 밝히는 값입니다.'); return; }
+                if (date > V.today()) { V.toast('추출 기준일은 오늘 이후일 수 없습니다.'); return; }
+                if (!window.DYXLSX) { V.toast('엑셀 읽기 모듈이 없어 반입할 수 없습니다.'); return; }
+                const btn = document.getElementById('cn-imp-run');
+                if (btn) { btn.disabled = true; btn.textContent = '읽는 중…'; }
+                DYXLSX.read(f).then(t => {
+                    const P = C.parse(t.rows);
+                    if (P.error) { V.toast(P.error); if (btn) { btn.disabled = false; btn.textContent = '반입'; } return; }
+                    const imp = C.applyImport(P.list, { file: f.name, extracted: date, skipped: P.skipped });
+                    S.tab = '미판정'; S.page = 1; S.sel = {};
+                    PG.conImportResult(imp.id);
+                    render();
+                }).catch(err => {
+                    V.toast('파일을 읽지 못했습니다 — ' + (err && err.message ? err.message : '형식을 확인하세요'));
+                    if (btn) { btn.disabled = false; btn.textContent = '반입'; }
+                });
+            };
+            PG.conImportResult = id => {
+                const imp = C.state().imports.find(x => x.id === id); if (!imp) return;
+                /* 이 반입 파일에 든 계약 전부(신규·변경·그대로) — 다시 올린 같은 파일에서도 자료 확인 필요가 0으로 보이지 않게 */
+                const touched = C.rows().filter(r => r.src === 'ehojo' && r.importId === imp.id);
+                const dayN = r => { const s = r.start || r.signed; return (s && r.end) ? Math.round((new Date(r.end) - new Date(s)) / 86400000) : null; };
+                const longest = touched.filter(r => dayN(r) != null).sort((a, b) => dayN(b) - dayN(a)).slice(0, 5);
+                const flaggedRows = touched.filter(C.flagged);
+                V.openModal('e호조 계약대장 반입 결과',
+                    statboxes([
+                        ['info', imp.total.toLocaleString(), '파일의 계약'],
+                        ['success', imp.added.length.toLocaleString(), '신규'],
+                        ['neutral', imp.changed.length.toLocaleString(), '변경'],
+                        ['neutral', imp.missingSet.length.toLocaleString(), '최근 파일에 없음'],
+                        [flaggedRows.length ? 'danger' : 'success', flaggedRows.length.toLocaleString(), '자료 확인 필요'],
+                    ]) +
+                    '<p style="font-size:var(--fs-12); color:var(--text-gray); margin:0 0 10px;">' + esc(imp.file) + ' · 추출 기준일 ' + esc(imp.extracted) + ' · ' + esc(imp.by) + ' ' + esc(imp.at) +
+                        (imp.skipped.length ? ' · <b>받지 않은 행 ' + imp.skipped.length + '건</b> — ' + imp.skipped.slice(0, 3).map(s => s.row + '행 ' + esc(s.why)).join(', ') + (imp.skipped.length > 3 ? ' 외' : '') : '') + '</p>' +
+                    (flaggedRows.length ? '<p class="check-notice" style="margin-bottom:10px;">자료 확인 필요 ' + flaggedRows.length + '건 — 준공예정일이 계약일보다 이르거나 계약금액이 0원입니다. 이 화면에서 고치지 않습니다 — e호조에서 정정한 파일을 다시 올리면 값만 바뀝니다.</p>' : '') +
+                    (longest.length
+                        ? '<p style="font-weight:var(--fw-semibold); margin:6px 0;">기간이 긴 순 (상위 ' + longest.length + '건)</p>' +
+                          tbl(['계약명', '계약일', '준공예정', '기간'], longest.map(r => [esc(r.name), esc(r.start || r.signed), esc(r.end), dayN(r).toLocaleString() + '일']))
+                        : ''),
+                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
+                    '<button class="btn btn-primary" onclick="DYV2.closeModal(); PG.conTab(\'미판정\')">미판정 계약 보기</button>');
+            };
+            PG.conImportUndo = id => {
+                if (manageGate('반입 되돌리기')) return;
+                const imp = C.state().imports.find(x => x.id === id); if (!imp) return;
+                V.openModal('반입 되돌리기',
+                    '<p>' + esc(imp.at) + ' 반입(' + esc(imp.file) + ')을 되돌립니다.</p>' +
+                    '<ul style="line-height:1.8; padding-left:18px;"><li>새로 들어온 계약 <b>' + imp.added.length + '건</b>을 지웁니다</li>' +
+                    '<li>값이 바뀐 계약 <b>' + imp.changed.length + '건</b>을 반입 전 값으로 돌립니다</li>' +
+                    '<li>«최근 파일에 없음»으로 바뀐 계약 <b>' + imp.missingSet.length + '건</b>의 표시를 지웁니다</li></ul>' +
+                    '<p style="font-size:var(--fs-12); color:var(--text-gray);">이 반입으로 들어온 계약을 이미 판정했거나 착공일을 넣었으면 되돌릴 수 없습니다.</p>',
+                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+                    '<button class="btn btn-primary" onclick="PG.conImportUndoDo(\'' + id + '\')">되돌리기</button>');
+            };
+            PG.conImportUndoDo = id => {
+                if (manageGate('반입 되돌리기')) return;
+                const res = C.undoImport(id);
+                if (!res.ok) { V.toast(res.why); return; }
+                V.closeModal(); S.sel = {}; V.toast('반입을 되돌렸습니다 — 신규 ' + res.imp.added.length + '건 삭제 · 변경 ' + res.imp.changed.length + '건 복원'); render();
+            };
+
+            /* ── 판정 (정의서 §6 «점검 항목 생성 규칙») ── */
+            const info = (k, v) => '<span class="k">' + k + '</span><div>' + (v || '<span class="rl-ro-none">-</span>') + '</div>';
+            PG.conJudge = id => {
+                if (manageGate('점검 대상 판정')) return;
+                const r = C.get(id); if (!r) return;
+                const radio = (name, vals, cur) => '<div style="display:flex; gap:14px; flex-wrap:wrap;">' + vals.map(v =>
+                    '<label style="display:inline-flex; gap:6px; align-items:center;"><input type="radio" name="' + name + '" value="' + v + '"' + (v === cur ? ' checked' : '') + '>' + v + '</label>').join('') + '</div>';
+                const smallBuild = r.cat === '공사' && C.amountOk(r) && r.amount < 1e8;
+                V.openModal('점검 대상 판정 — ' + esc(r.name),
+                    '<div class="preset-form-grid">' +
+                        info('출처', srcText(r)) +
+                        info('원값 구분', esc(r.kind || '-')) +
+                        info('계약기간', esc((r.start || r.signed || '?') + ' ~ ' + (r.end || '?'))) +
+                        info('계약금액', amtText(r)) +
+                        info('수급업체', esc(r.co || '') + (r.brn ? ' <span class="rl-ro-none">' + C.maskBrn(r.brn) + '</span>' : '')) +
+                        info('감독부서', esc(r.dept || '')) +
+                        (r.content ? info('계약내용', esc(r.content)) : '') +
+                    '</div><hr style="border:none; border-top:1px solid var(--card-line); margin:12px 0;">' +
+                    '<div class="preset-form-grid">' +
+                        '<span class="k">점검 대상 <span class="req">*</span></span>' + radio('cj-judge', ['미판정', '대상', '제외'], r.judge) +
+                        '<span class="k">제외 사유</span><textarea id="cj-reason" class="form-input" rows="2" placeholder="제외할 때만 — 예: 단순 물품 납품, 담양군 시설 안 작업 없음">' + esc(r.reason || '') + '</textarea>' +
+                        '<span class="k">점검 유형 <span class="req">*</span></span><select class="form-select" id="cj-cat">' + C.CATS.map(c => '<option' + (c === r.cat ? ' selected' : '') + '>' + c + '</option>').join('') + '</select>' +
+                        '<span class="k">도급인 의무 적용</span><div>' + radio('cj-duty', ['예', '아니오', '미확인'], r.duty) +
+                            '<p style="font-size:var(--fs-12); color:var(--text-gray); margin:4px 0 0;">담양군이 관리하는 장소(청사·시설)에서 수급인 근로자가 작업하는가 — 공사는 담양군이 시공을 주도하는가. «예»이면 산안법 제64조(협의체·순회점검·수급인 교육 확인)가 이행 관리의 계약 단위 할 일로 생깁니다. 발주 공사는 보통 «아니오»입니다(시공사 의무).</p></div>' +
+                        (smallBuild ? '<span class="k">건축허가 대상</span><label style="display:inline-flex; gap:6px; align-items:center;"><input type="checkbox" id="cj-permit"' + (r.permit ? ' checked' : '') + '>건축허가 대상 공사(금액과 무관하게 기술지도 대상)</label>' : '') +
+                    '</div>',
+                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+                    '<button class="btn btn-primary" onclick="PG.conJudgeSave(\'' + id + '\')">저장</button>');
+            };
+            PG.conJudgeSave = id => {
+                if (manageGate('점검 대상 판정')) return;
+                const pick = n => { const el = document.querySelector('input[name="' + n + '"]:checked'); return el ? el.value : ''; };
+                const judge = pick('cj-judge'), duty = pick('cj-duty');
+                const reason = ((document.getElementById('cj-reason') || {}).value || '').trim();
+                const cat = (document.getElementById('cj-cat') || {}).value;
+                const pm = document.getElementById('cj-permit');
+                if (judge === '제외' && !reason) { V.toast('제외 사유를 적으세요 — 사유 없는 제외는 저장하지 않습니다.'); return; }
+                const res = C.setJudge([id], judge, reason);
+                if (!res.ok) { V.toast(res.why); return; }
+                C.setAttrs(id, { cat: cat, duty: duty, permit: pm ? pm.checked : undefined });
+                V.closeModal(); V.toast('판정을 저장했습니다 — ' + judge + (judge === '대상' ? ' · 이번 회차 점검표와 위험성평가 확인이 생깁니다' : '')); render();
+            };
+            /* 일괄 판정 — 조건을 걸고 «이 조건 N건 선택» 뒤 한 번에. 대상 지정은 권하지 않는다(점검표가 생기는 쪽이라 잘못 지정하면 일이 늘어난다) */
+            PG.conBulk = judge => {
+                if (manageGate('일괄 판정')) return;
+                const ids = Object.keys(S.sel).filter(id => C.get(id));
+                if (!ids.length) { V.toast('판정할 계약을 먼저 고르세요.'); return; }
+                V.openModal(judge === '제외' ? '고른 ' + ids.length + '건 제외' : '고른 ' + ids.length + '건 점검 대상으로',
+                    (judge === '제외'
+                        ? '<p>' + ids.length + '건을 점검 대상에서 <b>제외</b>합니다. 사유는 판정 이력으로 남고 제외한 계약은 «제외» 탭에 그대로 보입니다.</p>' +
+                          '<textarea id="cj-bulk-reason" class="form-input" rows="3" placeholder="제외 사유 (필수) — 예: 단순 물품 납품, 담양군 시설 안 작업 없음"></textarea>'
+                        : '<p>' + ids.length + '건을 <b>점검 대상</b>으로 지정합니다. 대상마다 이번 회차 점검표와 위험성평가 확인이 생깁니다 — 잘못 지정하면 할 일이 늘어나므로 조건을 다시 확인하세요.</p>') +
+                    '<p style="font-size:var(--fs-12); color:var(--text-gray);">직후에는 [일괄 판정 되돌리기]로 이 묶음을 한 번에 되돌릴 수 있습니다.</p>',
+                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+                    '<button class="btn btn-primary" onclick="PG.conBulkDo(\'' + judge + '\')">' + ids.length + '건 ' + (judge === '제외' ? '제외' : '대상 지정') + '</button>');
+            };
+            PG.conBulkDo = judge => {
+                if (manageGate('일괄 판정')) return;
+                const ids = Object.keys(S.sel).filter(id => C.get(id));
+                const reason = ((document.getElementById('cj-bulk-reason') || {}).value || '').trim();
+                if (judge === '제외' && !reason) { V.toast('제외 사유를 적으세요.'); return; }
+                const res = C.setJudge(ids, judge, reason, { bulk: true });
+                if (!res.ok) { V.toast(res.why); return; }
+                S.sel = {}; V.closeModal(); V.toast(res.n + '건을 ' + (judge === '제외' ? '제외했습니다' : '점검 대상으로 지정했습니다')); render();
+            };
+            PG.conBulkUndo = () => {
+                if (manageGate('일괄 판정 되돌리기')) return;
+                const res = C.undoBulk(); if (!res.ok) return;
+                V.toast('일괄 판정 ' + res.n + '건을 되돌렸습니다'); render();
+            };
+
+            /* ── 착공일(보완) — 원장에 착공일이 없다. 기술지도 기한(착공일 전날)·관리비 확인 주기가 이 날짜로 계산된다 ── */
+            PG.conStart = id => {
+                const r = C.get(id); if (!r) return;
+                if (rowGate(r, '착공일 입력')) return;
+                V.openModal('착공일 입력 — ' + esc(r.name),
+                    '<p style="font-size:var(--fs-12); color:var(--text-gray); margin:0 0 10px;">e호조 계약대장에는 착공일자가 없어 계약일(' + esc(r.signed || r.start || '-') + ')로 대신하고 있습니다. 실제 착공일을 넣으면 기술지도 계약 기한(착공일 전날까지)과 산업안전보건관리비 사용내역 확인 주기(공사 시작 후 6개월마다)가 이 날짜로 다시 계산됩니다. 파일을 다시 올려도 이 값은 덮이지 않습니다.</p>' +
+                    '<div class="preset-form-grid"><span class="k">착공일</span><input type="date" id="cn-start" value="' + esc(r.startFix || '') + '"' + (r.end ? ' max="' + esc(r.end) + '"' : '') + '></div>',
+                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+                    (r.startFix ? '<button class="btn btn-outline" onclick="PG.conStartSave(\'' + id + '\', true)">지우기</button>' : '') +
+                    '<button class="btn btn-primary" onclick="PG.conStartSave(\'' + id + '\')">저장</button>');
+            };
+            PG.conStartSave = (id, clear) => {
+                const r = C.get(id); if (!r) return;
+                if (rowGate(r, '착공일 입력')) return;
+                const d = clear ? '' : ((document.getElementById('cn-start') || {}).value || '').trim();
+                if (!clear && !d) { V.toast('착공일을 입력하세요.'); return; }
+                const res = C.setStartFix(id, d);
+                if (!res.ok) { V.toast(res.why); return; }
+                V.closeModal(); V.toast(clear ? '착공일을 지웠습니다 — 계약일 기준으로 돌아갑니다' : '착공일을 저장했습니다'); render();
+            };
+
+            /* ── 직접 등록 — e호조에 없는 계약 ── */
             PG.conAdd = () => {
                 if (actGate('도급사업 등록')) return;
-                V.openModal('도급·용역·위탁 사업 등록',
-                    '<div class="edoc-linkcard"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:3px;" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>계약 시스템에서 사업 정보를 받아오는 경로가 없습니다. 아래 항목을 직접 입력해 등록하세요.</div>' +
+                V.openModal('도급·용역·위탁 사업 직접 등록',
+                    '<div class="edoc-linkcard">e호조에서 반입한 계약은 목록에 이미 있습니다. 여기는 <b>e호조에 없는 계약</b>(민간위탁 협약·타 회계 시스템 등)을 담는 자리입니다. 등록한 계약은 점검 대상으로 들어갑니다.</div>' +
                     '<div class="preset-form-grid">' +
                     '<span class="k">사업명 <span class="req">*</span></span><input type="text" id="cn-name" placeholder="계약 건명 그대로 입력">' +
-                    /* 구분 기본값을 «공사»로 열어 두면 아무것도 고르지 않은 사람의 사업이 조용히 공사가 된다.
-                       사업 성격에 따라 점검 항목의 무게가 달라지므로(정의서 §4-1) 고르게 하고 비면 막는다. */
-                    '<span class="k">구분 <span class="req">*</span></span><select class="form-select" id="cn-cat"><option value="">선택하세요</option><option>공사</option><option>용역</option><option>구매설치</option><option>위탁</option><option>기타</option></select>' +
+                    /* 구분 기본값을 «공사»로 열어 두면 아무것도 고르지 않은 사람의 사업이 조용히 공사가 된다 — 고르게 하고 비면 막는다. */
+                    '<span class="k">구분 <span class="req">*</span></span><select class="form-select" id="cn-cat"><option value="">선택하세요</option>' + C.CATS.map(c => '<option>' + c + '</option>').join('') + '</select>' +
                     '<span class="k">수급업체 <span class="req">*</span></span><input type="text" id="cn-co" placeholder="계약 상대자">' +
-                    /* 계약기간을 «2026-03 ~ 2026-11» 한 칸으로 받으면 «시작이 종료보다 늦을 수 없다»(정의서 §5-1)를
-                       확인할 방법이 없다. 같은 파일의 공사 직접 등록(조직 화면)처럼 시작·종료를 나눠 받는다. */
+                    '<span class="k">사업자등록번호</span><input type="text" id="cn-brn" inputmode="numeric" placeholder="숫자 10자리 — 있으면 같은 업체를 번호로 묶습니다">' +
                     '<span class="k">계약기간 <span class="req">*</span></span><div style="display:flex; gap:6px;"><input type="date" id="cn-from" aria-label="계약 시작일"><input type="date" id="cn-to" aria-label="계약 종료일"></div>' +
-                    /* 정의서 §5-1 은 계약금액을 «숫자만 · 음수 불가»로 정한다. «5.2억 원» 같은 자유 문자열로 받으면
-                       음수인지조차 판정할 수 없어 그 검증이 죽는다 — 원 단위 숫자로 받고 표시할 때 자릿수를 넣는다. */
                     '<span class="k">계약금액</span><input type="text" id="cn-amt" inputmode="numeric" placeholder="예: 520000000 (원 단위 숫자)"></div>',
                     '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
                     '<button class="btn btn-primary" onclick="PG.conSave()">등록</button>');
             };
-            /* 등록 폼 검증 — 정의서 §5-1. 직접 등록이 사업이 들어오는 유일한 경로라 여기서 걸러
-               내지 못한 값은 대조할 원본 없이 그대로 목록에 남는다. 종전에는 필수 세 개만 보고 통과시켜
-               시작일이 종료일보다 늦어도, 계약금액이 음수여도 «사업을 등록했습니다»가 떴다. */
             const NAME_MAX = 100;
             PG.conSave = () => conSaveDo(false);
             PG.conSaveForce = () => conSaveDo(true);
             PG.conDupClose = () => { const p = document.getElementById('cn-dup'); if (p) p.remove(); };
             function conSaveDo(force) {
+                if (actGate('도급사업 등록')) return;
                 PG.conDupClose();
                 const val = k => ((document.getElementById(k) || {}).value || '').trim();
-                const name = val('cn-name'), cat = val('cn-cat'), co = val('cn-co');
+                const name = val('cn-name'), cat = val('cn-cat'), co = val('cn-co'), brn = val('cn-brn').replace(/\D/g, '');
                 const from = val('cn-from'), to = val('cn-to'), amt = val('cn-amt').replace(/,/g, '');
                 if (!name) { V.toast('사업명을 입력하세요.'); return; }
                 if (name.length > NAME_MAX) { V.toast('사업명은 ' + NAME_MAX + '자 이내로 입력하세요.'); return; }
                 if (!cat) { V.toast('사업 구분을 고르세요.'); return; }
                 if (!co) { V.toast('수급업체명을 입력하세요.'); return; }
                 if (co.length > NAME_MAX) { V.toast('수급업체명은 ' + NAME_MAX + '자 이내로 입력하세요.'); return; }
+                if (brn && brn.length !== 10) { V.toast('사업자등록번호 10자리를 확인하세요.'); return; }
                 if (!from || !to) { V.toast('계약 기간을 확인하세요 — 시작일과 종료일을 모두 입력하세요.'); return; }
-                if (from > to) { V.toast('계약 기간을 확인하세요 — 시작일이 종료일보다 늦습니다.'); return; }
-                if (amt && !/^\d+$/.test(amt)) { V.toast('계약금액은 숫자로 입력하세요.'); return; }
-                const period = from + ' ~ ' + to;
-                /* 중복은 막지 않고 확인을 받는다(정의서 §5-1). 판정 축도 사업명 하나가 아니라
-                   «사업명·수급업체·기간» 셋이다. 이름만 보고 거부하면 해마다 같은 이름으로 다시
-                   계약하는 사업(청사 경비·미화 용역 등)을 두 번째 해부터 등록할 수 없고, 직접 등록이
-                   유일한 경로라 그 사업이 화면에서 통째 사라진다 — 점검하지 않은 현장이 없는 현장이 된다. */
-                if (!force && biz.some(b => b.name === name && b.co === co && b.period === period)) { conDupAsk(); return; }
-                /* 계약정보시스템에서 옮겨 적은 계약과 직접 등록한 사업이 한 목록에 섞인다.
-                   출처를 행마다 남겨야 연계가 열렸을 때 무엇을 교체하고 무엇을 남길지 가릴 수 있다.
-                   계약관서(dept)는 등록 폼이 받지 않는다 — 조직도에 등재된 부서가 11개뿐이라
-                   본청·의회사무과·보건소를 고를 수 없고, 고르게 하면 없는 부서를 지어내게 된다. */
-                biz.push({
-                    id: 'CON-' + String(biz.length + 1).padStart(2, '0'),
-                    name: name, cat: cat, dept: '', co: co, period: period, amount: amt, src: 'manual',
-                });
+                if (from > to) { V.toast('종료일이 시작일보다 앞섭니다.'); return; }
+                if (amt && !/^\d+$/.test(amt)) { V.toast('계약금액을 원 단위 숫자로 입력하세요.'); return; }
+                if (amt && Number(amt) <= 0) { V.toast('계약금액은 0보다 커야 합니다.'); return; }
+                /* 중복은 막지 않고 확인을 받는다 — 판정 축은 «사업명·수급업체·기간» 셋이다(정의서 §5-1). */
+                if (!force && all.some(b => b.name === name && b.co === co && C.startOf(b) === from && b.end === to)) { conDupAsk(); return; }
+                C.addManual({ name: name, cat: cat, co: co, brn: brn, signed: from, start: from, end: to, amount: amt ? Number(amt) : '' });
                 V.closeModal(); V.toast('사업을 등록했습니다 — 수급인 안전보건 수준 평가를 진행하세요'); render();
             }
-            /* 확인은 새 모달이 아니라 등록 모달 본문 안 인라인 패널이다(단일 모달 규칙).
-               모달 위에 모달을 쌓으면 닫기·ESC·백드롭의 대상이 모호해지고 부모 모달이 가려
-               «무엇을 그대로 등록하는지» 맥락을 잃는다. */
+            /* 확인은 새 모달이 아니라 등록 모달 본문 안 인라인 패널이다(단일 모달 규칙). */
             function conDupAsk() {
                 const host = document.querySelector('#v2-modal .modal-body');
                 if (!host) { conSaveDo(true); return; }
@@ -2117,104 +2343,226 @@
                     '<div class="stack-inline-head"><span>같은 사업이 이미 등록되어 있습니다</span>' +
                     '<button type="button" class="modal-close" onclick="PG.conDupClose()" aria-label="닫기">&times;</button></div>' +
                     '<div class="stack-inline-body">사업명·수급업체·계약기간이 모두 같은 사업이 이미 목록에 있습니다. 그대로 등록할까요?' +
-                        '<p style="font-size:var(--fs-12); color:var(--text-gray); margin:8px 0 0;">계약 자료를 받아오는 경로가 없어 같은 계약이 두 번 들어와도 막아 줄 다른 수단이 없습니다. 실제로 두 건이면 그대로 등록하고, 아니면 취소하고 기간·업체를 확인하세요.</p></div>' +
+                        '<p style="font-size:var(--fs-12); color:var(--text-gray); margin:8px 0 0;">직접 등록한 계약은 관리번호가 없어 같은 계약이 두 번 들어와도 시스템이 가려낼 수 없습니다. 실제로 두 건이면 그대로 등록하고, 아니면 취소하고 기간·업체를 확인하세요.</p></div>' +
                     '<div class="stack-inline-foot"><button class="btn btn-sm btn-secondary" onclick="PG.conDupClose()">취소</button>' +
                         '<button class="btn btn-sm btn-primary" onclick="PG.conSaveForce()">그대로 등록</button></div>';
                 host.appendChild(panel);
                 panel.scrollIntoView({ block: 'nearest' });
             }
-            /* 사업명·업체명은 담당자가 직접 입력한 값이라 따옴표가 섞일 수 있다.
-               onclick 에 이름을 실어 보내지 않고 행 id·업체 순번만 넘긴다. */
+
+            /* ── 점검표 · 위험성평가 실시 확인 · 서약서 — 점검 대상 계약만, 그 계약 감독부서 담당자가 ── */
+            const checkGate = (r, what) => {
+                if (rowGate(r, what)) return true;
+                if (r.judge !== '대상') { V.toast('점검 대상으로 판정한 계약만 ' + what + V.josa(what, '을', '를') + ' 합니다.'); return true; }
+                if (r.cancel === 'Y') { V.toast('해지된 계약은 점검 대상이 아닙니다.'); return true; }
+                return false;
+            };
             PG.conCheck = id => {
-                const row = biz.find(x => x.id === id); if (!row) return;
-                if (actGate('도급 점검표 작성')) return;
-                /* 점검표를 사업명으로 식별하면 «같은 이름 다른 계약»(해마다 다시 계약하는 용역) 두 건이
-                   한 점검표를 나눠 쓰게 된다 — 올해 점검표를 쓰면 작년 행까지 작성완료로 보인다.
-                   등록 행 id 는 재사용되지 않으므로 문서를 사업 1건에 고정할 수 있다. */
+                const row = C.get(id); if (!row) return;
+                if (checkGate(row, '도급 점검표 작성')) return;
+                const ir = C.inRound(row, rd);
+                if (ir === null) { V.toast('계약기간이 뒤집혀 회차를 판정할 수 없습니다 — e호조에서 기간을 정정한 파일을 다시 올리세요.'); return; }
+                if (ir === false) { V.toast('계약기간이 이번 회차(' + rd.label + ')와 겹치지 않아 이번 회차 점검 대상이 아닙니다'); return; }
+                /* 기록 키 = 계약 + 회차 — 한 반기의 점검표가 남은 반기까지 «작성완료»로 보이지 않게(정의서 §6).
+                   항목은 점검 유형으로 조립한다 — 공통 3개 + «공사»면 공사기간 기준(SCR-EDOC-005 §6). */
+                const build = row.cat === '공사';
+                const items = T.CHECKLIST_PRESETS.contract.concat(build ? T.CHECKLIST_PRESETS.contractBuild : []);
                 E.openForm({
-                    id: 'EDOC-도급점검-' + row.id, title: '도급사업 안전보건 점검표 — ' + row.name, form: 'F5',
-                    ctx: { menuLabel: '도급관리 · 반기', checklist: T.CHECKLIST_PRESETS.contract }, onChange: render,
+                    id: conCheckId(row), title: rd.label + ' 도급사업 안전보건 점검표 — ' + row.name, form: 'F5',
+                    source: '점검 유형 ' + esc(row.cat) + (build ? '' : ' · 적용하지 않은 항목: 공사기간 기준 — 공사가 아님'),
+                    ctx: { menuLabel: '도급관리 · 반기', checklist: items }, onChange: render,
                 });
             };
+            PG.conRisk = id => {
+                const row = C.get(id); if (!row) return;
+                if (checkGate(row, '도급사업 위험성평가 실시 확인')) return;
+                const nx = conRiskNext(row);
+                E.openForm({
+                    id: nx.id, title: '도급사업 위험성평가 실시 확인 (' + nx.kind + ') — ' + row.name, form: 'F5',
+                    source: nx.kind === '최초' ? '최초 확인 — 이 사업의 작업을 시작하기 전 수급인의 위험성평가를 확인합니다'
+                                               : '수시 확인 — 작업이 바뀌었거나 사고가 났을 때 다시 확인합니다',
+                    ctx: { menuLabel: '도급관리 · 최초·수시', checklist: T.CHECKLIST_PRESETS.contractRisk }, onChange: render,
+                });
+            };
+            const vendors = C.vendors();
             PG.conEval = ix => {
-                const v = vendorList()[ix]; if (!v) return;
+                const v = vendors[ix]; if (!v) return;
                 if (actGate('수급인 평가 작성')) return;
                 E.openForm({
-                    id: 'EDOC-수급인평가-' + v.co, title: '수급인 안전보건 수준 평가 — ' + v.co, form: 'F6',
+                    id: 'EDOC-수급인평가-' + (v.brn || v.co), title: '수급인 안전보건 수준 평가 — ' + v.co, form: 'F6',
                     ctx: { menuLabel: '도급관리', scorelist: T.SCORE_PRESETS.contract }, onChange: render,
                 });
             };
-            PG.conPledge = () => actGate('안전보건 서약서 첨부') ? null : V.openModal('안전보건 서약서 첨부',
-                DYV2.uploadDrop('서약서·계약서 사본을 첨부하세요 (다중 가능)', null, { hint: true }),
-                '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-                '<button class="btn btn-primary" onclick="DYV2.closeModal(); DYV2.toast(\'서약서가 첨부되었습니다\')">업로드</button>');
+            /* 서약서는 계약 건에 붙인다 — 파일 실물은 문서관리 연계 전이라 보관하지 않으므로 «첨부했다»고 말하지 않는다(§15). */
+            PG.conPledge = id => {
+                const row = C.get(id); if (!row) return;
+                if (checkGate(row, '안전보건 서약서 첨부')) return;
+                V.openModal('안전보건 서약서 첨부 — ' + esc(row.name),
+                    V.uploadDrop('서약서·계약서 사본을 첨부하세요 (다중 가능)', null, { hint: true }),
+                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
+                    '<button class="btn btn-primary" onclick="DYV2.closeModal(); DYV2.notReady(\'서약서 파일 보관\', \'문서관리 연계\')">업로드</button>');
+            };
 
-            const cat = c => '<span class="chip-mini pdca" style="white-space:nowrap;">' + esc(c) + '</span>';
-            /* 계약금액은 원 단위 숫자로 저장한다(정의서 §5-1). 표시할 때만 자릿수를 넣고, 숫자가 아닌
-               옛 값이 남아 있으면 고쳐 쓰지 않고 그대로 보여 준다 — 지어낸 해석을 붙이지 않는다. */
-            const amtText = a => {
-                const v = String(a == null ? '' : a).trim();
-                if (!v) return '-';
-                const t = /^\d+$/.test(v) ? Number(v).toLocaleString('ko-KR') + '원' : esc(v);
-                return '<span style="white-space:nowrap;">' + t + '</span>';
+            /* ── 표시 조각 ── */
+            const amtText = r => {
+                if (typeof r.amount === 'number' && r.amount > 0) return '<span style="white-space:nowrap;">' + r.amount.toLocaleString('ko-KR') + '원</span>';
+                if (r.src === 'ehojo') return '<span class="chip-status danger chip-sm">0원 — e호조 확인 필요</span>';
+                return '<span class="rl-ro-none">-</span>';
             };
-            /* 계약기간은 계약정보시스템 «목록» 화면에 없다(건별 상세에만 있다). 빈칸으로 두면
-               «기간이 없는 계약»으로 읽히므로 모른다는 사실을 그대로 적고, 대신 아는 값(계약일)을
-               같이 보여 준다 — 없는 기간을 계약일로 대신 채우면 반기 판정이 조용히 틀어진다. */
-            const periodText = b => {
-                const v = String(b.period == null ? '' : b.period).trim();
-                if (v) return '<span style="white-space:nowrap;">' + esc(v) + '</span>';
-                return '<span class="rl-ro-none">기간 미확인</span>'
-                    + (b.signed ? '<div style="font-size:var(--fs-12); color:var(--text-gray);">계약일 ' + esc(b.signed) + '</div>' : '');
+            function srcText(r) {
+                if (r.src === 'ehojo') {
+                    const imp = C.state().imports.find(x => x.id === r.importId);
+                    return 'e호조 ' + esc(r.mngNo) + (imp && imp.extracted ? ' · ' + esc(imp.extracted) + ' 추출' : '');
+                }
+                if (r.src === 'gyeyak') return '계약정보시스템 ' + esc(r.srcNo) + ' (옮겨 적음) ' + V.sampleChip('계약정보시스템 공개 목록에서 옮겨 적은 예시 자료입니다.');
+                return '직접 등록';
+            }
+            const chip = (tone, t, title) => '<span class="chip-status ' + tone + ' chip-sm"' + (title ? ' title="' + esc(title) + '"' : '') + '>' + t + '</span>';
+            const nameCell = r => {
+                const tags = [];
+                if (r.changed) tags.push(chip('warning', '판정 후 변경됨', '판정한 뒤 반입한 파일에서 계약 값이 바뀌었습니다 — 판정을 다시 보세요'));
+                if (r.missing) tags.push(chip('neutral', '최근 파일에 없음', '가장 최근 반입 파일에 이 계약이 없습니다 — 지우지 않고 남깁니다'));
+                if (C.periodBad(r)) tags.push(chip('danger', '기간 확인 필요', '준공예정일이 계약일보다 이릅니다 — e호조에서 정정'));
+                if (r.cancel === 'Y') tags.push(chip('neutral', '해지'));
+                if (r.term === '장기') tags.push('<span class="chip-mini wt">장기계속</span>');
+                return '<div style="min-width:240px;"><b>' + esc(r.name) + '</b>' + (tags.length ? ' ' + tags.join(' ') : '') +
+                    '<div style="font-size:var(--fs-12); color:var(--text-gray); margin-top:3px;">' + (r.dept ? esc(r.dept) + ' · ' : '') + srcText(r) + '</div></div>';
             };
-            /* 출처와 계약관서를 값 옆에 남긴다 — 옮겨 적은 계약과 직접 등록한 사업이 한 목록에
-               섞이므로, 구분이 없으면 연계가 열렸을 때 무엇을 교체할지 가릴 수 없다. */
-            const srcLine = b => '<div style="font-size:var(--fs-12); color:var(--text-gray); margin-top:3px;">'
-                + (b.dept ? esc(b.dept) + ' · ' : '')
-                + (b.src === 'gyeyak' ? '계약정보시스템 ' + esc(b.id) : '직접 등록')
-                + '</div>';
-            const vendors = vendorList();
-            const noPeriod = biz.filter(b => !String(b.period == null ? '' : b.period).trim()).length;
-            const checkTodo = biz.filter(b => !E.statusOf('EDOC-도급점검-' + b.id)).length;
-            const evalTodo = vendors.filter(v => !E.statusOf('EDOC-수급인평가-' + v.co)).length;
-            /* 요약 수치는 전부 아래 목록에서 센다. 사업이 들어오는 경로가 직접 등록 하나뿐인데 고정값을
-               쓰면 요약과 목록이 영원히 다른 현황을 주장한다(종전: 목록 4건 옆에 «진행 사업 12»).
-               «연간 누계»·«진행/종료» 축은 계약 이력을 넘겨주는 연계가 없어 어디에서도 셀 수 없으므로
-               지어내지 않고 뺀다. 미작성·미평가는 감추지 않고 그대로 센다 — 남은 일이기 때문이다. */
+            const catCell = r => '<span class="chip-mini pdca" style="white-space:nowrap;">' + esc(r.cat) + '</span>' +
+                (r.src === 'ehojo' && r.kind && r.kind !== r.cat ? '<div style="font-size:var(--fs-12); color:var(--text-gray);">원값 ' + esc(r.kind) + '</div>' : '');
+            const periodCell = r => {
+                const s = C.startOf(r), e = r.end;
+                let h;
+                if (!s && !e) h = '<span class="rl-ro-none">기간 미확인</span>';
+                else h = '<span style="white-space:nowrap;">' + esc(s || '?') + ' ~ ' + esc(e || '?') + '</span>';
+                const basis = r.startFix ? '착공일 기준' : (r.src === 'ehojo' ? '계약일 기준' : (!r.start && r.signed ? '계약일 ' + esc(r.signed) : ''));
+                const tech = C.legal(r).items.some(i => i.k === 'tech');
+                const need = r.cat === '공사' && tech && !r.startFix;
+                return h + (basis || need ? '<div style="font-size:var(--fs-12); color:var(--text-gray);">' + basis +
+                        (need ? ' ' + chip('warning', '착공일 미입력', '기술지도 계약 기한(착공일 전날)을 계산하려면 착공일이 필요합니다') : '') + '</div>' : '') +
+                    (r.cat === '공사' && C.canActRow(r) ? '<button class="btn btn-sm btn-outline" style="margin-top:4px;" onclick="PG.conStart(\'' + r.id + '\')">착공일</button>' : '');
+            };
+            const legalCell = r => {
+                const L = C.legal(r);
+                if (L.state === 'na') return '<span class="rl-ro-none">-</span>';
+                if (L.state === 'unknown') return chip('warning', '금액 확인 필요');
+                if (L.state === 'none') return '<span class="rl-ro-none">해당 없음</span>';
+                return L.items.map(i => chip(i.hold ? 'warning' : 'info', i.label, i.basis)).join(' ');
+            };
+            const judgeTone = { '미판정': 'warning', '대상': 'info', '제외': 'neutral' };
+            const judgeCell = r => chip(judgeTone[r.judge] || 'neutral', r.judge, r.judge === '제외' ? '사유: ' + r.reason : (r.judgedBy ? r.judgedBy + ' ' + (r.judgedAt || '') : '')) +
+                (r.judge === '제외' && r.reason ? '<div style="font-size:var(--fs-12); color:var(--text-gray); max-width:180px;">' + esc(r.reason) + '</div>' : '') +
+                (r.judge === '대상' ? '<div style="font-size:var(--fs-12); color:var(--text-gray);">도급인 의무 ' + esc(r.duty) + '</div>' : '') +
+                (C.canManage() ? '<div><button class="btn btn-sm btn-outline" style="margin-top:4px;" onclick="PG.conJudge(\'' + r.id + '\')">판정</button></div>' : '');
+            const checkCell = r => {
+                if (r.judge !== '대상') return '<span class="rl-ro-none">판정 후</span>';
+                if (r.cancel === 'Y') return '<span class="rl-ro-none">해지 — 대상 아님</span>';
+                const ir = C.inRound(r, rd);
+                const st = ir === true ? docStChip(conCheckId(r)) : '';
+                if (!C.canActRow(r)) return (st || '<span class="rl-ro-none">조회</span>');
+                return '<div style="display:flex; flex-direction:column; gap:var(--sp-1); align-items:flex-start;">' +
+                    (ir === true ? '<div>' + st + '</div><button class="btn btn-sm btn-primary" onclick="PG.conCheck(\'' + r.id + '\')">점검표 작성</button>'
+                        : ir === false ? '<span class="rl-ro-none">이번 회차 기간 밖</span>' : '<span class="rl-ro-none">기간 확인 필요</span>') +
+                    '<button class="btn btn-sm btn-outline" onclick="PG.conRisk(\'' + r.id + '\')">' + conRiskNext(r).btn + '</button></div>';
+            };
+            const pledgeCell = r => (r.judge === '대상' && r.cancel !== 'Y' && C.canActRow(r))
+                ? '<button class="btn btn-sm btn-secondary" onclick="PG.conPledge(\'' + r.id + '\')">첨부</button>' : '<span class="rl-ro-none">-</span>';
+
+            /* ── 요약 — 전부 아래 목록(원장)에서 센다. 점검표·평가 축은 «대상»에서, 남은 판단은 따로 ── */
+            const target = all.filter(r => r.judge === '대상');
+            const undecided = all.filter(r => r.judge === '미판정').length;
+            const checkTodo = target.filter(r => r.cancel !== 'Y' && C.inRound(r, rd) === true && !E.statusOf(conCheckId(r))).length;
+            const evalTodo = vendors.filter(v => !E.statusOf('EDOC-수급인평가-' + (v.brn || v.co))).length;
+            const dutyUnknown = target.filter(r => r.duty === '미확인').length;
+            const flagN = all.filter(C.flagged).length;
+            const ehojoN = all.filter(r => r.src === 'ehojo').length, manualN = all.filter(r => r.src === 'manual').length, gyN = all.filter(r => r.src === 'gyeyak').length;
+            const imps = C.state().imports, liveImp = C.lastImport();
+
+            /* ── 필터 바 ── */
+            const opt = (v, label, cur) => '<option value="' + esc(v) + '"' + (v === cur ? ' selected' : '') + '>' + esc(label) + '</option>';
+            const deptsHere = Array.from(new Set(base.map(r => r.dept).filter(Boolean))).sort();
+            const catsHere = C.CATS.filter(c => base.some(r => r.cat === c));
+            const condN = ['q', 'cat', 'dept', 'legal'].filter(k => S[k]).length + (S.flag ? 1 : 0) + (S.wide ? 1 : 0);
+            const tabN = t => t === '전체' ? base.length : base.filter(r => r.judge === t).length;
+            const filterBar =
+                '<div class="tabs" role="tablist" style="margin-bottom:10px;">' + ['미판정', '대상', '제외', '전체'].map(t =>
+                    '<button type="button" role="tab" class="tab' + (S.tab === t ? ' active' : '') + '" aria-selected="' + (S.tab === t) + '" onclick="PG.conTab(\'' + t + '\')">' + t + ' ' + tabN(t).toLocaleString() + '</button>').join('') + '</div>' +
+                '<div style="display:flex; flex-wrap:wrap; gap:var(--sp-2); align-items:center; margin-bottom:10px;">' +
+                    '<input type="search" id="cn-q" class="form-input" style="min-width:220px; flex:1;" placeholder="사업명·업체·관리번호·부서 검색" value="' + esc(S.q) + '" oninput="PG.conQ(this)">' +
+                    (catsHere.length > 1 ? '<select class="form-select" style="width:auto;" aria-label="점검 유형" onchange="PG.conSet(\'cat\', this.value)">' + opt('', '점검 유형 전체', S.cat) + catsHere.map(c => opt(c, c, S.cat)).join('') + '</select>' : '') +
+                    (deptsHere.length > 1 ? '<select class="form-select" style="width:auto;" aria-label="감독부서" onchange="PG.conSet(\'dept\', this.value)">' + opt('', '감독부서 전체', S.dept) + deptsHere.map(d => opt(d, d, S.dept)).join('') + '</select>' : '') +
+                    '<select class="form-select" style="width:auto;" aria-label="법정 적용" onchange="PG.conSet(\'legal\', this.value)">' + opt('', '법정 적용 전체', S.legal) +
+                        C.LEGAL.map(L => opt(L.k, L.label, S.legal)).join('') + opt('none', '해당 없음(공사)', S.legal) + opt('unknown', '금액 확인 필요', S.legal) + '</select>' +
+                    '<label style="display:inline-flex; gap:4px; align-items:center; font-size:var(--fs-13);"><input type="checkbox"' + (S.flag ? ' checked' : '') + ' onchange="PG.conSet(\'flag\', this.checked)">확인 필요만</label>' +
+                    '<label style="display:inline-flex; gap:4px; align-items:center; font-size:var(--fs-13);"><input type="checkbox"' + (S.wide ? ' checked' : '') + ' onchange="PG.conSet(\'wide\', this.checked)">이번 회차 밖 계약 포함</label>' +
+                    '<span style="font-size:var(--fs-13); color:var(--text-gray);">결과 ' + list.length.toLocaleString() + '건</span>' +
+                    '<button class="btn btn-sm btn-outline"' + (condN ? '' : ' disabled') + ' onclick="PG.conReset()">조건 초기화' + (condN ? ' ' + condN : '') + '</button>' +
+                '</div>' +
+                (C.canManage()
+                    ? '<div style="display:flex; flex-wrap:wrap; gap:var(--sp-2); align-items:center; margin-bottom:10px; padding:8px 10px; background:var(--surface-alt); border-radius:var(--radius-md);">' +
+                        '<span style="font-size:var(--fs-13);">고른 계약 <b>' + selIds.length.toLocaleString() + '</b>건</span>' +
+                        '<button class="btn btn-sm btn-outline" onclick="PG.conSelAll()"' + (list.length ? '' : ' disabled') + '>이 조건 ' + list.length.toLocaleString() + '건 모두 고르기</button>' +
+                        (selIds.length ? '<button class="btn btn-sm btn-outline" onclick="PG.conSelClear()">고르기 해제</button>' +
+                            '<button class="btn btn-sm btn-primary" onclick="PG.conBulk(\'대상\')">점검 대상으로</button>' +
+                            '<button class="btn btn-sm btn-secondary" onclick="PG.conBulk(\'제외\')">제외 (사유 입력)</button>' : '') +
+                        (C.state().lastBulk ? '<button class="btn btn-sm btn-outline" onclick="PG.conBulkUndo()">일괄 판정 되돌리기</button>' : '') +
+                      '</div>'
+                    : '');
+
+            const heads = (C.canManage() ? ['선택'] : []).concat(['사업명', '점검 유형', '수급업체', '계약기간', '계약금액', '법정 적용', '판정', '점검 (' + rd.label + ')', '서약서']);
+            const table = pageRows.length
+                ? tbl(heads, pageRows.map(r => (C.canManage()
+                        ? ['<input type="checkbox" aria-label="' + esc(r.name) + ' 고르기"' + (S.sel[r.id] ? ' checked' : '') + ' onchange="PG.conSel(\'' + r.id + '\', this.checked)">']
+                        : []).concat([
+                    nameCell(r), catCell(r),
+                    '<div style="min-width:110px;">' + esc(r.co || '') + (r.brn ? '<div style="font-size:var(--fs-12); color:var(--text-gray);">' + C.maskBrn(r.brn) + '</div>' : '') + '</div>',
+                    periodCell(r), amtText(r), legalCell(r), judgeCell(r), checkCell(r), pledgeCell(r),
+                ]))) + V.pager({ page: S.page, pages: pages, total: list.length, fn: 'PG.conPage', label: '계약 목록 페이지' })
+                : '<div class="v2-empty">' + (all.length ? '조건에 맞는 계약이 없습니다.' : '아직 반입하거나 등록한 계약이 없습니다.') +
+                    '<br><span style="font-size:var(--fs-12);">목록이 비어 있는 것은 계약이 없다는 뜻이 아니라 아직 받지도 등록하지도 않았다는 뜻일 수 있습니다.</span></div>';
+
             return statboxes([
-                ['info', biz.length, '등록 사업'],
-                ['neutral', vendors.length, '수급업체'],
-                [checkTodo ? 'warning' : 'success', checkTodo, '점검표 미작성'],
-                [evalTodo ? 'danger' : 'success', evalTodo, '수급인 미평가'],
+                ['info', target.length.toLocaleString(), '점검 대상'],
+                [undecided ? 'warning' : 'success', undecided.toLocaleString(), '미판정'],
+                ['neutral', vendors.length.toLocaleString(), '수급업체'],
+                [checkTodo ? 'warning' : 'success', checkTodo.toLocaleString(), rd.label.slice(5) + ' 점검표 미작성'],
+                [evalTodo ? 'danger' : 'success', evalTodo.toLocaleString(), '수급인 미평가'],
+                [dutyUnknown ? 'warning' : 'success', dutyUnknown.toLocaleString(), '도급인 의무 미확인'],
+                [flagN ? 'danger' : 'success', flagN.toLocaleString(), '자료 확인 필요'],
             ]) +
-            sectionCard('도급·용역·위탁 사업 목록',
-                '<div class="check-notice" style="margin-bottom:10px;">목록은 <b>담양군 계약정보시스템 공개 목록에서 옮겨 적은 계약</b>과 담당자가 직접 등록한 사업으로 채워집니다. 자동으로 받아오는 연계는 없으므로 옮겨 적지 않은 계약은 이 목록에도, 위 요약에도 잡히지 않습니다 — <b>위 수치는 모두 이 목록에서 센 값</b>입니다.'
-                + (noPeriod ? ' 계약기간은 계약정보시스템 <b>목록 화면에 없어</b> 건별 상세를 열어야 확인됩니다 — 현재 <b>' + noPeriod + '건</b>이 미확인이라 그 사업은 반기 점검 대상을 판정하지 못합니다.' : '')
-                + '</div>' +
-                (biz.length
-                    ? tbl(['사업명', '구분', '수급업체', '계약기간', '계약금액', '점검표', '서약서'],
-                        biz.map(b => [
-                            '<b>' + esc(b.name) + '</b> ' + docStChip('EDOC-도급점검-' + b.id) + srcLine(b),
-                            /* 기간은 한 값이다 — 줄이 갈리면 «2026-03-02»와 «2026-11-30» 두 날짜로 읽힌다.
-                               표는 이미 가로 스크롤 래퍼 안이라 줄바꿈을 막아도 본문이 밀리지 않는다. */
-                            cat(b.cat), esc(b.co), periodText(b), amtText(b.amount),
-                            /* 같은 행의 [첨부]·[평가 작성]과 같은 기준으로 건다 — 여기만 무조건 그리면
-                               군수·과장에게 활성 버튼이 보이고 «눌러야 거절»한다. 한 행 안에서 기준이
-                               갈리면 무엇이 내 권한인지 표가 알려주지 못한다. */
-                            (canAct() ? '<button class="btn btn-sm btn-primary" onclick="PG.conCheck(\'' + b.id + '\')">점검표 작성</button>' : '<span class="rl-ro-none">조회</span>'),
-                            (canAct() ? '<button class="btn btn-sm btn-secondary" onclick="PG.conPledge()">첨부</button>' : '<span class="rl-ro-none">조회</span>'),
-                        ]))
-                    : '<div class="v2-empty">등록된 도급·용역·위탁 사업이 없습니다.<br><span style="font-size:var(--fs-12);">목록이 비어 있는 것은 사업이 없다는 뜻이 아니라 아직 등록하지 않았다는 뜻입니다.</span></div>'),
-                (canAct() ? '<button class="btn btn-sm btn-primary" onclick="PG.conAdd()">+ 사업 등록</button>' : '')) +
+            sectionCard('도급·용역·위탁 계약 목록',
+                '<div class="check-notice" style="margin-bottom:10px;">' +
+                    (ehojoN
+                        ? '<b>e호조 계약대장에서 반입한 계약 ' + ehojoN.toLocaleString() + '건</b>(최근 추출 기준일 ' + esc((liveImp && liveImp.extracted) || '-') + ')'
+                        : '<b>아직 e호조 계약대장을 반입하지 않았습니다</b>') +
+                    '과 직접 등록한 계약 ' + manualN + '건' + (gyN ? ', 계약정보시스템에서 옮겨 적은 예시 ' + gyN + '건' : '') + '이 있습니다. ' +
+                    '<b>반입은 점검이 아닙니다</b> — 반입한 계약은 «미판정»으로 오르고, 주관부서 담당자가 점검 대상으로 판정한 계약에만 반기 점검표·위험성평가 실시 확인·수급인 평가가 생깁니다. ' +
+                    '기본 보기는 이번 회차(' + rd.label + ')와 계약기간이 겹치는 계약입니다. «법정 적용»은 법이 정한 금액 기준(산업안전보건관리비 2천만원·기술지도 1억·안전보건대장 50억 — 공사)을 자동으로 표시한 것이며 제외 근거가 아닙니다. e호조에 없는 계약(민간위탁 협약 등)은 직접 등록해야 목록에 나타납니다.' +
+                '</div>' + filterBar + table,
+                '<div style="display:flex; gap:6px;">' +
+                    (C.canManage() ? '<button class="btn btn-sm btn-primary" onclick="PG.conImport()">e호조 파일 올리기</button>' : '') +
+                    (canAct() ? '<button class="btn btn-sm btn-outline" onclick="PG.conAdd()">+ 사업 직접 등록</button>' : '') +
+                '</div>') +
             sectionCard('수급인 안전보건 수준 평가',
                 (vendors.length
                     ? tbl(['업체', '대상 사업', '평가 시점', '상태', ''], vendors.map((v, ix) => [
-                        esc(v.co), v.biz.map(esc).join('<br>'), '계약 전 적격심사 + 반기',
-                        docStChip('EDOC-수급인평가-' + v.co),
+                        esc(v.co) + (v.brn ? '<div style="font-size:var(--fs-12); color:var(--text-gray);">' + C.maskBrn(v.brn) + (v.names.length > 1 ? ' · 다른 표기 ' + v.names.filter(n => n !== v.co).map(esc).join(', ') : '') + '</div>' : ''),
+                        v.biz.slice(0, 3).map(esc).join('<br>') + (v.biz.length > 3 ? '<br><span class="rl-ro-none">외 ' + (v.biz.length - 3) + '건</span>' : ''),
+                        '계약 전 적격심사 + 반기',
+                        docStChip('EDOC-수급인평가-' + (v.brn || v.co)),
                         (canAct() ? '<button class="btn btn-sm btn-primary" onclick="PG.conEval(' + ix + ')">평가 작성</button>' : '<span class="rl-ro-none">조회</span>'),
                     ]))
-                    : '<div class="v2-empty">평가 대상 업체가 없습니다.<br><span style="font-size:var(--fs-12);">사업을 등록하면 그 수급업체가 평가 대상으로 올라옵니다.</span></div>') +
-                '<p style="font-size:var(--fs-12); color:var(--text-gray); margin-top:8px;">평가는 <b>업체 단위</b>로 묶습니다 — 사업마다 다시 평가하면 같은 업체의 점수가 여러 개가 되어 어느 것이 그 업체의 수준인지 알 수 없습니다. 아직 평가하지 않은 업체도 목록에 그대로 두어 남은 일이 드러나게 합니다.</p>');
+                    : '<div class="v2-empty">평가 대상 업체가 없습니다.<br><span style="font-size:var(--fs-12);">계약을 점검 대상으로 판정하거나 직접 등록하면 그 수급업체가 평가 대상으로 올라옵니다.</span></div>') +
+                '<p style="font-size:var(--fs-12); color:var(--text-gray); margin-top:8px;">평가는 <b>업체 단위</b>로 묶습니다 — 사업자등록번호가 있으면 번호로 묶어 상호 표기가 달라도 한 업체로 봅니다. 아직 평가하지 않은 업체도 목록에 그대로 두어 남은 일이 드러나게 합니다.</p>') +
+            (imps.length
+                ? sectionCard('반입 이력',
+                    tbl(['일시', '올린 사람', '파일', '추출 기준일', '파일의 계약', '신규', '변경', '최근 파일에 없음', '자료 확인 필요', ''], imps.slice().reverse().map(m => [
+                        esc(m.at), esc(m.by), esc(m.file), esc(m.extracted), m.total.toLocaleString(), m.added.length.toLocaleString(), m.changed.length.toLocaleString(), m.missingSet.length.toLocaleString(), m.flagged.toLocaleString(),
+                        m.undone ? '<span class="rl-ro-none">되돌림</span>'
+                            : (m === liveImp && C.canManage() ? '<button class="btn btn-sm btn-outline" onclick="PG.conImportResult(\'' + m.id + '\')">결과</button> <button class="btn btn-sm btn-outline" onclick="PG.conImportUndo(\'' + m.id + '\')">되돌리기</button>'
+                                : '<button class="btn btn-sm btn-outline" onclick="PG.conImportResult(\'' + m.id + '\')">결과</button>'),
+                    ])))
+                : '');
         },
 
         /* ── 개선조치 [SFR-003]: 전 메뉴 자동 유입 → 담당 지정 → 계획 → 완료 보고 → 확인 → 종결 ── */

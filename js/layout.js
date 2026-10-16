@@ -16,6 +16,7 @@
     const ICON = {
         shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>',
         pocket: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 3h16a2 2 0 0 1 2 2v6a10 10 0 0 1-20 0V5a2 2 0 0 1 2-2z"/><polyline points="8 10 12 14 16 10"/></svg>',
+        download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 21h14"/></svg>',
         grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
         building: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22V12h6v10"/><path d="M8 6h.01M12 6h.01M16 6h.01M8 10h.01M16 10h.01"/></svg>',
         alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m10.29 3.86-8.4 14.74A2 2 0 0 0 3.62 22h16.76a2 2 0 0 0 1.73-3.4L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
@@ -747,6 +748,10 @@
                             aria-haspopup="dialog" aria-label="전체메뉴 — 모든 화면을 한 번에 봅니다" title="전체메뉴">
                         ${ICON.grid}<span class="dy-allmenu-label">전체메뉴</span>
                     </button>
+                    <button class="dy-allmenu-btn dy-guide-btn" id="dy-guide-btn" type="button"
+                            aria-haspopup="dialog" aria-label="가이드 다운로드 — 업무 관리 확인 가이드·교육 교재" title="가이드 다운로드">
+                        ${ICON.download}<span class="dy-allmenu-label">가이드 다운로드</span>
+                    </button>
                     <button class="dy-help-btn" id="dy-help-btn" type="button" hidden
                             aria-label="도움말" title="이 화면 사용법">?</button>
                     <div class="dy-ntf-wrap" id="dy-ntf-wrap" style="position:relative;">
@@ -957,6 +962,42 @@
         if (btn) btn.addEventListener('click', openSitemap);
     }
 
+    /* 가이드 다운로드 — 헤더 [가이드 다운로드] 버튼이 연다(모든 해상도·모든 화면).
+       도움말([?])과 따로 둔다: 도움말은 «이 화면» 사용법이고 MAP 에 없는 화면에는
+       버튼 자체가 없지만, 이 자료는 화면과 무관하게 언제든 받을 수 있어야 한다.
+       제목은 PDF 표지 제목과 같게 둔다(열었을 때 누른 그것인지 바로 알아야 한다).
+       파일은 downloads/ 에 있고 저장 이름도 같은 값이다. 쪽수·용량·기준일은 파일을
+       바꿀 때 함께 고친다 — 누르기 전에 무엇이 오는지 알리는 값이다.
+       운영 구현 지시: docs/planning/전달-개발-가이드다운로드-20261016-v1.md */
+    const GUIDES = [
+        { t: '업무 관리 확인 가이드',
+          d: '이행 관리·문서 목록에서 무엇을 어떻게 확인하는지',
+          meta: 'PDF · 5쪽 · 1.7MB · 2026.10.13 기준',
+          file: '담양군_업무관리_확인가이드_2026-10.pdf' },
+        { t: '중대재해 업무단계 길잡이',
+          d: '1차 부서 교육 교재 — 업무단계 94개와 부서별 할 일',
+          meta: 'PDF · 36쪽 · 4.2MB · 인쇄용',
+          file: '담양군_중대재해_업무단계_길잡이_2026-10.pdf' }
+    ];
+    function guidesHtml() {
+        const e = s => (window.DYV2 && window.DYV2.esc) ? window.DYV2.esc(String(s)) : String(s);
+        return '<ul class="dy-guide-files">' + GUIDES.map(g =>
+            `<li><div class="dy-guide-file-txt"><strong>${e(g.t)}</strong><span>${e(g.d)}</span>` +
+            `<span class="dy-guide-file-meta">${e(g.meta)}</span></div>` +
+            `<a class="btn btn-sm btn-outline" href="downloads/${e(encodeURIComponent(g.file))}" download="${e(g.file)}"` +
+            ` aria-label="${e(g.t + ' 다운로드 (' + g.meta + ')')}">다운로드</a></li>`).join('') + '</ul>';
+    }
+    function openGuides() {
+        if (!window.DYV2 || !window.DYV2.openModal) return;
+        window.DYV2.openModal('가이드 다운로드', guidesHtml(),
+            '<button type="button" class="btn btn-outline" onclick="DYV2.closeModal()">닫기</button>',
+            { chrome: true });
+    }
+    function wireGuides() {
+        const btn = document.getElementById('dy-guide-btn');
+        if (btn) btn.addEventListener('click', openGuides);
+    }
+
     function renderSidebar(activeGroup, activePageId) {
         /* SNB 3뎁스 렌더 (§8.5 v1.1)
          *   item.section 값이 바뀌면 섹션 헤더 삽입, 섹션→비섹션 전환 시 구분선.
@@ -1077,6 +1118,7 @@
 
             wireMobileMenu();
             wireAllMenu();
+            wireGuides();
             wireNotification();
             wireRoleSwitcher();
 
@@ -1389,6 +1431,7 @@
         renderFilterRow,
         NAV,
         openSitemap,
+        openGuides,
         /* 알림 내부 핸들러 (인라인 onclick 용) */
         _ntfFilter: ntfSetFilter,
         _ntfReadAll: ntfMarkAllRead,
