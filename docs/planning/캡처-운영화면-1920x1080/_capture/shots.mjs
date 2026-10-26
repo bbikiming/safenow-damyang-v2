@@ -116,10 +116,10 @@ const FORM_FILL = `
   set(2, 'X', '서약서 미제출 — 7월 말까지 보완 요청');`;
 
 export default [
-  { name: 'C01_메인대시보드', pre: as('mayor'), preUrl: B + 'index.html', url: B + 'index.html',
+  { name: 'C01-메인대시보드', pre: as('mayor'), preUrl: B + 'index.html', url: B + 'index.html',
     after: `const g = document.querySelector('.dy-gnb'); if (![...g.children].some(a => a.textContent.trim() === '시스템 관리')) { const a = g.querySelector('.dy-gnb-item:not(.is-active)').cloneNode(true); a.textContent = '시스템 관리'; g.appendChild(a); }` },
-  { name: 'C02_위험성평가_목록', pre: as('staff') + OCC_SEED, preUrl: B + 'rsk-occ.html', url: B + 'rsk-occ.html' },
-  { name: 'C03_위험성평가_평가표', pre: as('staff') + RSK2026_SEED, preUrl: B + 'rsk-list.html', url: B + 'rsk-list.html',
+  { name: 'C02-위험성평가목록', pre: as('staff') + OCC_SEED, preUrl: B + 'rsk-occ.html', url: B + 'rsk-occ.html' },
+  { name: 'C03-위험성평가평가표(상세)', pre: as('staff') + RSK2026_SEED, preUrl: B + 'rsk-list.html', url: B + 'rsk-list.html',
     after: `
       const leaf = t => [...document.querySelectorAll('main *')].find(e => e.childElementCount === 0 && (e.textContent || '').trim().startsWith(t));
       const hideUp = t => { let x = leaf(t); if (!x) return 'miss ' + t; while (x.parentElement && x.parentElement.offsetHeight < 260 && x.parentElement.tagName !== 'MAIN') x = x.parentElement; x.style.display = 'none'; };
@@ -127,14 +127,14 @@ export default [
       let p = [...document.querySelectorAll('main *')].filter(e => (e.textContent || '').includes('내 부서 진행 상황')).pop();
       while (p && p.offsetHeight < 200) p = p.parentElement;
       window.scrollTo(0, p.getBoundingClientRect().top + scrollY - 132);` },
-  { name: 'C04_교육_계획대상자', pre: as('staff'), preUrl: B + 'index.html', url: B + 'edu-reg-detail.html?id=C-M07' },
-  { name: 'C05_교육_이수현황', url: B + 'edu-status.html' },
-  { name: 'C05b_교육_미이수대상', url: B + 'edu-status.html?status=short' },
-  { name: 'C06_도급_사업목록', pre: as('staff') + EDOC_SEED, preUrl: B + 'index.html', url: B + 'menu.html?m=contract' },
-  { name: 'C07_도급_사업별문서', url: B + 'menu.html?m=contract',
+  { name: 'C04-안전보건교육계획·대상자', pre: as('staff'), preUrl: B + 'index.html', url: B + 'edu-reg-detail.html?id=C-M07' },
+  { name: 'C05-안전보건교육이수현황', url: B + 'edu-status.html' },
+  { name: 'C05-안전보건교육이수현황(미이수대상)', url: B + 'edu-status.html?status=short' },
+  { name: 'C06-도급·용역사업목록', pre: as('staff') + EDOC_SEED, preUrl: B + 'index.html', url: B + 'menu.html?m=contract' },
+  { name: 'C07-도급·용역사업별문서목록', url: B + 'menu.html?m=contract',
     after: `const t = document.querySelector('main table'); window.scrollTo(0, t.getBoundingClientRect().top + scrollY - 140);` },
-  { name: 'C08_시설물_목록', pre: FAC_EXT_SEED, preUrl: B + 'fac-list.html', url: B + 'fac-risk.html' },
-  { name: 'C09_시설물_점검이력', url: B + 'fac-list.html', after: FAC_HISTORY },
-  { name: 'C10_업무문서_작성', url: B + 'menu.html?m=contract', after: FORM_FILL },
-  { name: 'C11_업무문서_제출확인', url: B + 'cmp-status.html' }
+  { name: 'C08-시설물목록', pre: FAC_EXT_SEED, preUrl: B + 'fac-list.html', url: B + 'fac-risk.html' },
+  { name: 'C09-시설물점검이력(상세)', url: B + 'fac-list.html', after: FAC_HISTORY },
+  { name: 'C10-업무문서작성화면', url: B + 'menu.html?m=contract', after: FORM_FILL },
+  { name: 'C11-업무문서제출·확인현황', url: B + 'cmp-status.html' }
 ];
