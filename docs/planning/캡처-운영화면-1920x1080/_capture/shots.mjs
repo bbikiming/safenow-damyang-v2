@@ -107,13 +107,13 @@ const FAC_HISTORY = `
   const body = document.querySelector('.modal-body'); body.scrollTop = document.getElementById('cap-insp').offsetTop - 120;`;
 
 const FORM_FILL = `
-  PG.conCheck('M-2'); await new Promise(r => setTimeout(r, 400));
-  document.querySelector('#edoc-pick-owner').value = '재난안전과 · 안전관리 주무관 / 박안전';
-  const rows = document.querySelectorAll('.edoc-chk-row');
-  const set = (i, v, note) => { rows[i].querySelector('[data-v="' + v + '"]').click(); rows[i].querySelector('.edoc-chk-note').value = note; };
-  set(0, 'O', '수급인 안전보건 수준 평가표(2026.06.03) 확인 — 적격');
-  set(1, 'O', '산업안전보건관리비 계상 확인 (도급액의 2.07%)');
-  set(2, 'X', '서약서 미제출 — 7월 말까지 보완 요청');`;
+  DOCUP.open(2026); await new Promise(r => setTimeout(r, 400));
+  DOCUP.addFiles([{ name: '2026년 하반기 도급사업 안전보건 점검 결과 보고.pdf', size: 482113, type: 'application/pdf' },
+                  { name: '붙임1_도급사업 안전보건 점검표(정수장 내진보강 공사).hwpx', size: 96512, type: '' }]);
+  await new Promise(r => setTimeout(r, 300));
+  document.getElementById('du-date').value = '2026-07-14';
+  DOCUP.setDir('internal'); await new Promise(r => setTimeout(r, 200));
+  DOCUP.pickOwner('u_jjt2', '박안전');`;
 
 export default [
   { name: 'C01-메인대시보드', pre: as('mayor'), preUrl: B + 'index.html', url: B + 'index.html',
@@ -135,6 +135,6 @@ export default [
     after: `const t = document.querySelector('main table'); window.scrollTo(0, t.getBoundingClientRect().top + scrollY - 140);` },
   { name: 'C08-시설물목록', pre: FAC_EXT_SEED, preUrl: B + 'fac-list.html', url: B + 'fac-risk.html' },
   { name: 'C09-시설물점검이력(상세)', url: B + 'fac-list.html', after: FAC_HISTORY },
-  { name: 'C10-업무문서작성화면', url: B + 'menu.html?m=contract', after: FORM_FILL },
+  { name: 'C10-업무문서작성화면', pre: as('staff'), preUrl: B + 'index.html', url: B + 'cmp-docs.html', after: FORM_FILL },
   { name: 'C11-업무문서제출·확인현황', url: B + 'cmp-status.html' }
 ];
