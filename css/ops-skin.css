@@ -236,6 +236,18 @@ html[data-skin="ops"] .roc-toolbar + .check-notice > :not(:first-child) { displa
 html[data-skin="ops"] .roc-toolbar + .check-notice > :first-child { display: flex; align-items: center; gap: var(--sp-2); }
 html[data-skin="ops"] .roc-toolbar + .check-notice > :first-child::after { content: "펼쳐 보기 ▾"; margin-left: auto; font-size: var(--fs-12); font-weight: var(--fw-medium); color: var(--ops-primary); }
 
+/* 도급관리 계약 목록: 안내는 회색 본문, 판정 탭은 따로 선 버튼, 검색칸은 줄 오른쪽 끝(운영 화면과 같은 배치) */
+html[data-skin="ops"] .con-notice { background: none; border: 0; padding: 0; font-size: var(--fs-12); line-height: 1.6; color: var(--ops-fg-muted); }
+html[data-skin="ops"] .con-notice b { color: var(--ops-fg); }
+html[data-skin="ops"] .con-tabs { background: none; padding: 0 0 var(--sp-4); border-radius: 0; gap: var(--sp-2); border-bottom: 1px solid var(--ops-border); margin-bottom: var(--sp-4) !important; }
+html[data-skin="ops"] .con-tabs .tab {
+  flex: none; min-height: 32px; padding: 0 12px; border: 1px solid var(--ops-border); border-radius: var(--radius-button);
+  background: var(--surface); color: var(--ops-fg); font-size: var(--fs-12); font-weight: var(--fw-medium); box-shadow: none;
+}
+html[data-skin="ops"] .con-tabs .tab.active { background: var(--ops-primary); border-color: var(--ops-primary); color: var(--surface); }
+html[data-skin="ops"] .card:has(.con-tabs) .table-figma thead th { white-space: nowrap; }
+html[data-skin="ops"] .con-filters #cn-q { order: 99; flex: 0 0 250px !important; min-width: 0 !important; margin-left: auto; }
+
 /* --- 운영 화면에 없는 프로토타입 전용 크롬은 감춘다 --- */
 html[data-skin="ops"] .dy-demo-bar,
 html[data-skin="ops"] .dy-notice,

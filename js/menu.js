@@ -2485,9 +2485,9 @@
             const condN = ['q', 'cat', 'dept', 'legal'].filter(k => S[k]).length + (S.flag ? 1 : 0) + (S.wide ? 1 : 0);
             const tabN = t => t === '전체' ? base.length : base.filter(r => r.judge === t).length;
             const filterBar =
-                '<div class="tabs" role="tablist" style="margin-bottom:10px;">' + ['미판정', '대상', '제외', '전체'].map(t =>
+                '<div class="tabs con-tabs" role="tablist" style="margin-bottom:10px;">' + ['미판정', '대상', '제외', '전체'].map(t =>
                     '<button type="button" role="tab" class="tab' + (S.tab === t ? ' active' : '') + '" aria-selected="' + (S.tab === t) + '" onclick="PG.conTab(\'' + t + '\')">' + t + ' ' + tabN(t).toLocaleString() + '</button>').join('') + '</div>' +
-                '<div style="display:flex; flex-wrap:wrap; gap:var(--sp-2); align-items:center; margin-bottom:10px;">' +
+                '<div class="con-filters" style="display:flex; flex-wrap:wrap; gap:var(--sp-2); align-items:center; margin-bottom:10px;">' +
                     '<input type="search" id="cn-q" class="form-input" style="min-width:220px; flex:1;" placeholder="사업명·업체·관리번호·부서 검색" value="' + esc(S.q) + '" oninput="PG.conQ(this)">' +
                     (catsHere.length > 1 ? '<select class="form-select" style="width:auto;" aria-label="점검 유형" onchange="PG.conSet(\'cat\', this.value)">' + opt('', '점검 유형 전체', S.cat) + catsHere.map(c => opt(c, c, S.cat)).join('') + '</select>' : '') +
                     (deptsHere.length > 1 ? '<select class="form-select" style="width:auto;" aria-label="감독부서" onchange="PG.conSet(\'dept\', this.value)">' + opt('', '감독부서 전체', S.dept) + deptsHere.map(d => opt(d, d, S.dept)).join('') + '</select>' : '') +
@@ -2509,6 +2509,7 @@
                       '</div>'
                     : '');
 
+            const opsSkin = document.documentElement.getAttribute('data-skin') === 'ops';
             const heads = (C.canManage() ? ['선택'] : []).concat(['사업명', '점검 유형', '수급업체', '계약기간', '계약금액', '법정 적용', '판정', '점검 (' + rd.label + ')', '서약서']);
             const table = pageRows.length
                 ? tbl(heads, pageRows.map(r => (C.canManage()
@@ -2530,8 +2531,9 @@
                 [dutyUnknown ? 'warning' : 'success', dutyUnknown.toLocaleString(), '도급인 의무 미확인'],
                 [flagN ? 'danger' : 'success', flagN.toLocaleString(), '자료 확인 필요'],
             ]) +
-            sectionCard('도급·용역·위탁 계약 목록',
-                '<div class="check-notice" style="margin-bottom:10px;">' +
+            /* 운영 화면 스킨(캡처용)에서는 운영과 같은 제목·버튼을 쓴다 — 기본 화면은 그대로다. */
+            sectionCard(opsSkin ? '도급·용역·위탁 사업 목록' : '도급·용역·위탁 계약 목록',
+                '<div class="check-notice con-notice" style="margin-bottom:10px;">' +
                     (ehojoN
                         ? '<b>e호조 계약대장에서 반입한 계약 ' + ehojoN.toLocaleString() + '건</b>(최근 추출 기준일 ' + esc((liveImp && liveImp.extracted) || '-') + ')'
                         : '<b>아직 e호조 계약대장을 반입하지 않았습니다</b>') +
@@ -2539,10 +2541,12 @@
                     '<b>반입은 점검이 아닙니다</b> — 반입한 계약은 «미판정»으로 오르고, 주관부서 담당자가 점검 대상으로 판정한 계약에만 반기 점검표·위험성평가 실시 확인·수급인 평가가 생깁니다. ' +
                     '기본 보기는 이번 회차(' + rd.label + ')와 계약기간이 겹치는 계약입니다. «법정 적용»은 법이 정한 금액 기준(산업안전보건관리비 2천만원·기술지도 1억·안전보건대장 50억 — 공사)을 자동으로 표시한 것이며 제외 근거가 아닙니다. e호조에 없는 계약(민간위탁 협약 등)은 직접 등록해야 목록에 나타납니다.' +
                 '</div>' + filterBar + table,
-                '<div style="display:flex; gap:6px;">' +
-                    (C.canManage() ? '<button class="btn btn-sm btn-primary" onclick="PG.conImport()">e호조 파일 올리기</button>' : '') +
-                    (canAct() ? '<button class="btn btn-sm btn-outline" onclick="PG.conAdd()">+ 사업 직접 등록</button>' : '') +
-                '</div>') +
+                (opsSkin
+                    ? (canAct() ? '<button class="btn btn-sm btn-primary" onclick="PG.conAdd()">＋ 사업 등록</button>' : '')
+                    : '<div style="display:flex; gap:6px;">' +
+                        (C.canManage() ? '<button class="btn btn-sm btn-primary" onclick="PG.conImport()">e호조 파일 올리기</button>' : '') +
+                        (canAct() ? '<button class="btn btn-sm btn-outline" onclick="PG.conAdd()">+ 사업 직접 등록</button>' : '') +
+                      '</div>')) +
             sectionCard('수급인 안전보건 수준 평가',
                 (vendors.length
                     ? tbl(['업체', '대상 사업', '평가 시점', '상태', ''], vendors.map((v, ix) => [
