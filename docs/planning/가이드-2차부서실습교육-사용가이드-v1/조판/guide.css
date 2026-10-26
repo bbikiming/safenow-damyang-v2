@@ -1,0 +1,76 @@
+@page { size: A4; margin: 15mm 15mm 17mm;
+  @bottom-left { content: "부서 담당자 가이드 · 1권 · 초안"; font: 7.5pt 'Pretendard', sans-serif; color: #6B7773; }
+  @bottom-right { content: counter(page); font: 8pt 'Pretendard', sans-serif; color: #6B7773; } }
+@page :first { @bottom-left { content: none; } @bottom-right { content: none; } }
+:root { --forest:#12302A; --teal:#1C7F66; --mint:#E4F1EC; --orange:#B4561A; --soft:#F3F7F5; --ink:#1D2624; --sub:#55625E; --line:#CFDAD6; --dsp:#5B6B8C; --dsp-bg:#E8ECF4; }
+* { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { margin: 0; font-family: 'Pretendard','Apple SD Gothic Neo','Malgun Gothic',sans-serif; color: var(--ink); font-size: 10.5pt; line-height: 1.55; word-break: keep-all; }
+.cover { break-after: page; height: 263mm; background: var(--forest); color: #fff; padding: 28mm 18mm; position: relative; margin: -15mm -15mm 0; height: 297mm; }
+.cv-top { font-size: 12pt; opacity: .85; }
+.cover h1 { font-size: 42pt; line-height: 1.2; margin: 50mm 0 6mm; }
+.cv-sub { font-size: 15pt; color: #CFE8DF; }
+.cv-foot { position: absolute; left: 18mm; right: 18mm; bottom: 24mm; display: flex; justify-content: space-between; font-size: 11pt; opacity: .85; }
+h2.ch { break-before: page; font-size: 22pt; color: var(--forest); margin: 0 0 5mm; padding: 4mm 0 3mm; border-bottom: 1mm solid var(--teal); display: flex; align-items: center; gap: 4mm; }
+.chno { background: var(--teal); color: #fff; font-size: 14pt; min-width: 11mm; height: 11mm; border-radius: 2mm; display: inline-flex; align-items: center; justify-content: center; padding: 0 2mm; }
+h3 { font-size: 13.5pt; color: var(--forest); margin: 7mm 0 3mm; break-after: avoid; }
+p { margin: 0 0 2.5mm; }
+code { font-family: inherit; font-weight: 700; color: var(--forest); background: var(--mint); border-radius: 1mm; padding: 0 1mm; }
+table { width: 100%; border-collapse: collapse; margin: 1mm 0 4mm; font-size: 9.5pt; break-inside: avoid; }
+th { background: var(--forest); color: #fff; text-align: left; padding: 1.6mm 2mm; font-weight: 600; }
+td { border-bottom: .25mm solid var(--line); padding: 1.6mm 2mm; vertical-align: top; }
+ul { margin: 0 0 3mm; padding-left: 5mm; } li { margin-bottom: 1mm; }
+.quote { background: var(--soft); border-left: 1mm solid var(--line); padding: 2mm 3mm; font-size: 9.5pt; color: var(--sub); }
+.box { border-radius: 2.5mm; padding: 2.5mm 3.5mm; margin: 0 0 3mm; break-inside: avoid; }
+.infobox { background: var(--soft); } .infobox b { color: var(--forest); }
+.okbox { background: var(--mint); border-left: 1.2mm solid var(--teal); } .okbox b { color: var(--teal); }
+.warnbox { background: #FBF1EA; border-left: 1.2mm solid var(--orange); } .warnbox b { color: var(--orange); }
+.tag { display: inline-block; font-size: 8pt; font-weight: 700; border-radius: 1.2mm; padding: .2mm 1.6mm; margin: 0 .8mm; }
+.tag.dept { background: var(--teal); color: #fff; } .tag.dsp { background: var(--dsp-bg); color: var(--dsp); } .tag.sys { background: #EEE; color: #555; }
+/* 단계 카드 */
+.step { border: .35mm solid var(--line); border-radius: 3mm; margin: 0 0 4mm; break-inside: avoid; overflow: hidden; }
+.sh { display: flex; align-items: center; gap: 3mm; background: var(--soft); padding: 2.2mm 3.5mm; }
+.sn { background: var(--orange); color: #fff; font-weight: 800; width: 7.5mm; height: 7.5mm; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 11pt; flex: none; }
+.st { font-weight: 700; font-size: 11.5pt; }
+.sb { padding: 3mm 3.5mm 2mm; }
+.figs { display: flex; gap: 3mm; align-items: flex-start; margin-bottom: 2mm; flex-wrap: wrap; }
+.figs figure { margin: 0; }
+.figs img { display: block; width: 100%; border: .3mm solid var(--line); border-radius: 1.5mm; }
+figure.full { width: 48mm; } figure.full img { border-color: #E06666; }
+figure.zoom { flex: 1 1 100mm; max-width: 172mm; }
+figure.zoom.tall { flex: 0 1 78mm; }
+.figs figure + figure.zoom { flex-basis: 70mm; }
+figcaption { font-size: 7.5pt; color: var(--sub); margin-top: .8mm; }
+.ex { border: .25mm solid var(--line); border-radius: 1mm; padding: 0 1.2mm; }
+.figcap { font-size: 8.5pt; color: var(--sub); margin: -1mm 0 2mm; }
+.ph { width: 100%; height: 26mm; border: .4mm dashed #C9A400; background: #FFF9DB; color: #6B5300; display: flex; align-items: center; justify-content: center; font-size: 9pt; border-radius: 2mm; }
+.row { display: grid; grid-template-columns: 22mm 1fr; gap: 2mm; padding: 1.2mm 0; border-top: .2mm dashed var(--line); font-size: 10pt; }
+.row .lb { font-weight: 700; color: var(--sub); font-size: 9pt; }
+.row.act .lb { color: var(--forest); } .row.ok .lb { color: var(--teal); } .row.ok span:last-child { color: var(--teal); font-weight: 600; }
+.row.ng .lb { color: var(--orange); } .row.note .lb { color: var(--dsp); }
+.sub { padding: .4mm 0 .4mm 24mm; font-size: 9.5pt; }
+.edit, li.edit { background: #FFF4C2; border: .3mm dashed #C9A400; color: #5B4600; border-radius: 1.5mm; padding: 1.5mm 2.5mm; margin: 1.5mm 0; font-size: 8.5pt; list-style: none; }
+.edit::before { content: "편집 메모 · 인쇄본에서 뺌 — "; font-weight: 700; }
+/* 2차 조정 */
+.cover { margin: 0; height: 297mm; break-after: page; }
+@page :first { margin: 0; }
+.lay.side { display: grid; grid-template-columns: 84mm 1fr; gap: 4mm; align-items: start; }
+.lay.stack .figs figure.zoom { max-width: 150mm; }
+.lay.side .figs { flex-direction: column; }
+.lay.side figure.zoom, .lay.side figure.zoom.tall { width: 100%; flex: none; max-width: none; }
+.lay.side figure.full { width: 40mm; }
+.lay.side .row { grid-template-columns: 19mm 1fr; }
+.lay .tcol .row:first-child { border-top: none; }
+figure.zoom img { max-height: 120mm; width: auto; max-width: 100%; }
+.lay.side { grid-template-columns: 78mm 1fr; }
+.lay.side figure.zoom img { max-height: 105mm; }
+.lay.stack figure.zoom img { max-height: 70mm; }
+.lay.side .figs { gap: 2mm; }
+
+.row { grid-template-columns: 27mm 1fr; } .lay.side .row { grid-template-columns: 25mm 1fr; } .sub { padding-left: 29mm; }
+h3 + p { margin-left: 0; }
+.chno:empty { display: none; }
+h2.part { break-before: page; font-size: 15pt; color: #fff; background: var(--forest); border-radius: 3mm; padding: 5mm 6mm; margin: 0 0 3mm; display: flex; align-items: center; gap: 4mm; }
+.partno { background: var(--teal); border-radius: 2mm; padding: 1mm 3mm; font-size: 12pt; }
+h2.part + p { color: var(--sub); margin-bottom: 5mm; }
+h2.ch.nb { break-before: avoid; margin-top: 4mm; }
+.tb { background: var(--dsp-bg); color: var(--forest); border: .3mm solid var(--teal); border-radius: 1.5mm; font-weight: 800; font-size: 10pt; padding: 0 1.6mm; }
