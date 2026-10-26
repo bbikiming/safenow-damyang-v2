@@ -1,0 +1,244 @@
+/* =========================================================================
+   운영 화면 스킨 — html[data-skin="ops"] 일 때만 적용 (기본 화면 무영향)
+   -------------------------------------------------------------------------
+   용도: 소개 자료·캡처용으로 프로토타입을 운영 서버(safety.damyang.go.kr)의
+         실제 디자인과 같게 보이게 한다. 켜기 ?skin=ops · 끄기 ?skin=off
+         (js/layout.js 가 localStorage('dy-skin') 에 기억하고 이 파일을 붙인다).
+   값의 출처: 운영 화면 computed style 실측(2026-10-26, assets/index-Dzd-RQfo.css).
+   원시값은 이 파일 :root 블록의 --ops-* 토큰에만 두고 아래 규칙은 토큰만 쓴다.
+   ========================================================================= */
+
+html[data-skin="ops"] {
+  /* 운영 팔레트 (HSL 토큰을 RGB 로 환산) */
+  --ops-primary: #2C906F;        /* --green-600 */
+  --ops-primary-hover: #1B7964;  /* --green-700 */
+  --ops-brand-dark: #247A5D;     /* --green-900 · 헤더·제목 */
+  --ops-brand-light: #E5F5F1;    /* --green-100 */
+  --ops-success-border: #78B5A4; /* --green-300 */
+  --ops-user-pill: #358D7B;
+  --ops-bg: #F2F3F2;             /* --color-grey-50 · 사이드바·바닥 */
+  --ops-muted: #EDEDED;          /* --color-grey-200 · 표 머리 */
+  --ops-border: #E3E3E3;         /* --color-grey-300 */
+  --ops-fg: #333333;             /* --color-grey-900 */
+  --ops-fg-muted: #787878;       /* --color-grey-700 */
+  --ops-grey-500: #B8B8B8;
+  --ops-info: #0091DB;   --ops-info-bg: #E0F4FF;   --ops-info-border: #9DC0E3;
+  --ops-warn: #E78B55;   --ops-warn-bg: #FFF9F0;   --ops-warn-border: #F9C6A9;
+  --ops-err: #D85A5A;    --ops-err-bg: #FDEEEE;    --ops-err-border: #E6A3A3;
+  --ops-purple: #8F3FCB; --ops-purple-bg: #F7EEFC; --ops-purple-border: #D6B4EC;
+  --ops-white-10: rgba(255, 255, 255, 0.1);
+  --ops-white-20: rgba(255, 255, 255, 0.2);
+  --ops-white-75: rgba(255, 255, 255, 0.75);
+  --ops-scrim: rgba(51, 51, 51, 0.5);
+
+  /* 프로토타입 토큰을 운영 값으로 다시 가리킨다 — 대부분의 화면은 이것만으로 따라온다 */
+  --main: var(--ops-primary);
+  --brand-600: var(--ops-primary);
+  --main-dark: var(--ops-brand-dark);
+  --brand-700: var(--ops-brand-dark);
+  --main-dark2: var(--ops-brand-dark);
+  --brand-900: var(--ops-brand-dark);
+  --brand-100: var(--ops-brand-light);
+  --brand-50: var(--ops-brand-light);
+  --user-pill-bg: var(--ops-user-pill);
+  --text-black: var(--ops-fg);
+  --gray-900: var(--ops-fg);
+  --text-gray: var(--ops-fg-muted);
+  --gray-700: var(--ops-fg-muted);
+  --card-line: var(--ops-border);
+  --gray-300: var(--ops-border);
+  --gray-200: var(--ops-muted);
+  --gray-100: var(--ops-muted);
+  --page-bg: var(--ops-bg);
+  --gray-50: var(--ops-bg);
+  --status-success-bg: var(--ops-brand-light);
+  --status-success-border: var(--ops-success-border);
+  --status-success-fg: var(--ops-primary);
+  --status-info-bg: var(--ops-info-bg);
+  --status-info-border: var(--ops-info-border);
+  --status-info-fg: var(--ops-info);
+  --status-warning-bg: var(--ops-warn-bg);
+  --status-warning-border: var(--ops-warn-border);
+  --status-warning-fg: var(--ops-warn);
+  --status-danger-bg: var(--ops-err-bg);
+  --status-danger-border: var(--ops-err-border);
+  --status-danger-fg: var(--ops-err);
+  --status-neutral-bg: var(--ops-muted);
+  --status-neutral-border: var(--ops-grey-500);
+  --status-neutral-fg: var(--ops-fg-muted);
+  --status-purple-bg: var(--ops-purple-bg);
+  --status-purple-border: var(--ops-purple-border);
+  --status-purple-fg: var(--ops-purple);
+  --dy-header-h: 64px;
+  --dy-gnb-h: 52px;
+  --dy-sidebar-w: 282px;
+}
+html[data-skin="ops"] body { font-family: Pretendard, "Pretendard Variable", "Public Sans", system-ui, sans-serif; color: var(--ops-fg); }
+
+/* --- 헤더 --- */
+html[data-skin="ops"] .dy-header { height: 64px; background: var(--ops-brand-dark); padding: 0 var(--sp-8); }
+html[data-skin="ops"] .dy-brand { gap: var(--sp-2-5); }
+html[data-skin="ops"] .dy-brand-icon { width: 28px; height: 28px; }
+html[data-skin="ops"] .dy-brand-name { font-size: 24px; line-height: 32px; gap: var(--sp-1-5); letter-spacing: -0.3px; }
+html[data-skin="ops"] .dy-brand-name strong { font-weight: var(--fw-bold); }
+html[data-skin="ops"] .dy-brand-name span { font-weight: var(--fw-medium); }
+html[data-skin="ops"] .dy-header-actions { gap: var(--sp-2) !important; }
+html[data-skin="ops"] .dy-allmenu-btn {
+  height: 32px; padding: 6px 8px; gap: var(--sp-1-5); border: 0; border-radius: 12px;
+  background: var(--surface); color: var(--ops-primary); font-size: var(--fs-14); font-weight: var(--fw-medium);
+}
+html[data-skin="ops"] .dy-help-btn {
+  width: 30px; height: 30px; border: 1.5px solid var(--ops-white-75); border-radius: var(--radius-full);
+  background: transparent; color: var(--ops-white-75); font-size: var(--fs-13); font-weight: var(--fw-bold);
+}
+html[data-skin="ops"] .dy-ntf-btn {
+  width: 36px; height: 36px; border-radius: 12px;
+  background: var(--ops-white-10); border: 1px solid var(--ops-white-20);
+}
+html[data-skin="ops"] .dy-user-pill { padding: 8px 12px 8px 8px; border-radius: 12px; background: var(--ops-user-pill); min-height: 49px; }
+html[data-skin="ops"] .dy-user-avatar { width: 32px; height: 32px; background: var(--ops-white-20); font-size: var(--fs-13); }
+html[data-skin="ops"] .dy-user-name { font-size: var(--fs-14); font-weight: var(--fw-medium); letter-spacing: 0; }
+html[data-skin="ops"] .dy-user-tier {
+  background: none !important; border: 0 !important; padding: 0 !important; margin-left: var(--sp-1);
+  color: var(--surface) !important; opacity: .75; font-size: var(--fs-12); font-weight: var(--fw-medium);
+}
+html[data-skin="ops"] .dy-user-tier::before { content: "("; }
+html[data-skin="ops"] .dy-user-tier::after { content: ")"; }
+html[data-skin="ops"] .dy-user-org { font-size: var(--fs-12); font-weight: var(--fw-medium); color: var(--surface); opacity: .75; letter-spacing: 0; }
+
+/* --- GNB --- */
+html[data-skin="ops"] .dy-gnb { height: 52px; background: var(--ops-primary); gap: 0; }
+html[data-skin="ops"] .dy-gnb-item { padding: 8px 16px; font-size: var(--fs-14); line-height: 20px; letter-spacing: 0; }
+html[data-skin="ops"] .dy-gnb-item:hover { background: var(--ops-white-10); }
+html[data-skin="ops"] .dy-gnb-item.is-active,
+html[data-skin="ops"] .dy-gnb-item.is-active:hover { background: var(--surface); color: var(--ops-primary); font-weight: var(--fw-bold); }
+
+/* --- 사이드바 --- */
+html[data-skin="ops"] .dy-sidebar { background: var(--ops-bg); padding: var(--sp-7) 0; }
+html[data-skin="ops"] .dy-sidebar-inner { width: calc(100% - 72px); gap: var(--sp-6); }
+html[data-skin="ops"] .dy-sidebar-title { font-size: var(--fs-16); line-height: 24px; color: var(--ops-primary); letter-spacing: 0; }
+html[data-skin="ops"] .dy-sidebar-nav { gap: var(--sp-1); }
+html[data-skin="ops"] .dy-sidebar-item {
+  min-height: 40px; padding: 10px 12px; gap: var(--sp-2); border-radius: var(--radius-button);
+  font-size: var(--fs-14); font-weight: var(--fw-regular); line-height: 20px; letter-spacing: 0; color: var(--ops-fg);
+}
+html[data-skin="ops"] .dy-sidebar-item:hover { background: var(--ops-brand-light); color: var(--ops-primary); }
+html[data-skin="ops"] .dy-sidebar-item.is-active,
+html[data-skin="ops"] .dy-sidebar-item.is-active:hover { background: var(--ops-primary); color: var(--surface); font-weight: var(--fw-bold); }
+html[data-skin="ops"] .dy-sidebar-item-icon { width: 18px; height: 18px; }
+html[data-skin="ops"] .dy-sidebar-item.is-nested { padding-left: 12px; font-size: var(--fs-14); }
+html[data-skin="ops"] .dy-sidebar-item.is-nested .dy-sidebar-item-icon { width: 18px; height: 18px; opacity: 1; }
+html[data-skin="ops"] .dy-sidebar-section { padding: 0 12px; margin: var(--sp-4) 0 var(--sp-2); font-size: var(--fs-12); line-height: 16px; letter-spacing: 0; color: var(--ops-fg-muted); }
+html[data-skin="ops"] .dy-sidebar-nav > .dy-sidebar-section:first-child { margin-top: 0; }
+html[data-skin="ops"] .dy-sidebar-sep { display: none; }
+
+/* --- 본문 · 페이지 머리 --- */
+html[data-skin="ops"] .dy-main { padding: var(--sp-7) var(--sp-8); }
+html[data-skin="ops"] .dy-main > * + * { margin-top: var(--sp-6); }
+html[data-skin="ops"] .dy-page-title { gap: var(--sp-2); margin-bottom: var(--sp-1); margin-top: 0; }
+html[data-skin="ops"] .dy-page-title h1 { font-size: 24px; line-height: 32px; letter-spacing: 0; color: var(--ops-brand-dark); }
+html[data-skin="ops"] .dy-page-title .dy-page-dot { width: 12px; height: 12px; background: var(--ops-primary); }
+html[data-skin="ops"] .dy-main > .dy-page-subtitle,
+html[data-skin="ops"] .dy-main > .dy-page-title + * { margin-top: 0; }
+html[data-skin="ops"] .dy-crumb {
+  display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-1);
+  font-size: var(--fs-14); line-height: 20px; color: var(--ops-fg-muted); margin: 0;
+}
+html[data-skin="ops"] .dy-crumb svg { width: 14px; height: 14px; }
+html[data-skin="ops"] .dy-crumb b { font-weight: var(--fw-medium); color: var(--ops-fg); }
+
+/* --- 법령 근거 칩 --- */
+html[data-skin="ops"] .law-basis-row { gap: var(--sp-2); margin: var(--sp-2) 0 0; }
+html[data-skin="ops"] .law-basis-lead { font-size: var(--fs-12); font-weight: var(--fw-semibold); color: var(--ops-brand-dark); margin-right: 0; }
+html[data-skin="ops"] .law-basis-chip {
+  min-height: 32px; padding: 0 12px; border: 0; border-radius: var(--radius-full);
+  background: var(--ops-brand-light); color: var(--ops-primary-hover);
+  font-size: var(--fs-12); font-weight: var(--fw-medium); line-height: 16px;
+}
+html[data-skin="ops"] .law-basis-i { display: none; }
+
+/* --- 카드 · 표 · 입력 · 버튼 · 배지 · 탭 --- */
+html[data-skin="ops"] .card { border-radius: var(--radius-card); border-color: var(--ops-border); }
+html[data-skin="ops"] .card-title { color: var(--ops-brand-dark); font-size: var(--fs-16); letter-spacing: 0; }
+html[data-skin="ops"] .table-figma thead th { background: var(--ops-muted); color: var(--ops-fg-muted); font-size: var(--fs-14); font-weight: var(--fw-semibold); padding: 12px 16px; }
+html[data-skin="ops"] .table-figma tbody td { padding: 12px 16px; font-size: var(--fs-14); }
+html[data-skin="ops"] .table-figma tbody tr:hover { background: var(--ops-brand-light); }
+html[data-skin="ops"] input.form-input,
+html[data-skin="ops"] select.form-select { height: 36px; }
+html[data-skin="ops"] .form-input,
+html[data-skin="ops"] .form-select { padding-top: 4px; padding-bottom: 4px; padding-left: 12px; font-size: var(--fs-14); border-color: var(--ops-border); }
+html[data-skin="ops"] .btn {
+  min-height: 32px; padding: 0 12px; gap: var(--sp-1-5);
+  font-size: var(--fs-12); font-weight: var(--fw-medium); border-radius: var(--radius-button);
+}
+html[data-skin="ops"] .btn-primary { background-color: var(--ops-primary); }
+html[data-skin="ops"] .btn-primary:hover { background-color: var(--ops-primary-hover); }
+html[data-skin="ops"] .btn-outline,
+html[data-skin="ops"] .btn-secondary { background-color: transparent; border-color: var(--ops-border); color: var(--ops-fg); }
+html[data-skin="ops"] .btn-mini { min-height: 32px; padding: 0 12px; font-size: var(--fs-12); font-weight: var(--fw-medium); border-radius: var(--radius-button); border-color: var(--ops-border); }
+html[data-skin="ops"] .chip-status {
+  padding: 2px 8px; border-radius: var(--radius-full); font-size: var(--fs-12); font-weight: var(--fw-bold);
+  line-height: 16px; letter-spacing: 0;
+}
+html[data-skin="ops"] .chip-status.neutral { background: var(--ops-muted); border-color: var(--ops-grey-500); color: var(--ops-fg-muted); }
+html[data-skin="ops"] .sub-tabs { gap: var(--sp-1); border-bottom-color: var(--ops-border); }
+html[data-skin="ops"] .sub-tab { padding: 10px 16px; font-size: var(--fs-14); font-weight: var(--fw-medium); color: var(--ops-fg-muted); }
+html[data-skin="ops"] .sub-tab.active,
+html[data-skin="ops"] .sub-tab.is-active { color: var(--ops-primary); font-weight: var(--fw-bold); border-bottom-color: var(--ops-primary); }
+
+/* --- 숫자 카드: 운영은 흰 카드 · 가운데 정렬 · 라벨 위 / 숫자 아래 --- */
+html[data-skin="ops"] .statbox {
+  flex-direction: column-reverse; gap: var(--sp-1); min-height: 106px; padding: var(--sp-6);
+  border: 1px solid var(--ops-border); border-radius: var(--radius-card); background: var(--surface); color: var(--ops-fg);
+}
+html[data-skin="ops"] .statbox-label { font-size: var(--fs-12); font-weight: var(--fw-regular); color: var(--ops-fg-muted); letter-spacing: 0; }
+html[data-skin="ops"] .statbox-num { font-size: 30px; line-height: 36px; font-weight: var(--fw-bold); letter-spacing: 0; }
+html[data-skin="ops"] .statbox.success,
+html[data-skin="ops"] .statbox.info,
+html[data-skin="ops"] .statbox.warning,
+html[data-skin="ops"] .statbox.danger,
+html[data-skin="ops"] .statbox.neutral { background: var(--surface); border-color: var(--ops-border); }
+html[data-skin="ops"] .statbox.success .statbox-num { color: var(--ops-primary); }
+html[data-skin="ops"] .statbox.info .statbox-num { color: var(--ops-info); }
+html[data-skin="ops"] .statbox.warning .statbox-num { color: var(--ops-warn); }
+html[data-skin="ops"] .statbox.danger .statbox-num { color: var(--ops-err); }
+html[data-skin="ops"] .statbox.neutral .statbox-num { color: var(--ops-fg); }
+
+/* --- 모달 — 운영은 반경 20 · 흐린 회색 스크림 · 하단 버튼 36px --- */
+html[data-skin="ops"] .modal-backdrop { background-color: var(--ops-scrim); backdrop-filter: blur(4px); }
+html[data-skin="ops"] .modal-content { border-radius: var(--radius-card); border: 1px solid var(--ops-border); box-shadow: var(--shadow-lg); }
+html[data-skin="ops"] .modal-header { padding: var(--sp-6) var(--sp-6) var(--sp-4); border-bottom-color: var(--ops-border); }
+html[data-skin="ops"] .modal-title { font-size: var(--fs-18); font-weight: var(--fw-semibold); color: var(--ops-fg); }
+html[data-skin="ops"] .modal-footer { border-top-color: var(--ops-border); gap: var(--sp-2); }
+html[data-skin="ops"] .modal-footer .btn { min-height: 36px; padding: 0 16px; font-size: var(--fs-14); }
+html[data-skin="ops"] .modal:has(.fac-grid) .modal-content { max-width: 1024px; }
+
+/* --- 요약 카드(kpi-card) — 운영: 반경 8 · 라벨 14 회색 · 값 24/600 기본색 --- */
+html[data-skin="ops"] .kpi-card { border-radius: var(--radius-button); border-color: var(--ops-border); }
+html[data-skin="ops"] .kpi-card-title { font-size: var(--fs-14); font-weight: var(--fw-regular); color: var(--ops-fg-muted); }
+html[data-skin="ops"] .kpi-card-value { color: var(--ops-fg); font-weight: var(--fw-semibold); }
+html[data-skin="ops"] .kpi-card-foot { font-size: var(--fs-12); color: var(--ops-fg-muted); }
+
+/* --- 입력칸: 프로토타입의 .select 별칭이 텍스트·날짜 입력에도 펼침 화살표를 그리던 것을 걷는다.
+       검색칸은 운영처럼 왼쪽 돋보기를 단다. --- */
+html[data-skin="ops"] input.select,
+html[data-skin="ops"] input.form-select { background-image: none; padding-right: 12px; height: 36px; }
+html[data-skin="ops"] input[placeholder*="검색"],
+html[data-skin="ops"] input[placeholder*="찾기"] {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23787878' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: 10px center; background-size: 16px; padding-left: 32px;
+}
+
+/* --- 화면별 보정 --- */
+/* 수시 위험성평가: 필터 두 칸을 한 줄로, 실시 사유 안내는 운영처럼 접힌 한 줄로 */
+html[data-skin="ops"] .roc-tb-left .form-select { width: auto; min-width: 140px; }
+html[data-skin="ops"] .roc-toolbar + .check-notice > :not(:first-child) { display: none; }
+html[data-skin="ops"] .roc-toolbar + .check-notice > :first-child { display: flex; align-items: center; gap: var(--sp-2); }
+html[data-skin="ops"] .roc-toolbar + .check-notice > :first-child::after { content: "펼쳐 보기 ▾"; margin-left: auto; font-size: var(--fs-12); font-weight: var(--fw-medium); color: var(--ops-primary); }
+
+/* --- 운영 화면에 없는 프로토타입 전용 크롬은 감춘다 --- */
+html[data-skin="ops"] .dy-demo-bar,
+html[data-skin="ops"] .dy-notice,
+html[data-skin="ops"] .dy-main > .check-notice,
+html[data-skin="ops"] #dy-help-banner,
+html[data-skin="ops"] #dy-screendef-fab { display: none !important; }

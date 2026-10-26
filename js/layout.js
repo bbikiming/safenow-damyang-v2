@@ -11,6 +11,27 @@
 (function () {
     'use strict';
 
+    /* --- 운영 화면 스킨 (css/ops-skin.css) — 소개 자료·캡처용 ---
+     * 켜기 ?skin=ops · 끄기 ?skin=off. 켜면 이 브라우저에서 계속 유지된다.
+     * 기본 화면은 건드리지 않는다 — 스킨이 꺼져 있으면 아래 분기는 전부 무동작이다. */
+    const OPS_SKIN = (function () {
+        let on = false;
+        try {
+            const q = new URLSearchParams(location.search).get('skin');
+            if (q === 'ops') localStorage.setItem('dy-skin', 'ops');
+            if (q === 'off') localStorage.removeItem('dy-skin');
+            on = localStorage.getItem('dy-skin') === 'ops';
+        } catch (e) {}
+        if (on) {
+            document.documentElement.setAttribute('data-skin', 'ops');
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = 'css/ops-skin.css';
+            document.head.appendChild(link);
+        }
+        return on;
+    })();
+
 
     /* --- 아이콘 (Lucide 스타일, stroke 1.75) --- */
     const ICON = {
@@ -739,7 +760,7 @@
                 <div style="display:flex;align-items:center;">
                     <button class="dy-mobile-menu" id="dy-mobile-menu-btn" aria-label="메뉴">${ICON.menu}</button>
                     <a class="dy-brand" href="index.html">
-                        <span class="dy-brand-icon">${ICON.pocket}</span>
+                        <span class="dy-brand-icon">${OPS_SKIN ? ICON.shield : ICON.pocket}</span>
                         <span class="dy-brand-name"><strong>담양군</strong><span>중대재해예방 시스템</span></span>
                     </a>
                 </div>
@@ -1034,7 +1055,7 @@
                 ? ` aria-label="${curSection} ${it.label}"` : '';
             const cur = isActive ? ' aria-current="page"' : '';
             return `${prefix}<a class="dy-sidebar-item ${isActive ? 'is-active' : ''} ${it.external ? 'is-external' : ''} ${nestedCls}" href="${href}"${aria}${cur} ${onclick}>
-                <span class="dy-sidebar-item-icon">${ICON[it.icon] || ICON.dot}</span>
+                <span class="dy-sidebar-item-icon">${(OPS_SKIN && OPS_ICON[it.id]) || ICON[it.icon] || ICON.dot}</span>
                 <span>${it.label}</span>
                 ${externalIcon}
             </a>`;
@@ -1097,6 +1118,7 @@
                 // 화면별 법령 근거 칩 주입 (DYLAW / js/law-map.js) — 매핑 없으면 무동작
                 // id 는 DYLAW 가 직접 해석한다 (menu.html 의 ?m=·?sub= 까지 반영)
                 if (window.DYLAW) window.DYLAW.inject(main);
+                if (OPS_SKIN) opsHead(main);
 
 
                 // [data-pagination] 마커 자동 렌더
@@ -1222,6 +1244,64 @@
         }
 
         mainEl.insertBefore(frag, mainEl.firstChild);
+    }
+
+    /* 운영 스킨 — 운영 화면이 쓰는 사이드바 아이콘(lucide)이 프로토타입과 다른 항목만 바꿔 낀다. */
+    const OPS_SVG = d => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>';
+    const OPS_BOOK = OPS_SVG('<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>');
+    const OPS_USERPLUS = OPS_SVG('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>');
+    const OPS_FILEPLUS = OPS_SVG('<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>');
+    const OPS_CLIPBOARD = OPS_SVG('<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>');
+    const OPS_ICON = {
+        'edu-reg': OPS_BOOK, 'edu-sup': OPS_BOOK,
+        'edu-hire': OPS_USERPLUS, 'edu-sup-hire': OPS_USERPLUS,
+        'edu-etc': OPS_FILEPLUS, 'edu-sup-etc': OPS_FILEPLUS,
+        'rsk-list': OPS_CLIPBOARD
+    };
+
+    /* 운영 스킨 — 부제 대신 «대메뉴 › 섹션 › 화면» 경로를 낸다(운영 화면과 같은 자리·같은 모양). */
+    const stripQualifier = t => String(t || '').replace(/\s*\([^)]*\)\s*$/, '');
+    function opsCrumb(title) {
+        const nav = document.createElement('nav');
+        nav.className = 'dy-crumb';
+        nav.setAttribute('aria-label', '현재 위치');
+        const pageId = document.body.getAttribute('data-dy-page') || 'index';
+        const g = findGroup(pageId);
+        const it = g.items.find(x => x.id === pageId);
+        const parts = [g.label];
+        if (it && it.section) parts.push(it.section);
+        parts.push(stripQualifier((it && it.label) || title));
+        if (parts[0] === parts[1]) parts.shift();
+        const sep = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
+        nav.innerHTML = parts.map((p, i) => i === parts.length - 1 ? '<b>' + p + '</b>' : '<span>' + p + '</span>').join(sep);
+        return nav;
+    }
+
+    /* 운영 스킨 — 근거 칩 표기를 운영과 같은 «제N조 제N호»로 바꾼다(표시만, 키·데이터 무변경). */
+    /* 운영 스킨 — 페이지 머리를 운영 순서(제목 → 경로 → 근거)로 맞춘다.
+       화면이 직접 쓴 제목·부제(menu.html 등)도 같은 모양이 되도록 마운트 뒤에 한 번 정리한다. */
+    function opsHead(root) {
+        const t = root.querySelector(':scope > .dy-page-title');
+        if (!t) return;
+        const h1 = t.querySelector('h1');
+        if (h1) h1.textContent = stripQualifier(h1.textContent);
+        root.querySelectorAll(':scope > .dy-page-subtitle').forEach(el => el.remove());
+        const crumb = root.querySelector(':scope > .dy-crumb') || opsCrumb(h1 ? h1.textContent : '');
+        t.after(crumb);
+        const row = root.querySelector(':scope > .law-basis-row');
+        if (row) crumb.after(row);
+        opsLawLabels(root);
+    }
+    function opsLawLabels(root) {
+        root.querySelectorAll('.law-basis-chip').forEach(function (b) {
+            const walker = document.createTreeWalker(b, NodeFilter.SHOW_TEXT);
+            let n;
+            while ((n = walker.nextNode())) {
+                n.nodeValue = n.nodeValue
+                    .replace(/§\s*(\d+)(의\d+)?/g, '제$1조$2')
+                    .replace(/(제\d+조(?:의\d+)?)\s+(\d+)호/g, '$1 제$2호');
+            }
+        });
     }
 
     /* ※ 3자 책임 라인 푸터(컨설팅 안전일터관리원 · 구축 ㈜다온플레이스 · 발주 담양군청)는
