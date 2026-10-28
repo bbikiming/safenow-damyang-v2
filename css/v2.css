@@ -4415,6 +4415,36 @@ p > .dx-note-gap { display: inline; }
 .cmp-pdf { text-align: left; padding: 18px; border: 1px dashed var(--card-line); border-radius: var(--radius-button); background: var(--surface); }
 .cmp-pdf b { display: block; color: var(--text-black); font-size: var(--fs-13); margin-bottom: 8px; }
 .cmp-pdf p { margin: 0; font-size: var(--fs-12); color: var(--text-gray); line-height: 1.7; }
+
+/* 문서 상세 — 온나라 원본 문서 · 첨부 파일 (SCR-CMP-002 §4-4 · P17~P23, 2026-10-28)
+   세 상태(연결 전 / 이어짐·내 부서 / 이어짐·다른 부서)를 같은 자리에 그린다. */
+.cmp-onn-box { margin-top: var(--sp-3); padding: var(--sp-4); border: 1px dashed var(--card-line); border-radius: var(--radius-button); background: var(--surface); font-size: var(--fs-13); color: var(--text-black); line-height: 1.65; }
+.cmp-onn-box > b { display: block; margin-bottom: var(--sp-2); }
+.cmp-onn-box p { margin: var(--sp-2) 0 var(--sp-3); font-size: var(--fs-12); color: var(--text-gray); line-height: 1.7; }
+.cmp-onn-box p:last-child { margin-bottom: 0; }
+.cmp-onn-card { margin-top: var(--sp-3); padding: var(--sp-4); border: 1px solid var(--card-line); border-radius: var(--radius-card); background: var(--surface); font-size: var(--fs-13); color: var(--text-black); line-height: 1.65; }
+.cmp-onn-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin: 0; font-size: var(--fs-12); color: var(--text-gray); }
+.cmp-onn-no { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); margin: var(--sp-3) 0 0; }
+.cmp-onn-h { margin: var(--sp-4) 0 var(--sp-2); font-size: var(--fs-13); font-weight: var(--fw-bold); color: var(--text-black); }
+.cmp-onn-p { margin: 0; }
+.cmp-onn-list { list-style: none; margin: var(--sp-2) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+.cmp-onn-list li { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-1) var(--sp-2); font-size: var(--fs-13); }
+.cmp-onn-list li > .cmp-dim:last-child { margin-left: auto; font-size: var(--fs-12); }
+.cmp-onn-fname { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1 1 120px; }
+.cmp-onn-act { display: inline-block; min-width: 36px; font-size: var(--fs-12); font-weight: var(--fw-bold); color: var(--main); }
+.cmp-onn-empty { margin: var(--sp-2) 0 0; font-size: var(--fs-12); }
+.cmp-onn-acts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-top: var(--sp-3); }
+.cmp-onn-foot { margin-bottom: 0; }
+.cmp-onn-tabs { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-3); }
+.cmp-onn-tab { min-height: var(--ctl-sm); padding: 0 var(--sp-3); border: 1px solid var(--card-line); border-radius: var(--radius-pill); background: var(--surface); font-size: var(--fs-12); color: var(--text-gray); cursor: pointer; }
+.cmp-onn-tab.is-on { border-color: var(--main); color: var(--main); font-weight: var(--fw-bold); }
+.cmp-onn-tab:focus-visible, .cmp-onn-cand:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; }
+.cmp-onn-cands { list-style: none; margin: var(--sp-3) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+.cmp-onn-cand { display: flex; flex-direction: column; gap: var(--sp-1); width: 100%; min-height: 44px; padding: var(--sp-3) var(--sp-4); border: 1px solid var(--card-line); border-radius: var(--radius-button); background: var(--surface); text-align: left; font-size: var(--fs-13); color: var(--text-black); cursor: pointer; }
+.cmp-onn-cand:hover { border-color: var(--main); }
+.cmp-onn-cand .cmp-dim { font-size: var(--fs-12); }
+.cmp-onn-warn { padding: var(--sp-3) var(--sp-4); border: 1px solid var(--status-warning-border); border-radius: var(--radius-button); background: var(--status-warning-bg); color: var(--status-warning-fg); font-size: var(--fs-13); }
+.cmp-onn-diff td { background: var(--status-warning-bg); }
 .cmp-card { padding: 18px 20px; border: 1px solid var(--card-line); border-radius: var(--radius-card); background: var(--surface); font-size: var(--fs-13); color: var(--text-black); line-height: 1.65; }
 .cmp-card + .cmp-card { margin-top: 16px; }
 .cmp-remove { margin-top: 14px; }

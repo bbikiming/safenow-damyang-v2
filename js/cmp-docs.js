@@ -178,7 +178,8 @@
         var rest =
             '<p><b>한 문서가 여러 할 일에 연결되므로 이행현황의 문서 합계는 실제 문서 수보다 큽니다.</b> ' +
                 '두 숫자를 함께 적어 오해를 막습니다 — 위 수치는 화면에서 센 값이지 고정값이 아닙니다.</p>' +
-            '<p>결재 완료 PDF·본문은 아직 없습니다 — 온나라 연동 전이라 <b>문서명·수발신자·보고일자·생산등록번호</b>만 있습니다.</p>' +
+            '<p>결재 완료 원본 파일은 이 시스템에 보관하지 않습니다. 원장 문서는 <b>그 부서 담당자가 상세에서 온나라 원본과 이을 수 있고</b>, ' +
+                '이어진 문서의 결재 경로·붙임 목록은 그 부서 사람에게만 보입니다. 온나라 연결은 원본을 찾아가는 길이고 이행 판정과 무관합니다.</p>' +
             '<p>문서 원장 ' + led.length.toLocaleString() + '건 중 <b>할 일에 연결된 문서만</b> 싣습니다 — 연결되지 않은 일반 행정문서는 이행 판정과 무관해 이 목록에 넣지 않습니다.</p>' +
             coverNote() +
             '<p>할 일 하나하나에 증빙이 갖춰졌는지는 <a href="cmp-status.html">업무 관리 &gt; 이행 관리</a>에서 봅니다. 여기는 <b>문서 1건</b>을 찾습니다.</p>' +
@@ -472,12 +473,7 @@
                두고, 항목이 많지 않으므로 가로로 흐르게 한다. */
             '<div class="card-body cmp-meta-wrap">' + metaBlock(d) + '</div>' +
             '<div class="card-body cmp-two cmp-two-doc">' +
-                '<div class="cmp-two-l">' +
-                    '<h3 class="cmp-detail-h3">결재 완료 문서</h3>' +
-                    '<div class="v2-empty cmp-pdf"><b>PDF 미보유 (온나라 연동 전)</b>' +
-                        '<p>이 시스템에는 문서명·수발신자·보고일자·생산등록번호만 있습니다. ' +
-                        '결재 완료본을 여기서 보려면 온나라 연동이 필요합니다 — 그럴듯한 미리보기를 대신 그리지 않습니다.</p></div>' +
-                '</div>' +
+                '<div class="cmp-two-l">' + leftPane(d) + '</div>' +
                 '<div class="cmp-two-r">' +
                     (past ? carryCard(d) : '') +
                     thisYearCard(d, st) +
@@ -491,15 +487,34 @@
      * 시작한 사람이 다른 메뉴로 튕기지 않도록 여기서 끝낸다. */
     function metaBlock(d) {
         function row(k, v) { return '<div><dt>' + esc(k) + '</dt><dd>' + v + '</dd></div>'; }
+        /* 온나라 값은 «이어진 우리 부서 문서»에만 더한다(SCR-CMP-002 §4-4 · P19).
+           다른 부서·연결 전 문서에는 행 자체를 그리지 않는다 — 비어 있는 칸이 남으면
+           «값이 없다»로 읽힌다. 일련번호 표기는 DOC-08 답 전 기본값(«처리과 일련번호»). */
+        function onnMetaRows(doc) {
+            var on = onnOf(doc);
+            if (!on.linked || !on.same) return '';
+            var n = on.links.length;
+            return row(O().noLabel(), esc(O().noText(on.link)) + (n > 1 ? ' ' + dim('외 ' + (n - 1) + '건') : '')) +
+                (on.det && on.det.state ? row('결재 상태', esc(on.det.state) + (on.det.doneAt ? ' ' + dim('· ' + on.det.doneAt) : '')) : '') +
+                (on.det ? row('문서 구분', esc(on.det.kind)) : '');
+        }
+        /* 담당자 — 원장은 부서까지만 갖는다. 이어진 문서는 기안자가 실제로 있으므로
+           우리 부서에는 기안자를, 다른 부서에는 «담당 부서에서 봅니다»를 쓴다(P6) —
+           있는 값을 «기록 없음»이라고 하면 사실과 다르다. */
+        function assigneeNote(doc) {
+            var on = doc.origin === 'ledger' ? onnOf(doc) : { linked: false };
+            if (on.linked && on.same && on.det && on.det.drafter) return '/ 기안 ' + esc(on.det.drafter);
+            if (on.linked && !on.same) return dim('/ 담당자는 담당 부서에서 봅니다');
+            return dim('/ 담당자는 기록 없음 — 문서 원장이 부서까지만 갖고 있습니다');
+        }
         var dim = function (t) { return '<span class="cmp-dim">' + esc(t) + '</span>'; };
         return '<h3 class="cmp-detail-h3 cmp-meta-h">문서 정보</h3>' +
             '<dl class="cmp-dl">' +
-                row('문서번호', d.origin === 'ledger' ? dim('기록 없음') : dim('(온나라에서 부여)')) +
+                (d.origin === 'ledger' ? onnMetaRows(d) : row('등록번호', dim('(온나라에서 부여)'))) +
                 row('보고일자', d.date ? esc(d.date) : dim('미기재')) +
                 row('수발신', D().srText(d, true) ? esc(D().srText(d, true)) : dim('미기재')) +
                 row('담당부서 · 담당자', d.dept
-                    ? esc(d.dept) + (d.assignee ? ' / ' + esc(d.assignee)
-                        : ' ' + dim('/ 담당자는 기록 없음 — 문서 원장이 부서까지만 갖고 있습니다'))
+                    ? esc(d.dept) + (d.assignee ? ' / ' + esc(d.assignee) : ' ' + assigneeNote(d))
                     : dim('기록 없음')) +
                 row('기준연도', esc(d.year) + '년') +
                 /* 출처를 틀리게 말하면 그 자체가 거짓 자료가 된다(원장 실측 5만여 건이
@@ -512,6 +527,209 @@
                 (d.note ? row('비고', esc(d.note)) : '') +
             '</dl>';
     }
+    /* =========================================================================
+     * 상세 왼쪽 열 — 출처마다 다르다 (SCR-CMP-002 §4-4, 2026-10-28)
+     *   원장 문서      → 온나라 원본 문서 (세 상태: 연결 전 / 이어짐·내 부서 / 이어짐·다른 부서)
+     *   이 시스템 등록 → 첨부 파일 (종전에는 저장만 하고 다시 볼 길이 없었다)
+     *   현행 업무문서  → 종전 안내 그대로 (전용 화면이 관리하는 이 목록 밖 문서)
+     * 판정·저장은 DYONNARA 한 곳이다 — 화면은 그 값을 그릴 뿐이다.
+     * ========================================================================= */
+    var O = function () { return global.DYONNARA; };
+    function onnOf(d) {
+        if (!O()) return { linked: false, same: false, links: [] };
+        var links = O().linksOf(d.id);
+        var same = O().sameDept(d);
+        S.onnSel = S.onnSel || {};
+        var sel = links.filter(function (l) { return l.oid === S.onnSel[d.id]; })[0] || links[0] || null;
+        return {
+            linked: links.length > 0, same: same, links: links, link: sel,
+            det: (sel && same) ? O().detail(d.id, sel.oid) : null,
+        };
+    }
+    function fmtSize(b) {
+        b = +b || 0;
+        return b >= 1048576 ? (b / 1048576).toFixed(1) + 'MB' : Math.max(1, Math.round(b / 1024)) + 'KB';
+    }
+    function leftPane(d) {
+        if (d.origin === 'user') return userFiles(d);
+        if (d.origin === 'ledger' && O()) return onnPanel(d);
+        return '<h3 class="cmp-detail-h3">결재 완료 문서</h3>' +
+            '<div class="v2-empty cmp-pdf"><b>원본 파일 미보유</b>' +
+                '<p>전용 화면이 관리하는 문서입니다. 결재 완료본은 이 시스템에 보관하지 않습니다 — 그럴듯한 미리보기를 대신 그리지 않습니다.</p></div>';
+    }
+    function userFiles(d) {
+        var fs = d.files || [];
+        return '<h3 class="cmp-detail-h3">첨부 파일</h3>' +
+            (fs.length
+                ? '<ul class="cmp-onn-list">' + fs.map(function (f) {
+                    return '<li><span class="cmp-onn-fname" title="' + esc(f.name) + '">' + esc(f.name) + '</span>' +
+                        '<span class="cmp-dim">' + fmtSize(f.size) + (f.at ? ' · ' + esc(f.at) : '') + '</span></li>';
+                  }).join('') + '</ul>'
+                : '<p class="cmp-dim cmp-onn-empty">첨부된 파일이 없습니다.</p>') +
+            '<p class="cmp-cap">이 시스템에서 올린 파일입니다. 파일을 여는 기능은 파일 저장 적용 후 제공됩니다.</p>';
+    }
+    var ONN_FOOT = '<p class="cmp-cap cmp-onn-foot">온나라 연결은 원본을 찾아가는 길입니다. 이행 판정은 연결과 상관없이 확정문서목록으로 합니다.</p>';
+    function onnPanel(d) {
+        var on = onnOf(d);
+        var can = O().canLink(d);
+        var id = esc(d.id);
+        var head = '<h3 class="cmp-detail-h3">온나라 원본 문서</h3>';
+
+        /* ① 연결 전 */
+        if (!on.linked) {
+            return head + '<div class="cmp-onn-box"><b>아직 온나라 문서와 이어지지 않았습니다</b>' +
+                (can
+                    ? '<p>원장의 연도·제목·부서로 온나라에서 찾고, 같은 문서인지 확인하면 이어집니다.</p>' +
+                      '<button type="button" class="btn btn-primary btn-sm" onclick="CMPDOC.onnFind(\'' + id + '\')">온나라에서 찾아 잇기</button>'
+                    : '<p>' + (on.same ? esc(O().denyNote(d)) : '잇는 일은 담당 부서(' + esc(d.dept || '—') + ')가 합니다.') + '</p>') +
+                '</div>' + ONN_FOOT;
+        }
+        /* ③ 이어짐 · 다른 부서 — 이유를 가르지 않는 한 줄(P18) */
+        if (!on.same) {
+            return head + '<div class="cmp-onn-box"><span class="chip-status chip-sm success">온나라 연결됨</span>' +
+                '<p>원본 정보는 담당 부서에서 봅니다.</p></div>' + ONN_FOOT;
+        }
+        /* ② 이어짐 · 내 부서 */
+        var l = on.link, det = on.det || {};
+        var tabs = on.links.length > 1
+            ? '<div class="cmp-onn-tabs" role="group" aria-label="이어진 온나라 문서">' + on.links.map(function (x) {
+                var cur = x.oid === l.oid;
+                return '<button type="button" class="cmp-onn-tab' + (cur ? ' is-on' : '') + '" aria-pressed="' + cur + '"' +
+                    ' onclick="CMPDOC.onnSel(\'' + id + '\',\'' + esc(x.oid) + '\')">' + esc(O().noText(x)) + '</button>';
+              }).join('') + '</div>'
+            : '';
+        var no = O().noText(l);
+        var path = (det.path || []).length
+            ? '<h4 class="cmp-onn-h">결재 경로</h4><ol class="cmp-onn-list cmp-onn-path">' + det.path.map(function (s) {
+                return '<li><span class="cmp-onn-act">' + esc(s.act) + '</span><span>' + esc(s.name) + ' <span class="cmp-dim">' + esc(s.duty) + '</span></span>' +
+                    '<span class="cmp-dim">' + esc(s.at) + '</span></li>';
+              }).join('') + '</ol>'
+            : '';
+        var send = det.send
+            ? '<h4 class="cmp-onn-h">발신</h4><p class="cmp-onn-p">보낸 곳 ' + esc(det.send.org) + ' <span class="cmp-dim">· ' + esc(det.send.at) + '</span></p>'
+            : '';
+        var recv = (det.recv || []).length
+            ? '<h4 class="cmp-onn-h">온나라 수신처</h4><ul class="cmp-onn-list">' + det.recv.map(function (r) {
+                return '<li><span>[' + esc(r.type) + '] ' + esc(r.name) + '</span><span class="cmp-dim">' + esc(r.status) + ' ' + esc(r.at) + '</span></li>';
+              }).join('') + '</ul>'
+            : '';
+        var files = l.paper
+            ? '<p class="cmp-dim cmp-onn-empty">종이문서라 파일 목록이 없습니다.</p>'
+            : '<ul class="cmp-onn-list">' + (l.files || []).map(function (f) {
+                return '<li><span class="chip-mini">' + esc(f.kind) + '</span><span class="cmp-onn-fname" title="' + esc(f.name) + '">' + esc(f.name) + '</span>' +
+                    '<span class="cmp-dim">' + fmtSize(f.size) + '</span></li>';
+              }).join('') + '</ul>';
+        var acts = can
+            ? '<div class="cmp-onn-acts">' +
+                (l.paper ? '' : '<button type="button" class="btn btn-outline btn-sm" onclick="CMPDOC.onnRefresh(\'' + id + '\',\'' + esc(l.oid) + '\')">붙임 목록 갱신</button>') +
+                '<button type="button" class="btn btn-outline btn-sm" onclick="CMPDOC.onnAskUnlink(\'' + id + '\',\'' + esc(l.oid) + '\')">연결 해제</button>' +
+                '<button type="button" class="du-link" onclick="CMPDOC.onnFind(\'' + id + '\')">온나라 문서 더 잇기</button>' +
+              '</div>'
+            : '<p class="cmp-cap">' + esc(O().denyNote(d)) + '</p>';
+        return head + tabs +
+            '<div class="cmp-onn-card">' +
+                '<p class="cmp-onn-meta">' + V().sampleChip('온나라 연계 전이라 원장 값과 조직도로 만든 예시 자료입니다.') +
+                    '<span>온나라 기준 ' + esc(det.fetchedAt || '') + ' 조회</span></p>' +
+                '<p class="cmp-onn-no"><b>' + esc(O().noLabel()) + ' ' + esc(no) + '</b>' +
+                    '<button type="button" class="du-link" onclick="CMPDOC.onnCopy(\'' + esc(String(l.seq)) + '\')">번호 복사</button></p>' +
+                path + send + recv +
+                '<h4 class="cmp-onn-h">본문 · 붙임</h4>' + files +
+                /* 받기 수단은 운영에서 조건이 풀릴 때까지 내지 않는다(P23 · DOC-07) */
+                (l.paper ? '' : '<p class="cmp-cap">붙임 내려받기는 담양군 확인 뒤 제공합니다 — 지금은 온나라에서 이 번호로 찾아 받으십시오. ' +
+                    '<span class="cmp-dim">붙임 목록 ' + esc(l.refreshedAt || '') + ' 기준</span></p>') +
+                acts +
+            '</div>' + ONN_FOOT;
+    }
+    /* 찾기 창 — 단계는 같은 모달 안에서 본문을 바꾼다(§1 단일 모달) */
+    function onnFind(id) {
+        var d = D().docById(id);
+        var r = O() ? O().search(id) : { ok: false, reason: '온나라 연결을 불러오지 못했습니다.' };
+        if (!r.ok) { V().toast(r.reason); return; }
+        S.onnCands = { id: id, list: r.cands };
+        var p = me();
+        V().openModal('온나라에서 찾아 잇기',
+            '<div class="cmp-na">' +
+                '<p class="cmp-onn-meta">' + V().sampleChip('온나라 연계 전이라 원장 값으로 만든 예시 후보입니다.') + '</p>' +
+                '<p><b>원장 값으로 찾았습니다</b> — ' + esc(d.year) + '년 · ' + esc(d.dept || '') + ' · «' + esc(d.title) + '»</p>' +
+                '<p class="cmp-dim">' + esc(p ? p.name : '') + ' 님의 온나라 계정으로 조회합니다. 다른 부서 문서는 나오지 않습니다.</p>' +
+                (r.cands.length
+                    ? '<ul class="cmp-onn-cands">' + r.cands.map(function (c, i) {
+                        return '<li><button type="button" class="cmp-onn-cand" onclick="CMPDOC.onnPick(\'' + esc(id) + '\',' + i + ')">' +
+                            '<b>' + esc(c.title) + '</b>' +
+                            '<span class="cmp-dim">' + esc(O().noLabel()) + ' ' + esc(O().noText(c)) + ' · ' + esc(c.date) + ' · ' + esc(c.deptName) + '</span></button></li>';
+                      }).join('') + '</ul>'
+                    : '<div class="v2-empty"><b>더 이을 온나라 문서가 없습니다</b><p>후보를 이미 모두 이었습니다.</p></div>') +
+            '</div>',
+            '<button class="btn btn-outline" onclick="DYV2.closeModal()">닫기</button>');
+    }
+    function onnPick(id, i) {
+        var d = D().docById(id);
+        var c = S.onnCands && S.onnCands.id === id ? S.onnCands.list[i] : null;
+        if (!d || !c) { V().toast('후보를 다시 고르세요.'); return; }
+        var df = O().diffs(d, c);
+        function tr(k, a, b) {
+            var bad = df.indexOf(k) >= 0;
+            return '<tr' + (bad ? ' class="cmp-onn-diff"' : '') + '><th scope="row">' + esc(k) + (bad ? ' <span class="chip-status chip-sm warning">다름</span>' : '') + '</th>' +
+                '<td>' + esc(a) + '</td><td>' + esc(b) + '</td></tr>';
+        }
+        var last = df[df.length - 1] || '';
+        V().openModal('온나라에서 찾아 잇기 — 확인',
+            '<div class="cmp-na">' +
+                '<p>원장 값과 온나라 값을 비교하고, 같은 문서이면 잇습니다.</p>' +
+                (df.length
+                    ? '<p class="cmp-onn-warn">' + esc(df.join('·')) + V().josa(last, '이', '가') + ' 다릅니다. 같은 문서인지 확인하고 이으세요 — 판단은 담당자가 합니다.</p>'
+                    : '') +
+                '<div class="cmp-wrap"><table class="table-figma table-compact"><thead><tr><th scope="col">항목</th><th scope="col">원장</th><th scope="col">온나라</th></tr></thead><tbody>' +
+                    tr('제목', d.title, c.title) + tr('보고일자', d.date || '—', c.date || '—') + tr('부서', d.dept || '—', c.deptName || '—') +
+                    '<tr><th scope="row">' + esc(O().noLabel()) + '</th><td class="cmp-dim">—</td><td>' + esc(O().noText(c)) + '</td></tr>' +
+                '</tbody></table></div>' +
+            '</div>',
+            '<button class="btn btn-outline" onclick="CMPDOC.onnFind(\'' + esc(id) + '\')">‹ 다시 고르기</button>' +
+            '<button class="btn btn-primary" onclick="CMPDOC.onnLink(\'' + esc(id) + '\',' + i + ')">이 문서와 잇기</button>');
+    }
+    function onnLink(id, i) {
+        var c = S.onnCands && S.onnCands.id === id ? S.onnCands.list[i] : null;
+        var r = O().link(id, c);
+        if (!r.ok) { V().toast(r.reason); return; }
+        S.onnSel = S.onnSel || {};
+        S.onnSel[id] = r.link.oid;
+        V().closeModal(true);
+        render();
+        V().toast('온나라 문서와 이었습니다 — 결재 경로와 붙임 목록이 보입니다.');
+    }
+    function onnAskUnlink(id, oid) {
+        var l = O().linksOf(id).filter(function (x) { return x.oid === oid; })[0];
+        if (!l) return;
+        V().openModal('온나라 연결 해제',
+            '<div class="cmp-na">' +
+                '<p><b>' + esc(O().noLabel()) + ' ' + esc(O().noText(l)) + '</b>와의 연결을 끊습니다.</p>' +
+                '<p>끊어도 원장 문서와 이행 판정은 그대로입니다. 누가 언제 끊었는지 기록에 남습니다. 잘못 이었다면 끊은 뒤 다시 찾아 이으세요.</p>' +
+            '</div>',
+            '<button class="btn btn-outline" onclick="DYV2.closeModal()">취소</button>' +
+            '<button class="btn btn-primary" onclick="CMPDOC.onnUnlink(\'' + esc(id) + '\',\'' + esc(oid) + '\')">연결 해제</button>');
+    }
+    function onnUnlink(id, oid) {
+        var r = O().unlink(id, oid);
+        if (!r.ok) { V().toast(r.reason); return; }
+        V().closeModal(true);
+        render();
+        V().toast(r.left ? '연결을 끊었습니다 — 이어진 온나라 문서가 ' + r.left + '건 남았습니다.' : '연결을 끊었습니다 — 이 문서는 다시 «연결 전»입니다.');
+    }
+    function onnRefresh(id, oid) {
+        var r = O().refresh(id, oid);
+        if (!r.ok) { V().toast(r.reason); return; }
+        render();
+        V().toast('붙임 목록을 온나라에서 다시 받았습니다.');
+    }
+    function onnSel(id, oid) { S.onnSel = S.onnSel || {}; S.onnSel[id] = oid; render(); }
+    function onnCopy(text) {
+        function done() { V().toast('번호 ' + text + '를 복사했습니다 — 온나라에서 이 번호로 찾아보십시오.'); }
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, function () { V().toast('복사하지 못했습니다 — 번호: ' + text); }); return; }
+        } catch (e) {}
+        V().toast('번호: ' + text);
+    }
+
     /* 어느 문서에서 가져왔는지 — 되돌아가 볼 수 있어야 «제목이 왜 이런지»를 안다 */
     function presetLink(d) {
         var src = D().docById(d.presetOf);
@@ -613,7 +831,7 @@
                     ((d.stageIds || []).length || 0) + '개' + (d.sr ? '·수발신자' : '') +
                     (( d.files || []).length ? '·첨부 ' + d.files.length + '건' : '') +
                     '가 그대로 채워지고 제목의 연도가 ' + y + '으로 바뀝니다.</p>' +
-                  '<p class="cmp-cap"><b>본문·결재문서는 복제하지 않습니다</b> — 온나라 연동 전이라 원본이 없고 결재는 새로 받습니다.' +
+                  '<p class="cmp-cap"><b>본문·결재문서는 복제하지 않습니다</b> — 원본은 온나라에 있고 결재는 새로 받습니다.' +
                     ((d.stageIds || []).length ? '' : ' 이 문서에는 연결된 할 일이 없어 등록 뒤 직접 골라야 합니다.') + '</p>' +
                   (can
                       ? '<button type="button" class="btn btn-primary" onclick="CMPDOC.carry(\'' + esc(d.id) + '\')">올해 문서로 등록</button>'
@@ -727,6 +945,10 @@
             global.DOCUP.editTitle(id, function () { render(); });
         },
         askRemove: askRemove, doRemove: doRemove,
+        /* 온나라 원본 문서 — 판정·저장은 DYONNARA (SCR-CMP-002 §3-3 · P17~P23) */
+        onnFind: onnFind, onnPick: onnPick, onnLink: onnLink,
+        onnAskUnlink: onnAskUnlink, onnUnlink: onnUnlink, onnRefresh: onnRefresh,
+        onnSel: onnSel, onnCopy: onnCopy,
         state: S,
     };
 }(window));
