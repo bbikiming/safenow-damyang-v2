@@ -699,7 +699,7 @@
         if (!l) return;
         V().openModal('온나라 연결 해제',
             '<div class="cmp-na">' +
-                '<p><b>' + esc(O().noLabel()) + ' ' + esc(O().noText(l)) + '</b>와의 연결을 끊습니다.</p>' +
+                '<p>이 연결을 끊습니다 — <b>' + esc(O().noLabel()) + ' ' + esc(O().noText(l)) + '</b></p>' +
                 '<p>끊어도 원장 문서와 이행 판정은 그대로입니다. 누가 언제 끊었는지 기록에 남습니다. 잘못 이었다면 끊은 뒤 다시 찾아 이으세요.</p>' +
             '</div>',
             '<button class="btn btn-outline" onclick="DYV2.closeModal()">취소</button>' +
@@ -720,7 +720,8 @@
     }
     function onnSel(id, oid) { S.onnSel = S.onnSel || {}; S.onnSel[id] = oid; render(); }
     function onnCopy(text) {
-        function done() { V().toast('번호 ' + text + '를 복사했습니다 — 온나라에서 이 번호로 찾아보십시오.'); }
+        /* 숫자 뒤 조사는 읽는 소리로 갈려(3148을 · 3142를) 번호를 조사 앞에 두지 않는다 */
+        function done() { V().toast('번호를 복사했습니다(' + text + ') — 온나라에서 이 번호로 찾아보십시오.'); }
         try {
             if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(done, function () { V().toast('복사하지 못했습니다 — 번호: ' + text); }); return; }
         } catch (e) {}
