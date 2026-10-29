@@ -4434,7 +4434,6 @@ p > .dx-note-gap { display: inline; }
 .cmp-onn-act { display: inline-block; min-width: 36px; font-size: var(--fs-12); font-weight: var(--fw-bold); color: var(--main); }
 .cmp-onn-empty { margin: var(--sp-2) 0 0; font-size: var(--fs-12); }
 .cmp-onn-acts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-top: var(--sp-3); }
-.cmp-onn-foot { margin-bottom: 0; }
 .cmp-onn-tabs { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-3); }
 .cmp-onn-tab { min-height: var(--ctl-sm); padding: 0 var(--sp-3); border: 1px solid var(--card-line); border-radius: var(--radius-pill); background: var(--surface); font-size: var(--fs-12); color: var(--text-gray); cursor: pointer; }
 .cmp-onn-tab.is-on { border-color: var(--main); color: var(--main); font-weight: var(--fw-bold); }

@@ -568,7 +568,7 @@
                 : '<p class="cmp-dim cmp-onn-empty">첨부된 파일이 없습니다.</p>') +
             '<p class="cmp-cap">이 시스템에서 올린 파일입니다. 파일을 여는 기능은 파일 저장 적용 후 제공됩니다.</p>';
     }
-    var ONN_FOOT = '<p class="cmp-cap cmp-onn-foot">온나라 연결은 원본을 찾아가는 길입니다. 이행 판정은 연결과 상관없이 확정문서목록으로 합니다.</p>';
+    /* «연결은 원본을 찾아가는 길 · 판정과 무관»은 목록 상단 안내가 한 번 말한다 — 패널마다 되풀이하지 않는다 */
     function onnPanel(d) {
         var on = onnOf(d);
         var can = O().canLink(d);
@@ -579,15 +579,14 @@
         if (!on.linked) {
             return head + '<div class="cmp-onn-box"><b>아직 온나라 문서와 이어지지 않았습니다</b>' +
                 (can
-                    ? '<p>원장의 연도·제목·부서로 온나라에서 찾고, 같은 문서인지 확인하면 이어집니다.</p>' +
-                      '<button type="button" class="btn btn-primary btn-sm" onclick="CMPDOC.onnFind(\'' + id + '\')">온나라에서 찾아 잇기</button>'
+                    ? '<button type="button" class="btn btn-primary btn-sm" onclick="CMPDOC.onnFind(\'' + id + '\')">온나라에서 찾아 잇기</button>'
                     : '<p>' + (on.same ? esc(O().denyNote(d)) : '잇는 일은 담당 부서(' + esc(d.dept || '—') + ')가 합니다.') + '</p>') +
-                '</div>' + ONN_FOOT;
+                '</div>';
         }
         /* ③ 이어짐 · 다른 부서 — 이유를 가르지 않는 한 줄(P18) */
         if (!on.same) {
             return head + '<div class="cmp-onn-box"><span class="chip-status chip-sm success">온나라 연결됨</span>' +
-                '<p>원본 정보는 담당 부서에서 봅니다.</p></div>' + ONN_FOOT;
+                '<p>원본 정보는 담당 부서에서 봅니다.</p></div>';
         }
         /* ② 이어짐 · 내 부서 */
         var l = on.link, det = on.det || {};
@@ -634,11 +633,9 @@
                     '<button type="button" class="du-link" onclick="CMPDOC.onnCopy(\'' + esc(String(l.seq)) + '\')">번호 복사</button></p>' +
                 path + send + recv +
                 '<h4 class="cmp-onn-h">본문 · 붙임</h4>' + files +
-                /* 받기 수단은 운영에서 조건이 풀릴 때까지 내지 않는다(P23 · DOC-07) */
-                (l.paper ? '' : '<p class="cmp-cap">붙임 내려받기는 담양군 확인 뒤 제공합니다 — 지금은 온나라에서 이 번호로 찾아 받으십시오. ' +
-                    '<span class="cmp-dim">붙임 목록 ' + esc(l.refreshedAt || '') + ' 기준</span></p>') +
+                /* 받기 수단은 운영에서 조건이 풀릴 때까지 내지 않는다(P23 · DOC-07) — 안내 문구도 두지 않고 번호 복사가 그 길을 맡는다 */
                 acts +
-            '</div>' + ONN_FOOT;
+            '</div>';
     }
     /* 찾기 창 — 단계는 같은 모달 안에서 본문을 바꾼다(§1 단일 모달) */
     function onnFind(id) {
