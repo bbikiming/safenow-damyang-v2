@@ -260,12 +260,15 @@
         if (!d) return { ok: false, reason: '문서를 찾을 수 없습니다.' };
         if (!canStart(d)) return { ok: false, reason: denyNote(d) };
         if (!cand || !cand.oid) return { ok: false, reason: '이을 온나라 문서를 고르세요.' };
-        var block = blockOf(d, cand);
-        if (block) return { ok: false, reason: block };
         var list = store().links[docId] || [];
         if (list.some(function (l) { return l.oid === cand.oid; })) return { ok: false, reason: '이미 이어진 온나라 문서입니다.' };
+        /* 화면이 넘긴 값은 쓰지 않는다 — 온나라에서 다시 받은 값으로 대조·저장한다(운영에서 서버가 하는 판정과 같은 자리) */
+        var fresh = (search(docId).cands || []).filter(function (c) { return c.oid === cand.oid; })[0];
+        if (!fresh) return { ok: false, reason: '온나라에서 다시 확인되지 않는 문서입니다 — 다시 찾아 고르세요.' };
+        var block = blockOf(d, fresh);
+        if (block) return { ok: false, reason: block };
         var p = me();
-        var o = JSON.parse(JSON.stringify(cand));
+        var o = JSON.parse(JSON.stringify(fresh));
         o.files = makeFiles(o);
         o.linkedBy = p ? p.name : '';
         o.linkedAt = nowTs();
