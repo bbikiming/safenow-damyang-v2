@@ -575,10 +575,10 @@
         var id = esc(d.id);
         var head = '<h3 class="cmp-detail-h3">온나라 원본 문서</h3>';
 
-        /* ① 연결 전 */
+        /* ① 연결 전 — 부서 대응표 확정 전에는 담당자 누구에게나 단추(확인 단계에서 처리과로 막는다) */
         if (!on.linked) {
             return head + '<div class="cmp-onn-box"><b>아직 온나라 문서와 이어지지 않았습니다</b>' +
-                (can
+                (O().canFind(d)
                     ? '<button type="button" class="btn btn-primary btn-sm" onclick="CMPDOC.onnFind(\'' + id + '\')">온나라에서 찾아 잇기</button>'
                     : '<p>' + (on.same ? esc(O().denyNote(d)) : '잇는 일은 담당 부서(' + esc(d.dept || '—') + ')가 합니다.') + '</p>') +
                 '</div>';
@@ -648,7 +648,7 @@
             '<div class="cmp-na">' +
                 '<p class="cmp-onn-meta">' + V().sampleChip('온나라 연계 전이라 원장 값으로 만든 예시 후보입니다.') + '</p>' +
                 '<p><b>원장 값으로 찾았습니다</b> — ' + esc(d.year) + '년 · ' + esc(d.dept || '') + ' · «' + esc(d.title) + '»</p>' +
-                '<p class="cmp-dim">' + esc(p ? p.name : '') + ' 님의 온나라 계정으로 조회합니다. 다른 부서 문서는 나오지 않습니다.</p>' +
+                '<p class="cmp-dim">' + esc(p ? p.name : '') + ' 님의 온나라 계정으로 조회합니다 — 내 부서 문서만 나오고, 처리과가 원장 부서(' + esc(d.dept || '—') + ')와 다르면 이을 수 없습니다.</p>' +
                 (r.cands.length
                     ? '<ul class="cmp-onn-cands">' + r.cands.map(function (c, i) {
                         return '<li><button type="button" class="cmp-onn-cand" onclick="CMPDOC.onnPick(\'' + esc(id) + '\',' + i + ')">' +
@@ -669,12 +669,17 @@
             return '<tr' + (bad ? ' class="cmp-onn-diff"' : '') + '><th scope="row">' + esc(k) + (bad ? ' <span class="chip-status chip-sm warning">다름</span>' : '') + '</th>' +
                 '<td>' + esc(a) + '</td><td>' + esc(b) + '</td></tr>';
         }
-        var last = df[df.length - 1] || '';
+        /* 처리과가 다르면 막고(다른 부서 문서), 제목·보고일자가 다르면 경고만 한다 */
+        var block = O().blockOf(d, c);
+        var soft = df.filter(function (k) { return k !== '부서'; });
+        var last = soft[soft.length - 1] || '';
         V().openModal('온나라에서 찾아 잇기 — 확인',
             '<div class="cmp-na">' +
                 '<p>원장 값과 온나라 값을 비교하고, 같은 문서이면 잇습니다.</p>' +
-                (df.length
-                    ? '<p class="cmp-onn-warn">' + esc(df.join('·')) + V().josa(last, '이', '가') + ' 다릅니다. 같은 문서인지 확인하고 이으세요 — 판단은 담당자가 합니다.</p>'
+                (block
+                    ? '<p class="cmp-onn-warn">' + esc(block) + '</p>'
+                    : soft.length
+                    ? '<p class="cmp-onn-warn">' + esc(soft.join('·')) + V().josa(last, '이', '가') + ' 다릅니다. 같은 문서인지 확인하고 이으세요 — 판단은 담당자가 합니다.</p>'
                     : '') +
                 '<div class="cmp-wrap"><table class="table-figma table-compact"><thead><tr><th scope="col">항목</th><th scope="col">원장</th><th scope="col">온나라</th></tr></thead><tbody>' +
                     tr('제목', d.title, c.title) + tr('보고일자', d.date || '—', c.date || '—') + tr('부서', d.dept || '—', c.deptName || '—') +
@@ -682,7 +687,7 @@
                 '</tbody></table></div>' +
             '</div>',
             '<button class="btn btn-outline" onclick="CMPDOC.onnFind(\'' + esc(id) + '\')">‹ 다시 고르기</button>' +
-            '<button class="btn btn-primary" onclick="CMPDOC.onnLink(\'' + esc(id) + '\',' + i + ')">이 문서와 잇기</button>');
+            (block ? '' : '<button class="btn btn-primary" onclick="CMPDOC.onnLink(\'' + esc(id) + '\',' + i + ')">이 문서와 잇기</button>'));
     }
     function onnLink(id, i) {
         var c = S.onnCands && S.onnCands.id === id ? S.onnCands.list[i] : null;

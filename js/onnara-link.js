@@ -25,6 +25,10 @@
     'use strict';
 
     var SKEY = 'dy-onnara-link-v1';
+    /* 부서 대응표(원장 부서명 → 부서코드 + 개편 대응)가 확정됐는가 (2026-10-30 개발 회신 Q1).
+       원장 부서는 글자라 조직도 이름과 다 맞지 않는다. 확정 전에는 [찾아 잇기]를 부서로 가리지 않고
+       확인 단계의 처리과 대조(blockOf)로 막는다. 확정되면 true — 단추가 그 문서 부서 담당자에게만 나간다. */
+    var DEPT_MAP_READY = false;
     var V = function () { return global.DYV2; };
     var R = function () { return global.DYROLE; };
     var D = function () { return global.DYDOCS; };
@@ -81,6 +85,23 @@
         var p = me();
         return sameDept(d) && !!p && p.tier === 'staff';
     }
+    /* 연결 전 문서의 [찾아 잇기] — 담당자 계층이면 내고, 대응표가 확정되면 그 문서 부서로 좁힌다 */
+    function canFind(d) {
+        var p = me();
+        if (!p || p.tier !== 'staff') return false;
+        return DEPT_MAP_READY ? sameDept(d) : true;
+    }
+    /* 잇기·더 잇기의 판정 — 이어진 문서는 그 부서 담당자(canLink), 연결 전 문서는 canFind */
+    function canStart(d) { return isLinked(d.id) ? canLink(d) : canFind(d); }
+    /* 처리과 대조 — 온나라 문서의 처리과가 원장 부서와 다르면 잇지 않는다(다른 부서 문서).
+       둘 다 담양군 부서 이름이라 대응표 없이 대조된다. 다만 확정목록은 옛 해 문서도 지금 이름으로 정리돼 있고
+       온나라 처리과명은 그 해 이름이라(2021·2022 건설과 = 안전건설과), 운영에서는 대응표의 개편 대응으로
+       같은 부서로 본다. 프로토타입의 예시 온나라 문서는 원장 이름으로 만들어 대응이 필요 없다. */
+    function blockOf(d, o) {
+        if (!d || !o) return '';
+        if ((o.deptName || '') === (d.dept || '')) return '';
+        return '온나라 문서의 처리과(' + (o.deptName || '—') + ')가 원장 부서(' + (d.dept || '—') + ')와 달라 이을 수 없습니다 — 다른 부서 문서입니다.';
+    }
     function denyNote(d) {
         var p = me();
         if (!sameDept(d)) return '다른 부서 문서는 온나라에서 조회할 수 없습니다 — 잇는 일은 ' + ((d && d.dept) || '담당 부서') + ' 담당자가 합니다.';
@@ -92,6 +113,18 @@
      * 원장 문서 한 건에서 그 문서와 같아 보이는 온나라 문서를 만든다. 운영에서는 담당자 계정으로
      * 문서관리카드를 조회한 응답이 이 자리에 온다. */
     function rcvOf(d) { return d.dir === 'in' ? 'R' : 'P'; }
+    /* 내 계정으로 찾은 «내 부서» 문서 — 다른 부서 원장 문서에서 찾으면 같은 제목의 수발신 짝이 나올 수 있다
+       (예: 공간재생과가 보낸 문서를 재난안전과가 접수한 문서). 확인 단계에서 처리과 대조로 막힌다. */
+    function makeOwn(d, p) {
+        var h = hash(d.id + '|own|' + p.deptId);
+        return {
+            oid: 'ONN-' + d.id + '-own-' + p.deptId,
+            deptId: p.deptId, deptName: p.deptName, seq: 1000 + (h % 8000),
+            rcv: d.dir === 'out' ? 'R' : 'P', gubun: '내부결재',
+            title: d.title, date: d.date || '', sr: d.dept || '',
+            paper: false, sample: true,
+        };
+    }
     function gubunOf(d) { return d.dir === 'out' ? '시행' : '내부결재'; }
     function makeOnnara(d, variant) {
         var h = hash(d.id + '|' + (variant || 0));
@@ -162,10 +195,13 @@
     function search(docId) {
         var d = D().docById(docId);
         if (!d) return { ok: false, reason: '문서를 찾을 수 없습니다.' };
-        if (!canLink(d)) return { ok: false, reason: denyNote(d) };
+        if (!canStart(d)) return { ok: false, reason: denyNote(d) };
         var have = {};
         linksOf(docId).forEach(function (l) { have[l.oid] = 1; });
-        var cands = [makeOnnara(d, 0), makeOnnara(d, 1)].filter(function (c) { return !have[c.oid]; });
+        /* 온나라는 누른 사람의 계정으로 찾는다 — 다른 부서 원장 문서에서 찾으면 내 부서 문서만 나온다 */
+        var p = me();
+        var pool = sameDept(d) ? [makeOnnara(d, 0), makeOnnara(d, 1)] : [makeOwn(d, p)];
+        var cands = pool.filter(function (c) { return !have[c.oid]; });
         return { ok: true, cands: cands };
     }
     /* 원장 값과 온나라 값의 다른 점 — 경고만 하고 막지 않는다(§5) */
@@ -210,7 +246,7 @@
             sample: true,
         };
     }
-    /* 등록번호 표기 — DOC-08 답 전 기본값: «처리과 일련번호» + 생산/접수 */
+    /* 번호 표기 — DOC-08 확정(2026-10-30): 처리과명을 붙여 조합하지 않고 «처리과 일련번호» + 생산/접수 */
     function noLabel() { return '처리과 일련번호'; }
     function noText(l) { return l ? (String(l.seq) + ' (' + (l.rcv === 'R' ? '접수' : '생산') + ')') : ''; }
 
@@ -222,8 +258,10 @@
     function link(docId, cand) {
         var d = D().docById(docId);
         if (!d) return { ok: false, reason: '문서를 찾을 수 없습니다.' };
-        if (!canLink(d)) return { ok: false, reason: denyNote(d) };
+        if (!canStart(d)) return { ok: false, reason: denyNote(d) };
         if (!cand || !cand.oid) return { ok: false, reason: '이을 온나라 문서를 고르세요.' };
+        var block = blockOf(d, cand);
+        if (block) return { ok: false, reason: block };
         var list = store().links[docId] || [];
         if (list.some(function (l) { return l.oid === cand.oid; })) return { ok: false, reason: '이미 이어진 온나라 문서입니다.' };
         var p = me();
@@ -264,7 +302,7 @@
     }
 
     global.DYONNARA = {
-        sameDept: sameDept, canLink: canLink, denyNote: denyNote,
+        sameDept: sameDept, canLink: canLink, canFind: canFind, denyNote: denyNote, blockOf: blockOf,
         linksOf: linksOf, isLinked: isLinked,
         search: search, diffs: diffs, detail: detail,
         noLabel: noLabel, noText: noText,
