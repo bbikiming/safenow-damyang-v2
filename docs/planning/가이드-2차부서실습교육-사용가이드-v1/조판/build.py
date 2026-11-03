@@ -274,7 +274,7 @@ if RELEASE:
     doc = re.sub(r'<div class="edit">.*?</div>', '', doc, flags=re.S)
     doc = re.sub(r'<li class="edit">.*?</li>', '', doc, flags=re.S)
     doc = re.sub(r'<div class="ph">.*?</div>', '', doc, flags=re.S)
-    doc = re.sub(r'\s*·?\s*⚠ 확인 필요(\([^)]*\))?', '', doc)
+    doc = re.sub(r'\s*·?\s*⚠ 확인 필요(?:\([^)]*\)|\s*—[^<|]*)?', '', doc)  # 문장 안 메모는 뒤 설명까지 지운다
     doc = doc.replace('<ul></ul>', '').replace('<div class="figs"></div>', '')
     assert '⚠' not in doc and '📝' not in doc and '편집 메모' not in doc.replace('.edit::before { content: "편집 메모 · 인쇄본에서 뺌 — "; font-weight: 700; }', ''), 'release has edit marks'
 open(os.path.join(HERE, f'guide{BOOK}{"_rel" if RELEASE else ""}.html'), 'w', encoding='utf-8').write(doc)
