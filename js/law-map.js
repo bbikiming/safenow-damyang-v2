@@ -2007,6 +2007,8 @@
         'admin-roles':       [],
         'admin-notify':      [],
         'admin-presets':     [],
+        'admin-guides':      [],
+        'admin-boards':      [],
         'admin-integration': [],
         /* 법령 관리 — 법령을 **다루는** 화면이지 어떤 조문의 직접 이행 수단이 아니다.
          * 여기에 근거를 붙이면 검증 6문 #2를 이 화면 스스로 어기게 된다. */
@@ -2472,6 +2474,7 @@
         'admin-users': ['admin-users.html'], 'admin-sites': ['admin-sites.html'],
         'admin-menus': ['admin-menus.html'], 'admin-roles': ['admin-roles.html'],
         'admin-notify': ['admin-notify.html'], 'admin-presets': ['admin-presets.html'],
+        'admin-guides': ['admin-guides.html'], 'admin-boards': ['admin-boards.html'],
         'admin-integration': ['admin-integration.html'],
         /* admin-law-map.html 은 통합 화면으로 가는 리다이렉트 스텁이라 여기 없다 */
         'admin-law': ['admin-law.html']

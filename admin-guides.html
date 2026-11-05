@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>가이드 관리 — 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="admin-guides"
+      data-page-title="가이드 관리"
+      data-page-subtitle="시스템 관리 &gt; 기준정보 &gt; 가이드 관리 — 헤더 [가이드 다운로드]에 보일 자료의 등록·순서·사용 여부">
+    <main>
+        <div id="ag-root"></div>
+    </main>
+
+    <div id="toast" class="toast" role="status"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/law-map.js"></script>
+    <script src="./js/help-center.js"></script><!-- DYHELP: 화면 도움말 -->
+    <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
+    <script src="./js/common.js"></script>
+    <script src="./js/admin-guides.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () { window.DYADMGUIDE.init('ag-root'); });
+    </script>
+</body>
+</html>

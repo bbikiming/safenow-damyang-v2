@@ -156,6 +156,21 @@
         syncedAt: '2026-07-16 09:15'
     };
 
+    /* 개선조치가 생긴 평가로 가는 주소 — 연도·부서를 함께 싣는다(운영 E08·E13, 2026-11-04).
+       연도 없는 주소는 기본 연도로 떨어져 **다른 해 평가**를 연다. 수시평가 건은 정기 화면이 아니라
+       수시 화면으로 간다(종전에는 assessment_id 가 비어 정기 화면으로, 정규식이 빗나가면 ?year=undefined). */
+    function impHref(m) {
+        if (!m) return 'rsk-list.html';
+        if (m.occ_id || m.source_type === 'occasional') {
+            var o = D().occasionalOf ? D().occasionalOf(m.occ_id) : null;
+            var oy = (o && o.year) || ((String(m.occ_id || '').match(/OCC-(\d{4})/) || [])[1]);
+            return 'rsk-occ.html' + (oy ? '?year=' + oy : '');
+        }
+        var a = m.assessment_id && D().assessmentOf ? D().assessmentOf(m.assessment_id) : null;
+        var y = (a && a.year) || ((String(m.assessment_id || '').match(/RA-(\d{4})/) || [])[1]);
+        return 'rsk-list.html' + (y ? '?year=' + y + (m.dept_id ? '&dept=' + encodeURIComponent(m.dept_id) : '') : '');
+    }
+
     /* ================= 아이템 수집 (마감 할일) ================= */
     function collectItems() {
         var out = [];
@@ -295,7 +310,7 @@
                        빈 값이고 '해당 없음'은 그대로 온다(판정은 D().facilLabel() 한 곳). */
                     facil: D().facilLabel ? D().facilLabel(m) : '',
                     dept: m.dept_id, dept_label: D().deptName(m.dept_id),
-                    href: 'rsk-list.html' + (m.assessment_id ? '?year=' + (m.assessment_id.match(/RA-(\d{4})/) || [])[1] : ''),
+                    href: impHref(m),
                     atype: 'inline',
                     action: returned ? '재제출' : (act ? (isRemind ? '재촉 응답' : '완료 처리') : '보기'),
                     remind: isRemind,

@@ -99,7 +99,7 @@
            결과를 영영 보고하지 못한다(실측 38~56%). 미이수는 결과의 일부로 적는다. */
         ready: function (c) {
             if (!c) return { ok: false, why: '교육을 찾지 못했습니다.' };
-            if (c.status !== 'DONE') return { ok: false, why: '교육 종료 처리 후에 기안할 수 있습니다.' };
+            if (c.status !== 'DONE') return { ok: false, why: NOT_CLOSED };
             return { ok: true };
         },
 
@@ -142,7 +142,8 @@
             if (!c) return [];
             var out = [];
             (c.files || []).forEach(function (f) {
-                out.push({ label: f.name, meta: f.slot || '교육 첨부' });
+                /* 크기를 알면 넘긴다 — 붙임 한도(합계 30MB)는 크기를 아는 파일로만 센다(DYDOC) */
+                out.push({ label: f.name, meta: f.slot || '교육 첨부', size: f.size || null });
             });
             enrollsOf(c.id).forEach(function (e) {
                 if (e.signFile) out.push({ label: e.signFile, meta: E().deptName(e.deptId) + ' 참석자 서명부' });
@@ -208,10 +209,19 @@
             : '여러 부서를 묶은 건이라 재난안전과 담당자가 기안합니다.';
     }
 
-    /* 목록·상세가 쓰는 표시 컨트롤 — 종료 처리된 교육에만 나타난다 */
+    /* 종료 처리 전 안내 — 기안 조건(ready)과 화면이 **같은 문장**을 쓴다 */
+    var NOT_CLOSED = '교육을 종료 처리한 뒤 기안할 수 있습니다.';
+
+    /* 목록·상세가 쓰는 표시 컨트롤 — [공문 기안]은 종료 처리된 교육에만 나타난다.
+     * 종료 처리 전에는 버튼 대신 **언제 기안할 수 있는지**를 밝힌다(운영 23건 #1 — 운영에서
+     * 진행 중 교육에도 기안이 열려 «실시 결과 (1개 부서 · 2명)» 조각까지 나왔다).
+     * 안내는 기안할 수 있는 사람에게만 낸다 — 기안하지 않는 사람에게는 소음이다. */
     function control(courseId) {
         var c = courseOf(courseId);
-        if (!c || c.status !== 'DONE') return '';
+        if (!c) return '';
+        if (c.status !== 'DONE') {
+            return canDraft(c).ok ? '<span class="file-hint">' + esc(NOT_CLOSED) + '</span>' : '';
+        }
         var d = latestDoc(courseId);
         if (!d) {
             /* 기안 권한이 없으면 **버튼을 내지 않는다** — 누르면 거절하는 버튼을 남기면
@@ -227,9 +237,7 @@
            상신 뒤에는 결재 진행 상황을 이 시스템이 알 수 없으므로 어디서 보는지 밝힌다. */
         return '<span class="chip-status chip-sm ' + V().toneOf(d.status) + '">' + esc(d.status) + '</span> ' +
             '<button type="button" class="btn btn-outline btn-sm" onclick="EDUDOC.openDoc(\'' + esc(courseId) + '\',\'' + esc(d.sid) + '\')">문서 보기</button> ' +
-            '<span class="file-hint" title="온나라 연동 전이라 이 시스템은 상신 사실까지만 압니다">' +
-                '진행 상황은 온나라에서 <b>' + esc(d.no) + '</b>로 확인' +
-            '</span>';
+            '<span class="file-hint">결재 진행은 온나라에서 확인</span>';
     }
 
     /* ===================== 결재 이력 소비 API =====================

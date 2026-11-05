@@ -161,6 +161,16 @@
         if (!mine || !canWriteReview(mine)) return '';
         return (a.depts || []).some(function (x) { return x.deptId === mine; }) ? mine : '';
     }
+    /* 그 해 평가 대상이 아닌 부서의 화면인가 — 조회 범위가 소속 부서로 좁혀진 계정(scope ≠ 'all')이고
+       소속 부서가 a.depts 에 없을 때다. 주관부서·군수는 전 부서를 보므로 해당하지 않는다. */
+    function notTargetView(a) {
+        if (!a || canManage()) return false;
+        var R = global.DYROLE;
+        if (!R || !R.current || !R.scope || R.scope() === 'all') return false;
+        var mine = R.deptId ? R.deptId() : ((R.current() || {}).deptId || '');
+        if (!mine) return false;
+        return !(a.depts || []).some(function (x) { return x.deptId === mine; });
+    }
     /* 차단 안내 — 재난안전과장에게 "재난안전과만 할 수 있다"고 하면 거짓말이 된다.
        같은 화면의 조회 전용 안내(manageNote)와 같은 말을 해야 한다. */
     function denyToast(deptId) {
@@ -400,6 +410,16 @@
         D().refreshAssessmentStatus(a.id);
         a = D().assessmentOf(a.id);
 
+        /* 그 해 평가 대상이 아닌 부서(조회 범위가 소속 부서로 좁혀진 계정)는 볼 것이 없다
+           (운영 E17, 2026-11-04). 요약·작성 단계·빈 표를 그리면 «개선 0/0 (0%)»처럼 하지도
+           않은 일을 0%로 말하고, 주관부서의 작성 안내까지 보인다. 한 줄로 끝낸다.
+           전 부서를 보는 계정(군수·재난안전과)은 대상 여부와 무관하게 전체를 본다. */
+        if (notTargetView(a)) {
+            state.mount.innerHTML = head + fromFacilNote(a) +
+                '<div class="rl-ro" role="note">우리 부서는 ' + esc(a.year) + '년 정기 위험성평가 대상이 아닙니다.</div>';
+            return;
+        }
+
         var summary = renderSummary(a);
         var tabs =
             '<div class="rl-tabs">' +
@@ -508,7 +528,10 @@
             '</div>' +
             '<div class="rl-progress">' +
                 '<div class="rl-progress-bar"><div class="rl-progress-fill" style="width:' + prog.pct + '%"></div></div>' +
-                '<div class="rl-progress-txt">개선 <b>' + prog.done + ' / ' + prog.total + '</b> (' + prog.pct + '%)</div>' +
+                /* 개선조치가 0건이면 0%가 아니다 — 비율을 낼 모수가 없다(운영 E17) */
+                '<div class="rl-progress-txt">' + (prog.total
+                    ? '개선 <b>' + prog.done + ' / ' + prog.total + '</b> (' + prog.pct + '%)'
+                    : '개선조치 <b>0건</b>') + '</div>' +
             '</div></div>';
     }
 
@@ -1397,9 +1420,13 @@
         V().openModal('개선조치 담당자 지정',
             '<p style="font-size:var(--fs-13);margin:0 0 4px;"><b>' + esc(D().deptName(deptId)) + '</b> · ' +
                 esc(r.name || '(유해위험요인 미입력)') + '</p>' +
-            '<p class="file-hint"><b>담당자는 원칙적으로 해당 부서가 정합니다.</b> ' +
-                '비워 두면 전달 후 그 부서가 개선조치 목록에서 지정합니다 — ' +
-                '이미 아는 경우에만 여기서 미리 적어 주세요.</p>' +
+            /* 안내는 여는 사람이 할 일만 말한다(운영 T29, 2026-11-04) — 이 창은 주관부서 작성표와
+               부서 담당자의 자기 부서 블록이 함께 쓴다. «비워 두면 그 부서가 지정합니다»는
+               주관부서에게만 맞는 말이라 부서 담당자에게는 내지 않는다. */
+            (canManage()
+                ? '<p class="file-hint"><b>담당자는 원칙적으로 해당 부서가 정합니다.</b> ' +
+                    '비워 두면 전달 후 그 부서가 지정합니다 — 이미 아는 경우에만 여기서 미리 적어 주세요.</p>'
+                : '<p class="file-hint">우리 부서 구성원 중에서 담당자를 고릅니다.</p>') +
             '<div class="rl-modal-row" style="margin-top:10px;">' +
                 '<label class="form-label" for="rl-owner-name">담당자</label>' +
                 '<div class="orgpick-field" id="rl-owner-field"><div style="display:flex;gap:8px;align-items:center;">' +
@@ -1789,7 +1816,7 @@
             return;
         }
         var depts = D().deptCandidates();
-        /* v1.1 §6.4: STEP1 부서 선정 기본값 전체선택 (인사정보시스템에서 조직 목록 로드 목업) */
+        /* v1.1 §6.4: STEP1 부서 선정 기본값 전체선택 (조직도 부서 목록) */
         var deptSel = {};
         depts.forEach(function (d) { deptSel[d.id] = true; });
         /* 설문조사표 단계는 마법사에서 제외 — 생성 후 목록에서 공통/부서별로 첨부한다.
@@ -1832,10 +1859,9 @@
         var allOn = cnt === total && total > 0;
         return '<div class="rl-modal-row">' +
             '<div class="rl-hr-badge">' +
-                /* 종전 «🔗 인사정보시스템 연동 — 조직(부서) 목록을 불러왔습니다»는 없는 연계를 성공으로
-                   말했다(§15 — 연계는 미구현이고 등록 부서도 일부뿐이다). 사실대로 밝힌다. */
-                '<span class="rl-hr-chip">조직도</span>' +
-                '<span style="font-size:12px;color:var(--text-gray);">등록된 부서에서 고릅니다 — 전체 과·사업소 명단은 조직도 연계 후 채워집니다.</span>' +
+                /* 조직도 출처(인사정보시스템·행정포털·온나라)를 화면에 쓰지 않는다 — 사용자가 알 필요가
+                   없는 정보다(2026-11-05 기획 확인 회신 1-2 · 23건 #22). 연계 상태 설명도 함께 걷었다. */
+                '<span style="font-size:var(--fs-12);color:var(--text-gray);">평가 대상 부서를 고릅니다.</span>' +
                 '<span style="font-size:12px;color:var(--text-black);font-weight:700;margin-left:auto;">선정 <b id="rl-w-cnt">' + cnt + '</b> / ' + total + '개 부서</span>' +
             '</div>' +
             '<label class="form-label" style="margin-top:10px;">평가 대상 부서 선택 <span style="color:var(--status-danger-fg)">*</span> ' +
@@ -1963,6 +1989,16 @@
             var a0 = (D().assessments(state.year) || [])[0];
             var cc = a0 && D().confirmCount ? D().confirmCount(a0.id) : null;
             if (cc && (cc.wait || cc.returned)) openConfirmQueue();
+            return;
+        }
+        /* 대시보드 활동·내 할일 개선조치에서 넘어오면 그 연도 평가의 그 부서 개선조치를 곧바로 연다
+           (운영 E13, 2026-11-04 — 연도 없는 주소로 다른 해 평가가 열리던 결함의 짝).
+           그 부서가 그 해 대상이 아니거나 조회 범위 밖이면 열지 않는다 — 목록 화면 그대로가 맞는 답이다. */
+        var qd = q.get('dept');
+        if (qd) {
+            var a1 = (D().assessments(state.year) || [])[0];
+            var inScope = !global.DYROLE || !global.DYROLE.inScope || global.DYROLE.inScope(qd);
+            if (a1 && inScope && (a1.depts || []).some(function (x) { return x.deptId === qd; })) openDept(qd);
         }
     }
 

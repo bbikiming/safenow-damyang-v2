@@ -362,6 +362,9 @@
         if (F.mode === 'self') {
             var ids = Object.keys(F.workerIds).filter(function (k) { return F.workerIds[k]; });
             if (!ids.length) { toast('교육 대상자를 1명 이상 선택하세요.'); return; }
+            /* 모집단이 섞이지 않게 — 교육을 만들기 전에 본다(운영 E19, 판정은 DYEDU 한 곳) */
+            var popWhy = E().populationIssue(F.kind, ids);
+            if (popWhy) { toast(popWhy); return; }
             /* 자체교육 즉시 완료 */
             var c = E().addCourse({
                 kind: F.kind, deptId: F.deptId, date: S.date, time: S.time, endTime: S.endTime,
@@ -450,7 +453,10 @@
             toast(E().deptName(G.deptId) + '은(는) 이미 등록된 부서입니다 — 신청 취소 후 다시 등록하세요.');
             return;
         }
-        E().addEnroll({ courseId: G.courseId, deptId: G.deptId, workerIds: ids, signFile: G.signFile, at: E().today() });
+        /* 저장 여부는 데이터 계층이 정한다(중복 부서·모집단 불일치 — 운영 E19).
+           반환값을 보지 않으면 저장되지 않았는데 «신청 완료»가 뜬다. */
+        var enr = { courseId: G.courseId, deptId: G.deptId, workerIds: ids, signFile: G.signFile, at: E().today() };
+        if (!E().addEnroll(enr)) { toast(E().enrollDenyReason(enr) || '등록부를 저장하지 못했습니다.'); return; }
         E().pushCourseHistory(G.courseId, { type: 'STATUS', by: E().deptName(G.deptId), memo: '참석자 등록부 등록 · ' + ids.length + '명 · 서명파일 첨부' });
         V().closeModal();
         toast(E().deptName(G.deptId) + ' · ' + ids.length + '명 신청 완료');
@@ -499,12 +505,16 @@
         var c = E().courseOf(courseId); if (!c) return;
         var enrolls = E().enrolls(courseId);
         var enrollRows = enrolls.length ? enrolls.map(function (e) {
-            var names = (e.workerIds || []).map(function (id) { var w = E().workerOf(id); return w ? w.name : id; }).join(', ');
+            /* 다른 부서 신청자 이름·서명파일은 가린다 — 판정은 DYEDU 한 곳(운영 P05) */
+            var names = E().personLabels(e.workerIds);
+            var seeSign = E().canSeePerson(e.deptId);
             return '<tr>' +
                 '<td>' + esc(E().deptName(e.deptId)) + '</td>' +
                 '<td>' + (e.workerIds || []).length + '명</td>' +
                 '<td style="font-size:var(--fs-12);color:var(--text-gray);">' + esc(names) + '</td>' +
-                '<td>' + (e.signFile ? '<span style="color:var(--main-dark);font-size:var(--fs-12);">' + esc(e.signFile) + '</span>' : '<span style="color:var(--text-gray);font-size:var(--fs-12);">-</span>') + '</td>' +
+                '<td>' + (!e.signFile ? '<span style="color:var(--text-gray);font-size:var(--fs-12);">-</span>'
+                    : seeSign ? '<span style="color:var(--main-dark);font-size:var(--fs-12);">' + esc(e.signFile) + '</span>'
+                    : '<span style="color:var(--text-gray);font-size:var(--fs-12);">제출됨</span>') + '</td>' +
                 '<td>' + esc(e.at) + '</td>' +
             '</tr>';
         }).join('') : '<tr><td colspan="5"><div class="v2-empty">신청이 없습니다.</div></td></tr>';

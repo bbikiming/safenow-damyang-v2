@@ -227,9 +227,10 @@
                 '<div class="dsh-hero-delta">전월 대비 +4%p · 이행률 미흡(60% 미만) 부서 ' + low.length + '곳</div>' +
               '</div>' +
               '<div class="dsh-hero-stats">' +
-                '<a class="dsh-hero-stat" href="stats.html"><b>0<em>건</em></b><span>중대재해 발생 (올해)</span></a>' +
+                /* «중대재해 발생»·«온나라 상신 중»은 집계 원본이 없는 고정값이었다(중대재해 대장 · 상신 경로
+                   통합 집계 없음) — 운영 E05(2026-11-04)에 따라 집계가 생길 때까지 칸을 두지 않는다.
+                   고정값 칸은 실제 결재중 0건인데 «2건 상신 중»이라고 말했다. */
                 '<a class="dsh-hero-stat is-danger" href="my-work.html"><b>' + totalOverdue + '<em>건</em></b><span>기한 초과 업무</span></a>' +
-                '<a class="dsh-hero-stat" href="menu.html?m=policy"><b>2<em>건</em></b><span>온나라 상신 중</span></a>' +
                 /* 2026-09-03 — 관리대상 현황(base-targets)은 메뉴에서 뺐다. 사업장 축을 여는
                    화면이 남아 있지 않으므로 «갈 곳 없는 링크»를 남기지 않고 수치만 낸다.
                    형제 3개는 링크라 태그를 <a> 로 두면 눌러도 아무 일이 없는 칸이 된다. */
@@ -314,7 +315,8 @@
             /* 2026-09-03 — 기준문서함(docs-archive)은 메뉴에서 뺐다. 매뉴얼 «점검»의
                회차별 증빙을 보는 자리는 이행 관리다. */
             /* 원료·제조물 건수는 대장에서 센다 — 하드코딩하면 등록·중지 후 화면과 어긋난다 */
-            { name: '중대재해·급박한 위험 대비 매뉴얼 점검',   basis: '시행령 §4 8호', cycle: '반기 1회 점검', st: '진행',   href: 'cmp-status.html', due: H2_DUE },
+            /* 이행 관리는 ?item= 으로 그 이행항목을 펼친 채 연다(운영 E12) — 조건 없이 보내면 첫 화면에 항목이 없다 */
+            { name: '중대재해·급박한 위험 대비 매뉴얼 점검',   basis: '시행령 §4 8호', cycle: '반기 1회 점검', st: '진행',   href: 'cmp-status.html?item=IND-08', due: H2_DUE },
             { name: '도급·용역·위탁 시 기준·절차 확인',        basis: '시행령 §4 9호', cycle: '반기 1회 점검', st: '미착수', href: 'menu.html?m=contract', due: H2_DUE },
         ];
         const doneN = duties.filter(d => d.st === '완료').length;
@@ -402,16 +404,8 @@
               '</div>' +
             '</div>';
 
-        const approveCard =
-            '<div class="card">' +
-              '<div class="card-header"><span class="card-title">결재·보고 대기</span><span class="chip-status danger chip-sm">2건</span></div>' +
-              '<div class="card-body">' +
-                '<div class="dsh-approve-row"><div><b>안전·보건 목표와 경영방침 (2026)</b><span>재난안전과 상신 · 온나라 연계 · 오늘 14:23</span></div>' +
-                  '<a class="btn btn-sm btn-primary" href="menu.html?m=policy">결재</a></div>' +
-                '<div class="dsh-approve-row"><div><b>상반기 의무이행 점검 결과 보고</b><span>재난안전과 상신 · 어제 17:40</span></div>' +
-                  '<a class="btn btn-sm btn-primary" href="menu.html?m=comply">결재</a></div>' +
-              '</div>' +
-            '</div>';
+        /* «결재·보고 대기 2건 [결재]» 카드는 걷었다(운영 E05 와 같은 근거, 2026-11-05) — 상신 경로를 모은
+           집계가 없어 고정값이었고, 승인·반려는 온나라 몫이라 이 시스템에 결재 버튼을 두지 않는다(CLAUDE.md §7-1). */
 
         /* 예산 집행 도넛 — 항목별 분해 (시행령 §4 4호 "편성·집행" 증빙 관점) */
         /* 예산 총괄표(DYBGT)와 같은 값이어야 한다 — 이 카드의 [예산 총괄표] 버튼이
@@ -463,7 +457,7 @@
         return hero + targetCard + chain +
             '<div class="dsh-grid">' +
               '<div style="display:flex; flex-direction:column; gap:16px;">' + heatCard + deptCard + dutyCard + '</div>' +
-              '<div style="display:flex; flex-direction:column; gap:16px;">' + approveCard + law5Card + accCard + budgetCard + feedCard + '</div>' +
+              '<div style="display:flex; flex-direction:column; gap:16px;">' + law5Card + accCard + budgetCard + feedCard + '</div>' +
             '</div>';
     }
 
@@ -666,6 +660,63 @@
         } catch (e) {}
         return c;
     }
+    /* 예방활동 요약 — 위험성평가 기록(DYRSK)에서 파생한다(운영 E13·P07, 2026-11-04).
+     *   · 범위: 조회 범위 안 부서의 활동만(DYROLE.inScope). 종전 예시 목록은 부서 계정에도 다른 부서
+     *     (하수처리장 · 재난안전과) 활동을 보여 줬다.
+     *   · 주소: 줄마다 **그 활동이 일어난 평가(연도)·그 부서 개선조치**로 간다. 연도 없는 주소는
+     *     기본 연도로 떨어져 다른 해 평가를 연다.
+     *   · 평가 운영 기록(생성·전달·공문)은 주관부서의 활동이다 — 재난안전과가 아니면 범위 밖이라 빠진다. */
+    const ACT_LABEL = {
+        CREATE: '정기평가 생성', DELIVER: '개선조치 전달', DISPATCH: '공문 상신', RECEIVE: '결재 회신',
+        COMPLETE: '평가 완료', NOTIFY: '개선조치 도착', STATUS: '개선조치 완료 처리', CONFIRM: '완료 확인',
+        RETURN: '완료 확인 반려', AMEND: '담당자·기한 변경', REMIND: '재촉', REGISTER: '수시평가 등록',
+        REVIEW: '안전관리자 검토', SUBMIT: '설문조사표 제출', OCC_STATUS: '위험성 감소대책 등록'
+    };
+    function activityFeed() {
+        const D = global.DYRSK, R = global.DYROLE;
+        if (!D) return '<div class="v2-empty">최근 활동이 없습니다.</div>';
+        const inScope = id => !R || !R.inScope || R.inScope(id);
+        const own = (R && R.OWNER_DEPT) || 'safety';
+        const rows = [];
+        const push = (at, deptId, type, subj, href) => {
+            if (!at || !inScope(deptId)) return;
+            rows.push({ at: String(at), deptId, type, subj: subj || '', href });
+        };
+        try {
+            (D.assessments() || []).forEach(a => {
+                const href = 'rsk-list.html?year=' + a.year;
+                (a.history || []).forEach(h => push(h.at, own, h.type, a.year + '년 정기 위험성평가', href));
+                (a.depts || []).forEach(dp => push(dp.reportAt, dp.deptId, 'SUBMIT', a.year + '년 정기 위험성평가',
+                    href + '&dept=' + encodeURIComponent(dp.deptId)));
+            });
+            (D.improvements() || []).forEach(m => {
+                let href;
+                if (m.occ_id || m.source_type === 'occasional') {
+                    const o = D.occasionalOf ? D.occasionalOf(m.occ_id) : null;
+                    href = 'rsk-occ.html' + (o ? '?year=' + o.year : '');
+                } else {
+                    const a = D.assessmentOf ? D.assessmentOf(m.assessment_id) : null;
+                    href = 'rsk-list.html' + (a ? '?year=' + a.year + '&dept=' + encodeURIComponent(m.dept_id) : '');
+                }
+                const subj = (m.hazard && m.hazard.name) || m.hazard_risk_factor || '개선조치';
+                (m.history || []).forEach(h => push(h.at, m.dept_id, h.type, subj, href));
+            });
+            (D.occasionals ? D.occasionals() : []).forEach(o => {
+                const href = 'rsk-occ.html?year=' + o.year;
+                /* 수시평가의 STATUS 는 «감소대책 등록 → 개선조치 전환»이다 — 개선조치의 완료 처리와 다른 뜻 */
+                (o.history || []).forEach(h => push(h.at, o.deptId, h.type === 'STATUS' ? 'OCC_STATUS' : h.type,
+                    '수시 위험성평가 — ' + String(o.desc || '').split(' · ')[0], href));
+            });
+        } catch (e) {}
+        rows.sort((x, y) => y.at.localeCompare(x.at));
+        const top = rows.slice(0, 5);
+        if (!top.length) return '<div class="v2-empty">최근 활동이 없습니다.</div>';
+        return top.map(r =>
+            '<div class="dsh-feed-item"><span class="dsh-feed-time">' + E(r.at.slice(0, 10)) + '</span><span>' +
+              E(D.deptName(r.deptId)) + ' — ' + E(ACT_LABEL[r.type] || '기록') + ' · ' + E(r.subj) +
+              (r.href ? ' <a href="' + E(r.href) + '" style="color:var(--main-dark); font-weight:700;">보기</a>' : '') +
+            '</span></div>').join('');
+    }
     function staffView(p) {
         p = p || (global.DYROLE && global.DYROLE.current());
         const deptId = (p && p.deptId) || '';
@@ -822,7 +873,8 @@
         }).join('');
         const ratesCard =
             '<div class="card">' +
-              '<div class="card-header"><span class="card-title">업무문서 처리율 — 대메뉴별</span>' +
+              /* 부서 화면 아래에 있지만 군 전체 수치다 — 제목에 밝힌다(운영 P07). 안 밝히면 우리 부서 수치로 읽힌다 */
+              '<div class="card-header"><span class="card-title">업무문서 처리율 — 대메뉴별 (군 전체)</span>' +
                 '<span class="dsh-seed-note">업무문서 처리 기록 기준</span></div>' +
               '<div class="card-body">' + ratesRows + '</div>' +
             '</div>';
@@ -852,15 +904,8 @@
             '<div style="display:flex; flex-direction:column; gap:16px;">' +
               catCard +
               '<div class="card">' +
-                '<div class="card-header"><span class="card-title">예방활동 요약</span>' +
-                    '<span class="dsh-seed-note">예시 자료</span></div>' +
-                '<div class="card-body">' +
-                  '<div class="dsh-feed-item"><span class="dsh-feed-time">오늘 10:20</span><span>수시 위험성평가 완료 — 하수처리장 설비 변경 <a href="rsk-list.html" style="color:var(--main-dark); font-weight:700;">보기</a></span></div>' +
-                  '<div class="dsh-feed-item"><span class="dsh-feed-time">오늘 09:05</span><span>종사자 신고 1건 접수 — 보도블록 침하 <a href="rsk-occ.html" style="color:var(--main-dark); font-weight:700;">보기</a></span></div>' +
-                  '<div class="dsh-feed-item"><span class="dsh-feed-time">어제 16:40</span><span>관리감독자 교육 이수율 100% 달성</span></div>' +
-                  
-                  '<div class="dsh-feed-item"><span class="dsh-feed-time">06-08</span><span>도급사업 서약서 3건 첨부 완료</span></div>' +
-                '</div>' +
+                '<div class="card-header"><span class="card-title">예방활동 요약</span></div>' +
+                '<div class="card-body">' + activityFeed() + '</div>' +
               '</div>' +
               '<div class="card">' +
                 '<div class="card-header"><span class="card-title">알림 메시지 이력</span>' +

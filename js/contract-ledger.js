@@ -156,7 +156,15 @@
     /* ── 권한 — 반입·판정은 주관부서 담당자, 착공일·점검은 그 계약 감독부서 담당자(주관부서 포함) ── */
     function canManage() { const D = R(); return !D || D.canAct(D.OWNER_DEPT); }
     function deptIdOf(r) { return V().deptIdOf ? V().deptIdOf(r.dept) : ''; }
-    function canActRow(r) { const D = R(); return !D || D.canAct(deptIdOf(r)); }
+    /* 계약 줄의 처리(착공일·점검표·위험성평가 확인·서약서)는 그 계약 **사업부서 담당자**와 주관부서 담당자만 한다.
+       사업부서가 조직도에 없으면(deptIdOf → '') canAct('') 가 «부서 없는 전사 항목»으로 읽혀 **모든 부서 담당자가
+       통과**했다 — 운영 P06(담양읍 계정에 관광과·건설과 계약의 [점검표 작성]·[첨부]가 열림)이 그 구멍이다.
+       부서를 모르면 주관부서 소관으로 본다(교육 DYEDU.courseDeptOf 와 같은 원칙, CLAUDE.md §4). */
+    function canActRow(r) {
+        const D = R(); if (!D) return true;
+        const id = deptIdOf(r);
+        return id ? D.canAct(id) : D.canAct(D.OWNER_DEPT);
+    }
     function actor() { const D = R(); const p = D && D.current && D.current(); return p ? p.name : '담당자'; }
     function stamp() { const d = new Date(), z = n => String(n).padStart(2, '0'); return today() + ' ' + z(d.getHours()) + ':' + z(d.getMinutes()); }
 

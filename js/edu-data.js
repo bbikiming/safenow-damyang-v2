@@ -452,6 +452,25 @@
     /* ================= CRUD ================= */
     function workers() { return load().workers.filter(function (w) { return w.active; }); }
     function workerOf(id) { var arr = load().workers; for (var i = 0; i < arr.length; i++) if (arr[i].id === id) return arr[i]; return null; }
+    /* ── 다른 부서 사람의 이름·서명파일 — 조회 범위 밖이면 가린다 (2026-11-05 운영 P05) ──
+     * 교육 상세·기타교육 상세는 전 부서 신청을 한 표로 보여 준다. 부서 담당자에게 남의 부서
+     * 신청자 이름과 서명등록부(이름·서명이 있다)가 열리면 근로자 명단 화면이 범위를 좁힌
+     * 의미가 없어진다(채용시교육 목록 = 근로자 명단 조회 범위와 같은 근거, CLAUDE.md §4).
+     * 판정은 DYROLE.inScope 한 곳이다 — 주관부서·총괄 책임자는 전 부서, 그 밖은 자기 부서.
+     * 가린 이름은 «#번호»다. 번호는 명단 등록 순서라 화면마다 같은 사람이 같은 번호다. */
+    function canSeePerson(deptId) {
+        var R = global.DYROLE;
+        return !R || !R.inScope || R.inScope(deptId);
+    }
+    function personLabel(id) {
+        var arr = load().workers;
+        for (var i = 0; i < arr.length; i++) {
+            if (arr[i].id !== id) continue;
+            return canSeePerson(arr[i].deptId) ? arr[i].name : '#' + (i + 1);
+        }
+        return id;
+    }
+    function personLabels(ids) { return (ids || []).map(personLabel).join(', '); }
     /* 계약기간 필수 판정 — **데이터 계층에 둔다** (2026-09-01)
      * 종전 가드는 근로자 명단 화면의 저장 함수에만 있었다. 그런데 쓰기 경로가 넷이고
      * (등록·수정·지정일·엑셀) 그중 엑셀은 화면 가드를 지나지 않는다. 지금은 그 경로가
@@ -706,9 +725,44 @@
      * 데이터 계층에서 막는 이유는 호출부가 7곳이고 그중 넷이 채용시교육 자동 생성
      * 경로라, 화면마다 검사를 두면 반드시 빠뜨리는 곳이 생기기 때문이다.
      * 반환 — 저장했으면 true, 중복이라 거절했으면 false. */
+    /* ── 교육의 모집단 — 현업근로자 교육과 관리감독자 교육은 대상이 갈린다 (2026-11-05 운영 E19) ──
+     * 운영 서버에서 현업근로자 집합교육 등록부 후보에 관리감독자가 섞여 나왔다. 관리감독자
+     * 정기교육은 별도 교육(관리감독자 › 정기교육)이라 섞이면 같은 사람이 두 정기교육에
+     * 이수기록을 갖고, 현업근로자 이수율의 분모·분자가 함께 틀어진다.
+     * 화면 후보만 거르면 전역 호출로 뚫리므로 **저장 경로(addEnroll)에서 같은 판정**을 한다.
+     * 채용시교육(HIRE)은 근로자·관리감독자가 같은 kind 를 쓰므로 여기서 가르지 않는다. */
+    function populationOfKind(kind) {
+        if (kind === 'SUP_REG' || kind === 'SUP_ETC') return 'SUP';
+        if (kind === 'REG_GROUP' || kind === 'REG_SELF' || kind === 'ETC') return 'FIELD';
+        return '';
+    }
+    function populationIssue(kind, workerIds) {
+        var pop = populationOfKind(kind);
+        if (!pop) return '';
+        var bad = (workerIds || []).filter(function (id) {
+            var w = workerOf(id);
+            if (!w) return false;
+            return pop === 'SUP' ? w.category !== 'SUPERVISOR' : w.category === 'SUPERVISOR';
+        });
+        if (!bad.length) return '';
+        return pop === 'SUP'
+            ? '관리감독자 교육에는 관리감독자만 등록할 수 있습니다.'
+            : '현업근로자 교육에는 관리감독자를 등록할 수 없습니다 — 관리감독자는 관리감독자 교육에 등록합니다.';
+    }
+    /* 등록부를 저장할 수 없는 이유 — 화면이 addEnroll 의 false 를 사유로 바꿔 말할 때 쓴다 */
+    function enrollDenyReason(o) {
+        var c = courseOf(o.courseId);
+        var pop = c ? populationIssue(c.kind, o.workerIds) : '';
+        if (pop) return pop;
+        if (hasEnroll(o.courseId, o.deptId)) return deptName(o.deptId) + '은(는) 이미 등록된 부서입니다 — 신청 취소 후 다시 등록하세요.';
+        return '';
+    }
     function addEnroll(o) {
         var d = load();
         if (d.enrolls.some(function (e) { return e.courseId === o.courseId && e.deptId === o.deptId && e.status !== 'CANCELLED'; })) return false;
+        /* 모집단이 맞지 않는 사람이 섞이면 저장하지 않는다(E19) */
+        var oc = courseOf(o.courseId);
+        if (oc && populationIssue(oc.kind, o.workerIds)) return false;
         d.enrolls.push({
             courseId: o.courseId, deptId: o.deptId,
             workerIds: (o.workerIds || []).slice(),
@@ -983,7 +1037,8 @@
                대상 작업은 등록 폼에서 복수 선택으로 **받는다**(js/edu-etc.js) — 판정에
                쓰지 않을 뿐이다. */
             perCourseCheck: false,
-            checkNote: '16시간은 최초 작업 전 4시간을 하고 나머지 12시간을 3개월 이내에 나눠 할 수 있으며, 단기간·간헐적 작업은 2시간입니다. 이 화면은 분할 이력과 최초 작업일·단기간 여부를 받지 않으므로 한 건만 보고 미달 여부를 판정하지 않습니다.',
+            /* 화면 문구는 담당자가 알 것만 — 시스템이 무엇을 받지 않는지는 위 주석에만 둔다(운영 T28) */
+            checkNote: '특별교육은 나눠 실시할 수 있어 한 건만으로 미달을 표시하지 않습니다.',
             hours: [
                 { who: '일용·1주 이하 기간제', h: 2, note: '별표5 제1호라목 제39호는 8시간' },
                 { who: '그 밖의 근로자', h: 16, note: '최초 작업 전 4시간 + 12시간은 3개월 내 분할 / 단기간·간헐 작업은 2시간' }
@@ -1085,6 +1140,8 @@
         courseSessions: courseSessions, sessionHours: sessionHours, sumSessionHours: sumSessionHours,
         /* 신청·이수 */
         enrolls: enrolls, allEnrolls: allEnrolls, addEnroll: addEnroll, hasEnroll: hasEnroll, removeEnroll: removeEnroll,
+        enrollDenyReason: enrollDenyReason, populationIssue: populationIssue,
+        canSeePerson: canSeePerson, personLabel: personLabel, personLabels: personLabels,
         cancelCompletedEnroll: cancelCompletedEnroll,
         removeWorkerFromCourse: removeWorkerFromCourse,
         records: records, recordsFor: recordsFor, addRecord: addRecord,

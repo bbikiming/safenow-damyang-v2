@@ -368,6 +368,10 @@
         }
         var ids = Object.keys(F.workerIds).filter(function (k) { return F.workerIds[k]; });
         if (!ids.length) { toast('대상자를 1명 이상 선택하세요.'); return; }
+        /* 현업근로자 기타교육에 관리감독자, 관리감독자 기타교육에 근로자가 섞이지 않게(운영 E19).
+           교육을 만들기 전에 본다 — 만든 뒤 등록부가 거절되면 대상자 없는 교육이 남는다. */
+        var popWhy = E().populationIssue(courseKind(), ids);
+        if (popWhy) { toast(popWhy); return; }
         var c = E().addCourse({
             kind: courseKind(), etcType: F.etcType, deptId: F.deptId,
             date: F.date, time: F.time, hours: F.hours, instructor: F.instructor, place: F.place, desc: F.desc,
@@ -395,9 +399,8 @@
     function viewDetail(courseId) {
         var c = E().courseOf(courseId); if (!c) return;
         var enrolls = E().enrolls(courseId);
-        var names = enrolls.map(function (e) {
-            return (e.workerIds || []).map(function (id) { var w = E().workerOf(id); return w ? w.name : id; }).join(', ');
-        }).join(' · ');
+        /* 다른 부서 대상자는 «#번호»로 가린다 — 판정은 DYEDU.personLabel 한 곳(운영 P05) */
+        var names = enrolls.map(function (e) { return E().personLabels(e.workerIds); }).join(' · ');
         var hist = (c.history || []).map(function (h) {
             return '<div style="padding:6px 0;border-bottom:1px dashed var(--card-line);font-size:var(--fs-12);">' +
                 '<span style="color:var(--text-gray);margin-right:8px;">' + esc(h.at) + '</span>' +
@@ -418,11 +421,10 @@
             ? '<div class="check-notice" style="margin-top:10px;border-color:var(--status-danger-border);">' +
                 '<b>법정 최소 교육시간 미달 ' + short.length + '명</b> — 실시 ' + c.hours + 'h · 최소 ' + short[0].need + 'h<br>' +
                 short.map(function (x) { return esc(x.worker.name) + '(' + esc(E().empLabel(x.worker.empType)) + ' · 최소 ' + x.need + 'h)'; }).join(', ') +
-                '<br><span class="file-hint">기록은 그대로 남습니다 — 미달 사실을 지우지 않기 위해서입니다.</span>' +
+                '<br><span class="file-hint">기록은 그대로 남습니다.</span>' +
               '</div>'
             : (info.perCourseCheck === false && info.checkNote
-                ? '<div class="check-notice" style="margin-top:10px;"><b>이 유형은 한 건만으로 미달을 판정하지 않습니다</b><br>' +
-                    esc(info.checkNote) + '</div>'
+                ? '<div class="check-notice" style="margin-top:10px;">' + esc(info.checkNote) + '</div>'
                 : '');
         V().openModal((c.etcType || '기타 교육') + ' — 상세',
             '<div style="font-size:var(--fs-13);">' +

@@ -28,8 +28,10 @@
        개인정보보호법의 목적 내 최소 이용 — 교육 이수 기록은 산안법 §29 이행 증빙이
        목적이므로 그 목적에 필요한 범위로 좁힌다.
          본인·소속 부서 = 자기 부서원 / 재난안전과·군수 = 전 부서
-       **부서별 집계(완료율)는 그대로 공개한다** — 개인이 식별되지 않고,
-       총괄 책임자가 부서 간 비교를 못 하면 이행 관리가 성립하지 않는다.
+       **부서별 요약도 같은 범위다 (2026-11-05 운영 P01)** — 종전에는 «개인이 식별되지
+       않는다»며 부서별 완료율을 전 부서에 공개했는데, 운영에서 부서 담당자 계정에 다른 부서
+       줄이 보여 «근로자 명단과 같은 조회 범위»로 확정했다. 부서 간 비교는 전 부서를 보는
+       재난안전과·군수가 한다(그 둘은 scope 'all' 이라 잃는 것이 없다).
        종전에는 누구로 접속해도 전 직원의 개인별 이수시간이 보였다. */
     /* 독촉 발신자 — 하드코딩하면 담양읍장이 눌러도 재난안전과가 보낸 것으로 남는다
        (위험성평가 remindBy() 와 같은 근거). */
@@ -111,7 +113,9 @@
 
     function renderSummary() {
         /* 완료율은 선택된 모집단(구분·고용형태·채용연도) 기준으로 다시 계산한다 */
-        var all = E().deptSummary(E().TODAY, inPopulation, { keepEmpty: true });
+        /* 조회 범위 밖 부서는 줄 자체를 내지 않는다(운영 P01) — 근로자 명단과 같은 범위 */
+        var all = E().deptSummary(E().TODAY, inPopulation, { keepEmpty: true })
+            .filter(function (d) { return canSeePerson(d.deptId); });
         var arr = all.filter(function (d) {
             if (state.fPct === '100' && d.pct !== 100) return false;
             if (state.fPct === 'mid' && !(d.pct !== null && d.pct >= 70 && d.pct < 100)) return false;
@@ -140,11 +144,8 @@
                 '<td>' + d.done + '명</td>' +
                 '<td><div class="progress edu-gauge"><div class="progress-bar ' + barCls + '" style="width:' + (d.pct || 0) + '%"></div></div>' +
                     '<span class="edu-bar-txt">' + pctText + '</span></td>' +
-                /* 조회 범위 밖 부서는 [상세]를 내지 않는다 — 종전에는 버튼을 내놓고 누르면
-                   «개인 이수이력은 열람할 수 없습니다»로 거절했다(부서 합계는 그대로 보인다). */
-                '<td>' + ((!global.DYROLE || !global.DYROLE.inScope || global.DYROLE.inScope(d.deptId))
-                    ? '<button type="button" class="btn btn-outline btn-sm" onclick="EDUS.viewDept(\'' + d.deptId + '\')">상세</button>'
-                    : '<span class="edu-short" title="다른 부서의 개인 이수이력은 그 부서와 재난안전과가 봅니다">—</span>') + '</td>' +
+                /* 범위 밖 부서는 위에서 줄째 뺐다 — 여기 오는 줄은 전부 [상세]를 열 수 있다 */
+                '<td><button type="button" class="btn btn-outline btn-sm" onclick="EDUS.viewDept(\'' + d.deptId + '\')">상세</button></td>' +
             '</tr>';
         }).join('') : '<tr><td colspan="5"><div class="v2-empty">' +
             (all.length ? '조건에 맞는 부서가 없습니다.' : '데이터가 없습니다.') + '</div></td></tr>';
@@ -342,7 +343,9 @@
 
     /* =============== 독촉 이력 =============== */
     function openReminders() {
-        var arr = E().reminders().slice().sort(function (a, b) { return (b.at || '').localeCompare(a.at || ''); });
+        /* 독촉 이력도 같은 범위 — 대상자 이름이 실려 있다(운영 P01) */
+        var arr = E().reminders().filter(function (r) { return canSeePerson(r.deptId); })
+            .slice().sort(function (a, b) { return (b.at || '').localeCompare(a.at || ''); });
         var rows = arr.length ? arr.map(function (r) {
             var names = (r.workerIds || []).map(function (wid) { var w = E().workerOf(wid); return w ? w.name : wid; }).join(', ');
             return '<tr>' +

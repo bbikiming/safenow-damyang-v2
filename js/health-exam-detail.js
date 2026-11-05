@@ -48,8 +48,9 @@
         var may = canAct(r);
         var unex = S().hcUnexamined(r);
         var done = !!r.done;
-        var rate = r.targetCount ? Math.round(r.examinedCount / r.targetCount * 100) : 0;
-        var barTone = rate >= 100 ? '' : (rate >= 80 ? 'warn' : 'danger');
+        /* 실시일이 없으면 수검률은 «-»(운영 E04 ②) — 목록과 같은 DYSH.hcRate */
+        var rate = S().hcRate(r);
+        var barTone = rate == null ? '' : rate >= 100 ? '' : (rate >= 80 ? 'warn' : 'danger');
 
         /* 상단 액션 — 상태별 컨텍스트 액션(점진적 공개) */
         var acts = '';
@@ -58,19 +59,16 @@
             else if (unex > 0) acts += '<button type="button" class="btn btn-primary" onclick="HEXD.complete()">추가검진 반영</button>';
             else if (S().hcFollowup(r)) acts += '<button type="button" class="btn btn-primary" onclick="HEXD.complete()">사후관리 완료</button>';
             else acts += '<span class="sh-st success" style="align-self:center;">완료 처리됨</span>';
-            acts += '<button type="button" class="btn btn-outline" onclick="HEXD.evidence()">증빙 등록</button>';
+            /* 결과보고서는 실시일이 있어야 붙는다(운영 E04 ①) — 미실시면 [검진 완료 처리]가 함께 받는다 */
+            if (done) acts += '<button type="button" class="btn btn-outline" onclick="HEXD.evidence()">증빙 등록</button>';
             if (!done || unex > 0) acts += '<button type="button" class="btn btn-outline" onclick="HEXD.resetDue()">기한 재설정</button>';
             if (!done || unex > 0) acts += '<button type="button" class="btn btn-outline" onclick="HEXD.reason()">미검진 사유 입력</button>';
             acts += '<button type="button" class="btn btn-outline" onclick="HEXD.notify()">알림 발송</button>';
         }
         var actions = acts ? '<div class="sh-actions" style="margin-bottom:14px;">' + acts + '</div>' : roNote(r);
 
-        var linknote =
-            '<div class="sh-linkbar">' +
-                S().icon('check', 18) +
-                '<div>이 건이 <b>완료</b>되면 수검률·증빙이 <b>안전보건관리책임자 평가</b>의 「종사자의 건강진단 등 건강관리」 항목 참고지표에 반영됩니다. ' +
-                '<a href="evl-eval.html">인력 평가에서 확인 →</a></div>' +
-            '</div>';
+        /* 연계 설명 안내(인력 평가 반영)는 걷었다(운영 T14, 2026-11-04) */
+        var linknote = '';
 
         /* 개요 + 검진 일정 */
         var overview =
@@ -90,13 +88,13 @@
 
         /* 대상자 현황 */
         var status =
-            '<div class="sh-card"><div class="sh-card-h">대상자 현황 <span class="sub">수검률 ' + rate + '%</span></div>' +
+            '<div class="sh-card"><div class="sh-card-h">대상자 현황 <span class="sub">수검률 ' + (rate == null ? '-' : rate + '%') + '</span></div>' +
             '<dl class="sh-kv">' +
                 '<dt>대상자 수</dt><dd><b>' + r.targetCount + '</b> 명</dd>' +
                 '<dt>수검자 수</dt><dd><b style="color:var(--status-success-fg)">' + r.examinedCount + '</b> 명</dd>' +
                 '<dt>미검진자 수</dt><dd><b style="color:' + (unex > 0 ? 'var(--status-danger-fg)' : 'var(--text-gray)') + '">' + unex + '</b> 명</dd>' +
             '</dl>' +
-            '<div class="sh-bar ' + barTone + '"><span style="width:' + rate + '%"></span></div></div>';
+            '<div class="sh-bar ' + barTone + '"><span style="width:' + (rate || 0) + '%"></span></div></div>';
 
         /* 실시 증빙 */
         var evidence =
@@ -104,7 +102,9 @@
             (r.evidence
                 ? '<div class="sh-photos"><div class="sh-photo has">' + S().icon('file', 26) + '<span>실시확인서.pdf</span></div>' +
                   '<div style="align-self:center;font-size:13px;color:var(--text-gray);">실시 증빙이 등록되어 있습니다.</div></div>'
-                : '<div class="sh-req">아직 실시 증빙이 등록되지 않았습니다. 검진기관 실시확인서를 <b>[증빙 등록]</b>으로 첨부하세요.</div>') +
+                : (done
+                    ? '<div class="sh-req">아직 실시 증빙이 등록되지 않았습니다. 검진기관 실시확인서를 <b>[증빙 등록]</b>으로 첨부하세요.</div>'
+                    : '<div class="sh-req">검진을 실시한 뒤 <b>[검진 완료 처리]</b>에서 실시일·수검자 수와 함께 결과보고서를 올립니다.</div>')) +
             '</div>';
 
         /* 사후관리 — 상세형: 계획/실적 / 단순형: 이행 여부만 */
@@ -158,6 +158,7 @@
     /* ── 증빙 등록 ── */
     function evidence() {
         if (deny(S().healthOf(state.id), '실시 증빙 등록')) return;
+        if (!S().healthOf(state.id).done) { toast('검진 실시일을 먼저 등록하세요 — [검진 완료 처리]에서 결과보고서를 함께 올립니다.'); return; }
         V().openModal('실시 증빙 등록',
             '<p style="font-size:13px;margin-bottom:10px;color:var(--text-gray);">검진기관 실시확인서·집계 결과 통보서를 첨부합니다. 개인별 결과지는 첨부하지 않습니다.</p>' +
             V().uploadDrop('파일을 끌어다 놓거나 클릭하여 업로드<br><span style="font-size:12px;">업로드 시 이력이 자동 기록됩니다</span>', null, { hint: true }),
@@ -165,7 +166,9 @@
             '<button type="button" class="btn btn-primary" onclick="HEXD.saveEvidence()">등록</button>');
     }
     function saveEvidence() {
-        if (deny(S().healthOf(state.id), '실시 증빙 등록')) return; S().attachEvidence('hc', state.id, '실시 증빙'); V().closeModal(); render(); toast('증빙이 등록되었습니다.'); }
+        if (deny(S().healthOf(state.id), '실시 증빙 등록')) return;
+        if (!S().attachEvidence('hc', state.id, '실시 증빙')) { toast('검진 실시일을 먼저 등록하세요.'); return; }
+        V().closeModal(); render(); toast('증빙이 등록되었습니다.'); }
 
     /* ── 미검진 사유 ── */
     function reason() {
@@ -238,12 +241,15 @@
         if (deny(S().healthOf(state.id), '검진 완료 처리')) return;
         var r = S().healthOf(state.id);
         if (!r.done) {
-            if (!r.evidence) { toast('실시 증빙을 먼저 등록하세요.'); return; }
+            /* 실시일·수검자 수·결과보고서를 한 번에 받는다(운영 E04 ①) — 결과보고서와 수검 인원은
+               실시일이 있어야 들어간다. 종전에는 증빙을 먼저 올리게 해 «미실시인데 첨부됨»이 생겼다. */
             V().openModal('검진 완료 처리',
-                '<div style="margin-bottom:12px;"><label class="form-label">검진 실시일</label>' +
+                '<div style="margin-bottom:12px;"><label class="form-label">검진 실시일 <span style="color:var(--status-danger-fg)">*</span></label>' +
                     '<input type="date" class="form-input" id="hd-c-date" value="' + esc(S().TODAY) + '"></div>' +
                 '<div style="margin-bottom:12px;"><label class="form-label">수검자 수 (대상 ' + r.targetCount + '명)</label>' +
                     '<input type="number" class="form-input" id="hd-c-ex" value="' + r.targetCount + '" min="0" max="' + r.targetCount + '"></div>' +
+                '<div style="margin-bottom:12px;"><label class="form-label">결과보고서 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                    V().uploadDrop('검진기관 실시확인서·집계 결과 통보서를 끌어다 놓거나 클릭하여 업로드', null, { hint: true }) + '</div>' +
                 /* 사후관리 대상 여부는 결과 통보서를 받는 이 시점에만 정해진다 —
                    여기서 받지 않으면 사후관리 축이 신규 건에서 영영 열리지 않는다. */
                 '<div><label><input type="checkbox" id="hd-c-fu-need"' + (r.followupNeeded ? ' checked' : '') + '> ' +
@@ -276,8 +282,11 @@
         if (!Number.isInteger(ex) || ex < 0 || ex > r.targetCount) { toast('수검자 수는 0명 이상 대상자 수 이하로 입력하세요.'); return; }
         if (dateEl && (!dateEl.value || dateEl.value > S().TODAY)) { toast('검진 실시일을 확인하세요.'); return; }
         var fuEl = document.getElementById('hd-c-fu-need');
+        var first = !r.done;
         S().completeHealth(state.id, { doneDate: dateEl ? dateEl.value : undefined, examinedCount: isNaN(ex) ? undefined : ex,
             followupNeeded: fuEl ? !!fuEl.checked : undefined });
+        /* 실시 확정과 함께 결과보고서를 붙인다 — 실시일이 생긴 뒤라 저장 계층 가드를 통과한다 */
+        if (first && !r.evidence) S().attachEvidence('hc', state.id, '결과보고서');
         V().closeModal(); render(); toast('검진 실시가 반영되었습니다.');
     }
     function saveFollowup() {

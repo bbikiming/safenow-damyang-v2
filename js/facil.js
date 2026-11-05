@@ -117,6 +117,18 @@
     /* ── 파생·조회 ── */
     function recOf(no) { return DB.recs.find(r => r.facilNo === no) || null; }
     function extOf(no) { return DB.ext[no] || {}; }
+    /* 읽는 쪽이 쓰는 값 — 안전등급·최근 점검일은 보완입력이 비어 있으면 FMS 점검 결과
+       (수신분의 fmsSafetyGrade·fmsInspectYmd)를 쓴다(운영 사양, 2026-11-04 T22).
+       입력 폼은 extOf(직접 입력값)를 그대로 보여 «비워 두면 FMS 값»이 유지되게 한다.
+       지금 시드(시설물관리대장 기본현황)에는 점검 결과가 없어 보완입력 값만 쓰인다. */
+    function effOf(no) {
+        const e = extOf(no), r = recOf(no) || {};
+        if ((e.safetyGrade || !r.fmsSafetyGrade) && (e.lastInspectYmd || !r.fmsInspectYmd)) return e;
+        return Object.assign({}, e, {
+            safetyGrade: e.safetyGrade || r.fmsSafetyGrade || '',
+            lastInspectYmd: e.lastInspectYmd || r.fmsInspectYmd || '',
+        });
+    }
     function ageOf(r) { const y = (r.cplYmd || '').slice(0, 4); return /^\d{4}$/.test(y) ? (thisYear() - +y) : null; }
     function addrOf(r) { return [r.addrSido, r.addrGugun, r.addrDong, r.addrDetail].filter(x => x && x.trim()).join(' '); }
     /* 법정 점검주기 초과 개월 수 — 시행령 별표3. 등급별 주기(개월)를 기준으로 잰다.
@@ -140,7 +152,7 @@
     }
     /* 위험도: 확보된 변수만으로 점수. 핵심변수(안전등급 or 점검일) 없으면 '산정불가' — 0 처리 금지(PRD §8). */
     function riskOf(no) {
-        const r = recOf(no), e = extOf(no);
+        const r = recOf(no), e = effOf(no);
         const have = [];
         let score = 0;
         const age = ageOf(r);
@@ -190,7 +202,7 @@
         DB.recs.forEach(r => {
             if (r.facilClass === '2') c.cls2++; if (r.facilClass === '3') c.cls3++;
             const a = ageOf(r); if (a != null && a >= 30) c.aged++;
-            const e = extOf(r.facilNo);
+            const e = effOf(r.facilNo);
             if (!e.lat || !e.lng) c.noCoord++;
             if (r.jur === '미상') c.noJur++;
             if (e.safetyGrade) c.graded++;
@@ -295,8 +307,8 @@
                 if (f.cls && r.facilClass !== f.cls) return false;
                 if (f.jur && r.jur !== f.jur) return false;
                 if (f.aged && !((ageOf(r) || 0) >= 30)) return false;
-                if (f.graded === 'y' && !extOf(r.facilNo).safetyGrade) return false;
-                if (f.graded === 'n' && extOf(r.facilNo).safetyGrade) return false;
+                if (f.graded === 'y' && !effOf(r.facilNo).safetyGrade) return false;
+                if (f.graded === 'n' && effOf(r.facilNo).safetyGrade) return false;
                 if (f.q) {
                     const hay = (r.facilNm + ' ' + r.facilNo + ' ' + addrOf(r)).toLowerCase();
                     if (hay.indexOf(f.q.toLowerCase()) < 0) return false;
@@ -395,7 +407,7 @@
             const list = DYFACIL.list(UI);
             if (!list.length) return '<tr><td colspan="8"><div class="v2-empty">조건에 맞는 시설물이 없습니다.<br><span style="font-size:12px;">필터를 바꿔 보세요. 대장은 FMS 수신분이며 수신 주기·범위는 시스템 관리 &gt; 연계 관리에서 확인합니다.</span></div></td></tr>';
             return list.map(r => {
-                const e = extOf(r.facilNo), age = ageOf(r), rk = riskOf(r.facilNo);
+                const e = effOf(r.facilNo), age = ageOf(r), rk = riskOf(r.facilNo);
                 const flags = [];
                 if (age != null && age >= 30) flags.push('<span class="chip-mini wt-attach">노후 ' + age + '년</span>');
                 if (r.jur === '미상') flags.push('<span class="chip-mini wt-attach">소관확인</span>');
@@ -440,10 +452,29 @@
         render();
     }
 
+    /* ── 보완입력·FMS 전송·위험성평가 연계는 재난안전과 담당자만 (23건 #18, 2026-11-05) ──
+       종전에는 판정이 없어 부서 담당자 계정에도 세 버튼이 열렸다. 판정은 DYROLE.canAct 를
+       주관부서로 물은 값 하나이고(§12), 버튼을 감추는 화면과 진입 함수가 같은 판정을 본다
+       (버튼만 감추면 전역 호출로 뚫린다). 조회는 막지 않는다. */
+    function canEditFac() {
+        const R = window.DYROLE;
+        return !(R && R.canAct) || R.canAct(R.OWNER_DEPT);
+    }
+    function facDenyNote() {
+        const R = window.DYROLE, p = R && R.current ? R.current() : null;
+        if (p && p.tier !== 'staff' && R.readOnlyNote) return R.readOnlyNote('보완입력·FMS 전송') || '';
+        return '보완입력·FMS 전송은 재난안전과 담당자가 합니다 — 틀린 정보는 재난안전과에 알려 주세요.';
+    }
+    function facGate() {
+        if (canEditFac()) return false;
+        V().toast(facDenyNote());
+        return true;
+    }
+
     /* ─────────── FAC02-D 시설물 상세 · 보완입력 (모달) ─────────── */
     function openDetail(no) {
         const r = recOf(no); if (!r) return;
-        const e = extOf(no), age = ageOf(r), rk = riskOf(no);
+        const e = extOf(no), ef = effOf(no), age = ageOf(r), rk = riskOf(no);
         const ro = (lbl, val) => '<div class="fac-f"><span class="fac-f-l">' + lbl + '</span><span class="fac-f-v">' + (val && String(val).trim() ? esc(val) : '<em style="color:var(--text-gray);">— FMS 미제공</em>') + '</span></div>';
 
         /* 1) FMS 기본현황 (읽기전용) */
@@ -474,30 +505,38 @@
            saveExt 가 병합이라 이전 값은 ext 에 그대로 남는다. */
         const sel = (id, cur, opts, ph) => '<select class="select" id="' + id + '" style="width:100%;"><option value="">' + ph + '</option>' + opts.map(o => { const v = Array.isArray(o) ? o[0] : o, l = Array.isArray(o) ? o[1] : o; return '<option value="' + v + '"' + (cur === v ? ' selected' : '') + '>' + esc(l) + '</option>'; }).join('') + '</select>';
         const inp = (id, cur, ph, type) => '<input class="select" id="' + id + '" style="width:100%;" type="' + (type || 'text') + '" value="' + esc(cur || '') + '" placeholder="' + esc(ph || '') + '">';
-        const nextSuggest = e.lastInspectYmd ? DYFACIL.suggestNext(e.lastInspectYmd, e.safetyGrade || 'C') : '';
-        const extBlock =
-            '<div class="fac-sec-t" style="margin-top:18px;">보완입력 ' +
-                '<span class="chip-mini wt-program">FMS 수신이 덮어쓰지 않음</span></div>' +
-            /* 개발자·발주처가 이 구획을 "담양군 자체 데이터"로 읽은 사례가 있어(2026-08-13
-               FMS 추가 요청 질의) 두 부류를 화면에서 갈라 밝힌다. 라벨만으로는 구분되지 않고,
-               구분이 틀리면 추가 연계 요청 목록에서 FMS 소관 항목이 통째로 빠진다. */
-            '<p class="fac-note">이 중 <b>안전등급 · 최근 점검일 · 중대결함 · 규모</b>는 원래 FMS 소관' +
-                '(점검진단실적 · 중대결함사후관리 · 상세제원)인데 이번 수신분<b>(시설물관리대장 기본현황)</b>에 ' +
-                '들어 있지 않아 <b>추가 연계가 붙을 때까지만</b> 직접 받는 값입니다. 연계되면 입력란은 닫히고 ' +
-                '소유권이 FMS 로 넘어가며, 그때까지 채운 값은 지우지 않고 "직접 입력값"으로 남겨 수신값과 대조합니다. ' +
-                '<b>소관부서 · 이용인원</b>은 FMS 표준연계 규격에 없어 담양군이 계속 관리합니다.</p>' +
+        const nextSuggest = ef.lastInspectYmd ? DYFACIL.suggestNext(ef.lastInspectYmd, ef.safetyGrade || 'C') : '';
+        /* 머리·칸 설명의 연계 이야기는 걷었다(운영 T22, 2026-11-04) — 담당자가 알 것은
+           «무엇을 비워 두면 되고 무엇을 넣어야 하나» 하나다. */
+        const edit = canEditFac();
+        const rv = (lbl, val, hint) => '<div class="fac-f2"><span class="fac-f-l">' + lbl + '</span>' +
+            '<div class="fac-f-v">' + (val !== '' && val != null ? esc(val) : '<em style="color:var(--text-gray);">미입력</em>') + '</div>' +
+            (hint ? '<span class="fac-hint">' + hint + '</span>' : '') + '</div>';
+        const extBlock = !edit
+            ? '<div class="fac-sec-t" style="margin-top:18px;">보완입력</div>' +
+              '<p class="fac-note">' + esc(facDenyNote()) + '</p>' +
+              '<div class="fac-grid">' +
+                rv('안전등급 (A~E)', ef.safetyGrade || '') + rv('최근 점검일', ef.lastInspectYmd || '') +
+                rv('차기 정기안전점검 예정일', nextSuggest || '', esc(cycleNote(ef.safetyGrade)) + ' — 시행령 별표3') +
+                rv('중대결함 유무', e.defectYn === 'Y' ? '있음' : e.defectYn === 'N' ? '없음' : '') +
+                rv('규모 (값 / 단위)', e.sizeValue ? e.sizeValue + ' ' + (e.sizeUnit || '') : '') +
+                rv('소관부서', e.deptNm || '') + rv('이용인원 (일평균)', e.dailyUsers ? e.dailyUsers + '명' : '') +
+              '</div>'
+            :
+            '<div class="fac-sec-t" style="margin-top:18px;">보완입력</div>' +
+            '<p class="fac-note">안전등급·최근 점검일은 비워 두면 FMS 점검 결과를 씁니다. 중대결함·규모·소관부서·이용인원은 담양군이 입력합니다.</p>' +
             '<div class="fac-grid">' +
             '<div class="fac-f2"><span class="fac-f-l">안전등급 (A~E)</span>' + sel('ex-grade', e.safetyGrade, ['A', 'B', 'C', 'D', 'E'].map(g => [g, g + ' — ' + GRADE_DESC[g].split(' — ')[1]]), '미평가') +
-                '<span class="fac-hint">연계 전 임시 입력 · 점검·진단 실시결과로 지정하는 값</span></div>' +
+                '<span class="fac-hint">점검·진단 실시결과로 지정하는 값</span></div>' +
             '<div class="fac-f2"><span class="fac-f-l">최근 점검일</span>' + inp('ex-last', e.lastInspectYmd, 'YYYY-MM-DD', 'date') +
-                '<span class="fac-hint">연계 전 임시 입력</span></div>' +
+                '</div>' +
             '<div class="fac-f2"><span class="fac-f-l">차기 정기안전점검 예정일 <span class="chip-mini wt-elec">자동 산출</span></span>' +
                 '<div class="fac-f-v">' + (nextSuggest ? esc(nextSuggest) : '<em style="color:var(--text-gray);">최근 점검일 입력 후 산출</em>') + '</div>' +
                 '<span class="fac-hint">' + esc(cycleNote(e.safetyGrade)) + ' — 시행령 별표3</span></div>' +
             '<div class="fac-f2"><span class="fac-f-l">중대결함 유무</span>' + sel('ex-defyn', e.defectYn, [['N', '없음'], ['Y', '있음']], '미확인') +
-                '<span class="fac-hint">연계 전 임시 입력 · 유형·통보일은 FMS 가 원천이라 받지 않음</span></div>' +
+                '</div>' +
             '<div class="fac-f2"><span class="fac-f-l">규모 (값 / 단위)</span><div style="display:flex; gap:6px;">' + inp('ex-size', e.sizeValue, '값') + inp('ex-unit', e.sizeUnit, '㎡·m·톤/일') + '</div>' +
-                '<span class="fac-hint">연계 전 임시 입력 · 공중이용시설 판정 근거</span></div>' +
+                '<span class="fac-hint">공중이용시설 판정 근거</span></div>' +
             '<div class="fac-f2"><span class="fac-f-l">소관부서</span>' + inp('ex-dept', e.deptNm, '예: 건설과') +
                 '<span class="fac-hint">담양군 관리 항목</span></div>' +
             '<div class="fac-f2"><span class="fac-f-l">이용인원 (일평균)</span>' + inp('ex-users', e.dailyUsers, '명', 'number') +
@@ -563,7 +602,10 @@
                 '<tbody>' + rows + '</tbody></table></div>';
         }
 
-        const foot =
+        /* 조회 전용이면 닫기만 — 누르면 거절하는 버튼을 남기지 않는다 */
+        const foot = !edit
+            ? '<button class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>'
+            :
             '<button class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
             '<button class="btn btn-outline" onclick="DYFACIL._send(\'' + no + '\', \'update\')">FMS 전송(수정)</button>' +
             (rk.level !== 'na'
@@ -601,7 +643,7 @@
                 (!RF.gbn || r.facilGbn === RF.gbn) &&
                 (!RF.cls || r.facilClass === RF.cls) &&
                 (!RF.jur || r.jur === RF.jur));
-            const scored = recs.map(r => ({ r, rk: riskOf(r.facilNo), e: extOf(r.facilNo) }));
+            const scored = recs.map(r => ({ r, rk: riskOf(r.facilNo), e: effOf(r.facilNo) }));
             const rank = { high: 0, mid: 1, low: 2, na: 3 };
             /* 동점이면 준공이 오래된 순 — 같은 점수라면 오래된 시설을 먼저 본다.
                정렬 기준을 사용자가 바꾸게 하지 않는다. 이 화면의 목적이 '어디부터
@@ -616,7 +658,9 @@
                 /* 이미 평가에서 다뤄진 시설물도 랭킹에서 빼지 않는다 — 빼면 "왜 사라졌지"가
                    되고, 한 번 다뤘다고 위험이 없어지는 것도 아니다. 대신 표시로 구분한다. */
                 const nImp = (impsOf(s.r.facilNo) || []).length;
-                const btn = s.rk.level === 'na'
+                const btn = !canEditFac()
+                    ? '<button class="btn btn-sm btn-outline" onclick="DYFACIL._detail(\'' + s.r.facilNo + '\')">상세</button>'
+                    : s.rk.level === 'na'
                     ? '<button class="btn btn-sm btn-outline" onclick="DYFACIL._detail(\'' + s.r.facilNo + '\')">보완입력</button>'
                     : '<button class="btn btn-sm ' + (nImp ? 'btn-outline' : 'btn-primary') + '" onclick="DYFACIL._toRisk(\'' + s.r.facilNo + '\')">' +
                       (nImp ? '연계 보기' : '근로자 위험성평가 연계') + '</button>';
@@ -654,7 +698,7 @@
                 card('산정 불가', nNa + '건', '핵심변수 미확보 — 보완입력 필요') +
                 card('평가 가능', (DB.recs.length - nNa) + '건', '안전등급·점검일 확보분') +
                 '</div>' +
-                '<div class="card"><div class="card-body" style="font-size:12px; color:var(--text-gray);">위험도는 확보된 변수만으로 산정합니다. 없는 값은 0으로 처리하지 않고 <b>산정불가</b>로 분류해 과소평가를 방지합니다. 점검 주기 초과는 안전등급별 법정 주기(반기 1회 · D·E는 연 3회)를 기준으로 판정합니다.</div></div>' +
+                '<div class="card"><div class="card-body" style="font-size:12px; color:var(--text-gray);">위험도는 확보된 변수만으로 산정합니다. 점검 주기 초과는 안전등급별 법정 주기(반기 1회 · D·E는 연 3회)를 기준으로 판정합니다.</div></div>' +
                 '<div class="card" style="margin-top:12px;"><div class="card-body" style="overflow-x:auto; padding:0;">' +
                 filterBar +
                 '<table class="table-figma"><thead><tr><th>시설물</th><th>안전등급</th><th>최근 점검</th><th>경과</th><th>이용인원</th><th>위험도</th><th>변수</th><th>관리</th></tr></thead><tbody>' +
@@ -844,6 +888,7 @@
         return '';
     }
     DYFACIL._saveExt = no => {
+        if (facGate()) return;
         const x = collectExt();
         const err = extError(x);
         if (err) { V().toast(err); return; }
@@ -857,6 +902,7 @@
        종전에는 누르는 즉시 나갔다. 단일 모달 규칙이라 같은 모달 본문을 확인 화면으로 바꾸고,
        [취소]는 상세로 돌아간다. 결재는 붙이지 않는다 — 실행자·시각은 연계 이력에 남는다. */
     DYFACIL._send = (no, kind) => {
+        if (facGate()) return;
         const r = recOf(no); if (!r) return;
         V().openModal('FMS 전송 확인 — ' + esc(r.facilNm),
             '<p>이 시설물의 <b>FMS 시설물관리대장</b>을 수정 전송합니다. FMS 쪽 정본이 바뀌며, ' +
@@ -871,6 +917,7 @@
             '<button class="btn btn-primary" onclick="DYFACIL._sendGo(\'' + no + '\', \'' + kind + '\')">전송</button>');
     };
     DYFACIL._sendGo = (no, kind) => {
+        if (facGate()) return;
         const res = sendFms(no, kind);
         V().toast(res.msg);
         if (res.ok) { DYV2.closeModal(); if (window.__facRerender) window.__facRerender(); }
@@ -878,6 +925,7 @@
     /* 개선조치는 독립 메뉴가 아니다(2026-07-30 회의) — 시설물 상세에서 개선조치 대장·상세로
        내보내지 않는다. 내역은 위 표가 전부이고, 처리는 위험성평가·내 할일에서 한다. */
     DYFACIL._toRisk = no => {
+        if (facGate()) return;
         const r = recOf(no); if (!r) return;
         /* 위험성평가 대상으로 FACIL_NO 관통 (PRD §5-4) */
         window.location.href = 'rsk-list.html?target=' + encodeURIComponent(no) + '&name=' + encodeURIComponent(r.facilNm) + '&facilNo=' + encodeURIComponent(no);

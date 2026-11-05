@@ -126,9 +126,10 @@
         V().openModal('온나라 결재 요청',
             '<div style="text-align:center; padding:8px 4px 4px;">' +
             '<p style="font-size:14px; font-weight:700; margin-bottom:6px;">온나라로 결재 요청을 보냈습니다</p>' +
-            '<p style="font-size:12px; color:var(--text-gray);">' + esc(docTitle) + '<br>문서번호 <b>' + no + '</b>' +
+            /* 상신 직후 돌려받는 값은 **연계 번호**다 — «문서번호»(생산등록번호)는 결재가 끝나야 생긴다(CLAUDE.md §7-1 2026-10-07). */
+            '<p style="font-size:12px; color:var(--text-gray);">' + esc(docTitle) + '<br>연계 번호 <b>' + no + '</b>' +
                 (lineTxt ? '<br>결재선: ' + esc(lineTxt) : '') + '</p>' +
-            '<p style="font-size:12px; color:var(--text-gray); margin-top:8px;">결재 완료·반려는 온나라에서 회신됩니다 — 진행 상황은 온나라에서 문서번호로 확인하세요. (연계 시뮬레이션)</p>' +
+            '<p style="font-size:12px; color:var(--text-gray); margin-top:8px;">진행 상황은 온나라에서 확인합니다.</p>' +
             '</div>',
             '<button class="btn btn-primary" onclick="DYV2.closeModal();' + (after ? after : '') + '">확인</button>');
         return no;

@@ -1,7 +1,7 @@
 /* =========================================================================
  * 담양군 중대재해예방 통합관리시스템 v2 — 예산관리 (BGT)
  *   · 데이터 레이어 (window.DYBGT) + BGT01-V 예산 총괄표 화면 렌더
- *   · localStorage 영속 키 'dybgt-v4' = { targets, items, sheets, policies }
+ *   · localStorage 영속 키 'dybgt-v5' = { targets, items, sheets, policies }
  *   · 화면 렌더는 #bgt-app 가 있을 때만 실행 (bgt-settings.html은 데이터 레이어로만 로드)
  *
  * 요구사항 매핑 (화면 정의서 추적용):
@@ -30,7 +30,7 @@
     function canDraft() { return !window.DYROLE || window.DYROLE.canAct(''); }
     const DRAFT_DENY = '상신은 <b>담당자</b>가 합니다 — 관리·감독 계층은 조회만 합니다.';
 
-    const KEY = 'dybgt-v4';
+    const KEY = 'dybgt-v5';   /* v5: 결재완료 회신의 생산등록번호·결재일(2026-11-05) */
     try { localStorage.removeItem('dybgt-v3'); } catch (e) {}
     /* DYV2.esc 재사용 (XSS 방지) — common.js 로드 전 호출 대비 폴백 */
     const esc = s => (window.DYV2 && DYV2.esc)
@@ -99,6 +99,7 @@
                 status: '승인완료', rejectReason: '',
                 onnara: {
                     docNo: '온나라-2026-1042',
+                    prodNo: '재난안전과-1187', apprDate: '2026-06-02',   /* 생산등록번호·결재일 — 예시 값(§15) */
                     /* 지난 점검표의 결재선 — **예시 값**이다(§15). 종전 시드는 '이팀장'·'김과장'
                        처럼 **조직도에 없는 이름**을 4단계로 찍었다. 실인물 uid 로 바꾸고 3단계로
                        맞춰야 이력이 지금 규칙과 같은 형태로 읽힌다. */
@@ -131,6 +132,7 @@
                 status: '승인완료', rejectReason: '',
                 onnara: {
                     docNo: '온나라-2026-1078',
+                    prodNo: '재난안전과-1203', apprDate: '2026-06-05',   /* 생산등록번호·결재일 — 예시 값(§15) */
                     /* 지난 점검표의 결재선 — **예시 값**이다(§15). 종전 시드는 '이팀장'·'김과장'
                        처럼 **조직도에 없는 이름**을 4단계로 찍었다. 실인물 uid 로 바꾸고 3단계로
                        맞춰야 이력이 지금 규칙과 같은 형태로 읽힌다. */
@@ -531,7 +533,8 @@
      *   ② 승인 단계·처리자를 **그 문서 결재선에서 파생**한다 — 고정 이름 금지.
      *      (종전 `MID_STEPS` 의 '이팀장'·'김과장'·'부군수' 는 조직도에 없는 이름이었다.)
      *   ③ 회신 등록은 결재가 아니라 **옮겨 적기**라 결재선과 무관하게 담당자가 한다. */
-    function receiveOnnara(id, kind, reason) {
+    function receiveOnnara(id, kind, reason, meta) {
+        meta = meta || {};
         const s = getSheet(id);
         if (!s) return { ok: false, msg: '점검표를 찾을 수 없습니다.' };
         if (s.status !== '결재중' || !s.onnara) return { ok: false, msg: '결재중 상태에서만 수신할 수 있습니다.' };
@@ -551,24 +554,34 @@
         }
 
         if (kind === 'approve') {
+            /* 결재완료 회신은 생산등록번호·결재일이 있어야 받는다(2026-11-05 기획 확인 회신 #6) —
+             * 번호가 있어야 옮겨 적은 결과를 온나라 원본으로 되짚을 수 있다(CLAUDE.md §7-1). */
+            const prodNo = String(meta.prodNo || '').trim();
+            const apprDate = String(meta.apprDate || '').trim();
+            if (!prodNo) return { ok: false, msg: '생산등록번호를 입력하세요.' };
+            if (!apprDate) return { ok: false, msg: '결재일을 입력하세요.' };
+            s.onnara.prodNo = prodNo;
+            s.onnara.apprDate = apprDate;
             for (let i = doneCount(); i < line.length; i++) {
                 steps.push({ at, act: label(i) + ' 승인', by: line[i].name, note: i === line.length - 1 ? '승인 완료' : '-' });
             }
             s.status = '승인완료';
             s.rejectReason = '';
-            s.history.push({ at, ev: '온나라 승인 완료 수신' });
+            s.history.push({ at, ev: '온나라 결재 완료 회신 — ' + prodNo + ' · ' + apprDate });
             s.updated = at; save();
             return { ok: true, msg: '최종 승인이 수신되었습니다.' };
         }
 
         if (kind === 'reject') {
             const rs = String(reason || '').trim();
+            const rejDate = String(meta.rejDate || '').trim();
+            if (!rejDate) return { ok: false, msg: '반려일을 입력하세요.' };
             if (!rs) return { ok: false, msg: '반려 사유를 입력하세요.' };
             const i = Math.min(doneCount(), Math.max(line.length - 1, 0));
-            steps.push({ at, act: '반려', by: (line[i] || {}).name || '-', note: rs });
+            steps.push({ at, act: '반려', by: (line[i] || {}).name || '-', note: rejDate + ' · ' + rs });
             s.status = '반려';
             s.rejectReason = rs;
-            s.history.push({ at, ev: '온나라 반려 수신 — ' + rs });
+            s.history.push({ at, ev: '온나라 반려 회신(' + rejDate + ') — ' + rs });
             s.updated = at; save();
             return { ok: true, msg: '반려가 수신되었습니다.' };
         }
@@ -878,7 +891,9 @@
         const commonRow = '<div class="bgt-appr-row">' +
             '<span class="bgt-appr-lab">온나라 결재</span>' +
             statusChip(s.status) +
-            (docNo ? '<span class="bgt-appr-docno">' + esc(docNo) + '</span>' : '') +
+            ((s.onnara && s.onnara.prodNo)
+                ? '<span class="bgt-appr-docno">생산등록번호 ' + esc(s.onnara.prodNo) + (s.onnara.apprDate ? ' · ' + esc(s.onnara.apprDate) : '') + '</span>'
+                : (docNo ? '<span class="bgt-appr-docno">연계 번호 ' + esc(docNo) + '</span>' : '')) +
             '<button class="btn btn-sm btn-outline" onclick="DYBGT._apprHistory(\'' + s.id + '\')">이력</button>' +
         '</div>';
 
@@ -909,9 +924,11 @@
               steps.map(x => '<tr><td>' + esc(x.at) + '</td><td>' + esc(x.act) + '</td><td>' + esc(x.by) + '</td><td>' + esc(x.note || '-') + '</td></tr>').join('') +
               '</tbody></table></div>' +
               ((s.onnara && s.onnara.approval && s.onnara.approval.sample) ? '<p style="margin-top:8px;">' + V().sampleChip('지난 점검표의 결재선은 예시 값입니다') + '</p>' : '') +
-              '<p class="file-hint" style="margin-top:10px;">결재 완료·반려는 <b>온나라에서 회신</b>됩니다 — 진행 상황은 온나라에서 문서번호로 확인하세요.</p>'
+              ((s.onnara && s.onnara.prodNo)
+                ? '<p class="file-hint" style="margin-top:10px;">생산등록번호 <b>' + esc(s.onnara.prodNo) + '</b> · 결재일 ' + esc(s.onnara.apprDate || '-') + '</p>'
+                : '<p class="file-hint" style="margin-top:10px;">진행 상황은 온나라에서 확인합니다.</p>')
             : '<div class="v2-empty">결재 이력이 없습니다 — 상신하면 이력이 기록됩니다.</div>';
-        V().openModal('온나라 결재 이력' + (docNo ? ' — ' + docNo : ''), body,
+        V().openModal('온나라 결재 이력', body,
             '<button class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
     }
 
@@ -947,9 +964,9 @@
         V().openModal('온나라 결재 요청',
             '<div style="text-align:center; padding:8px 4px 4px;">' +
             '<p style="font-size:14px; font-weight:700; margin-bottom:6px;">온나라로 결재 요청을 보냈습니다</p>' +
-            '<p style="font-size:12px; color:var(--text-gray);">' + title + '<br>문서번호 <b>' + esc(res.docNo) + '</b>' +
+            '<p style="font-size:12px; color:var(--text-gray);">' + title + '<br>연계 번호 <b>' + esc(res.docNo) + '</b>' +
                 ((snap && snap.lineText) ? '<br>결재선: ' + esc(snap.lineText) : '') + '</p>' +
-            '<p style="font-size:12px; color:var(--text-gray); margin-top:8px;">결재 완료·반려는 온나라에서 회신됩니다 — 진행 상황은 온나라에서 문서번호로 확인하세요. (연계 시뮬레이션)</p>' +
+            '<p style="font-size:12px; color:var(--text-gray); margin-top:8px;">진행 상황은 온나라에서 확인합니다. 결재가 끝나면 [결재 상태 · 회신 등록]에 생산등록번호·결재일을 적습니다.</p>' +
             '</div>',
             '<button class="btn btn-primary" onclick="DYV2.closeModal(); DYBGT._afterSubmit(\'' + id + '\')">확인</button>');
     }
@@ -970,7 +987,7 @@
             '</tbody></table></div>';
         const lineTxt = (s.onnara && s.onnara.approval && s.onnara.approval.lineText) || '';
         return '<div class="bgt-status-modal">' +
-            '<p class="bgt-act-desc" style="margin-bottom:10px;">문서번호 <b>' + esc(docNo) + '</b>' +
+            '<p class="bgt-act-desc" style="margin-bottom:10px;">연계 번호 <b>' + esc(docNo) + '</b>' +
                 (lineTxt ? ' · 결재선: ' + esc(lineTxt) : '') + '</p>' +
             table + recvBox(id, s) +
         '</div>';
@@ -986,14 +1003,13 @@
         const nextName = line[done] ? line[done].name : '';
         return '<div class="bgt-sim-box">' +
             '<div class="bgt-sim-head">결재 결과 회신 등록 — 연계 전 수동 기록</div>' +
-            '<p class="file-hint" style="margin-bottom:10px;">온나라가 보낸 결재 결과를 <b>옮겨 적는 자리</b>입니다 — 이 시스템이 결재하지 않습니다. ' +
-                '연계가 붙으면 온나라 응답이 대신합니다. 회신 등록은 결재가 아니라서 <b>결재선과 무관하게 담당자가</b> 합니다.</p>' +
+            '<p class="file-hint" style="margin-bottom:10px;">온나라에서 끝난 결재 결과를 옮겨 적습니다. 결재 완료는 생산등록번호·결재일, 반려는 반려일·사유를 적습니다.</p>' +
             '<div class="bgt-act-btns">' +
                 (midLeft
                     ? '<button class="btn btn-sm btn-outline" onclick="DYBGT._recv(\'' + id + '\', \'mid\')">' +
                         esc(stepLabel(done)) + ' 승인 회신' + (nextName ? ' (' + esc(nextName) + ')' : '') + '</button>'
                     : '') +
-                '<button class="btn btn-sm btn-primary" onclick="DYBGT._recv(\'' + id + '\', \'approve\')">결재 완료 회신</button>' +
+                '<button class="btn btn-sm btn-primary" onclick="DYBGT._approveToggle(\'' + id + '\')">결재 완료 회신</button>' +
                 '<button class="btn btn-sm btn-outline" onclick="DYBGT._rejectToggle(\'' + id + '\')">반려 회신</button>' +
             '</div>' +
             '<div id="bgt-reject-form" style="display:none;"></div>' +
@@ -1198,8 +1214,8 @@
      * 예산은 결재 결과가 후속 업무를 여는 도메인이라 회신을 뺄 수 없다(receiveOnnara 주석).
      * 되살리되 이름과 문구를 「모의 수신」에서 **「회신 등록 — 연계 전 수동 기록」**으로 바꿨다:
      * 이 자리는 결재하는 곳이 아니라 온나라가 보낸 결과를 옮겨 적는 곳이다. */
-    function recvOnnara(id, kind) {
-        const res = receiveOnnara(id, kind);
+    function recvOnnara(id, kind, meta) {
+        const res = receiveOnnara(id, kind, '', meta);
         if (!res.ok) { V().toast(res.msg); return; }
         V().toast(res.msg);
         const s = getSheet(id);
@@ -1214,15 +1230,43 @@
         const body = document.querySelector('#v2-modal .modal-body');
         if (body) body.innerHTML = statusModalBody(id);
     }
+    /* 결재 완료 회신 — 생산등록번호·결재일을 모달 안 인라인으로 받는다(§1 · 2026-11-05 #6) */
+    function approveToggle(id) {
+        const box = document.getElementById('bgt-reject-form');
+        if (!box) return;
+        if (box.dataset.mode === 'approve' && box.style.display !== 'none') { rejectCancel(); return; }
+        box.dataset.mode = 'approve';
+        box.style.display = 'block';
+        box.innerHTML =
+            '<div class="bgt-reject-inline">' +
+                '<label class="bgt-lab" for="bgt-prod-no">생산등록번호 (필수)</label>' +
+                '<input id="bgt-prod-no" class="bgt-in" type="text" placeholder="예: 재난안전과-1234">' +
+                '<label class="bgt-lab" for="bgt-appr-date" style="margin-top:8px;">결재일 (필수)</label>' +
+                '<input id="bgt-appr-date" class="bgt-in" type="date">' +
+                '<div class="bgt-act-btns" style="margin-top:8px;">' +
+                    '<button class="btn btn-outline btn-sm" onclick="DYBGT._rejectCancel()">취소</button>' +
+                    '<button class="btn btn-primary btn-sm" onclick="DYBGT._approveConfirm(\'' + id + '\')">결재 완료 회신 등록</button>' +
+                '</div>' +
+            '</div>';
+        const el = document.getElementById('bgt-prod-no'); if (el) el.focus();
+    }
+    function approveConfirm(id) {
+        const no = document.getElementById('bgt-prod-no');
+        const dt = document.getElementById('bgt-appr-date');
+        recvOnnara(id, 'approve', { prodNo: no ? no.value : '', apprDate: dt ? dt.value : '' });
+    }
     /* 반려 사유는 모달 안 인라인으로 받는다 — 별도 모달을 띄우지 않는다(CLAUDE.md §1) */
     function rejectToggle(id) {
         const box = document.getElementById('bgt-reject-form');
         if (!box) return;
-        if (box.style.display !== 'none' && box.innerHTML) { box.style.display = 'none'; box.innerHTML = ''; return; }
+        if (box.dataset.mode === 'reject' && box.style.display !== 'none' && box.innerHTML) { rejectCancel(); return; }
+        box.dataset.mode = 'reject';
         box.style.display = 'block';
         box.innerHTML =
             '<div class="bgt-reject-inline">' +
-                '<label class="bgt-lab" for="bgt-reject-reason">반려 사유 (필수)</label>' +
+                '<label class="bgt-lab" for="bgt-reject-date">반려일 (필수)</label>' +
+                '<input id="bgt-reject-date" class="bgt-in" type="date">' +
+                '<label class="bgt-lab" for="bgt-reject-reason" style="margin-top:8px;">반려 사유 (필수)</label>' +
                 '<textarea id="bgt-reject-reason" class="bgt-in" rows="2" placeholder="온나라에서 회신된 반려 사유를 그대로 옮겨 적으세요"></textarea>' +
                 '<div class="bgt-act-btns" style="margin-top:8px;">' +
                     '<button class="btn btn-outline btn-sm" onclick="DYBGT._rejectCancel()">취소</button>' +
@@ -1233,13 +1277,13 @@
     }
     function rejectCancel() {
         const box = document.getElementById('bgt-reject-form');
-        if (box) { box.style.display = 'none'; box.innerHTML = ''; }
+        if (box) { box.style.display = 'none'; box.innerHTML = ''; box.dataset.mode = ''; }
     }
     function rejectConfirm(id) {
         const ta = document.getElementById('bgt-reject-reason');
         const reason = ta ? ta.value.trim() : '';
-        if (!reason) { V().toast('반려 사유를 입력하세요.'); return; }
-        const res = receiveOnnara(id, 'reject', reason);
+        const rd = document.getElementById('bgt-reject-date');
+        const res = receiveOnnara(id, 'reject', reason, { rejDate: rd ? rd.value : '' });
         if (!res.ok) { V().toast(res.msg); return; }
         V().toast(res.msg);
         V().closeModal();
@@ -1284,6 +1328,8 @@
     DYBGT._doSubmit = doSubmit;            /* 결재선 지정 모달 → 실제 상신 */
     DYBGT._recv = recvOnnara;              /* 결재 결과 회신 등록(중간/최종) */
     DYBGT._rejectToggle = rejectToggle;    /* 반려 회신 사유 인라인 토글 */
+    DYBGT._approveToggle = approveToggle;  /* 결재 완료 회신 — 생산등록번호·결재일 인라인 */
+    DYBGT._approveConfirm = approveConfirm;
     DYBGT._rejectCancel = rejectCancel;
     DYBGT._rejectConfirm = rejectConfirm;
     if (LN) DYBGT.ln = LN;                 /* 결재선 편집기(onclick 경로) */

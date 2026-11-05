@@ -680,7 +680,8 @@
             '<div class="du-pre">' +
                 errBox(P.err) +
                 '<p class="du-pre-lead"><b>' + P.from + '년</b> 문서의 업무단계 선택값을 <b>' + P.to + '년</b>으로 가져옵니다. ' +
-                    '전년도 <b>진행상태·결재상태·보고일자·문서번호는 복제하지 않습니다.</b>' +
+                    '전년도 <b>진행상태·결재상태·보고일자·문서번호는 복제하지 않습니다.</b> ' +
+                    '가져온 문서는 <b>' + P.to + '년 파일을 붙여야 이행으로 셉니다</b>(그 전까지 «파일 대기»).' +
                     (skipped > 0
                         ? ' 할 일이 붙지 않은 문서 ' + skipped.toLocaleString() + '건은 가져올 업무단계가 없어 목록에서 뺐습니다.'
                         : '') + '</p>' +
@@ -1007,14 +1008,18 @@
                         '<a class="du-saved-t" href="' + esc(detailHref(d, o.backTo)) + '">' + esc(d.title) + '</a>' +
                         '<span class="du-saved-m">' + esc(d.id) +
                         (stg ? ' · 할 일 ' + stg + '개' : ' · 할 일 미지정') +
-                        ((d.files || []).length ? ' · 첨부 ' + d.files.length + '건' : '') + '</span>' +
+                        ((d.files || []).length ? ' · 첨부 ' + d.files.length + '건' : '') +
+                        (D().awaitingFile(d) ? ' · 파일 대기' : '') + '</span>' +
                     '</li>';
                 }).join('') +
                 '</ul>' +
                 /* 지금 상태를 한 줄로 — «등록했다»만으로는 다음에 무엇이 남았는지 모른다.
-                   그 다음 할 일은 이 화면이 아니라 **내 할일**에서 이어진다. */
-                '<p class="du-saved-next">올린 서류는 <b>진행중</b>입니다. 재난안전과 담당자가 확인하면 완료가 됩니다. ' +
-                    '<a class="du-saved-go" href="my-work.html">내 할일에서 이어서 처리 →</a></p>' +
+                   그 다음 할 일은 이 화면이 아니라 **내 할일**에서 이어진다.
+                   지난해에서 옮긴 사본만 만들었으면 아직 진행중이 아니다(E20) — 사실대로 말한다. */
+                (docs.every(function (d) { return D().awaitingFile(d); })
+                    ? '<p class="du-saved-next">문서 상세에서 <b>올해 파일을 붙이면</b> 진행중이 되고, 재난안전과 담당자가 확인하면 완료가 됩니다.</p>'
+                    : '<p class="du-saved-next">올린 서류는 <b>진행중</b>입니다. 재난안전과 담당자가 확인하면 완료가 됩니다. ' +
+                        '<a class="du-saved-go" href="my-work.html">내 할일에서 이어서 처리 →</a></p>') +
             '</div>';
         /* **되돌리기** — 방금 만든 것을 바로 물릴 수 있어야 한다. 잘못 골라 30건을
            만들고 나면 한 건씩 찾아 지우는 수밖에 없었다(§4 «CRUD 는 회수 경로까지»).
@@ -1177,7 +1182,8 @@
         saved(madeDocs, {
             title: FROM + '년 문서를 ' + TO + '년으로 가져왔습니다',
             lead: made + '건을 ' + TO + '년 문서로 만들었습니다.',
-            note: warn || null,
+            /* 가져온 문서는 올해 파일을 붙여야 이행으로 센다(E20, DYDOCS.awaitingFile) */
+            note: warn + '각 문서에 <b>' + TO + '년 파일을 붙여야</b> 이행으로 셉니다 — 그 전까지는 «파일 대기»입니다.',
         });
     }
 

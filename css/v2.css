@@ -4862,3 +4862,26 @@ p > .dx-note-gap { display: inline; }
 .ri-toolbar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; padding: var(--sp-3) var(--sp-4); }
 .ri-filters { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
 .ri-filters .form-select { width: auto; min-width: 140px; }
+
+/* ── 운영 반영 2026-11-05 · E 시스템관리 ── 가이드 관리 · 게시판 관리 · 정보센터
+   목록 제목(누르면 본문이 열리는 버튼) · 첨부 줄 · 순서 버튼 · 안내 한 줄. 표·칩·빈 상태는
+   표준(.table-figma · .chip-status · .v2-empty)을 쓰고 여기서는 그 사이만 메운다. */
+.bd-lead { max-width: var(--measure); margin: 0 0 var(--stack-base); font-size: var(--fs-14); color: var(--text-gray); }
+.bd-note { font-size: var(--fs-12); color: var(--text-gray); margin-top: var(--sp-1); }
+.bd-src { font-size: var(--fs-12); color: var(--text-black); word-break: break-all; }
+.bd-title { background: none; border: 0; padding: 0; text-align: left; font: inherit; font-weight: var(--fw-semibold);
+  color: var(--text-black); cursor: pointer; min-height: 32px; }
+.bd-title:hover { color: var(--main-dark); text-decoration: underline; }
+.bd-title:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; border-radius: var(--radius-xs); }
+.bd-meta { font-size: var(--fs-13); color: var(--text-gray); margin: 0 0 var(--sp-3); }
+.bd-body { font-size: var(--fs-14); line-height: 1.6; white-space: pre-wrap; margin-bottom: var(--sp-3); }
+.bd-files { list-style: none; padding: 0; margin: var(--sp-2) 0 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+.bd-files li { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); font-size: var(--fs-13);
+  padding: var(--sp-2) var(--sp-3); border: 1px solid var(--card-line); border-radius: var(--radius-sm); }
+.bd-files li span { min-width: 0; word-break: break-all; }
+.bd-order { display: inline-flex; gap: var(--sp-1); }
+.bd-radio { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-14); min-height: 32px; }
+.bd-catbar { margin: var(--sp-3) 0 0; }
+.bd-catbar .form-select { width: auto; min-width: 140px; }
+.bd-table th:nth-child(-n+2), .bd-table td:nth-child(-n+2) { text-align: left; }
+@media (max-width: 767px) { .bd-table { min-width: 600px; } .bd-table-wide { min-width: 820px; } }

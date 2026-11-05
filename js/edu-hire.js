@@ -156,7 +156,13 @@
 
         /* 관리·감독 계층에는 등록·수정 수단 대신 누가 하는지를 밝힌다(담당자에게는 '') */
         var ro = global.DYROLE && global.DYROLE.readOnlyNote ? global.DYROLE.readOnlyNote('채용시교육 기록 등록·수정') : '';
-        state.mount.innerHTML = ro + tabs + filters + groupBar +
+        var unk = unknownCount();
+        var unkNote = unk
+            ? '<p class="file-hint" style="margin:0 0 10px;">' +
+                (SUP_MODE ? '관리감독자 지정일' : '채용일') + '이 없는 <b>' + unk + '명</b>은 「판정 불가」로 표시됩니다. ' +
+                (SUP_MODE ? '지정일' : '채용일') + '은 <b>근로자 명단 관리</b>에서 등록합니다.</p>'
+            : '';
+        state.mount.innerHTML = ro + tabs + unkNote + filters + groupBar +
             '<div class="edu-card"><div class="edu-scroll"><table class="table-figma table-compact"><thead><tr>' +
                 headerCk +
                 '<th>이름</th><th>부서</th><th>고용형태</th><th>채용일</th><th>필요시간</th><th>이수일</th><th>상태</th><th></th>' +
@@ -219,8 +225,8 @@
                 : (s === 'BEFORE' || s === 'LATE_DONE' || s === 'UNKNOWN_DONE');
         }).length;
     }
-    /* 전체 = 미이수 + 이수 + 판정 불가. 세 번째가 0이 아니면 그 사실을 화면에 밝힌다 —
-       탭 합이 전체와 안 맞는 이유를 담당자가 알아야 한다. */
+    /* 전체 = 미이수 + 이수 + 판정 불가. 세 번째가 0이 아니면 몇 명이고 **무엇을 하면
+       풀리는지**만 밝힌다(운영 T12 — 탭 합이 안 맞는 이유 같은 설명은 쓰지 않는다). */
     function unknownCount() {
         return pool().filter(function (w) {
             var s = E().hireStatus(w.id).status;

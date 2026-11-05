@@ -255,6 +255,7 @@
                   esc(cover().label) + ' · ' + cover().deptCount + '개 부서만 수록</span>'
                 : '');
         var rest =
+            '<p>이행 여부는 그 해 증빙 문서로 판정합니다. 지난해 문서를 불러와 만든 문서는 <b>올해 파일을 붙여야</b> 셉니다.</p>' +
             '<p>' + esc(lv.label) + ' — ' + esc(lv.note2) + '</p>' +
             '<p>관리대상 단위는 <b>시설</b>과 <b>공사·용역</b>으로 다시 갈리며, 공사·용역은 계약 자료 연계 후 대상이 채워집니다.</p>' +
             coverageNote() +
@@ -553,7 +554,7 @@
                영영 못 연다. dropKey 가 Enter/Space 를 클릭으로 수렴시킨다. */
             /* 요약(충족 n/m)은 항목명 **바로 옆**에 둔다 — 오른쪽 끝에 두면 이름에서
                수치까지 시선이 표를 가로지른다. 문서 수만 열 정렬을 유지한다. */
-            var head = '<tr class="cmp-grp" role="button" tabindex="0" aria-expanded="' + (open ? 'true' : 'false') + '"' +
+            var head = '<tr class="cmp-grp" data-item="' + esc(itemId) + '" role="button" tabindex="0" aria-expanded="' + (open ? 'true' : 'false') + '"' +
                 ' onclick="CMPST.toggleItem(\'' + esc(itemId) + '\')" onkeydown="DYV2.dropKey(event)">' +
                 '<td colspan="5"><span class="cmp-car" aria-hidden="true">' + (open ? '▾' : '▸') + '</span>' +
                     '<span class="cmp-gname">' + esc(it.name) + '</span>' +
@@ -786,7 +787,7 @@
             var cy = C().cycleOf(s);
             var n = names.filter(function (nm) { return byDept[nm][s.id]; }).length;
             var mine = me ? deptState(s, me, !!byDept[me][s.id]) : null;
-            return '<tr class="cmp-stg cmp-rowlink" onclick="CMPST.rowOpen(event, \'' + esc(s.id) + '\')"><td class="cmp-c-main">' +
+            return '<tr class="cmp-stg cmp-rowlink" data-item="' + esc(s.itemId) + '" onclick="CMPST.rowOpen(event, \'' + esc(s.id) + '\')"><td class="cmp-c-main">' +
                     '<button type="button" class="cmp-slink" onclick="CMPST.openDetail(\'' + esc(s.id) + '\')">' + esc(s.name) + '</button>' +
                     '<span class="cmp-scode">' + esc(s.id) + '</span></td>' +
                 '<td class="cmp-c-cy' + (cy.need ? '' : ' cmp-dim') + '">' + esc(cy.label) + '</td>' +
@@ -1181,7 +1182,8 @@
             '<th>문서명</th>' + (showSrc ? '<th class="cmp-c-cy">구분</th>' : '') + '<th class="cmp-c-ac">수발신자</th>' +
             '<th class="cmp-num cmp-c-rd">보고일자</th>' + (showSt ? '<th class="cmp-c-st">결재상태</th>' : '') +
         '</tr></thead><tbody>' + docs.map(function (d) {
-            return '<tr class="cmp-stg"><td><a href="cmp-docs.html?doc=' + encodeURIComponent(d.id) + '">' + esc(d.title) + '</a></td>' +
+            return '<tr class="cmp-stg"><td><a href="cmp-docs.html?doc=' + encodeURIComponent(d.id) + '">' + esc(d.title) + '</a>' +
+                C().awaitChip(d) + '</td>' +
                 (showSrc ? '<td class="cmp-dim">' + esc(srcOf(d)) + '</td>' : '') +
                 '<td class="cmp-c-ac">' + (d.sr ? esc(d.sr) : '<span class="cmp-dim">—</span>') + '</td>' +
                 '<td class="cmp-num">' + esc(d.date || '—') + '</td>' +
@@ -1250,7 +1252,7 @@
         if (!D().canConfirm()) { V().toast('완료 확인은 주관부서(재난안전과) 담당자만 할 수 있습니다.'); return; }
         var rec = D().stageRecord(stageId, S.year);
         var done = rec.status === D().ST.DONE;
-        var n = D().documentIdsOfStage(stageId, S.year).length;
+        var n = D().evidenceIdsOfStage(stageId, S.year).length;
         var body =
             '<div class="cmp-na">' +
                 '<p class="cmp-scode">' + esc(s.id) + '</p>' +
@@ -1385,14 +1387,13 @@
                         '</label>';
                     }).join('') : '<div class="v2-empty">조건에 맞는 문서가 없습니다.</div>') +
                 '</div>' +
-                '<p class="cmp-cap"><b>문서명·수발신자·보고일자·업무단계 매핑·첨부파일을 모두 복사합니다.</b> ' +
-                    '다만 ' + P.from + '년 원장 문서는 <b>메타데이터만</b> 보유해(문서명·수발신자·보고일자·생산등록번호) 복사할 첨부가 없습니다. ' +
-                    '<b>본문과 결재문서는 복제하지 않습니다</b> — 온나라 연동 전이라 원본 자체가 없고, 결재는 새로 받아야 합니다.</p>' +
+                '<p class="cmp-cap">고른 문서의 문서명·수발신자·보고일자·할 일 연결을 ' + P.to + '년 문서로 옮깁니다. ' +
+                    '<b>불러온 문서는 ' + P.to + '년 파일을 붙여야 이행으로 셉니다</b> — 그 전까지는 «파일 대기»로 남고 이행 판정에 들어가지 않습니다.</p>' +
             '</div>';
         var foot =
             '<span class="cmp-pull-fields">불러올 항목' +
                 fieldCk('title', '문서명') + fieldCk('sr', '수발신자') + fieldCk('date', '보고일자') +
-                fieldCk('stages', '업무단계 매핑') + fieldCk('files', '첨부파일') +
+                fieldCk('stages', '업무단계 매핑') + fieldCk('files', '지난해 첨부파일') +
             '</span>' +
             '<button class="btn btn-outline" onclick="DYV2.closeModal()">취소</button>' +
             '<button class="btn btn-primary"' + (n ? '' : ' disabled') + ' onclick="CMPST.pullRun()">불러오기 (' + n + ')</button>';
@@ -1429,7 +1430,9 @@
                 ? src.stageIds.slice()
                 : [P.stageId];
             if (stages.indexOf(P.stageId) < 0) stages.push(P.stageId);
-            var files = (P.fields.files && (src.files || []).length) ? src.files.slice() : [];
+            /* 원본 파일은 «옮겨 온 파일» 표지를 달아 가져온다 — 올해 파일이 아니라
+               판정에 세지 않는다(E20, DYDOCS.awaitingFile) */
+            var files = (P.fields.files && (src.files || []).length) ? D().carriedFiles(src, P.from, P.to) : [];
             var r = D().addDocument({
                 title: title,
                 sr: P.fields.sr ? src.sr : '',
@@ -1445,8 +1448,7 @@
                 src: 'upload',
                 dept: myDept(),
                 note: P.from + '년 문서(' + id + ')를 불러와 만든 문서 — 업무단계 ' + stages.length + '개' +
-                      (files.length ? ' · 첨부 ' + files.length + '건' : ' · 원본에 첨부 없음') +
-                      '. 본문·결재문서는 복제하지 않습니다(온나라 연동 전).',
+                      (files.length ? ' · 지난해 첨부 ' + files.length + '건' : '') + '.',
                 presetOf: id,
             });
             if (r.ok) { ok++; madeDocs.push(r.doc); } else fail = r.reason;
@@ -1463,12 +1465,13 @@
             global.DOCUP.saved(madeDocs, {
                 title: TO + '년 문서로 만들었습니다',
                 lead: ok + '건을 ' + TO + '년 문서로 만들었습니다.',
-                note: skip ? '이미 불러온 <b>' + skip + '건</b>은 건너뛰었습니다.' : null,
+                note: '각 문서에 <b>' + TO + '년 파일을 붙여야</b> 이행으로 셉니다 — 그 전까지는 «파일 대기»입니다.' +
+                      (skip ? ' 이미 불러온 <b>' + skip + '건</b>은 건너뛰었습니다.' : ''),
                 backTo: 'cmp-status.html' + location.search,
             });
             return;
         }
-        V().toast(ok + '건을 ' + TO + '년 문서로 만들었습니다.' +
+        V().toast(ok + '건을 ' + TO + '년 문서로 만들었습니다 — 파일을 붙이면 이행으로 셉니다.' +
             (skip ? ' 이미 불러온 ' + skip + '건은 건너뛰었습니다.' : ''));
     }
 
@@ -1535,7 +1538,7 @@
         var list = gapList();
         var per = list.filter(function (s) { return C().cycleOf(s).need > 0; }).length;
         var prev = D().presetSourceYear(S.year);
-        var twice = prev ? list.filter(function (s) { return D().documentIdsOfStage(s.id, prev).length === 0; }).length : 0;
+        var twice = prev ? list.filter(function (s) { return D().evidenceIdsOfStage(s.id, prev).length === 0; }).length : 0;
         var selN = Object.keys(S.gapSel).length;
 
         var fields = [
@@ -1618,7 +1621,7 @@
     function gapRow(s, prev) {
         var cy = C().cycleOf(s);
         var j = C().judge(s, S.year);
-        var prevN = prev ? D().documentIdsOfStage(s.id, prev).length : null;
+        var prevN = prev ? D().evidenceIdsOfStage(s.id, prev).length : null;
         var twice = prev && prevN === 0;
         var can = D().canSetNA();
         return '<tr class="cmp-stg"><td class="cmp-c-ck">' +
@@ -2071,7 +2074,7 @@
             var list = gapList();
             var head = STAGE_HEAD.concat([prev ? prev + '년 문서' : '지난연도 문서']);
             var rows = list.map(function (s) {
-                return stageCells(s).concat([prev ? D().documentIdsOfStage(s.id, prev).length : '']);
+                return stageCells(s).concat([prev ? D().evidenceIdsOfStage(s.id, prev).length : '']);
             });
             return V().tableFile(['이행관리', '누락점검', y + '년'].concat(expCond()), head, rows, expNote('누락 점검', rows.length));
         }
@@ -2127,6 +2130,31 @@
         if (!S.dyear) S.dyear = S.year;
         window.addEventListener('popstate', function () { readURL(); render(); });
         render();
+        focusArrived();
+    }
+    /* ?item= 으로 들어오면 그 항목을 화면 첫머리로 가져온다(운영 E12) — 계층·보기를
+       맞춰 펼쳐도 28개 항목 중 아래쪽이면 «누르고 왔는데 안 보인다»가 그대로 남는다.
+       처음 한 번만 한다(이후 조작은 사용자의 스크롤을 존중한다). */
+    function focusArrived() {
+        if (!S.focusItem || S.detail || !S.mount) return;
+        /* 그룹 머리(군·관리대상 단위)가 있으면 그 줄, 없으면(부서 단위 단계별 보기) 그 항목의 첫 할 일 줄 */
+        var rows = S.mount.querySelectorAll('tr[data-item]');
+        for (var i = 0; i < rows.length; i++) {
+            if (rows[i].getAttribute('data-item') !== S.focusItem) continue;
+            var target = rows[i].classList.contains('cmp-grp') ? rows[i] : (rows[i].querySelector('.cmp-slink') || rows[i]);
+            try {
+                rows[i].scrollIntoView({ block: 'start' });
+                /* 머리줄(헤더·GNB)이 화면 위에 붙어 있어 그만큼 내려 둔다 — 안 그러면 그 줄이 헤더 밑에 가린다 */
+                var off = 0;
+                ['.dy-header', '.dy-gnb'].forEach(function (sel) {
+                    var el = document.querySelector(sel);
+                    if (el && /sticky|fixed/.test(getComputedStyle(el).position)) off = Math.max(off, el.getBoundingClientRect().bottom);
+                });
+                if (off) window.scrollBy(0, -(off + 16));
+                target.focus({ preventScroll: true });
+            } catch (e) {}
+            return;
+        }
     }
 
     global.CMPST = {

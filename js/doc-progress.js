@@ -284,6 +284,40 @@
         var byId = build().byId;
         return ids.filter(function (id) { return byId[id] && byId[id].year === +year; });
     }
+    /* =========================================================================
+     * 불러온 사본 — 실물 파일 대기 (운영 E20, 2026-11-05)
+     * -------------------------------------------------------------------------
+     * 지난해 문서를 올해로 옮기는 세 경로(이행 관리 불러오기 · 문서 목록 이어받기 ·
+     * 업무 업로드 프리셋)는 제목·수발신자·할 일 연결을 베낀다. 이행 판정은 «그 해
+     * 증빙 문서가 있는가» 하나라, 베끼기만 해도 **올해 실물도 결재도 없는 사본이
+     * 올해 이행으로 세졌다**. 그래서 사본은 올해 파일을 붙이기 전까지 판정에서 뺀다.
+     *   · 원본에서 함께 옮겨 온 파일(copiedFromFileId)은 올해 파일이 아니다.
+     *   · 작년 서류로 «채우기»(업무 업로드 fillFrom)는 올해 파일을 요구하므로 대기가 아니다.
+     * 판정은 여기 한 곳이다 — 화면·집계(DYCMP.judge·이행률·누락 점검·내려받기)는
+     * evidenceIdsOfStage 를 거쳐 같은 값을 본다. */
+    function ownFiles(d) {
+        return ((d && d.files) || []).filter(function (f) { return f && !f.copiedFromFileId; });
+    }
+    function awaitingFile(d) {
+        if (typeof d === 'string') d = docById(d);
+        return !!(d && d.origin === 'user' && d.presetOf && ownFiles(d).length === 0);
+    }
+    /* 그 해 이행 증빙으로 세는 문서 — 파일 대기 사본을 뺀다 */
+    function evidenceIdsOfStage(stageId, year) {
+        var byId = build().byId;
+        return documentIdsOfStage(stageId, year).filter(function (id) { return !awaitingFile(byId[id]); });
+    }
+    /* 옮기는 경로가 원본 파일을 함께 가져올 때 쓴다 — 올해 파일과 구분하는 표지를 단다 */
+    function carriedFiles(src, fromYear, toYear) {
+        return ((src && src.files) || []).map(function (f) {
+            var o = {};
+            Object.keys(f).forEach(function (k) { o[k] = f[k]; });
+            o.copiedFromFileId = f.copiedFromFileId || f.id || f.name;
+            o.sourceYear = f.sourceYear || +fromYear;
+            o.targetYear = +toYear;
+            return o;
+        });
+    }
     function stageIdsOfDocument(documentId) {
         var d = docById(documentId);
         return d ? d.stageIds.slice() : [];
@@ -327,7 +361,7 @@
         /* 연도별 확정 문서(2021~2024·2026)도 같은 규칙이다 — 실측이고, 이 시스템에서
            확인한 사람이 없으므로 문서가 있으면 «진행중»까지다. 사용자 등록분도
            업로드 직후는 진행중이라(§5) 같은 결과가 된다. */
-        return documentIdsOfStage(stageId, year).length > 0 ? ST.WIP : ST.NONE;
+        return evidenceIdsOfStage(stageId, year).length > 0 ? ST.WIP : ST.NONE;
     }
     function statusLabel(code) { return ST_LABEL[code] || ST_LABEL[ST.NONE]; }
     function stageRecord(stageId, year) {
@@ -336,7 +370,7 @@
         return {
             stageId: stageId, year: year,
             status: statusOfStage(stageId, year),
-            evidenceDocumentIds: p.evidenceDocumentIds || documentIdsOfStage(stageId, year),
+            evidenceDocumentIds: p.evidenceDocumentIds || evidenceIdsOfStage(stageId, year),
             confirmedAt: p.confirmedAt || null, confirmedBy: p.confirmedBy || null,
             updatedAt: p.updatedAt || null, updatedBy: p.updatedBy || null,
             naReason: p.naReason || '',
@@ -661,7 +695,14 @@
         };
         store().docs.push(doc);
         save();
-        applyDocument(doc.id, doc.stageIds, year);
+        /* 파일 대기 사본은 증빙이 아니라 진행중으로 올리지 않는다(E20) —
+           올해 파일을 붙이는 순간 updateDocument 가 같은 전이를 한다 */
+        if (awaitingFile(doc)) {
+            log('carry', '문서 ' + doc.id + ' — 지난해 문서에서 옮김 · 파일 대기(판정 제외)', { docId: doc.id });
+            save();
+        } else {
+            applyDocument(doc.id, doc.stageIds, year);
+        }
         return { ok: true, doc: doc };
     }
 
@@ -688,7 +729,8 @@
                 transition(sid, list[i].year, ST.WIP, { silent: true });
             }
         });
-        applyDocument(id, list[i].stageIds, list[i].year);
+        /* 아직 파일 대기 사본이면 증빙이 아니다(E20) — 파일이 붙은 수정에서만 전이한다 */
+        if (!awaitingFile(list[i])) applyDocument(id, list[i].stageIds, list[i].year);
         return { ok: true, doc: list[i] };
     }
 
@@ -735,7 +777,7 @@
         save();
         /* 증빙이 사라진 단계는 다시 판정한다 — 남은 문서가 없으면 미이행 */
         d.stageIds.forEach(function (sid) {
-            if (documentIdsOfStage(sid, d.year).length === 0) transition(sid, d.year, ST.NONE, { silent: true });
+            if (evidenceIdsOfStage(sid, d.year).length === 0) transition(sid, d.year, ST.NONE, { silent: true });
         });
         log('delete', '문서 삭제 — ' + d.title + ' (단계 ' + d.stageIds.length + '개)', { docId: id });
         save();
@@ -880,6 +922,8 @@
         /* 문서 축 */
         allDocs: allDocs, docById: docById,
         documentIdsOfStage: documentIdsOfStage,
+        evidenceIdsOfStage: evidenceIdsOfStage, awaitingFile: awaitingFile,
+        ownFiles: ownFiles, carriedFiles: carriedFiles,
         stageIdsOfDocument: stageIdsOfDocument,
         itemIdsOfDocument: itemIdsOfDocument,
         /* 상태·진행률 (§10 계약) */

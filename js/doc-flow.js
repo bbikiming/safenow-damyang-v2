@@ -45,6 +45,12 @@
     function stepLabel(i, len) { return i === len - 1 ? '결재' : '검토'; }
     function today() { return V().today(); }
 
+    /* 붙임 한도 — **설정값**이다(CLAUDE.md §7-1 · 2026-10-07). 온나라 확인 전 기본값이고
+     * 회신이 오면 여기 한 줄만 바꾼다. 시스템이 만드는 별지(이수자 명단 등)도 붙임 1개로 센다.
+     * 넘는 파일을 상신 때 조용히 빼지 않도록 **고르는 단계에서** 막는다.
+     * 용량은 파일에 크기가 있을 때만 더한다 — 모르는 크기를 0 으로 세어 합계를 지어내지 않는다. */
+    var ATTACH_LIMIT = { count: 5, fileMB: 10, totalMB: 30 };
+
     /* =====================================================================
      * 결재선 — **공용 조각** (DYDOC.approvalLine)
      * ---------------------------------------------------------------------
@@ -227,8 +233,10 @@
         function lineEditorHtml() {
             var L = line(), iss = lineIssues(L);
             return '<div class="rskdoc-line">' +
+                /* 안내는 담당자가 할 일만 — 상신 방식(호출기안)·위임전결규칙 설명은 주석에만 둔다(운영 T30).
+                   «서로 다른 사람» 규칙은 어겼을 때 아래 경고가 말한다. */
                 '<div class="rskdoc-line-head"><b>결재선</b>' +
-                    '<span class="file-hint">기안·검토·결재는 <b>서로 다른 사람</b>이어야 합니다 — 결재선 전체가 한 번에 올라갑니다</span>' +
+                    '<span class="file-hint">조직도에서 검토자·결재자를 고르세요</span>' +
                     '<span class="spacer"></span>' +
                     '<button type="button" class="btn btn-sm btn-outline" onclick="' + NS + '.addStep()">＋ 검토</button> ' +
                     '<button type="button" class="btn btn-sm btn-outline" onclick="' + NS + '.resetLine()">기본값</button>' +
@@ -326,11 +334,15 @@
          * 도메인이 주지 않으면 종전대로 열어 둔다 — 동결된 위험성평가 공문은
          * 자체 구현이라 영향이 없고, 훅을 안 준 도메인의 화면도 흔들리지 않는다. */
         function permit(t) { return cfg.canDraft ? cfg.canDraft(t) : { ok: true }; }
+        /* 권한과 기안 조건을 **네 경로(기안·미리보기·확인·상신) 모두**에서 본다.
+         * 종전에는 기안 조건(ready)을 기안 폼을 열 때만 봐서, 폼을 연 뒤의 전역 호출은
+         * 조건을 다시 지나지 않았다(운영 23건 #1 — 진행 중 교육에 기안이 열렸다). */
         function denied(t) {
             var r = permit(t);
-            if (r.ok) return false;
-            toast(r.why || '이 공문을 기안할 권한이 없습니다.');
-            return true;
+            if (!r.ok) { toast(r.why || '이 공문을 기안할 권한이 없습니다.'); return true; }
+            var rd = cfg.ready ? cfg.ready(t) : { ok: true };
+            if (!rd.ok) { toast(rd.why || '아직 기안할 수 없습니다.'); return true; }
+            return false;
         }
         function open(id) {
             var t = cfg.targetOf(id);
@@ -338,13 +350,13 @@
             /* **버튼을 감추는 것만으로는 부족하다** — 전역 호출로 뚫린다.
                기안·미리보기·확인·상신 네 경로에 모두 건다. */
             if (denied(t)) return;
-            var r = cfg.ready ? cfg.ready(t) : { ok: true };
-            if (!r.ok) { toast(r.why || '아직 기안할 수 없습니다.'); return; }
             F = {
                 id: id, docType: '내부결재',
                 title: cfg.titleOf ? cfg.titleOf(t) : '',
                 to: '', body: '',
-                attach: (cfg.attachOf ? cfg.attachOf(t) : []).map(function (a) { return { label: a.label, meta: a.meta || '', on: false }; }),
+                attach: (cfg.attachOf ? cfg.attachOf(t) : []).map(function (a) {
+                    return { label: a.label, meta: a.meta || '', on: false, size: (a.size > 0 ? +a.size : null) };
+                }),
                 basis: {}, annex: true
             };
             renderDraft();
@@ -357,8 +369,56 @@
             if (el('body')) F.body = el('body').value;
         }
         function setType(v) { capture(); F.docType = v; renderDraft(); }
-        function setAttach(i, on) { capture(); if (F.attach[i]) F.attach[i].on = !!on; }
-        function setAnnex(on) { capture(); F.annex = !!on; renderDraft(); }
+
+        /* ── 붙임 한도 ──────────────────────────────────────────────── */
+        function limit() { return cfg.attachLimit || ATTACH_LIMIT; }
+        function annexCount() {
+            if (!F || !F.annex || !cfg.annexes) return 0;
+            return cfg.annexes(cfg.targetOf(F.id), null).length;
+        }
+        function attachCount() {
+            return F.attach.filter(function (a) { return a.on; }).length + annexCount();
+        }
+        /* 고른 파일이 모두 크기를 알 때만 합계를 낸다(MB). 하나라도 모르면 null. */
+        function attachTotalMB() {
+            var on = F.attach.filter(function (a) { return a.on; });
+            if (on.some(function (a) { return a.size == null; })) return null;
+            return on.reduce(function (n, a) { return n + a.size; }, 0) / (1024 * 1024);
+        }
+        function mb(n) { return (Math.round(n * 10) / 10).toFixed(1); }
+        function attachSumText() {
+            var L = limit(), tot = attachTotalMB();
+            return '붙임 ' + attachCount() + ' / ' + L.count + '개' +
+                (tot == null ? '' : ' · 합계 ' + mb(tot) + ' / ' + L.totalMB + 'MB');
+        }
+        function attachIssue() {
+            if (!F) return '';
+            var L = limit();
+            if (attachCount() > L.count) return '붙임은 ' + L.count + '개까지 붙일 수 있습니다.';
+            var big = F.attach.filter(function (a) { return a.on && a.size != null && a.size > L.fileMB * 1024 * 1024; })[0];
+            if (big) return big.label + ' — 파일당 ' + L.fileMB + 'MB까지 붙일 수 있습니다.';
+            var tot = attachTotalMB();
+            if (tot != null && tot > L.totalMB) return '붙임 합계는 ' + L.totalMB + 'MB까지입니다.';
+            return '';
+        }
+        function syncAttachSum() {
+            var el = global.document.getElementById(NS + '-attach-sum');
+            if (el) el.textContent = attachSumText();
+        }
+        function setAttach(i, on) {
+            capture();
+            if (!F.attach[i]) return;
+            F.attach[i].on = !!on;
+            var why = on ? attachIssue() : '';
+            if (why) { F.attach[i].on = false; toast(why); renderDraft(); return; }
+            syncAttachSum();
+        }
+        function setAnnex(on) {
+            capture(); F.annex = !!on;
+            var why = on ? attachIssue() : '';
+            if (why) { F.annex = false; toast(why); }
+            renderDraft();
+        }
         function setBasis(key, on) { capture(); if (on) F.basis[key] = true; else delete F.basis[key]; }
         function insert(text) {
             capture();
@@ -381,10 +441,15 @@
             if (!F.attach.length) {
                 return '<p class="file-hint">붙일 수 있는 파일이 없습니다 — 교육·평가에 올려 둔 파일이 붙임 후보가 됩니다.</p>';
             }
+            var L = limit();
             return '<div class="rskdoc-cks">' + F.attach.map(function (a, i) {
-                return '<label class="rskdoc-ck"><input type="checkbox"' + (a.on ? ' checked' : '') +
+                /* 파일당 한도를 넘는 파일은 고를 수 없게 두고 이유를 그 자리에 쓴다(SCR-EDU-004 §4-5) */
+                var big = a.size != null && a.size > L.fileMB * 1024 * 1024;
+                return '<label class="rskdoc-ck"><input type="checkbox"' + (a.on && !big ? ' checked' : '') + (big ? ' disabled' : '') +
                     ' onchange="' + NS + '.setAttach(' + i + ', this.checked)">' +
-                    '<span><b>' + esc(a.label) + '</b>' + (a.meta ? ' <span class="file-hint">' + esc(a.meta) + '</span>' : '') + '</span></label>';
+                    '<span><b>' + esc(a.label) + '</b>' + (a.meta ? ' <span class="file-hint">' + esc(a.meta) + '</span>' : '') +
+                    (big ? ' <span class="file-hint">온나라 붙임 한도(파일당 ' + L.fileMB + 'MB) 초과 — 시스템에는 남아 있고 공문에는 붙지 않습니다</span>' : '') +
+                    '</span></label>';
             }).join('') + '</div>';
         }
         function basisHtml(t) {
@@ -418,13 +483,15 @@
                         chipsHtml(t) +
                         '<textarea class="form-textarea" id="' + NS + '-body" rows="8" placeholder="공문 본문을 직접 입력하세요.">' + esc(F.body) + '</textarea></div>' +
                     basisHtml(t) +
-                    '<div class="rskdoc-block"><label class="form-label">붙임 <span class="file-hint">이미 올려 둔 파일에서 고릅니다 — 여기서 새로 올리지 않습니다</span></label>' +
+                    '<div class="rskdoc-block"><label class="form-label">붙임 <span class="file-hint">이미 올려 둔 파일에서 고릅니다</span></label>' +
                         attachPickHtml() +
                         ((cfg.annexes && cfg.annexes(t, null).length)
                             ? '<label class="rskdoc-ck" style="margin-top:6px;"><input type="checkbox"' + (F.annex ? ' checked' : '') +
                                 ' onchange="' + NS + '.setAnnex(this.checked)"><span><b>붙임 별지</b> <span class="file-hint">' +
                                 esc(cfg.annexes(t, null).map(function (x) { return x.title; }).join(' · ')) + '</span></span></label>'
                             : '') +
+                        /* 한도 안내는 수치만(운영 T30) — 별지도 개수에 들어간다 */
+                        '<p class="file-hint" id="' + NS + '-attach-sum" aria-live="polite">' + esc(attachSumText()) + '</p>' +
                     '</div>' +
                     lineEditorHtml() +
                 '</div>',
@@ -528,6 +595,9 @@
             if (!String(F.title || '').trim()) { toast('공문 제목을 입력하세요.'); return; }
             if (!String(F.body || '').trim()) { toast('공문 본문을 입력하세요.'); return; }
             var t = cfg.targetOf(F.id);
+            /* 상신을 막는 사유 — 결재선과 붙임 한도. 미리보기 자체는 막지 않고 버튼 자리에 사유를 쓴다 */
+            var sendWhy = !lineReady().ok ? lineReady().why + ' [← 수정]에서 결재선을 고치세요.'
+                : attachIssue() ? attachIssue() + ' [← 수정]에서 붙임을 줄이세요.' : '';
             V().openModal('문서 미리보기 — ' + esc(F.title),
                 /* 좁은 화면에서 지면이 왼쪽으로 밀리는 것을 막는 래퍼 — 규칙은 .rskdoc-preview(css/v2.css) */
                 '<div class="rskdoc-preview">' +
@@ -536,9 +606,9 @@
                    할 이유가 없다. 대신 상신 버튼을 잠그고 **무엇이 걸렸는지** 그 자리에 쓴다.
                    누르면 거절하는 버튼을 남기면 담당자가 이유를 모른 채 두 번 누른다. */
                 '<button type="button" class="btn btn-secondary" onclick="' + NS + '.back()">← 수정</button>' +
-                (lineReady().ok
+                (!sendWhy
                     ? '<button type="button" class="btn btn-primary" onclick="' + NS + '.confirmSend()">온나라로 결재 상신</button>'
-                    : '<span class="rskdoc-foot-note">' + esc(lineReady().why) + ' <b>[← 수정]</b>에서 결재선을 고치세요.</span>'),
+                    : '<span class="rskdoc-foot-note">' + esc(sendWhy) + '</span>'),
                 { variant: 'wide', headHtml: '<button type="button" class="btn btn-sm btn-outline pdf-noprint" onclick="' + NS + '.print()">PDF 저장 / 인쇄</button>' });
         }
         function back() { if (!F) return; renderDraft(); }
@@ -551,13 +621,17 @@
             if (!F) { toast('먼저 [공문 기안]으로 문서를 작성하세요.'); return; }
             if (denied(cfg.targetOf(F.id))) return;
             if (lineDenied()) return;
+            var ai = attachIssue();
+            if (ai) { toast(ai); return; }
+            /* 확인 단계는 **같은 창의 본문을 바꿔** 보인다 — openModal 이 앞 창(미리보기)을 닫고
+             * 연다(화면에 뜬 창은 늘 하나, 운영 23건 #3). 문서 내용을 다시 늘어놓지 않고
+             * 되돌릴 수 없다는 사실만 말한다. */
             V().openModal('상신하면 되돌릴 수 없습니다',
                 '<div class="rskdoc-send">' +
                     '<div class="rskdoc-lock-warn">' +
                         '<b>' + esc(cfg.lockNote || '상신 후에는 이 기록을 수정할 수 없습니다.') + '</b><br>' +
-                        '<span class="file-hint">문서번호가 채번되고 결재 이력에 남습니다. 되돌리려면 반려를 받아야 합니다.</span>' +
+                        '<span class="file-hint">고치려면 반려를 받아 다시 올립니다.</span>' +
                     '</div>' +
-                    '<p class="file-hint">문서 내용은 바로 앞 미리보기에서 확인했습니다 — 여기서 다시 보여드리지 않습니다.</p>' +
                 '</div>',
                 '<button type="button" class="btn btn-secondary" onclick="' + NS + '.preview()">← 미리보기</button>' +
                 '<button type="button" class="btn btn-primary" onclick="' + NS + '.send()">상신</button>');
@@ -568,6 +642,8 @@
             if (denied(t)) return;
             /* 확인 화면을 건너뛰고 전역 호출로 들어오는 경로까지 막는다 — 버튼만 잠그면 뚫린다 */
             if (lineDenied()) return;
+            var ai = attachIssue();
+            if (ai) { toast(ai); return; }
             var no = cfg.nextNo();
             var doc = {
                 sid: no + '-' + (cfg.docsFor(t) || []).length,
@@ -582,11 +658,19 @@
             };
             cfg.save(t, doc);
             V().closeModal();
+            /* 상신 직후 값은 생산등록번호가 아니라 «연계 번호»다 — 문서번호는 결재가 끝나야 생긴다
+             * (CLAUDE.md §7-1 2026-10-07). 결과 창은 개발 상태를 말하지 않고(운영 문구 원칙),
+             * 연계 전 재현이라는 사실은 «예시 자료» 칩이 맡는다(§15). */
+            /* 구성은 SCR-EDOC-008 §4 — 보낸 사실 · 문서명 · 연계 번호 · 문서번호 안내 · 결재선 · 보낸 붙임 */
+            var sentAttach = attachNames(t, doc);
             V().openModal('온나라 결재 요청',
                 '<div class="rskdoc-sent">' +
+                    '<p>결재 요청을 보냈습니다. ' + V().sampleChip('온나라 연계 전 상신 결과를 재현한 값입니다.') + '</p>' +
                     '<p><b>' + esc(doc.title) + '</b></p>' +
-                    '<p>문서번호 <b>' + esc(no) + '</b> <span class="file-hint">임시 채번 — 실제 번호는 온나라가 부여합니다</span></p>' +
-                    '<p class="file-hint">온나라 연동은 아직 구현되지 않았습니다 — 이 화면은 상신 결과를 재현합니다.</p>' +
+                    '<p>연계 번호 <b>' + esc(no) + '</b> <span class="file-hint">문서번호는 결재가 끝나면 온나라가 부여합니다</span></p>' +
+                    '<p class="file-hint">결재선 ' + esc(doc.lineText) + '</p>' +
+                    (sentAttach.length ? '<p class="file-hint">붙임 ' + sentAttach.map(esc).join(' · ') + '</p>' : '') +
+                    '<p class="file-hint">결재 완료·반려가 회신되면 상태가 바뀝니다. 결재 진행은 온나라에서 확인합니다.</p>' +
                 '</div>',
                 '<button type="button" class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
             refresh();

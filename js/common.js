@@ -412,6 +412,8 @@
         general: FILE_LIMITS,
         image: { formats: 'JPG · PNG · GIF', extensions: ['jpg', 'jpeg', 'png', 'gif'], maxMB: 10, maxCount: 5 },
         bulk:  { formats: 'XLSX(엑셀)', extensions: ['xlsx'], maxMB: 20, maxCount: 1 },
+        /* 가이드 자료 — 시스템 관리 › 가이드 관리가 헤더 [가이드 다운로드]에 올리는 PDF 한 건(2026-11-05) */
+        guide: { formats: 'PDF', extensions: ['pdf'], maxMB: 20, maxCount: 1 },
     };
     function limitsOf(profile) { return FILE_PROFILES[profile] || FILE_LIMITS; }
     /* 업로드 영역 하단에 붙이는 안내 문구 HTML — profile 을 주지 않으면 일반 증빙 */
@@ -770,7 +772,12 @@
         var t = String(word == null ? '' : word).trim();
         if (!t) return withJong;
         var c = t.charCodeAt(t.length - 1);
-        var has = (c >= 0xac00 && c <= 0xd7a3) ? ((c - 0xac00) % 28) > 0 : false;
+        var has;
+        if (c >= 0xac00 && c <= 0xd7a3) has = ((c - 0xac00) % 28) > 0;
+        /* 숫자·로마자로 끝나면 읽는 소리로 본다 — «v2.1이»(일) · «2호는»(이) · «HWPX는». 종전에는
+         * 전부 받침 없음으로 보아 «v2.1가»가 나왔다(2026-11-05). 0 영·1 일·3 삼·6 육·7 칠·8 팔 = 받침 */
+        else if (c >= 48 && c <= 57) has = '013678'.indexOf(t.charAt(t.length - 1)) >= 0;
+        else has = 'LMNRlmnr'.indexOf(t.charAt(t.length - 1)) >= 0;
         return has ? withJong : withoutJong;
     }
 

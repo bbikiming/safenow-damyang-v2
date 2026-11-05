@@ -82,7 +82,9 @@
                     '</select>' +
                 '</div>' +
                 '<div>' +
-                    '<button type="button" class="btn btn-outline" onclick="RSKOCC.downloadForm()">📥 양식 다운로드 (HWPX)</button> ' +
+                    /* 양식 파일이 등록되기 전에는 내려받기 버튼을 내지 않는다(운영 T31, 2026-11-04) —
+                       누르면 «준비 중»만 말하는 버튼은 두지 않는다. 파일이 생기면 D().OCC_FORM_READY 를 켠다. */
+                    (formReady() ? '<button type="button" class="btn btn-outline" onclick="RSKOCC.downloadForm()">📥 양식 다운로드 (HWPX)</button> ' : '') +
                     (canRegister()
                         ? '<button type="button" class="btn btn-primary" data-tour="occ-create" onclick="RSKOCC.openReasonGate()">＋ 수시평가 등록</button> '
                         : '') +
@@ -243,8 +245,11 @@
             '<div class="roc-reason-list">' + cards + '</div>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>');
     }
-    /* 양식 다운로드 — HWPX. 양식 안에 안전관리자 확인·서명란이 들어 있다. */
+    /* 양식 다운로드 — HWPX. 양식 안에 안전관리자 확인·서명란이 들어 있다.
+       양식 파일이 아직 없다(운영 T31) — 버튼·«작성 양식» 칸을 숨기고, 전역 호출에도 같은 판정을 건다. */
+    function formReady() { return !!(D().OCC_FORM_READY); }
     function downloadForm() {
+        if (!formReady()) return;
         V().notReady('양식 내려받기', '서식 파일 등록');
     }
 
@@ -410,10 +415,13 @@
                 '<select class="form-select" id="roc-r-reason" onchange="RSKOCC.onReasonChange()">' + reasonOpts + '</select>' +
                 '<p class="file-hint">' + esc((D().OCC_REASONS[F.reason] || {}).desc || '') + '</p></div>' +
             /* 작성 양식은 담당자가 직접 위험도 계산표를 짜지 않게 하려고 제공한다 —
-             * 발주처: "부서마다 이런 걸 작성을 못해요. 실질적으로 능력이 안 돼요." */
-            '<div class="roc-modal-row"><label class="form-label">작성 양식</label>' +
-                '<button type="button" class="btn btn-outline btn-sm" onclick="RSKOCC.downloadForm()">📥 ' + esc(D().OCC_FORM_FILE) + ' 다운로드</button>' +
-                '<p class="file-hint">양식을 내려받아 작성한 뒤 아래 첨부파일로 올리세요. 양식에는 <b>안전관리자 확인·서명란</b>이 들어 있습니다.</p></div>' +
+             * 발주처: "부서마다 이런 걸 작성을 못해요. 실질적으로 능력이 안 돼요."
+             * 양식 파일이 올라오기 전까지는 칸을 숨긴다(운영 T31) — 없는 양식을 설명하지 않는다. */
+            (formReady()
+                ? '<div class="roc-modal-row"><label class="form-label">작성 양식</label>' +
+                    '<button type="button" class="btn btn-outline btn-sm" onclick="RSKOCC.downloadForm()">📥 ' + esc(D().OCC_FORM_FILE) + ' 다운로드</button>' +
+                    '<p class="file-hint">양식을 내려받아 작성한 뒤 아래 첨부파일로 올리세요. 양식에는 <b>안전관리자 확인·서명란</b>이 들어 있습니다.</p></div>'
+                : '') +
             '<div class="roc-modal-row"><label class="form-label">발생일 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 '<input type="date" class="form-input" id="roc-r-date" value="' + esc(F.date) + '" style="max-width:200px;"></div>' +
             '<div class="roc-modal-row"><label class="form-label">내용 <span style="color:var(--status-danger-fg)">*</span></label>' +

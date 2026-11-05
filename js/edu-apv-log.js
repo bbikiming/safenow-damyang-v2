@@ -51,7 +51,9 @@
                     ? '<div class="statbox success"><div class="statbox-num">' + done + '</div><div class="statbox-label">결재완료</div></div>' +
                       '<div class="statbox ' + (rej ? 'danger' : 'neutral') + '"><div class="statbox-num">' + rej + '</div><div class="statbox-label">반려</div></div>'
                     : '<div class="statbox neutral" style="grid-column:span 2;"><div class="statbox-label" style="text-align:left;">' +
-                      '<b>결재 완료·반려는 온나라 회신으로 채워집니다</b><br>연동 전에는 상신 사실과 문서만 남습니다 — 진행 상황은 온나라에서 문서번호로 확인하세요.</div></div>') +
+                      /* 개발 상태(연동 전)를 말하지 않고 할 일만 — 운영 문구 원칙(2026-11-05).
+                         상신 직후에는 문서번호가 아직 없으므로 «문서번호로 확인»이라 쓰지 않는다(§7-1). */
+                      '<b>결재 완료·반려는 온나라 회신으로 채워집니다</b><br>결재 진행은 온나라에서 확인합니다.</div></div>') +
             '</div>';
 
         var bar = EDUFILTER.bar([

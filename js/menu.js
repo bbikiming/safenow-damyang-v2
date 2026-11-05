@@ -37,8 +37,10 @@
     /* '문서 N건' 은 이 대메뉴에 걸린 **업무문서** 수인데, 화면 표에는 다른 축이
        나온다(경영방침은 방침 버전 3건). 나란히 놓이면 "10건이라면서 3개만 보이네요"로
        읽힌다 — 무엇을 센 숫자인지 밝힌다. */
+    /* 요구사항 번호(SFR-…)는 사용자가 알 필요가 없는 코드라 부제에 넣지 않는다
+       (운영 요청 T25 — «화면 코드는 쓰지 않는다», 2026-11-05). */
     document.getElementById('sbm-subtitle').textContent =
-        '안전보건관리체계 > ' + META.label + ' · ' + META.sfr + ' · 관련 업무문서 ' + MY_DOCS.length + '건';
+        '안전보건관리체계 > ' + META.label + ' · 관련 업무문서 ' + MY_DOCS.length + '건';
 
     /* ── 의견청취: 대메뉴 승격 — sub 파라미터로 3개 SNB 페이지 분기(voice/committee/council) ── */
     const OPN_SUB_MAP = { voice: '의견청취·건의함', committee: '산업안전보건위원회', council: '협의체·점검표' };
@@ -49,7 +51,7 @@
         const subLabel = OPN_SUB_MAP[OPN_SUB];
         document.title = subLabel + ' - 담양군 중대재해예방통합관리시스템 v2';
         document.getElementById('sbm-title').textContent = subLabel;
-        document.getElementById('sbm-subtitle').textContent = '의견청취 > ' + subLabel + ' · ' + META.sfr;
+        document.getElementById('sbm-subtitle').textContent = '의견청취 > ' + subLabel;
     }
 
     /* ── 탭 ── */
@@ -122,10 +124,10 @@
         if (!APPRLN) { onDone(null); return; }
         V.openModal('온나라 결재 상신 — ' + esc(title),
             '<div class="rskdoc-send">' +
-                '<p class="file-hint">결재선을 지정해야 상신할 수 있습니다. 상신은 <b>결재선 전체를 한 번에</b> 온나라로 넘기므로 기안·검토·결재가 서로 다른 사람이어야 합니다.</p>' +
+                '<p class="file-hint">검토자·결재자를 조직도에서 고르세요. 기안·검토·결재는 서로 다른 사람이어야 합니다.</p>' +
                 '<div id="sbm-lnmount">' + APPRLN.lineEditorHtml() + '</div>' +
                 '<div class="rskdoc-lock-warn" style="margin-top:10px;"><b>상신 후에는 수정할 수 없습니다.</b><br>' +
-                '<span class="file-hint">문서번호가 채번되고 결재 이력에 남습니다. 되돌리려면 반려를 받아야 합니다.</span></div>' +
+                '<span class="file-hint">결재 이력에 남습니다. 다시 고치려면 반려를 받아야 합니다.</span></div>' +
             '</div>',
             '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button class="btn btn-primary" onclick="PG._apprGo()">상신</button>');
@@ -171,8 +173,7 @@
         const nextName = line[done] ? line[done].name : '';
         return '<div class="bgt-sim-box">' +
             '<div class="bgt-sim-head">결재 결과 회신 등록 — 연계 전 수동 기록</div>' +
-            '<p class="file-hint" style="margin-bottom:10px;">온나라가 보낸 결재 결과를 <b>옮겨 적는 자리</b>입니다 — 이 시스템이 결재하지 않습니다. ' +
-                '연계가 붙으면 온나라 응답이 대신합니다. 회신 등록은 결재가 아니라서 <b>결재선과 무관하게 담당자가</b> 합니다.</p>' +
+            '<p class="file-hint" style="margin-bottom:10px;">온나라에서 받은 결재 결과를 옮겨 적습니다.</p>' +
             '<div class="bgt-act-btns">' +
                 (midLeft ? '<button class="btn btn-sm btn-outline" onclick="' + ns + '(\'' + id + '\',\'mid\')">' +
                     esc(label(done)) + ' 승인 회신' + (nextName ? ' (' + esc(nextName) + ')' : '') + '</button>' : '') +
@@ -182,34 +183,60 @@
             '<div id="sbm-reject-form" style="display:none;"></div>' +
         '</div>';
     }
-    /* 반려 사유 인라인 입력 — 별도 모달을 띄우지 않는다(CLAUDE.md §1) */
-    function rejectInline(ns, id) {
+    /* 회신 입력 — 별도 모달을 띄우지 않고 인라인으로 편다(CLAUDE.md §1).
+     * 결재완료는 **생산등록번호·결재일**, 반려는 **반려일·사유**가 필수다(공통 권한정의 §7-4 ·
+     * 2026-10-07 회신 · 11-05 회신 #6) — 번호가 있어야 옮겨 적은 결과를 온나라 원본으로 되짚는다. */
+    function rejectInline(ns, id, mode) {
         const box = document.getElementById('sbm-reject-form'); if (!box) return;
-        if (box.style.display !== 'none' && box.innerHTML) { box.style.display = 'none'; box.innerHTML = ''; return; }
+        mode = mode || 'reject';
+        if (box.style.display !== 'none' && box.innerHTML && box.getAttribute('data-mode') === mode) { box.style.display = 'none'; box.innerHTML = ''; return; }
         box.style.display = 'block';
-        box.innerHTML = '<div class="bgt-reject-inline">' +
-            '<label class="form-label" for="sbm-reject-reason">반려 사유 (필수)</label>' +
-            '<textarea id="sbm-reject-reason" class="form-textarea" rows="2" placeholder="온나라에서 회신된 반려 사유를 그대로 옮겨 적으세요"></textarea>' +
-            '<div class="bgt-act-btns" style="margin-top:8px;">' +
-                '<button class="btn btn-outline btn-sm" onclick="' + ns + '(\'' + id + '\',\'cancel\')">취소</button>' +
-                '<button class="btn btn-primary btn-sm" onclick="' + ns + '(\'' + id + '\',\'doReject\')">반려 회신 등록</button>' +
-            '</div></div>';
-        const ta = document.getElementById('sbm-reject-reason'); if (ta) ta.focus();
+        box.setAttribute('data-mode', mode);
+        const today = V.today();
+        box.innerHTML = mode === 'approve'
+            ? '<div class="bgt-reject-inline">' +
+                '<label class="form-label" for="sbm-recv-no">생산등록번호 (필수)</label>' +
+                '<input id="sbm-recv-no" type="text" class="form-input" placeholder="예: 재난안전과-1234">' +
+                '<label class="form-label" for="sbm-recv-date" style="margin-top:8px;">결재일 (필수)</label>' +
+                '<input id="sbm-recv-date" type="date" class="form-input" max="' + today + '">' +
+                '<div class="bgt-act-btns" style="margin-top:8px;">' +
+                    '<button class="btn btn-outline btn-sm" onclick="' + ns + '(\'' + id + '\',\'cancel\')">취소</button>' +
+                    '<button class="btn btn-primary btn-sm" onclick="' + ns + '(\'' + id + '\',\'doApprove\')">결재 완료 회신 등록</button>' +
+                '</div></div>'
+            : '<div class="bgt-reject-inline">' +
+                '<label class="form-label" for="sbm-recv-date">반려일 (필수)</label>' +
+                '<input id="sbm-recv-date" type="date" class="form-input" max="' + today + '">' +
+                '<label class="form-label" for="sbm-reject-reason" style="margin-top:8px;">반려 사유 (필수)</label>' +
+                '<textarea id="sbm-reject-reason" class="form-textarea" rows="2" placeholder="온나라에서 회신된 반려 사유를 그대로 옮겨 적으세요"></textarea>' +
+                '<div class="bgt-act-btns" style="margin-top:8px;">' +
+                    '<button class="btn btn-outline btn-sm" onclick="' + ns + '(\'' + id + '\',\'cancel\')">취소</button>' +
+                    '<button class="btn btn-primary btn-sm" onclick="' + ns + '(\'' + id + '\',\'doReject\')">반려 회신 등록</button>' +
+                '</div></div>';
+        const first = document.getElementById(mode === 'approve' ? 'sbm-recv-no' : 'sbm-recv-date'); if (first) first.focus();
     }
     /* 회신 반영 — 단계·처리자를 **결재선에서 파생**한다(안전장치 ②).
+     * extra: { no, date } — 결재완료의 생산등록번호·결재일 / 반려의 반려일.
      * 반환: {ok, msg, appr} — 도메인이 상태를 받아 자기 객체에 쓴다. */
-    function applyRecv(kind, appr, snap, doneSteps, reason) {
+    function applyRecv(kind, appr, snap, doneSteps, reason, extra) {
         const line = (snap && snap.line) || [];
         const label = i => (window.DYDOC ? DYDOC.stepLabel(i, line.length) : (i === line.length - 1 ? '결재' : '검토'));
+        const x = extra || {};
+        const dateBad = d => !d || d > V.today();
         if (kind === 'mid') {
             if (!(line.length > 1 && doneSteps < line.length - 1)) return { ok: false, msg: '중간 결재가 이미 완료되었습니다.' };
             return { ok: true, appr: '결재중', done: doneSteps + 1, msg: label(doneSteps) + ' 승인 회신이 등록되었습니다.' };
         }
-        if (kind === 'approve') return { ok: true, appr: '승인완료', done: line.length, msg: '결재 완료 회신이 등록되었습니다 — 현행본으로 반영됩니다.' };
+        if (kind === 'approve') {
+            const no = String(x.no || '').trim();
+            if (!no) return { ok: false, msg: '생산등록번호를 입력하세요 — 온나라 원본을 찾는 번호입니다.' };
+            if (dateBad(x.date)) return { ok: false, msg: '결재일을 입력하세요(오늘 이후는 안 됩니다).' };
+            return { ok: true, appr: '승인완료', done: line.length, no: no, date: x.date, msg: '결재 완료 회신이 등록되었습니다 — 현행본으로 반영됩니다.' };
+        }
         if (kind === 'reject') {
             const rs = String(reason || '').trim();
+            if (dateBad(x.date)) return { ok: false, msg: '반려일을 입력하세요(오늘 이후는 안 됩니다).' };
             if (!rs) return { ok: false, msg: '반려 사유를 입력하세요.' };
-            return { ok: true, appr: '반려', done: doneSteps, reason: rs, msg: '반려 회신이 등록되었습니다.' };
+            return { ok: true, appr: '반려', done: doneSteps, reason: rs, date: x.date, msg: '반려 회신이 등록되었습니다 — 고쳐서 다시 상신할 수 있습니다.' };
         }
         return { ok: false, msg: '알 수 없는 회신 유형입니다.' };
     }
@@ -225,6 +252,45 @@
                    { uid: 'u_safe1', name: '홍길동', role: '재난안전과장', dept: '재난안전과' }],
             lineText: '기안 박안전 → 검토 김중대 → 결재 홍길동', sample: true,
         };
+    }
+
+    /* 경영방침 상태 — 경영방침 화면과 이행점검 › 체계 점검(§4-1 줄)이 **같은 값**을 읽는다(운영 E03).
+       종전에는 policy() 안에서만 시드를 만들어, 체계 점검 줄이 방침 상태를 모른 채 고정 문구를 찍었다. */
+    function polState() {
+        /* ===== SSOT (window.POLICY_STATE) ===== */
+        if (!window.POLICY_STATE) {
+            window.POLICY_STATE = {
+                tab: 'policy', view: 'list', ver: null, draftType: null, draftVer: null,
+                VERSIONS: [
+                    { ver: '2.0', type: '제정', title: '담양군 안전·보건 경영방침', goal: '군민과 종사자의 생명·안전을 최우선으로 하는 안전 담양',
+                      details: ['중대산업재해·중대시민재해 ZERO', '정기 위험성평가 이행률 100%', '안전보건교육 이수율 95% 이상'],
+                      inspector: '재난안전과 · 재난안전과장 / 홍길동', effDate: '2026-02-03', appr: '승인완료',
+                      inspections: [{ half: '2026 상반기', date: '2026-06-22', result: '적합', inspector: '홍길동' }],
+                      postings: [{ id: 'L1', loc: '군청 본관 1층 게시판', photo: '본관 1층 게시판 게시 사진', date: '2026-02-05', status: '게시완료' },
+                                 { id: 'L2', loc: '내부망(새올) 전자게시', photo: '새올 전자게시 화면 캡처', date: '2026-02-03', status: '게시완료' }],
+                      evidence: [{ id: 'E1', name: '경영방침_2026.pdf', kind: '본문' }, { id: 'E2', name: '의견수렴결과.xlsx', kind: '의견수렴' }],
+                      postedDate: '2026-02-05', pdf: { docNo: '온나라-2026-3174', issued: '2026-02-03', signer: '담양군수 김담양' } },
+                    { ver: '1.1', type: '개정', title: '담양군 안전·보건 경영방침', goal: '안전한 일터, 건강한 담양',
+                      details: ['중대재해 ZERO 유지', '위험성평가 이행률 100%', '안전보건교육 이수율 90% 이상'], inspector: '재난안전과 · 재난안전과장 / 홍길동',
+                      effDate: '2025-07-01', appr: '승인완료', inspections: [{ half: '2025 하반기', date: '2025-12-10', result: '보완 필요', inspector: '홍길동' }],
+                      postings: [{ id: 'L1', loc: '군청 본관 1층 게시판', photo: '본관 1층 게시판 게시 사진', date: '2025-07-03', status: '게시완료' }],
+                      evidence: [{ id: 'E1', name: '개정_방침_v1.1.pdf', kind: '본문' }], postedDate: '2025-07-03',
+                      pdf: { docNo: '온나라-2025-2210', issued: '2025-07-01', signer: '담양군수 김담양' } },
+                    { ver: '1.0', type: '최초', title: '담양군 안전·보건 경영방침', goal: '안전 담양 원년 — 중대재해 예방 체계 구축',
+                      details: ['중대재해 예방 관리체계 구축', '위험성평가 도입'], inspector: '재난안전과 · 재난안전과장 / 홍길동',
+                      effDate: '2024-03-01', appr: '승인완료', inspections: [], postings: [], evidence: [], postedDate: '',
+                      pdf: { docNo: '온나라-2024-1102', issued: '2024-03-01', signer: '담양군수 김담양' } },
+                ],
+            };
+        }
+        const S = window.POLICY_STATE;
+        /* 시드 버전은 결재선 없이 '승인완료'만 갖고 있었다 — 이력이 통째로 비어 화면이
+           무엇을 보여주는지 전달되지 않는다. 예시 값으로 채우되 예시임을 표시한다. */
+        S.VERSIONS.forEach(v => {
+            if (v.appr !== '미상신' && !v.approval) { v.approval = sampleLine(); v.apprAt = (v.pdf && v.pdf.issued) || v.effDate; }
+        });
+        S.VERSIONS.sort((a, b) => parseFloat(b.ver) - parseFloat(a.ver));
+        return S;
     }
 
     const PROGRAM = {
@@ -465,39 +531,7 @@
                 PG._stackClose(); V.toast('조문 상세가 등록되었습니다 — 근거 태그 호버 시 표시됩니다');
             };
 
-            /* ===== SSOT (window.POLICY_STATE) ===== */
-            if (!window.POLICY_STATE) {
-                window.POLICY_STATE = {
-                    tab: 'policy', view: 'list', ver: null, draftType: null, draftVer: null,
-                    VERSIONS: [
-                        { ver: '2.0', type: '제정', title: '담양군 안전·보건 경영방침', goal: '군민과 종사자의 생명·안전을 최우선으로 하는 안전 담양',
-                          details: ['중대산업재해·중대시민재해 ZERO', '정기 위험성평가 이행률 100%', '안전보건교육 이수율 95% 이상'],
-                          inspector: '재난안전과 · 재난안전과장 / 홍길동', effDate: '2026-02-03', appr: '승인완료',
-                          inspections: [{ half: '2026 상반기', date: '2026-06-22', result: '적합', inspector: '홍길동' }],
-                          postings: [{ id: 'L1', loc: '군청 본관 1층 게시판', photo: '본관 1층 게시판 게시 사진', date: '2026-02-05', status: '게시완료' },
-                                     { id: 'L2', loc: '내부망(새올) 전자게시', photo: '새올 전자게시 화면 캡처', date: '2026-02-03', status: '게시완료' }],
-                          evidence: [{ id: 'E1', name: '경영방침_2026.pdf', kind: '본문' }, { id: 'E2', name: '의견수렴결과.xlsx', kind: '의견수렴' }],
-                          postedDate: '2026-02-05', pdf: { docNo: '온나라-2026-3174', issued: '2026-02-03', signer: '담양군수 김담양' } },
-                        { ver: '1.1', type: '개정', title: '담양군 안전·보건 경영방침', goal: '안전한 일터, 건강한 담양',
-                          details: ['중대재해 ZERO 유지', '위험성평가 이행률 100%', '안전보건교육 이수율 90% 이상'], inspector: '재난안전과 · 재난안전과장 / 홍길동',
-                          effDate: '2025-07-01', appr: '승인완료', inspections: [{ half: '2025 하반기', date: '2025-12-10', result: '보완 필요', inspector: '홍길동' }],
-                          postings: [{ id: 'L1', loc: '군청 본관 1층 게시판', photo: '본관 1층 게시판 게시 사진', date: '2025-07-03', status: '게시완료' }],
-                          evidence: [{ id: 'E1', name: '개정_방침_v1.1.pdf', kind: '본문' }], postedDate: '2025-07-03',
-                          pdf: { docNo: '온나라-2025-2210', issued: '2025-07-01', signer: '담양군수 김담양' } },
-                        { ver: '1.0', type: '최초', title: '담양군 안전·보건 경영방침', goal: '안전 담양 원년 — 중대재해 예방 체계 구축',
-                          details: ['중대재해 예방 관리체계 구축', '위험성평가 도입'], inspector: '재난안전과 · 재난안전과장 / 홍길동',
-                          effDate: '2024-03-01', appr: '승인완료', inspections: [], postings: [], evidence: [], postedDate: '',
-                          pdf: { docNo: '온나라-2024-1102', issued: '2024-03-01', signer: '담양군수 김담양' } },
-                    ],
-                };
-            }
-            const S = window.POLICY_STATE;
-            /* 시드 버전은 결재선 없이 '승인완료'만 갖고 있었다 — 이력이 통째로 비어 화면이
-               무엇을 보여주는지 전달되지 않는다. 예시 값으로 채우되 예시임을 표시한다. */
-            S.VERSIONS.forEach(v => {
-                if (v.appr !== '미상신' && !v.approval) { v.approval = sampleLine(); v.apprAt = (v.pdf && v.pdf.issued) || v.effDate; }
-            });
-            S.VERSIONS.sort((a, b) => parseFloat(b.ver) - parseFloat(a.ver));
+            const S = polState();
             const POL = {
                 cur: () => S.VERSIONS.find(v => v.ver === S.ver) || S.VERSIONS[0] || null,
                 lastInspection: v => (v && v.inspections && v.inspections.length) ? v.inspections[v.inspections.length - 1] : null,
@@ -519,33 +553,47 @@
             const apprChip = a => '<span class="chip-status ' + apprColor(a) + '">' + (a || '미상신') + '</span>';
             const checkChip = v => { const i = POL.lastInspection(v); return i ? '<span class="chip-status success">점검완료 · ' + i.date + '</span>' : '<span class="chip-status neutral">미점검</span>'; };
             const typeChip = t => '<span class="chip-mini ' + (t === '제정' ? 'wt-elec' : t === '개정' ? 'wt' : 'st-done') + '">' + t + '</span>';
-            /* 현행이 아닌 버전은 둘로 갈린다 — **아직 결재를 못 받은 신규본**과 **지나간 이력**이다.
-               둘을 다 '이력'이라고 부르면 방금 만든 방침이 과거 것으로 읽혀, 담당자가 상신해야
-               한다는 사실을 놓친다. 판정 기준은 현행본의 시행일이다. */
-            const isPending = v => {
-                if (!v) return false;
-                const a = POL.active && POL.active();
-                if (a && a.ver === v.ver) return false;
-                /* **결재 상태로 판정한다** — 시행일로 재면 승인완료된 옛 버전까지 대기로 잡힌다
-                   (실제로 그 오류를 냈다). 승인을 받은 적 없는 것만 '결재 대기'다. */
-                return v.appr !== '승인완료';
-            };
+            /* 버전 상태는 **결재로 정한다** (운영 E09 · 23건 #9, 2026-11-04 확정):
+               결재완료 최신본 = 현행 · 결재 전 최신본 = 작성중(미상신·반려면 수정 가능, 상신하면 잠김)
+               · 그 밖(새 현행본에 밀려난 판, 새 판에 밀려난 미결재본) = 이력.
+               현행본이 없을 때 하나뿐인 방침을 «이력»·«이전 버전»으로 다루면 고칠 길이 없어진다
+               (운영에서 실제로 유일본 v1.0 이 잠겨 실제 방침을 넣지 못했다). */
+            const isDraft = v => !!v && v.appr !== '승인완료' && v === S.VERSIONS[0];
+            const canEditVer = v => isDraft(v) && (v.appr === '미상신' || v.appr === '반려');
+            const draftOf = () => (isDraft(S.VERSIONS[0]) ? S.VERSIONS[0] : null);
             const stateChip = v => {
-                const lb = POL.isActive(v) ? '현행' : (isPending(v) ? '결재 대기' : '이력');
+                const lb = POL.isActive(v) ? '현행' : (isDraft(v) ? '작성중' : '이력');
                 return '<span class="chip-status ' + V.toneOf(lb) + '">' + lb + '</span>';
             };
+            /* 경영방침의 등록·수정·개정·제정·상신·회신·점검은 **재난안전과 담당자**가 한다
+               (운영 23건 #19 — 부서 계정에 [개정]·[제정]이 보였다). 판정은 DYROLE.canAct(주관부서) 한 곳이고
+               버튼을 감추는 것과 함께 진입·저장 함수에도 건다(버튼만 감추면 전역 호출로 뚫린다). */
+            const OWNER = (window.DYROLE && window.DYROLE.OWNER_DEPT) || 'safety';
+            const polCan = () => canAct(OWNER);
+            const polDeny = what => canAct()
+                ? what + V.josa(what, '은', '는') + ' 재난안전과 담당자가 합니다.'
+                : what + V.josa(what, '은', '는') + ' 담당자가 합니다 — 관리·감독 계층은 조회만 합니다.';
+            const polGate = what => { if (polCan()) return false; V.toast(polDeny(what)); return true; };
             const resultChip = r => '<span class="chip-status ' + (r === '적합' ? 'success' : r === '부적합' ? 'danger' : 'warning') + '">' + r + '</span>';
 
             /* ===== 라우터 ===== */
             PG.go = (tab, view, ver) => { if (tab) S.tab = tab; if (view) S.view = view; if (ver !== undefined) S.ver = ver; render(); };
             PG.polTab = name => PG.go(name, 'list', null);
             PG.polOpen = ver => PG.go(S.tab, 'detail', ver);
-            PG.polBack = () => PG.go(S.tab, 'list', null);
+            PG.polBack = () => {
+                /* 수정 폼에서 [취소]하면 그 판의 상세로 돌아간다 — 목록으로 튕기면 하던 일을 잃는다. */
+                if (S.view === 'form' && S.editVer) { const ver = S.editVer; S.editVer = null; PG.go(S.tab, 'detail', ver); return; }
+                S.editVer = null; PG.go(S.tab, 'list', null);
+            };
             PG.polGoBoard = () => PG.go('board', 'list', null);
 
             /* 등록(최초/제정/개정) */
             PG.polNew = () => {
-                if (!S.VERSIONS.length) { S.draftType = '최초'; S.draftVer = '1.0'; PG.go('policy', 'form'); return; }
+                if (polGate('경영방침 등록')) return;
+                if (!S.VERSIONS.length) { S.editVer = null; S.draftType = '최초'; S.draftVer = '1.0'; PG.go('policy', 'form'); return; }
+                /* 작성중인 판이 있으면 그 위에 또 만들지 않는다 — 결재 전 판이 둘이면 어느 것을 상신할지 갈린다. */
+                const dr = draftOf();
+                if (dr) { V.toast('작성중인 판(v' + dr.ver + ')이 있습니다 — 그 판을 고치거나 상신하세요.'); PG.go('policy', 'detail', dr.ver); return; }
                 PG._stackOpen('경영방침 등록',
                     '<p style="font-size:13px; color:var(--text-gray); margin-bottom:14px;">현재 최신본 <b>v' + S.VERSIONS[0].ver + '</b> 기준으로 새 버전을 만듭니다. 구분을 선택하세요.</p>' +
                     '<div style="display:flex; gap:10px;">' +
@@ -554,21 +602,46 @@
                     '</div>',
                     '<button class="btn btn-secondary" onclick="PG._stackClose()">취소</button>');
             };
-            PG.polNewKind = type => { S.draftType = type; S.draftVer = POL.nextVer(type); PG._stackClose(); PG.go('policy', 'form'); };
+            PG.polNewKind = type => {
+                if (polGate('경영방침 ' + type)) return;
+                const dr = draftOf();
+                if (dr) { PG._stackClose(); V.toast('작성중인 판(v' + dr.ver + ')이 있습니다 — 그 판을 고치거나 상신하세요.'); return; }
+                S.editVer = null; S.draftType = type; S.draftVer = POL.nextVer(type); PG._stackClose(); PG.go('policy', 'form');
+            };
+            /* [수정] — 작성중(미상신·반려)인 판만 고친다. 상신한 판은 잠긴다(반려 회신을 받으면 다시 열린다). */
+            PG.polEdit = ver => {
+                if (polGate('경영방침 수정')) return;
+                const v = S.VERSIONS.find(x => x.ver === ver); if (!v) return;
+                if (!canEditVer(v)) { V.toast(v.appr === '결재중' ? '상신한 방침은 고칠 수 없습니다 — 반려 회신을 받으면 다시 고칠 수 있습니다.' : '작성중인 방침만 고칠 수 있습니다.'); return; }
+                S.editVer = v.ver; S.draftType = v.type; S.draftVer = v.ver; PG.go('policy', 'form');
+            };
             const goalEditRow = val => '<div class="goal-row"><input type="text" value="' + V.esc(val) + '" placeholder="세부 방침을 입력하세요"><button type="button" class="goal-del" onclick="this.closest(\'.goal-row\').remove()" aria-label="삭제">×</button></div>';
             PG.polGoalAdd = () => { const l = document.getElementById('pol-form-goals'); if (!l) return; l.insertAdjacentHTML('beforeend', goalEditRow('')); const ii = l.querySelectorAll('input'); if (ii.length) ii[ii.length - 1].focus(); };
             PG.polPickInspector = () => E.openOrgTree('pol-form-inspector');
             PG.polSave = () => {
+                if (polGate('경영방침 저장')) return;
                 const goal = ((document.getElementById('pol-form-goal') || {}).value || '').trim();
                 if (!goal) { V.toast('목표를 입력하세요'); return; }
                 const details = Array.from(document.querySelectorAll('#pol-form-goals input')).map(i => i.value.trim()).filter(Boolean);
+                if (!details.length) { V.toast('세부 방침을 하나 이상 입력하세요'); return; }
+                const effDate = ((document.getElementById('pol-form-eff') || {}).value || '').trim();
+                if (!effDate) { V.toast('시행일을 입력하세요'); return; }
                 const inspector = (document.getElementById('pol-form-inspector') || {}).value || '';
+                if (S.editVer) {
+                    const v = S.VERSIONS.find(x => x.ver === S.editVer);
+                    if (!v || !canEditVer(v)) { V.toast('작성중인 방침만 고칠 수 있습니다.'); return; }
+                    Object.assign(v, { goal, details, inspector, effDate });
+                    S.editVer = null; S.draftType = null; S.draftVer = null;
+                    PG.go('policy', 'detail', v.ver);
+                    V.toast('경영방침 v' + v.ver + '을(를) 고쳤습니다');
+                    return;
+                }
                 const v = { ver: S.draftVer, type: S.draftType, title: '담양군 안전·보건 경영방침', goal, details, inspector,
-                    effDate: '2026-06-24', appr: '미상신', inspections: [], postings: [], evidence: [], postedDate: '',
+                    effDate, appr: '미상신', inspections: [], postings: [], evidence: [], postedDate: '',
                     pdf: { docNo: '(상신 전)', issued: '-', signer: '담양군수' } };
                 S.VERSIONS.unshift(v); S.draftType = null; S.draftVer = null;
                 PG.go('policy', 'detail', v.ver);
-                V.toast('경영방침 v' + v.ver + ' (' + v.type + ') 등록 완료');
+                V.toast('경영방침 v' + v.ver + ' (' + v.type + ') 등록 완료 — 작성중입니다. 상신해 결재를 받으면 현행본이 됩니다');
             };
             PG.polRevise = () => PG.polNewKind('개정');
             PG.polEnact = () => PG.polNewKind('제정');
@@ -578,20 +651,24 @@
                상태는 상신(polOnnara)과 회신 등록(polRecv) 두 경로로만 바뀐다. */
             /* 결재 결과 회신 등록 — 단계·처리자는 결재선에서 파생한다(recvBox·applyRecv 주석). */
             PG.polRecv = (ver, kind) => {
+                if (polGate('결재 결과 회신 등록')) return;
                 const v = S.VERSIONS.find(x => x.ver === ver); if (!v) return;
-                if (kind === 'reject') { rejectInline('PG.polRecv', ver); return; }
-                if (kind === 'cancel') { rejectInline('PG.polRecv', ver); return; }
-                let reason = '';
-                if (kind === 'doReject') {
-                    const ta = document.getElementById('sbm-reject-reason');
-                    reason = ta ? ta.value.trim() : '';
-                    kind = 'reject';
-                }
-                const r = applyRecv(kind, v.appr, v.approval, v.recvDone || 0, reason);
+                if (kind === 'reject' || kind === 'approve') { rejectInline('PG.polRecv', ver, kind); return; }
+                if (kind === 'cancel') { const b = document.getElementById('sbm-reject-form'); if (b) { b.style.display = 'none'; b.innerHTML = ''; } return; }
+                const fv = id => ((document.getElementById(id) || {}).value || '').trim();
+                let reason = '', extra = {};
+                if (kind === 'doReject') { reason = fv('sbm-reject-reason'); extra = { date: fv('sbm-recv-date') }; kind = 'reject'; }
+                else if (kind === 'doApprove') { extra = { no: fv('sbm-recv-no'), date: fv('sbm-recv-date') }; kind = 'approve'; }
+                const r = applyRecv(kind, v.appr, v.approval, v.recvDone || 0, reason, extra);
                 if (!r.ok) { V.toast(r.msg); return; }
                 v.appr = r.appr;
                 v.recvDone = r.done;
-                if (r.reason) v.rejectReason = r.reason;
+                if (r.reason) { v.rejectReason = r.reason; v.rejectDate = r.date; }
+                if (r.appr === '승인완료') {
+                    /* 생산등록번호·결재일은 결재로 생긴 값이다 — 지면의 문서번호·시행 표기가 이 값을 쓴다. */
+                    v.prodNo = r.no; v.apprDate = r.date; v.docNo = r.no;
+                    v.pdf = Object.assign({}, v.pdf, { docNo: r.no, issued: r.date });
+                }
                 V.toast(r.msg);
                 if (r.appr === '결재중') { PG.polApprHistory(ver); }   /* 중간 승인 — 모달 유지 */
                 else { V.closeModal(); }
@@ -600,8 +677,9 @@
             /* 상신 전에 **결재선을 지정한다** — 종전에는 누르는 즉시 결재중이 됐다.
                결재선은 그 방침 버전에 저장하고 이력·팝업이 같은 값 하나를 읽는다. */
             PG.polOnnara = ver => {
-                if (actGate('경영방침 결재 상신')) return;
+                if (polGate('경영방침 결재 상신')) return;
                 const v = S.VERSIONS.find(x => x.ver === ver); if (!v) return;
+                if (!canEditVer(v)) { V.toast(v.appr === '결재중' ? '이미 상신한 방침입니다.' : '작성중인 방침만 상신합니다.'); return; }
                 apprSubmit('경영방침 v' + ver, snap => {
                     v.appr = '결재중';
                     v.apprAt = V.today() + ' 09:00';
@@ -621,7 +699,9 @@
                           rows.map(r => '<tr><td>' + esc(r[0]) + '</td><td>' + esc(r[1]) + '</td><td>' + esc(r[2]) + '</td><td>' + esc(r[3]) + '</td></tr>').join('') +
                           '</tbody></table></div>' +
                           ((v && v.approval && v.approval.sample) ? '<p style="margin-top:8px;">' + V.sampleChip('지난 버전의 결재선은 예시 값입니다') + '</p>' : '') +
-                          '<p class="file-hint" style="margin-top:10px;">결재 완료·반려는 <b>온나라에서</b> 판단합니다 — 진행 상황은 온나라에서 문서번호로 확인하세요.</p>' +
+                          '<p class="file-hint" style="margin-top:10px;">결재 완료·반려는 <b>온나라에서</b> 판단합니다 — 진행 상황은 온나라에서 확인하세요.</p>' +
+                          ((v && v.appr === '승인완료' && v.prodNo) ? '<p class="file-hint">생산등록번호 <b>' + esc(v.prodNo) + '</b> · 결재일 ' + esc(v.apprDate || '-') + '</p>' : '') +
+                          ((v && v.appr === '반려' && v.rejectReason) ? '<p class="file-hint">반려 ' + esc(v.rejectDate || '') + ' — ' + esc(v.rejectReason) + '</p>' : '') +
                           (v ? recvBox('PG.polRecv', v.ver, v.appr, v.approval, v.recvDone || 0) : '')
                         : '<div class="v2-empty">결재 이력이 없습니다 — 상신하면 이력이 기록됩니다.</div>'),
                     '<button class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
@@ -732,7 +812,7 @@
                 PG._stackClose(); render(); V.toast('게시 항목이 등록되었습니다');
             };
             PG.boardLocDel = (ver, id) => { const v = S.VERSIONS.find(x => x.ver === ver); if (v) v.postings = (v.postings || []).filter(p => p.id !== id); render(); V.toast('게시 항목이 삭제되었습니다'); };
-            PG.evidenceAdd = ver => PG._stackOpen('증빙 추가',
+            PG.evidenceAdd = ver => polGate('증빙 추가') ? null : PG._stackOpen('증빙 추가',
                 '<div class="preset-form-grid">' +
                 '<span class="k">구분</span><select id="evi-add-kind"><option>본문</option><option>의견수렴</option><option>기타</option></select>' +
                 '<span class="k">파일</span>' + DYV2.uploadDrop('증빙 파일 첨부', null, { style: 'padding:14px;' }) +
@@ -740,6 +820,7 @@
                 '<button class="btn btn-secondary" onclick="PG._stackClose()">취소</button>' +
                 '<button class="btn btn-primary" onclick="PG.evidenceSave(\'' + ver + '\')">등록</button>');
             PG.evidenceSave = ver => {
+                if (polGate('증빙 추가')) return;
                 const v = S.VERSIONS.find(x => x.ver === ver); if (!v) return;
                 const kind = (document.getElementById('evi-add-kind') || {}).value || '기타';
                 const name = ((document.getElementById('evi-add-name') || {}).value || '').trim() || '증빙_' + ((v.evidence || []).length + 1);
@@ -747,10 +828,11 @@
                 v.evidence.push({ id: 'E' + (v.evidence.length + 1) + '-' + v.evidence.length, name, kind });
                 PG._stackClose(); render(); V.toast('증빙이 추가되었습니다');
             };
-            PG.evidenceDel = (ver, id) => { const v = S.VERSIONS.find(x => x.ver === ver); if (v) v.evidence = (v.evidence || []).filter(e => e.id !== id); render(); V.toast('증빙이 삭제되었습니다'); };
+            PG.evidenceDel = (ver, id) => { if (polGate('증빙 삭제')) return; const v = S.VERSIONS.find(x => x.ver === ver); if (v) v.evidence = (v.evidence || []).filter(e => e.id !== id); render(); V.toast('증빙이 삭제되었습니다'); };
 
             /* 이행점검 (F5) */
             PG.polCheckWrite = ver => {
+                if (polGate('경영방침 이행 점검 작성')) return;
                 const v = S.VERSIONS.find(x => x.ver === ver) || POL.active(); if (!v) return;
                 if (!POL.isActive(v)) { V.toast('현행(결재 승인완료) 방침만 이행 점검을 작성할 수 있습니다'); return; }
                 E.openForm({ id: 'EDOC-경영방침점검-' + v.ver, title: '경영방침 수립·이행 점검표 (v' + v.ver + ')', form: 'F5',
@@ -799,29 +881,29 @@
 
             /* ===== 뷰 빌더 ===== */
             function renderListPolicy() {
-                if (!S.VERSIONS.length) return subtabs + sectionCard('경영방침', '<div style="text-align:center; padding:44px 20px; color:var(--text-gray);">등록된 경영방침이 없습니다.<br><br><button class="btn btn-primary" onclick="PG.polNew()">최초 등록</button></div>', '');
+                if (!S.VERSIONS.length) return subtabs + sectionCard('경영방침', '<div style="text-align:center; padding:44px 20px; color:var(--text-gray);">등록된 경영방침이 없습니다.' + (polCan() ? '<br><br><button class="btn btn-primary" onclick="PG.polNew()">최초 등록</button>' : '') + '</div>', '');
                 const body = '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>버전</th><th>상태</th><th>방침명</th><th>반기 점검</th><th>온나라 결재 상태</th></tr></thead><tbody>' +
                     S.VERSIONS.map(v => '<tr style="cursor:pointer;" onclick="PG.polOpen(\'' + v.ver + '\')"><td><b>v' + v.ver + '</b> ' + typeChip(v.type) + '</td><td>' + stateChip(v) + '</td><td>' + V.esc(v.title) + '</td><td>' + checkChip(v) + '</td><td>' + apprChip(v.appr) + '</td></tr>').join('') +
                     '</tbody></table></div>';
-                return subtabs + sectionCard('경영방침 (' + S.VERSIONS.length + '건)', body, '<button class="btn btn-sm btn-primary" onclick="PG.polNew()">+ 등록</button>');
+                return subtabs + sectionCard('경영방침 (' + S.VERSIONS.length + '건)', body, polCan() ? '<button class="btn btn-sm btn-primary" onclick="PG.polNew()">+ 등록</button>' : '');
             }
             function renderListCheck() {
                 const act = POL.active();
-                const notice = '<div class="check-notice">결재 승인완료된 <b>현행본만</b> 이행 점검을 작성할 수 있습니다. 이전 버전은 <b>점검 이력 열람만</b> 가능합니다.' +
-                    (act ? ' 현행본: <b>v' + act.ver + '</b>' : ' (현행본 없음 — 결재 승인 후 점검 가능)') + '</div>';
+                const notice = '<div class="check-notice">이행 점검은 <b>현행본</b>(결재완료)에서 작성합니다.' +
+                    (act ? ' 현행본: <b>v' + act.ver + '</b>' : ' 현행본이 없습니다 — 작성중인 방침을 상신해 결재를 받으면 점검할 수 있습니다.') + '</div>';
                 const body = notice + '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>버전</th><th>상태</th><th>방침명</th><th>점검 여부</th><th>점검일</th><th>점검 결과</th><th>점검표</th></tr></thead><tbody>' +
                     S.VERSIONS.map(v => {
                         const i = POL.lastInspection(v); const idx = i ? v.inspections.length - 1 : -1;
                         const isAct = POL.isActive(v);
                         const action = i
                             ? '<button class="btn btn-sm btn-outline" onclick="event.stopPropagation(); PG.checkSheet(\'' + v.ver + '\',' + idx + ')">점검표 보기</button>'
-                            : (isAct
+                            : ((isAct && polCan())
                                 ? '<button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); PG.polCheckWrite(\'' + v.ver + '\')">점검 작성</button>'
-                                : '<span style="font-size:12px; color:var(--text-gray);">이력 없음</span>');
+                                : '<span style="font-size:12px; color:var(--text-gray);">' + (isAct ? '미점검' : '이력 없음') + '</span>');
                         return '<tr style="cursor:pointer;" onclick="PG.polOpen(\'' + v.ver + '\')"><td><b>v' + v.ver + '</b></td><td>' + stateChip(v) + '</td><td>' + V.esc(v.title) + '</td><td>' + (i ? '<span class="chip-status success">완료</span>' : '<span class="chip-status neutral">미점검</span>') + '</td><td>' + (i ? i.date : '-') + '</td><td>' + (i ? resultChip(i.result) : '-') + '</td><td>' + action + '</td></tr>';
                     }).join('') +
                     '</tbody></table></div>';
-                const foot = act ? '<button class="btn btn-sm btn-outline" onclick="PG.polChkBasis(\'' + act.ver + '\')">점검표 근거 설정</button><button class="btn btn-sm btn-primary" onclick="PG.polCheckWrite(\'' + act.ver + '\')">현행본 이행점검 작성</button>' : '';
+                const foot = (act && polCan()) ? '<button class="btn btn-sm btn-outline" onclick="PG.polChkBasis(\'' + act.ver + '\')">점검표 근거 설정</button><button class="btn btn-sm btn-primary" onclick="PG.polCheckWrite(\'' + act.ver + '\')">현행본 이행점검 작성</button>' : '';
                 return subtabs + sectionCard('이행 점검 (반기)', body, foot);
             }
             /* 게시 현황 — 2026-07-30 회의로 **기준 단위를 버전에서 부서로** 바꿨다.
@@ -863,15 +945,14 @@
                     '<p style="font-size:var(--fs-12); color:var(--text-gray); margin-bottom:10px;">' +
                         '현행 경영방침 <b>v' + (act ? act.ver : '-') + '</b>' + (act ? ' · ' + V.esc(act.title) : '') +
                         ' 을 <b>전 부서·사업장이 게시</b>했는지 확인합니다. ' +
-                        '<b>게시 자체를 명시한 조문은 없습니다</b> — 시행령 제4조제1호는 목표·경영방침을 <b>설정할 것</b>만 정하고, 게시는 그 설정이 실제로 구성원에게 닿았는지 확인하는 <b>이행 수단</b>입니다. ' +
-                        '게시로 등록하려면 <b>게시 위치와 게시 사진</b>이 있어야 합니다. ' +
-                        '이 결과는 <a href="menu.html?m=comply" style="color:var(--main-dark); font-weight:700;">의무 이행점검</a>의 부서별 이행 현황과 같은 축을 씁니다.</p>' +
+                        '게시로 등록하려면 <b>게시 위치와 게시 사진</b>이 있어야 합니다.</p>' +
                     DEPTCHK.render(Object.assign({ key: BOARD_KEY }, boardOpts()));
                 return subtabs + sectionCard('부서별 게시 현황', body, '');
             }
             function renderDetail(v) {
                 if (!v) return renderListPolicy();
-                const editable = POL.isActive(v);
+                const editable = POL.isActive(v) && polCan();
+                const draft = isDraft(v);
                 const infoGrid = '<div class="preset-form-grid">' +
                     '<span class="k">버전</span><div><b>v' + v.ver + '</b> ' + typeChip(v.type) + ' ' + stateChip(v) + '</div>' +
                     '<span class="k">방침 제호</span><div>' + V.esc(v.title) + '</div>' +
@@ -880,17 +961,20 @@
                     '<span class="k">세부 방침</span><ol style="margin:0; padding-left:18px;">' + (v.details || []).map(d => '<li>' + V.esc(d) + '</li>').join('') + '</ol>' +
                     '<span class="k">점검자</span><div>' + V.esc(v.inspector || '-') + '</div>' +
                     '<span class="k">반기 점검</span><div>' + checkChip(v) + '</div>' +
-                    '<span class="k">온나라 결재</span><div style="display:flex; gap:8px; align-items:center;">' + apprChip(v.appr) + '<button class="btn btn-sm btn-outline" onclick="PG.polApprHistory(\'' + v.ver + '\')">이력</button></div>' +
+                    '<span class="k">온나라 결재</span><div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">' + apprChip(v.appr) + '<button class="btn btn-sm btn-outline" onclick="PG.polApprHistory(\'' + v.ver + '\')">이력</button>' +
+                        (v.prodNo ? '<span class="file-hint">생산등록번호 ' + esc(v.prodNo) + ' · 결재일 ' + esc(v.apprDate || '-') + '</span>' : '') + '</div>' +
                     '</div>' +
                     '<div class="pol-badges" style="margin-top:14px;">' +
                     '<button type="button" class="pol-badge" onclick="PG.policyGuide()">ⓘ 작성 가이드</button>' +
                     '</div>';
                 const pdfPanel = '<div class="pol-pdf-wrap"><div class="pol-pdf-tools"><span style="font-size:12px; font-weight:700; color:var(--text-gray);">PDF 미리보기</span><span style="display:flex; gap:6px;"><button class="btn btn-sm btn-outline" onclick="PG.polPdfFull(\'' + v.ver + '\')">전체화면</button><button class="btn btn-sm btn-primary" onclick="PG.polPdfDownload()">PDF 다운로드</button></span></div>' + pdfPaper(v) + '</div>';
-                const checkSec = sectionCard('반기 이행 점검 ' + (editable ? '' : '이력 (열람 전용)'),
+                const checkSec = sectionCard('반기 이행 점검' + ((POL.isActive(v) || draft) ? '' : ' 이력'),
                     (v.inspections && v.inspections.length ? '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>회차</th><th>점검일</th><th>점검자</th><th>결과</th><th></th></tr></thead><tbody>' + v.inspections.map((i, idx) => '<tr><td>' + i.half + '</td><td>' + i.date + '</td><td>' + (i.inspector || '-') + '</td><td>' + resultChip(i.result) + '</td><td><button class="btn btn-sm btn-outline" onclick="PG.checkSheet(\'' + v.ver + '\',' + idx + ')">점검표 보기</button></td></tr>').join('') + '</tbody></table></div>' : '<p style="color:var(--text-gray); font-size:13px;">점검 이력이 없습니다.</p>') +
-                    (editable ? '' : (isPending(cur)
-                        ? '<p class="lock-note">아직 <b>결재를 받지 않은 방침</b>입니다. 점검·게시는 결재가 승인완료된 현행본에서만 합니다 — 먼저 상신하세요.</p>'
-                        : '<p class="lock-note">지나간 버전입니다. 점검 이력 열람만 가능하며 신규 점검 작성·수정은 현행본에서만 할 수 있습니다.</p>')),
+                    (POL.isActive(v) ? '' : (draft
+                        ? '<p class="lock-note">' + (v.appr === '결재중'
+                            ? '결재중인 방침입니다 — 결재가 끝나면 현행본이 되고, 그때부터 점검·게시를 합니다.'
+                            : '작성중인 방침입니다 — 상신해 결재를 받으면 현행본이 되고, 그때부터 점검·게시를 합니다.') + '</p>'
+                        : '<p class="lock-note">이력 버전입니다 — 점검 이력만 볼 수 있습니다.</p>')),
                     editable ? '<button class="btn btn-sm btn-outline" onclick="PG.polChkBasis(\'' + v.ver + '\')">점검표 근거 설정</button><button class="btn btn-sm btn-primary" onclick="PG.polCheckWrite(\'' + v.ver + '\')">이행점검 작성</button>' : '');
                 /* 게시 여부는 **부서 전수 체크리스트([게시 현황] 탭)** 가 단일 출처다(2026-07-30 회의).
                    버전별 게시 카드를 여기 남겨 두면 같은 화면에서 '게시율 0%'와 '게시완료 2건'이
@@ -901,28 +985,34 @@
                         '<button class="btn btn-sm btn-outline" style="margin-left:10px;" onclick="PG.polGoBoard()">게시 현황 탭 열기</button></div>' +
                     '<div class="attach-list" style="margin-top:16px;"><div class="attach-list-head">관련 증빙 (방침 본문·의견수렴 등)</div><div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>파일명</th><th>구분</th>' + (editable ? '<th></th>' : '') + '</tr></thead><tbody>' + (v.evidence || []).map(e => '<tr><td>' + V.esc(e.name) + '</td><td><span class="chip-mini wt">' + e.kind + '</span></td>' + (editable ? '<td><button class="btn btn-sm btn-outline" onclick="PG.evidenceDel(\'' + v.ver + '\',\'' + e.id + '\')">삭제</button></td>' : '') + '</tr>').join('') + '</tbody></table></div>' + (editable ? '<button class="btn btn-sm btn-outline" style="margin-top:8px;" onclick="PG.evidenceAdd(\'' + v.ver + '\')">+ 증빙 추가</button>' : '') + '</div>',
                     '');
+                /* 버튼은 할 수 있는 사람에게만 낸다 — 등록·수정·상신은 재난안전과 담당자(polCan).
+                   작성중이면 [수정]·[상신], 작성중이 없으면 [개정]·[제정](새 판을 만든다). */
+                const hasDraft = !!draftOf();
+                let acts = '';
+                if (polCan()) {
+                    if (canEditVer(v)) acts += '<button class="btn btn-sm btn-outline" onclick="PG.polEdit(\'' + v.ver + '\')">수정</button>' +
+                        '<button class="btn btn-sm btn-primary" onclick="PG.polOnnara(\'' + v.ver + '\')">온나라 결재 상신</button>';
+                    else if (!hasDraft) acts += '<button class="btn btn-sm btn-outline" onclick="PG.polRevise()">개정</button><button class="btn btn-sm btn-outline" onclick="PG.polEnact()">제정</button>';
+                } else {
+                    acts = '<span class="opn-muted" style="font-size:var(--fs-12); align-self:center;">' + polDeny('경영방침 등록·수정·상신') + '</span>';
+                }
                 const header = '<div class="pol-detail-top"><button class="btn btn-sm btn-outline" onclick="PG.polBack()">‹ 목록</button>' +
-                    '<div class="pol-detail-actions"><button class="btn btn-sm btn-outline" onclick="PG.polRevise()">개정</button><button class="btn btn-sm btn-outline" onclick="PG.polEnact()">제정</button>' +
-                    ((v.appr === '미상신' || v.appr === '반려')
-                        /* 상신은 **기안 행위**다 — 결재선을 붙인 뒤로는 조회 전용 계층이 누르면
-                           그 사람이 기안자로 온나라에 올라간다. 권한이 없으면 버튼을 내지 않고
-                           **누가 하는지**를 대신 밝힌다(CLAUDE.md §12 · 2026-08-28 검수 B-2). */
-                        ? (canAct()
-                            ? '<button class="btn btn-sm btn-primary" onclick="PG.polOnnara(\'' + v.ver + '\')">온나라 결재 상신</button>'
-                            : '<span class="opn-muted" style="font-size:var(--fs-12); align-self:center;">상신은 <b>담당자</b>가 합니다 — 관리·감독 계층은 조회만 합니다.</span>')
-                        : '') + '</div></div>';
+                    '<div class="pol-detail-actions">' + acts + '</div></div>';
                 const main = sectionCard('경영방침 v' + v.ver + ' 상세', '<div class="pol-detail-grid"><div class="pol-detail-info">' + infoGrid + '</div>' + pdfPanel + '</div>', '');
                 return subtabs + header + main + checkSec + boardSec;
             }
             function renderForm() {
-                const body = '<div class="pol-detail-top"><button class="btn btn-sm btn-outline" onclick="PG.polBack()">‹ 취소</button><div style="font-weight:700;">경영방침 ' + S.draftType + ' 등록 · <span class="chip-mini wt-elec">v' + S.draftVer + '</span></div></div>' +
+                const ed = S.editVer ? S.VERSIONS.find(x => x.ver === S.editVer) : null;
+                const goals = ed && ed.details && ed.details.length ? ed.details.map(goalEditRow).join('') : goalEditRow('');
+                const body = '<div class="pol-detail-top"><button class="btn btn-sm btn-outline" onclick="PG.polBack()">‹ 취소</button><div style="font-weight:700;">경영방침 ' + (ed ? '수정' : S.draftType + ' 등록') + ' · <span class="chip-mini wt-elec">v' + S.draftVer + '</span></div></div>' +
                     '<div class="preset-form-grid" style="margin-top:8px;">' +
-                    '<span class="k">목표</span><input id="pol-form-goal" type="text" placeholder="경영방침 목표(슬로건)를 입력하세요">' +
-                    '<span class="k">세부 방침</span><div><div id="pol-form-goals" class="goal-list">' + goalEditRow('') + '</div><button type="button" class="btn btn-sm btn-outline" style="margin-top:8px;" onclick="PG.polGoalAdd()">+ 세부 방침 추가</button></div>' +
-                    '<span class="k">점검자</span><div class="orgpick-field"><div style="display:flex; gap:8px; align-items:center;"><input id="pol-form-inspector" type="text" value="재난안전과 · 재난안전과장 / 홍길동" readonly style="flex:1;"><button type="button" class="btn btn-sm btn-outline" onclick="PG.polPickInspector()">조직도</button></div></div>' +
+                    '<span class="k">목표 <span class="req">*</span></span><input id="pol-form-goal" type="text" value="' + V.esc(ed ? ed.goal : '') + '" placeholder="경영방침 목표(슬로건)를 입력하세요">' +
+                    '<span class="k">세부 방침 <span class="req">*</span></span><div><div id="pol-form-goals" class="goal-list">' + goals + '</div><button type="button" class="btn btn-sm btn-outline" style="margin-top:8px;" onclick="PG.polGoalAdd()">+ 세부 방침 추가</button></div>' +
+                    '<span class="k">시행일 <span class="req">*</span></span><input id="pol-form-eff" type="date" value="' + V.esc(ed ? (ed.effDate || '') : V.today()) + '">' +
+                    '<span class="k">점검자</span><div class="orgpick-field"><div style="display:flex; gap:8px; align-items:center;"><input id="pol-form-inspector" type="text" value="' + V.esc(ed ? (ed.inspector || '') : '재난안전과 · 재난안전과장 / 홍길동') + '" readonly style="flex:1;"><button type="button" class="btn btn-sm btn-outline" onclick="PG.polPickInspector()">조직도</button></div></div>' +
                     '</div>' +
                     '<div style="display:flex; justify-content:flex-end; gap:8px; margin-top:18px;"><button class="btn btn-outline" onclick="PG.polBack()">취소</button><button class="btn btn-primary" onclick="PG.polSave()">저장</button></div>';
-                return subtabs + sectionCard('경영방침 등록', body, '');
+                return subtabs + sectionCard(ed ? '경영방침 수정' : '경영방침 등록', body, '');
             }
 
             /* ===== 디스패치 ===== */
@@ -992,60 +1082,114 @@
                 V.toast('선임계를 첨부했습니다 — 파일 실물은 연계 후 보관됩니다.');
             };
             PG.orgAppointPick = label => { const el = document.getElementById('org-ap-name'); if (el) el.value = label; };
+            /* 안전관리자·보건관리자는 **위탁기관 인원**일 수 있다 (운영 E11, 2026-11-04).
+               담양군 안전·보건관리자는 위탁이라(이행 관리 IND-06-01 문서 «… 위탁 용역 계약의뢰») 조직도에 없다.
+               조직도에서만 고르게 하면 선임 현황이 영영 «미선임»이고 인력 평가 대상도 0명이 된다.
+               위탁이면 성명·위탁기관명·위탁 계약 기간을 받고 선임계 자리에 위탁 계약서를 받는다. */
+            const AP_OUTSOURCE = ['안전관리자', '보건관리자'];
+            PG.orgApKind = () => {
+                const kind = ((document.getElementById('org-ap-kind') || {}).value || '');
+                const can = AP_OUTSOURCE.indexOf(kind) >= 0;
+                const src = document.getElementById('org-ap-src-row'), srcK = document.getElementById('org-ap-src-row-k');
+                if (src) src.style.display = can ? 'flex' : 'none';
+                if (srcK) srcK.style.display = can ? '' : 'none';
+                if (!can) { const r = document.querySelector('input[name="org-ap-src"][value="org"]'); if (r) r.checked = true; }
+                PG.orgApSrc();
+            };
+            PG.orgApSrc = () => {
+                const el = document.querySelector('input[name="org-ap-src"]:checked');
+                const out = !!el && el.value === 'out';
+                document.querySelectorAll('.org-ap-org').forEach(n => { n.style.display = out ? 'none' : ''; });
+                document.querySelectorAll('.org-ap-out').forEach(n => { n.style.display = out ? (n.getAttribute('data-disp') || '') : 'none'; });
+                const hint = document.getElementById('org-ap-paper-label');
+                if (hint) hint.textContent = out ? '위탁 계약서 (선임계)' : '선임계 첨부';
+            };
             /* 버튼만 감추면 전역 호출로 뚫린다 — 저장 경로에도 같은 가드를 둔다(CLAUDE.md §12). */
             PG.orgAppoint = (kind) => {
                 if (actGate('선임 등록')) return;
                 const today = DYV2.today();
                 PG._apKind = kind || '';
                 PG._apPaper = false;
+                const kinds = ['안전관리자', '보건관리자', '안전보건관리책임자', '관리감독자'];
+                const pre = kinds.find(k => String(kind || '').indexOf(k) === 0) || '';
                 V.openModal('안전·보건관리자 선임 등록',
                     '<div class="preset-form-grid">' +
-                    '<span class="k">구분 <span class="req">*</span></span><select class="form-select" id="org-ap-kind"><option value="">선택하세요</option><option>안전관리자</option><option>보건관리자</option><option>안전보건관리책임자</option><option>관리감독자</option></select>' +
-                    '<span class="k">성명 <span class="req">*</span></span>' +
-                    '<div class="orgpick-field" id="org-ap-field"><div style="display:flex; gap:8px; align-items:center;">' +
+                    '<span class="k">구분 <span class="req">*</span></span><select class="form-select" id="org-ap-kind" onchange="PG.orgApKind()"><option value="">선택하세요</option>' +
+                        kinds.map(k => '<option' + (k === pre ? ' selected' : '') + '>' + k + '</option>').join('') + '</select>' +
+                    '<span class="k" id="org-ap-src-row-k">선임 형태</span>' +
+                    '<div id="org-ap-src-row" style="display:flex; gap:14px; flex-wrap:wrap;">' +
+                        '<label style="display:inline-flex; gap:6px; align-items:center;"><input type="radio" name="org-ap-src" value="org" checked onchange="PG.orgApSrc()">조직도 인원</label>' +
+                        '<label style="display:inline-flex; gap:6px; align-items:center;"><input type="radio" name="org-ap-src" value="out" onchange="PG.orgApSrc()">위탁기관 인원</label>' +
+                    '</div>' +
+                    '<span class="k org-ap-org">성명 <span class="req">*</span></span>' +
+                    '<div class="orgpick-field org-ap-org" id="org-ap-field"><div style="display:flex; gap:8px; align-items:center;">' +
                         '<input type="text" id="org-ap-name" readonly placeholder="[조직도]에서 대상자를 고르세요" style="flex:1; background:var(--surface-alt);">' +
                         '<button type="button" class="btn btn-sm btn-outline" onclick="PG.orgPickName()">조직도</button>' +
                     '</div></div>' +
+                    '<span class="k org-ap-out" style="display:none;">성명 <span class="req">*</span></span><input class="org-ap-out" type="text" id="org-ap-out-name" style="display:none;" placeholder="위탁기관에서 선임한 사람">' +
+                    '<span class="k org-ap-out" style="display:none;">위탁기관명 <span class="req">*</span></span><input class="org-ap-out" type="text" id="org-ap-agency" style="display:none;" placeholder="위탁 계약 상대 기관">' +
+                    '<span class="k org-ap-out" style="display:none;">위탁 계약 기간 <span class="req">*</span></span>' +
+                    '<div class="org-ap-out" data-disp="flex" style="display:none; gap:6px;"><input type="date" id="org-ap-cfrom" aria-label="위탁 계약 시작일"><input type="date" id="org-ap-cto" aria-label="위탁 계약 종료일"></div>' +
                     /* 선임일 기본값을 특정 날짜로 박아 두면 기준일이 움직일 때 미래 날짜가 기본이 된다. */
                     '<span class="k">선임일 <span class="req">*</span></span><input type="date" id="org-ap-date" value="' + today + '" max="' + today + '">' +
                     '<span class="k">자격</span><input type="text" id="org-ap-cert" placeholder="예: 산업안전기사">' +
-                    '<span class="k">선임계 첨부</span>' +
+                    '<span class="k" id="org-ap-paper-label">선임계 첨부</span>' +
                     '<div><div id="org-ap-paper">' +
-                    DYV2.uploadDrop('선임 신고서·자격증 사본 첨부', 'PG.orgApPaper()', { style: 'padding:14px;' }) +
+                    DYV2.uploadDrop('선임 신고서·자격증 사본 또는 위탁 계약서 첨부', 'PG.orgApPaper()', { style: 'padding:14px;' }) +
                     '</div></div></div>',
                     '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
                     '<button class="btn btn-primary" onclick="PG.orgAppointSave()">등록</button>');
+                PG.orgApKind();
             };
             /* 필수값 검증 — 종전에는 [등록]이 곧바로 «선임 등록 완료» 알림을 띄워, 아무것도 고르지 않아도
                선임을 마친 것처럼 말했다. 선임 공백은 그 자체가 법정 의무 미이행이라 빈 등록이 그것을 덮는다. */
             PG.orgAppointSave = () => {
+                if (actGate('선임 등록')) return;
                 const val = k => ((document.getElementById(k) || {}).value || '').trim();
-                const kind = val('org-ap-kind'), name = val('org-ap-name'), date = val('org-ap-date');
+                const kind = val('org-ap-kind'), date = val('org-ap-date');
+                const srcEl = document.querySelector('input[name="org-ap-src"]:checked');
+                const out = AP_OUTSOURCE.indexOf(kind) >= 0 && !!srcEl && srcEl.value === 'out';
+                const name = out ? val('org-ap-out-name') : val('org-ap-name');
+                const agency = out ? val('org-ap-agency') : '';
+                const cfrom = out ? val('org-ap-cfrom') : '', cto = out ? val('org-ap-cto') : '';
                 if (!kind) { V.toast('구분을 고르세요.'); return; }
-                if (!name) { V.toast('조직도에서 대상자를 고르세요.'); return; }
+                if (!name) { V.toast(out ? '위탁기관에서 선임한 사람의 성명을 입력하세요.' : '조직도에서 대상자를 고르세요.'); return; }
+                if (out && !agency) { V.toast('위탁기관명을 입력하세요.'); return; }
+                if (out && (!cfrom || !cto)) { V.toast('위탁 계약 기간을 입력하세요 — 시작일과 종료일을 모두 넣습니다.'); return; }
+                if (out && cfrom > cto) { V.toast('위탁 계약 종료일이 시작일보다 앞섭니다.'); return; }
                 if (!date) { V.toast('선임일을 입력하세요.'); return; }
                 /* 아직 오지 않은 날로 선임할 수 없다 — 미래 선임을 허용하면 «지금 선임돼 있다»가 거짓이 된다. */
                 if (date > DYV2.today()) { V.toast('아직 오지 않은 날로 선임할 수 없습니다.'); return; }
+                if (out && cto < DYV2.today()) { V.toast('위탁 계약이 이미 끝났습니다 — 지금 유효한 계약 기간을 넣으세요.'); return; }
                 /* 현황에 반영하고 나서 알린다 — 알림만 내고 표가 그대로면 «등록했다»가 거짓이 된다
                    (조직 화면 정의서 §4-2 «현황에 반영하고 신고 안내를 낸다»). */
                 const slot = appoint.find(a => a.kind === kind) || appoint.find(a => !a.name && a.kind.indexOf(kind) === 0);
                 /* 선임계는 파일 연계 전이라 실물을 보관하지 않는다 — 첨부했다는 사실만 남기고
                    미첨부는 현황에 그대로 드러낸다. 첨부 여부를 안 남기면 «미첨부»가 영원히 미첨부다. */
                 const paper = !!PG._apPaper;
-                if (slot) { slot.name = name; slot.date = date; slot.cert = val('org-ap-cert'); slot.paper = paper; }
-                else { appoint.push({ kind: kind, name: name, date: date, cert: val('org-ap-cert'), paper: paper }); }
+                const rec = { name: name, date: date, cert: val('org-ap-cert'), paper: paper,
+                    mode: out ? '위탁' : '', agency: agency, contract: out ? (cfrom + ' ~ ' + cto) : '' };
+                if (slot) Object.assign(slot, rec);
+                else appoint.push(Object.assign({ kind: kind }, rec));
                 V.closeModal();
                 E.notify('선임 등록 완료 — 고용노동부 선임 신고 안내', '메일');
                 render();
             };
-            PG.orgEval = () => actGate('수행평가 작성') ? null : E.openForm({
-                id: 'EDOC-수행평가-2026H1', title: '2026 상반기 안전보건관리책임자등 수행평가', form: 'F6',
-                ctx: { menuLabel: '조직 · 반기', scorelist: T.SCORE_PRESETS.org }, onChange: render,
-            });
+            /* [수행평가 작성]은 **인력 평가 화면으로 넘어간다** — 평가를 두 화면에서 만들면 같은 사람의
+               점수가 둘이 된다(조직 정의서 §6 «실제 평가는 인력 평가 화면이 한다» · 11-05 회신 1-3).
+               이 화면에서 다른 메뉴로 넘어가는 것은 이 버튼 하나다. */
+            PG.orgEval = () => { if (actGate('수행평가 작성')) return; location.href = 'evl-eval.html'; };
+            /* [후속조치 등록] — 같은 화면에서 **F7 조치보고 서식**이 열린다 (11-05 회신 1-1).
+               시행령 §4제5호나목의 «평가·관리» 중 «관리»의 증빙이다(포상·인사 반영·지원 보완).
+               개선조치로 보내지 않고, 평가 결과로 자동으로 만들지 않는다 — 필요한지는 사람이 판단한다.
+               결재는 기안·검토·결재 3단계(F7 서식의 결재선)이고 결재 결과를 옮겨 적는 수단은 두지 않는다.
+               회차는 오늘이 속한 반기다 — 시드에 박지 않는다(§11). */
+            const halfId = (function () { const t = V.today(); return t.slice(0, 4) + (+t.slice(5, 7) <= 6 ? 'H1' : 'H2'); })();
+            const halfLabel = halfId.slice(0, 4) + ' ' + (halfId.slice(4) === 'H1' ? '상반기' : '하반기');
             PG.orgFollow = () => actGate('후속조치 등록') ? null : E.openForm({
-                id: 'EDOC-후속조치-2026H1', title: '수행평가 후속 조치 (포상·인사 반영)', form: 'F7',
-                ctx: { menuLabel: '조직' }, source: '2026 상반기 수행평가 — 판정 미흡 1건',
-                fields: { source: '수행평가: 예산·인력 지원의 충분성 — 보완 판정' }, onChange: render,
+                id: 'EDOC-후속조치-' + halfId, title: '수행평가 후속 조치 — 포상·인사 반영 등 (' + halfLabel + ')', form: 'F7',
+                ctx: { menuLabel: '조직 · 반기' },
+                fields: { source: halfLabel + ' 안전보건관리책임자등 수행평가' }, onChange: render,
             });
             PG.orgStaffComplete = () => {
                 if (actGate('선임 현황 점검 완료')) return;
@@ -1061,8 +1205,8 @@
                 const ro = row && row.src !== 'manual';
                 const amt = row && typeof row.amount === 'number' ? String(row.amount) : '';
                 V.openModal(row ? '공사별 안전관리자 현황 수정' : '공사 직접 등록',
-                    (ro ? '<div class="edoc-linkcard">e호조에서 받은 공사는 <b>안전관리자만</b> 고칩니다 — 공사명·기간·금액은 e호조 원장 값이라 여기서 고쳐도 다음 반입에 덮입니다. 착공일은 도급관리에서 넣습니다.</div>'
-                        : (row ? '' : '<div class="edoc-linkcard">e호조에서 받은 공사는 목록에 이미 있습니다. 여기는 e호조에 없는 공사를 담는 자리이고, 도급관리 목록에도 함께 나타납니다.</div>')) +
+                    (ro ? '<div class="edoc-linkcard">e호조에서 받은 공사는 <b>안전관리자만</b> 입력합니다. 공사명·기간·금액이 틀렸다면 e호조에서 바로잡은 뒤 계약대장 파일을 다시 올리면 반영됩니다. 착공일은 도급관리에서 넣습니다.</div>'
+                        : (row ? '' : '<div class="edoc-linkcard">e호조에 없는 공사를 등록합니다. 등록한 공사는 도급관리 목록에도 나타납니다.</div>')) +
                     '<div class="preset-form-grid">' +
                     '<span class="k">발주처</span>' + (ro ? '<div>' + esc(row.owner) + '</div>' : '<input id="org-c-owner" type="text" value="' + esc(row ? row.owner : '담양군') + '">') +
                     '<span class="k">공사명 <span class="req">*</span></span>' + (ro ? '<div>' + esc(row.name) + '</div>' : '<input id="org-c-name" type="text" value="' + esc(row ? row.name : '') + '">') +
@@ -1072,7 +1216,7 @@
                         : '<input id="org-c-amount" type="text" inputmode="numeric" value="' + esc(amt) + '" placeholder="예: 520000000 (원 단위 숫자)">') +
                     '<span class="k">안전관리자</span><input id="org-c-manager" type="text" value="' + esc(row ? row.mgr : '') + '" placeholder="시공사가 선임한 안전관리자">' +
                     '</div>' +
-                    '<p style="font-size:var(--fs-12); color:var(--text-gray); margin-top:8px;">건설공사 현장의 안전관리자 선임은 <b>공사금액 50억원 이상</b>에만 걸리는 <b>시공사의 의무</b>입니다(산업안전보건법 시행령 별표3). 담양군은 확인하는 쪽입니다.</p>',
+                    '<p style="font-size:var(--fs-12); color:var(--text-gray); margin-top:8px;">안전관리자 선임은 <b>공사금액 50억원 이상</b> 공사에서 <b>시공사</b>가 합니다(산업안전보건법 시행령 별표3). 담양군은 선임 여부를 확인합니다.</p>',
                     '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
                     '<button class="btn btn-primary" onclick="PG.orgConstSave(\'' + (id || '') + '\')">저장</button>');
             };
@@ -1116,22 +1260,14 @@
             const ocReq = construction.filter(x => C.mgrDuty(x) === 'required');
             const team = (name, n) => '<div style="border:1px solid var(--card-line); border-radius:var(--radius-md); padding:10px 14px; text-align:center; background:var(--surface);"><div style="font-size:12px; font-weight:700;">' + name + '</div><div style="font-size:12px; color:var(--text-gray);">' + n + '명</div></div>';
             /* 조직도 요약 — 단일 출처(DYV2.ORG) 파생 실인원 · 조회 전용 */
-            const orgTotal = (V.orgTotal ? V.orgTotal() : 0);
             const jjtN = (V.orgCount ? V.orgCount('jjt', false) : 0);
             const mayorN = (V.orgCount ? V.orgCount('n_mayor', false) : 1);
             const deptCards = (V.orgFlat ? V.orgFlat() : [])
                 .map(d => team(d.dept, d.members.length)).join('');
-            /* 부서 등록 갭은 감추지 않는다 — 명단이 다 확보되지 않은 것과 조직이 그만큼인 것은 다르다. */
-            const orgGap = (window.DEPTCHK && DEPTCHK.gap) ? DEPTCHK.gap() : null;
-            /* [조직도 동기화] 버튼을 제거했다 — 행정포털 조직도 연계는 아직 구현돼 있지 않아
-               «동기화 완료» 알림은 일어나지 않은 일을 알린 것이다. 연계 관리 화면이 같은 시스템을
-               «연계 이력 미구현»으로 밝히고 있어 두 화면이 반대를 말하고 있었고, 조직 화면 정의서도
-               조직도 현황을 조회 전용으로 정한다. 조직도 데이터 자체는 그대로이며 바뀐 것은
-               «밖에서 동기화된다»는 주장뿐이다. */
+            /* [조직도 동기화] 버튼을 제거했다 — 일어나지 않은 동기화를 알리지 않는다.
+               조직도 출처·연계 설명 문단도 지웠다(운영 T01 · 11-05 회신 1-2 «출처 이름을 화면에 쓰지 않는다»).
+               사용자가 알 필요가 없는 정보이고, 대체 문구도 두지 않는다. 부서 명단 갭은 이행점검·게시 현황 표가 밝힌다. */
             return sectionCard('조직도 현황',
-                '<div class="check-notice" style="margin-bottom:10px;">조직도는 이 시스템의 사용자·조직 관리에 등록된 명단(현재 ' + orgTotal + '명' +
-                (orgGap ? ' · 부서 ' + orgGap.registered + ' / ' + orgGap.expected + '개 등록' : '') +
-                ')에서 그대로 파생합니다. <b>행정포털 조직도 연계는 아직 구현되지 않아</b> 밖에서 명단이 자동으로 들어오거나 맞춰지는 경로가 없습니다 — 조직이 개편되면 사용자·조직 관리에서 먼저 반영해야 이 화면이 따라옵니다.</div>' +
                 '<div style="display:flex; flex-direction:column; align-items:center; gap:10px;">' +
                 team('군수 (경영책임자)', mayorN) +
                 '<div style="width:1px; height:14px; background:var(--card-line);"></div>' +
@@ -1140,7 +1276,10 @@
                 deptCards + '</div></div>') +
             sectionCard('안전관리자·보건관리자 선임 현황',
                 tbl(['구분', '성명', '자격', '선임일', '선임계', '상태'], appoint.map(x => [
-                    esc(x.kind), x.name ? esc(x.name) : '<span class="badge-unassigned">미선임</span>',
+                    esc(x.kind),
+                    x.name ? esc(x.name) + (x.mode === '위탁'
+                        ? '<div style="font-size:var(--fs-12); color:var(--text-gray);">위탁 · ' + esc(x.agency || '') + (x.contract ? ' · ' + esc(x.contract) : '') + '</div>' : '')
+                        : '<span class="badge-unassigned">미선임</span>',
                     x.cert ? esc(x.cert) : '-', x.date || '-',
                     /* 첨부 없는 선임을 그대로 드러낸다 — 감추면 서류가 영영 오지 않는다(정의서 §6). */
                     /* 표준 배지(chip-status + toneOf)를 직접 쓴다 — 이 화면이 두루 쓰는 ST()는
@@ -1155,7 +1294,7 @@
                 ])),
                 canAct() ? '' : '<p class="rl-ro-none">' + DYROLE.readOnlyNote('선임 등록') + '</p>') +
             sectionCard('법정 배치인원 자동 점검',
-                '<div class="check-notice" style="margin-bottom:10px;">법령 배치 기준과 현재 선임 인원을 직역별로 비교합니다. 미달이거나 기준이 미등록된 경우 이 점검의 <b>완료 확정만</b> 차단하고 다른 업무는 막지 않습니다.</div>' +
+                '<div class="check-notice" style="margin-bottom:10px;">법령 배치 기준과 현재 선임 인원을 직역별로 비교합니다.</div>' +
                 tbl(['직역', '법정 기준', '현재 선임', '판정', '기준 출처'], staffing.map(x => [
                     x.role,
                     x.required == null ? '<span class="chip-mini wt">미등록</span>' : x.required + '명',
@@ -1165,9 +1304,9 @@
                 ])),
                 (!canAct() ? '' : '<button class="btn btn-sm btn-primary" onclick="PG.orgStaffComplete()"' + ((staffShort || staffPending) ? ' disabled title="미달·기준 미등록을 해소한 뒤 완료할 수 있습니다"' : '') + '>점검 완료 확정</button>')) +
             sectionCard('공사별 안전관리자 선임 현황',
-                '<div class="check-notice" style="margin-bottom:10px;">공사는 도급관리와 <b>같은 계약 원장</b>에서 옵니다 — e호조에서 반입한 계약과 직접 등록한 계약 가운데 점검 유형이 «공사»이고 아직 끝나지 않은 것입니다(' + construction.length.toLocaleString() + '건). ' +
-                    '안전관리자 선임은 <b>공사금액 50억원 이상</b> 공사에만 걸리는 <b>시공사의 의무</b>라(산업안전보건법 시행령 별표3) 그 공사만 «미선임»으로 보이고 점검 완료를 막습니다 — 지금 ' + ocReq.length + '건입니다. ' +
-                    '안전관리자는 e호조에 없어 직접 넣습니다. 현장대리인·감독공무원은 다른 지위라 넣지 않습니다.</div>' +
+                '<div class="check-notice" style="margin-bottom:10px;">진행 중인 공사 ' + construction.length.toLocaleString() + '건의 안전관리자 선임을 확인합니다. ' +
+                    '선임 의무는 <b>공사금액 50억원 이상</b> 공사에만 있어(시공사 의무 · 산업안전보건법 시행령 별표3) 그 공사만 «미선임»으로 표시됩니다 — 지금 ' + ocReq.length + '건입니다. ' +
+                    '안전관리자는 [수정]으로 입력합니다(현장대리인·감독공무원은 넣지 않습니다).</div>' +
                 (construction.length
                     ? tbl(['발주처', '공사명', '공사기간', '공사금액', '안전관리자', '점검', '관리'], ocRows.map(x => [
                         esc(x.owner || '담양군'),
@@ -1183,8 +1322,8 @@
                     ])) + V.pager({ page: OC.page, pages: ocPages, total: construction.length, fn: 'PG.orgConstPage', label: '공사 목록 페이지' })
                     : '<div class="v2-empty">진행 중인 공사가 없습니다.<br><span style="font-size:var(--fs-12);">도급관리에서 e호조 계약대장을 반입하거나 공사를 직접 등록하면 여기에 나타납니다.</span></div>'),
                 (canAct() ? '<button class="btn btn-sm btn-primary" onclick="PG.orgConstForm()">+ 공사 직접 등록</button>' : '')) +
-            sectionCard('수행평가 · 후속조치 (반기) ' + docStChip('EDOC-수행평가-2026H1'),
-                '<p style="font-size:12px; color:var(--text-gray);">경영책임자가 안전보건관리책임자등의 업무 수행을 반기 1회 평가하고, 미흡 판정은 후속 조치(포상·인사)로 이어집니다.</p>',
+            sectionCard('수행평가 · 후속조치 (' + halfLabel + ') <span style="font-size:var(--fs-12); font-weight:var(--fw-regular); color:var(--text-gray);">후속조치</span> ' + docStChip('EDOC-후속조치-' + halfId),
+                '<p style="font-size:12px; color:var(--text-gray);">[수행평가 작성]은 인력 평가 화면으로 이어집니다.</p>',
                 (canAct()
                     ? '<div style="display:flex; gap:6px;">' +
                       '<button class="btn btn-sm btn-primary" onclick="PG.orgEval()">수행평가 작성</button>' +
@@ -1702,7 +1841,7 @@
                       rows.map(r => '<tr><td>' + esc(r[0]) + '</td><td>' + esc(r[1]) + '</td><td>' + esc(r[2]) + '</td><td>' + esc(r[3]) + '</td></tr>').join('') +
                       '</tbody></table></div>' +
                       ((c && c.approval && c.approval.sample) ? '<p style="margin-top:8px;">' + V.sampleChip('지난 점검결과지의 결재선은 예시 값입니다') + '</p>' : '') +
-                      '<p class="file-hint" style="margin-top:10px;">결재 완료·반려는 <b>온나라에서 회신</b>됩니다 — 진행 상황은 온나라에서 문서번호로 확인하세요.</p>'
+                      '<p class="file-hint" style="margin-top:10px;">결재 완료·반려는 <b>온나라에서 회신</b>됩니다 — 진행 상황은 온나라에서 확인하세요.</p>'
                     : '<div class="v2-empty">결재 이력이 없습니다 — 상신하면 이력이 기록됩니다.</div>';
                 V.openModal('온나라 결재 이력' + (c ? ' — ' + c.id + (c.docNo ? ' · ' + c.docNo : '') : ''), body,
                     '<button class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
@@ -2116,7 +2255,7 @@
                     '<ul style="font-size:var(--fs-12); color:var(--text-gray); margin:10px 0 0; padding-left:18px; line-height:1.7;">' +
                         '<li>받는 칸 — ' + Object.values(C.COLS).join(' · ') + ' (하나라도 없으면 파일 전체를 받지 않습니다)</li>' +
                         '<li>받아 두는 칸 — ' + Object.values(C.KEEP).join(' · ') + ' · 재무 집행 칸(지급·선급 등)은 받지 않습니다</li>' +
-                        '<li>반입은 점검이 아닙니다 — 새 계약은 «미판정»으로 오르고 판정한 계약에만 점검표가 생깁니다</li>' +
+                        '<li>새 계약은 «미판정»으로 오릅니다 — 점검할 계약은 [판정]으로 고릅니다</li>' +
                         '<li>이번 파일에 없는 계약은 지우지 않고 «최근 파일에 없음»으로 둡니다 · 판정·착공일 등 이 화면에서 정한 값은 덮지 않습니다</li>' +
                     '</ul>',
                     '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
@@ -2173,7 +2312,7 @@
                     ]) +
                     '<p style="font-size:var(--fs-12); color:var(--text-gray); margin:0 0 10px;">' + esc(imp.file) + ' · 추출 기준일 ' + esc(imp.extracted) + ' · ' + esc(imp.by) + ' ' + esc(imp.at) +
                         (imp.skipped.length ? ' · <b>받지 않은 행 ' + imp.skipped.length + '건</b> — ' + imp.skipped.slice(0, 3).map(s => s.row + '행 ' + esc(s.why)).join(', ') + (imp.skipped.length > 3 ? ' 외' : '') : '') + '</p>' +
-                    (flaggedRows.length ? '<p class="check-notice" style="margin-bottom:10px;">자료 확인 필요 ' + flaggedRows.length + '건 — 준공예정일이 계약일보다 이르거나 계약금액이 0원입니다. 이 화면에서 고치지 않습니다 — e호조에서 정정한 파일을 다시 올리면 값만 바뀝니다.</p>' : '') +
+                    (flaggedRows.length ? '<p class="check-notice" style="margin-bottom:10px;">자료 확인 필요 ' + flaggedRows.length + '건 — 준공예정일이 계약일보다 이르거나 계약금액이 0원입니다. e호조에서 바로잡은 뒤 계약대장 파일을 다시 올리면 반영됩니다.</p>' : '') +
                     (longest.length
                         ? '<p style="font-weight:var(--fw-semibold); margin:6px 0;">기간이 긴 순 (상위 ' + longest.length + '건)</p>' +
                           tbl(['계약명', '계약일', '준공예정', '기간'], longest.map(r => [esc(r.name), esc(r.start || r.signed), esc(r.end), dayN(r).toLocaleString() + '일']))
@@ -2296,7 +2435,7 @@
             PG.conAdd = () => {
                 if (actGate('도급사업 등록')) return;
                 V.openModal('도급·용역·위탁 사업 직접 등록',
-                    '<div class="edoc-linkcard">e호조에서 반입한 계약은 목록에 이미 있습니다. 여기는 <b>e호조에 없는 계약</b>(민간위탁 협약·타 회계 시스템 등)을 담는 자리입니다. 등록한 계약은 점검 대상으로 들어갑니다.</div>' +
+                    '<div class="edoc-linkcard"><b>e호조에 없는 계약</b>(민간위탁 협약 등)을 등록합니다. 등록한 계약은 점검 대상으로 들어갑니다.</div>' +
                     '<div class="preset-form-grid">' +
                     '<span class="k">사업명 <span class="req">*</span></span><input type="text" id="cn-name" placeholder="계약 건명 그대로 입력">' +
                     /* 구분 기본값을 «공사»로 열어 두면 아무것도 고르지 않은 사람의 사업이 조용히 공사가 된다 — 고르게 하고 비면 막는다. */
@@ -2385,9 +2524,14 @@
                 });
             };
             const vendors = C.vendors();
+            /* 수급인 평가는 그 업체 계약의 사업부서 담당자와 주관부서 담당자가 한다 — 계약 줄과 같은 판정(운영 P06).
+               아무 부서 담당자나 남의 부서 업체를 평가하면 평가가 누구 것인지 알 수 없다. */
+            const vendorRows = v => all.filter(r => r.judge === '대상' && r.co && (r.brn || ('co:' + r.co)) === v.key);
+            const canEvalVendor = v => C.canManage() || vendorRows(v).some(C.canActRow);
             PG.conEval = ix => {
                 const v = vendors[ix]; if (!v) return;
                 if (actGate('수급인 평가 작성')) return;
+                if (!canEvalVendor(v)) { V.toast('수급인 평가는 그 업체 계약의 감독부서 담당자가 합니다.'); return; }
                 E.openForm({
                     id: 'EDOC-수급인평가-' + (v.brn || v.co), title: '수급인 안전보건 수준 평가 — ' + v.co, form: 'F6',
                     ctx: { menuLabel: '도급관리', scorelist: T.SCORE_PRESETS.contract }, onChange: render,
@@ -2519,8 +2663,8 @@
                     '<div style="min-width:110px;">' + esc(r.co || '') + (r.brn ? '<div style="font-size:var(--fs-12); color:var(--text-gray);">' + C.maskBrn(r.brn) + '</div>' : '') + '</div>',
                     periodCell(r), amtText(r), legalCell(r), judgeCell(r), checkCell(r), pledgeCell(r),
                 ]))) + V.pager({ page: S.page, pages: pages, total: list.length, fn: 'PG.conPage', label: '계약 목록 페이지' })
-                : '<div class="v2-empty">' + (all.length ? '조건에 맞는 계약이 없습니다.' : '아직 반입하거나 등록한 계약이 없습니다.') +
-                    '<br><span style="font-size:var(--fs-12);">목록이 비어 있는 것은 계약이 없다는 뜻이 아니라 아직 받지도 등록하지도 않았다는 뜻일 수 있습니다.</span></div>';
+                : '<div class="v2-empty">' + (all.length ? '조건에 맞는 계약이 없습니다.' : '아직 올리거나 등록한 계약이 없습니다.' +
+                    '<br><span style="font-size:var(--fs-12);">[e호조 파일 올리기]로 계약대장을 올리면 목록이 만들어집니다.</span>') + '</div>';
 
             return statboxes([
                 ['info', target.length.toLocaleString(), '점검 대상'],
@@ -2533,13 +2677,9 @@
             ]) +
             /* 운영 화면 스킨(캡처용)에서는 운영과 같은 제목·버튼을 쓴다 — 기본 화면은 그대로다. */
             sectionCard(opsSkin ? '도급·용역·위탁 사업 목록' : '도급·용역·위탁 계약 목록',
+                /* 운영 T09 — 목록 위 안내는 할 일만 말한다. 반입 건수·추출 기준일은 출처 줄과 반입 이력이 이미 보인다. */
                 '<div class="check-notice con-notice" style="margin-bottom:10px;">' +
-                    (ehojoN
-                        ? '<b>e호조 계약대장에서 반입한 계약 ' + ehojoN.toLocaleString() + '건</b>(최근 추출 기준일 ' + esc((liveImp && liveImp.extracted) || '-') + ')'
-                        : '<b>아직 e호조 계약대장을 반입하지 않았습니다</b>') +
-                    '과 직접 등록한 계약 ' + manualN + '건' + (gyN ? ', 계약정보시스템에서 옮겨 적은 예시 ' + gyN + '건' : '') + '이 있습니다. ' +
-                    '<b>반입은 점검이 아닙니다</b> — 반입한 계약은 «미판정»으로 오르고, 주관부서 담당자가 점검 대상으로 판정한 계약에만 반기 점검표·위험성평가 실시 확인·수급인 평가가 생깁니다. ' +
-                    '기본 보기는 이번 회차(' + rd.label + ')와 계약기간이 겹치는 계약입니다. «법정 적용»은 법이 정한 금액 기준(산업안전보건관리비 2천만원·기술지도 1억·안전보건대장 50억 — 공사)을 자동으로 표시한 것이며 제외 근거가 아닙니다. e호조에 없는 계약(민간위탁 협약 등)은 직접 등록해야 목록에 나타납니다.' +
+                    'e호조 계약대장 파일을 올리면 계약 목록이 만들어집니다. 점검할 계약은 [판정]으로 고릅니다.' +
                 '</div>' + filterBar + table,
                 (opsSkin
                     ? (canAct() ? '<button class="btn btn-sm btn-primary" onclick="PG.conAdd()">＋ 사업 등록</button>' : '')
@@ -2554,10 +2694,10 @@
                         v.biz.slice(0, 3).map(esc).join('<br>') + (v.biz.length > 3 ? '<br><span class="rl-ro-none">외 ' + (v.biz.length - 3) + '건</span>' : ''),
                         '계약 전 적격심사 + 반기',
                         docStChip('EDOC-수급인평가-' + (v.brn || v.co)),
-                        (canAct() ? '<button class="btn btn-sm btn-primary" onclick="PG.conEval(' + ix + ')">평가 작성</button>' : '<span class="rl-ro-none">조회</span>'),
+                        (canAct() && canEvalVendor(v) ? '<button class="btn btn-sm btn-primary" onclick="PG.conEval(' + ix + ')">평가 작성</button>' : '<span class="rl-ro-none">조회</span>'),
                     ]))
-                    : '<div class="v2-empty">평가 대상 업체가 없습니다.<br><span style="font-size:var(--fs-12);">계약을 점검 대상으로 판정하거나 직접 등록하면 그 수급업체가 평가 대상으로 올라옵니다.</span></div>') +
-                '<p style="font-size:var(--fs-12); color:var(--text-gray); margin-top:8px;">평가는 <b>업체 단위</b>로 묶습니다 — 사업자등록번호가 있으면 번호로 묶어 상호 표기가 달라도 한 업체로 봅니다. 아직 평가하지 않은 업체도 목록에 그대로 두어 남은 일이 드러나게 합니다.</p>') +
+                    : '<div class="v2-empty">평가 대상 업체가 없습니다.<br><span style="font-size:var(--fs-12);">점검 대상으로 판정한 계약의 수급업체가 여기에 나타납니다.</span></div>') +
+                '<p style="font-size:var(--fs-12); color:var(--text-gray); margin-top:8px;">평가는 <b>업체 단위</b>로 합니다 — 한 업체가 여러 사업을 맡으면 한 줄로 묶습니다.</p>') +
             (imps.length
                 ? sectionCard('반입 이력',
                     tbl(['일시', '올린 사람', '파일', '추출 기준일', '파일의 계약', '신규', '변경', '최근 파일에 없음', '자료 확인 필요', ''], imps.slice().reverse().map(m => [
@@ -2640,10 +2780,11 @@
          * 담양군은 양쪽 다 적용 대상이라 부서 점검도 두 축으로 나눈다(CLAUDE.md §10 검증 6문 ④).
          * 관계 법령 목록이 오기 전에는 확인된 공통 항목만 쓰고 목록 미완결을 표시한다. */
         comply() {
-            PG.cmpCheck = () => E.openForm({
-                id: 'EDOC-의무이행점검-2026H1', title: '2026 상반기 의무이행 점검표 (중처법 시행령 §4·§5)', form: 'F5',
+            /* 점검표는 **고른 회차**의 것이다 — id 를 '2026H1' 로 박아 두면 하반기를 골라도 상반기 점검표가 열린다(운영 E03). */
+            PG.cmpCheck = () => { if (actGate('체계 점검표 작성')) return; E.openForm({
+                id: 'EDOC-의무이행점검-' + S.period.replace('-', ''), title: periodLabel(S.period) + ' 의무이행 점검표 (중처법 시행령 §4·§5)', form: 'F5',
                 ctx: { menuLabel: '이행관리 · 반기', checklist: T.CHECKLIST_PRESETS.comply }, onChange: render,
-            });
+            }); };
             /* 반기 마감 보고 상신 — **결재선을 묻고 검사한 뒤** 올린다.
              * 종전에는 이 버튼이 결재선을 묻지도 검사하지도 않고 곧바로 안내 팝업을 띄웠고,
              * 팝업은 **검증되지 않은 기본 결재선**을 「상신 완료」로 인쇄했다 — 재난안전과장이
@@ -2734,27 +2875,50 @@
                     '</select>' +
                 '</div>';
 
+            /* ── 체계 점검(반기)의 근거 현황 — **고른 회차의 연도·기간** 자료만 본다 (운영 E03, 2026-11-04).
+               종전에는 고정 문구(«정기 1회 · 수시 2회 실시»)와 '2026H1' 고정 id 를 찍어, 상·하반기가 같은 값을
+               보이고 서로 다른 해의 평가를 섞었다. 정기평가는 그 해 1건, 수시는 그 반기 안의 건만 센다.
+               상태와 수치는 같은 평가에서 가져온다. */
+            const pYear = +S.period.slice(0, 4), pH1 = S.period.slice(-1) === '1';
+            const pFrom = pYear + (pH1 ? '-01-01' : '-07-01'), pTo = pYear + (pH1 ? '-06-30' : '-12-31');
+            const pid = S.period.replace('-', '');
+            const PS = polState();
+            const polAt = PS.VERSIONS.filter(v => v.appr === '승인완료' && (v.effDate || '') <= pTo)
+                .sort((a, b) => (b.effDate || '').localeCompare(a.effDate || ''))[0] || null;
+            const polIns = polAt && (polAt.inspections || []).find(i => i.half === periodLabel(S.period));
+            const polCell = polAt
+                ? '현행 v' + esc(polAt.ver) + ' · 반기 점검 ' + (polIns ? '완료 (' + esc(polIns.date) + ')' : '미작성')
+                : '<span class="chip-status warning chip-sm">현행 방침 없음</span>';
+            const R = window.DYRSK;
+            let rskCell = '-';
+            if (R && R.assessments) {
+                const reg = R.assessments(pYear)[0] || null;
+                const occN = R.occasionals(pYear).filter(o => (o.date || '') >= pFrom && (o.date || '') <= pTo).length;
+                rskCell = (reg
+                        ? pYear + '년 정기 ' + (reg.status === 'COMPLETED' ? '완료' : '진행중') + ' (대상 부서 ' + (reg.depts || []).length + '개)'
+                        : pYear + '년 정기평가 없음') +
+                    ' · 이 반기 수시 ' + occN + '건';
+            }
             return sectionCard('부서별 이행 현황 (전수 점검)',
                 axisTabs +
                 '<p style="font-size:var(--fs-12); color:var(--text-gray); margin-bottom:10px;">' + axis.note +
-                ' 이행으로 등록하려면 <b>증빙</b>이 있어야 하고, <b>해당없음</b>은 사유를 적어야 합니다 — ' +
-                '사유 없는 해당없음은 미이행과 함께 관리 대상으로 남습니다.</p>' +
+                ' 이행으로 등록하려면 <b>증빙</b>이 있어야 하고, <b>해당없음</b>은 사유를 적어야 합니다.</p>' +
                 DEPTCHK.render(Object.assign({ key: cmpKey }, cmpOpts())),
                 '') +
-            sectionCard('안전보건관리체계 점검 (반기) ' + docStChip('EDOC-의무이행점검-2026H1'),
-                '<p style="font-size:12px; color:var(--text-gray);">중처법 시행령 <b>§4</b>(안전보건관리체계 구축·이행) 항목별 이행 여부를 점검합니다. 각 항목에는 해당 메뉴의 실데이터가 근거로 연결되며, <b>X(미이행) 항목은 확정 시 개선조치로 자동 등록</b>됩니다.</p>' +
-                tbl(['항목', '근거 메뉴', '근거 현황'], [
-                    ['§4-1 목표·경영방침 수립', '<a href="menu.html?m=policy" style="color:var(--main-dark); font-weight:700;">경영방침</a>', '2026 방침 수립 · 점검 ' + (E.statusOf('EDOC-경영방침점검-2026H1') || '미작성')],
-                    ['§4-3 유해·위험요인 확인·개선', '<a href="rsk-list.html" style="color:var(--main-dark); font-weight:700;">위험성평가</a>', '정기 1회 · 수시 2회 실시'],
-                    ['§4-5 책임자 평가·관리', '<a href="menu.html?m=org" style="color:var(--main-dark); font-weight:700;">조직</a>', '수행평가 ' + (E.statusOf('EDOC-수행평가-2026H1') || '미작성')],
-                    ['§4-7 종사자 의견청취', '<a href="menu.html?m=opinion" style="color:var(--main-dark); font-weight:700;">의견청취</a>', '접수·처리 운영 중'],
+            sectionCard('안전보건관리체계 점검 (' + periodLabel(S.period) + ') ' + docStChip('EDOC-의무이행점검-' + pid),
+                '<p style="font-size:12px; color:var(--text-gray);">중처법 시행령 <b>§4</b>(안전보건관리체계 구축·이행) 항목별 이행 여부를 점검합니다. 미이행(X) 항목은 점검표를 확정하면 개선조치로 등록됩니다.</p>' +
+                tbl(['항목', '근거 메뉴', '근거 현황 (' + periodLabel(S.period) + ')'], [
+                    ['§4-1 목표·경영방침 수립', '<a href="menu.html?m=policy" style="color:var(--main-dark); font-weight:700;">경영방침</a>', polCell],
+                    ['§4-3 유해·위험요인 확인·개선', '<a href="rsk-list.html?year=' + pYear + '" style="color:var(--main-dark); font-weight:700;">위험성평가</a>', rskCell],
+                    ['§4-5 책임자 평가·관리', '<a href="evl-list.html" style="color:var(--main-dark); font-weight:700;">평가 현황</a>', '수행평가는 평가 현황에서 확인 · 후속조치 ' + (E.statusOf('EDOC-후속조치-' + pid) || '미작성')],
+                    ['§4-7 종사자 의견청취', '<a href="menu.html?m=opinion" style="color:var(--main-dark); font-weight:700;">의견청취</a>', '접수·처리 현황은 의견청취에서 확인'],
                 ]),
                 '<div style="display:flex; gap:6px;">' +
-                '<button class="btn btn-sm btn-primary" onclick="PG.cmpCheck()">점검표 작성</button>' +
+                (canAct() ? '<button class="btn btn-sm btn-primary" onclick="PG.cmpCheck()">점검표 작성</button>' : '') +
                 ((S.closed && S.closed[S.period])
                     ? '<span class="opn-muted" style="font-size:var(--fs-12); align-self:center;">' +
                         periodLabel(S.period) + ' 마감 보고 <b>상신됨</b>' + (S.closed[S.period].docNo ? ' · ' + esc(S.closed[S.period].docNo) : '') + ' — ' + esc(S.closed[S.period].lineText || '') +
-                        ' · 결재 진행은 온나라에서 문서번호로 확인하세요</span>'
+                        ' · 결재 진행은 온나라에서 확인하세요</span>'
                     : (canAct()
                         ? '<button class="btn btn-sm btn-outline" onclick="PG.cmpClose()">반기 마감 · 온나라 상신</button>'
                         : '<span class="opn-muted" style="font-size:var(--fs-12); align-self:center;">상신은 <b>담당자</b>가 합니다 — 관리·감독 계층은 조회만 합니다.</span>')) +
@@ -2763,9 +2927,10 @@
                 /* 2026-09-03 — 기준문서함(docs-archive)을 메뉴에서 뺐다. 원문을 두는 자리는
                    문서 목록이고, **문서별 버전 이력은 기준문서함에만 있던 기능이라 대체가
                    없다.** 없어진 것을 «있는 것처럼» 적지 않는다(CLAUDE.md §14-12). */
-                '<div class="check-notice" style="margin-bottom:10px;">제정·개정 원문은 <b>문서 목록</b>에서 찾고, 제정·조치 여부·교육·점검 증빙은 <b>이행 관리</b>에서 회차별로 관리합니다. 같은 파일을 두 곳에 중복 등록하지 않습니다.</div>' +
+                '<div class="check-notice" style="margin-bottom:10px;">제정·개정 원문은 <b>문서 목록</b>에서 찾고, 제정·조치 여부·교육·점검 증빙은 <b>이행 관리</b>에서 회차별로 관리합니다.</div>' +
                 tbl(['관리 구분', '정본 위치', '현재 상태', '이동'], [
-                    ['제정·개정 원문', '문서 목록', '<span class="chip-status neutral">문서별 버전 이력 없음 — 기준문서함 메뉴 제외</span>', '<a class="btn btn-sm btn-outline" href="cmp-docs.html">문서 찾기</a>'],
+                    /* 운영 T06 — «기준문서함 메뉴 제외»는 운영 사용자가 모르는 메뉴 이름이다. 할 일만 말한다. */
+                    ['제정·개정 원문', '문서 목록', '문서 목록에서 찾습니다', '<a class="btn btn-sm btn-outline" href="cmp-docs.html">문서 찾기</a>'],
                     ['제정·조치 여부 점검', '이행 관리', '<span class="chip-status warning">회차별 증빙 확인</span>', '<a class="btn btn-sm btn-primary" href="cmp-status.html">이행 관리</a>'],
                 ]),
                 '') +
@@ -2774,8 +2939,7 @@
              * 이행한다"고 주장만 하고 실제로는 §4만 점검하게 된다. */
             sectionCard('관계 법령 의무이행 점검 <span class="chip-status warning" style="margin-left:6px;">목록 미등록</span>',
                 '<p style="font-size:12px; color:var(--text-gray);">중처법 시행령 <b>§5</b>(종사자 · 반기 1회) · <b>§11</b>(공중이용시설 이용자 · 연 1회)이 요구하는 점검입니다. ' +
-                '§4가 "우리 기관이 체계를 갖췄나"라면, 여기는 <b>"개별 관계 법령을 실제로 지켰나"</b>입니다. ' +
-                '두 조문 모두 관계 법령을 <b>정의만 하고 목록을 주지 않으므로</b>, 담양군 관리대상에 적용되는 법령 목록을 기관이 직접 확정해야 점검이 성립합니다.</p>' +
+                '담양군 관리대상에 적용되는 관계 법령 목록을 정하면 점검할 수 있습니다.</p>' +
                 tbl(['점검 항목', '주기', '현황'], [
                     ['§5-1 관계 법령 의무이행 점검 (종사자)', '반기 1회', '<span class="chip-status warning">관계 법령 목록 미등록</span>'],
                     ['§5-3 유해·위험작업 안전보건교육 실시 점검', '반기 1회', '<a href="edu-status.html" style="color:var(--main-dark); font-weight:700;">이수현황</a> 연결 가능'],
@@ -2784,7 +2948,7 @@
                 ]),
                 '<button class="btn btn-sm btn-primary" onclick="PG.cmpLawList()">관계 법령 목록이란</button>') +
             sectionCard('안전보건 예산 편성·집행',
-                '<p style="font-size:12px; color:var(--text-gray);">예산 편성·집행·집행률 관리는 <b>예산관리</b> 대메뉴로 이관되었습니다. 총괄표에서 기관·시설별 진행 현황을 확인하세요.</p>',
+                '<p style="font-size:12px; color:var(--text-gray);">예산은 인력·예산 › 예산 총괄표에서 확인합니다.</p>',
                 '<a class="btn btn-sm btn-primary" href="bgt-main.html">예산 총괄표 바로가기</a>');
         },
     };

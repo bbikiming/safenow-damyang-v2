@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>게시판 관리 — 담양군 중대재해예방통합관리시스템</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="./js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="./css/style.css">
+    <link rel="stylesheet" href="./css/v2.css">
+</head>
+<body data-dy-page="admin-boards"
+      data-page-title="게시판 관리"
+      data-page-subtitle="시스템 관리 &gt; 기준정보 &gt; 게시판 관리 — 정보센터 게시판의 이름·유형·순서·사용 여부">
+    <main>
+        <div id="ab-root"></div>
+    </main>
+
+    <div id="toast" class="toast" role="status"></div>
+
+    <script src="./js/layout.js"></script>
+    <script src="./js/law-map.js"></script>
+    <script src="./js/help-center.js"></script><!-- DYHELP: 화면 도움말 -->
+    <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
+    <script src="./js/common.js"></script>
+    <script src="./js/board-data.js"></script><!-- DYBOARD: 게시판 데이터 — 정보센터와 같은 파일 -->
+    <script src="./js/admin-boards.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () { window.DYADMBOARD.init('ab-root'); });
+    </script>
+</body>
+</html>

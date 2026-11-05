@@ -298,7 +298,8 @@
      * -------------------------------------------------------------------------
      * DYDOCS 의 완료/진행중/미이행/해당없음 전이를 대체하지 않는다. 완료 확인
      * (재난안전과 담당자)의 축은 기존 이행 목록에 그대로 있다.
-     * 문서 수는 DYDOCS.documentIdsOfStage(stageId, year).length 하나만 쓴다.
+     * 문서 수는 DYDOCS.evidenceIdsOfStage(stageId, year).length 하나만 쓴다
+     * (지난해 문서에서 옮겨 와 아직 올해 파일이 없는 사본은 빠진다 — 운영 E20).
      * ========================================================================= */
     /* ── 이행의무 유형 — 「안 한 것」과 「할 조건이 안 된 것」을 가른다 ──────────
      * 분류기준 «이행의무 유형» 이 단계를 정기주기 · 상시·최초 · 조건부(사유 발생) ·
@@ -328,7 +329,7 @@
         var s = (stage && stage.id) ? stage : D().stage(stage);
         var d = dutyOf(s);
         if (!d || !d.cond) return false;
-        return D().documentIdsOfStage(s.id, +(year || D().DEFAULT_YEAR)).length === 0;
+        return D().evidenceIdsOfStage(s.id, +(year || D().DEFAULT_YEAR)).length === 0;
     }
 
     /* =========================================================================
@@ -369,7 +370,7 @@
         if (!s) return null;
         year = +(year || D().DEFAULT_YEAR);
         var cy = cycleOf(s);
-        var n = D().documentIdsOfStage(s.id, year).length;
+        var n = D().evidenceIdsOfStage(s.id, year).length;
         var rec = D().stageRecord(s.id, year);
 
         /* 비해당이 최우선 — 사람이 사유를 대고 뺀 것이라 자동 판정보다 앞선다
@@ -405,7 +406,7 @@
         if (!s) return null;
         var cy = cycleOf(s);
         if (!(cy.need > 0)) return null;
-        var n = D().documentIdsOfStage(s.id, +year).length;
+        var n = D().evidenceIdsOfStage(s.id, +year).length;
         if (n >= cy.need) return null;
         var k = n + 1;
         return { round: k, need: cy.need, due: deadlineOf(cy.need, k, +year) };
@@ -550,7 +551,7 @@
     }
     function rateOf(stages, year) {
         var pool = rateStages(stages), done = 0;
-        pool.forEach(function (s) { if (D().documentIdsOfStage(s.id, year).length > 0) done++; });
+        pool.forEach(function (s) { if (D().evidenceIdsOfStage(s.id, year).length > 0) done++; });
         return { total: pool.length, done: done, miss: pool.length - done,
                  pct: pool.length ? Math.round(done / pool.length * 100) : 0 };
     }
@@ -623,6 +624,9 @@
             /* 이행 증빙 문서 — 할 일에 연결된 문서만. 표가 이 수를 보이고 문서 목록(cmp-docs)도
                같은 문서만 싣는다(2026-10-12) — 둘이 다른 수를 세면 건수를 눌렀을 때 어긋난다. */
             if ((d.stageIds || []).some(function (sid) { return !!D().stage(sid); })) ev++;
+            /* 올해 파일을 아직 안 붙인 사본은 판정에 넣지 않는다(E20) — 목록에는 «파일 대기»로
+               보이므로 건수(ev)에는 남기고, «서류가 붙은 할 일»(hit)에서만 뺀다 */
+            if (D().awaitingFile(d)) return;
             (d.stageIds || []).forEach(function (sid) { hit[sid] = 1; });
         });
         stages.forEach(function (s) {
@@ -665,6 +669,12 @@
     function docsOfStage(stageId, year) {
         return D().documentIdsOfStage(stageId, year).map(D().docById).filter(Boolean);
     }
+    /* 파일 대기 사본 표지 — 이행 관리·문서 목록이 같은 칩을 쓴다(E20).
+       판정은 DYDOCS.awaitingFile 한 곳이다. */
+    function awaitChip(d) {
+        if (!D().awaitingFile || !D().awaitingFile(d)) return '';
+        return ' <span class="chip-status chip-sm warning" title="올해 파일을 붙이면 이행으로 셉니다">불러옴 — 파일 대기</span>';
+    }
     /* 연결 수 / 문서 수 — 한 문서가 여러 단계에 걸리므로 두 수가 다르다(§5-1).
        화면이 두 숫자를 함께 찍어 오해를 막는다. */
     function linkCounts(docs) {
@@ -686,6 +696,6 @@
         axesOf: axesOf, axisLabel: axisLabel,
         TASK_TYPE: TASK_TYPE, FUNCS: FUNCS,
         typeOf: typeOf, pathsOf: pathsOf, funcOf: funcOf, needsConfirm: needsConfirm, typeCounts: typeCounts,
-        kpiOf: kpiOf, rateOf: rateOf, rateStages: rateStages, docsOfStage: docsOfStage, deptList: deptList, deptStats: deptStats, deptDocs: deptDocs, deptDocsMeta: deptDocsMeta, linkCounts: linkCounts, years: years,
+        kpiOf: kpiOf, rateOf: rateOf, rateStages: rateStages, docsOfStage: docsOfStage, awaitChip: awaitChip, deptList: deptList, deptStats: deptStats, deptDocs: deptDocs, deptDocsMeta: deptDocsMeta, linkCounts: linkCounts, years: years,
     };
 }(window));

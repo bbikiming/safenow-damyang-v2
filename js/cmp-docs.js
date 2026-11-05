@@ -171,16 +171,12 @@
     }
     function notice() {
         var all = pool();
-        var lc = C().linkCounts(all);
-        var led = D().allDocs().filter(function (d) { return d.origin === 'ledger'; });
         /* 접어도 남는 한 줄은 «설명»이 아니라 «지금 상태»여야 한다(§14-12) */
-        var lead = '이행 증빙 문서 <b>' + all.length.toLocaleString() + '건</b> · 할 일 연결 <b>' + lc.links.toLocaleString() + '건</b>';
+        /* T16(운영 2026-11-04) — «할 일 연결 N건 · 두 수가 다른 이유»는 사용자가 몰라도 되는 설명이라 걷었다 */
+        var lead = '이행 증빙 문서 <b>' + all.length.toLocaleString() + '건</b>';
         var rest =
-            '<p><b>한 문서가 여러 할 일에 연결되므로 이행현황의 문서 합계는 실제 문서 수보다 큽니다.</b> ' +
-                '두 숫자를 함께 적어 오해를 막습니다 — 위 수치는 화면에서 센 값이지 고정값이 아닙니다.</p>' +
-            '<p>결재 완료 원본 파일은 이 시스템에 보관하지 않습니다. 원장 문서는 <b>그 부서 담당자가 상세에서 온나라 원본과 이을 수 있고</b>, ' +
-                '이어진 문서의 결재 경로·붙임 목록은 그 부서 사람에게만 보입니다. 온나라 연결은 원본을 찾아가는 길이고 이행 판정과 무관합니다.</p>' +
-            '<p>문서 원장 ' + led.length.toLocaleString() + '건 중 <b>할 일에 연결된 문서만</b> 싣습니다 — 연결되지 않은 일반 행정문서는 이행 판정과 무관해 이 목록에 넣지 않습니다.</p>' +
+            '<p>할 일에 연결된 문서만 싣습니다. 결재 완료본과 붙임은 온나라에서 봅니다 — 원장 문서는 그 부서 담당자가 상세에서 온나라 원본과 이을 수 있습니다.</p>' +
+            '<p>지난해 문서를 불러오거나 이어받아 만든 문서는 <b>올해 파일을 붙여야 이행으로 셉니다</b>(«불러옴 — 파일 대기»).</p>' +
             coverNote() +
             '<p>할 일 하나하나에 증빙이 갖춰졌는지는 <a href="cmp-status.html">업무 관리 &gt; 이행 관리</a>에서 봅니다. 여기는 <b>문서 1건</b>을 찾습니다.</p>' +
             ((global.DYROLE && global.DYROLE.readOnlyNote) ? (global.DYROLE.readOnlyNote('문서 등록') || '') : '');
@@ -190,7 +186,6 @@
     /* ── ④ 목록 ── */
     function listPane() {
         var list = view();
-        var lc = C().linkCounts(list);
         var pages = Math.max(1, Math.ceil(list.length / PAGE));
         if (S.page > pages) S.page = pages;
         var rows = list.slice((S.page - 1) * PAGE, S.page * PAGE);
@@ -215,8 +210,6 @@
         bar += yearChips() + docAdvPanel();
 
         return notice() + bar + deptCond() + menuCond() + stageCond() +
-            '<p class="cmp-cap">조건에 맞는 <b>문서 ' + list.length.toLocaleString() + '건</b> · 할 일 <b>연결 ' + lc.links.toLocaleString() + '건</b> — ' +
-                '한 문서가 여러 할 일에 걸리므로 두 수는 다릅니다.</p>' +
             (rows.length ? table(rows, hasStatus(list)) : emptyBox()) +
             pager(pages, list.length);
     }
@@ -308,6 +301,7 @@
         /* 행 전체가 진입 타깃(와이어프레임 tr.stg) — 칩·버튼 클릭에는 양보한다 */
         return '<tr class="cmp-stg cmp-rowlink" onclick="CMPDOC.rowOpen(event, \'' + esc(d.id) + '\')"><td class="cmp-c-main">' +
                 '<button type="button" class="cmp-slink" onclick="CMPDOC.openDoc(\'' + esc(d.id) + '\')">' + esc(d.title) + '</button>' +
+                C().awaitChip(d) +
                 '<span class="cmp-scode">' + esc(d.id) + ' · ' + esc(d.year) + '년</span></td>' +
             '<td class="cmp-c-stg">' + stageChips(d) + '</td>' +
             '<td class="cmp-c-dept2">' + (d.dept ? esc(d.dept) : '<span class="cmp-dim">—</span>') + '</td>' +
@@ -517,13 +511,9 @@
                     ? esc(d.dept) + (d.assignee ? ' / ' + esc(d.assignee) : ' ' + assigneeNote(d))
                     : dim('기록 없음')) +
                 row('기준연도', esc(d.year) + '년') +
-                /* 출처를 틀리게 말하면 그 자체가 거짓 자료가 된다(원장 실측 5만여 건이
-                   «사용자 등록»으로 뜨던 결함). 좁은 것부터 판정한다. */
-                row('데이터 구분', d.dataMode === 'real'
-                    ? '<b>문서 원장 실측</b> ' + dim('— ' + d.year + '년 담양군 문서 원장에서 그대로 가져온 실제 기록입니다.')
-                    : d.dataMode === 'demo' ? '예시 값'
-                    : '사용자 등록') +
-                (d.presetOf ? row('가져온 원본', presetLink(d)) : '') +
+                /* «데이터 구분»(원장 실측/사용자 등록) 줄은 걷었다(운영 T24, 2026-11-04) —
+                   사용자가 몰라도 되는 내부 구분이다. 등록분 여부는 왼쪽 열(온나라 원본 / 첨부 파일)이 말한다. */
+                (d.presetOf ? row('가져온 원본', presetLink(d) + C().awaitChip(d)) : '') +
                 (d.note ? row('비고', esc(d.note)) : '') +
             '</dl>';
     }
@@ -555,18 +545,50 @@
         if (d.origin === 'ledger' && O()) return onnPanel(d);
         return '<h3 class="cmp-detail-h3">결재 완료 문서</h3>' +
             '<div class="v2-empty cmp-pdf"><b>원본 파일 미보유</b>' +
-                '<p>전용 화면이 관리하는 문서입니다. 결재 완료본은 이 시스템에 보관하지 않습니다 — 그럴듯한 미리보기를 대신 그리지 않습니다.</p></div>';
+                '<p>전용 화면이 관리하는 문서입니다. 결재 완료본과 붙임은 온나라에서 봅니다.</p></div>';
     }
     function userFiles(d) {
         var fs = d.files || [];
+        var wait = D().awaitingFile(d);
+        /* 파일 붙이기 — 등록분을 고칠 수 있는 사람(소유 부서)에게만. 불러온 사본은
+           여기서 올해 파일을 붙여야 이행으로 센다(E20). 버튼만 감추지 않고
+           저장 함수(attachRun)도 같은 판정을 본다. */
+        var canAttach = D().canEditDoc(d) && d.origin === 'user';
         return '<h3 class="cmp-detail-h3">첨부 파일</h3>' +
+            (wait
+                ? '<div class="cmp-onn-box"><span class="chip-status chip-sm warning">불러옴 — 파일 대기</span>' +
+                    '<p>' + esc(d.year) + '년 파일을 붙이면 이행으로 셉니다. 그 전까지는 이행 판정에 들어가지 않습니다.</p></div>'
+                : '') +
             (fs.length
                 ? '<ul class="cmp-onn-list">' + fs.map(function (f) {
                     return '<li><span class="cmp-onn-fname" title="' + esc(f.name) + '">' + esc(f.name) + '</span>' +
-                        '<span class="cmp-dim">' + fmtSize(f.size) + (f.at ? ' · ' + esc(f.at) : '') + '</span></li>';
+                        '<span class="cmp-dim">' + fmtSize(f.size) + (f.at ? ' · ' + esc(f.at) : '') +
+                            (f.copiedFromFileId ? ' · 지난해 파일' : '') + '</span></li>';
                   }).join('') + '</ul>'
                 : '<p class="cmp-dim cmp-onn-empty">첨부된 파일이 없습니다.</p>') +
-            '<p class="cmp-cap">이 시스템에서 올린 파일입니다. 파일을 여는 기능은 파일 저장 적용 후 제공됩니다.</p>';
+            (canAttach
+                ? V().uploadDrop('<b>파일 붙이기</b><span class="cmp-dim"> — 끌어다 놓거나 눌러서 고르세요</span>', null,
+                    { pick: 'CMPDOC.attachRun', multiple: true, hint: true })
+                : '') +
+            '<p class="cmp-cap">파일을 여는 기능은 파일 저장 적용 후 제공됩니다.</p>';
+    }
+    /* 등록분에 파일 붙이기 — 소유 부서만(updateDocument 가 소유권을 다시 본다).
+       불러온 사본이면 이 순간부터 이행 증빙으로 센다(DYDOCS.awaitingFile). */
+    function attachRun(items) {
+        var d = D().docById(S.doc);
+        if (!d || d.origin !== 'user' || !D().canEditDoc(d)) {
+            V().toast(d ? (D().ownDenyNote ? D().ownDenyNote(d.dept) : '이 문서에 파일을 붙일 수 없습니다.') : '문서를 찾을 수 없습니다.');
+            return;
+        }
+        var wasWait = D().awaitingFile(d);
+        var add = (items || []).map(function (f, i) {
+            return { id: 'FILE-' + d.year + '-A' + Date.now().toString(36) + i, name: f.name, size: f.size, at: V().today() };
+        });
+        if (!add.length) return;
+        var r = D().updateDocument(d.id, { files: (d.files || []).concat(add) });
+        if (!r.ok) { V().toast(r.reason); return; }
+        render();
+        V().toast('파일 ' + add.length + '건을 붙였습니다' + (wasWait ? ' — 이제 ' + d.year + '년 이행 증빙으로 셉니다.' : '.'));
     }
     /* «연결은 원본을 찾아가는 길 · 판정과 무관»은 목록 상단 안내가 한 번 말한다 — 패널마다 되풀이하지 않는다 */
     function onnPanel(d) {
@@ -834,8 +856,7 @@
                     ((d.stageIds || []).length || 0) + '개' + (d.sr ? '·수발신자' : '') +
                     (( d.files || []).length ? '·첨부 ' + d.files.length + '건' : '') +
                     '가 그대로 채워지고 제목의 연도가 ' + y + '으로 바뀝니다.</p>' +
-                  '<p class="cmp-cap"><b>본문·결재문서는 복제하지 않습니다</b> — 원본은 온나라에 있고 결재는 새로 받습니다.' +
-                    ((d.stageIds || []).length ? '' : ' 이 문서에는 연결된 할 일이 없어 등록 뒤 직접 골라야 합니다.') + '</p>' +
+                  '<p class="cmp-cap">만든 문서에 <b>' + y + '년 파일을 붙여야</b> 이행으로 셉니다.</p>' +
                   (can
                       ? '<button type="button" class="btn btn-primary" onclick="CMPDOC.carry(\'' + esc(d.id) + '\')">올해 문서로 등록</button>'
                       : '<p class="cmp-cap"><b>조회 전용</b> — 문서 등록은 부서 담당자가 수행합니다.</p>')) +
@@ -876,7 +897,8 @@
         var title = String(src.title || '').split(String(src.year)).join(String(y));
         /* 복사 범위는 «전부»다(발주처 결정 2026-08-18) — 제목·수발신자·업무단계 매핑·첨부.
            본문·결재문서는 온나라 연동 전이라 원본이 없고, 결재는 새로 받아야 한다. */
-        var files = (src.files || []).slice();
+        /* 원본 파일은 «옮겨 온 파일» 표지를 단다 — 올해 파일이 아니라 판정에 세지 않는다(E20) */
+        var files = D().carriedFiles(src, src.year, y);
         var stages = (src.stageIds || []).slice();
         var r = D().addDocument({
             title: title,
@@ -888,8 +910,7 @@
             src: 'upload',
             dept: myDept(),
             note: src.year + '년 문서(' + src.id + ')를 이어받아 만든 문서 — 업무단계 ' + stages.length + '개' +
-                  (files.length ? ' · 첨부 ' + files.length + '건' : ' · 원본에 첨부 없음') +
-                  '. 본문·결재문서는 복제하지 않습니다(온나라 연동 전).',
+                  (files.length ? ' · 지난해 첨부 ' + files.length + '건' : '') + '.',
             presetOf: src.id,
         });
         if (!r.ok) { V().toast(r.reason); return; }
@@ -902,9 +923,8 @@
            모르면 담당자가 첨부를 또 올린다. */
         /* «할 일 1개 · 원본에 첨부 없음을 함께 가져왔습니다»로 읽혀 «없음»을 가져온
            꼴이었다 — 가져온 것과 없는 것을 나눠 말한다. */
-        V().toast(y + '년 문서로 등록했습니다 — 할 일 ' + stages.length + '개' +
-            (files.length ? '와 첨부 ' + files.length + '건을 함께 가져왔습니다.'
-                          : '를 함께 가져왔습니다. 원본에는 첨부가 없습니다.'));
+        V().toast(y + '년 문서로 등록했습니다 — 할 일 ' + stages.length + '개를 이었습니다. ' +
+            y + '년 파일을 붙이면 이행으로 셉니다.');
     }
 
     /* ── 페이지 제목 줄 ── */
@@ -941,7 +961,7 @@
         init: init, render: render,
         setF: setF, resetF: resetF, expand: expand, go: go, toggleAdv: toggleAdv,
         openPick: openPick, pick: pick, applyPick: applyPick, dropStage: dropStage, clearStages: clearStages,
-        openDoc: openDoc, closeDoc: closeDoc, carry: carry, rowOpen: rowOpen,
+        openDoc: openDoc, closeDoc: closeDoc, carry: carry, rowOpen: rowOpen, attachRun: attachRun,
         /* 제목 수정은 DOCUP 단일 출처 — 저장 뒤 이 화면만 다시 그린다 */
         editTitle: function (id) {
             if (!global.DOCUP || !global.DOCUP.editTitle) { V().toast('제목 수정을 불러오지 못했습니다.'); return; }

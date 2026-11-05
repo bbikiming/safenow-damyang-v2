@@ -361,6 +361,8 @@
     }
     function healthOf(id) { var a = health(); for (var i = 0; i < a.length; i++) if (a[i].id === id) return a[i]; return null; }
 
+    /* «기한 초과»는 예정일이 지났고 실시일이 없을 때(미실시) · 추가검진 예정일이 지났을 때 ·
+       유소견 조치결과 제출기한이 지났을 때뿐이다(운영 E04 ③). 실시일이 없으면 수검률은 «-»다(hcRate). */
     function effHealth(r) {
         if (!r.done) {
             return isPast(r.planned) ? STATUS.OVERDUE : STATUS.PENDING;
@@ -377,6 +379,11 @@
         return STATUS.DONE;
     }
     function hcUnexamined(r) { return Math.max(0, (r.targetCount || 0) - (r.examinedCount || 0)); }
+    /* 수검률 — 실시일이 없으면 null(화면은 «-»). 목록·상세가 같은 값을 쓴다(운영 E04 ②) */
+    function hcRate(r) {
+        if (!r || !r.done || !r.targetCount) return null;
+        return Math.round((r.examinedCount || 0) / r.targetCount * 100);
+    }
     function hcFollowup(r) { return !!r.followupNeeded && !r.followupDone; }
 
     function healthSummary(rows) {
@@ -420,6 +427,10 @@
                 pushHist(r, '결과보고서 등록' + (r.reportVersions > 1 ? ' · 제' + r.reportVersions + '판(이전 판 보존)' : ''));
             }
         } else {
+            /* 결과보고서(실시 증빙)는 실시일이 있어야 붙는다(운영 E04, 2026-11-04) —
+               «미실시인데 결과보고서 첨부됨»이 생기면 상태(기한 초과)와 증빙이 서로 다른 말을 한다.
+               화면 두 곳(목록·상세)이 같은 판정을 보도록 저장 계층에서 막는다. */
+            if (!r.done) return null;
             r.evidence = true;
             pushHist(r, (label || '증빙파일') + ' 등록');
         }
@@ -512,7 +523,7 @@
         weMeasured: weMeasured, weNeedsImprove: weNeedsImprove,
         workEnvSummary: workEnvSummary, workEnvLink: workEnvLink,
         /* 건강검진 */
-        health: health, healthOf: healthOf, addHealth: addHealth, effHealth: effHealth,
+        health: health, healthOf: healthOf, addHealth: addHealth, effHealth: effHealth, hcRate: hcRate,
         hcUnexamined: hcUnexamined, hcFollowup: hcFollowup,
         healthSummary: healthSummary, healthLink: healthLink,
         /* 공용 처리 */

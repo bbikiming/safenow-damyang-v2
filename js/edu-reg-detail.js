@@ -1,5 +1,5 @@
 /* =====================================================================
-   edu-reg-detail.js · 정기교육 상세 (EDU-REG-DETAIL, v1.1 §8.5)
+   edu-reg-detail.js · 정기교육 상세 (SCR-EDU-004 · 화면에는 화면 코드를 쓰지 않는다 — 운영 T25)
    ---------------------------------------------------------------------
    집합교육 상세를 모달 대신 별도 화면으로. ?id=course_id 로 진입.
    · 교육 정보(일정·시간·강사·장소·내용·첨부)
@@ -87,14 +87,19 @@
          * 누르면 거절하는 버튼을 남겨 두면 담당자가 왜 안 되는지 모른 채 두 번 누른다. */
         var enrollLock = lockOf(state.courseId);
         var rows = allEnrolls.length ? allEnrolls.map(function (e) {
-            var names = (e.workerIds || []).map(function (wid) { var w = E().workerOf(wid); return w ? w.name : wid; }).join(', ');
+            /* 다른 부서 신청 줄 — 이름은 «#번호»로 가리고 서명등록부(이름·서명이 있다)는 열지 않는다.
+               신청 취소·정정도 내지 않는다(아래 canActDept). 판정은 DYEDU 한 곳(운영 P05). */
+            var names = E().personLabels(e.workerIds);
+            var seeSign = E().canSeePerson(e.deptId);
             var cancelled = e.status === 'CANCELLED';
             return '<tr>' +
                 '<td class="edu-name">' + esc(E().deptName(e.deptId)) + (cancelled ? ' <span class="chip-status chip-sm danger">등록취소</span>' : '') + '</td>' +
                 '<td>' + esc(names) + '</td>' +
                 '<td>' + (e.workerIds || []).length + '명</td>' +
                 '<td>' + (e.actualHours == null ? c.hours : e.actualHours) + 'h</td>' +
-                '<td>' + (e.signFile ? '<span style="color:var(--main-dark);font-size:var(--fs-12);">📎 ' + esc(e.signFile) + '</span>' : '<span style="color:var(--text-gray);">-</span>') + '</td>' +
+                '<td>' + (!e.signFile ? '<span style="color:var(--text-gray);">-</span>'
+                    : seeSign ? '<span style="color:var(--main-dark);font-size:var(--fs-12);">📎 ' + esc(e.signFile) + '</span>'
+                    : '<span style="color:var(--text-gray);font-size:var(--fs-12);">제출됨</span>') + '</td>' +
                 '<td>' + esc(e.at) + '</td>' +
                 '<td class="col-action">' + (cancelled
                     ? '<span style="font-size:var(--fs-12);color:var(--text-gray);">' + esc(e.cancelReason || '취소 사유 미기재') + '<br>' + esc(e.cancelledAt || '') + '</span>'
@@ -216,7 +221,10 @@
             toast(E().deptName(G.deptId) + '은(는) 이미 등록된 부서입니다 — 신청 취소 후 다시 등록하세요.');
             return;
         }
-        E().addEnroll({ courseId: state.courseId, deptId: G.deptId, workerIds: ids, signFile: G.signFile, actualHours: actualHours, at: E().today() });
+        /* 저장 여부는 데이터 계층이 정한다(중복 부서·모집단 불일치 — 운영 E19).
+           반환값을 보지 않으면 저장되지 않았는데 «신청 완료»가 뜨고 이수기록만 붙는다. */
+        var enr = { courseId: state.courseId, deptId: G.deptId, workerIds: ids, signFile: G.signFile, actualHours: actualHours, at: E().today() };
+        if (!E().addEnroll(enr)) { toast(E().enrollDenyReason(enr) || '등록부를 저장하지 못했습니다.'); return; }
         if (c.status === 'DONE') E().recordCourseCompletion(state.courseId, ids, actualHours, c.date);
         E().pushCourseHistory(state.courseId, { type: 'STATUS', by: E().deptName(G.deptId), memo: '참석자 등록부 등록 · ' + ids.length + '명 · 실제 참석 ' + actualHours + 'h · 서명파일 첨부' });
         V().closeModal();

@@ -154,13 +154,8 @@
                     '<span class="sh-hist-actor">' + esc(h.actor) + '</span></li>';
             }).join('') + '</ul></div>';
 
-        /* 인력평가 연계 안내 */
-        var linknote =
-            '<div class="sh-linkbar">' +
-                S().icon('check', 18) +
-                '<div>이 건이 <b>완료</b>되면 결과·증빙이 <b>안전보건관리책임자 평가</b>의 「작업환경측정 등 작업환경의 점검 및 개선」 항목 참고지표에 반영됩니다. ' +
-                '<a href="evl-eval.html">인력 평가에서 확인 →</a></div>' +
-            '</div>';
+        /* 인력평가 연계 안내는 걷었다(운영 T13, 2026-11-04) — 사용자가 몰라도 되는 연계 설명이다 */
+        var linknote = '';
 
         state.mount.innerHTML = actions + linknote +
             '<div class="sh-detail">' + overview + report + resultCard + pendingCard + histCard + '</div>';

@@ -736,6 +736,12 @@
             /* 법령 관리 — 법령·조문 / 메뉴 근거 매핑 / 변경 이력 3탭 단일 화면
              * (2026-07-30 통합. admin-law-map.html 은 매핑 탭 리다이렉트 스텁) */
             { id: 'admin-law',         section: '기준정보',    label: '법령 관리',        icon: 'file',     href: 'admin-law.html',         screen: 'ADM04-S' },
+            /* 가이드 관리 · 게시판 관리 (2026-11-05 운영 반영) — 운영 시스템 관리의 가이드
+             * 관리(헤더 [가이드 다운로드] 목록의 정본)와, 운영 요청서 S2 가 요청한 게시판
+             * 관리(정보센터 탭의 정본). 둘 다 사용자에게 보이는 자료의 «정의»를 관리하는
+             * 화면이라 기준정보에 둔다. */
+            { id: 'admin-guides',      section: '기준정보',    label: '가이드 관리',      icon: 'download', href: 'admin-guides.html' },
+            { id: 'admin-boards',      section: '기준정보',    label: '게시판 관리',      icon: 'list',     href: 'admin-boards.html' },
             { id: 'admin-integration', section: '연계·알림',   label: '연계 관리',        icon: 'external', href: 'admin-integration.html', screen: 'SIR-001' },
             { id: 'admin-notify',      section: '연계·알림',   label: '알림 관리',        icon: 'bell',     href: 'admin-notify.html',      screen: 'SFR-017' },
         ]},
@@ -989,24 +995,71 @@
        제목은 PDF 표지 제목과 같게 둔다(열었을 때 누른 그것인지 바로 알아야 한다).
        파일은 downloads/ 에 있고 저장 이름도 같은 값이다. 쪽수·용량·기준일은 파일을
        바꿀 때 함께 고친다 — 누르기 전에 무엇이 오는지 알리는 값이다.
-       운영 구현 지시: docs/planning/전달-개발-가이드다운로드-20261016-v1.md */
-    const GUIDES = [
-        { t: '업무 관리 확인 가이드',
-          d: '이행 관리·문서 목록에서 무엇을 어떻게 확인하는지',
-          meta: 'PDF · 5쪽 · 1.7MB · 2026.10.13 기준',
-          file: '담양군_업무관리_확인가이드_2026-10.pdf' },
-        { t: '중대재해 업무단계 길잡이',
-          d: '1차 부서 교육 교재 — 업무단계 94개와 부서별 할 일',
-          meta: 'PDF · 36쪽 · 4.2MB · 인쇄용',
-          file: '담양군_중대재해_업무단계_길잡이_2026-10.pdf' }
+       운영 구현 지시: docs/planning/전달-개발-가이드다운로드-20261016-v1.md
+
+       ── 목록의 정본은 시스템 관리 > 가이드 관리(admin-guides.html)다 (2026-11-05) ──
+       운영 시스템 관리에 가이드 관리가 있어(자료를 올려 이 목록을 바꾼다) 프로토타입도
+       맞췄다. 목록은 이 파일 한 곳에 둔다 — 헤더 모달은 모든 화면에서 열리므로 관리
+       화면 전용 파일에 두면 다른 화면에서 읽을 수 없다. 관리 화면은 아래 API 만 쓴다.
+         · 시드(영점)는 아래 두 건이다. 용량은 downloads/ 파일에서 잰 값(bytes)이고
+           표시는 MB 소수 한 자리로 파생한다 — 손으로 적은 «1.7MB» 를 두지 않는다.
+         · src 'downloads' = 시스템과 함께 배포된 파일, 'upload' = 가이드 관리에서 올린
+           파일(프로토타입은 파일 실물을 보관하지 못한다 — 내려받기는 notReady),
+           kind 'link' = 영상 등 바깥 주소(새 탭).
+         · 모달에는 «사용» 이고 자료(파일·주소)가 있는 항목만 순서대로 낸다 — 누르면
+           오류가 나는 버튼을 두지 않는다(운영 지시 §5). */
+    const GUIDE_KEY = 'dy-guides-v1';
+    const GUIDE_SEED = [
+        { id: 'g-cmp-check', kind: 'file', src: 'downloads',
+          title: '업무 관리 확인 가이드',
+          desc: '이행 관리·문서 목록에서 무엇을 어떻게 확인하는지',
+          fmt: 'PDF', pages: 5, bytes: 1799612, note: '2026.10.13 기준',
+          file: '담양군_업무관리_확인가이드_2026-10.pdf', use: true },
+        { id: 'g-step-guide', kind: 'file', src: 'downloads',
+          title: '중대재해 업무단계 길잡이',
+          desc: '1차 부서 교육 교재 — 업무단계 94개와 부서별 할 일',
+          fmt: 'PDF', pages: 36, bytes: 4441836, note: '인쇄용',
+          file: '담양군_중대재해_업무단계_길잡이_2026-10.pdf', use: true }
     ];
+    function guideList() {
+        let v = null;
+        try { v = JSON.parse(localStorage.getItem(GUIDE_KEY) || 'null'); } catch (e) { v = null; }
+        return Array.isArray(v) ? v : JSON.parse(JSON.stringify(GUIDE_SEED));
+    }
+    function guideSaveAll(list) {
+        try { localStorage.setItem(GUIDE_KEY, JSON.stringify(list || [])); return true; } catch (e) { return false; }
+    }
+    function guideMB(bytes) { return (Math.round((Number(bytes) || 0) / 1048576 * 10) / 10).toFixed(1) + 'MB'; }
+    function guideMeta(g) {
+        if (!g) return '';
+        if (g.kind === 'link') return [g.fmt || '링크', g.note].filter(Boolean).join(' · ');
+        return [g.fmt, g.pages ? g.pages + '쪽' : '', g.bytes ? guideMB(g.bytes) : '', g.note]
+            .filter(Boolean).join(' · ');
+    }
+    function guideShown(g) {
+        if (!g || g.use === false) return false;
+        return g.kind === 'link' ? !!g.url : !!g.file;
+    }
     function guidesHtml() {
         const e = s => (window.DYV2 && window.DYV2.esc) ? window.DYV2.esc(String(s)) : String(s);
-        return '<ul class="dy-guide-files">' + GUIDES.map(g =>
-            `<li><div class="dy-guide-file-txt"><strong>${e(g.t)}</strong><span>${e(g.d)}</span>` +
-            `<span class="dy-guide-file-meta">${e(g.meta)}</span></div>` +
-            `<a class="btn btn-sm btn-outline" href="downloads/${e(encodeURIComponent(g.file))}" download="${e(g.file)}"` +
-            ` aria-label="${e(g.t + ' 다운로드 (' + g.meta + ')')}">다운로드</a></li>`).join('') + '</ul>';
+        const list = guideList().filter(guideShown);
+        if (!list.length) return '<div class="v2-empty">등록된 가이드가 없습니다.</div>';
+        return '<ul class="dy-guide-files">' + list.map(g => {
+            const meta = guideMeta(g);
+            let act;
+            if (g.kind === 'link') {
+                act = `<a class="btn btn-sm btn-outline" href="${e(g.url)}" target="_blank" rel="noopener"` +
+                    ` aria-label="${e(g.title + ' 열기 (' + meta + ', 새 탭)')}">열기</a>`;
+            } else if (g.src === 'downloads') {
+                act = `<a class="btn btn-sm btn-outline" href="downloads/${e(encodeURIComponent(g.file))}" download="${e(g.file)}"` +
+                    ` aria-label="${e(g.title + ' 다운로드 (' + meta + ')')}">다운로드</a>`;
+            } else {
+                act = `<button type="button" class="btn btn-sm btn-outline" onclick="DYV2.notReady('가이드 파일 내려받기', '파일 저장소 연계')"` +
+                    ` aria-label="${e(g.title + ' 다운로드 (' + meta + ')')}">다운로드</button>`;
+            }
+            return `<li><div class="dy-guide-file-txt"><strong>${e(g.title)}</strong><span>${e(g.desc)}</span>` +
+                `<span class="dy-guide-file-meta">${e(meta)}</span></div>${act}</li>`;
+        }).join('') + '</ul>';
     }
     function openGuides() {
         if (!window.DYV2 || !window.DYV2.openModal) return;
@@ -1512,6 +1565,9 @@
         NAV,
         openSitemap,
         openGuides,
+        /* 가이드 목록 — 정본은 이 파일, 편집은 시스템 관리 > 가이드 관리(admin-guides.js) */
+        guides: { list: guideList, saveAll: guideSaveAll, meta: guideMeta, mb: guideMB,
+                  shown: guideShown, seed: () => JSON.parse(JSON.stringify(GUIDE_SEED)) },
         /* 알림 내부 핸들러 (인라인 onclick 용) */
         _ntfFilter: ntfSetFilter,
         _ntfReadAll: ntfMarkAllRead,

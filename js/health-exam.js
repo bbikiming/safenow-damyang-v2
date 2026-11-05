@@ -124,9 +124,8 @@
 
         var linkbar =
             '<div class="sh-linkbar">' + S().icon('check', 18) + '<div>' +
-                '이 화면은 <b>인원수·수검률·결과보고서 증빙</b>만 관리합니다 — 개인별 검진 결과는 담지 않습니다(개인정보 최소수집). ' +
-                '완료 결과·증빙은 <b>안전보건관리책임자 평가</b>의 「종사자의 건강진단 등 건강관리」 항목에 <b>집계 지표로 자동 연계</b>됩니다. ' +
-                '<a href="evl-eval.html">인력 평가로 이동 →</a></div>' +
+                /* 운영 T14(2026-11-04) — 연계·개인정보 원칙 설명은 걷고 이 화면에서 하는 일만 남긴다 */
+                '이 화면은 인원수·수검률·결과보고서만 관리합니다. 개인별 검진 결과는 올리지 않습니다.</div>' +
             '</div>';
 
         var thead = '<th>대상 부서</th><th>검진 유형</th><th>위탁 검진기관</th><th>예정일 · 실시일</th>' +
@@ -140,6 +139,8 @@
 
     /* 공통 셀 조각 */
     function eviCell(r) {
+        /* 결과보고서는 실시일이 있어야 붙는다(운영 E04 ①) — 미실시 건에는 첨부 수단을 내지 않는다 */
+        if (!r.evidence && !r.done) return '<span class="sh-pill-none">실시 후 첨부</span>';
         return r.evidence
             ? '<span class="sh-attached">' + S().icon('file') + '첨부됨</span>'
             : (canAct(r.dept)
@@ -161,10 +162,11 @@
 
     /* 목록 행 — 대상 인원·수검률(집계)·결과보고서 첨부 중심 */
     function rowSimple(r) {
-        var rate = r.targetCount ? Math.round(r.examinedCount / r.targetCount * 100) : 0;
+        /* 실시일이 없으면 수검률은 «-»(운영 E04 ②) — 판정은 DYSH.hcRate 한 곳 */
+        var rate = S().hcRate(r);
         return '<tr onclick="HEX.detail(\'' + r.id + '\')">' + baseCells(r) +
             '<td class="num">' + r.targetCount + '</td>' +
-            '<td class="num">' + rate + '%</td>' +
+            '<td class="num">' + (rate == null ? '<span style="color:var(--text-gray)">-</span>' : rate + '%') + '</td>' +
             '<td>' + eviCell(r) + '</td>' +
             '<td>' + followupCell(r) + '</td>' +
             '<td>' + stChip(r) + '</td>' +
@@ -184,6 +186,7 @@
     function attach(id) {
         if (!canAct()) { V().toast(denyNote('증빙 첨부')); return; }
         var r = S().healthOf(id); if (!r) return;
+        if (!r.done) { V().toast('검진 실시일을 먼저 등록하세요 — 결과보고서는 실시 후 첨부합니다.'); return; }
         V().openModal('실시 증빙 등록',
             '<p style="font-size:13px;margin-bottom:10px;color:var(--text-gray);"><b>' + esc(r.dept) + ' · ' + esc(r.type) + '</b> 검진기관 실시확인서·집계 결과표를 첨부합니다. 개인별 결과지는 첨부하지 않습니다.</p>' +
             V().uploadDrop('파일을 끌어다 놓거나 클릭하여 업로드<br><span style="font-size:12px;">업로드 시 이력이 자동 기록됩니다</span>', null, { hint: true }),
@@ -191,7 +194,9 @@
             '<button type="button" class="btn btn-primary" onclick="HEX.saveAttach(\'' + id + '\')">등록</button>');
     }
     function saveAttach(id) {
-        if (!canAct()) { V().toast(denyNote('증빙 첨부')); return; } S().attachEvidence('hc', id, '실시 증빙'); V().closeModal(); render(); V().toast('증빙이 등록되었습니다.'); }
+        if (!canAct()) { V().toast(denyNote('증빙 첨부')); return; }
+        if (!S().attachEvidence('hc', id, '실시 증빙')) { V().toast('검진 실시일을 먼저 등록하세요 — 결과보고서는 실시 후 첨부합니다.'); return; }
+        V().closeModal(); render(); V().toast('증빙이 등록되었습니다.'); }
 
     function openNew() {
         if (!canAct()) { V().toast(denyNote('검진 계획 등록')); return; }

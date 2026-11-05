@@ -1172,6 +1172,9 @@
     /* 수시평가 작성 양식 — 발주처: "수시 HWP x로 하면 되나요? 네 x로 해 주세요"
      * 양식 안에 안전관리자 확인·서명란이 포함된다("안전 관리자 서명하는 란을 추가로 만들어야"). */
     var OCC_FORM_FILE = '수시_위험성평가_작성양식.hwpx';
+    /* 양식 파일이 실제로 등록됐는가 — 아직 없다(운영 T31, 2026-11-04). false 인 동안 수시평가 화면은
+       양식 내려받기 버튼과 등록 창의 «작성 양식» 칸을 내지 않는다. 파일을 받으면 true 로 켠다. */
+    var OCC_FORM_READY = false;
     function occasionals(year) {
         var d = load();
         return d.occasionals.filter(function (o) { return !year || o.year === year; })
@@ -1410,7 +1413,7 @@
         /* 공문(온나라 이관) */
         docs: docs, docsFor: docsFor, latestDoc: latestDoc, pushDoc: pushDoc, receiveDoc: receiveDoc,
         addOccasional: addOccasional, occImprovements: occImprovements, occImpCount: occImpCount, reviewOccasional: reviewOccasional, OCC_REASONS: OCC_REASONS,
-        OCC_BASIS: OCC_BASIS, OCC_FORM_FILE: OCC_FORM_FILE, setOccReviewFile: setOccReviewFile,
+        OCC_BASIS: OCC_BASIS, OCC_FORM_FILE: OCC_FORM_FILE, OCC_FORM_READY: OCC_FORM_READY, setOccReviewFile: setOccReviewFile,
         /* 메타 */
         SRC_META: SRC_META, STATUS_META: STATUS_META,
         /* 레거시 호환 */

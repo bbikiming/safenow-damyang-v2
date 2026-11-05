@@ -721,7 +721,7 @@
   "name": "정보센터",
   "type": "목록",
   "route": "info-center.html",
-  "components": "layout.js, common.js",
+  "components": "layout.js, common.js, board-data.js, info-center.js",
   "existingSfr": "없음",
   "defFile": "SCR-RPT-003_정보센터.md",
   "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/info-center.html",
@@ -842,6 +842,32 @@
   "existingSfr": "ADM03-S / SFR-002",
   "defFile": "SCR-ADMIN-009_사업장관리.md",
   "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/admin-sites.html",
+  "unresolvedCount": 0
+ },
+ {
+  "scrId": "SCR-ADMIN-010",
+  "daemenu": "시스템 관리",
+  "jungmenu": "기준정보 > 가이드 관리",
+  "name": "가이드 관리",
+  "type": "목록·등록·수정",
+  "route": "admin-guides.html",
+  "components": "layout.js, common.js, admin-guides.js",
+  "existingSfr": "없음(운영 반영 신설)",
+  "defFile": "SCR-ADMIN-010_가이드관리.md",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/admin-guides.html",
+  "unresolvedCount": 0
+ },
+ {
+  "scrId": "SCR-ADMIN-011",
+  "daemenu": "시스템 관리",
+  "jungmenu": "기준정보 > 게시판 관리",
+  "name": "게시판 관리",
+  "type": "목록·등록·수정",
+  "route": "admin-boards.html",
+  "components": "layout.js, common.js, board-data.js, admin-boards.js",
+  "existingSfr": "없음(운영 반영 신설)",
+  "defFile": "SCR-ADMIN-011_게시판관리.md",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/admin-boards.html",
   "unresolvedCount": 0
  },
  {
