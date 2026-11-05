@@ -85,7 +85,7 @@
         '</a>';
     }
 
-    /* ── 시각화 공용 헬퍼 (css/v2.css .dsh-spark/.dsh-heat/.dsh-mbar/… 계열) ── */
+    /* ── 시각화 공용 헬퍼 (css/v2.css .dsh-spark/.dsh-mbar/… 계열) ── */
     /* 스파크라인 — SVG polyline, 값 배열을 240×34 뷰박스에 정규화 */
     function sparkline(values, label) {
         const min = Math.min.apply(null, values), max = Math.max.apply(null, values);
@@ -344,42 +344,6 @@
               '</div>' +
             '</div>';
 
-        /* 부서 × 9개 의무 히트맵 — "어느 부서의 어느 의무가 구멍인가"를 한 눈에.
-         *   예시 자료: 부서 이행률(DEPT_RATES)에서 결정적으로 파생 (9호 도급은 전반 취약). */
-        const heatHead = duties.map((d, j) =>
-            '<th title="' + E(d.name) + '">' + (j + 1) + '호</th>').join('');
-        const heatRows = DEPT_RATES.map((dep, i) => {
-            const cells = duties.map((d, j) => {
-                const score = dep.rate - j * 2 + ((i * 7 + j * 5) % 13) - (j === 8 ? 14 : 0);
-                const cls = score >= 68 ? 'ok' : score >= 55 ? 'run' : 'bad';
-                const glyph = cls === 'ok' ? '✓' : cls === 'run' ? '─' : '!';
-                const stTxt = cls === 'ok' ? '이행' : cls === 'run' ? '진행' : '보완필요';
-                return '<td><span class="dsh-heat-cell ' + cls + '" role="link" tabindex="0"' +
-                    ' title="' + E(dep.name) + ' · ' + E(d.name) + ' — ' + stTxt + '"' +
-                    ' aria-label="' + E(dep.name) + ' ' + (j + 1) + '호 ' + stTxt + '"' +
-                    ' onclick="location.href=\'' + d.href + '\'"' +
-                    ' onkeydown="if(event.key===\'Enter\')location.href=\'' + d.href + '\'">' + glyph + '</span></td>';
-            }).join('');
-            return '<tr><th class="rowh">' + E(dep.name) + '</th>' + cells + '</tr>';
-        }).join('');
-        const heatCard =
-            '<div class="card">' +
-              '<div class="card-header"><span class="card-title">부서 × 의무 이행 매트릭스 — 시행령 §4 반기 점검 준비</span>' +
-                '<a class="btn btn-sm btn-secondary" href="menu.html?m=comply">이행관리</a></div>' +
-              '<div class="card-body">' +
-                '<div class="dsh-heat-wrap"><table class="dsh-heat" aria-label="부서별 9개 의무 이행 매트릭스">' +
-                  '<thead><tr><th class="rowh">부서</th>' + heatHead + '</tr></thead>' +
-                  '<tbody>' + heatRows + '</tbody>' +
-                '</table></div>' +
-                '<div class="dsh-viz-legend">' +
-                  '<span><i style="background:var(--status-success-bg);"></i>✓ 이행</span>' +
-                  '<span><i style="background:var(--status-warning-bg);"></i>─ 진행</span>' +
-                  '<span><i style="background:var(--status-danger-bg);"></i>! 보완필요</span>' +
-                  '<span style="margin-left:auto;">칸을 누르면 해당 의무 화면으로 이동</span>' +
-                '</div>' +
-              '</div>' +
-            '</div>';
-
         /* 재해·아차사고 월별 추이 — 중대재해 0건의 근거 (예방활동 작동 증빙) */
         const ACC = [2, 1, 3, 0, 2, 1, 1, null, null, null, null, null];  /* null = 미도래 월 */
         const accMax = Math.max.apply(null, ACC.filter(v => v != null));
@@ -456,7 +420,7 @@
 
         return hero + targetCard + chain +
             '<div class="dsh-grid">' +
-              '<div style="display:flex; flex-direction:column; gap:16px;">' + heatCard + deptCard + dutyCard + '</div>' +
+              '<div style="display:flex; flex-direction:column; gap:16px;">' + deptCard + dutyCard + '</div>' +
               '<div style="display:flex; flex-direction:column; gap:16px;">' + law5Card + accCard + budgetCard + feedCard + '</div>' +
             '</div>';
     }
