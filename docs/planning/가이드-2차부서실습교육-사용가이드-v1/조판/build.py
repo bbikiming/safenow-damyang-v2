@@ -109,7 +109,7 @@ def figure_line(text, stepkey):
     """'그림:' 줄 → 그림 칸 HTML. [전체] 뒤 코드는 작게, [확대] 뒤 코드는 잘라서."""
     global EXLABEL
     EXLABEL = '재난안전과 계정 · 연습 자료' if BOOK in ('ops1', 'ops2') else '예시 화면 · 연습 계정'
-    if '담당자 화면 예시' in text: EXLABEL = '부서 담당자 화면 예시 · 과장 화면에는 버튼이 없을 수 있음'
+    if '담당자 화면 예시' in text: EXLABEL = '부서 담당자 화면 예시 · 처리는 담당자가 합니다'
     if '재난안전과 계정 예시' in text: EXLABEL = '재난안전과 계정 예시 · 부서 화면과 같은 모양' if BOOK in ('etc', '1') else '재난안전과 계정 예시 · 과장·팀장 화면과 다를 수 있음'
     text = re.sub(r'`\[(담당자 화면 예시|재난안전과 계정 예시)\]`', '', text)
     parts = re.split(r'(`\[전체\]`|`\[확대\]`)', text)
@@ -136,7 +136,8 @@ def figure_line(text, stepkey):
                     src, (w, h) = r
                     cls = 'zoom wide' if w > h * 1.6 else 'zoom'
                     out.append(f'<figure class="{cls}"><img src="{src}" alt=""><figcaption><span class="ex">{EXLABEL}</span></figcaption></figure>')
-        rest = CODE.sub('', seg).strip(' ·,()')
+        rest = CODE.sub('', seg).strip(' ·,')
+        if rest.startswith('(') and rest.endswith(')'): rest = rest[1:-1].strip()
         if rest and '새 캡처' not in rest: caps.append(rest)
     cap = ('<p class="figcap">' + inline(' '.join(caps)) + '</p>') if caps else ''
     return '<div class="figs">' + ''.join(out) + '</div>' + cap
