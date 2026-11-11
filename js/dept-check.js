@@ -349,7 +349,7 @@
             if (flow) {
                 /* 배포 흐름 — 내가 이 표에서 무엇을 하는지 한 줄로 밝힌다(권한 블록과 같은 말) */
                 var own = R().OWNER_DEPT, mineTxt;
-                if (p.tier === 'staff' && p.deptId === own) mineTxt = '<b>우리 부서(재난안전과) 결과 제출</b>과 <b>전 부서 검토(승인·반려)·독촉</b>을 합니다. 점검 배포·마감 상신도 재난안전과 담당자 몫입니다.';
+                if (p.tier === 'staff' && p.deptId === own) mineTxt = '<b>우리 부서(재난안전과) 결과 제출</b>과 <b>전 부서 검토(승인·반려)·독촉</b>을 합니다. 점검 배포·마감 보고도 재난안전과 담당자 몫입니다.';
                 else if (isOwnerLead()) mineTxt = '<b>전 부서 검토(승인·반려)·독촉</b>을 합니다. 결과 제출·배포·마감은 담당자가 합니다.';
                 else if (p.tier === 'staff') mineTxt = '<b>우리 부서 줄의 결과 제출</b>만 합니다. 검토는 재난안전과가 합니다.';
                 else if (p.tier === 'super' && p.deptId === own) mineTxt = '<b>조회</b>와 <b>전 부서 독촉</b>을 합니다. 결과 제출은 부서 담당자, 검토는 재난안전과 담당자·팀장이 합니다.';
@@ -441,7 +441,7 @@
         if (!flow.dist) {
             return '<div class="v2-empty" style="padding:24px;">' +
                 (isOwnerStaff()
-                    ? '이 회차는 아직 배포하지 않았습니다. 위 <b>[점검 배포]</b>로 점검표를 올리면 대상 부서에 할 일이 갑니다.'
+                    ? '이 회차는 아직 배포하지 않았습니다. 위 <b>[점검 배포]</b>에서 점검표·기한·대상을 정하고 시달 공문을 온나라로 보내면 대상 부서에 할 일이 갑니다.'
                     : '재난안전과가 점검표를 배포하면 이 표에서 우리 부서 결과를 제출합니다.') + '</div>';
         }
         /* 조회 범위 — 재난안전과·총괄 책임자는 전 부서, 그 밖에는 **우리 부서 줄만** 본다(2026-11-12 사용자 지시).
@@ -465,14 +465,18 @@
             .concat(list.filter(function (d) { return !isTarget(flow, d.id); }));
         var rows = sorted.map(function (d) { return flowRowHtml(key, ns, d, opts, flow, L); }).join('');
         var lockNote = flow.locked
-            ? '<div class="check-notice" style="margin-bottom:10px;"><b>이 회차는 군수께 보고되었습니다(' + esc(flow.locked) + ').</b> 보고된 그대로 잠겨 제출·확인을 바꿀 수 없습니다. 반려·반송되면 다시 열립니다.</div>'
+            ? '<div class="check-notice" style="margin-bottom:10px;"><b>이 회차는 마감 보고를 온나라로 보냈습니다(' + esc(flow.locked) + ').</b> 보낸 그대로 잠겨 제출·검토·독촉을 바꿀 수 없습니다. 온나라에서 반려·반송되면 다시 열립니다.</div>'
             : '';
         var cs = full ? carrySummary(key, flow) : { total: 0 };
         var carryNote = cs.total
             ? '<div class="check-notice" style="margin-bottom:10px;"><b>지난 반기(' + esc(perLabelOf(prevKeyOf(key))) + ') 미이행 ' + cs.total + '곳</b> — 이번 점검에서 조치 결과를 함께 받습니다. ' +
               '보고 ' + cs.reported + '곳 · 조치 완료 ' + cs.done + '곳' + (cs.total - cs.reported ? ' · 아직 안 낸 곳 ' + (cs.total - cs.reported) : '') + '</div>'
             : '';
-        return lockNote + carryNote + stat +
+        var rt = remindTargets(key, flow);
+        var bulk = rt.length > 1
+            ? '<div style="display:flex;justify-content:flex-end;margin:0 0 8px;"><button type="button" class="btn btn-outline btn-sm" onclick="' + ns + '.remindAll()">미제출 ' + rt.length + '개 부서 독촉</button></div>'
+            : '';
+        return lockNote + carryNote + stat + bulk +
             '<div class="dchk-scroll"><table class="table-figma table-compact"><thead><tr>' +
                 '<th style="min-width:130px;">부서·사업장</th>' +
                 '<th style="width:130px;">진행</th>' +
@@ -541,7 +545,7 @@
             if (p === 'OK' && canReviewer())
                 acts += '<button type="button" class="btn btn-outline btn-sm" onclick="' + ns + '.uncfm(\'' + esc(d.id) + '\')">확인 취소</button> ';
             if ((p === 'NONE' || p === 'RETURNED') && canRemindRow(d.id))
-                acts += '<button type="button" class="btn btn-outline btn-sm" onclick="' + ns + '.remind(\'' + esc(d.id) + '\')">독촉</button>';
+                acts += '<button type="button" class="btn btn-outline btn-sm" title="받는 사람 ' + esc(global.DYADM && global.DYADM.contactText ? global.DYADM.contactText(d.id) : '그 부서 담당자') + '" onclick="' + ns + '.remind(\'' + esc(d.id) + '\')">독촉</button>';
         }
         if (!acts) acts = '<span class="dchk-ro">' + (flow.locked ? '잠김' : '조회') + '</span>';
 
@@ -613,7 +617,7 @@
     function flowGate(key, deptId, flow) {
         if (!flow) return true;
         if (!flow.dist) { toast('아직 배포되지 않은 회차입니다 — 재난안전과가 점검표를 배포하면 제출합니다.'); return false; }
-        if (flow.locked) { toast('이 회차는 군수께 보고되어 잠겼습니다.'); return false; }
+        if (flow.locked) { toast('이 회차는 마감 보고를 보내 잠겼습니다.'); return false; }
         if (!isTarget(flow, deptId)) { toast('이 회차 점검 대상 부서가 아닙니다.'); return false; }
         var p = progressOf(key, deptId, flow);
         if (p === 'OK') { toast('재난안전과가 확인한 결과입니다 — 고치려면 재난안전과에 확인 취소를 요청하세요.'); return false; }
@@ -621,7 +625,11 @@
     }
     /* 입력 창을 다룰 수 있는가 — 배포 흐름은 «그 부서 담당자», 기본(경영방침 게시)은 종전 판정 */
     function canEdit(deptId, opts) { return (opts && opts.flow) ? canSubmit(deptId) : canAct(deptId); }
-    function denySubmit() { toast('결과 제출은 그 부서 담당자가 합니다 — 고칠 것이 있으면 [검토]에서 반려하세요.'); }
+    function denySubmit() {
+        toast(canReviewer()
+            ? '결과 제출은 그 부서 담당자가 합니다 — 고칠 것이 있으면 [검토]에서 반려하세요.'
+            : '결과 제출은 그 부서 담당자가 자기 부서 줄에서 합니다.');
+    }
     function open(key, deptId, opts) {
         if (!canEdit(deptId, opts)) { if (opts.flow) denySubmit(); else denied(deptId); return; }
         if (!flowGate(key, deptId, opts.flow)) return;
@@ -635,7 +643,7 @@
             date: st.date || today(),
             naReason: st.naReason || '', note: st.note, photos: (st.photos || []).slice(),
             missText: st.missText || '', plan: st.plan || '', planDue: st.planDue || '',
-            prevRound: (st.confirm && st.confirm.round) || 0, resubmit: !!(st.exists && fresh),
+            prevRound: (st.confirm && st.confirm.round) || 0, resubmit: !!(st.exists && fresh), retReason: (st.confirm && st.confirm.state === CF.RETURNED && st.confirm.reason) || '',
             carry: opts.flow ? carryOf(key, deptId) : null,
             carryState: (st.prevAction && st.prevAction.state) || '', carryText: (st.prevAction && st.prevAction.text) || '',
             opts: opts
@@ -656,7 +664,7 @@
                 '<b>' + esc(o.periodLabel || '') + ' 점검표</b> · 기한 ' + esc(flow.dist.due) +
                 ((flow.dist.forms || []).length ? '<br>' + flow.dist.forms.map(function (f) { return '📎 ' + esc(f.name); }).join(' · ') + ' (제' + (flow.dist.ver || 1) + '판)' : '') +
                 (flow.dist.note ? '<br>' + esc(flow.dist.note) : '') +
-                (F.resubmit ? '<br><b>반려된 결과를 고쳐 다시 제출합니다.</b>' : '') +
+                (F.resubmit ? '<br><b>반려된 결과를 고쳐 다시 제출합니다.</b>' + (F.retReason ? ' 반려 사유: ' + esc(F.retReason) : '') : '') +
                 '</div>';
         }
         var needEv = flow ? (F.status === ST.DONE || F.status === ST.TODO) : F.status === ST.DONE;
@@ -827,7 +835,7 @@
     /* ================= 재난안전과 확인 · 보완 요청 ================= */
     function reviewGate(key, deptId, opts) {
         if (!canReviewer()) { toast('검토는 재난안전과 담당자·팀장이 합니다.'); return false; }
-        if (opts.flow && opts.flow.locked) { toast('이 회차는 군수께 보고되어 잠겼습니다.'); return false; }
+        if (opts.flow && opts.flow.locked) { toast('이 회차는 마감 보고를 보내 잠겼습니다.'); return false; }
         return true;
     }
     function review(key, deptId, opts) {
@@ -913,15 +921,21 @@
         if (p && p.tier === 'staff' && p.deptId === deptId) return false;
         return Rr.canRemind(deptId);
     }
-    function remind(key, deptId, opts) {
-        if (!canRemindRow(deptId)) {
-            toast(global.DYROLE && global.DYROLE.remindDenyNote ? global.DYROLE.remindDenyNote('독촉') : '독촉 권한이 없습니다.');
-            return;
-        }
+    /* 독촉 거절 문구 — 그 부서 담당자가 자기 부서를 누르면 «자기 자신»이라 따로 말한다(11-10 부서 단위) */
+    function remindDeny(deptId) {
+        var p = me();
+        if (p && p.tier === 'staff' && p.deptId === deptId)
+            return '우리 부서 독촉은 부서장과 재난안전과가 합니다 — 담당자 자신에게는 보내지 않습니다.';
+        return global.DYROLE && global.DYROLE.remindDenyNote ? global.DYROLE.remindDenyNote('독촉') : '독촉 권한이 없습니다.';
+    }
+    function remind(key, deptId, opts, quiet) {
+        if (!canRemindRow(deptId)) { if (!quiet) toast(remindDeny(deptId)); return false; }
         var flow = opts && opts.flow;
         if (flow) {
+            if (!flow.dist) { if (!quiet) toast('아직 배포되지 않은 회차입니다.'); return false; }
+            if (flow.locked) { if (!quiet) toast('이 회차는 마감 보고를 보내 잠겼습니다.'); return false; }
             var pr = progressOf(key, deptId, flow);
-            if (pr !== 'NONE' && pr !== 'RETURNED') { toast('미제출·반려된 부서에만 독촉합니다.'); return; }
+            if (pr !== 'NONE' && pr !== 'RETURNED') { if (!quiet) toast('미제출·반려된 부서에만 독촉합니다.'); return false; }
         }
         var d = deptOf(deptId);
         var who = global.DYADM && global.DYADM.contactText ? global.DYADM.contactText(deptId) : '그 부서 담당자';
@@ -933,11 +947,42 @@
             var lk = key + '|' + deptId;
             (log[lk] = log[lk] || []).push({ at: nowTs(), by: actor(), what: what, to: who });
             fsave();
-            toast((d ? d.name : deptId) + ' ' + what + ' 기록 · 받는 사람 ' + who);
+            notify({ kind: 'remind', key: key, deptId: deptId, what: what, due: flow.dist && flow.dist.due });
+            if (quiet) return true;
+            toast((d ? d.name : deptId) + ' ' + what + ' · 받는 사람 ' + who);
             if (opts && opts.onChange) opts.onChange();
-            return;
+            return true;
         }
         toast((d ? d.name : deptId) + ' ' + what + ' · 받는 사람 ' + who + ' — 발송 기록은 알림 연계 후 남습니다');
+    }
+
+    /* 일괄 독촉 — 미제출(NONE)만 센다(반려는 사유가 달라 줄에서 따로). 받는 사람을 누르기 전에 밝힌다. */
+    function remindTargets(key, flow) {
+        if (!flow || !flow.dist || flow.locked) return [];
+        return depts().filter(function (d) {
+            return (!R() || !R().inScope || R().inScope(d.id)) && progressOf(key, d.id, flow) === 'NONE' && canRemindRow(d.id);
+        });
+    }
+    function remindAll(key, opts) {
+        var flow = opts && opts.flow;
+        var list = remindTargets(key, flow);
+        if (!list.length) { toast('독촉할 미제출 부서가 없습니다.'); return; }
+        var who = function (id) { return global.DYADM && global.DYADM.contactText ? global.DYADM.contactText(id) : '그 부서 담당자'; };
+        V().openModal('미제출 ' + list.length + '개 부서 결과 제출 독촉',
+            '<p style="margin:0 0 10px;">아래 부서에 «결과 제출 독촉» 알림을 보내고 회차 기록에 남깁니다.</p>' +
+            '<div class="dchk-scroll"><table class="table-figma table-compact"><thead><tr><th>부서</th><th>받는 사람</th><th>이전 독촉</th></tr></thead><tbody>' +
+            list.map(function (d) {
+                var n = ((fload().reminds || {})[key + '|' + d.id] || []).length;
+                return '<tr><td>' + esc(d.name) + '</td><td>' + esc(who(d.id)) + '</td><td>' + (n ? n + '회' : '-') + '</td></tr>';
+            }).join('') + '</tbody></table></div>',
+            '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+            '<button class="btn btn-primary" onclick="' + opts.ns + '.doRemindAll()">' + list.length + '개 부서 독촉</button>');
+    }
+    function doRemindAll(key, opts) {
+        var n = remindTargets(key, opts && opts.flow).filter(function (d) { return remind(key, d.id, opts, true); }).length;
+        V().closeModal();
+        toast(n ? n + '개 부서에 결과 제출 독촉을 보냈습니다' : '독촉할 미제출 부서가 없습니다.');
+        if (opts && opts.onChange) opts.onChange();
     }
 
     /* ================= 알림 =================
@@ -955,6 +1000,12 @@
         var perLbl = per.replace(/^(\d{4})-H([12])$/, function (m, y, h) { return y + ' ' + (h === '1' ? '상반기' : '하반기'); }) +
             (axis === 'citizen' ? ' 중대시민재해' : ' 중대산업재해');
         var href = 'menu.html?m=comply&axis=' + axis + '&period=' + per;
+        if (o.kind === 'remind') {
+            L.ntfPush({ cat: 'compliance', catLabel: '이행', toDept: o.deptId, toTier: ['staff', 'super'],
+                title: perLbl + ' 의무이행 자체점검 ' + o.what + (o.what === '반려 재제출 독촉' ? ' — 반려된 결과를 고쳐 다시 제출해 주세요' : ' — 결과를 제출해 주세요') + (o.due ? '(기한 ' + o.due + ')' : ''),
+                href: href, work: 'my-work.html?cat=comply', basis: 'cse-5' });
+            return;
+        }
         if (o.kind === 'return') {
             L.ntfPush({ cat: 'compliance', catLabel: '이행', toDept: o.deptId, toTier: ['staff', 'super'],
                 title: perLbl + ' 의무이행 점검 결과 반려 — ' + o.reason, href: href, work: 'my-work.html?cat=comply', basis: 'cse-5' });
@@ -969,7 +1020,7 @@
         depts: depts, gap: gap, summary: summary,
         stateOf: stateOf, setState: setState, reset: reset,
         render: render, open: open, setStatus: setStatus, addPhoto: addPhoto,
-        mDelPhoto: mDelPhoto, save: saveModal, delPhoto: delPhoto, remind: remind,
+        mDelPhoto: mDelPhoto, save: saveModal, delPhoto: delPhoto, remind: remind, remindAll: remindAll, doRemindAll: doRemindAll,
         /* 배포 흐름 (이행점검) */
         closeReady: closeReady, carryOf: carryOf, carrySummary: carrySummary, prevKeyOf: prevKeyOf, CARRY_LABEL: CARRY_LABEL, setCarry: setCarry,
         flow: FLOW, remindLog: function (key, deptId) { return ((fload().reminds || {})[key + '|' + deptId] || []).slice(); }, isTarget: isTarget, progressOf: progressOf, submitted: submitted, isOwnerStaff: isOwnerStaff,

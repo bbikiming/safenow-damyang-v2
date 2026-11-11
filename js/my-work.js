@@ -118,9 +118,8 @@
               due: '2026-07-15', dept: 'safety', dept_label: '재난안전과',
               atype: 'attach', href: 'menu.html?m=opinion&sub=committee', destLabel: '산업안전보건위원회' },
             /* 이행 */
-            { id: 'C-01', cat: 'comply',     title: '의무이행 점검표 반기 마감 (D+8 기한초과)',
-              due: '2026-07-08', dept: 'safety', dept_label: '재난안전과',
-              atype: 'menu', href: 'menu.html?m=comply', action: '점검표 작성', destLabel: '이행점검' },
+            /* C-01 «의무이행 점검표 반기 마감 — 점검표 작성»은 2026-11-12 에 걷었다 — 이행점검 화면의 점검표 작성(F5)을
+               걷었고, 반기 마감은 배포 기록에서 만드는 카드 10(«반기 마감 · 군수 보고»)이 맡는다. */
             { id: 'C-02', cat: 'comply',     title: '안전보건교육 상반기 실시 결과 정리',
               due: '2026-07-25', dept: 'safety', dept_label: '재난안전과',
               atype: 'menu', href: 'edu-status.html', action: '보러 가기', destLabel: '이수현황' },
@@ -332,7 +331,7 @@
                         out.push({
                             id: 'CMP-CFM-' + key, cat: 'comply',
                             title: per.slice(0, 4) + ' ' + (per.slice(-1) === '1' ? '상반기' : '하반기') + ' ' + ax[1] + ' 의무이행 점검 — 확인 대기 ' + sm.wait + '건',
-                            sub: '부서가 올린 점검표를 보고 확인하거나 보완을 요청합니다' + (sm.none ? ' · 미제출 ' + sm.none + '개 부서' : ''),
+                            sub: '부서가 올린 점검표를 내려받아 보고 승인하거나 반려합니다' + (sm.none ? ' · 미제출 ' + sm.none + '개 부서' : ''),
                             due: '', status: 'IN_PROGRESS',
                             dept: ownC, dept_label: '재난안전과',
                             href: 'menu.html?m=comply&axis=' + (ax[0] === 'comply-citizen' ? 'citizen' : 'industrial') + '&period=' + per,

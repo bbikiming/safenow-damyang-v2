@@ -13,7 +13,8 @@
 
     /* r5 — 2026-07-30 회의: 기타교육 분류를 법정 3유형으로 재정의(구 5종 폐지) ·
      * 첨부 슬롯(file.slot) 도입. 구 etcType 이 남으면 필터·표시가 어긋나므로 버전 범프. */
-    var SKEY = 'damyangEduV1r8';   /* r8 — 참석자 등록부는 교육이 끝난 뒤(등록 기한) · 끝난 접수 중 교육 시드 1건 (2026-11-12) */
+    var SKEY = 'damyangEduV1r9';   /* r9 — 시드 이력 문구 «신청» 걷기 (2026-11-12) */
+    /* r8 — 참석자 등록부는 교육이 끝난 뒤(등록 기한) · 끝난 접수 중 교육 시드 1건 (2026-11-12) */
     /* 오늘 기준 — DYV2.today() 단일 출처. TODAY 는 하위호환 게터(DYEDU.TODAY)로 유지. */
     function today() { return (global.DYV2 && global.DYV2.today) ? global.DYV2.today() : realToday(); }
     function realToday() {
@@ -274,7 +275,7 @@
                 status: 'DONE', createdBy: '재난안전과',
                 history: [
                     { type: 'CREATE', at: mm.date, by: '재난안전과', memo: '월별 집합교육 등록' },
-                    { type: 'STATUS', at: mm.date, by: '재난안전과', memo: '교육 종료 처리 · 신청자 카운트' }
+                    { type: 'STATUS', at: mm.date, by: '재난안전과', memo: '교육 종료 처리 · 등록부 참석자 이수 반영' }
                 ]
             });
             Object.keys(completedWorkers).forEach(function (dept) {
@@ -440,7 +441,7 @@
             { at: '2026-07-15 09:20', by: '재난안전과', deptId: 'env',
               workerIds: ['w_env_c3'], memo: '7월 말 사이클 종료 예정 · 정기교육 보강 요청' },
             { at: '2026-07-14 14:10', by: '재난안전과', deptId: 'facility',
-              workerIds: ['w_fac_c3'], memo: '8월 집합교육 신청 및 서명 증빙 제출 요청' },
+              workerIds: ['w_fac_c3'], memo: '8월 집합교육 참석자 등록부 제출 요청' },
             { at: '2026-07-11 10:35', by: '재난안전과', deptId: 'construct',
               workerIds: ['w_con_c3'], memo: '미이수 12시간 확인 · 부서 자체교육 계획 회신 요청' }
         ];

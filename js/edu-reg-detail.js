@@ -267,7 +267,7 @@
         /* 버튼을 감추는 것만으로는 부족하다 — 전역 호출(EDURD.confirmCancel)로 뚫린다 */
         if (!E().canActDept(deptId)) { deny(deptId); return; }
         var lock = lockOf(state.courseId);
-        if (lock) { toast('결재 ' + lock + ' 상태라 신청을 취소할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
+        if (lock) { toast('결재 ' + lock + ' 상태라 등록부를 취소할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
         var mine = E().enrolls(state.courseId).filter(function (e) { return e.deptId === deptId; });
         var cnt = mine.reduce(function (n, e) { return n + (e.workerIds || []).length; }, 0);
         V().openModal(c.status === 'DONE' ? '완료 교육기록 정정' : '참석자 등록부 등록 취소',
@@ -282,7 +282,7 @@
     function doCancel(deptId) {
         if (!E().canActDept(deptId)) { V().closeModal(); deny(deptId); return; }
         var lock = lockOf(state.courseId);
-        if (lock) { V().closeModal(); toast('결재 ' + lock + ' 상태라 신청을 취소할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
+        if (lock) { V().closeModal(); toast('결재 ' + lock + ' 상태라 등록부를 취소할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
         var c = E().courseOf(state.courseId);
         var reason = c && c.status === 'DONE' ? ((document.getElementById('erd-cancel-reason') || {}).value || '').trim() : '';
         if (c && c.status === 'DONE' && !reason) { toast('정정 사유를 입력하세요.'); return; }

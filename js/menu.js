@@ -2783,7 +2783,7 @@
             /* 배포·검토 화면 진입·마감은 **재난안전과 담당자** 일이다 — canAct()(부서 미지정)는 부서 담당자도
                통과시켜 운영에서 부서 계정에 [반기 마감]이 뜨던 것과 같은 구멍이 된다(운영 재검수 2-1). */
             const ownerOK = () => !window.DYROLE || DYROLE.canAct(DYROLE.OWNER_DEPT);
-            const ownerGate = (what) => { if (ownerOK()) return false; V.toast(what + '은(는) 재난안전과 담당자가 합니다.'); return true; };
+            const ownerGate = (what) => { if (ownerOK()) return false; V.toast(what + (V.josa ? V.josa(what, '은', '는') : '은(는)') + ' 재난안전과 담당자가 합니다.'); return true; };
             /* 반기 마감 보고 상신 — **결재선을 묻고 검사한 뒤** 올린다.
              * 종전에는 이 버튼이 결재선을 묻지도 검사하지도 않고 곧바로 안내 팝업을 띄웠고,
              * 팝업은 **검증되지 않은 기본 결재선**을 「상신 완료」로 인쇄했다 — 재난안전과장이
@@ -2799,9 +2799,9 @@
             const closedOf = (per) => (window.DEPTCHK && DEPTCHK.flow) ? DEPTCHK.flow.closed(per) : null;
             const lockOf = (per) => { const c = closedOf(per); return c && (c.status === '기안함 전송' || c.status === '결재중' || c.status === '결재완료') ? c.status : ''; };
             PG.cmpClose = () => {
-                if (ownerGate('반기 마감 상신')) return;
+                if (ownerGate('반기 마감 보고')) return;
                 const per = periodLabel(S.period);
-                if (lockOf(S.period)) { V.toast(per + ' 마감 보고는 이미 상신되었습니다.'); return; }
+                if (lockOf(S.period)) { V.toast(per + ' 마감 보고는 이미 온나라로 보냈습니다.'); return; }
                 const ax = Object.keys(AXES).map(k => {
                     const key = AXES[k].key + '|' + S.period, d = DEPTCHK.flow.dist(key);
                     return { k, label: AXES[k].label, dist: d, s: d ? DEPTCHK.summary(key, { dist: d }) : null };
@@ -2874,10 +2874,15 @@
                     const rec = { at: V.today(), status: '기안함 전송', by: p.name || '', byUid: p.uid || '', docNo: '재난안전과-' + n, title: per + ' 의무이행 점검 결과 보고' };
                     DEPTCHK.flow.setClosed(S.period, rec);
                     V.openModal('온나라 기안함에 보냈습니다',
-                        '<div class="rskdoc-sent"><p>마감 보고 공문을 온나라 연계기안함에 보냈고, ' + esc(per) + ' 이행점검을 잠갔습니다. ' + V.sampleChip('온나라 연계 전 전송 결과를 재현한 값입니다.') + '</p>' +
-                        '<p><b>' + esc(rec.title) + '</b></p>' +
-                        '<p>연계 번호 <b>' + esc(rec.docNo) + '</b> <span class="file-hint">문서번호는 결재가 끝나면 온나라가 부여합니다</span></p>' +
-                        '<p><b>온나라 기안함에서 검토·결재를 지정해 상신하세요.</b></p></div>',
+                        DYDOC.sentHtml({
+                            lead: '마감 보고 공문을 온나라 연계기안함에 보냈고, ' + per + ' 이행점검을 잠갔습니다.',
+                            status: '기안함 전송',
+                            rows: [
+                                ['문서', rec.title],
+                                ['연계 번호', rec.docNo, '문서번호는 결재가 끝나면 온나라가 부여합니다.'],
+                                ['다음 할 일', '온나라 기안함에서 검토·결재를 지정해 상신하세요.', '온나라에서 반려·반송되면 이 회차가 다시 열립니다.']
+                            ]
+                        }),
                         '<button class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
                     render();
                 };
@@ -3004,6 +3009,8 @@
                 save: () => DEPTCHK.save(),
                 delPhoto: (id, i) => { DEPTCHK.delPhoto(cmpKey, id, i); render(); },
                 remind: (id) => DEPTCHK.remind(cmpKey, id, cmpOpts()),
+                remindAll: () => DEPTCHK.remindAll(cmpKey, cmpOpts()),
+                doRemindAll: () => DEPTCHK.doRemindAll(cmpKey, cmpOpts()),
                 unsubmit: (id) => DEPTCHK.unsubmit(cmpKey, id, cmpOpts()),
                 doUnsubmit: (id) => DEPTCHK.doUnsubmit(cmpKey, id, cmpOpts()),
                 review: (id) => DEPTCHK.review(cmpKey, id, cmpOpts()),
@@ -3145,7 +3152,7 @@
             PG.cmpDistCancel = () => {
                 if (ownerGate('배포 취소')) return;
                 if (submittedIds().length) { V.toast('제출한 부서가 있어 배포를 취소할 수 없습니다.'); return; }
-                if ((curDist() || {}).docs && curDist().docs.length) { V.toast('시달 공문이 이미 상신되어 배포를 취소할 수 없습니다 — 반려·반송되면 다시 기안합니다.'); return; }
+                if ((curDist() || {}).docs && curDist().docs.length) { V.toast('시달 공문을 이미 온나라로 보내 배포를 취소할 수 없습니다 — 반려·반송되면 같은 회차 공문을 다시 보냅니다.'); return; }
                 DEPTCHK.flow.removeDist(cmpKey); V.closeModal(); V.toast('배포를 취소했습니다 — 대상 부서 할 일이 회수됩니다'); render();
             };
             /* 점검표 내려받기 — 이 화면에서 방금 올린 파일만 내려받을 수 있다(저장소에는 파일명만 남는다) */

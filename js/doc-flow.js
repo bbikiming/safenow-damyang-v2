@@ -760,26 +760,32 @@
             var sentAttach = attachNames(t, doc);
             if (SIMPLE) {
                 V().openModal('온나라 기안함에 보냈습니다',
-                    '<div class="rskdoc-sent">' +
-                        '<p>' + esc(cfg.sentNote || '공문을 온나라 연계기안함에 보냈습니다.') + ' ' + V().sampleChip('온나라 연계 전 전송 결과를 재현한 값입니다.') + '</p>' +
-                        '<p><b>' + esc(doc.title) + '</b></p>' +
-                        '<p>연계 번호 <b>' + esc(no) + '</b> <span class="file-hint">문서번호는 결재가 끝나면 온나라가 부여합니다</span></p>' +
-                        (sentAttach.length ? '<p class="file-hint">붙임 ' + sentAttach.map(esc).join(' · ') + '</p>' : '') +
-                        '<p><b>온나라 기안함에서 검토·결재를 지정해 상신하세요.</b> <span class="file-hint">결재가 끝나면 온나라가 수신 부서로 시행합니다.</span></p>' +
-                    '</div>',
+                    sentHtml({
+                        lead: cfg.sentNote || '공문을 온나라 연계기안함에 보냈습니다.',
+                        status: '기안함 전송',
+                        rows: [
+                            ['문서', doc.title],
+                            ['연계 번호', no, '문서번호는 결재가 끝나면 온나라가 부여합니다.'],
+                            ['붙임', sentAttach.join(' · ')],
+                            ['다음 할 일', '온나라 기안함에서 검토·결재를 지정해 상신하세요.', '결재가 끝나면 온나라가 수신 부서로 시행합니다.']
+                        ]
+                    }),
                     '<button type="button" class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
                 refresh();
                 return;
             }
             V().openModal('온나라 결재 요청',
-                '<div class="rskdoc-sent">' +
-                    '<p>결재 요청을 보냈습니다. ' + V().sampleChip('온나라 연계 전 상신 결과를 재현한 값입니다.') + '</p>' +
-                    '<p><b>' + esc(doc.title) + '</b></p>' +
-                    '<p>연계 번호 <b>' + esc(no) + '</b> <span class="file-hint">문서번호는 결재가 끝나면 온나라가 부여합니다</span></p>' +
-                    '<p class="file-hint">결재선 ' + esc(doc.lineText) + '</p>' +
-                    (sentAttach.length ? '<p class="file-hint">붙임 ' + sentAttach.map(esc).join(' · ') + '</p>' : '') +
-                    '<p class="file-hint">결재 완료·반려가 회신되면 상태가 바뀝니다. 결재 진행은 온나라에서 확인합니다.</p>' +
-                '</div>',
+                sentHtml({
+                    lead: '결재 요청을 보냈습니다.',
+                    status: '결재중',
+                    rows: [
+                        ['문서', doc.title],
+                        ['연계 번호', no, '문서번호는 결재가 끝나면 온나라가 부여합니다.'],
+                        ['결재선', doc.lineText],
+                        ['붙임', sentAttach.join(' · ')],
+                        ['다음 할 일', '결재 진행은 온나라에서 확인합니다.', '결재 완료·반려가 회신되면 상태가 바뀝니다.']
+                    ]
+                }),
                 '<button type="button" class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
             refresh();
         }
@@ -815,5 +821,29 @@
         return api;
     }
 
-    global.DYDOC = { define: define, approvalLine: approvalLine, stepLabel: stepLabel };
+    /* ===================== 온나라 전송 결과 창 — 한 모양 =====================
+     * 공문을 온나라로 보낸 뒤 결과 창은 «온나라 결재 상태» 컴포넌트(.approval-box / .approval-kv, 라벨–값 2열)
+     * 하나로 그린다. 문장 중간에 업로드 안내 상자(.file-hint)를 끼우면 가운데 정렬된 글이 상자 조각으로
+     * 갈라져 읽을 수 없었다(2026-11-12). 도메인이 결과 창을 따로 짜지 않는다 — 시달 공문·일반 공문·마감 보고 공용.
+     *   o.lead  — 무엇이 일어났는지 한 문장
+     *   o.status — 상태 칩 라벨(«기안함 전송» · «결재중»)
+     *   o.rows  — [[라벨, 값(HTML 이스케이프 전 문자열), 보조 문구?], ...] 값이 비면 그 줄을 내지 않는다 */
+    function sentHtml(o) {
+        var V = global.DYV2 || {};
+        var esc = V.esc || function (x) { return String(x == null ? '' : x); };
+        var tone = V.toneOf ? V.toneOf(o.status) : 'info';
+        var rows = [['상태', null]].concat(o.rows || []).filter(function (r) { return r[0] === '상태' || (r[1] != null && r[1] !== ''); });
+        return '<div class="approval-box">' +
+            '<div class="approval-top"><span>' + esc(o.lead) + '</span></div>' +
+            '<div class="approval-kv">' + rows.map(function (r) {
+                var v = r[0] === '상태'
+                    ? '<span class="chip-status ' + tone + ' chip-sm">' + esc(o.status) + '</span> ' + (V.sampleChip ? V.sampleChip('온나라 연계 전 전송 결과를 재현한 값입니다.') : '')
+                    : esc(r[1]);
+                return '<span class="ak">' + esc(r[0]) + '</span><span class="av">' + v +
+                    (r[2] ? '<span class="av-sub">' + esc(r[2]) + '</span>' : '') + '</span>';
+            }).join('') + '</div>' +
+        '</div>';
+    }
+
+    global.DYDOC = { define: define, approvalLine: approvalLine, stepLabel: stepLabel, sentHtml: sentHtml };
 })(window);

@@ -500,6 +500,8 @@
 | 개선조치 상세 카드 | `IMPCARD` (`js/rsk-imp-cards.js`) | 화면별 개선조치 표·카드 재구현 |
 | 공문(기안문) 지면 | `.pdf-paper.pdf-doc.pdf-gm` + `.pdf-gm-annex`·`.table-doc` | 화면별 공문 CSS 계열 신설 |
 | **공문 흐름 전체** | **`DYDOC`(`js/doc-flow.js`)** — §7-1 | 도메인별 공문 모듈 자작 |
+| 온나라 전송 결과 창 | **`DYDOC.sentHtml()`** — «온나라 결재 상태» 라벨–값 2열(`.approval-box`/`.approval-kv`, 보조 문구 `.av-sub`) | 가운데 정렬 문단 + 문장 중간 상자 안내 (2026-11-12 — 글이 조각으로 갈라져 깨져 보였다) |
+| 안내 문구 | 블록 안내 = `<p class="file-hint">`(상자) · **문장 안 = `<span class="file-hint">`(회색 글씨, 상자 아님)** | 문장 중간에 상자형 안내 끼우기 |
 
 **상태 어휘 → tone 은 `DYV2.STATUS_TONE`(`js/common.js`) 단일 출처**다. 화면에서 라벨별 색을 직접 고르지 않고 `DYV2.toneOf(label)`로 tone 을 얻어 `--status-{tone}-*` 토큰을 쓴다. 매핑에 없는 라벨은 `neutral` 로 수렴하므로, 새 어휘는 표에 추가한다.
 

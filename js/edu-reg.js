@@ -161,7 +161,7 @@
                 '<span>강사 <b>' + esc(c.instructor || '-') + '</b></span>' +
                 '<span>장소 <b>' + esc(c.place || '-') + '</b></span>' +
                 '<span>등록 <b>' + enrolledDepts + '개 부서 · ' + enrolledCnt + '명</b></span>' +
-                (grpOpen ? '<span>' + (E().enrollOpen(c) ? '등록 기한 <b>' + esc(E().enrollDue(c)) + '</b>' : '등록부는 <b>교육이 끝난 뒤</b> 받습니다') + '</span>' : '') +
+                (grpOpen ? '<span>' + (E().enrollOpen(c) ? '등록 기한 <b>' + esc(E().enrollDue(c)) + '</b>' : '등록부는 <b>' + esc(E().lastSessionDate(c).slice(5)) + '부터</b> · 등록 기한 ' + esc(E().enrollDue(c).slice(5))) + '</span>' : '') +
             '</div>' +
         '</div>';
     }
@@ -268,7 +268,7 @@
             (F.mode === 'group'
                 ? ''
                 : (F.edit
-                    ? '<div class="check-notice">대상자는 이 화면에서 바꾸지 않습니다 — 이미 반영된 이수시간과 어긋나므로 <b>신청 취소 후 재신청</b>으로 처리합니다.</div>'
+                    ? '<div class="check-notice">대상자는 이 화면에서 바꾸지 않습니다 — 이미 반영된 이수시간과 어긋나므로 <b>등록 취소 후 다시 등록</b>으로 처리합니다.</div>'
                     : renderSelfTargets())
             );
         var title = F.edit
@@ -496,8 +496,8 @@
             '<p style="font-size:var(--fs-13);"><b>' + esc(c.desc) + '</b><br>' +
                 esc(E().courseDateTime(c)) + ' · ' + c.hours + 'h</p>' +
             (enrolls.length
-                ? '<div class="check-notice" style="margin-top:10px;">신청 <b>' + enrolls.length + '개 부서 · ' + cnt + '명</b>' +
-                    (counted ? '의 <b>이수시간 ' + c.hours + 'h 반영분도 함께 회수</b>됩니다.' : ' 신청 내역이 함께 삭제됩니다.') + '</div>'
+                ? '<div class="check-notice" style="margin-top:10px;">참석자 등록부 <b>' + enrolls.length + '개 부서 · ' + cnt + '명</b>' +
+                    (counted ? '의 <b>이수시간 ' + c.hours + 'h 반영분도 함께 회수</b>됩니다.' : ' 등록부가 함께 삭제됩니다.') + '</div>'
                 : '') +
             '<p style="font-size:var(--fs-12);color:var(--text-gray);margin-top:8px;">삭제 후에는 되돌릴 수 없습니다.</p>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
@@ -511,7 +511,7 @@
         if (lk) { V().closeModal(); toast('결재 ' + lk + ' 상태라 삭제할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
         var r = E().removeCourse(courseId);
         V().closeModal();
-        toast(r ? '교육을 삭제했습니다 · 신청 ' + r.enrolls + '건 · 이수기록 ' + r.records + '건 회수' : '교육을 찾을 수 없습니다.');
+        toast(r ? '교육을 삭제했습니다 · 등록부 ' + r.enrolls + '건 · 이수기록 ' + r.records + '건 회수' : '교육을 찾을 수 없습니다.');
         render();
     }
 
@@ -532,7 +532,7 @@
                     : '<span style="color:var(--text-gray);font-size:var(--fs-12);">제출됨</span>') + '</td>' +
                 '<td>' + esc(e.at) + '</td>' +
             '</tr>';
-        }).join('') : '<tr><td colspan="5"><div class="v2-empty">신청이 없습니다.</div></td></tr>';
+        }).join('') : '<tr><td colspan="5"><div class="v2-empty">등록된 참석자 등록부가 없습니다.</div></td></tr>';
         var hist = (c.history || []).map(function (h) {
             return '<div style="padding:6px 0;border-bottom:1px dashed var(--card-line);font-size:var(--fs-12);">' +
                 '<span style="color:var(--text-gray);margin-right:8px;">' + esc(h.at) + '</span>' +
@@ -548,9 +548,9 @@
                 ((c.files && c.files.length) ? '<div style="font-size:var(--fs-12);color:var(--main-dark);margin-top:6px;">📎 ' + c.files.map(function (f) { return esc(f.name); }).join(' · ') + '</div>' : '') +
                 ((c.photos && c.photos.length) ? '<div style="font-size:var(--fs-12);color:var(--main-dark);margin-top:4px;">📷 교육 사진 ' + c.photos.length + '장 · ' + c.photos.map(function (p) { return esc(p.name); }).join(' · ') + '</div>' : '') +
             '</div>' +
-            '<label class="form-label">신청 현황</label>' +
+            '<label class="form-label">등록 현황</label>' +
             '<div class="edu-scroll"><table class="table-figma table-compact"><thead><tr>' +
-                '<th>부서</th><th>인원</th><th>대상자</th><th>서명</th><th>신청일</th>' +
+                '<th>부서</th><th>인원</th><th>참석자</th><th>서명부</th><th>등록일</th>' +
             '</tr></thead><tbody>' + enrollRows + '</tbody></table></div>' +
             (hist ? '<label class="form-label" style="margin-top:12px;">이력</label><div>' + hist + '</div>' : ''),
             '<button type="button" class="btn btn-primary" onclick="DYV2.closeModal()">닫기</button>');

@@ -409,16 +409,15 @@
              대장이지 책임자 지정 축이 아니다. */
           title: '군청 청사 관리책임자로 자동 지정', href: 'menu.html?m=org',
           work: 'my-work.html', basis: 'osh-15' },
-        { id: 'n3', cat: 'compliance', catLabel: '이행',       time: '08:00',
-          title: '의무이행 점검표 반기 마감 기한 초과 (D+8)', href: 'menu.html?m=comply',
-          work: 'my-work.html?cat=comply', basis: 'cse-5' },
+        /* n3 «의무이행 점검표 반기 마감 기한 초과»는 2026-11-12 에 걷었다 — 이행점검은 배포 흐름이 알림을 만든다
+           (배포·기한 변경·검토 요청·반려·독촉 5종, DYLayout.ntfPush). 고정 예시는 그 흐름과 다른 말을 했다. */
         /* n4 «업무문서 안전점검 계열 16건 분류 확인 요청»은 2026-10-12 에 걷었다 —
            분류는 업무목록 엑셀이 정하고 이 시스템에서 하지 않는다. */
         { id: 'n5', cat: 'risk',       catLabel: '위험성평가', time: '어제 14:30',
           title: '물순환사업소 개선조치 기한초과 재촉', href: 'my-work.html?dept=water&cat=improve',
           work: 'my-work.html?dept=water&cat=improve', basis: 'cse-4-3' },
     ];
-    const NTF_DEFAULT_UNREAD = ['n1', 'n2', 'n3'];
+    const NTF_DEFAULT_UNREAD = ['n1', 'n2'];
     /* ── 업무가 만든 알림 (2026-11-12) ──────────────────────────────────────
      * 위 NTF_ITEMS 는 고정 예시다. 이행점검 제출·반려처럼 **업무 화면에서 실제로 일어난 일**은
      * 여기 쌓고(ntfPush) 받는 사람(부서 · 등급)에게만 보인다. 새로 쌓인 알림은 안 읽음으로 시작한다.

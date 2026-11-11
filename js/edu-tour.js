@@ -137,13 +137,13 @@
             title: '교육 종료 처리로 이수시간 카운트',
             where: '상세 화면 오른쪽 위 <b>[교육 종료 처리]</b>',
             clickPath: [
-                '신청 현황(부서·인원)을 마지막으로 확인합니다',
+                '등록 현황(부서·인원)을 마지막으로 확인합니다',
                 '[교육 종료 처리] → [종료 처리]',
-                '이 시점에 신청자 전원에게 교육시간이 반영됩니다 — 되돌릴 수 없습니다'
+                '이 시점에 등록부에 오른 참석자 전원에게 교육시간이 반영됩니다 — 되돌릴 수 없습니다'
             ],
-            desc: '상세 화면에서 신청 현황 전체를 확인하고 종료 처리하면 신청자 전원에게 교육시간이 반영됩니다.',
-            script: '종료 처리 한 번으로 신청자 전원의 이수시간이 자동 반영됩니다 — 사람별 엑셀 합산이 사라집니다.',
-            modalGuide: '신청 부서·인원을 마지막으로 확인하고 <b>[종료 처리]</b>를 누르면 전원에게 시간이 카운트됩니다.',
+            desc: '상세 화면에서 등록 현황 전체를 확인하고 종료 처리하면 등록부에 오른 참석자 전원에게 교육시간이 반영됩니다.',
+            script: '종료 처리 한 번으로 등록부에 오른 참석자 전원의 이수시간이 자동 반영됩니다 — 사람별 엑셀 합산이 사라집니다.',
+            modalGuide: '등록 부서·인원을 마지막으로 확인하고 <b>[종료 처리]</b>를 누르면 전원에게 시간이 카운트됩니다.',
             actionLabel: '교육 종료 처리 열기',
             action: function () { global.EDURD.closeCourse(); },
             done: function () { var c = demoCourse(); return !!c && c.status === 'DONE'; },
@@ -220,7 +220,7 @@
         flowNote: function () {
             return '추적 중인 교육: <b>' + V().esc(courseLabel()) + '</b>' +
                 ' — 새로 등록하면 그 교육을 따라갑니다.<br>' +
-                '교육은 재난안전과 담당자가 전 과정을 운전합니다 — 부서 신청도 조직도에서 부서를 골라 이 화면에서 처리합니다.';
+                '교육은 재난안전과 담당자가 전 과정을 운전합니다 — 부서 등록부도 조직도에서 부서를 골라 이 화면에서 대리 등록할 수 있습니다.';
         },
         barTitle: function () { return '안전보건교육 사용법 — ' + STEPS.length + '걸음'; },
         barDesc: function () {
@@ -245,7 +245,7 @@
         /* 접수 중 집합교육이 하나도 없으면 2·3단계를 돌 수 없다 — 종전 게이트 그대로 */
         if (!openCourse()) {
             V().openModal('예시 데이터 복원',
-                '<p style="font-size:var(--fs-13);line-height:1.65;">접수 중인 집합교육이 모두 종료되어 신청 단계를 따라갈 수 없습니다. ' +
+                '<p style="font-size:var(--fs-13);line-height:1.65;">등록부를 받는 집합교육이 모두 종료되어 등록 단계를 따라갈 수 없습니다. ' +
                 '교육 예시 자료를 처음 상태로 복원한 뒤 시작합니다.</p>',
                 '<button class="btn btn-secondary" type="button" onclick="DYV2.closeModal()">취소</button>' +
                 '<button class="btn btn-primary" type="button" onclick="EDUTOUR.restoreAndStart()">복원 후 시작</button>');
@@ -266,7 +266,7 @@
         if (T.view() === 'read') { toast('조회 전용 관점에서는 예시 데이터를 되돌릴 수 없습니다.'); return; }
         T.stop();
         V().openModal('예시 데이터 되돌리기',
-            '<p style="font-size:var(--fs-13);line-height:1.6;">교육 등록·신청·종료 처리와 근로자 명단·독촉 이력 데이터를 처음 상태로 되돌립니다.</p>',
+            '<p style="font-size:var(--fs-13);line-height:1.6;">교육 등록·참석자 등록부·종료 처리와 근로자 명단·독촉 이력 데이터를 처음 상태로 되돌립니다.</p>',
             '<button class="btn btn-secondary" type="button" onclick="DYV2.closeModal()">취소</button>' +
             '<button class="btn btn-primary" type="button" onclick="EDUTOUR.confirmReset()">되돌리기</button>');
     };
