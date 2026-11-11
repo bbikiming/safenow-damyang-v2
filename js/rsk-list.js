@@ -925,7 +925,7 @@
         var excluded = allDepts.length - visible.length;
 
         var rows = visible.map(function (dp) { return deptRow(a, dp, asking); }).join('');
-        if (!rows) rows = '<tr><td colspan="' + (asking ? 9 : 8) + '" style="text-align:center;color:var(--text-gray);padding:24px;">' +
+        if (!rows) rows = '<tr><td colspan="' + (asking ? 7 : 8) + '" style="text-align:center;color:var(--text-gray);padding:24px;">' +
             (allDepts.length ? '조치 대상 부서가 없습니다. 지적사항이 있는 부서가 발견되지 않았습니다.' : '선정된 부서가 없습니다.') + '</td></tr>';
 
         var excludedNote = excluded > 0
@@ -939,7 +939,9 @@
             '<div class="rl-card"><div class="rl-card-title"' + (asking ? ' style="justify-content:space-between;"' : '') + '>부서별 조치' + (asking ? reqActions(a) : '') + '</div>' +
                 (asking ? '<p style="font-size:var(--fs-12);color:var(--text-gray);margin:0 0 8px;">개선이 필요한 부서를 <b>요청</b>에 체크하고 조치기한을 확인한 뒤 조치 요청 공문을 보냅니다. 체크하지 않은 부서는 «지적사항 없음»으로 완료됩니다.</p>' : '') +
                 '<div class="rl-table-scroll"><table class="rl-dept-table"><thead><tr>' +
-                    (asking ? '<th style="width:56px;">요청</th>' : '') + '<th>부서</th><th>점검일</th><th>설문조사표 양식</th><th>설문조사표 제출본</th><th>개선건수</th><th>조치기한</th><th>상태</th><th>관리</th>' +
+                    /* 요청 단계에는 개선건수·관리가 늘 비어 있어 그 두 칸 대신 «요청» 칸을 둔다 */
+                    (asking ? '<th style="width:56px;">요청</th><th>부서</th><th>점검일</th><th>설문조사표 양식</th><th>설문조사표 제출본</th><th>조치기한</th><th>상태</th>'
+                            : '<th>부서</th><th>점검일</th><th>설문조사표 양식</th><th>설문조사표 제출본</th><th>개선건수</th><th>조치기한</th><th>상태</th><th>관리</th>') +
                 '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
                 excludedNote +
             '</div>';
@@ -1023,12 +1025,12 @@
             '<td>' + esc(dp.inspectDate || '-') + '</td>' +
             '<td>' + surveyCell + '</td>' +
             '<td>' + reportCell + '</td>' +
-            '<td>' + impCell + '</td>' +
+            (asking ? '' : '<td>' + impCell + '</td>') +
             '<td>' + dueCell + '</td>' +
             '<td><span class="chip-mini ' + stCls + '">' + stLbl + '</span>' +
                 (dp.deliveredAt ? '<div style="font-size:var(--fs-12);color:var(--text-gray);margin-top:3px;">' + (dp.request ? '요청' : '전달') + ' ' + esc(dp.deliveredAt) +
                     (dp.request ? (dp.inputDone ? ' · 입력 완료' : ' · 입력 중') : '') + '</div>' : '') + '</td>' +
-            '<td>' + mngBtn + remindBtn + '</td>' +
+            (asking ? '' : '<td>' + mngBtn + remindBtn + '</td>') +
         '</tr>';
     }
 
