@@ -350,16 +350,57 @@
             /* **버튼을 감추는 것만으로는 부족하다** — 전역 호출로 뚫린다.
                기안·미리보기·확인·상신 네 경로에 모두 건다. */
             if (denied(t)) return;
+            /* cfg.initOf(t) — 문서 종류·수신의 기본값(선택). 부서에 시달하는 공문(이행점검 배포)은
+               «외부발송 · 수신자 참조»로 시작한다. 주지 않으면 종전대로 내부결재. */
+            var init = cfg.initOf ? (cfg.initOf(t) || {}) : {};
             F = {
-                id: id, docType: '내부결재',
+                id: id, docType: init.docType || '내부결재',
                 title: cfg.titleOf ? cfg.titleOf(t) : '',
-                to: '', body: '',
+                to: init.to || '', body: '',
                 attach: (cfg.attachOf ? cfg.attachOf(t) : []).map(function (a) {
-                    return { label: a.label, meta: a.meta || '', on: false, size: (a.size > 0 ? +a.size : null) };
+                    /* a.on — 반드시 실려야 하는 붙임(배포 공문의 점검표 양식)은 미리 고른 채 시작한다 */
+                    return { label: a.label, meta: a.meta || '', on: !!a.on, size: (a.size > 0 ? +a.size : null) };
                 }),
                 basis: {}, annex: true
             };
+            /* 수신처(cfg.recipientsDefault) — 공용 조직도로 고르는 부서 목록. 기본값은 도메인이 정한다 */
+            if (cfg.recipientsDefault) {
+                F.rc = {}; (cfg.recipientsDefault(t) || []).forEach(function (id) { F.rc[id] = true; });
+                F.rcOpen = false;
+            }
             renderDraft();
+        }
+        function rcIds() { return F && F.rc ? Object.keys(F.rc).filter(function (k) { return F.rc[k]; }) : []; }
+        function rcName(id) { return cfg.recipientName ? cfg.recipientName(id) : id; }
+        /* 수신처 이름 — 저장된 문서면 그때 고른 값, 기안 중이면 지금 고른 값 */
+        function recipientNames(t, doc) {
+            if (doc && doc.recipients) return doc.recipients.map(rcName);
+            if (!doc && F && F.rc) return rcIds().map(rcName);
+            return cfg.recipientsOf ? cfg.recipientsOf(t, doc) : [];
+        }
+        function rcSel() { return F && F.rc ? F.rc : {}; }
+        /* 조직도에서 하나 켜고 끌 때 — 창을 다시 그리지 않는다(검색어·스크롤 보존, CLAUDE.md §3 ORGPICK) */
+        function rcTog(id, on) {
+            if (!F || !F.rc) return;
+            if (on) F.rc[id] = true; else delete F.rc[id];
+            syncRc();
+        }
+        function rcReset() {
+            if (!F || !cfg.recipientsDefault) return;
+            capture(); F.rc = {}; (cfg.recipientsDefault(cfg.targetOf(F.id)) || []).forEach(function (id) { F.rc[id] = true; });
+            renderDraft();
+        }
+        function rcToggle() { capture(); F.rcOpen = !F.rcOpen; renderDraft(); }
+        function rcSummaryHtml() {
+            var t = cfg.targetOf(F.id), ids = rcIds();
+            var warn = cfg.recipientWarn ? cfg.recipientWarn(t, ids) : '';
+            return '<p style="margin:0;">' + esc(F.to || '수신자 참조') + ' — <b>' + ids.length + '곳</b> ' +
+                '<span class="file-hint">' + esc(ids.map(rcName).join(', ') || '(수신처 없음)') + '</span></p>' +
+                (warn ? '<p class="file-hint" style="color:var(--status-warning-fg); margin:4px 0 0;">' + warn + '</p>' : '');
+        }
+        function syncRc() {
+            var el = global.document.getElementById(NS + '-rc-sum');
+            if (el) el.innerHTML = rcSummaryHtml();
         }
         function capture() {
             if (!F) return;
@@ -462,8 +503,45 @@
                 }).join('') + '</div></div>';
         }
 
+        /* ===== 단순 기안(cfg.simple) — 운영 결정(2026-11-06 «온나라로 기안까지만»)을 따르는 도메인용 =====
+         * 결재선을 받지 않는다(검토·결재는 온나라 기안함에서 지정). 문서 종류·수신·붙임은 도메인이 정한 값으로
+         * 고정해 보여만 주고, 담당자는 **제목과 본문만** 쓴다. 지면 서명란은 기안자만, 버튼은 «온나라로 보내기». */
+        var SIMPLE = !!cfg.simple;
+        function renderSimple(t) {
+            var rc = recipientNames(t, null);
+            var att = F.attach.filter(function (a) { return a.on; }).map(function (a) { return a.label; })
+                .concat(F.annex && cfg.annexes ? cfg.annexes(t, null).map(function (x) { return x.title + '(별지)'; }) : []);
+            V().openModal('공문 기안 — ' + esc(cfg.subjectOf ? cfg.subjectOf(t) : ''),
+                '<div class="rskdoc-draft">' +
+                    (F.rc
+                        ? '<div class="rskdoc-block"><label class="form-label">수신 <span class="roc-req">*</span> ' +
+                              '<span class="file-hint">기본값은 ' + esc(cfg.recipientsDefaultLabel || '도메인 기본 수신처') + '입니다</span></label>' +
+                              '<div id="' + NS + '-rc-sum">' + rcSummaryHtml() + '</div>' +
+                              '<div style="display:flex; gap:6px; margin-top:6px;">' +
+                                  '<button type="button" class="btn btn-sm btn-outline" onclick="' + NS + '.rcToggle()">' + (F.rcOpen ? '조직도 접기' : '조직도에서 수신처 고르기') + '</button>' +
+                                  '<button type="button" class="btn btn-sm btn-outline" onclick="' + NS + '.rcReset()">기본값으로</button>' +
+                              '</div>' +
+                              (F.rcOpen && global.ORGPICK ? '<div style="margin-top:6px;">' + global.ORGPICK.deptsPanel(NS + '-rcpanel', { selectedPath: NS + '.rcSel', onToggle: NS + '.rcTog' }) + '</div>' : '') +
+                          '</div>'
+                        : '<div class="rskdoc-block"><label class="form-label">수신</label>' +
+                              '<p style="margin:0;">' + esc(F.to || '수신자 참조') + (rc.length ? ' — <b>' + rc.length + '곳</b> <span class="file-hint">' + esc(rc.join(', ')) + '</span>' : '') + '</p></div>') +
+                    '<div class="rskdoc-block"><label class="form-label" for="' + NS + '-title">제목 <span class="roc-req">*</span></label>' +
+                        '<input type="text" class="form-input" id="' + NS + '-title" value="' + esc(F.title) + '"></div>' +
+                    '<div class="rskdoc-block"><label class="form-label" for="' + NS + '-body">본문 <span class="roc-req">*</span>' +
+                        ' <span class="file-hint">직접 작성합니다 — 아래 조각을 눌러 넣을 수 있습니다</span></label>' +
+                        chipsHtml(t) +
+                        '<textarea class="form-textarea" id="' + NS + '-body" rows="8" placeholder="공문 본문을 직접 입력하세요.">' + esc(F.body) + '</textarea></div>' +
+                    '<div class="rskdoc-block"><label class="form-label">붙임</label>' +
+                        (att.length ? '<p style="margin:0;">' + att.map(function (n, i) { return (i + 1) + '. ' + esc(n); }).join('<br>') + '</p>' : '<p class="file-hint">없음</p>') +
+                        '<p class="file-hint" id="' + NS + '-attach-sum">' + esc(attachSumText()) + '</p></div>' +
+                '</div>',
+                '<span class="rskdoc-foot-note">검토·결재는 온나라 기안함에서 지정합니다.</span>' +
+                '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
+                '<button type="button" class="btn btn-primary" onclick="' + NS + '.preview()">문서 미리보기 →</button>');
+        }
         function renderDraft() {
             var t = cfg.targetOf(F.id);
+            if (SIMPLE) { renderSimple(t); return; }
             var out = F.docType === '외부발송';
             V().openModal('공문 기안 — ' + esc(cfg.subjectOf ? cfg.subjectOf(t) : ''),
                 '<div class="rskdoc-draft">' +
@@ -515,6 +593,8 @@
         }
         function signLineHtml(L, doc) {
             var p = drafterOf(doc);
+            if (SIMPLE) return '<div class="pdf-gm-sign"><span class="pdf-gm-sign-i"><b>기안자</b> ' + esc(p.role || '담당') + ' ' + esc(p.name) +
+                '</span><span class="pdf-gm-sign-i"><span class="pdf-dash">검토·결재 — 온나라 기안함에서 지정</span></span></div>';
             var cols = [{ t: '기안자', r: p.role || '담당', n: p.name }].concat(L.map(function (s, i) {
                 return { t: i === L.length - 1 ? '결재권자' : '검토자', r: s.role || '', n: s.name || '' };
             }));
@@ -564,6 +644,10 @@
                 bodyDocHtml(src.body) +
                 attachDocHtml(attachNames(t, doc)) +
                 (out ? '<div class="pdf-gm-issuer">담 양 군 수<span class="pdf-doc-seal">관인</span></div>' : '') +
+                /* 수신자 목록(선택) — «수신자 참조»로 보낼 때 받는 부서를 지면에 적는다(cfg.recipientsOf) */
+                ((out && recipientNames(t, doc).length)
+                    ? '<div class="pdf-gm-frow"><span class="k">수신자</span><span class="v">' + recipientNames(t, doc).map(esc).join(', ') + '</span></div>'
+                    : '') +
                 '<div class="pdf-gm-foot">' +
                     signLineHtml(L, doc) +
                     '<div class="pdf-gm-frow"><span class="k">협조자</span><span class="v"><span class="pdf-dash">-</span></span></div>' +
@@ -594,9 +678,10 @@
             if (denied(cfg.targetOf(F.id))) return;
             if (!String(F.title || '').trim()) { toast('공문 제목을 입력하세요.'); return; }
             if (!String(F.body || '').trim()) { toast('공문 본문을 입력하세요.'); return; }
+            if (F.rc && !rcIds().length) { toast('수신처를 1곳 이상 고르세요.'); return; }
             var t = cfg.targetOf(F.id);
             /* 상신을 막는 사유 — 결재선과 붙임 한도. 미리보기 자체는 막지 않고 버튼 자리에 사유를 쓴다 */
-            var sendWhy = !lineReady().ok ? lineReady().why + ' [← 수정]에서 결재선을 고치세요.'
+            var sendWhy = (!SIMPLE && !lineReady().ok) ? lineReady().why + ' [← 수정]에서 결재선을 고치세요.'
                 : attachIssue() ? attachIssue() + ' [← 수정]에서 붙임을 줄이세요.' : '';
             V().openModal('문서 미리보기 — ' + esc(F.title),
                 /* 좁은 화면에서 지면이 왼쪽으로 밀리는 것을 막는 래퍼 — 규칙은 .rskdoc-preview(css/v2.css) */
@@ -607,7 +692,7 @@
                    누르면 거절하는 버튼을 남기면 담당자가 이유를 모른 채 두 번 누른다. */
                 '<button type="button" class="btn btn-secondary" onclick="' + NS + '.back()">← 수정</button>' +
                 (!sendWhy
-                    ? '<button type="button" class="btn btn-primary" onclick="' + NS + '.confirmSend()">온나라로 결재 상신</button>'
+                    ? '<button type="button" class="btn btn-primary" onclick="' + NS + '.confirmSend()">' + (SIMPLE ? '온나라로 보내기' : '온나라로 결재 상신') + '</button>'
                     : '<span class="rskdoc-foot-note">' + esc(sendWhy) + '</span>'),
                 { variant: 'wide', headHtml: '<button type="button" class="btn btn-sm btn-outline pdf-noprint" onclick="' + NS + '.print()">PDF 저장 / 인쇄</button>' });
         }
@@ -620,9 +705,17 @@
         function confirmSend() {
             if (!F) { toast('먼저 [공문 기안]으로 문서를 작성하세요.'); return; }
             if (denied(cfg.targetOf(F.id))) return;
-            if (lineDenied()) return;
+            if (!SIMPLE && lineDenied()) return;
             var ai = attachIssue();
             if (ai) { toast(ai); return; }
+            if (SIMPLE) {
+                V().openModal('온나라로 보내면 되돌릴 수 없습니다',
+                    '<div class="rskdoc-send"><div class="rskdoc-lock-warn"><b>' + esc(cfg.lockNote || '보낸 뒤에는 이 기록을 고칠 수 없습니다.') + '</b><br>' +
+                    '<span class="file-hint">공문은 온나라 연계기안함에 들어갑니다. 검토·결재를 지정해 상신하는 것은 온나라에서 합니다.</span></div></div>',
+                    '<button type="button" class="btn btn-secondary" onclick="' + NS + '.preview()">← 미리보기</button>' +
+                    '<button type="button" class="btn btn-primary" onclick="' + NS + '.send()">보내기</button>');
+                return;
+            }
             /* 확인 단계는 **같은 창의 본문을 바꿔** 보인다 — openModal 이 앞 창(미리보기)을 닫고
              * 연다(화면에 뜬 창은 늘 하나, 운영 23건 #3). 문서 내용을 다시 늘어놓지 않고
              * 되돌릴 수 없다는 사실만 말한다. */
@@ -641,19 +734,21 @@
             var t = cfg.targetOf(F.id);
             if (denied(t)) return;
             /* 확인 화면을 건너뛰고 전역 호출로 들어오는 경로까지 막는다 — 버튼만 잠그면 뚫린다 */
-            if (lineDenied()) return;
+            if (!SIMPLE && lineDenied()) return;
             var ai = attachIssue();
             if (ai) { toast(ai); return; }
+            if (F.rc && !rcIds().length) { toast('수신처를 1곳 이상 고르세요.'); return; }
             var no = cfg.nextNo();
             var doc = {
                 sid: no + '-' + (cfg.docsFor(t) || []).length,
-                no: no, at: today(), status: '결재중',
+                no: no, at: today(), status: SIMPLE ? '기안함 전송' : '결재중',
                 docType: F.docType, title: F.title, to: F.to, body: F.body,
                 attach: F.attach.filter(function (x) { return x.on; }),
                 annex: F.annex, basis: Object.keys(F.basis),
+                recipients: F.rc ? rcIds() : undefined,
                 /* 온나라로 넘어가는 결재선 — **계정 식별자(uid) 배열**이다. 이름은 표시용이라
                    함께 담되, 연계가 붙으면 키가 되는 것은 uid 다(SCR-ADMIN-001 §4). */
-                line: line().slice(), lineText: lineText(),
+                line: SIMPLE ? [] : line().slice(), lineText: SIMPLE ? '' : lineText(),
                 by: persona().name, byUid: persona().uid || '', dept: myDeptName()
             };
             cfg.save(t, doc);
@@ -663,6 +758,19 @@
              * 연계 전 재현이라는 사실은 «예시 자료» 칩이 맡는다(§15). */
             /* 구성은 SCR-EDOC-008 §4 — 보낸 사실 · 문서명 · 연계 번호 · 문서번호 안내 · 결재선 · 보낸 붙임 */
             var sentAttach = attachNames(t, doc);
+            if (SIMPLE) {
+                V().openModal('온나라 기안함에 보냈습니다',
+                    '<div class="rskdoc-sent">' +
+                        '<p>' + esc(cfg.sentNote || '공문을 온나라 연계기안함에 보냈습니다.') + ' ' + V().sampleChip('온나라 연계 전 전송 결과를 재현한 값입니다.') + '</p>' +
+                        '<p><b>' + esc(doc.title) + '</b></p>' +
+                        '<p>연계 번호 <b>' + esc(no) + '</b> <span class="file-hint">문서번호는 결재가 끝나면 온나라가 부여합니다</span></p>' +
+                        (sentAttach.length ? '<p class="file-hint">붙임 ' + sentAttach.map(esc).join(' · ') + '</p>' : '') +
+                        '<p><b>온나라 기안함에서 검토·결재를 지정해 상신하세요.</b> <span class="file-hint">결재가 끝나면 온나라가 수신 부서로 시행합니다.</span></p>' +
+                    '</div>',
+                    '<button type="button" class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
+                refresh();
+                return;
+            }
             V().openModal('온나라 결재 요청',
                 '<div class="rskdoc-sent">' +
                     '<p>결재 요청을 보냈습니다. ' + V().sampleChip('온나라 연계 전 상신 결과를 재현한 값입니다.') + '</p>' +
@@ -696,6 +804,7 @@
             confirmSend: confirmSend, send: send, openDoc: openDoc,
             capture: capture, insert: insert, setType: setType, setAttach: setAttach,
             setAnnex: setAnnex, setBasis: setBasis,
+            rcSel: rcSel, rcTog: rcTog, rcReset: rcReset, rcToggle: rcToggle,
             pickOpen: LN.pickOpen, pickApprover: LN.pickApprover, addStep: LN.addStep,
             delStep: LN.delStep, resetLine: LN.resetLine,
             line: line, lineText: lineText, lineIssues: lineIssues, lineReady: lineReady,

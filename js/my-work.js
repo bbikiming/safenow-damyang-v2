@@ -275,7 +275,7 @@
                 var y2 = +todayIso().slice(0, 4);
                 [y2 + '-H2', y2 + '-H1', (y2 - 1) + '-H2'].forEach(function (per) {
                     var cl2 = DCS.flow.closed(per);
-                    var locked = cl2 && (cl2.status === '결재중' || cl2.status === '결재완료');
+                    var locked = cl2 && (cl2.status === '기안함 전송' || cl2.status === '결재중' || cl2.status === '결재완료');
                     [['comply-industrial', '중대산업재해', 'industrial'], ['comply-citizen', '중대시민재해', 'citizen']].forEach(function (ax) {
                         var key = ax[0] + '|' + per, d = DCS.flow.dist(key);
                         if (!d || (d.targets || []).indexOf(state.deptId) === -1) return;
@@ -287,7 +287,8 @@
                             id: 'CMP-SUB-' + key, cat: 'comply',
                             title: per.slice(0, 4) + ' ' + (per.slice(-1) === '1' ? '상반기' : '하반기') + ' ' + ax[1] + ' 의무이행 자체점검 — 결과 제출',
                             sub: ret ? '반려: ' + (st.confirm.reason || '') + ' — 고쳐서 다시 제출합니다'
-                                     : '재난안전과 ' + d.at + ' 배포 · 점검표를 내려받아 작성한 뒤 결과를 제출합니다',
+                                     : '재난안전과 ' + d.at + ' 배포 · 점검표를 내려받아 작성한 뒤 결과를 제출합니다' +
+                                       (DCS.carryOf && DCS.carryOf(key, state.deptId) ? ' · 지난 반기 미이행 조치 결과도 함께 적습니다' : ''),
                             due: d.due, status: done ? 'DONE' : 'IN_PROGRESS',
                             dept: state.deptId, dept_label: D().deptName(state.deptId),
                             href: 'menu.html?m=comply&axis=' + ax[2] + '&period=' + per,
@@ -310,8 +311,19 @@
             if (DCK && DCK.flow && meC && meC.tier === 'staff' && meC.deptId === ownC && state.deptId === ownC) {
                 var yy = +todayIso().slice(0, 4);
                 [yy + '-H2', yy + '-H1', (yy - 1) + '-H2'].forEach(function (per) {
+                    /* 마감 보고 차례 — 전 부서 확인 완료 또는 기한 경과(이행점검 화면과 같은 판정, DEPTCHK.closeReady) */
+                    var why = DCK.closeReady ? DCK.closeReady(per) : '';
+                    if (why) {
+                        out.push({
+                            id: 'CMP-CLOSE-' + per, cat: 'comply',
+                            title: per.slice(0, 4) + ' ' + (per.slice(-1) === '1' ? '상반기' : '하반기') + ' 의무이행 점검 — 반기 마감 · 군수 보고',
+                            sub: why + ' · 보고서를 미리 보고 온나라로 보냅니다(보내면 이 회차가 잠깁니다)',
+                            due: '', status: 'IN_PROGRESS', dept: ownC, dept_label: '재난안전과',
+                            href: 'menu.html?m=comply&period=' + per, atype: 'menu', action: '마감 보고하러 가기', destLabel: '이행점검', remind: false
+                        });
+                    }
                     var cl = DCK.flow.closed(per);
-                    if (cl && (cl.status === '결재중' || cl.status === '결재완료')) return;
+                    if (cl && (cl.status === '기안함 전송' || cl.status === '결재중' || cl.status === '결재완료')) return;
                     [['comply-industrial', '중대산업재해'], ['comply-citizen', '중대시민재해']].forEach(function (ax) {
                         var key = ax[0] + '|' + per, d = DCK.flow.dist(key);
                         if (!d) return;

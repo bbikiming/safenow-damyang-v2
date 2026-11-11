@@ -221,6 +221,9 @@
         dist: function (key) { return fload().dist[key] || null; },
         setDist: function (key, o) { fload().dist[key] = o; fsave(); return o; },
         removeDist: function (key) { delete fload().dist[key]; fsave(); },
+        /* 기안 중인 배포 — [공문 기안 →]을 누른 뒤 상신하기 전까지의 배포 내용. 상신하면 배포가 된다 */
+        pending: function (key) { return (fload().pending || {})[key] || null; },
+        setPending: function (key, o) { var f = fload(); f.pending = f.pending || {}; if (o) f.pending[key] = o; else delete f.pending[key]; fsave(); return o; },
         closed: function (period) { return fload().closed[period] || null; },
         setClosed: function (period, o) { if (o) fload().closed[period] = o; else delete fload().closed[period]; fsave(); },
         civilDefaultTargets: civilDefaultTargets
@@ -250,6 +253,48 @@
     function submitted(key, deptId) {
         var st = stateOf(key, deptId);
         return !!st.exists && !(st.confirm && st.confirm.state === CF.RETURNED);
+    }
+    /* ===== 지난 반기 미이행 이어 보기 (2026-11-12 — 시행령 §5②2 «미이행이면 필요한 조치») =====
+     * 같은 축의 바로 앞 회차에 «일부 미이행»으로 낸 부서는, 이번 회차에서 **지난 조치계획의 결과**를 함께 낸다.
+     * 조치 결과를 따로 올리는 단계를 두지 않는 대신 다음 반기 점검이 그 확인 자리다. */
+    function prevKeyOf(key) {
+        var i = key.lastIndexOf('|'), base = key.slice(0, i), per = key.slice(i + 1);
+        var m = /^(\d{4})-H([12])$/.exec(per); if (!m) return '';
+        return base + '|' + (m[2] === '2' ? m[1] + '-H1' : (+m[1] - 1) + '-H2');
+    }
+    function perLabelOf(key) {
+        var per = key.slice(key.lastIndexOf('|') + 1);
+        return per.replace(/^(\d{4})-H([12])$/, function (x, y, h) { return y + ' ' + (h === '1' ? '상반기' : '하반기'); });
+    }
+    function carryOf(key, deptId) {
+        var pk = prevKeyOf(key); if (!pk) return null;
+        var st = stateOf(pk, deptId);
+        if (!st.exists || st.status !== ST.TODO) return null;
+        return { key: pk, perLabel: perLabelOf(pk), missText: st.missText || '', plan: st.plan || '', planDue: st.planDue || '' };
+    }
+    var CARRY_LABEL = { DONE: '조치 완료', DOING: '조치 중', NONE: '미조치' };
+    /* 마감 보고 차례인가 — 그 회차에 배포한 축이 있고, 배포한 축 전부가 «대상 전부 확인 완료» 또는 «기한 경과»면
+       사유 문구를, 아니면 ''. 이미 보낸 회차는 ''. 이행점검 화면과 내 할일이 같은 판정을 쓴다. */
+    function closeReady(per) {
+        var c = FLOW.closed(per);
+        if (c && (c.status === '기안함 전송' || c.status === '결재중' || c.status === '결재완료')) return '';
+        var axes = ['comply-industrial', 'comply-citizen'].map(function (a) { var k = a + '|' + per; return { k: k, d: FLOW.dist(k) }; }).filter(function (x) { return x.d; });
+        if (!axes.length) return '';
+        var allOk = axes.every(function (x) { var q = summary(x.k, { dist: x.d }); return q.total > 0 && q.ok === q.total; });
+        if (allOk) return '전 부서 확인 완료 — 마감 보고 차례';
+        var allDue = axes.every(function (x) { return x.d.due && today() > x.d.due; });
+        return allDue ? '기한 경과 — 마감 보고 차례' : '';
+    }
+    function carrySummary(key, flow) {
+        var out = { total: 0, reported: 0, done: 0, list: [] };
+        depts().forEach(function (d) {
+            if (!isTarget(flow, d.id)) return;
+            var c = carryOf(key, d.id); if (!c) return;
+            var st = stateOf(key, d.id), pa = st.exists && st.prevAction;
+            out.total++; if (pa) { out.reported++; if (pa.state === 'DONE') out.done++; }
+            out.list.push({ dept: d, carry: c, action: pa || null });
+        });
+        return out;
     }
     function overdue(flow) { return !!(flow && flow.dist && flow.dist.due && today() > flow.dist.due); }
 
@@ -322,7 +367,10 @@
             }
         }
 
-        if (flow) return gapNote + roleNote + renderFlow(key, ns, list, opts, flow, L);
+        if (flow) {
+            var fullScope = !R() || !R().scope || R().scope() === 'all';
+            return (fullScope ? gapNote : '') + roleNote + renderFlow(key, ns, list, opts, flow, L);
+        }
 
         var s = summary(key);
         var stat =
@@ -396,8 +444,13 @@
                     ? '이 회차는 아직 배포하지 않았습니다. 위 <b>[점검 배포]</b>로 점검표를 올리면 대상 부서에 할 일이 갑니다.'
                     : '재난안전과가 점검표를 배포하면 이 표에서 우리 부서 결과를 제출합니다.') + '</div>';
         }
+        /* 조회 범위 — 재난안전과·총괄 책임자는 전 부서, 그 밖에는 **우리 부서 줄만** 본다(2026-11-12 사용자 지시).
+           판정은 DYROLE.inScope 한 곳(CLAUDE.md §12). 범위가 좁으면 전 부서 요약 칸도 내지 않는다 —
+           한 줄을 보면서 «대상 11개 부서»를 읽게 하지 않는다. */
+        var full = !R() || !R().scope || R().scope() === 'all';
+        if (!full) list = list.filter(function (d) { return R().inScope(d.id); });
         var s = summary(key, flow);
-        var stat =
+        var stat = !full ? '' :
             '<div class="dchk-stat">' +
                 statBox('대상', s.total + '개 부서', 'neutral') +
                 statBox('제출', s.submitted + '개 (' + s.rate + '%)', s.rate === 100 ? 'success' : 'info') +
@@ -414,7 +467,12 @@
         var lockNote = flow.locked
             ? '<div class="check-notice" style="margin-bottom:10px;"><b>이 회차는 군수께 보고되었습니다(' + esc(flow.locked) + ').</b> 보고된 그대로 잠겨 제출·확인을 바꿀 수 없습니다. 반려·반송되면 다시 열립니다.</div>'
             : '';
-        return lockNote + stat +
+        var cs = full ? carrySummary(key, flow) : { total: 0 };
+        var carryNote = cs.total
+            ? '<div class="check-notice" style="margin-bottom:10px;"><b>지난 반기(' + esc(perLabelOf(prevKeyOf(key))) + ') 미이행 ' + cs.total + '곳</b> — 이번 점검에서 조치 결과를 함께 받습니다. ' +
+              '보고 ' + cs.reported + '곳 · 조치 완료 ' + cs.done + '곳' + (cs.total - cs.reported ? ' · 아직 안 낸 곳 ' + (cs.total - cs.reported) : '') + '</div>'
+            : '';
+        return lockNote + carryNote + stat +
             '<div class="dchk-scroll"><table class="table-figma table-compact"><thead><tr>' +
                 '<th style="min-width:130px;">부서·사업장</th>' +
                 '<th style="width:130px;">진행</th>' +
@@ -440,6 +498,11 @@
             (p === 'OK' && cf.by ? '<div class="dchk-sub">' + esc(cf.by) + ' · ' + esc(cf.at || '') + '</div>' : '') +
             ((cf.round || 1) > 1 ? '<div class="dchk-sub">' + cf.round + '차 제출</div>' : '');
         var resCell = '<span class="dchk-none">-</span>';
+        var cr = carryOf(key, d.id);
+        var carryLine = cr
+            ? '<div class="dchk-sub" style="margin-top:4px;"><b>지난 반기 미이행</b> · 조치계획 «' + esc(cr.plan) + '»(예정 ' + esc(cr.planDue) + ')' +
+              (st.exists && st.prevAction ? ' → ' + chip(CARRY_LABEL[st.prevAction.state] || '') + ' ' + esc(st.prevAction.text || '') : ' → <span class="dchk-warn" style="display:inline;">조치 결과 미보고</span>') + '</div>'
+            : '';
         if (st.exists) {
             resCell = chip(L[st.status]) +
                 (st.status === ST.TODO
@@ -451,6 +514,7 @@
                     : '') +
                 (st.place ? '<div class="dchk-sub">' + esc(st.place) + '</div>' : '');
         }
+        if (carryLine) resCell = (resCell === '<span class="dchk-none">-</span>' ? '' : resCell) + carryLine;
         var late = st.exists && flow.dist.due && (st.submittedAt || '') > flow.dist.due;
         var dateCell = st.exists
             ? esc(st.submittedAt || st.date || '') + (late ? '<div class="dchk-warn">지연 제출</div>' : '') +
@@ -572,6 +636,8 @@
             naReason: st.naReason || '', note: st.note, photos: (st.photos || []).slice(),
             missText: st.missText || '', plan: st.plan || '', planDue: st.planDue || '',
             prevRound: (st.confirm && st.confirm.round) || 0, resubmit: !!(st.exists && fresh),
+            carry: opts.flow ? carryOf(key, deptId) : null,
+            carryState: (st.prevAction && st.prevAction.state) || '', carryText: (st.prevAction && st.prevAction.text) || '',
             opts: opts
         };
         renderModal(d);
@@ -595,7 +661,19 @@
         }
         var needEv = flow ? (F.status === ST.DONE || F.status === ST.TODO) : F.status === ST.DONE;
         var evLabel = flow ? '작성한 점검표' : (o.evidenceLabel || '증빙 사진');
-        var body = distHead +
+        /* 지난 반기 미이행 — 이번 제출에서 그 조치 결과를 함께 받는다(필수) */
+        var carryBlock = '';
+        if (flow && F.carry) {
+            carryBlock = '<div class="dchk-mrow" style="border:1px solid var(--status-warning-border); border-radius:var(--radius-sm); padding:var(--sp-2) var(--sp-3);">' +
+                '<label class="form-label">지난 반기(' + esc(F.carry.perLabel) + ') 미이행 조치 결과' + req() + '</label>' +
+                '<p class="file-hint" style="margin:0 0 6px;">미이행: ' + esc(F.carry.missText) + '<br>조치계획: ' + esc(F.carry.plan) + ' (예정 ' + esc(F.carry.planDue) + ')</p>' +
+                '<div class="dchk-radios">' + ['DONE', 'DOING', 'NONE'].map(function (v) {
+                    return '<label class="dchk-radio"><input type="radio" name="dchk-carry" value="' + v + '"' + (F.carryState === v ? ' checked' : '') +
+                        ' onchange="' + ns + '.setCarry(this.value)"> ' + CARRY_LABEL[v] + '</label>';
+                }).join('') + '</div>' +
+                '<textarea class="form-textarea" id="dchk-carrytext" rows="2" style="margin-top:6px;" placeholder="무엇을 했는지(조치 중·미조치면 사유와 새 예정일)">' + esc(F.carryText) + '</textarea></div>';
+        }
+        var body = distHead + carryBlock +
             '<div class="dchk-mrow"><label class="form-label">' + esc(flow ? '점검 결과' : (o.statusLabel || (L.DONE + ' 여부'))) + req() + '</label>' +
                 '<div class="dchk-radios">' + radios + '</div></div>' +
             (F.status === ST.NA
@@ -651,7 +729,9 @@
         if (el('dchk-miss')) F.missText = el('dchk-miss').value.trim();
         if (el('dchk-plan')) F.plan = el('dchk-plan').value.trim();
         if (el('dchk-plandue')) F.planDue = el('dchk-plandue').value;
+        if (el('dchk-carrytext')) F.carryText = el('dchk-carrytext').value.trim();
     }
+    function setCarry(v) { if (!F) return; capture(); F.carryState = v; }
     function setStatus(v) {
         if (!F || !canEdit(F.deptId, F.opts)) { denied(F && F.deptId); return; } capture(); F.status = v; renderModal(deptOf(F.deptId)); }
     function deptOf(id) { return depts().filter(function (x) { return x.id === id; })[0]; }
@@ -676,6 +756,7 @@
         if (flow) {
             if ((F.status === ST.DONE || F.status === ST.TODO) && !F.photos.length) { toast('작성한 점검표를 올려 주세요.'); return; }
             if (F.status === ST.TODO && (!F.missText || !F.plan || !F.planDue)) { toast('미이행 내용과 조치계획, 조치 예정일을 적어 주세요.'); return; }
+            if (F.carry && (!F.carryState || !F.carryText)) { toast('지난 반기 미이행 조치 결과(조치 완료·조치 중·미조치)와 내용을 적어 주세요.'); return; }
         } else {
             if (F.status === ST.DONE && !F.photos.length) {
                 var ev = F.opts.evidenceLabel || '증빙';
@@ -701,6 +782,7 @@
             var p = me();
             Object.assign(patch, {
                 missText: F.status === ST.TODO ? F.missText : '', plan: F.status === ST.TODO ? F.plan : '',
+                prevAction: F.carry ? { state: F.carryState, text: F.carryText, period: F.carry.perLabel } : null,
                 planDue: F.status === ST.TODO ? F.planDue : '',
                 submittedAt: today(), submittedBy: p ? p.name : actor(), submittedByUid: p ? p.uid : '',
                 formVer: (flow.dist && flow.dist.ver) || 1,
@@ -762,6 +844,11 @@
                   '<div class="dchk-mrow"><span class="form-label">조치계획</span><div>' + esc(st.plan) + ' (예정 ' + esc(st.planDue) + ')</div></div>'
                 : '') +
             (st.status === ST.NA ? '<div class="dchk-mrow"><span class="form-label">해당없음 사유</span><div>' + esc(st.naReason || '사유 미기재') + '</div></div>' : '') +
+            (carryOf(key, deptId)
+                ? '<div class="dchk-mrow"><span class="form-label">지난 반기 미이행 조치 결과</span><div>' +
+                    '조치계획 «' + esc(carryOf(key, deptId).plan) + '»(예정 ' + esc(carryOf(key, deptId).planDue) + ') → ' +
+                    (st.prevAction ? chip(CARRY_LABEL[st.prevAction.state]) + ' ' + esc(st.prevAction.text || '') : '<span class="dchk-warn">보고 없음</span>') + '</div></div>'
+                : '') +
             '<div class="dchk-mrow"><span class="form-label">작성한 점검표</span><div>' +
                 ((st.photos || []).length ? fileBtns(key, deptId, ns, st.photos) : '없음') +
                 (opts.flow && opts.flow.dist && (opts.flow.dist.forms || []).length
@@ -884,6 +971,7 @@
         render: render, open: open, setStatus: setStatus, addPhoto: addPhoto,
         mDelPhoto: mDelPhoto, save: saveModal, delPhoto: delPhoto, remind: remind,
         /* 배포 흐름 (이행점검) */
+        closeReady: closeReady, carryOf: carryOf, carrySummary: carrySummary, prevKeyOf: prevKeyOf, CARRY_LABEL: CARRY_LABEL, setCarry: setCarry,
         flow: FLOW, remindLog: function (key, deptId) { return ((fload().reminds || {})[key + '|' + deptId] || []).slice(); }, isTarget: isTarget, progressOf: progressOf, submitted: submitted, isOwnerStaff: isOwnerStaff,
         unsubmit: unsubmit, doUnsubmit: doUnsubmit,
         review: review, doConfirm: doConfirm, download: download, doReturn: doReturn, uncfm: uncfm, doUncfm: doUncfm
