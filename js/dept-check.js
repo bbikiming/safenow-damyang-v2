@@ -63,10 +63,21 @@
      *   독촉                           : DYROLE.canRemind — 주관부서와 그 부서장(담당자는 자기 부서 줄 없음, 군수 없음)
      *   배포·마감 상신·체계 점검표     : 재난안전과 담당자(화면 모듈이 판정)
      *   그 밖                          : 조회 */
+    /* 결과 제출 — 그 부서 **실무자 누구나**(담당자 계층 · 과장·소장·팀장·군수 제외, 2026-11-12 개발 회신 B안).
+       «부서 안전보건 담당자» 등급으로 좁히지 않는다 — 구성원 명단이 담양군 확정 전이라 좁히면 아무도 내지 못한다
+       (온나라 잇기의 «담당자»와 같은 근거, 공통 권한 정의 §7). 그 부서에 실무자가 한 명도 없을 때만 부서장이 낸다. */
+    var LEAD_RE = /(과장|소장|실장|국장|읍장|면장|군수|팀장)$/;
+    function hasPractitioner(deptId) {
+        var n = global.DYV2 && global.DYV2.orgNode ? global.DYV2.orgNode(deptId) : null;
+        if (!n) return true;
+        return (n.members || []).some(function (m) { return !m.lead && !LEAD_RE.test(m.role || ''); });
+    }
     function canSubmit(deptId) {
         var p = me();
         if (!R() || !p) return true;
-        return p.tier === 'staff' && p.deptId === deptId;
+        if (p.deptId !== deptId) return false;
+        if (p.tier === 'staff') return true;
+        return p.tier === 'super' && !hasPractitioner(deptId);
     }
     function canReviewer() { return isOwnerStaff() || isOwnerLead(); }
     function actor() { return R() && R().actorLabel ? R().actorLabel() : '재난안전과'; }
@@ -351,7 +362,8 @@
                 var own = R().OWNER_DEPT, mineTxt;
                 if (p.tier === 'staff' && p.deptId === own) mineTxt = '<b>우리 부서(재난안전과) 결과 제출</b>과 <b>전 부서 검토(승인·반려)·독촉</b>을 합니다. 점검 배포·마감 보고도 재난안전과 담당자 몫입니다.';
                 else if (isOwnerLead()) mineTxt = '<b>전 부서 검토(승인·반려)·독촉</b>을 합니다. 결과 제출·배포·마감은 담당자가 합니다.';
-                else if (p.tier === 'staff') mineTxt = '<b>우리 부서 줄의 결과 제출</b>만 합니다. 검토는 재난안전과가 합니다.';
+                else if (p.tier === 'staff') mineTxt = '<b>우리 부서 줄의 결과 제출</b>만 합니다(우리 부서 실무자 누구나). 검토는 재난안전과가 합니다.';
+                else if (p.tier === 'super' && p.deptId !== own && !hasPractitioner(p.deptId)) mineTxt = '<b>우리 부서 결과 제출</b>과 <b>독촉</b>을 합니다 — 우리 부서에 실무자 계정이 없어 부서장이 냅니다.';
                 else if (p.tier === 'super' && p.deptId === own) mineTxt = '<b>조회</b>와 <b>전 부서 독촉</b>을 합니다. 결과 제출은 부서 담당자, 검토는 재난안전과 담당자·팀장이 합니다.';
                 else if (p.tier === 'super') mineTxt = '<b>조회</b>와 <b>우리 부서 독촉</b>을 합니다. 결과 제출은 부서 담당자가 합니다.';
                 else mineTxt = '<b>조회 전용입니다.</b> 결과 제출은 각 부서 담당자, 검토는 재난안전과가 합니다.';
@@ -522,8 +534,10 @@
         var late = st.exists && flow.dist.due && (st.submittedAt || '') > flow.dist.due;
         var dateCell = st.exists
             ? esc(st.submittedAt || st.date || '') + (late ? '<div class="dchk-warn">지연 제출</div>' : '') +
-              (st.submittedBy ? '<div class="dchk-sub">' + esc(st.submittedBy) + '' + '</div>' : '')
-            : '<span class="dchk-none">-</span>';
+              (st.submittedBy ? '<div class="dchk-sub">' + esc(st.submittedBy) + '</div>' : '') +
+              (st.editedBy ? '<div class="dchk-sub">고침 · ' + esc(st.editedBy) + ' · ' + esc((st.editedAt || '').slice(0, 10)) + '</div>' : '')
+            : (function () { var cl = ((fload().cancels || {})[key + '|' + d.id] || []); var c = cl[cl.length - 1];
+                return c ? '<span class="dchk-none">-</span><div class="dchk-sub">제출 취소 · ' + esc(c.by) + ' · ' + esc((c.at || '').slice(0, 10)) + '</div>' : '<span class="dchk-none">-</span>'; })();
         var files = (st.photos || []).length
             ? fileBtns(key, d.id, ns, st.photos)
             : '<span class="dchk-none">-</span>';
@@ -562,6 +576,7 @@
     function canReview(st, deptId) {
         var p = me();
         if (p && st.submittedByUid && st.submittedByUid === p.uid) return false;
+        if (p && st.editedByUid && st.editedByUid === p.uid) return false;
         /* 재난안전과 담당자와 팀장이 전 부서를 검토한다(2026-11-12 사용자 지시) */
         return canReviewer();
     }
@@ -788,11 +803,18 @@
         };
         if (flow) {
             var p = me();
+            /* 제출 고치기(확인 대기 중 같은 차수)는 처음 낸 사람·날을 그대로 두고 고친 사람·날을 따로 남긴다 —
+               같은 부서 실무자 누구나 고칠 수 있어 누가 무엇을 했는지 남아야 한다 */
+            var prevSt = stateOf(F.key, F.deptId);
+            var editing = prevSt.exists && prevSt.confirm && prevSt.confirm.state === CF.WAIT && !F.resubmit;
             Object.assign(patch, {
                 missText: F.status === ST.TODO ? F.missText : '', plan: F.status === ST.TODO ? F.plan : '',
                 prevAction: F.carry ? { state: F.carryState, text: F.carryText, period: F.carry.perLabel } : null,
                 planDue: F.status === ST.TODO ? F.planDue : '',
-                submittedAt: today(), submittedBy: p ? p.name : actor(), submittedByUid: p ? p.uid : '',
+                submittedAt: editing ? prevSt.submittedAt : today(),
+                submittedBy: editing ? prevSt.submittedBy : (p ? p.name : actor()),
+                submittedByUid: editing ? prevSt.submittedByUid : (p ? p.uid : ''),
+                editedAt: editing ? nowTs() : '', editedBy: editing ? (p ? p.name : actor()) : '', editedByUid: editing && p ? p.uid : '',
                 formVer: (flow.dist && flow.dist.ver) || 1,
                 confirm: { state: CF.WAIT, round: F.resubmit ? F.prevRound + 1 : (F.prevRound || 1) }
             });
@@ -828,6 +850,10 @@
         if (!canSubmit(deptId) || !flowGate(key, deptId, opts.flow)) { V().closeModal(); return; }
         if (progressOf(key, deptId, opts.flow) !== 'WAIT') { V().closeModal(); return; }
         removeState(key, deptId);
+        /* 취소 기록 — 같은 부서 다른 실무자의 제출도 취소할 수 있어 누가 지웠는지 남긴다 */
+        var lg = fload().cancels = fload().cancels || {};
+        (lg[key + '|' + deptId] = lg[key + '|' + deptId] || []).push({ at: nowTs(), by: actor() });
+        fsave();
         V().closeModal(); toast('제출을 취소했습니다.');
         if (opts.onChange) opts.onChange();
     }
@@ -888,7 +914,7 @@
         var p = me();
         setState(key, deptId, { confirm: Object.assign({}, st.confirm, { state: CF.RETURNED, by: p ? p.name : actor(), at: today(), reason: reason }) });
         notify({ kind: 'return', key: key, deptId: deptId, flow: opts.flow, periodLabel: opts.periodLabel, reason: reason });
-        V().closeModal(); toast((deptOf(deptId) || {}).name + ' 반려 — 그 부서 담당자에게 알림을 보냈습니다');
+        V().closeModal(); toast((deptOf(deptId) || {}).name + ' 반려 — 제출한 사람에게 알림을 보냈습니다');
         if (opts.onChange) opts.onChange();
     }
     function uncfm(key, deptId, opts) {

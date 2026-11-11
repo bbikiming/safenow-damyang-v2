@@ -182,6 +182,28 @@
                     /* 끝난 평가는 할 일이 아니다 — 다만 **제출한 기록**은 완료한 업무 탭에
                        남아야 한다. 끝났다고 지우면 소명할 자료가 사라진다. */
                     if (closed && !dp.reportFile) return;
+                    /* 조치 입력 할 일(반영안 ⑦) — 조치 요청 공문을 받은 순간 생기고 «입력 완료»로 끝난다.
+                       조치 완료(사진)는 개선조치 건마다 따로 할 일로 뜬다(아래 개선조치 축). */
+                    if (dp.request && !closed) {
+                        var nIn = D().improvementsFor(a.id, dp.deptId).length;
+                        out.push({
+                            id: 'RSK-' + a.id + '-' + dp.deptId + '-input',
+                            cat: 'risk',
+                            title: a.title + ' — 부서별 개선조치 작성',
+                            sub: '재난안전과 ' + dp.request.at + ' 조치 요청 · 보고서를 보고 작성표에 유해위험요인·개선조치를 적은 뒤 [입력 완료]' +
+                                (nIn ? ' · 개선조치 ' + nIn + '건' : ''),
+                            due: dp.dueDate || '',
+                            status: dp.inputDone ? 'DONE' : 'IN_PROGRESS',
+                            dept: dp.deptId, dept_label: D().deptName(dp.deptId),
+                            href: 'rsk-list.html?year=' + a.year + '&dept=' + encodeURIComponent(dp.deptId),
+                            atype: 'menu', action: '작성하러 가기', destLabel: '정기 위험성평가',
+                            doneDate: dp.inputDone ? dp.inputDone.at : '', doneBy: dp.inputDone ? (dp.inputDone.by || '') : '',
+                            doneText: dp.inputDone ? '입력 완료 · ' + (dp.inputDone.count ? dp.inputDone.count + '건' : '조치 대상 없음') : '',
+                            remind: false
+                        });
+                    }
+                    /* 설문조사표 제출은 요청 공문을 받은 뒤에 할 일이 된다(반영안 ③) — 공문 전에는 부서가 받은 것이 없다 */
+                    if (!(D().surveyRequested && D().surveyRequested(a)) && !dp.reportFile) return;
                     var f = dp.surveyFile || (a.files && a.files.surveyAll) || '';
                     /* 부서가 정기평가에서 실제로 하는 일은 '점검일에 참여'가 아니라
                      * **설문조사표를 작성해 제출**하는 것이다. 종전에는 양식 다운로드만 있고
@@ -191,10 +213,10 @@
                         id: 'RSK-' + a.id + '-' + dp.deptId + '-report',
                         cat: 'risk',
                         title: a.title + ' — 유해위험요인 설문조사표 작성·제출',
-                        sub: (dp.inspectDate ? '점검일 ' + dp.inspectDate + ' · ' : '') +
+                        sub: (a.surveyReq ? '재난안전과 ' + a.surveyReq.at + ' 요청 · ' : '') + (dp.inspectDate ? '점검일 ' + dp.inspectDate + ' · ' : '') +
                              '양식 ' + (f || '미배포') +
                              (done ? ' · 제출 ' + esc(dp.reportFile) : ''),
-                        due: dp.inspectDate || '',
+                        due: a.surveyDue || dp.inspectDate || '',
                         status: done ? 'DONE' : 'IN_PROGRESS',
                         dept: dp.deptId, dept_label: D().deptName(dp.deptId),
                         href: 'rsk-list.html?year=' + a.year,
@@ -1523,8 +1545,16 @@
         var a = D().assessmentOf(aid); if (!a) return;
         var dp = (a.depts || []).filter(function (x) { return x.deptId === deptId; })[0];
         if (!dp) return;
+        if (submitBlock(a)) { toast(submitBlock(a)); return; }
         if (!RPT || RPT.aid !== aid || RPT.deptId !== deptId) RPT = { aid: aid, deptId: deptId, files: [] };
         renderReport();
+    }
+    /* 제출을 받는 때 — 요청 공문 뒤 · 보고서 등록 전 (rsk-list 와 같은 판정) */
+    function submitBlock(a) {
+        if (!a) return '평가를 찾지 못했습니다.';
+        if (D().surveyRequested && !D().surveyRequested(a)) return '아직 설문조사표 요청 공문이 오지 않았습니다.';
+        if (a.status === 'COMPLETED' || ((a.review && a.review.stage) || 'NONE') !== 'NONE') return '보고서가 등록되어 제출본을 더 이상 바꿀 수 없습니다.';
+        return '';
     }
     function renderReport() {
         var a = D().assessmentOf(RPT.aid); if (!a) return;
@@ -1537,7 +1567,8 @@
         }).join('');
         V().openModal('유해위험요인 설문조사표 제출 — ' + esc(D().deptName(RPT.deptId)),
             '<p class="mw-rpt-lead">' + esc(a.title) +
-                (dp.inspectDate ? ' · 점검일 <b>' + esc(dp.inspectDate) + '</b>' : '') + '</p>' +
+                (dp.inspectDate ? ' · 점검일 <b>' + esc(dp.inspectDate) + '</b>' : '') +
+                (a.surveyDue ? ' · 제출 기한 <b>' + esc(a.surveyDue) + '</b>' : '') + '</p>' +
             '<div class="mw-rpt-step"><span class="mw-rpt-no">1</span>' +
                 '<div><b>양식 받기</b>' +
                     (form
@@ -1573,6 +1604,9 @@
         renderReport();
     }
     function doReport() {
+        if (!RPT) return;
+        var ra = D().assessmentOf(RPT.aid);
+        if (submitBlock(ra)) { toast(submitBlock(ra)); return; }
         if (!RPT.files.length) { toast('작성한 설문조사표 파일을 선택하세요.'); return; }
         var p = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
         var who = p ? (D().deptName(RPT.deptId) + ' · ' + p.name) : (D().deptName(RPT.deptId) + ' 담당자');

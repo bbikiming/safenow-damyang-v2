@@ -144,6 +144,9 @@
         .rl-dept-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; padding: 6px 10px; background: var(--gray-50); border-radius: var(--radius-md); }
         .rl-dept-allck { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-12); font-weight: 700; color: var(--text-gray); cursor: pointer; }
         .rl-dept-allck input { cursor: pointer; }
+        /* 작성표 블록 아래 [＋ 행 추가] · [입력 완료] 줄 (2026-11-11) */
+        .rl-rv-blk-acts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-top: var(--sp-2); }
+        .rl-rv-blk-acts .file-hint { flex: 1; min-width: 200px; margin: 0; }
     </style>
 </head>
 <body data-dy-page="rsk-list"
@@ -164,6 +167,7 @@
     <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
     <script src="./js/common.js"></script>
     <script src="./js/org-pick.js"></script>
+    <script src="./js/doc-flow.js"></script><!-- 공문 공용 골격 (DYDOC) — 설문조사표·조치 요청 공문 (RSKREQ) -->
     <script src="./js/adm-perm.js"></script><!-- DYADM.deptContacts: 독촉 받는 사람(등급 → 부서장 대체) — 기획확인 4차 C-32 -->
     <script src="./js/facil-data.js"></script><!-- FMS 시설물 대장 시드 -->
     <script src="./js/facil.js"></script><!-- 검수 행 시설물 지정(DYFACIL 인라인 선택기) -->

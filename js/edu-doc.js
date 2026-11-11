@@ -145,8 +145,13 @@
                 /* 크기를 알면 넘긴다 — 붙임 한도(합계 30MB)는 크기를 아는 파일로만 센다(DYDOC) */
                 out.push({ label: f.name, meta: f.slot || '교육 첨부', size: f.size || null });
             });
+            /* 일괄 등록(2026-11-11)은 서명부 한 파일을 여러 부서 줄이 함께 가리킨다 — 붙임 후보에는 한 번만 낸다 */
+            var seen = {};
             enrollsOf(c.id).forEach(function (e) {
-                if (e.signFile) out.push({ label: e.signFile, meta: E().deptName(e.deptId) + ' 참석자 서명부' });
+                if (!e.signFile) return;
+                if (seen[e.signFile]) { seen[e.signFile].meta = '일괄 등록 참석자 서명부'; return; }
+                seen[e.signFile] = { label: e.signFile, meta: E().deptName(e.deptId) + ' 참석자 서명부' };
+                out.push(seen[e.signFile]);
             });
             return out;
         },

@@ -786,7 +786,10 @@
             signFile: o.signFile || '', actualHours: o.actualHours == null ? null : +o.actualHours,
             status: 'ACTIVE', at: o.at || today(),
             /* 누가 올렸는지 — 재난안전과가 다른 부서 몫을 대신 올리면 proxy(대리 등록) */
-            by: o.by || '', proxy: !!o.proxy
+            by: o.by || '', proxy: !!o.proxy,
+            /* bulk — 재난안전과 일괄 등록(여러 부서 · 서명부 한 파일, 2026-11-11). 올린 쪽이 고친다:
+               이 줄은 그 부서가 [등록 취소] 하지 못하고 재난안전과 담당자만 정정한다 */
+            bulk: !!o.bulk
         });
         save();
         return true;

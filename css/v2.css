@@ -1700,6 +1700,12 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .edu-tg-body { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 3px; max-height: 220px; overflow-y: auto; border: 1px solid var(--card-line); border-radius: var(--radius-md); padding: 6px; }
 .edu-tg-member { display: flex; align-items: center; gap: 6px; font-size: var(--fs-12); padding: 4px 6px; border-radius: var(--radius-xs); cursor: pointer; }
 .edu-tg-member:hover { background: var(--brand-50); }
+/* 참석자 일괄 등록 (2026-11-11) — 부서별 묶음. 묶음은 한 줄 전체를 차지하고 구성원만 칸으로 나눈다 */
+.edu-bulk-grp { grid-column: 1 / -1; padding: var(--sp-1-5) var(--sp-1); border-bottom: 1px dashed var(--card-line); }
+.edu-bulk-grp:last-child { border-bottom: 0; }
+.edu-bulk-grp.is-done { color: var(--text-gray); font-size: var(--fs-12); }
+.edu-bulk-head { display: flex; align-items: center; gap: var(--sp-1-5); font-size: var(--fs-13); cursor: pointer; }
+.edu-bulk-members { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: var(--sp-0-5); margin-top: var(--sp-1); }
 /* 대상자 picker 부서 소제목 (채용시 교육 추가) — 다중열 그리드에서 한 줄 전체를 차지해야 그룹 구분이 유지된다 */
 .edu-tg-dept { grid-column: 1 / -1; position: sticky; top: 0; background: var(--surface-alt); border-bottom: 1px solid var(--card-line); padding: 5px 6px; margin: 0 -6px; z-index: var(--z-base); }
 .edu-tg-dept:not(:first-child) { margin-top: 4px; }

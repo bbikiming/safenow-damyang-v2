@@ -519,21 +519,24 @@
             };
         });
         var deptCount = deptPayload.length;
+        /* 설문 제출 기한(2026-11-11 2차 교육 반영안 ②) — 점검일(용역 방문일)과 다른 값이다.
+           점검일은 부서에 알리는 일정이고, 설문 기한은 부서가 작성본을 내야 하는 마감이다. */
+        var surveyDue = o.surveyDue || '';
         var a = {
             id: 'RA-' + o.year + '-' + String(10 + d.seqAsmt).slice(-2),
             year: o.year, type: 'REGULAR', status: 'IN_PROGRESS',
-            title: o.year + '년 정기 위험성평가', createdAt: today(),
+            title: o.year + '년 정기 위험성평가', createdAt: today(), surveyDue: surveyDue,
             targetId: '', scope: 'ALL', method: '4x4', team: [], worker_participation: false,
             change_reason: '', changed_processes: [], completed_at: '', approval: '',
             files: { surveyAll: o.surveyAll || '', report: '' },
             review: { stage: 'NONE', extractedAt: '', parsedDepts: {} },
             depts: deptPayload,
             history: [
+                /* 생성만으로는 부서에 아무것도 가지 않는다 — 부서 요청은 설문조사표 요청 공문을
+                   온나라로 보내는 순간이다(sendSurveyRequest). 종전 «생성 = 점검예정일 통보»는
+                   공문 없이 알림만 가는 순서라 2차 교육 반영안과 맞지 않았다. */
                 { type: 'CREATE', at: today(), by: '재난안전과',
-                  memo: '정기평가 생성 · ' + deptCount + '개 부서 선정' },
-                /* 설문조사표는 생성 이후 목록에서 첨부하므로, 생성 시 통보는 점검예정일까지다 */
-                { type: 'NOTIFY', at: today(), by: '재난안전과',
-                  memo: deptCount + '개 부서에 점검예정일 통보' }
+                  memo: '정기평가 생성 · ' + deptCount + '개 부서 선정' + (surveyDue ? ' · 설문 제출 기한 ' + surveyDue : '') }
             ]
         };
         d.assessments.push(a); save(); return a;
@@ -655,12 +658,15 @@
         a.depts.forEach(function (dp) {
             var c = deptImpCount(aid, dp.deptId);
             if (!dp.deliveredAt) { dp.status = 'BEFORE'; return; }
+            /* 조치 요청을 받은 부서는 «입력 완료» 전까지 끝나지 않는다 — 입력 0건이 «아직 안 씀»일 수 있다 */
+            if (dp.request && !dp.inputDone) { dp.status = 'BEFORE'; return; }
             dp.status = (c.total === 0 || c.done === c.total) ? 'DONE' : 'BEFORE';
         });
         var actionable = a.depts.filter(function (dp) {
             return deptImpCount(aid, dp.deptId).total > 0;
         });
-        var allDone = actionable.length > 0 && actionable.every(function (dp) { return dp.status === 'DONE'; });
+        var pendingInput = a.depts.some(function (dp) { return dp.request && !dp.inputDone; });
+        var allDone = !pendingInput && actionable.length > 0 && actionable.every(function (dp) { return dp.status === 'DONE'; });
         if (allDone) {
             a.status = 'COMPLETED';
             a.completed_at = today();
@@ -695,18 +701,159 @@
      * 보고서 원문은 부서 행의 [부서 보고서]에서 열어 보며 참고한다.
      * ※ reportParseMock 시드는 삭제하지 않고 남겨 둔다 — 되살리기 위해서가 아니라,
      *   기존 세션 데이터와의 호환·이력 추적을 위해서다. 다시 파싱에 쓰지 말 것. */
-    function uploadReport(aid, fileName) {
+    /* ===== 보고서 + 조치기한 (2026-11-11 2차 교육 반영안 ⑤) =====
+     * 보고서를 올리면서 **조치기한을 함께** 정한다(일괄 + 부서별). 종전에는 보고서를 올리면
+     * 재난안전과 작성표가 열리고 기한은 작성이 끝난 뒤에 정해, 부서가 기한을 모른 채 일했다.
+     * 작성표는 조치 요청 뒤에 열린다 — 유해위험요인·조치 내용은 **부서가 보고서를 보고 직접** 적는다
+     * (setInputDone → commitDeptRows). 재난안전과는 어느 부서에 개선이 필요한지만 골라 공문으로 요청한다.
+     * stage: NONE(보고서 전) → REVIEW(보고서·기한 등록, 요청 전) → DELIVERED(조치 요청 공문 보냄). */
+    function uploadReport(aid, fileName, dues) {
         var a = assessmentOf(aid); if (!a) return null;
+        dues = dues || {};
         a.files = a.files || {}; a.files.report = fileName || (a.year + '_정기평가_보고서.hwpx');
-        /* 부서별 빈 작성표를 연다 — 자동 추출 없음 */
-        var parsed = {};
-        (a.depts || []).forEach(function (dp) { parsed[dp.deptId] = []; });
-        a.review = { stage: 'REVIEW', extractedAt: nowTs(), parsedDepts: parsed };
+        (a.depts || []).forEach(function (dp) {
+            dp.dueDate = (dues.deptDues && dues.deptDues[dp.deptId]) || dues.bulkDue || dp.dueDate || '';
+        });
+        a.review = { stage: 'REVIEW', extractedAt: nowTs(), parsedDepts: {} };
         a.history = a.history || [];
         a.history.push({ type: 'STATUS', at: nowTs(), by: '재난안전과',
-            memo: '보고서 첨부 · 부서별 개선조치 작성 시작 (' + (a.depts || []).length + '개 부서)' });
+            memo: '보고서 첨부 · 조치기한 설정 (' + (dues.bulkDue ? '일괄 ' + dues.bulkDue : '부서별') + ')' });
         save();
-        return { deptCount: (a.depts || []).length, totalCount: 0 };
+        return { deptCount: (a.depts || []).length };
+    }
+    /* 요청 전(REVIEW)에만 부서별 기한을 고친다 — 요청 뒤에는 개선조치마다 연장으로 바꾼다 */
+    function setDeptDue(aid, deptId, due) {
+        var a = assessmentOf(aid); if (!a || !a.review || a.review.stage !== 'REVIEW') return null;
+        var dp = (a.depts || []).filter(function (x) { return x.deptId === deptId; })[0];
+        if (!dp) return null;
+        dp.dueDate = due || '';
+        save(); return dp;
+    }
+
+    /* ===== 설문조사표 요청 공문 (반영안 ③) =====
+     * 양식을 붙이는 것과 부서에 요청하는 것은 다른 행위다 — 양식을 고쳐 올릴 때마다 부서에
+     * 알림이 가면 안 된다. 요청은 **공문을 온나라로 보내는 순간** 한 번이고, 보낸 뒤에는
+     * 양식을 바꾸지 않는다(바꾸려면 새 평가 · 이력이 갈린다). */
+    function surveyRequested(a) { return !!(a && a.surveyReq && a.surveyReq.at); }
+    function sendSurveyRequest(aid, doc, by) {
+        var a = assessmentOf(aid); if (!a) return null;
+        a.surveyReq = { at: today(), by: by || '재난안전과', docs: (a.surveyReq && a.surveyReq.docs || []).concat(doc ? [doc] : []) };
+        pushHistory(aid, { type: 'NOTIFY', by: by || '재난안전과',
+            memo: (a.depts || []).length + '개 부서에 설문조사표 요청 공문 발송' + (a.surveyDue ? ' (제출 기한 ' + a.surveyDue + ')' : '') +
+                (doc && doc.no ? ' · 연계 번호 ' + doc.no : '') });
+        save(); return a;
+    }
+
+    /* ===== 부서별 조치 요청 공문 (반영안 ⑥) =====
+     * 고른 부서에만 요청이 가고, 고르지 않은 부서는 «지적사항 없음»으로 그 자리에서 닫힌다 —
+     * 사람이 «요청 안 함»을 고른 것이 곧 판정이다(종전 deliverFromReview 의 0건 부서 처리와 같은 결과).
+     * 개선조치는 여기서 만들지 않는다 — 부서가 작성표를 쓰고 [입력 완료]할 때 생긴다(commitDeptRows). */
+    function requestAction(aid, deptIds, doc, by) {
+        var a = assessmentOf(aid); if (!a || !a.review || a.review.stage !== 'REVIEW') return null;
+        var sel = {}; (deptIds || []).forEach(function (id) { sel[id] = true; });
+        var asked = 0, none = 0;
+        (a.depts || []).forEach(function (dp) {
+            dp.deliveredAt = today();
+            if (sel[dp.deptId]) {
+                dp.request = { at: today(), by: by || '재난안전과', no: (doc && doc.no) || '' };
+                dp.noFindings = false; dp.inputDone = null; dp.status = 'BEFORE';
+                asked++;
+            } else {
+                dp.request = null; dp.noFindings = true; dp.status = 'DONE'; dp.dueDate = '';
+                pushHistory(aid, { type: 'REVIEW', by: by || '재난안전과', memo: deptName(dp.deptId) + ' — 지적사항 없음(조치 요청 대상 아님)' });
+                none++;
+            }
+        });
+        a.review.stage = 'DELIVERED';
+        a.actionReq = { at: today(), by: by || '재난안전과', depts: Object.keys(sel), docs: (a.actionReq && a.actionReq.docs || []).concat(doc ? [doc] : []) };
+        pushHistory(aid, { type: 'DELIVER', by: by || '재난안전과',
+            memo: asked + '개 부서에 조치 요청 공문 발송' + (none ? ' · 지적사항 없는 ' + none + '개 부서 완료' : '') +
+                (doc && doc.no ? ' · 연계 번호 ' + doc.no : '') });
+        refreshAssessmentStatus(aid);
+        return { asked: asked, none: none };
+    }
+    function deptOf(a, deptId) { return ((a && a.depts) || []).filter(function (x) { return x.deptId === deptId; })[0] || null; }
+    /* 이 부서가 지금 유해위험요인을 입력할 수 있는가 — 요청을 받았고 «입력 완료» 전 */
+    function inputOpen(aid, deptId) {
+        var a = assessmentOf(aid), dp = deptOf(a, deptId);
+        return !!(a && a.status !== 'COMPLETED' && dp && dp.request && !dp.inputDone);
+    }
+    /* ===== 부서 직접 작성 (반영안 ⑦) — 기존 작성표를 그 부서가 쓴다 =====
+     * 작성표(부서 블록 + [＋ 행 추가])는 그대로다. 바뀐 것은 **언제·누가**뿐이다 — 조치 요청을
+     * 받은 뒤 그 부서 담당자가 적고, [입력 완료]를 누르는 순간 그 부서의 유효 행이 개선조치가 된다
+     * (종전 전 부서 일괄 «전달»을 부서 단위로 쪼갠 것). 행 채택 조건·승계 필드는 deliverFromReview 와 같다. */
+    function validDeptRows(a, deptId) {
+        var pd = (a && a.review && a.review.parsedDepts) || {};
+        return (pd[deptId] || []).filter(function (r) { return !r.deleted && (r.name || '').trim() && (r.action || '').trim(); });
+    }
+    function commitDeptRows(aid, deptId, by) {
+        var a = assessmentOf(aid), dp = deptOf(a, deptId); if (!dp) return 0;
+        var rows = validDeptRows(a, deptId), deptNm = deptName(deptId), due = dp.dueDate || '';
+        dp.hazards = rows.map(function (r) { return { name: r.name.trim(), category: r.category || '', cause: r.cause || '', basis: r.basis || '', action: r.action.trim(), facilNo: r.facilNo || '', facilNm: r.facilNm || '', facilNa: !!r.facilNa }; });
+        rows.forEach(function (r) {
+            var beforeF = (r.beforePhotos || []).slice(), afterF = (r.afterPhotos || []).slice();
+            var before = beforeF.map(function (f) { return f.name; }), after = afterF.map(function (f) { return f.name; });
+            var alreadyDone = !!r.done && after.length > 0;
+            var hist = [{ type: 'REGISTER', at: nowTs(), by: by || (deptNm + ' 담당자'), memo: '부서 작성 · 입력 완료 (기한 ' + (due || '미지정') + ')' + basisMemo(r.basis) }];
+            if (alreadyDone) hist.push({ type: 'STATUS', at: nowTs(), by: r.owner || (deptNm + ' 담당자'), memo: '작성 단계에서 조치 완료로 확인됨 · 개선 후 사진 ' + after.length + '건' });
+            addImprovement({
+                source_type: 'risk_assessment', assessment_id: aid, dept_id: deptId,
+                hazard: { name: r.name.trim(), category: r.category || '', cause: r.cause || '', basis: r.basis || '',
+                          facilNo: r.facilNo || '', facilNm: r.facilNm || '', facilNa: !!r.facilNa },
+                description: r.action.trim(), action: r.action.trim(), due: due, due_date: due,
+                assigned_to: r.owner || '',
+                before_photo: before.length ? before.join(', ') : false, after_photo: after.length ? after.join(', ') : false,
+                before_photos: beforeF, after_photos: afterF,
+                completed_date: alreadyDone ? (r.doneAt || today()) : '',
+                signature: alreadyDone ? { by: r.owner || (deptNm + ' 담당자'), at: r.doneAt || today() } : null,
+                status: alreadyDone ? 'DONE' : 'IN_PROGRESS', reassessed: alreadyDone, created: today(), history: hist
+            });
+        });
+        return rows.length;
+    }
+    /* 입력 완료 — 행이 0건이면 «아직 안 씀»과 «쓸 게 없음»을 가를 수 없어 부서가 알린다.
+       0건으로 끝내려면 사유가 필요하다(이행점검 «해당없음은 사유 없이 저장하지 않는다»와 같은 근거). */
+    function setInputDone(aid, deptId, by, reason) {
+        var a = assessmentOf(aid), dp = deptOf(a, deptId);
+        if (!inputOpen(aid, deptId)) return { error: '입력 중인 부서가 아닙니다.' };
+        var n = validDeptRows(a, deptId).length;
+        var r = String(reason || '').trim();
+        if (!n && !r) return { error: '작성한 유해위험요인이 없습니다 — 조치할 것이 없으면 사유를 적으세요.' };
+        commitDeptRows(aid, deptId, by);
+        dp.inputDone = { at: today(), by: by || '', reason: n ? '' : r, count: n };
+        if (!n) dp.noFindings = true;
+        pushHistory(aid, { type: 'STATUS', by: by || deptName(deptId),
+            memo: deptName(deptId) + ' 조치 입력 완료 · ' + (n ? n + '건' : '조치 대상 없음 — ' + r) });
+        refreshAssessmentStatus(aid);
+        return dp;
+    }
+    function undoInputDone(aid, deptId, by) {
+        var a = assessmentOf(aid), dp = deptOf(a, deptId);
+        if (!a || !dp || !dp.inputDone || a.status === 'COMPLETED') return { error: '되돌릴 입력 완료가 없습니다.' };
+        /* 되돌리면 그 부서 개선조치를 거두고 작성표로 돌아간다 — 완료 처리한 건이 있으면 되돌리지 않는다
+           (사진·서명이 붙은 기록을 지우게 된다). 작성표 행은 지우지 않았으므로 그대로 다시 열린다. */
+        var ms = improvementsFor(aid, deptId);
+        if (ms.some(function (m) { return m.status === 'DONE'; })) return { error: '완료 처리한 개선조치가 있어 되돌릴 수 없습니다.' };
+        var d0 = load(); d0.improvements = d0.improvements.filter(function (m) { return !(m.assessment_id === aid && m.dept_id === deptId); });
+        dp.inputDone = null; dp.noFindings = false; dp.status = 'BEFORE';
+        pushHistory(aid, { type: 'REOPEN', by: by || deptName(deptId), memo: deptName(deptId) + ' 조치 입력 완료 취소 — 다시 입력 중' });
+        refreshAssessmentStatus(aid);
+        return dp;
+    }
+    /* 부서 줄 상태 — 화면 네 곳(부서 표·조회 표·내 부서 진행·내 할일)이 같은 말을 하게 한다.
+       요청 전 / 조치전(입력 0건) / 조치중 / 반려 / 완료 / 지적사항 없음 */
+    function deptStage(a, dp) {
+        if (!a || !dp) return '';
+        if (dp.noFindings && !improvementsFor(a.id, dp.deptId).length) return '지적사항 없음';
+        if (!dp.deliveredAt) return '요청 전';
+        var ms = improvementsFor(a.id, dp.deptId);
+        if (ms.some(function (m) { return confirmState(m) === CFM_RETURN; })) return '반려';
+        var legacy = !dp.request;   /* 옛 흐름(작성표 전달)으로 끝난 평가 */
+        if (!ms.length) return legacy ? '지적사항 없음' : (validDeptRows(a, dp.deptId).length ? '조치중' : '조치전');
+        var allDone = ms.every(function (m) { return m.status === 'DONE'; });
+        var allOk = ms.every(function (m) { return confirmState(m) === CFM_OK; });
+        if (allDone && allOk && (legacy || dp.inputDone)) return '완료';
+        return '조치중';
     }
     function clearReport(aid) {
         var a = assessmentOf(aid); if (!a) return;
@@ -1081,7 +1228,11 @@
     /* 공문 기안 가능 — 개선조치가 1건 이상이고 전 건이 완료·확인까지 끝났을 때 */
     function docReady(aid) {
         var c = confirmCount(aid);
-        return c.total > 0 && c.done === c.total && c.ok === c.total;
+        var a = assessmentOf(aid);
+        /* 조치 요청을 받은 부서가 모두 «입력 완료»를 알려야 한다 — 입력 중인 부서가 있으면
+           확인을 다 마쳐도 결과 공문에 그 부서 조치가 빠진다 */
+        var waiting = !!a && (a.depts || []).some(function (dp) { return dp.request && !dp.inputDone; });
+        return !waiting && c.total > 0 && c.done === c.total && c.ok === c.total;
     }
 
     /* ================= 공문(온나라 이관) 스토어 =================
@@ -1397,6 +1548,11 @@
         uploadReport: uploadReport, clearReport: clearReport,
         reviewSet: reviewSet, reviewDel: reviewDel, reviewAdd: reviewAdd,
         deliverFromReview: deliverFromReview,
+        /* 2026-11-11 흐름 전환 — 설문 요청 공문 · 보고서+기한 · 조치 요청 공문 · 부서 직접 입력 */
+        setDeptDue: setDeptDue, surveyRequested: surveyRequested, sendSurveyRequest: sendSurveyRequest,
+        requestAction: requestAction, inputOpen: inputOpen, validDeptRows: validDeptRows,
+        setInputDone: setInputDone, undoInputDone: undoInputDone,
+        deptStage: deptStage,
         /* 개선조치 */
         improvements: improvements, improvementOf: improvementOf, improvementsFor: improvementsFor,
         facilLabel: facilLabel,

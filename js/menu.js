@@ -2847,7 +2847,7 @@
                 };
                 const unconfirmed = ax.reduce((n, a) => n + (a.s ? a.s.wait + a.s.returned : 0), 0);
                 V.openModal(per + ' 의무이행 점검 마감 보고 — 문서 미리보기',
-                    '<div class="pdf-noprint check-notice" style="margin-bottom:10px;">군수께 올라갈 보고 내용입니다. <b>[온나라로 보내기]</b>를 누르면 온나라 기안함으로 가고 이 회차는 잠깁니다. 검토·결재는 온나라에서 지정합니다.' +
+                    '<div class="pdf-noprint check-notice" style="margin-bottom:10px;">군수께 올라갈 보고 내용입니다. 이 지면은 <b>PDF로 만들어 붙임 1</b>로 보내고 본문은 «붙임 문서를 결재 요청합니다.» 한 줄입니다. <b>[온나라로 보내기]</b>를 누르면 온나라 기안함으로 가고 이 회차는 잠깁니다. 검토·결재는 온나라에서 지정합니다.' +
                         (unconfirmed ? '<br><b>확인되지 않은 줄 ' + unconfirmed + '건</b>은 «미확인»·«반려»로 그대로 올라갑니다.' : '') + '</div>' +
                     '<div class="cmp-report" style="border:1px solid var(--card-line); border-radius:var(--radius-card); padding:16px 18px; max-height:56vh; overflow:auto;">' +
                         '<h3 style="text-align:center; margin:0 0 4px;">' + esc(per) + ' 중대재해 예방을 위한 안전·보건 확보의무 이행점검 결과 보고</h3>' +
@@ -2880,6 +2880,7 @@
                             rows: [
                                 ['문서', rec.title],
                                 ['연계 번호', rec.docNo, '문서번호는 결재가 끝나면 온나라가 부여합니다.'],
+                                ['붙임', '1. ' + rec.title + '(PDF)', '본문은 «붙임 문서를 결재 요청합니다.» 한 줄입니다.'],
                                 ['다음 할 일', '온나라 기안함에서 검토·결재를 지정해 상신하세요.', '온나라에서 반려·반송되면 이 회차가 다시 열립니다.']
                             ]
                         }),

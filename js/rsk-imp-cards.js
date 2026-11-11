@@ -114,7 +114,7 @@
            완료된 건은 어느 쪽도 바꾸지 않는다(끝난 일을 고치는 건 기록 조작이다). */
         if (amendKind(m) && m.status !== 'DONE') {
             meta.push('<button type="button" class="rl-imp-amend" onclick="IMPCARD.amendOpen(\'' + esc(m.id) + '\')">' +
-                (amendKind(m) === 'owner' ? '담당자 지정' : '변경') + '</button>');
+                (amendKind(m) === 'owner' ? (canExtend(m) ? '담당자 지정 · 기한 연장' : '담당자 지정') : '변경') + '</button>');
         }
         if (amendLogHtml(m)) meta.push(amendLogHtml(m));
         return '<article class="rl-imp-card' + (overdue ? ' is-overdue' : '') + '">' +
@@ -355,6 +355,12 @@
         return (p.deptId && p.deptId === m.dept_id) ? 'owner' : '';
     }
 
+    /* 부서의 기한 연장 (2026-11-11 2차 교육 반영안 ⑦ «필요 시 기한 연장») —
+     * 정기평가 개선조치는 그 부서 담당자가 **늦추는 쪽으로만** 직접 바꾼다. 사유는 필수이고
+     * 이력에 남으며 재난안전과에 알림이 간다. 당기는 것·수시평가 건은 종전대로 주관부서 몫이다. */
+    function canExtend(m) {
+        return amendKind(m) === 'owner' && m.source_type === 'risk_assessment' && !!m.assessment_id && m.status !== 'DONE';
+    }
     /* 변경 이력 — 기한이 밀린 사실은 그 자리에 남아 있어야 관리 수단이 된다 */
     function amendLogHtml(m) {
         var logs = (m.history || []).filter(function (h) { return h.type === 'AMEND'; });
@@ -370,7 +376,7 @@
         /* 완료된 건은 어느 쪽도 바꾸지 않는다 — 카드가 [변경]을 내지 않는 조건과 같다 */
         if (m.status === 'DONE') { V().toast('완료된 개선조치는 담당자·기한을 바꾸지 않습니다.'); return; }
         AMEND = id;
-        V().openModal(kind === 'both' ? '담당자 · 기한 변경' : '담당자 지정',
+        V().openModal(kind === 'both' ? '담당자 · 기한 변경' : (canExtend(m) ? '담당자 지정 · 기한 연장' : '담당자 지정'),
             '<p style="font-size:var(--fs-13);margin:0 0 4px;"><b>' +
                 esc((m.hazard && m.hazard.name) || m.hazard_risk_factor || '-') + '</b></p>' +
             '<p class="file-hint">' +
@@ -387,9 +393,11 @@
                     /* 후보는 그 개선조치 부서 사람만(A-19) — 다른 부서 사람은 조회 범위 밖이라 그 건을 열 수 없다 */
                     '<button type="button" class="btn btn-outline" onclick="ORGPICK.toggle(\'imp-am-field\',\'member\',\'IMPCARD.amendPick\',{rootId:\'' + esc(m.dept_id) + '\'})">조직도</button>' +
                 '</div></div></div>' +
-            (kind === 'both'
-                ? '<div class="rl-modal-row"><label class="form-label" for="imp-am-due">기한</label>' +
-                    '<input type="date" class="form-input" id="imp-am-due" value="' + esc(m.due || m.due_date || '') + '" style="max-width:200px;"></div>'
+            (kind === 'both' || canExtend(m)
+                ? '<div class="rl-modal-row"><label class="form-label" for="imp-am-due">' + (kind === 'both' ? '기한' : '기한 연장') + '</label>' +
+                    '<input type="date" class="form-input" id="imp-am-due" value="' + esc(m.due || m.due_date || '') + '"' +
+                        (kind === 'both' ? '' : ' min="' + esc(m.due || m.due_date || '') + '"') + ' style="max-width:200px;">' +
+                    (kind === 'both' ? '' : '<p class="file-hint">기한 안에 마치지 못하면 늦출 수 있습니다. 재난안전과에 알림이 갑니다.</p>') + '</div>'
                 /* 부서는 기한을 못 바꾼다 — 왜 없는지 밝히지 않으면 '기능이 빠졌다'로 읽힌다 */
                 : '<div class="rl-modal-row"><label class="form-label">기한</label>' +
                     '<div><b>' + esc(m.due || m.due_date || '-') + '</b>' +
@@ -422,9 +430,25 @@
         var patch = { assigned_to: owner };
         /* 부서 담당자가 보낸 요청에 기한이 섞이지 않게 — 화면에 칸이 없어도 막는다 */
         if (amendKind(mm) === 'both') patch.due = g('imp-am-due');
+        var extended = false;
+        if (canExtend(mm)) {
+            var nd = g('imp-am-due'), od = mm.due || mm.due_date || '';
+            if (nd && nd !== od) {
+                if (od && nd < od) { V().toast('기한은 늦추는 쪽으로만 바꿀 수 있습니다 — 앞당기려면 재난안전과에 요청하세요.'); return; }
+                patch.due = nd; extended = true;
+            }
+        }
         var r = D().amendImprovement(AMEND, patch, why, by);
         AMEND = null;
         if (!r) { V().toast('변경하지 못했습니다.'); return; }
+        if (extended && global.DYLayout && global.DYLayout.ntfPush) {
+            var aa = D().assessmentOf(r.assessment_id) || {};
+            global.DYLayout.ntfPush({
+                cat: 'risk', catLabel: '위험성평가', toDept: (global.DYROLE && global.DYROLE.OWNER_DEPT) || 'safety', toTier: ['staff'],
+                title: D().deptName(r.dept_id) + ' 개선조치 기한 연장 — ' + ((r.hazard && r.hazard.name) || '') + ' → ' + patch.due + ' (사유: ' + why + ')',
+                href: 'rsk-list.html?year=' + (aa.year || '') + '&dept=' + r.dept_id, work: 'my-work.html'
+            });
+        }
         V().closeModal();
         if (CTX && CTX.onChange) { try { CTX.onChange(); } catch (e) {} }
         /* 카드 화면이 열려 있지 않은 곳(내 할일 목록)에서도 불린다 — 그때는 그 화면이

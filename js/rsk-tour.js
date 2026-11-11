@@ -55,20 +55,6 @@
     function imps() { var a = A(); return a ? D().improvementsFor(a.id, demoDept()) : []; }
     function doc() { var a = A(); return a ? D().latestDoc('A|' + a.id) : null; }
 
-    /* 검수 표에서 **실제로 개선조치가 될 행** 수.
-       DYRSK.deliverFromReview 가 채택하는 조건과 같은 식이어야 한다 —
-       다른 식을 쓰면 "4단계 완료"라 해 놓고 5단계에서 전 부서가
-       '지적사항 없음'으로 빠지는 사고가 난다. */
-    function validRows() {
-        var a = A(); if (!a || !a.review) return 0;
-        var pd = a.review.parsedDepts || {}, n = 0;
-        Object.keys(pd).forEach(function (k) {
-            n += (pd[k] || []).filter(function (r) {
-                return !r.deleted && (r.name || '').trim() && (r.action || '').trim();
-            }).length;
-        });
-        return n;
-    }
     function ownerP() { return OWNER_P; }
     /* 받침에 맞는 조사 (DYTOUR 가 노출) */
     function jo(w, a, b) { return global.DYTOUR ? global.DYTOUR.josa(w, a, b) : a; }
@@ -95,29 +81,32 @@
             note: function () { var a = A(); return a ? '대상 부서 ' + (a.depts || []).length + '개' : '미생성'; }
         },
         {
-            key: 'survey', label: '설문', page: 'rsk-list.html',
+            key: 'survey', label: '설문 요청', page: 'rsk-list.html',
             persona: ownerP, href: function () { return 'rsk-list.html'; },
             selector: '[data-tour="rsk-survey"]',
-            title: '유해위험요인 설문조사표 첨부',
-            where: '요약 카드 안 <b>“공통 유해위험요인 설문조사표”</b> 줄의 <b>[＋ 첨부]</b>',
+            title: '설문조사표 양식 · 요청 공문',
+            where: '요약 카드의 <b>[＋ 첨부]</b> → <b>[설문조사표 요청 공문 →]</b>',
             clickPath: [
-                '요약 카드의 [＋ 첨부]',
-                '파일명을 그대로 두고 [첨부] — 파일 실물 저장은 문서관리 연계 후 적용됩니다'
+                '요약 카드의 [＋ 첨부]로 공통 양식을 붙입니다',
+                '[설문조사표 요청 공문 →] — 본문 조각을 눌러 넣고 [문서 미리보기 →]',
+                '[온나라로 보내기] → [보내기] — 이 순간 대상 부서에 제출 요청이 갑니다'
             ],
-            desc: '전 부서가 같은 서식을 쓰도록 공통본을 답니다. 부서별로 다른 서식이 필요하면 표에서 부서별로 덮어씁니다.',
-            script: '서식을 시스템이 배포하므로 부서가 옛 버전을 쓰거나 서식을 찾아 헤매는 일이 없어집니다.',
-            modalGuide: '설문조사표는 <b>보고서 등록 전까지만</b> 붙일 수 있습니다 — 그 뒤에는 잠깁니다.',
-            actionLabel: '설문조사표 첨부 열기',
-            action: function () { global.RSKLIST.openSurveyAll(); },
-            done: function () {
-                var a = A(); if (!a) return false;
+            desc: '양식을 붙이는 것만으로는 부서에 아무것도 가지 않습니다. 요청 공문을 온나라로 보내는 순간 부서 할 일과 알림이 생깁니다.',
+            script: '공문과 시스템 요청이 한 번에 나갑니다 — 부서는 공문을 받고, 같은 순간 내 할일에 설문조사표 제출이 뜹니다.',
+            modalGuide: '본문은 <b>직접 작성</b>합니다 — 위 조각 버튼으로 요청 안내·제출 개요를 넣을 수 있습니다. 보낸 뒤에는 양식을 바꿀 수 없습니다.',
+            actionLabel: '설문조사표 요청 공문 열기',
+            action: function () {
+                var a = A(); if (!a) return;
                 var p = D().surveyProgress(a.id);
-                return p.total > 0 && p.done === p.total;
+                if (!p.total || p.done < p.total) { global.RSKLIST.openSurveyAll(); return; }
+                global.RSKLIST.openSurveyReq();
             },
+            done: function () { var a = A(); return !!a && D().surveyRequested(a); },
             note: function () {
                 var a = A(); if (!a) return '평가 생성 후';
+                if (D().surveyRequested(a)) return '요청 ' + a.surveyReq.at + ' · 기한 ' + (a.surveyDue || '-');
                 var p = D().surveyProgress(a.id);
-                return '부서 적용 ' + p.done + ' / ' + p.total;
+                return '양식 적용 ' + p.done + ' / ' + p.total + ' · 요청 전';
             }
         },
         {
@@ -161,58 +150,48 @@
             }
         },
         {
-            key: 'review', label: '검수', page: 'rsk-list.html',
+            key: 'review', label: '보고서', page: 'rsk-list.html',
             persona: ownerP, href: function () { return 'rsk-list.html'; },
             selector: '[data-tour="rsk-report"]',
-            title: '통합 보고서 첨부 · 부서별 조치 작성',
-            where: '<b>[＋ 통합 보고서 첨부]</b> → 열리는 작성표',
+            title: '용역 보고서 · 조치기한',
+            where: '용역업체 보고서 카드의 <b>[＋ 보고서 첨부 · 조치기한]</b>',
             clickPath: [
-                '[＋ 통합 보고서 첨부] — 첨부하면 부서별 조치 작성표로 바뀝니다',
-                '부서 블록에서 [＋ 행 추가]',
-                '유해위험요인 이름과 개선조치를 적습니다 — 둘 다 있어야 개선조치가 됩니다'
+                '[＋ 보고서 첨부 · 조치기한] — 통합 보고서를 고릅니다',
+                '조치기한을 넣고 [일괄 적용] (부서마다 다르면 표에서 고칩니다)',
+                '[첨부] — 다음은 조치를 요청할 부서를 고르는 표입니다'
             ],
-            desc: '보고서를 보고 부서별 지적 항목을 적습니다. 시스템이 보고서 내용을 자동으로 옮기지 않습니다 — 담당자가 읽고 판단해 적습니다.',
-            script: '여기가 핵심입니다. 보고서를 읽고 “무엇을 시킬지”만 적으면, 그 줄이 곧 부서의 개선조치가 됩니다.',
-            modalGuide: '파일명을 그대로 두고 <b>[첨부]</b>를 누르면 작성표가 열립니다.',
-            actionLabel: '통합 보고서 첨부 열기',
+            desc: '보고서를 올리면서 기한을 함께 정합니다. 유해위험요인·조치 내용은 재난안전과가 적지 않습니다 — 부서가 보고서를 보고 직접 입력합니다.',
+            script: '종전에는 재난안전과가 보고서를 읽어 부서별 조치를 대신 적었습니다. 이제 기한만 정하고, 무엇을 할지는 그 부서가 씁니다.',
+            modalGuide: '파일을 고르고 <b>조치기한</b>을 일괄 적용한 뒤 <b>[첨부]</b>를 누르세요.',
+            actionLabel: '보고서 첨부 열기',
             action: function () { global.RSKLIST.uploadReport(); },
-            done: function () {
-                var a = A(); var st = a && a.review && a.review.stage;
-                if (st === 'DELIVERED') return true;
-                return st === 'REVIEW' && validRows() > 0;
-            },
+            done: function () { var a = A(); var st = a && a.review && a.review.stage; return st === 'REVIEW' || st === 'DELIVERED'; },
             note: function () {
                 var a = A(); if (!a) return '평가 생성 후';
                 var st = a.review && a.review.stage;
-                if (st === 'DELIVERED') return '전달 완료';
-                if (st === 'REVIEW') return '작성 ' + validRows() + '건 (이름·개선조치가 모두 있는 행)';
-                return '보고서 미첨부';
+                return st === 'DELIVERED' ? '조치 요청 완료' : st === 'REVIEW' ? '보고서·기한 등록 · 요청 전' : '보고서 미첨부';
             }
         },
         {
-            key: 'deliver', label: '전달', page: 'rsk-list.html',
+            key: 'deliver', label: '조치 요청', page: 'rsk-list.html',
             persona: ownerP, href: function () { return 'rsk-list.html'; },
             selector: '[data-tour="rsk-deliver"]',
-            title: '조치기한 설정 · 부서 전달',
-            where: '작성표 아래 <b>[작성완료 · 조치기한 설정 →]</b>',
+            title: '개선 필요 부서 선택 · 조치 요청 공문',
+            where: '조치 요청 부서 선택 표 아래 <b>[조치 요청 공문 →]</b>',
             clickPath: [
-                '[작성완료 · 조치기한 설정 →] — 작성 행이 0건이면 비활성입니다',
-                '기한을 넣고 [일괄 적용] (부서별로 다르면 각 행에서 수정)',
-                '[전달 실행] — 이 순간 개선조치가 부서 할 일로 배분됩니다'
+                '개선이 필요한 부서만 체크합니다 — 고르지 않은 부서는 «지적사항 없음»으로 완료됩니다',
+                '[조치 요청 공문 →] → 본문 작성 → [문서 미리보기 →]',
+                '[온나라로 보내기] → [보내기] — 고른 부서에 조치 입력 요청이 갑니다'
             ],
-            desc: '전달하는 순간 부서별 개선조치가 만들어지고 담당자의 개선조치 목록에 꽂힙니다.',
-            script: '공문으로 “조치하세요” 하고 끝나던 걸, 기한이 붙은 할 일로 각 부서에 배분합니다.',
-            modalGuide: '<b>일괄 적용</b>으로 한 번에 기한을 넣고 <b>[전달 실행]</b>을 누르세요.',
-            actionLabel: '조치기한 설정 열기',
-            action: function () { global.RSKLIST.openDueSet(); },
-            done: function () {
-                var a = A();
-                return !!(a && a.review && a.review.stage === 'DELIVERED') && imps().length > 0;
-            },
+            desc: '보낸 순간 고른 부서의 내 할일에 «유해위험요인·조치 내용 입력»이 뜨고, 보고서가 붙임으로 함께 갑니다.',
+            script: '공문으로 “조치하세요” 하고 끝나던 일이, 기한이 붙은 부서 할 일로 바로 이어집니다.',
+            modalGuide: '본문 조각으로 요청 안내·이행 방법을 넣고 미리보기에서 <b>[온나라로 보내기]</b>를 누르세요.',
+            actionLabel: '조치 요청 공문 열기',
+            action: function () { global.RSKLIST.openActionReq(); },
+            done: function () { var a = A(); return !!(a && a.review && a.review.stage === 'DELIVERED'); },
             note: function () {
                 var a = A(); if (!a) return '평가 생성 후';
-                var n = D().improvementsFor(a.id).length;
-                return n ? '개선조치 ' + n + '건 전달됨' : '전달 전';
+                return a.actionReq ? '요청 ' + a.actionReq.depts.length + '개 부서 · ' + a.actionReq.at : '요청 전';
             }
         },
         {
@@ -223,35 +202,43 @@
             persona: deptPersona, scopeDept: demoDept,
             href: function () { return 'rsk-list.html'; },
             selector: '[data-tour="rsk-complete"]',
-            title: '부서가 개선조치를 완료',
-            where: '<b>내 부서 진행 상황</b>의 <b>[개선조치 완료 처리]</b>',
+            title: '부서가 작성표를 쓰고 → 완료',
+            where: '우리 부서 작성표 블록의 <b>[＋ 행 추가]</b>',
             clickPath: [
-                '[개선조치 완료 처리] — 우리 부서 개선조치 카드가 열립니다',
-                '조치할 건의 [완료 처리]를 누릅니다',
-                '조치 내용·완료일을 적고 개선 후 사진과 담당자 서명을 채우면 저장됩니다'
+                '블록 위 통합 보고서를 열어 우리 부서 해당 내용을 확인합니다',
+                '[＋ 행 추가]로 유해위험요인·개선조치를 적고, 다 적으면 [입력 완료] — 유효 행이 개선조치가 됩니다',
+                '조치를 마친 건은 [개선조치 완료 처리] → 카드의 [완료 처리]에서 개선 후 사진과 서명을 올립니다 (못 마치면 [기한 연장])'
             ],
-            desc: '개선 전·후 사진과 담당자 서명을 붙여야 완료가 됩니다. 사진 없이 “했다”만으로는 끝나지 않습니다.',
-            script: '증빙이 붙은 완료만 인정합니다. 이 사진이 그대로 뒤에서 만들 공문의 근거가 됩니다.',
-            modalGuide: '조치할 건의 <b>[완료 처리]</b> 를 누르고, 조치 내용과 사진을 채우세요 — <b>사진과 서명이 모두 있어야</b> 저장됩니다.',
+            desc: '무엇을 할지는 부서가 보고서를 보고 같은 작성표에 직접 적습니다. [입력 완료]를 누르면 그 부서의 유효 행이 개선조치가 됩니다.',
+            script: '증빙이 붙은 완료만 인정합니다. 이 사진이 그대로 뒤에서 만들 결과 공문의 근거가 됩니다.',
+            modalGuide: '완료 처리는 <b>사진과 서명이 모두 있어야</b> 저장됩니다.',
             /* 무대에서 OS 파일 대화상자를 열지 않기 위한 시연 수단이다(3단계와 같은 이유).
                실제 파일 입력란은 그대로 두므로 증빙 요건을 낮추는 것이 아니다.
                완료 모달을 그리는 주체가 MYWORK 이므로 그쪽 도우미를 쓴다. */
             /* when — 이 필드가 있는 모달에서만 버튼을 낸다. 앞서 열리는 조치 상세 카드에는
                대상 행(cmplId)이 정해지지 않아, 거기서 누르면 어느 건의 사진인지 알 수 없다. */
             modalAction: { label: '예시 사진 넣기', fn: 'MYWORK.pickAfterDemo()', when: '#mw-cmpl-desc' },
-            actionLabel: '개선조치 카드 열기',
-            action: function () { if (global.RSKLIST) global.RSKLIST.openDept(demoDept()); },
+            actionLabel: '개선조치 작성·완료 열기',
+            action: function () {
+                var a = A(), d = dp();
+                if (!global.RSKLIST || !a) return;
+                if (d && d.request && !d.inputDone) { location.href = 'rsk-list.html?year=' + a.year; return; }   /* 작성표는 화면에 있다 */
+                global.RSKLIST.openDept(demoDept());
+            },
             done: function () {
+                var d = dp(); if (!d || !d.deliveredAt) return false;
+                if (!d.request) return true;   /* 지적사항 없음 — 이 부서는 할 일이 없다 */
                 var ms = imps();
-                return ms.length > 0 && ms.every(function (m) { return m.status === 'DONE'; });
+                return !!d.inputDone && ms.every(function (m) { return m.status === 'DONE'; });
             },
             note: function () {
                 var a = A();
                 if (a && !deptListed()) return deptNm() + jo(deptNm(), '은 ', '는 ') + a.year + '년 평가 대상 부서가 아닙니다';
+                var d = dp(); if (!d || !d.deliveredAt) return '조치 요청 대기';
+                if (!d.request) return deptNm() + ' — 지적사항 없음';
                 var ms = imps();
-                if (!ms.length) return '전달 대기';
                 var n = ms.filter(function (m) { return m.status === 'DONE'; }).length;
-                return deptNm() + ' ' + n + ' / ' + ms.length + '건 완료';
+                return deptNm() + (d.inputDone ? ' 개선조치 ' + ms.length + '건 · 완료 ' + n + '건' : ' 작성 중');
             }
         },
         {
@@ -341,7 +328,7 @@
         },
         barTitle: function () { return '정기 위험성평가는 이렇게 진행합니다 — ' + STEPS.length + '걸음'; },
         barDesc: function () {
-            return '생성 → 설문조사표 → 부서 제출 → 보고서 검수 → 전달 → 조치 완료 → 완료 확인 → 공문 기안 → 결재 회신. ' +
+            return '생성 → 설문조사표 요청 공문 → 부서 제출 → 보고서·조치기한 → 조치 요청 공문 → 부서 입력·완료 → 완료 확인 → 결과 공문 → 결재 회신. ' +
                 '가이드가 <b>어디를 누를지</b> 짚어 줍니다.';
         }
     });
