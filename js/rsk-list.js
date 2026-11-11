@@ -319,7 +319,7 @@
                 mine: true,
                 done: !!dp.deliveredAt && (!dp.request || !!dp.inputDone) && doneN === ms.length,
                 note: !dp.request ? (dp.deliveredAt ? '할 일 없음' : '조치 요청 대기')
-                    : (!dp.inputDone ? '아래 작성표에 적고 [입력 완료] · 기한 ' + (dp.dueDate || '-')
+                    : (!dp.inputDone ? '작성 중 · 기한 ' + (dp.dueDate || '-')
                     : (returnedN
                         ? doneN + ' / ' + ms.length + '건 완료 · 반려 ' + returnedN + '건 재조치 필요'
                         : doneN + ' / ' + ms.length + '건 완료')),
@@ -404,8 +404,6 @@
                         '<span class="rl-empty-step">① 대상 부서 선정</span>' +
                         '<span class="rl-empty-arrow">→</span>' +
                         '<span class="rl-empty-step">② 점검일 · 설문 기한</span>' +
-                        '<span class="rl-empty-arrow">→</span>' +
-                        '<span class="rl-empty-step">③ 설문조사표 요청 공문</span>' +
                     '</div>' +
                     '<div class="rl-empty-sub">생성한 뒤 설문조사표 양식을 붙이고 <b>요청 공문</b>을 보내면 대상 부서에 제출 요청이 갑니다.</div>' +
                     (canManage()
@@ -876,7 +874,7 @@
             return !global.DYROLE || !global.DYROLE.inScope || global.DYROLE.inScope(dp.deptId);
         }).map(function (dp) {
             var c = D().deptImpCount(a.id, dp.deptId);
-            var lbl = D().deptStage(a, dp) || '요청 전';
+            var lbl = D().deptStage(a, dp) || '조치 요청 전';
             return '<tr>' +
                 '<td><b>' + esc(D().deptName(dp.deptId)) + '</b></td>' +
                 '<td>' + esc(dp.inspectDate || '-') + '</td>' +
@@ -970,15 +968,15 @@
         var overdue = D().improvementsFor(a.id, dp.deptId).some(function (m) { return D().isOverdue(m); });
         var deliveredNo = !dp.deliveredAt;
         /* 상태 어휘는 DYRSK.deptStage 한 곳 — 조치전 · 조치중 · 반려 · 완료 (2차 교육 17장) */
-        var stLbl = D().deptStage(a, dp) || '요청 전';
-        var stCls = stLbl === '완료' ? 'st-done' : (stLbl === '조치중' ? 'st-doing' : 'st-todo');
+        var stLbl = D().deptStage(a, dp) || '조치 요청 전';
+        var stCls = stLbl === '완료' ? 'st-done' : (stLbl === '조치중' ? 'st-doing' : (stLbl === '조치 요청 전' || stLbl === '지적사항 없음' ? 'wt' : 'st-todo'));
         var reviewStage = (a.review && a.review.stage) || 'NONE';
 
         var mngBtn;
         if (a.status === 'COMPLETED') {
             mngBtn = '<button type="button" class="btn btn-outline btn-sm" onclick="RSKLIST.openDept(\'' + dp.deptId + '\')">보기</button>';
         } else if (deliveredNo) {
-            mngBtn = '<span style="font-size:12px;color:var(--text-gray);">' + (reviewStage === 'NONE' ? '보고서 대기' : '요청 전') + '</span>';
+            mngBtn = '<span style="font-size:12px;color:var(--text-gray);">' + (reviewStage === 'NONE' ? '보고서 대기' : '조치 요청 전') + '</span>';
         } else {
             mngBtn = '<button type="button" class="btn btn-primary btn-sm" onclick="RSKLIST.openDept(\'' + dp.deptId + '\')">관리</button>';
         }
@@ -1181,7 +1179,7 @@
                     (ro ? '</fieldset><p class="file-hint" style="margin-top:8px;">조회 전용 — 이 블록은 ' + esc(name) + ' 담당자' + (deptId === OWNER_DEPT ? '' : '와 재난안전과 담당자') + '가 적습니다.</p>' :
                     '<div class="rl-rv-blk-acts">' +
                         '<button type="button" class="btn btn-outline btn-sm" data-tour="rsk-complete" onclick="RSKLIST.reviewAdd(\'' + deptId + '\')">＋ 행 추가</button>' +
-                        '<span class="file-hint">조치기한 ' + esc(((a.depts || []).filter(function (x) { return x.deptId === deptId; })[0] || {}).dueDate || '-') + ' · 다 적었으면 [입력 완료]를 누르면 유효 행이 개선조치가 됩니다</span>' +
+                        '<span class="file-hint">조치기한 ' + esc(((a.depts || []).filter(function (x) { return x.deptId === deptId; })[0] || {}).dueDate || '-') + '</span>' +
                         '<button type="button" class="btn btn-primary btn-sm" onclick="RSKLIST.inDoneOpen(\'' + deptId + '\')">입력 완료</button>' +
                     '</div>' +
                     (state.inDoneFor === deptId ? inDoneBox(a, deptId) : '')) +
@@ -1193,7 +1191,7 @@
         var footNote = (!owner && !deptIds.some(canWriteReview))
             ? '<span style="color:var(--text-gray);">조치 요청을 받은 부서 담당자가 적고 <b>[입력 완료]</b>를 누르면 개선조치가 됩니다.</span>'
             : owner
-            ? '<span style="color:var(--text-gray);">조치 요청을 받은 부서가 자기 블록을 적고 <b>[입력 완료]</b>를 누르면 유효 행이 개선조치가 됩니다. 재난안전과도 같은 표에서 대신 적을 수 있습니다.</span>'
+            ? '<span style="color:var(--text-gray);">적은 내용은 <b>즉시 저장</b>됩니다. 재난안전과도 같은 표에서 대신 적을 수 있습니다.</span>'
             : '<span style="color:var(--text-gray);">적은 내용은 <b>즉시 저장</b>됩니다. 다 적었으면 <b>[입력 완료]</b>로 재난안전과에 알립니다.</span>';
         var footActions = '';
         return '<div class="rl-card rl-rv-card">' +
@@ -1325,8 +1323,10 @@
     /* 입력 완료 확인 칸 — 블록 안에 펼친다(모달을 겹치지 않는다) */
     function inDoneBox(a, deptId) {
         var n = D().validDeptRows(a, deptId).length;
+        var all = (((a.review || {}).parsedDepts || {})[deptId] || []).filter(function (r) { return !r.deleted; }).length;
+        var skip = Math.max(0, all - n);
         return '<div class="stack-inline" style="margin-top:8px;">' +
-            (n ? '<p style="margin:0 0 6px;font-size:var(--fs-13);">유효 행 <b>' + n + '건</b>(유해위험요인·개선조치가 모두 있는 행)이 개선조치가 됩니다. 이후 작성표는 닫히고 완료 처리는 [관리]·내 할일에서 합니다.</p>'
+            (n ? '<p style="margin:0 0 6px;font-size:var(--fs-13);">유해위험요인과 개선조치를 모두 적은 <b>' + n + '건</b>이 개선조치가 됩니다' + (skip ? ' (하나라도 비어 있는 ' + skip + '건은 빠집니다)' : '') + '. 이후 작성표는 닫히고 완료 처리는 [관리]·내 할일에서 합니다.</p>'
                : '<label class="form-label" for="rl-in-why">조치할 것이 없는 사유 <span style="color:var(--status-danger-fg)">*</span></label>' +
                  '<textarea class="form-textarea" id="rl-in-why" rows="2" placeholder="예: 보고서 지적 항목이 우리 부서 소관이 아님(재난안전과와 협의)"></textarea>') +
             '<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:6px;">' +

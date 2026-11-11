@@ -148,6 +148,8 @@
         .rl-rv-blk-acts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-top: var(--sp-2); }
         .rl-rv-blk-acts .file-hint { flex: 1; min-width: 200px; margin: 0; }
         .rl-rv-ro { border: 0; padding: 0; margin: 0; min-width: 0; }
+        /* 부서 표 상태 칩은 한 줄로 — «조치 요청 전»이 좁은 상태 칸에서 두 줄로 접히지 않게 (2026-11-11) */
+        .rl-card td .chip-mini { white-space: nowrap; }
     </style>
 </head>
 <body data-dy-page="rsk-list"
@@ -157,7 +159,7 @@
         <div class="check-notice">
             <b>정기 위험성평가</b>는 연 1건입니다.
             재난안전과는 대상 부서 선정 · <b>설문조사표 요청 공문</b> · 용역 보고서와 조치기한 등록 · <b>조치 요청 공문</b> · 완료 확인 · 재촉을 이 화면에서 처리합니다.
-            조치를 요청받은 부서는 보고서를 보고 아래 작성표에 우리 부서 유해위험요인·개선조치를 적은 뒤 <b>[입력 완료]</b>를 누릅니다.
+            조치를 요청받은 부서는 보고서를 보고 아래 작성표에 우리 부서 유해위험요인·개선조치를 적습니다.
         </div>
         <div id="rl-root"></div>
     </main>

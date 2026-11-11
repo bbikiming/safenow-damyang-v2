@@ -841,11 +841,11 @@
         return dp;
     }
     /* 부서 줄 상태 — 화면 네 곳(부서 표·조회 표·내 부서 진행·내 할일)이 같은 말을 하게 한다.
-       요청 전 / 조치전(입력 0건) / 조치중 / 반려 / 완료 / 지적사항 없음 */
+       조치 요청 전 / 조치전(입력 0건) / 조치중 / 반려 / 완료 / 지적사항 없음 */
     function deptStage(a, dp) {
         if (!a || !dp) return '';
         if (dp.noFindings && !improvementsFor(a.id, dp.deptId).length) return '지적사항 없음';
-        if (!dp.deliveredAt) return '요청 전';
+        if (!dp.deliveredAt) return '조치 요청 전';
         var ms = improvementsFor(a.id, dp.deptId);
         if (ms.some(function (m) { return confirmState(m) === CFM_RETURN; })) return '반려';
         var legacy = !dp.request;   /* 옛 흐름(작성표 전달)으로 끝난 평가 */

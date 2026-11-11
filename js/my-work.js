@@ -190,7 +190,7 @@
                             id: 'RSK-' + a.id + '-' + dp.deptId + '-input',
                             cat: 'risk',
                             title: a.title + ' — 부서별 개선조치 작성',
-                            sub: '재난안전과 ' + dp.request.at + ' 조치 요청 · 보고서를 보고 작성표에 유해위험요인·개선조치를 적은 뒤 [입력 완료]' +
+                            sub: '재난안전과 ' + dp.request.at + ' 조치 요청 · 작성표에 우리 부서 개선조치 작성' +
                                 (nIn ? ' · 개선조치 ' + nIn + '건' : ''),
                             due: dp.dueDate || '',
                             status: dp.inputDone ? 'DONE' : 'IN_PROGRESS',
