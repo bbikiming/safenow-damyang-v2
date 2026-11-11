@@ -48,7 +48,13 @@
        [일괄 독촉]이 떴다. 선택칸도 같은 판정으로 낸다 — 처리 버튼이 없는 계정에 선택칸만 남기지 않는다. */
     function canRemindDept(deptId) {
         var R = global.DYROLE;
-        return !R || !R.canRemind || R.canRemind(deptId);
+        if (!R || !R.canRemind) return true;
+        /* 자기 자신에게는 보내지 않는다 — 부서 단위로 읽는다(SCR-ADMIN-002 §6, 2026-11-10).
+           받는 사람이 그 부서 담당자라서, 그 부서 담당자가 누르면 자기·같은 과 담당자에게 간다.
+           부서장(super)은 자기 부서를 독촉한다. 이행점검·경영방침(DEPTCHK canRemindRow)과 같은 식이다. */
+        var p = R.current ? R.current() : null;
+        if (p && p.tier === 'staff' && p.deptId === deptId) return false;
+        return R.canRemind(deptId);
     }
     function remindDeny() {
         var R = global.DYROLE;

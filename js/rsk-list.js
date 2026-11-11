@@ -595,7 +595,7 @@
             V().uploadDrop(
                 '<div style="font-weight:700;">클릭하여 ' + esc(opts.what || '파일') + ' 선택</div>' +
                 '<div style="font-size:var(--fs-12);color:var(--text-gray);margin-top:4px;">또는 파일을 이 영역에 끌어다 놓으세요</div>',
-                null, { hint: true, pick: 'RSKLIST.onPickFile' }) +
+                null, { hint: true, pick: 'RSKLIST.onPickFile', profile: opts.profile }) +
             '<div id="rl-picked" class="rl-picked" aria-live="polite"></div>' +
             '<div class="rl-modal-row" style="margin-top:10px;">' +
                 '<label class="form-label" for="rl-survey-name">첨부 파일명</label>' +
@@ -829,7 +829,7 @@
             '이미 작성·전달된 <b>개선 건수와 조치 내역은 그대로 유지</b>됩니다.' +
             (existing ? '<br><span style="color:var(--text-gray);">현재 보고서: ' + esc(existing) + '</span>' : '') + '</p>',
             a.year + '_정기평가_보고서_최종.hwpx', 'RSKLIST.doReportAttach()',
-            { what: '용역업체 보고서' });
+            { what: '용역업체 보고서', profile: 'report' });
     }
     function doReportAttach() {
         var a = current(); if (!a) return;
@@ -1330,7 +1330,7 @@
         surveyModal('용역업체 통합 보고서 첨부',
             '<p style="font-size:var(--fs-13);">전체 통합본을 첨부하면 <b>' + (a.depts || []).length + '개 부서</b>의 ' +
             '개선조치 작성표가 열립니다. 용역 보고서는 이 통합본 하나이며, 부서가 낸 설문조사표 제출본과는 별개입니다.</p>',
-            a.year + '_정기평가_통합보고서.pdf', 'RSKLIST.doUploadReport()', { what: '통합 보고서' });
+            a.year + '_정기평가_통합보고서.pdf', 'RSKLIST.doUploadReport()', { what: '통합 보고서', profile: 'report' });
     }
     function doUploadReport() {
         var a = (D().assessments(state.year) || [])[0]; if (!a) return;
