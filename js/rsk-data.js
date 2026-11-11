@@ -709,6 +709,8 @@
      * stage: NONE(보고서 전) → REVIEW(보고서·기한 등록, 요청 전) → DELIVERED(조치 요청 공문 보냄). */
     function uploadReport(aid, fileName, dues) {
         var a = assessmentOf(aid); if (!a) return null;
+        /* 순서 ③④ → ⑤ — 설문조사표 요청 공문 전에는 받지 않는다. 화면이 버튼을 잠가도 전역 호출로 뚫리지 않게 */
+        if (!surveyRequested(a)) return { error: '설문조사표 요청 공문을 보낸 뒤에 보고서를 첨부합니다.' };
         dues = dues || {};
         a.files = a.files || {}; a.files.report = fileName || (a.year + '_정기평가_보고서.hwpx');
         (a.depts || []).forEach(function (dp) {

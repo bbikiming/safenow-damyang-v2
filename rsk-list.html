@@ -42,6 +42,7 @@
         .rl-report-file { color: var(--main-dark); font-weight: 700; font-size: var(--fs-13); }
         .rl-file-btn { border: 1px dashed var(--card-line); background: var(--surface); padding: 5px 12px; border-radius: var(--radius-md); font-size: var(--fs-12); color: var(--text-gray); cursor: pointer; }
         .rl-file-btn:hover { background: var(--brand-50); border-color:var(--main-dark); color: var(--main-dark); }
+        .rl-file-btn:disabled { opacity: .5; cursor: not-allowed; background: var(--surface); border-color: var(--card-line); color: var(--text-gray); }
         /* 터치 기기에서만 탭 타깃 44px 이상 (데스크톱은 조밀함 유지, WCAG 2.5.5) */
         @media (pointer: coarse) { .rl-file-btn { min-height: 44px; } }
 

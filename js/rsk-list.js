@@ -1053,8 +1053,13 @@
         }
         var body;
         if (stage === 'NONE') {
-            body = '<button type="button" class="rl-file-btn" data-tour="rsk-report" onclick="RSKLIST.uploadReport()">＋ 통합 보고서 첨부</button>' +
-                '<span style="font-size:12px;color:var(--text-gray);">통합본을 첨부하면서 <b>부서별 조치기한</b>을 정합니다. 그다음 아래 표에서 조치를 요청할 부서를 고릅니다.</span>';
+            /* 순서 ③④ → ⑤ — 설문조사표 요청 공문을 보내기 전에는 보고서를 받지 않는다(2026-11-11).
+               버튼 자리는 그대로 두고 잠가, 왜 아직 아닌지를 같은 자리에서 말한다. */
+            var reqd = D().surveyRequested(a);
+            body = '<button type="button" class="rl-file-btn" data-tour="rsk-report"' + (reqd ? '' : ' disabled') + ' onclick="RSKLIST.uploadReport()">＋ 통합 보고서 첨부</button>' +
+                '<span style="font-size:12px;color:var(--text-gray);">' + (reqd
+                    ? '통합본을 첨부하면서 <b>부서별 조치기한</b>을 정합니다. 그다음 아래 표에서 조치를 요청할 부서를 고릅니다.'
+                    : '설문조사표 <b>요청 공문</b>을 보낸 뒤에 첨부합니다.') + '</span>';
         } else if (stage === 'REVIEW') {
             body = '<span class="rl-report-file">📄 ' + esc(a.files.report) + '</span>' +
                 '<span class="chip-mini st-doing" style="margin-left:6px;">조치 요청 전</span>' +
@@ -1367,9 +1372,11 @@
 
     /* =============== 보고서 업로드·취소·검수 상호작용 =============== */
     /* 통합 보고서 첨부 — 여기서도 실제 파일을 고른다(구: 파일명 자동 생성). */
+    var REPORT_WAIT = '설문조사표 요청 공문을 보낸 뒤에 보고서를 첨부합니다.';
     function uploadReport() {
         if (!canManage()) { denyToast(); return; }
         var a = (D().assessments(state.year) || [])[0]; if (!a) return;
+        if (!D().surveyRequested(a)) { toast(REPORT_WAIT); return; }
         /* 보고서와 조치기한을 한 창에서 받는다(2차 교육 반영안 ⑤) — 부서가 기한을 알고 일하게 */
         var rows = (a.depts || []).map(function (dp) {
             return '<tr><td>' + esc(D().deptName(dp.deptId)) + '</td><td><input type="date" class="form-input rl-rep-due" data-dept="' + esc(dp.deptId) + '"' +
@@ -1396,6 +1403,7 @@
         var a = (D().assessments(state.year) || [])[0]; if (!a) return;
         /* 첨부는 아직 보고서가 없을 때만 — 작성·전달 뒤에 다시 올리면 작성표가 비워진다 */
         if (!manageGate(a, stageOf(a) === 'NONE', '이미 통합 보고서가 첨부되어 있습니다 — 다시 올리려면 [보고서 취소] 후 첨부하세요.')) return;
+        if (!manageGate(a, D().surveyRequested(a), REPORT_WAIT)) return;
         var name = surveyNameInput(a.year + '_정기평가_통합보고서.pdf');
         if (!name) { toast('파일을 고르거나 파일명을 입력하세요.'); return; }
         var deptDues = {}, missing = 0;
@@ -1407,6 +1415,7 @@
         if (missing && !bulk) { toast('조치기한이 비어 있는 부서가 있습니다 (' + missing + '개) — 일괄 적용하거나 부서별로 넣으세요.'); return; }
         var r = D().uploadReport(a.id, name, { bulkDue: bulk, deptDues: deptDues });
         if (!r) return;
+        if (r.error) { toast(r.error); return; }
         state.reqSel = null;
         V().closeModal();
         toast('보고서·조치기한 등록 · 이제 조치를 요청할 부서를 고르세요');
