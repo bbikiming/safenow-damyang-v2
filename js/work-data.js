@@ -479,6 +479,10 @@
                 var D = global.DEPTCHK; if (!D) return null;
                 /* 회차 축을 key 에 넣는다 — 없으면 상·하반기가 한 행을 공유해
                    5월에 찍은 이행이 11월 업무를 발행 즉시 완료로 만든다. */
+                /* 이행점검(comply-*)은 **제출하면 끝**이다 — 결과가 «일부 미이행»이어도 부서 할 일은 끝난다.
+                   «이행»일 때만 끝나게 하면 정직하게 미이행을 적은 부서의 할 일이 영영 남는다(2026-11-12).
+                   경영방침 게시(policy-post)는 게시해야 끝나는 일이라 «게시(DONE)» 그대로다. */
+                if (arg.indexOf('comply-') === 0) return D.submitted ? D.submitted(arg + '|' + periodKey, deptId) : false;
                 return D.stateOf(arg + '|' + periodKey, deptId).status === 'DONE';
             }
             if (kind === 'EDU') {

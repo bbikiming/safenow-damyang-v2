@@ -13,7 +13,7 @@
 
     /* r5 — 2026-07-30 회의: 기타교육 분류를 법정 3유형으로 재정의(구 5종 폐지) ·
      * 첨부 슬롯(file.slot) 도입. 구 etcType 이 남으면 필터·표시가 어긋나므로 버전 범프. */
-    var SKEY = 'damyangEduV1r7';   /* r7 — 관리감독자 지정일 기준 연간 사이클 · 미등록 판정 분리 */
+    var SKEY = 'damyangEduV1r8';   /* r8 — 참석자 등록부는 교육이 끝난 뒤(등록 기한) · 끝난 접수 중 교육 시드 1건 (2026-11-12) */
     /* 오늘 기준 — DYV2.today() 단일 출처. TODAY 는 하위호환 게터(DYEDU.TODAY)로 유지. */
     function today() { return (global.DYV2 && global.DYV2.today) ? global.DYV2.today() : realToday(); }
     function realToday() {
@@ -289,14 +289,25 @@
                 }
             });
         });
-        /* 8월 예정(OPEN) — 아직 신청 접수 중 */
+        /* 7월 보충교육(OPEN) — 교육은 끝났고 부서가 참석자 등록부를 올리는 중(등록 기한 07-21).
+           «교육이 끝난 뒤 한 번 올린다»를 보여 주는 예시다(2026-11-12). */
+        courses.push({
+            id: 'C-M07B', kind: 'REG_GROUP', date: '2026-07-14', time: '14:00', hours: 2, enrollDays: 7,
+            instructor: '재난안전과 안전관리 주무관', place: '군청 소회의실',
+            desc: '2026년 7월 현업근로자 보충 안전보건교육 (미이수자 대상)',
+            files: [{ name: '2026_07월_보충교육_서명부양식.hwpx', slot: 'roster' }],
+            status: 'OPEN', createdBy: '재난안전과',
+            history: [{ type: 'CREATE', at: '2026-07-07', by: '재난안전과', memo: '집합교육 등록' }]
+        });
+        enrolls.push({ courseId: 'C-M07B', deptId: 'env', workerIds: ['w_env_c2'], signFile: '환경과_07월보충_서명부.pdf', actualHours: 2, at: '2026-07-15', by: '정환경' });
+        /* 8월 예정(OPEN) — 교육 전. 끝난 뒤 등록부를 받는다 */
         courses.push({
             id: 'C-M08', kind: 'REG_GROUP', date: '2026-08-14', time: '14:00', hours: 3,
             instructor: '한국산업안전보건공단 이강사', place: '군청 대회의실',
-            desc: '2026년 8월 정기 안전보건교육 (전체 부서 대상) — 신청 접수 중',
+            desc: '2026년 8월 정기 안전보건교육 (전체 부서 대상)',
             files: [{ name: '2026_08월_교육계획서.hwpx' }],
             status: 'OPEN', createdBy: '재난안전과',
-            history: [{ type: 'CREATE', at: '2026-07-14', by: '재난안전과', memo: '집합교육 등록 · 신청 접수 개시' }]
+            history: [{ type: 'CREATE', at: '2026-07-14', by: '재난안전과', memo: '집합교육 등록' }]
         });
         /* 부서별 자체 보강교육 (7월) — 후기 채용자·미이수자 대상 · 12h 채워 60~70% 이수율 목표 달성 */
         var boostSeed = {
@@ -330,7 +341,7 @@
             id: 'C-SR2', kind: 'SUP_REG', date: '2026-09-18', time: '13:30', hours: 8,
             instructor: '노동안전연구원', place: '외부 위탁', desc: '2026 관리감독자 정기교육 2차 (하반기 8h) — 예정',
             files: [], status: 'OPEN', createdBy: '재난안전과',
-            history: [{ type: 'CREATE', at: '2026-07-10', by: '재난안전과', memo: '관리감독자 정기교육 등록 · 신청 접수 개시' }]
+            history: [{ type: 'CREATE', at: '2026-07-10', by: '재난안전과', memo: '관리감독자 정기교육 등록' }]
         });
         /* 관리감독자 정기 1차 참석자 */
         var supAttended = ['w_u_safe1', 'w_u_env1', 'w_u_wat1', 'w_u_fac1', 'w_u_con1', 'w_u_hlth1'];
@@ -542,6 +553,8 @@
             files: o.files || [], photos: o.photos || [], status: o.status || 'OPEN',
             createdBy: o.createdBy || '', history: o.history || []
         };
+        /* 집합교육 등록 기한 — 마지막 회차 뒤 N일(기본 7) */
+        if (o.enrollDays != null && o.enrollDays !== '') c.enrollDays = +o.enrollDays;
         d.courses.push(c);
         c.history.push({ type: 'CREATE', at: nowTs(), by: o.createdBy || '', memo: kindLabel(c.kind) + ' 등록' });
         save(); return c;
@@ -754,7 +767,8 @@
         var c = courseOf(o.courseId);
         var pop = c ? populationIssue(c.kind, o.workerIds) : '';
         if (pop) return pop;
-        if (hasEnroll(o.courseId, o.deptId)) return deptName(o.deptId) + '은(는) 이미 등록된 부서입니다 — 신청 취소 후 다시 등록하세요.';
+        if (hasEnroll(o.courseId, o.deptId)) return deptName(o.deptId) + '은(는) 이미 등록된 부서입니다 — 등록 취소 후 다시 등록하세요.';
+        if (c && c.status === 'OPEN' && isGroupCourse(c) && !enrollOpen(c)) return '교육이 끝난 뒤(' + lastSessionDate(c) + '부터) 참석자 등록부를 올립니다.';
         return '';
     }
     function addEnroll(o) {
@@ -763,11 +777,15 @@
         /* 모집단이 맞지 않는 사람이 섞이면 저장하지 않는다(E19) */
         var oc = courseOf(o.courseId);
         if (oc && populationIssue(oc.kind, o.workerIds)) return false;
+        /* 집합교육 등록부는 교육이 끝난 뒤에만 받는다 — 화면 두 곳(목록·상세)이 같은 판정을 지난다 */
+        if (oc && oc.status === 'OPEN' && isGroupCourse(oc) && !enrollOpen(oc)) return false;
         d.enrolls.push({
             courseId: o.courseId, deptId: o.deptId,
             workerIds: (o.workerIds || []).slice(),
             signFile: o.signFile || '', actualHours: o.actualHours == null ? null : +o.actualHours,
-            status: 'ACTIVE', at: o.at || today()
+            status: 'ACTIVE', at: o.at || today(),
+            /* 누가 올렸는지 — 재난안전과가 다른 부서 몫을 대신 올리면 proxy(대리 등록) */
+            by: o.by || '', proxy: !!o.proxy
         });
         save();
         return true;
@@ -870,14 +888,37 @@
      *   remind — 독촉받은 미이수자(현재 사이클 미완료)
      * 이수율 같은 현황은 할 일이 아니라 넣지 않는다. 종전에는 내 할일만 이 두 가지를 세고 대시보드는
      * 예시 숫자를 써서, 같은 부서의 교육 할 일이 두 화면에서 다르게 보였다. 판정을 한 곳에 둔다. */
+    /* ===== 참석자 등록부를 받는 때 (2026-11-12) =====
+     * 서명은 참석 사실의 증빙이고 실제 참석시간은 교육이 끝나야 정해진다 — 그래서 등록부는
+     * **마지막 회차가 끝난 날부터** 받는다(교육 전 등록 금지). 사전 신청·불참자 처리는 두지 않는다
+     * (2026-07-16 «한 단계» 결정 유지). 등록 기한 = 마지막 회차 + enrollDays(기본 7일). */
+    function lastSessionDate(c) {
+        var ss = courseSessions(c);
+        return ss.length ? ss.map(function (x) { return x.date || ''; }).sort().pop() : (c && c.date) || '';
+    }
+    function enrollDays(c) { return c && c.enrollDays != null && c.enrollDays !== '' ? +c.enrollDays : 7; }
+    function enrollDue(c) {
+        var d = lastSessionDate(c); if (!d) return '';
+        var t = new Date(d + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() + enrollDays(c));
+        return t.toISOString().slice(0, 10);
+    }
+    /* 등록부를 지금 받는가 — 접수 중이고 교육이 끝났을 때 */
+    function enrollOpen(c) {
+        if (!c || c.status !== 'OPEN') return false;
+        if (!isGroupCourse(c)) return true;
+        var d = lastSessionDate(c);
+        return !d || today() >= d;
+    }
     function deptTodos(deptId) {
         var out = [];
         if (!deptId) return out;
         var en = enrolls();
         courses({ status: 'OPEN' }).forEach(function (c) {
             if (c.kind !== 'REG_GROUP' && c.kind !== 'SUP_REG') return;
+            /* 교육이 끝나기 전에는 할 일이 아니다 — 끝난 날 생기고 등록 기한을 단다 */
+            if (!enrollOpen(c)) return;
             if (en.some(function (e) { return e.courseId === c.id && e.deptId === deptId; })) return;
-            out.push({ kind: 'apply', course: c });
+            out.push({ kind: 'apply', course: c, due: enrollDue(c) });
         });
         reminders().forEach(function (r) {
             if (r.deptId !== deptId) return;
@@ -1149,6 +1190,7 @@
         syncCourseRecordHours: syncCourseRecordHours,
         /* 독촉 */
         reminders: reminders, addReminder: addReminder, deptTodos: deptTodos,
+        lastSessionDate: lastSessionDate, enrollDue: enrollDue, enrollOpen: enrollOpen, enrollDays: enrollDays,
         groupHoursConflicts: groupHoursConflicts,
         /* 계산 */
         cycleOf: cycleOf, requiredHours: requiredHours, hireHours: hireHours, hireAnchor: hireAnchor,

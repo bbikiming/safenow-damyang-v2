@@ -5,27 +5,28 @@
 
      참석자4 "그럼 그 부서가 그게 걸어져 있는지 안 걸어져 있는지 확인하게끔 체크리스트를
               만들어야 될 거 아니야 … 과 쭈르륵 사업소 쭈르륵 해가지고 돼 있는지 안 돼 있는지"
-     참석자4 "여기 39개잖아요 … 전체가 리스트가 쭈르륵 나와가지고 얘네들이 증빙 자료
-              조그마하게 사진 다 들게 하고 체크리스트 만들어가지고 얘가 안 했는지 했는지
-              안 했으면 거기다 전화하면 되잖아"
      참석자3 "어차피 이 시스템 존재 자체가 증빙 역할이니까 … 작은 거는 다 자료가 들어가야"
 
-   같은 표를 **경영방침 게시 현황**과 **의무 이행점검** 두 곳이 쓴다. 회의 결론이
-   "경영방침 원본은 계획에서, 게시 여부는 이행점검에서 확인"이라 두 화면이 같은 축(부서)을
-   공유하기 때문이다. 화면마다 표를 새로 짜지 말고 이 모듈을 재사용할 것.
+   같은 표를 **경영방침 게시 현황**과 **의무 이행점검** 두 곳이 쓴다.
+
+   ── 두 가지 쓰임 (2026-11-12 이행점검 흐름 보완) ─────────────────────
+   · 기본(경영방침 게시) — 부서가 [확인 등록]으로 게시/미게시/해당없음을 적는다.
+   · **배포 흐름(opts.flow, 이행점검)** — 재난안전과가 점검표를 **배포**하고(양식·안내·기한·대상),
+     부서가 내려받아 작성해 **[결과 제출]**하고, 재난안전과가 **[확인] / [보완 요청]**을 한다.
+     군수 보고(마감 상신) 뒤에는 그 회차를 **잠근다**.
+     근거: 전달-개발-이행점검·교육등록부-흐름보완-20261111-v1 · 확인-주무관-이행점검·교육-이슈점검-20261112-v2.
+
+   ── «미등록(미제출)»은 저장 코드가 아니라 «기록 없음»이다 ───────────
+   종전에는 손대지 않은 줄의 기본값이 TODO(미이행)라 **안 낸 부서와 점검했더니 미이행인 부서가
+   같은 칩**으로 보였다. 그러면 정직하게 미이행을 적은 부서에도 독촉이 가고, 군수 보고의 미이행
+   목록에 안 낸 부서가 섞인다. 저장 코드는 그대로 셋(DONE/TODO/NA)이고 «기록 없음»을 따로 판정한다.
 
    ── '해당없음'을 특별히 다루는 이유 ──────────────────────────────────
-   발주처가 실제 종이 서식을 펼쳐 놓고 지적한 실패 모드가 "미이행"이 아니라
-   **'해당 없음'으로 적고 빠져나가는 것**이었다.
-     참석자1 "이 사람은 안 한 거죠. 개판이네 누구야 도시과 뭘 해야 되는데 원래 해야 돼요
-              해당 없어 나 이해가 안 되네."
-   그래서 해당없음은 사유 없이 고를 수 없고, 고르면 '사유 확인 필요'로 남아 미이행과
-   같은 관리 대상이 된다. 체크박스 하나로 끝내면 종이 서식의 문제를 그대로 옮기게 된다.
+   발주처가 지적한 실패 모드가 **'해당 없음'으로 적고 빠져나가는 것**이었다. 해당없음은 사유 없이
+   저장할 수 없고, 사유 없는 옛 데이터는 '사유 미기재 — 확인 필요'로 계속 드러난다.
 
    ── 부서 명단 갭 ────────────────────────────────────────────────────
-   회의에서 대상은 "과 + 사업소 39개"로 확인됐는데 DYV2.ORG 에는 11개만 있다.
-   그럴듯하게 지어내지 않고 화면에 '미등록'으로 드러낸다(CLAUDE.md 말미 원칙).
-   실제 명단을 받으면 DYV2.ORG 한 곳만 늘리면 이 화면들은 자동으로 따라온다.
+   대상은 과·사업소 39개인데 DYV2.ORG 에는 일부만 있다. 지어내지 않고 '미등록'으로 드러낸다.
    ===================================================================== */
 (function (global) {
     'use strict';
@@ -33,76 +34,114 @@
     var V = function () { return global.DYV2; };
     function esc(s) { return V().esc(String(s == null ? '' : s)); }
     function toast(m) { V().toast(m); }
+    function today() { return V() && V().today ? V().today() : new Date().toISOString().slice(0, 10); }
+    function nowTs() {
+        var t = new Date(), pad = function (n) { return (n < 10 ? '0' : '') + n; };
+        return today() + ' ' + pad(t.getHours()) + ':' + pad(t.getMinutes());
+    }
     /* ===== 권한 (CLAUDE.md §12) =====
-     * 이 표는 부서 전수 점검표다 — **표는 전 부서를 보여주되**(전수 점검이 목적),
-     * 각 행의 '확인 등록·독촉'은 그 부서 담당자와 주관부서만 할 수 있다.
+     * 표는 전 부서를 보여주되(전수 점검이 목적), 각 행의 등록·제출은 그 부서 담당자와 주관부서만 한다.
      * 관리·감독(군수·과장·소장)은 조회만 한다 — 담당자 이름으로 대신 등록하면 문서 위조다. */
     function R() { return global.DYROLE; }
+    function me() { return R() && R().current ? R().current() : null; }
     function canAct(deptId) { return !R() || R().canAct(deptId); }
+    /* 배포·확인은 주관부서(재난안전과) **담당자**만 한다 */
+    function isOwnerStaff() {
+        var p = me();
+        if (!R() || !p) return true;
+        return p.tier === 'staff' && p.deptId === R().OWNER_DEPT;
+    }
+    /* 재난안전과 팀장 — 담당자와 함께 전 부서 제출을 검토한다(2026-11-12 사용자 지시).
+       본인 제출은 본인이 검토하지 않으므로 재난안전과 줄도 팀장이 검토할 수 있다. */
+    function isOwnerLead() {
+        var p = me();
+        return !!(R() && p && p.deptId === R().OWNER_DEPT && p.tier === 'super' && /팀장/.test(p.role || ''));
+    }
+    /* ===== 이행점검(배포 흐름) 권한 — 이 블록 한 곳에서만 판정한다 (2026-11-12 사용자 지시) =====
+     *   결과 제출·고치기·취소·다시 제출 : 그 부서 담당자 — **자기 부서만**(재난안전과도 자기 줄만, 대리 제출 없음)
+     *   검토(승인·반려·확인 취소)      : 재난안전과 담당자·팀장 — 전 부서(본인 제출 제외)
+     *   독촉                           : DYROLE.canRemind — 주관부서와 그 부서장(담당자는 자기 부서 줄 없음, 군수 없음)
+     *   배포·마감 상신·체계 점검표     : 재난안전과 담당자(화면 모듈이 판정)
+     *   그 밖                          : 조회 */
+    function canSubmit(deptId) {
+        var p = me();
+        if (!R() || !p) return true;
+        return p.tier === 'staff' && p.deptId === deptId;
+    }
+    function canReviewer() { return isOwnerStaff() || isOwnerLead(); }
+    function actor() { return R() && R().actorLabel ? R().actorLabel() : '재난안전과'; }
     function denied(deptId) {
-        var p = R() && R().current ? R().current() : null;
+        var p = me();
         toast(p && p.tier !== 'staff'
-            ? '관리감독자는 조회만 합니다 — 확인 등록은 담당자 본인이 수행합니다.'
+            ? '관리감독자는 조회만 합니다 — 등록·제출은 담당자 본인이 수행합니다.'
             : '해당 부서 담당자와 주관부서(재난안전과)만 등록할 수 있습니다.');
     }
 
-    /* v3 — key 에 **회차 축**이 들어갔다(2026-08-10).
- * 종전 rowKey(key, deptId) 에는 회차가 없어 상·하반기가 한 행을 공유했다.
- * 5월에 이행을 찍으면 11월 하반기 업무가 발행 즉시 완료로 파생되고 이듬해도
- * 영구 완료였다. 회차는 **호출자가 key 에 실어 보낸다**(이 모듈은 무수정).
- *   예) 'comply-industrial|2026-H1'(반기) · 'policy-post|v2.0'(방침 버전)
- *   회차 축은 그 업무가 무엇을 기준으로 다시 하는가로 정한다 — 의무 이행점검은
- *   반기마다, 경영방침 게시는 **방침이 바뀔 때** 다시 붙인다.
- * 업무 자동발행(DYWORK.deptDone)이 이 key 로 완료를 파생한다. */
-var SKEY = 'dy-deptcheck-v4';   /* v4 — 경영방침 게시 회차 축을 연도 → 방침 버전으로 */
+    /* v5 — 이행점검 배포 흐름(확인 축·미이행 조치계획) 시드 (2026-11-12).
+     * key 에 **회차 축**이 들어간다 — 호출자가 실어 보낸다.
+     *   예) 'comply-industrial|2026-H1'(반기) · 'policy-post|v2.0'(방침 버전) */
+    var SKEY = 'dy-deptcheck-v5';
+    var FKEY = 'dy-comply-flow-v1';   /* 배포·마감 기록 — 회차 단위 */
 
     /* 회의에서 확인된 전체 대상 수(과 + 사업소). 실제 명단은 발주처 제공 대기. */
     var EXPECTED_DEPTS = 39;
 
-    /* 상태는 **코드로 저장**하고 화면 문구는 화면이 정한다.
-     * 이행점검은 '이행/미이행', 경영방침 게시는 '게시/미게시'로 읽혀야 하는데,
-     * 표시 문구를 그대로 저장하면 라벨을 바꿀 때마다 저장 데이터가 깨진다.
-     * 표시 라벨은 DYV2.STATUS_TONE 이 아는 어휘여야 색이 붙는다(CLAUDE.md §7). */
+    /* 상태는 **코드로 저장**하고 화면 문구는 화면이 정한다(CLAUDE.md §4-2). */
     var ST = { DONE: 'DONE', TODO: 'TODO', NA: 'NA' };
-    var DEFAULT_LABELS = { DONE: '이행', TODO: '미이행', NA: '해당없음' };
+    var DEFAULT_LABELS = { DONE: '이행', TODO: '미이행', NA: '해당없음', NONE: '미등록' };
+    /* 배포 흐름의 결과 라벨 — 결과는 «제출한 줄»에만 붙는다 */
+    var FLOW_LABELS = { DONE: '전 항목 이행', TODO: '일부 미이행', NA: '해당없음', NONE: '미제출' };
     function labelsOf(opts) {
-        return Object.assign({}, DEFAULT_LABELS, (opts && opts.labels) || {});
+        return Object.assign({}, (opts && opts.flow) ? FLOW_LABELS : DEFAULT_LABELS, (opts && opts.labels) || {});
     }
+    /* 확인 축 — 결과 값(status)을 건드리지 않는다(위험성평가 개선조치 확인과 같은 구조, CLAUDE.md §4-3) */
+    var CF = { WAIT: 'WAIT', OK: 'OK', RETURNED: 'RETURNED' };
 
-
-    /* ================= 예시 자료 =================
-     * 전 부서 '미이행 0%' 로만 보이면 회의가 요구한 "돼 있는지 안 돼 있는지" 표에
-     * **'돼 있는' 사례가 하나도 없다.** 상태 5종(이행·미이행·사유 있는 해당없음·
-     * 사유 없는 해당없음·증빙 여러 장)이 한 화면에 다 보이도록 심는다.
-     * 실제 명단(39개)을 받으면 DYV2.ORG 만 늘리면 나머지 부서는 자동으로 '미이행'이 된다. */
+    /* ================= 예시 자료 ================= */
     var SEED_THUMB = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAwICQsJCAwLCgsODQwOEh4UEhEREiUbHBYeLCcuLisnKyoxN0Y7MTRCNCorPVM+QkhKTk9OLztWXFVMW0ZNTkv/2wBDAQ0ODhIQEiQUFCRLMisyS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0v/wAARCAB4AKADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDmc0ZpuaM1geUOzRmm5ozQA7NGabmjNADs0ZpuaM0AOzRmm5ozQA7NGabmjNADs0ZpuaM0AOzRmm5ozQA7NGabmjNADs0ZpuaM0ANzRmm5ozTGOzRmm5ozQA7NGabmjNADs0ZpuaM0AOzRmm5ozQA7NGabmjNADs0ZpuaM0AOzRmm5ozQA7NGabmjNADs0ZpuaM0ANzRmm5ozQUOzRmm5ozQA7NGabmjNADs0ZpuaM0AOzRmm5ozQA7NGabmjNADs0ZpuaM0AOzRmm5ozQA7NGabmjNADs0ZpuaM0ANzRmkzXVR6RaNdOhssojSC3+dh9rUQyMH6+qoeMD5sU7FKNzls0Zrq4tIsDBbyTWkqzScXMEYJ+zDsSS425HOWyKz4baze1s4jbDzZ7Gedpt7bgyGUrgZx/yzAPFOw+RmJmjNb1zDaW1tcXElqLh1FkFEkj4G+As3Qg8kfh+lWpdGtYZrqKO0M8MaXZacu2Ynj8zYvBx0VTyOd3pRYORnL5ozSZozSJFzRmkzRmgBc0ZpM0ZoAXNGaTNGaAFzRmkzRmgBc0ZpM0ZoAXNGaTNGaAG5qSC4kt3LxNtYoyE4zwylSPyJqHNGaCh2aM03NGaBDs1Zj1C5jtzAjqI9pXOxdwB6gNjIB9Ae59aqZozQMdmjNNzRmgQ7NGabmjNADs0ZpuaM0AOzRmm5ozQA7NGabmjNADs0ZpuaM0AOzRmm5ozQA3NGabmjNModmjNNzRmgB2aM03NGaAHZozTc0ZoAdmjNNzRmgB2aM03NGaAHZozTc0ZoAdmjNNzRmgB2aM03NGaAHZozTc0ZoAbmjNJmjNAxc0ZpM0ZoAXNGaTNGaAFzRmkzRmgBc0ZpM0ZoAXNGaTNGaAFzRmkzRmgBc0ZpM0ZoAXNGaTNGaAFzRmkzRmgBuaM0UUxhmjNFFABmjNFFABmjNFFABmjNFFABmjNFFABmjNFFABmjNFFABmjNFFABmjNFFAH/9k=';
     function ph(n) { return { name: n, size: 164000, type: 'image/jpeg', w: 1600, h: 1200, thumb: SEED_THUMB }; }
+    function doc(n) { return { name: n, size: 412000, type: 'application/pdf' }; }
     var SEED = {
-        /* 경영방침 게시 — 게시 4 · 미게시 5 · 해당없음(사유O) 1 · 해당없음(사유X) 1 */
+        /* 경영방침 게시 — 게시 4 · 해당없음(사유O) 1 · 해당없음(사유X) 1 · 나머지 미등록 */
         'policy-post|v2.0': {
             safety:   { status: 'DONE', place: '군청 본관 1층 게시판', date: '2026-03-04', photos: [ph('재난안전과_게시_1.jpg')] },
             env:      { status: 'DONE', place: '환경과 사무실 입구', date: '2026-03-05', photos: [ph('환경과_게시_1.jpg')] },
             water:    { status: 'DONE', place: '물순환사업소 정문 게시판', date: '2026-03-06', photos: [ph('물순환_게시_1.jpg'), ph('물순환_게시_2.jpg')] },
             facility: { status: 'DONE', place: '공공시설사업소 현관', date: '2026-03-06', photos: [ph('공공시설_게시_1.jpg')] },
             health:   { status: 'NA', naReason: '보건소는 별도 청사로 군청 게시판 대상이 아님 — 보건소 자체 게시판에 별도 게시(2026-03-10)', date: '2026-03-10' },
-            /* 사유 없이 저장된 옛 데이터 — 행에 '사유 미기재 — 확인 필요'로 계속 드러난다 */
             culture:  { status: 'NA', naReason: '', date: '' }
         },
-        /* 중대산업재해 이행점검 — 이행 5 · 미이행 5 · 해당없음 1 */
+        /* 중대산업재해 2026 상반기 — 확인 완료·확인 대기·보완 요청·일부 미이행·해당없음·미제출이 한 화면에 다 보이게 */
         'comply-industrial|2026-H1': {
-            safety:    { status: 'DONE', place: '재난안전과 안전보건 캐비닛', date: '2026-06-28', photos: [ph('재난안전과_점검표.jpg')] },
-            water:     { status: 'DONE', place: '물순환사업소 사무실', date: '2026-06-29', photos: [ph('물순환_점검표.jpg')] },
-            env:       { status: 'DONE', place: '환경과 사무실', date: '2026-06-30', photos: [ph('환경과_점검표.jpg')] },
-            construct: { status: 'DONE', place: '건설과 안전관리팀', date: '2026-06-30', photos: [ph('건설과_점검표.jpg')] },
-            facility:  { status: 'DONE', place: '공공시설사업소', date: '2026-07-01', photos: [ph('공공시설_점검표.jpg')] },
-            plan:      { status: 'NA', naReason: '기획예산실은 현장 작업이 없어 안전조치 점검 대상에서 제외 — 예산 편성 항목만 해당', date: '2026-06-25' }
+            safety:    { status: 'DONE', date: '2026-06-24', photos: [doc('재난안전과_상반기_자체점검표.pdf')], submittedAt: '2026-06-24', submittedBy: '박안전', submittedByUid: 'u_jjt2',
+                         confirm: { state: 'WAIT', round: 1 } },
+            water:     { status: 'DONE', date: '2026-06-26', place: '지적 없음', photos: [doc('물순환사업소_상반기_자체점검표.pdf')], submittedAt: '2026-06-26', submittedBy: '하정수', submittedByUid: 'u_wat3',
+                         confirm: { state: 'OK', round: 1, by: '박안전', at: '2026-06-29' } },
+            env:       { status: 'DONE', date: '2026-06-27', photos: [doc('환경과_상반기_자체점검표.pdf')], submittedAt: '2026-06-27', submittedBy: '정수빈', submittedByUid: 'u_env5',
+                         confirm: { state: 'OK', round: 1, by: '박안전', at: '2026-06-29' } },
+            construct: { status: 'DONE', date: '2026-06-30', photos: [doc('건설과_상반기_자체점검표.pdf')], submittedAt: '2026-06-30', submittedBy: '건설과 담당자', submittedByUid: '',
+                         confirm: { state: 'WAIT', round: 1 } },
+            facility:  { status: 'DONE', date: '2026-07-01', photos: [doc('공공시설사업소_상반기_자체점검표.pdf')], submittedAt: '2026-07-01', submittedBy: '공공시설사업소 담당자', submittedByUid: '',
+                         confirm: { state: 'RETURNED', round: 1, by: '박안전', at: '2026-07-03', reason: '점검표 2쪽 부서장 서명이 빠졌습니다 — 서명본으로 다시 올려 주세요' } },
+            culture:   { status: 'TODO', date: '2026-06-29', photos: [doc('문화체육과_상반기_자체점검표.pdf')], submittedAt: '2026-06-29', submittedBy: '문화체육과 담당자', submittedByUid: '',
+                         missText: '점검표 4번(체육시설 안전점검 결과 기록) — 상반기 정기점검 결과를 대장에 기록하지 않음',
+                         plan: '7월 중 체육시설 3개소 점검 결과를 대장에 기록하고 담당자를 지정', planDue: '2026-07-31', needs: ['부서 자체 처리'],
+                         confirm: { state: 'WAIT', round: 1 } },
+            plan:      { status: 'NA', naReason: '기획예산실은 현장 작업이 없어 안전조치 점검 대상에서 제외 — 예산 편성 항목만 해당', date: '2026-06-25', submittedAt: '2026-06-25', submittedBy: '기획예산실 담당자', submittedByUid: '',
+                         confirm: { state: 'OK', round: 1, by: '박안전', at: '2026-06-29' } }
         },
-        /* 중대시민재해 이행점검 — 이행 3 · 미이행 7 · 해당없음(사유X) 1 */
+        /* 중대시민재해 2026 상반기 — 대상은 공중이용시설 보유 부서 */
         'comply-citizen|2026-H1': {
-            facility:  { status: 'DONE', place: '공공시설사업소 시설관리팀', date: '2026-06-27', photos: [ph('공중이용시설_점검.jpg')] },
-            culture:   { status: 'DONE', place: '문화체육과 체육시설팀', date: '2026-06-29', photos: [ph('체육시설_점검.jpg')] },
-            water:     { status: 'DONE', place: '물순환사업소 수질관리팀', date: '2026-06-30', photos: [ph('수질_점검.jpg')] },
-            acct:      { status: 'NA', naReason: '', date: '' }
+            facility: { status: 'DONE', date: '2026-06-27', photos: [doc('공공시설사업소_시민재해_점검표.pdf')], submittedAt: '2026-06-27', submittedBy: '공공시설사업소 담당자', submittedByUid: '',
+                        confirm: { state: 'OK', round: 1, by: '박안전', at: '2026-06-30' } },
+            culture:  { status: 'DONE', date: '2026-06-29', photos: [doc('문화체육과_시민재해_점검표.pdf')], submittedAt: '2026-06-29', submittedBy: '문화체육과 담당자', submittedByUid: '',
+                        confirm: { state: 'WAIT', round: 1 } },
+            water:    { status: 'DONE', date: '2026-06-30', photos: [doc('물순환사업소_시민재해_점검표.pdf')], submittedAt: '2026-06-30', submittedBy: '하정수', submittedByUid: 'u_wat3',
+                        confirm: { state: 'OK', round: 1, by: '박안전', at: '2026-06-30' } },
+            env:      { status: 'TODO', date: '2026-06-30', photos: [doc('환경과_시민재해_점검표.pdf')], submittedAt: '2026-06-30', submittedBy: '정수빈', submittedByUid: 'u_env5',
+                        missText: '점검표 2번(공중화장실 안전점검 계획) — 하반기 계획 미수립',
+                        plan: '8월까지 공중화장실 12개소 안전점검 계획 수립', planDue: '2026-08-31', needs: ['인력'],
+                        confirm: { state: 'WAIT', round: 1 } }
         }
     };
     function applySeed(d) {
@@ -110,7 +149,7 @@ var SKEY = 'dy-deptcheck-v4';   /* v4 — 경영방침 게시 회차 축을 연�
             var m = SEED[key];
             Object.keys(m).forEach(function (deptId) {
                 var base = { status: ST.TODO, place: '', date: '', naReason: '', photos: [], note: '' };
-                d[key + '|' + deptId] = Object.assign(base, m[deptId]);
+                d[key + '|' + deptId] = Object.assign(base, JSON.parse(JSON.stringify(m[deptId])));
             });
         });
         return d;
@@ -125,83 +164,173 @@ var SKEY = 'dy-deptcheck-v4';   /* v4 — 경영방침 게시 회차 축을 연�
         return db;
     }
     function save() { try { global.sessionStorage.setItem(SKEY, JSON.stringify(db)); } catch (e) {} }
-    function reset() { db = applySeed({}); save(); }
+    function reset() { db = applySeed({}); save(); fdb = flowSeed(); fsave(); }
 
     function rowKey(key, deptId) { return key + '|' + deptId; }
-    /* 부서 1건의 이행 상태. 기본값은 '미이행' — 아무도 손대지 않은 것과 이행한 것을 구분해야 한다. */
+    /* 부서 1건의 상태. 기록이 없으면 exists:false — «미등록/미제출»이다(미이행과 다르다). */
     function stateOf(key, deptId) {
         var d = load()[rowKey(key, deptId)];
-        return d || { status: ST.TODO, place: '', date: '', naReason: '', photos: [], note: '' };
+        if (d) return Object.assign({ exists: true }, d);
+        return { exists: false, status: ST.TODO, place: '', date: '', naReason: '', photos: [], note: '' };
     }
     function setState(key, deptId, patch) {
         var d = load(), k = rowKey(key, deptId);
-        d[k] = Object.assign(stateOf(key, deptId), patch || {});
+        var cur = d[k] || { status: ST.TODO, place: '', date: '', naReason: '', photos: [], note: '' };
+        d[k] = Object.assign({}, cur, patch || {});
+        delete d[k].exists;
         save();
         return d[k];
     }
+    function removeState(key, deptId) { var d = load(); delete d[rowKey(key, deptId)]; save(); }
+
+    /* ================= 배포·마감 기록 (이행점검) =================
+     * 회차마다 «무엇을(양식) · 누구에게(대상 부서) · 언제까지(기한)» 내려보냈는지가 남아야
+     * «그 반기에 무엇을 점검했나»를 증명할 수 있다. */
+    var fdb = null;
+    function flowSeed() {
+        var all = depts().map(function (d) { return d.id; });
+        var civ = civilDefaultTargets();
+        return {
+            dist: {
+                'comply-industrial|2026-H1': { at: '2026-05-14', by: '박안전', due: '2026-06-30', ver: 1,
+                    note: '부서장 서명 후 스캔본을 올려 주세요. 미이행 항목은 조치계획을 함께 적어 주세요.',
+                    forms: [{ name: '2026년_상반기_중대산업재해_이행사항_자체점검표.hwpx', size: 88000 }], targets: all },
+                'comply-citizen|2026-H1': { at: '2026-05-15', by: '박안전', due: '2026-06-30', ver: 1,
+                    note: '공중이용시설을 관리하는 부서만 작성합니다. 부서장 서명 후 스캔본을 올려 주세요.',
+                    forms: [{ name: '2026년_상반기_중대시민재해_이행사항_자체점검표.hwpx', size: 76000 }], targets: civ }
+            },
+            closed: {}
+        };
+    }
+    function fload() {
+        if (fdb) return fdb;
+        try { fdb = JSON.parse(global.sessionStorage.getItem(FKEY) || 'null'); } catch (e) { fdb = null; }
+        if (!fdb) { fdb = flowSeed(); fsave(); }
+        return fdb;
+    }
+    function fsave() { try { global.sessionStorage.setItem(FKEY, JSON.stringify(fdb)); } catch (e) {} }
+    /* 시민 축 기본 대상 — 공중이용시설 보유 부서(조직도 속성). 확정 명단은 담양군 확인(실측 11곳) */
+    function civilDefaultTargets() {
+        var out = [];
+        try {
+            V().orgWalk(function (n) { if (n && n.attrs && n.attrs.publicFacility) out.push(n.id); });
+        } catch (e) {}
+        return out;
+    }
+    var FLOW = {
+        dist: function (key) { return fload().dist[key] || null; },
+        setDist: function (key, o) { fload().dist[key] = o; fsave(); return o; },
+        removeDist: function (key) { delete fload().dist[key]; fsave(); },
+        closed: function (period) { return fload().closed[period] || null; },
+        setClosed: function (period, o) { if (o) fload().closed[period] = o; else delete fload().closed[period]; fsave(); },
+        civilDefaultTargets: civilDefaultTargets
+    };
 
     /* ================= 부서 목록 ================= */
-    /* DYV2.ORG 파생만 쓴다 — 자체 조직도를 만들지 않는다(CLAUDE.md §3) */
     function depts() { return V().orgDepts(); }
     function gap() {
         var n = depts().length;
         return { registered: n, expected: EXPECTED_DEPTS, missing: Math.max(0, EXPECTED_DEPTS - n) };
     }
 
-    function summary(key) {
+    /* ===== 배포 흐름 — 줄의 진행 상태 =====
+     * 'OFF'(대상 아님) · 'NONE'(미제출) · 'WAIT'(확인 대기) · 'RETURNED'(보완 요청) · 'OK'(확인 완료) */
+    function isTarget(flow, deptId) {
+        return !!(flow && flow.dist && (flow.dist.targets || []).indexOf(deptId) !== -1);
+    }
+    function progressOf(key, deptId, flow) {
+        if (!isTarget(flow, deptId)) return 'OFF';
+        var st = stateOf(key, deptId);
+        if (!st.exists) return 'NONE';
+        var c = (st.confirm && st.confirm.state) || CF.WAIT;
+        return c === CF.OK ? 'OK' : c === CF.RETURNED ? 'RETURNED' : 'WAIT';
+    }
+    var PROG_LABEL = { OFF: '대상 아님', NONE: '미제출', WAIT: '확인 대기', RETURNED: '반려', OK: '확인 완료' };
+    /* 제출로 끝나는가 — 결과가 무엇이든 제출했으면 부서 할 일은 끝난다(보완 요청이면 다시 할 일) */
+    function submitted(key, deptId) {
+        var st = stateOf(key, deptId);
+        return !!st.exists && !(st.confirm && st.confirm.state === CF.RETURNED);
+    }
+    function overdue(flow) { return !!(flow && flow.dist && flow.dist.due && today() > flow.dist.due); }
+
+    function summary(key, flow) {
+        if (flow) {
+            var tg = depts().filter(function (d) { return isTarget(flow, d.id); });
+            var s = { total: tg.length, submitted: 0, ok: 0, wait: 0, returned: 0, none: 0, done: 0, todo: 0, na: 0, naUnexplained: 0, late: 0 };
+            tg.forEach(function (d) {
+                var p = progressOf(key, d.id, flow), st = stateOf(key, d.id);
+                if (p === 'NONE') { s.none++; return; }
+                s.submitted++;
+                if (p === 'OK') s.ok++; else if (p === 'WAIT') s.wait++; else if (p === 'RETURNED') s.returned++;
+                if (st.status === ST.DONE) s.done++; else if (st.status === ST.TODO) s.todo++; else { s.na++; if (!st.naReason) s.naUnexplained++; }
+                if (flow.dist.due && (st.submittedAt || '') > flow.dist.due) s.late++;
+            });
+            s.rate = s.total ? Math.round(s.submitted / s.total * 100) : 0;
+            return s;
+        }
         var rows = depts().map(function (d) { return stateOf(key, d.id); });
-        var done = rows.filter(function (r) { return r.status === ST.DONE; }).length;
-        var na = rows.filter(function (r) { return r.status === ST.NA; }).length;
+        var done = rows.filter(function (r) { return r.exists && r.status === ST.DONE; }).length;
+        var na = rows.filter(function (r) { return r.exists && r.status === ST.NA; }).length;
+        var none = rows.filter(function (r) { return !r.exists; }).length;
         return {
-            total: rows.length, done: done, na: na,
-            todo: rows.length - done - na,
-            /* 사유 없이 해당없음을 고른 건 — 관리자가 따져봐야 하는 대상 */
-            naUnexplained: rows.filter(function (r) { return r.status === ST.NA && !r.naReason; }).length,
+            total: rows.length, done: done, na: na, none: none,
+            todo: rows.length - done - na - none,
+            naUnexplained: rows.filter(function (r) { return r.exists && r.status === ST.NA && !r.naReason; }).length,
             rate: rows.length ? Math.round(done / rows.length * 100) : 0
         };
     }
 
     /* ================= 렌더 =================
-     * opts: { key, ns(전역 네임스페이스 문자열), evidenceLabel, placeLabel, onChange }
-     *   ns 는 이 표의 버튼이 호출할 전역 객체 이름 — 화면 모듈이 DEPTCHK 위임 래퍼를 노출한다. */
+     * opts: { key, ns, labels, statusLabel, rateLabel, placeLabel, evidenceLabel, onChange,
+     *         flow?: { dist, locked, period } }  — flow 가 있으면 배포 흐름(이행점검) */
     function render(opts) {
         var key = opts.key, ns = opts.ns || 'DEPTCHK';
         var L = labelsOf(opts);
-        var g = gap(), s = summary(key);
+        var g = gap();
         var list = depts();
+        var flow = opts.flow || null;
 
         var gapNote = g.missing
             ? '<div class="check-notice" style="margin-bottom:10px;">' +
-                '<b>부서 명단 ' + g.registered + ' / ' + g.expected + '개 등록</b> — 회의에서 확인된 대상은 과·사업소 ' +
+                '<b>부서 명단 ' + g.registered + ' / ' + g.expected + '개 등록</b> — 대상은 과·사업소 ' +
                 g.expected + '개인데 시스템에는 ' + g.registered + '개만 등록되어 있습니다. ' +
-                '나머지 <b>' + g.missing + '개는 명단 미확보</b>라 표에 나타나지 않습니다. ' +
-                '전수 점검이 성립하려면 부서 명단을 먼저 받아야 합니다.</div>'
+                '나머지 <b>' + g.missing + '개는 명단 미확보</b>라 표에 나타나지 않습니다.</div>'
             : '';
 
-        /* 조작 권한이 없으면 **왜 없는지 상시 안내한다** — 종전에는 버튼을 눌렀을 때만
-           토스트로 알렸다. 애초에 버튼을 내지 않으니 그 토스트에 도달할 길이 없고,
-           관리·감독 계층은 "내 화면이 왜 비어 있지"만 남는다. 안내는 *왜*를 맡고
-           표는 *무엇이 있는지*를 맡는다(§12 readOnlyNote 와 같은 기준). */
         var roleNote = '';
         if (R() && R().current) {
             var p = R().current();
             var anyAct = list.some(function (d) { return canAct(d.id); });
-            if (!anyAct) {
+            if (flow) {
+                /* 배포 흐름 — 내가 이 표에서 무엇을 하는지 한 줄로 밝힌다(권한 블록과 같은 말) */
+                var own = R().OWNER_DEPT, mineTxt;
+                if (p.tier === 'staff' && p.deptId === own) mineTxt = '<b>우리 부서(재난안전과) 결과 제출</b>과 <b>전 부서 검토(승인·반려)·독촉</b>을 합니다. 점검 배포·마감 상신도 재난안전과 담당자 몫입니다.';
+                else if (isOwnerLead()) mineTxt = '<b>전 부서 검토(승인·반려)·독촉</b>을 합니다. 결과 제출·배포·마감은 담당자가 합니다.';
+                else if (p.tier === 'staff') mineTxt = '<b>우리 부서 줄의 결과 제출</b>만 합니다. 검토는 재난안전과가 합니다.';
+                else if (p.tier === 'super' && p.deptId === own) mineTxt = '<b>조회</b>와 <b>전 부서 독촉</b>을 합니다. 결과 제출은 부서 담당자, 검토는 재난안전과 담당자·팀장이 합니다.';
+                else if (p.tier === 'super') mineTxt = '<b>조회</b>와 <b>우리 부서 독촉</b>을 합니다. 결과 제출은 부서 담당자가 합니다.';
+                else mineTxt = '<b>조회 전용입니다.</b> 결과 제출은 각 부서 담당자, 검토는 재난안전과가 합니다.';
+                roleNote = '<div class="check-notice" style="margin-bottom:10px;">' + mineTxt + '</div>';
+            } else if (!anyAct) {
                 roleNote = '<div class="check-notice" style="margin-bottom:10px;">' +
                     (p.tier !== 'staff'
                         ? '<b>조회 전용입니다.</b> 관리·감독 계층은 현황을 보고 지휘하며, ' +
-                          (opts.labels && opts.labels.DONE ? esc(opts.labels.DONE) : '이행') +
-                          ' 등록은 각 부서 담당자가 직접 수행합니다.'
+                          (flow ? '결과 제출' : (opts.labels && opts.labels.DONE ? esc(opts.labels.DONE) : '이행') + ' 등록') +
+                          '은 각 부서 담당자가 직접 수행합니다.'
                         : '<b>조회 전용입니다.</b> 등록은 해당 부서 담당자와 주관부서(재난안전과)가 수행합니다.') +
                     '</div>';
             }
         }
 
+        if (flow) return gapNote + roleNote + renderFlow(key, ns, list, opts, flow, L);
+
+        var s = summary(key);
         var stat =
             '<div class="dchk-stat">' +
                 statBox('전체', g.registered + '개 부서', 'neutral') +
                 statBox(L.DONE, s.done + '개', 'success') +
                 statBox(L.TODO, s.todo + '개', s.todo ? 'danger' : 'neutral') +
+                statBox(L.NONE, s.none + '개', s.none ? 'warning' : 'neutral') +
                 statBox(L.NA, s.na + '개' + (s.naUnexplained ? ' (사유 없음 ' + s.naUnexplained + ')' : ''),
                     s.naUnexplained ? 'warning' : 'neutral') +
                 statBox(opts.rateLabel || (L.DONE + '률'), s.rate + '%', s.rate === 100 ? 'success' : 'info') +
@@ -224,19 +353,14 @@ var SKEY = 'dy-deptcheck-v4';   /* v4 — 경영방침 게시 회차 축을 연�
         return '<div class="dchk-stat-box"><span class="dchk-stat-label">' + esc(label) + '</span>' +
             '<span class="chip-status ' + tone + '">' + esc(val) + '</span></div>';
     }
+    function chip(label) { return '<span class="chip-status chip-sm ' + V().toneOf(label) + '">' + esc(label) + '</span>'; }
 
     function rowHtml(key, ns, d, opts) {
         var st = stateOf(key, d.id);
         var L = labelsOf(opts);
-        var label = L[st.status] || L.TODO;
-        var tone = V().toneOf(label);
-        /* 해당없음인데 사유가 없으면 그 사실을 행에서 바로 보이게 한다 — 조용히 넘어가면 안 된다 */
-        var naWarn = (st.status === ST.NA && !st.naReason)
+        var label = st.exists ? (L[st.status] || L.TODO) : L.NONE;
+        var naWarn = (st.exists && st.status === ST.NA && !st.naReason)
             ? '<div class="dchk-warn">사유 미기재 — 확인 필요</div>' : '';
-        /* 증빙 삭제는 **조작 권한이 있을 때만** 낸다 — 저장 경로에는 가드가 있어 눌러도
-           지워지지 않지만(denied), 남의 부서 행에 삭제 버튼이 보이면 담당자는 자기가
-           할 수 있는 일로 읽는다. `[확인 등록]`(아래)과 같은 기준이어야 한다.
-           도달할 수 없는 행동을 버튼으로 약속하지 않는다. */
         var mayAct = canAct(d.id);
         var photos = (st.photos || []).length
             ? '<div class="dchk-thumbs">' + st.photos.map(function (p, i) {
@@ -249,64 +373,260 @@ var SKEY = 'dy-deptcheck-v4';   /* v4 — 경영방침 게시 회차 축을 연�
 
         return '<tr>' +
             '<td><b>' + esc(d.name) + '</b><div class="dchk-sub">' + d.count + '명</div></td>' +
-            '<td><span class="chip-status chip-sm ' + tone + '">' + esc(label) + '</span>' + naWarn + '</td>' +
+            '<td>' + chip(label) + naWarn + '</td>' +
             '<td>' + (st.place ? esc(st.place) : '<span class="dchk-none">-</span>') +
                 (st.naReason ? '<div class="dchk-sub">사유: ' + esc(st.naReason) + '</div>' : '') + '</td>' +
             '<td>' + (st.date ? esc(st.date) : '<span class="dchk-none">-</span>') + '</td>' +
             '<td>' + photos + '</td>' +
             '<td class="col-action">' +
-                (canAct(d.id)
+                (mayAct
                     ? '<button type="button" class="btn btn-outline btn-sm" onclick="' + ns + '.open(\'' + esc(d.id) + '\')">확인 등록</button>'
                     : '<span class="dchk-ro">조회</span>') +
-                (st.status !== ST.DONE
-                    ? (canRemindRow(d.id) ? ' <button type="button" class="btn btn-outline btn-sm" onclick="' + ns + '.remind(\'' + esc(d.id) + '\')">독촉</button>' : '')
-                    : '') +
+                ((!st.exists || st.status !== ST.DONE) && canRemindRow(d.id)
+                    ? ' <button type="button" class="btn btn-outline btn-sm" onclick="' + ns + '.remind(\'' + esc(d.id) + '\')">독촉</button>' : '') +
             '</td>' +
         '</tr>';
     }
 
-    /* ================= 확인 등록 모달 ================= */
+    /* ---------- 배포 흐름 표 ---------- */
+    function renderFlow(key, ns, list, opts, flow, L) {
+        if (!flow.dist) {
+            return '<div class="v2-empty" style="padding:24px;">' +
+                (isOwnerStaff()
+                    ? '이 회차는 아직 배포하지 않았습니다. 위 <b>[점검 배포]</b>로 점검표를 올리면 대상 부서에 할 일이 갑니다.'
+                    : '재난안전과가 점검표를 배포하면 이 표에서 우리 부서 결과를 제출합니다.') + '</div>';
+        }
+        var s = summary(key, flow);
+        var stat =
+            '<div class="dchk-stat">' +
+                statBox('대상', s.total + '개 부서', 'neutral') +
+                statBox('제출', s.submitted + '개 (' + s.rate + '%)', s.rate === 100 ? 'success' : 'info') +
+                statBox('확인 완료', s.ok + '개', s.ok ? 'success' : 'neutral') +
+                statBox('확인 대기', s.wait + '개', s.wait ? 'info' : 'neutral') +
+                statBox('반려', s.returned + '개', s.returned ? 'warning' : 'neutral') +
+                statBox('일부 미이행', s.todo + '개', s.todo ? 'danger' : 'neutral') +
+                statBox('미제출', s.none + '개' + (s.none && overdue(flow) ? ' · 기한 경과' : ''), s.none ? 'danger' : 'neutral') +
+            '</div>';
+        /* 대상 부서를 위에, 대상 아닌 부서를 아래에 — 분모에 들지 않는 줄이 섞이면 표를 훑기 어렵다 */
+        var sorted = list.filter(function (d) { return isTarget(flow, d.id); })
+            .concat(list.filter(function (d) { return !isTarget(flow, d.id); }));
+        var rows = sorted.map(function (d) { return flowRowHtml(key, ns, d, opts, flow, L); }).join('');
+        var lockNote = flow.locked
+            ? '<div class="check-notice" style="margin-bottom:10px;"><b>이 회차는 군수께 보고되었습니다(' + esc(flow.locked) + ').</b> 보고된 그대로 잠겨 제출·확인을 바꿀 수 없습니다. 반려·반송되면 다시 열립니다.</div>'
+            : '';
+        return lockNote + stat +
+            '<div class="dchk-scroll"><table class="table-figma table-compact"><thead><tr>' +
+                '<th style="min-width:130px;">부서·사업장</th>' +
+                '<th style="width:130px;">진행</th>' +
+                '<th style="min-width:200px;">점검 결과</th>' +
+                '<th style="width:110px;">제출일</th>' +
+                '<th style="min-width:150px;">작성한 점검표</th>' +
+                '<th style="width:170px;">관리</th>' +
+            '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+    }
+    function flowRowHtml(key, ns, d, opts, flow, L) {
+        var p = progressOf(key, d.id, flow);
+        if (p === 'OFF') {
+            return '<tr class="dchk-off"><td><b>' + esc(d.name) + '</b></td><td>' + chip('대상 아님') + '</td>' +
+                '<td colspan="4"><span class="dchk-none">이 회차 점검 대상이 아닙니다</span></td></tr>';
+        }
+        var st = stateOf(key, d.id);
+        var cf = st.confirm || {};
+        var rl = ((fload().reminds || {})[key + '|' + d.id] || []);
+        var progCell = chip(p === 'NONE' && overdue(flow) ? '미제출' : PROG_LABEL[p]) +
+            (rl.length && (p === 'NONE' || p === 'RETURNED') ? '<div class="dchk-sub">독촉 ' + rl.length + '회 · 최근 ' + esc(rl[rl.length - 1].at.slice(0, 10)) + '</div>' : '') +
+            (p === 'NONE' && overdue(flow) ? '<div class="dchk-warn">기한 경과</div>' : '') +
+            (p === 'RETURNED' && cf.reason ? '<div class="dchk-warn">' + esc(cf.reason) + '</div>' : '') +
+            (p === 'OK' && cf.by ? '<div class="dchk-sub">' + esc(cf.by) + ' · ' + esc(cf.at || '') + '</div>' : '') +
+            ((cf.round || 1) > 1 ? '<div class="dchk-sub">' + cf.round + '차 제출</div>' : '');
+        var resCell = '<span class="dchk-none">-</span>';
+        if (st.exists) {
+            resCell = chip(L[st.status]) +
+                (st.status === ST.TODO
+                    ? '<div class="dchk-sub">미이행: ' + esc(st.missText || '') + '</div>' +
+                      '<div class="dchk-sub">조치계획: ' + esc(st.plan || '') + (st.planDue ? ' (예정 ' + esc(st.planDue) + ')' : '') + '</div>'
+                    : '') +
+                (st.status === ST.NA
+                    ? (st.naReason ? '<div class="dchk-sub">사유: ' + esc(st.naReason) + '</div>' : '<div class="dchk-warn">사유 미기재 — 확인 필요</div>')
+                    : '') +
+                (st.place ? '<div class="dchk-sub">' + esc(st.place) + '</div>' : '');
+        }
+        var late = st.exists && flow.dist.due && (st.submittedAt || '') > flow.dist.due;
+        var dateCell = st.exists
+            ? esc(st.submittedAt || st.date || '') + (late ? '<div class="dchk-warn">지연 제출</div>' : '') +
+              (st.submittedBy ? '<div class="dchk-sub">' + esc(st.submittedBy) + '' + '</div>' : '')
+            : '<span class="dchk-none">-</span>';
+        var files = (st.photos || []).length
+            ? fileBtns(key, d.id, ns, st.photos)
+            : '<span class="dchk-none">-</span>';
+
+        var acts = '';
+        if (!flow.locked) {
+            var mine = canSubmit(d.id);
+            if (mine && (p === 'NONE' || p === 'RETURNED'))
+                acts += '<button type="button" class="btn btn-primary btn-sm" onclick="' + ns + '.open(\'' + esc(d.id) + '\')">' + (p === 'RETURNED' ? '다시 제출' : '결과 제출') + '</button> ';
+            /* 제출 고치기·취소는 그 부서만 — 재난안전과가 남의 부서 제출을 고치면 대리 작성이다 */
+            if (mine && p === 'WAIT')
+                acts += '<button type="button" class="btn btn-outline btn-sm" onclick="' + ns + '.open(\'' + esc(d.id) + '\')">제출 고치기</button> ' +
+                        '<button type="button" class="btn btn-outline btn-sm" onclick="' + ns + '.unsubmit(\'' + esc(d.id) + '\')">제출 취소</button> ';
+            if (p === 'WAIT' && canReviewer()) {
+                acts += canReview(st, d.id)
+                    ? '<button type="button" class="btn btn-primary btn-sm" onclick="' + ns + '.review(\'' + esc(d.id) + '\')">검토</button> '
+                    : '<span class="dchk-ro">다른 담당자·팀장이 검토</span> ';
+            }
+            if (p === 'OK' && canReviewer())
+                acts += '<button type="button" class="btn btn-outline btn-sm" onclick="' + ns + '.uncfm(\'' + esc(d.id) + '\')">확인 취소</button> ';
+            if ((p === 'NONE' || p === 'RETURNED') && canRemindRow(d.id))
+                acts += '<button type="button" class="btn btn-outline btn-sm" onclick="' + ns + '.remind(\'' + esc(d.id) + '\')">독촉</button>';
+        }
+        if (!acts) acts = '<span class="dchk-ro">' + (flow.locked ? '잠김' : '조회') + '</span>';
+
+        return '<tr>' +
+            '<td><b>' + esc(d.name) + '</b><div class="dchk-sub">' + d.count + '명</div></td>' +
+            '<td>' + progCell + '</td>' +
+            '<td>' + resCell + '</td>' +
+            '<td>' + dateCell + '</td>' +
+            '<td>' + files + '</td>' +
+            '<td class="col-action">' + acts + '</td>' +
+        '</tr>';
+    }
+    /* 같은 사람이 제출하고 확인하지 않는다 — 자기 부서 줄은 재난안전과의 다른 담당자가 확인한다 */
+    function canReview(st, deptId) {
+        var p = me();
+        if (p && st.submittedByUid && st.submittedByUid === p.uid) return false;
+        /* 재난안전과 담당자와 팀장이 전 부서를 검토한다(2026-11-12 사용자 지시) */
+        return canReviewer();
+    }
+
+    /* ================= 파일 내려받기 =================
+     * 저장소에는 파일 이름만 남는다(파일 본문은 직렬화되지 않는다). 이 화면에서 올린 파일은
+     * 메모리에 붙들어 두었다가 검토 창·표에서 바로 내려받게 한다. 그 밖의 파일(예시 자료·
+     * 다른 브라우저에서 올린 것)은 첨부 저장 연계 후 내려받는다 — 받은 척하지 않는다. */
+    var MEM = {};
+    /* 계정을 바꾸면 화면을 다시 읽어 메모리가 비므로, 시연 확인용으로 작은 파일(1MB 이하)만
+       이 브라우저 세션에 함께 담아 둔다. 실제 파일 보관은 첨부 저장 연계 몫이다. */
+    var FILEKEY = 'dy-deptcheck-files-v1';
+    function fileStore() { try { return JSON.parse(global.sessionStorage.getItem(FILEKEY) || '{}'); } catch (e) { return {}; } }
+    function stashFiles(key, deptId, items) {
+        (items || []).forEach(function (f) {
+            if (!f.file || f.file.size > 1024 * 1024 || !global.FileReader) return;
+            var r = new FileReader();
+            r.onload = function () {
+                var st = fileStore(); st[rowKey(key, deptId) + '|' + f.name] = r.result;
+                try { global.sessionStorage.setItem(FILEKEY, JSON.stringify(st)); } catch (e) {}
+            };
+            r.readAsDataURL(f.file);
+        });
+    }
+    function fileOf(key, deptId, i) {
+        var mem = MEM[rowKey(key, deptId)] || [];
+        var st = stateOf(key, deptId);
+        var f = (st.photos || [])[i];
+        if (!f) return null;
+        var hit = mem.filter(function (m) { return m.name === f.name && m.file; })[0];
+        return hit || f;
+    }
+    function download(key, deptId, i) {
+        var f = fileOf(key, deptId, i);
+        if (!f) return;
+        var url = f.file ? URL.createObjectURL(f.file) : fileStore()[rowKey(key, deptId) + '|' + f.name];
+        if (url) {
+            var a = document.createElement('a');
+            a.href = url; a.download = f.name;
+            document.body.appendChild(a); a.click(); a.remove();
+            return;
+        }
+        V().notReady('«' + f.name + '» 내려받기', '첨부 저장 연계');
+    }
+    function fileBtns(key, deptId, ns, photos) {
+        return (photos || []).map(function (f, i) {
+            return '<button type="button" class="btn btn-outline btn-sm" style="margin:2px 4px 2px 0;" onclick="' + ns + '.dl(\'' + esc(deptId) + '\',' + i + ')">⬇ ' + esc(f.name) + '</button>';
+        }).join('');
+    }
+
+    /* ================= 등록·제출 모달 ================= */
     var F = null;
+    function flowGate(key, deptId, flow) {
+        if (!flow) return true;
+        if (!flow.dist) { toast('아직 배포되지 않은 회차입니다 — 재난안전과가 점검표를 배포하면 제출합니다.'); return false; }
+        if (flow.locked) { toast('이 회차는 군수께 보고되어 잠겼습니다.'); return false; }
+        if (!isTarget(flow, deptId)) { toast('이 회차 점검 대상 부서가 아닙니다.'); return false; }
+        var p = progressOf(key, deptId, flow);
+        if (p === 'OK') { toast('재난안전과가 확인한 결과입니다 — 고치려면 재난안전과에 확인 취소를 요청하세요.'); return false; }
+        return true;
+    }
+    /* 입력 창을 다룰 수 있는가 — 배포 흐름은 «그 부서 담당자», 기본(경영방침 게시)은 종전 판정 */
+    function canEdit(deptId, opts) { return (opts && opts.flow) ? canSubmit(deptId) : canAct(deptId); }
+    function denySubmit() { toast('결과 제출은 그 부서 담당자가 합니다 — 고칠 것이 있으면 [검토]에서 반려하세요.'); }
     function open(key, deptId, opts) {
-        if (!canAct(deptId)) { denied(deptId); return; }
+        if (!canEdit(deptId, opts)) { if (opts.flow) denySubmit(); else denied(deptId); return; }
+        if (!flowGate(key, deptId, opts.flow)) return;
         var d = depts().filter(function (x) { return x.id === deptId; })[0];
         if (!d) return;
         var st = stateOf(key, deptId);
+        var fresh = !st.exists || (st.confirm && st.confirm.state === CF.RETURNED && opts.flow);
         F = {
             key: key, deptId: deptId, ns: opts.ns || 'DEPTCHK',
-            status: st.status, place: st.place,
-            date: st.date || new Date().toISOString().slice(0, 10),
-            naReason: st.naReason, note: st.note, photos: (st.photos || []).slice(),
+            status: st.exists ? st.status : (opts.flow ? '' : ST.DONE), place: st.place || '',
+            date: st.date || today(),
+            naReason: st.naReason || '', note: st.note, photos: (st.photos || []).slice(),
+            missText: st.missText || '', plan: st.plan || '', planDue: st.planDue || '',
+            prevRound: (st.confirm && st.confirm.round) || 0, resubmit: !!(st.exists && fresh),
             opts: opts
         };
         renderModal(d);
     }
+    function req() { return ' <span style="color:var(--status-danger-fg)">*</span>'; }
     function renderModal(d) {
-        var o = F.opts, ns = F.ns;
+        var o = F.opts, ns = F.ns, flow = o.flow;
         var L = labelsOf(o);
         var radios = [ST.DONE, ST.TODO, ST.NA].map(function (v) {
             return '<label class="dchk-radio"><input type="radio" name="dchk-st" value="' + v + '"' +
                 (F.status === v ? ' checked' : '') + ' onchange="' + ns + '.setStatus(this.value)"> ' + esc(L[v]) + '</label>';
         }).join('');
-        var body =
-            '<div class="dchk-mrow"><label class="form-label">' + esc(o.statusLabel || (L.DONE + ' 여부')) + ' <span style="color:var(--status-danger-fg)">*</span></label>' +
+        var distHead = '';
+        if (flow && flow.dist) {
+            distHead = '<div class="check-notice" style="margin-bottom:12px;">' +
+                '<b>' + esc(o.periodLabel || '') + ' 점검표</b> · 기한 ' + esc(flow.dist.due) +
+                ((flow.dist.forms || []).length ? '<br>' + flow.dist.forms.map(function (f) { return '📎 ' + esc(f.name); }).join(' · ') + ' (제' + (flow.dist.ver || 1) + '판)' : '') +
+                (flow.dist.note ? '<br>' + esc(flow.dist.note) : '') +
+                (F.resubmit ? '<br><b>반려된 결과를 고쳐 다시 제출합니다.</b>' : '') +
+                '</div>';
+        }
+        var needEv = flow ? (F.status === ST.DONE || F.status === ST.TODO) : F.status === ST.DONE;
+        var evLabel = flow ? '작성한 점검표' : (o.evidenceLabel || '증빙 사진');
+        var body = distHead +
+            '<div class="dchk-mrow"><label class="form-label">' + esc(flow ? '점검 결과' : (o.statusLabel || (L.DONE + ' 여부'))) + req() + '</label>' +
                 '<div class="dchk-radios">' + radios + '</div></div>' +
             (F.status === ST.NA
-                /* 해당없음은 사유 없이 넘어갈 수 없다 — 이 칸이 없으면 종이 서식과 같아진다 */
-                ? '<div class="dchk-mrow"><label class="form-label" for="dchk-na">' + esc(L.NA) + ' 사유 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                ? '<div class="dchk-mrow"><label class="form-label" for="dchk-na">' + esc(L.NA) + ' 사유' + req() + '</label>' +
                     '<textarea class="form-textarea" id="dchk-na" rows="2" placeholder="왜 이 부서에 해당하지 않는지 적으세요">' + esc(F.naReason) + '</textarea>' +
-                    '<p class="file-hint">사유가 없으면 <b>확인 필요</b>로 남아 미이행과 함께 관리됩니다.</p></div>'
-                : '<div class="dchk-mrow"><label class="form-label" for="dchk-place">' + esc(o.placeLabel || '위치·비고') +
-                    (F.status === ST.DONE ? ' <span style="color:var(--status-danger-fg)">*</span>' : '') + '</label>' +
-                    '<input type="text" class="form-input" id="dchk-place" value="' + esc(F.place) + '" placeholder="' + esc(o.placePlaceholder || '') + '"></div>') +
-            '<div class="dchk-mrow"><label class="form-label" for="dchk-date">확인일</label>' +
+                    '<p class="file-hint">사유가 없으면 <b>확인 필요</b>로 남습니다.</p></div>'
+                : '') +
+            (flow && F.status === ST.TODO
+                ? '<div class="dchk-mrow"><label class="form-label" for="dchk-miss">미이행 내용' + req() + '</label>' +
+                    '<textarea class="form-textarea" id="dchk-miss" rows="2" placeholder="점검표 몇 번 항목이 왜 지켜지지 않았는지">' + esc(F.missText) + '</textarea></div>' +
+                  '<div class="dchk-mrow"><label class="form-label" for="dchk-plan">조치계획' + req() + '</label>' +
+                    '<textarea class="form-textarea" id="dchk-plan" rows="2" placeholder="무엇을 하겠다">' + esc(F.plan) + '</textarea></div>' +
+                  '<div class="dchk-mrow"><label class="form-label" for="dchk-plandue">조치 예정일' + req() + '</label>' +
+                    '<input type="date" class="form-input" id="dchk-plandue" value="' + esc(F.planDue) + '" style="max-width:200px;">' +
+                    '<p class="file-hint">조치했는지는 다음 반기 점검에서 확인합니다.</p></div>'
+                : '') +
+            (!flow && F.status !== ST.NA
+                ? '<div class="dchk-mrow"><label class="form-label" for="dchk-place">' + esc(o.placeLabel || '위치·비고') +
+                    (F.status === ST.DONE ? req() : '') + '</label>' +
+                    '<input type="text" class="form-input" id="dchk-place" value="' + esc(F.place) + '" placeholder="' + esc(o.placePlaceholder || '') + '"></div>'
+                : '') +
+            (flow && F.status && F.status !== ST.NA
+                ? '<div class="dchk-mrow"><label class="form-label" for="dchk-place">비고</label>' +
+                    '<input type="text" class="form-input" id="dchk-place" value="' + esc(F.place) + '" placeholder="한 줄로 짧게"></div>'
+                : '') +
+            '<div class="dchk-mrow"><label class="form-label" for="dchk-date">' + (flow ? '점검일' : '확인일') + '</label>' +
                 '<input type="date" class="form-input" id="dchk-date" value="' + esc(F.date) + '" style="max-width:200px;"></div>' +
-            '<div class="dchk-mrow"><label class="form-label">' + esc(o.evidenceLabel || '증빙 사진') +
-                (F.status === ST.DONE ? ' <span style="color:var(--status-danger-fg)">*</span>' : '') + '</label>' +
-                /* 실제 파일을 고른다 — '이행' 판정의 유일한 증빙이라 파일명을 지어내면
-                   없는 사진으로 이행 처리가 되어 버린다(회의가 가장 강하게 요구한 지점). */
+            (flow && F.status === ST.NA ? '' :
+            '<div class="dchk-mrow"><label class="form-label">' + esc(evLabel) + (needEv ? req() : '') + '</label>' +
                 V().uploadDrop(
-                    '<b>' + esc(o.evidenceLabel || '증빙 사진') + '</b> <span style="font-size:var(--fs-12);color:var(--text-gray);">클릭 또는 끌어놓기</span>',
+                    '<b>' + esc(evLabel) + '</b> <span style="font-size:var(--fs-12);color:var(--text-gray);">클릭 또는 끌어놓기</span>',
                     null, { hint: true, multiple: true, pick: ns + '.addPhoto', style: 'padding:12px;' }) +
                 (F.photos.length
                     ? '<ul class="dchk-shots">' + F.photos.map(function (p, i) {
@@ -318,59 +638,81 @@ var SKEY = 'dy-deptcheck-v4';   /* v4 — 경영방침 게시 회차 축을 연�
                               '<button type="button" class="edu-attach-del" onclick="' + ns + '.mDelPhoto(' + i + ')" aria-label="' + esc(p.name) + ' 삭제">×</button></li>';
                       }).join('') + '</ul>'
                     : '') +
-            '</div>';
+            '</div>');
         V().openModal(esc(d.name) + ' — ' + esc(o.title || '이행 확인 등록'), body,
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-            '<button type="button" class="btn btn-primary" onclick="' + ns + '.save()">저장</button>');
+            '<button type="button" class="btn btn-primary" onclick="' + ns + '.save()">' + (flow ? (F.resubmit ? '다시 제출' : '제출') : '저장') + '</button>');
     }
     function capture() {
         var el = function (id) { return document.getElementById(id); };
         if (el('dchk-place')) F.place = el('dchk-place').value.trim();
         if (el('dchk-na')) F.naReason = el('dchk-na').value.trim();
         if (el('dchk-date')) F.date = el('dchk-date').value;
+        if (el('dchk-miss')) F.missText = el('dchk-miss').value.trim();
+        if (el('dchk-plan')) F.plan = el('dchk-plan').value.trim();
+        if (el('dchk-plandue')) F.planDue = el('dchk-plandue').value;
     }
     function setStatus(v) {
-        if (!F || !canAct(F.deptId)) { denied(F && F.deptId); return; } capture(); F.status = v; renderModal(deptOf(F.deptId)); }
+        if (!F || !canEdit(F.deptId, F.opts)) { denied(F && F.deptId); return; } capture(); F.status = v; renderModal(deptOf(F.deptId)); }
     function deptOf(id) { return depts().filter(function (x) { return x.id === id; })[0]; }
     function addPhoto(files) {
-        if (!F || !canAct(F.deptId)) { denied(F && F.deptId); return; }
+        if (!F || !canEdit(F.deptId, F.opts)) { denied(F && F.deptId); return; }
         capture();
         if (!files || !files.length) return;
         F.photos = F.photos.concat(files).slice(0, V().FILE_LIMITS.maxCount);
         renderModal(deptOf(F.deptId));
-        toast('증빙 ' + files.length + '건 첨부');
+        toast('파일 ' + files.length + '건 첨부');
     }
     function mDelPhoto(i) {
-        if (!F || !canAct(F.deptId)) { denied(F && F.deptId); return; } capture(); F.photos.splice(i, 1); renderModal(deptOf(F.deptId)); }
+        if (!F || !canEdit(F.deptId, F.opts)) { denied(F && F.deptId); return; } capture(); F.photos.splice(i, 1); renderModal(deptOf(F.deptId)); }
 
     function saveModal() {
-        if (!F || !canAct(F.deptId)) { denied(F && F.deptId); return; }
+        if (!F || !canEdit(F.deptId, F.opts)) { denied(F && F.deptId); return; }
         capture();
-        /* '이행'이라고 적으려면 증빙이 있어야 한다 — 시스템 존재 자체가 증빙 역할이라는 것이 회의 결론이다 */
+        var flow = F.opts.flow;
+        if (flow && !flowGate(F.key, F.deptId, flow)) return;
         var L = labelsOf(F.opts);
-        if (F.status === ST.DONE && !F.photos.length) {
-            var ev = F.opts.evidenceLabel || '증빙';
-            toast(L.DONE + V().josa(L.DONE, '으로', '로') + ' 등록하려면 ' + ev + V().josa(ev, '이', '가') + ' 필요합니다.');
-            return;
+        if (!F.status) { toast('점검 결과를 고르세요.'); return; }
+        if (flow) {
+            if ((F.status === ST.DONE || F.status === ST.TODO) && !F.photos.length) { toast('작성한 점검표를 올려 주세요.'); return; }
+            if (F.status === ST.TODO && (!F.missText || !F.plan || !F.planDue)) { toast('미이행 내용과 조치계획, 조치 예정일을 적어 주세요.'); return; }
+        } else {
+            if (F.status === ST.DONE && !F.photos.length) {
+                var ev = F.opts.evidenceLabel || '증빙';
+                toast(L.DONE + V().josa(L.DONE, '으로', '로') + ' 등록하려면 ' + ev + V().josa(ev, '이', '가') + ' 필요합니다.');
+                return;
+            }
+            if (F.status === ST.DONE && !F.place) {
+                var pl = F.opts.placeLabel || '위치';
+                toast(pl + V().josa(pl, '을', '를') + ' 입력하세요.'); return;
+            }
         }
-        if (F.status === ST.DONE && !F.place) {
-            var pl = F.opts.placeLabel || '위치';
-            toast(pl + V().josa(pl, '을', '를') + ' 입력하세요.'); return;
-        }
-        /* 해당없음은 사유 없이 저장할 수 없다 — 필수(*)라고 표시해 놓고 통과시키면 종이 서식과 같아진다.
-         * (이미 사유 없이 쌓여 있는 기존 데이터는 행에서 '사유 미기재 — 확인 필요'로 계속 드러난다) */
         if (F.status === ST.NA && !F.naReason) {
             toast(L.NA + ' 사유를 적으세요 — 사유 없이 빠질 수 없습니다.');
             var na = document.getElementById('dchk-na'); if (na) na.focus();
             return;
         }
-        setState(F.key, F.deptId, {
+        var patch = {
             status: F.status, place: F.place, date: F.date,
             naReason: F.status === ST.NA ? F.naReason : '',
-            photos: F.photos
-        });
+            photos: F.status === ST.NA && flow ? [] : F.photos
+        };
+        if (flow) {
+            var p = me();
+            Object.assign(patch, {
+                missText: F.status === ST.TODO ? F.missText : '', plan: F.status === ST.TODO ? F.plan : '',
+                planDue: F.status === ST.TODO ? F.planDue : '',
+                submittedAt: today(), submittedBy: p ? p.name : actor(), submittedByUid: p ? p.uid : '',
+                formVer: (flow.dist && flow.dist.ver) || 1,
+                confirm: { state: CF.WAIT, round: F.resubmit ? F.prevRound + 1 : (F.prevRound || 1) }
+            });
+        }
+        setState(F.key, F.deptId, patch);
+        MEM[rowKey(F.key, F.deptId)] = (F.photos || []).filter(function (f) { return f.file; });
+        stashFiles(F.key, F.deptId, F.photos);
+        if (flow) notify({ kind: 'submit', key: F.key, deptId: F.deptId, flow: flow, periodLabel: F.opts.periodLabel });
         V().closeModal();
-        toast((deptOf(F.deptId) || {}).name + ' ' + L[F.status] + ' 등록');
+        toast((deptOf(F.deptId) || {}).name + (flow ? ' 결과 제출 — 재난안전과 확인을 기다립니다' : ' ' + L[F.status] + ' 등록'));
         if (F.opts.onChange) F.opts.onChange();
     }
     function delPhoto(key, deptId, i) {
@@ -380,36 +722,170 @@ var SKEY = 'dy-deptcheck-v4';   /* v4 — 경영방침 게시 회차 축을 연�
         ph.splice(i, 1);
         setState(key, deptId, { photos: ph });
     }
-    /* 독촉 권한 — 독촉 경로(이행점검·경영방침·교육·위험성평가)가 같은 판정을 쓴다(기획확인 4차
-       C-32, 2026-10-06): 주관부서와 그 부서는 보내고 총괄 책임자는 조회만 한다(DYROLE.canRemind).
-       종전에는 이 표만 canAct(담당자)로 판정해 재난안전과장·부서장은 독촉할 수 없었고, 위험성평가는
-       그 반대라 같은 «독촉»이 화면마다 다른 사람에게 열려 있었다. 자기 자신에게는 보내지 않는다 —
-       그 부서 담당자가 자기 부서를 독촉하면 받는 사람이 자기다. */
-    function canRemindRow(deptId) {
-        var R = global.DYROLE;
-        if (!R || !R.canRemind) return canAct(deptId);
-        var p = R.current ? R.current() : null;
-        if (p && p.tier === 'staff' && p.deptId === deptId) return false;
-        return R.canRemind(deptId);
+
+    /* ================= 제출 취소 (확인 전만) ================= */
+    function unsubmit(key, deptId, opts) {
+        if (!canSubmit(deptId)) { denySubmit(); return; }
+        if (!flowGate(key, deptId, opts.flow)) return;
+        if (progressOf(key, deptId, opts.flow) !== 'WAIT') { toast('확인 대기 중인 제출만 취소할 수 있습니다.'); return; }
+        var ns = opts.ns || 'DEPTCHK';
+        V().openModal('제출 취소 — ' + esc((deptOf(deptId) || {}).name || ''),
+            '<p style="font-size:var(--fs-13);">올린 점검표와 적은 결과·조치계획이 지워지고 <b>미제출</b>로 돌아갑니다.</p>',
+            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
+            '<button type="button" class="btn btn-primary" onclick="' + ns + '.doUnsubmit(\'' + esc(deptId) + '\')">제출 취소</button>');
     }
-    /* 독촉 — 회의에서 미이행 부서 대응으로 나온 수단은 전화와 알림이다.
-       받는 사람은 등급으로 찾는다(DYADM.contactText — 부서 안전보건 담당자 → 부서장 대체).
-       이 표는 아직 발송 기록을 남기지 않으므로 «보냈다»고 말하지 않는다(CLAUDE.md §15). */
-    function remind(key, deptId) {
+    function doUnsubmit(key, deptId, opts) {
+        if (!canSubmit(deptId) || !flowGate(key, deptId, opts.flow)) { V().closeModal(); return; }
+        if (progressOf(key, deptId, opts.flow) !== 'WAIT') { V().closeModal(); return; }
+        removeState(key, deptId);
+        V().closeModal(); toast('제출을 취소했습니다.');
+        if (opts.onChange) opts.onChange();
+    }
+
+    /* ================= 재난안전과 확인 · 보완 요청 ================= */
+    function reviewGate(key, deptId, opts) {
+        if (!canReviewer()) { toast('검토는 재난안전과 담당자·팀장이 합니다.'); return false; }
+        if (opts.flow && opts.flow.locked) { toast('이 회차는 군수께 보고되어 잠겼습니다.'); return false; }
+        return true;
+    }
+    function review(key, deptId, opts) {
+        if (!reviewGate(key, deptId, opts)) return;
+        var st = stateOf(key, deptId);
+        if (progressOf(key, deptId, opts.flow) !== 'WAIT') { toast('확인 대기 중인 제출이 아닙니다.'); return; }
+        if (!canReview(st, deptId)) { toast('본인이 제출한 결과는 재난안전과의 다른 담당자나 팀장이 검토합니다.'); return; }
+        var L = labelsOf(opts), ns = opts.ns || 'DEPTCHK';
+        var body =
+            '<div class="dchk-mrow"><span class="form-label">점검 결과</span> ' + chip(L[st.status]) +
+                ((st.confirm && st.confirm.round > 1) ? ' <span class="dchk-sub">' + st.confirm.round + '차 제출</span>' : '') + '</div>' +
+            (st.status === ST.TODO
+                ? '<div class="dchk-mrow"><span class="form-label">미이행 내용</span><div>' + esc(st.missText) + '</div></div>' +
+                  '<div class="dchk-mrow"><span class="form-label">조치계획</span><div>' + esc(st.plan) + ' (예정 ' + esc(st.planDue) + ')</div></div>'
+                : '') +
+            (st.status === ST.NA ? '<div class="dchk-mrow"><span class="form-label">해당없음 사유</span><div>' + esc(st.naReason || '사유 미기재') + '</div></div>' : '') +
+            '<div class="dchk-mrow"><span class="form-label">작성한 점검표</span><div>' +
+                ((st.photos || []).length ? fileBtns(key, deptId, ns, st.photos) : '없음') +
+                (opts.flow && opts.flow.dist && (opts.flow.dist.forms || []).length
+                    ? '<div class="dchk-sub">배포한 양식: ' + opts.flow.dist.forms.map(function (f) { return esc(f.name); }).join(' · ') + ' (제' + (opts.flow.dist.ver || 1) + '판) — 위 회차 머리에서 내려받습니다</div>' : '') +
+                '</div></div>' +
+            '<div class="dchk-mrow"><span class="form-label">제출</span><div>' + esc(st.submittedAt || '') + ' · ' + esc(st.submittedBy || '') + '</div></div>' +
+            '<div class="dchk-mrow"><label class="form-label" for="dchk-ret">반려 사유 <span class="dchk-sub">(반려할 때 필수 — 부서 담당자에게 알림으로 갑니다)</span></label>' +
+                '<textarea class="form-textarea" id="dchk-ret" rows="2" placeholder="부서가 무엇을 고칠지 적어 주세요"></textarea></div>';
+        V().openModal('제출 검토 — ' + esc((deptOf(deptId) || {}).name || ''), body,
+            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
+            '<button type="button" class="btn btn-outline" style="border-color:var(--status-danger-border);color:var(--status-danger-fg);" onclick="' + ns + '.doReturn(\'' + esc(deptId) + '\')">반려</button>' +
+            '<button type="button" class="btn btn-primary" onclick="' + ns + '.doConfirm(\'' + esc(deptId) + '\')">승인</button>');
+    }
+    function doConfirm(key, deptId, opts) {
+        if (!reviewGate(key, deptId, opts)) { V().closeModal(); return; }
+        var st = stateOf(key, deptId);
+        if (progressOf(key, deptId, opts.flow) !== 'WAIT' || !canReview(st, deptId)) { V().closeModal(); return; }
+        var p = me();
+        setState(key, deptId, { confirm: Object.assign({}, st.confirm, { state: CF.OK, by: p ? p.name : actor(), at: today(), reason: '' }) });
+        V().closeModal(); toast((deptOf(deptId) || {}).name + ' 승인 — 확인 완료');
+        if (opts.onChange) opts.onChange();
+    }
+    function doReturn(key, deptId, opts) {
+        if (!reviewGate(key, deptId, opts)) { V().closeModal(); return; }
+        var st = stateOf(key, deptId);
+        if (progressOf(key, deptId, opts.flow) !== 'WAIT' || !canReview(st, deptId)) { V().closeModal(); return; }
+        var reason = ((document.getElementById('dchk-ret') || {}).value || '').trim();
+        if (!reason) { toast('반려 사유를 적어 주세요 — 부서가 무엇을 고칠지 알아야 합니다.'); var el = document.getElementById('dchk-ret'); if (el) el.focus(); return; }
+        var p = me();
+        setState(key, deptId, { confirm: Object.assign({}, st.confirm, { state: CF.RETURNED, by: p ? p.name : actor(), at: today(), reason: reason }) });
+        notify({ kind: 'return', key: key, deptId: deptId, flow: opts.flow, periodLabel: opts.periodLabel, reason: reason });
+        V().closeModal(); toast((deptOf(deptId) || {}).name + ' 반려 — 그 부서 담당자에게 알림을 보냈습니다');
+        if (opts.onChange) opts.onChange();
+    }
+    function uncfm(key, deptId, opts) {
+        if (!reviewGate(key, deptId, opts)) return;
+        if (progressOf(key, deptId, opts.flow) !== 'OK') return;
+        var ns = opts.ns || 'DEPTCHK';
+        V().openModal('확인 취소 — ' + esc((deptOf(deptId) || {}).name || ''),
+            '<p style="font-size:var(--fs-13);">확인을 풀면 <b>확인 대기</b>로 돌아가고 부서가 제출을 고칠 수 있습니다.</p>' +
+            '<div class="dchk-mrow"><label class="form-label" for="dchk-unc">확인 취소 사유' + req() + '</label>' +
+            '<textarea class="form-textarea" id="dchk-unc" rows="2"></textarea></div>',
+            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
+            '<button type="button" class="btn btn-primary" onclick="' + ns + '.doUncfm(\'' + esc(deptId) + '\')">확인 취소</button>');
+    }
+    function doUncfm(key, deptId, opts) {
+        if (!reviewGate(key, deptId, opts)) { V().closeModal(); return; }
+        var reason = ((document.getElementById('dchk-unc') || {}).value || '').trim();
+        if (!reason) { toast('확인을 취소하는 이유를 적어 주세요.'); return; }
+        var st = stateOf(key, deptId);
+        setState(key, deptId, { confirm: Object.assign({}, st.confirm, { state: CF.WAIT, by: '', at: '', reason: '', unconfirmed: { by: actor(), at: nowTs(), reason: reason } }) });
+        V().closeModal(); toast('확인을 취소했습니다');
+        if (opts.onChange) opts.onChange();
+    }
+
+    /* 독촉 권한 — 독촉 경로(이행점검·경영방침·교육·위험성평가)가 같은 판정(DYROLE.canRemind).
+       자기 자신에게는 보내지 않는다 — 그 부서 담당자 계정에는 자기 부서 줄 독촉이 없다(11-10). */
+    function canRemindRow(deptId) {
+        var Rr = global.DYROLE;
+        if (!Rr || !Rr.canRemind) return canAct(deptId);
+        var p = Rr.current ? Rr.current() : null;
+        if (p && p.tier === 'staff' && p.deptId === deptId) return false;
+        return Rr.canRemind(deptId);
+    }
+    function remind(key, deptId, opts) {
         if (!canRemindRow(deptId)) {
             toast(global.DYROLE && global.DYROLE.remindDenyNote ? global.DYROLE.remindDenyNote('독촉') : '독촉 권한이 없습니다.');
             return;
         }
+        var flow = opts && opts.flow;
+        if (flow) {
+            var pr = progressOf(key, deptId, flow);
+            if (pr !== 'NONE' && pr !== 'RETURNED') { toast('미제출·반려된 부서에만 독촉합니다.'); return; }
+        }
         var d = deptOf(deptId);
         var who = global.DYADM && global.DYADM.contactText ? global.DYADM.contactText(deptId) : '그 부서 담당자';
-        toast((d ? d.name : deptId) + ' 독촉 · 받는 사람 ' + who + ' — 발송 기록은 알림 연계 후 남습니다');
+        var what = flow ? (progressOf(key, deptId, flow) === 'RETURNED' ? '반려 재제출 독촉' : '결과 제출 독촉') : '독촉';
+        if (flow) {
+            /* 배포 흐름은 독촉 기록을 회차별로 남긴다 — 줄에 «독촉 N회 · 최근»이 보이고 마감 보고에도 쓴다.
+               발신자는 실제 접속자다(재난안전과 고정 문자열 금지). 알림 발송 자체는 알림 연계 몫이다. */
+            var log = fload().reminds = fload().reminds || {};
+            var lk = key + '|' + deptId;
+            (log[lk] = log[lk] || []).push({ at: nowTs(), by: actor(), what: what, to: who });
+            fsave();
+            toast((d ? d.name : deptId) + ' ' + what + ' 기록 · 받는 사람 ' + who);
+            if (opts && opts.onChange) opts.onChange();
+            return;
+        }
+        toast((d ? d.name : deptId) + ' ' + what + ' · 받는 사람 ' + who + ' — 발송 기록은 알림 연계 후 남습니다');
+    }
+
+    /* ================= 알림 =================
+     * 받는 사람이 할 일이 있을 때만 보낸다(SCR-ADMIN-002 §4-1):
+     *   제출 → 재난안전과 담당자(재난안전과 줄이면 팀장 포함) «검토 요청»
+     *   반려 → 그 부서 담당자(없으면 부서장) «반려 — 사유»
+     * 헤더 알림은 DYLayout.ntfPush 한 곳으로 쌓는다(실제 문자·메일 발송은 알림 연계 몫). */
+    function notify(o) {
+        var L = global.DYLayout;
+        if (!L || !L.ntfPush) return;
+        var own = R() ? R().OWNER_DEPT : 'safety';
+        var dn = (deptOf(o.deptId) || {}).name || o.deptId;
+        var axis = /citizen/.test(o.key) ? 'citizen' : 'industrial';
+        var per = o.key.split('|')[1] || '';
+        var perLbl = per.replace(/^(\d{4})-H([12])$/, function (m, y, h) { return y + ' ' + (h === '1' ? '상반기' : '하반기'); }) +
+            (axis === 'citizen' ? ' 중대시민재해' : ' 중대산업재해');
+        var href = 'menu.html?m=comply&axis=' + axis + '&period=' + per;
+        if (o.kind === 'return') {
+            L.ntfPush({ cat: 'compliance', catLabel: '이행', toDept: o.deptId, toTier: ['staff', 'super'],
+                title: perLbl + ' 의무이행 점검 결과 반려 — ' + o.reason, href: href, work: 'my-work.html?cat=comply', basis: 'cse-5' });
+        } else if (o.kind === 'submit') {
+            L.ntfPush({ cat: 'compliance', catLabel: '이행', toDept: own, toTier: ['staff', 'super'],
+                title: dn + ' ' + perLbl + ' 의무이행 점검 결과 제출 — 검토 요청', href: href, work: 'my-work.html?cat=comply', basis: 'cse-5' });
+        }
     }
 
     global.DEPTCHK = {
-        ST: ST, DEFAULT_LABELS: DEFAULT_LABELS, EXPECTED_DEPTS: EXPECTED_DEPTS,
+        ST: ST, CF: CF, DEFAULT_LABELS: DEFAULT_LABELS, FLOW_LABELS: FLOW_LABELS, EXPECTED_DEPTS: EXPECTED_DEPTS,
         depts: depts, gap: gap, summary: summary,
         stateOf: stateOf, setState: setState, reset: reset,
         render: render, open: open, setStatus: setStatus, addPhoto: addPhoto,
-        mDelPhoto: mDelPhoto, save: saveModal, delPhoto: delPhoto, remind: remind
+        mDelPhoto: mDelPhoto, save: saveModal, delPhoto: delPhoto, remind: remind,
+        /* 배포 흐름 (이행점검) */
+        flow: FLOW, remindLog: function (key, deptId) { return ((fload().reminds || {})[key + '|' + deptId] || []).slice(); }, isTarget: isTarget, progressOf: progressOf, submitted: submitted, isOwnerStaff: isOwnerStaff,
+        unsubmit: unsubmit, doUnsubmit: doUnsubmit,
+        review: review, doConfirm: doConfirm, download: download, doReturn: doReturn, uncfm: uncfm, doUncfm: doUncfm
     };
 })(window);

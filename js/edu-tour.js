@@ -83,18 +83,18 @@
             clickPath: [
                 '[＋ 집합교육 등록]',
                 '일자·시작~종료 시각을 회차 탭에 적습니다 — 교육 시간은 회차에서 자동 계산됩니다',
-                '강사·장소·내용을 채우고 참석자 명단·교육 자료를 붙인 뒤 [등록]'
+                '강사·장소·내용 · 등록부 기한을 채우고 서명부 양식·교육 자료를 붙인 뒤 [등록]'
             ],
-            desc: '과정 일정·시간·강사·장소·내용과 첨부를 한 건으로 등록하면 참석자 등록부 접수가 시작됩니다.',
+            desc: '과정 일정·시간·강사·장소·내용과 첨부를 한 건으로 등록합니다. 교육이 끝나면 부서가 참석자 등록부를 올립니다.',
             script: '엑셀로 나눠 관리하던 월별 교육 일정·계획 문서를 하나의 교육 건으로 등록합니다.',
-            modalGuide: '등록 즉시 참석자 등록부 접수가 시작됩니다. 일자·시간·내용을 확인하고 <b>[등록]</b>을 누르세요.',
+            modalGuide: '교육이 끝난 날부터 부서가 참석자 등록부를 올립니다(등록부 기한 안에). 일자·시간·내용을 확인하고 <b>[등록]</b>을 누르세요.',
             actionLabel: '집합교육 등록 열기',
             action: function () { global.EDUR.openCreate('group'); },
             done: function () { return !!demoCourse(); },
             note: function () { return courseLabel(); }
         },
         {
-            key: 'apply', label: '신청', page: 'edu-reg.html',
+            key: 'apply', label: '등록부', page: 'edu-reg.html',
             persona: ownerP, href: function () { return 'edu-reg.html'; },
             /* 접수 중 집합교육이 여러 건이면 [data-tour="apply"] 가 카드마다 붙고
                (edu-reg.js) 목록이 일자 내림차순이라 시드 8월 교육이 먼저 걸린다.
@@ -106,16 +106,16 @@
                 return id ? '.edu-course-card[data-course-id="' + id + '"] [data-tour="apply"]'
                           : '[data-tour="apply"]';
             },
-            title: '부서가 대상자를 골라 등록부 제출',
+            title: '교육이 끝난 뒤 부서가 참석자 등록부 등록',
             where: '그 교육 카드의 <b>[＋ 참석자 등록부 등록]</b>',
             clickPath: [
                 '교육 카드의 [＋ 참석자 등록부 등록]',
                 '조직도에서 부서를 고르고 근로자를 체크합니다',
-                '서명파일을 첨부해야 [신청 완료]가 열립니다'
+                '서명부 스캔을 첨부하고 [등록]'
             ],
-            desc: '부서 담당자가 근로자 명단에서 대상자를 체크하고 서명파일을 올려 신청합니다.',
-            script: '서명파일은 신청 시점에 올립니다. 정원·마감·불참 개념 없이 신청 명단이 곧 카운트 대상입니다.',
-            modalGuide: '부서를 조직도에서 고르고 근로자를 선택한 뒤 <b>서명파일</b>을 첨부해야 [신청 완료] 조건이 채워집니다.',
+            desc: '교육이 끝난 뒤 부서 담당자가 참석자를 체크하고 실제 참석시간과 서명부 스캔을 올립니다.',
+            script: '등록부는 교육이 끝난 뒤 한 번 올립니다. 사전 신청·불참자 처리 없이 등록부 명단이 곧 이수 대상입니다.',
+            modalGuide: '근로자를 선택하고 <b>서명부 스캔</b>을 첨부한 뒤 [등록]을 누르세요.',
             actionLabel: '참석자 등록부 등록 열기',
             action: function () {
                 var id = courseId();
@@ -126,7 +126,7 @@
             note: function () {
                 if (!demoCourse()) return '교육 등록 후';
                 var e = enrollCount();
-                return e.depts ? '신청 ' + e.depts + '개 부서 · ' + e.people + '명' : '신청 없음';
+                return e.depts ? '등록 ' + e.depts + '개 부서 · ' + e.people + '명' : '등록 없음';
             }
         },
         {

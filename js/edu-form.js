@@ -137,7 +137,8 @@
      * 드롭존은 접근성 렌더러 DYV2.uploadDrop 만 사용(CLAUDE.md §2). */
     var ATTACH_SLOTS = {
         group: [
-            { key: 'roster',   label: '참석자 명단', sub: '참석자 등록부·서명부' },
+            /* 부서가 교육 때 참석자 서명을 받을 양식 — 끝난 뒤 이 양식의 스캔본이 등록부로 올라온다(2026-11-12) */
+            { key: 'roster',   label: '서명부 양식', sub: '참석자가 서명할 양식' },
             { key: 'material', label: '교육 자료',   sub: '교육에 사용할 자료' }
         ],
         done: [

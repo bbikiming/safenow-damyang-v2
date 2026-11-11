@@ -217,8 +217,16 @@
             var WK = global.DYWORK;
             if (WK) {
                 var me = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
+                /* 이행점검 할 일은 재난안전과가 **배포한 회차·대상 부서**에만 생긴다(2026-11-12) —
+                   양식·기한·대상 없이 날짜만 보고 빈 할 일을 먼저 내지 않는다. 기한도 배포에 적힌 날이다. */
+                var CMPAX = { 'W-CMP-IND': 'comply-industrial', 'W-CMP-CIV': 'comply-citizen' };
+                var DC = global.DEPTCHK;
                 WK.deptTasks(state.deptId).forEach(function (t) {
                     if (t.issue.status === WK.IST.CANCELED) return;
+                    var cax = t.tpl && CMPAX[t.tpl.id];
+                    var cdist = null;
+                    /* 이행점검은 아래 «배포» 블록이 카드를 낸다 — 날짜 자동발행 카드는 내지 않는다(중복 방지) */
+                    if (cax) return;
                     var mine = me && t.assign.to === me.uid;
                     var unassigned = t.unassigned && !t.done;
                     /* 남이 배정받은 건은 내 할일이 아니다 */
@@ -232,15 +240,18 @@
                         id: 'WK-' + t.id,
                         cat: tpl.cat || 'comply',
                         title: t.name + ' — ' + t.periodLabel,
-                        sub: t.issue.issuedBy + ' ' + t.issue.issuedAt + ' 발행' +
+                        sub: cdist ? ('재난안전과 ' + cdist.at + ' 배포 · 점검표를 내려받아 작성한 뒤 결과를 제출합니다' +
+                                (function () { var st = DC.stateOf(cax + '|' + t.issue.periodKey, t.deptId);
+                                    return st.confirm && st.confirm.state === 'RETURNED' ? ' · 보완 요청: ' + (st.confirm.reason || '') : ''; })()) :
+                             t.issue.issuedBy + ' ' + t.issue.issuedAt + ' 발행' +
                              ((tpl.slots || []).length
                                  ? ' · ' + tpl.slots.map(function (x) { return x.key; }).join('+') + ' 필요'
                                  : (tpl.destLabel ? ' · ' + tpl.destLabel + ' 화면에서 처리' : '')) +
                              (returned ? ' · 반려: ' + t.confirm.reason : ''),
-                        due: t.due,
+                        due: cdist ? cdist.due : t.due,
                         status: t.done ? 'DONE' : 'IN_PROGRESS',
                         dept: t.deptId, dept_label: t.deptName,
-                        href: tpl.href || '',
+                        href: cdist ? 'menu.html?m=comply&axis=' + (cax === 'comply-citizen' ? 'citizen' : 'industrial') + '&period=' + t.issue.periodKey : (tpl.href || ''),
                         destLabel: tpl.destLabel || '',
                         atype: unassigned ? 'wkassign' : (tpl.profile === 'menu' ? 'menu' : 'attach'),
                         action: tpl.profile === 'menu' ? '처리하러 가기' : '',
@@ -250,6 +261,72 @@
                         remind: (t.reminds || []).length > 0,
                         doneDate: t.submittedAt || '',
                         doneText: (t.files || []).length ? '첨부 ' + t.files.length + '건' : ''
+                    });
+                });
+            }
+        } catch (e) {}
+
+        /* 이행점검 — 부서의 할 일: 재난안전과가 배포한 회차의 «결과 제출»(2026-11-12).
+         * 배포하는 순간 대상 부서에 생기고, **결과가 무엇이든 제출하면 끝난다**(보완 요청이면 다시 뜬다).
+         * 마감 보고(상신)된 회차는 잠겨 더 낼 수 없으므로 띄우지 않는다. */
+        try {
+            var DCS = global.DEPTCHK;
+            if (DCS && DCS.flow && state.deptId) {
+                var y2 = +todayIso().slice(0, 4);
+                [y2 + '-H2', y2 + '-H1', (y2 - 1) + '-H2'].forEach(function (per) {
+                    var cl2 = DCS.flow.closed(per);
+                    var locked = cl2 && (cl2.status === '결재중' || cl2.status === '결재완료');
+                    [['comply-industrial', '중대산업재해', 'industrial'], ['comply-citizen', '중대시민재해', 'citizen']].forEach(function (ax) {
+                        var key = ax[0] + '|' + per, d = DCS.flow.dist(key);
+                        if (!d || (d.targets || []).indexOf(state.deptId) === -1) return;
+                        var st = DCS.stateOf(key, state.deptId);
+                        var ret = st.confirm && st.confirm.state === 'RETURNED';
+                        var done = DCS.submitted(key, state.deptId);
+                        if (!done && locked) return;
+                        out.push({
+                            id: 'CMP-SUB-' + key, cat: 'comply',
+                            title: per.slice(0, 4) + ' ' + (per.slice(-1) === '1' ? '상반기' : '하반기') + ' ' + ax[1] + ' 의무이행 자체점검 — 결과 제출',
+                            sub: ret ? '반려: ' + (st.confirm.reason || '') + ' — 고쳐서 다시 제출합니다'
+                                     : '재난안전과 ' + d.at + ' 배포 · 점검표를 내려받아 작성한 뒤 결과를 제출합니다',
+                            due: d.due, status: done ? 'DONE' : 'IN_PROGRESS',
+                            dept: state.deptId, dept_label: D().deptName(state.deptId),
+                            href: 'menu.html?m=comply&axis=' + ax[2] + '&period=' + per,
+                            atype: 'menu', action: ret ? '다시 제출하러 가기' : '제출하러 가기', destLabel: '이행점검',
+                            doneDate: done ? (st.submittedAt || '') : '', doneBy: done ? (st.submittedBy || '') : '',
+                            doneText: done ? '결과 제출' + (st.confirm && st.confirm.state === 'OK' ? ' · 재난안전과 확인 완료' : ' · 확인 대기') : '',
+                            remind: false
+                        });
+                    });
+                });
+            }
+        } catch (e) {}
+
+        /* 이행점검 — 재난안전과 담당자의 할 일: 부서가 제출한 결과의 «확인»(2026-11-12).
+         * 축·회차 1건당 한 줄로 묶는다. 마감 보고된 회차는 잠겨 있으므로 세지 않는다. */
+        try {
+            var DCK = global.DEPTCHK;
+            var meC = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
+            var ownC = global.DYROLE && global.DYROLE.OWNER_DEPT;
+            if (DCK && DCK.flow && meC && meC.tier === 'staff' && meC.deptId === ownC && state.deptId === ownC) {
+                var yy = +todayIso().slice(0, 4);
+                [yy + '-H2', yy + '-H1', (yy - 1) + '-H2'].forEach(function (per) {
+                    var cl = DCK.flow.closed(per);
+                    if (cl && (cl.status === '결재중' || cl.status === '결재완료')) return;
+                    [['comply-industrial', '중대산업재해'], ['comply-citizen', '중대시민재해']].forEach(function (ax) {
+                        var key = ax[0] + '|' + per, d = DCK.flow.dist(key);
+                        if (!d) return;
+                        var sm = DCK.summary(key, { dist: d });
+                        if (!sm.wait) return;
+                        out.push({
+                            id: 'CMP-CFM-' + key, cat: 'comply',
+                            title: per.slice(0, 4) + ' ' + (per.slice(-1) === '1' ? '상반기' : '하반기') + ' ' + ax[1] + ' 의무이행 점검 — 확인 대기 ' + sm.wait + '건',
+                            sub: '부서가 올린 점검표를 보고 확인하거나 보완을 요청합니다' + (sm.none ? ' · 미제출 ' + sm.none + '개 부서' : ''),
+                            due: '', status: 'IN_PROGRESS',
+                            dept: ownC, dept_label: '재난안전과',
+                            href: 'menu.html?m=comply&axis=' + (ax[0] === 'comply-citizen' ? 'citizen' : 'industrial') + '&period=' + per,
+                            atype: 'menu', action: '확인하러 가기', destLabel: '이행점검',
+                            remind: false
+                        });
                     });
                 });
             }
@@ -335,16 +412,16 @@
                         out.push({
                             id: 'EDU-APPLY-' + c.id,
                             cat: 'edu',
-                            title: c.desc + ' — 참석자 등록부 등록 필요',
-                            sub: '일정 ' + c.date + ' · ' + c.hours + 'h · ' + (c.instructor || ''),
-                            due: c.date,
+                            title: c.desc + ' — 참석자 등록부 등록',
+                            sub: '교육 ' + Edu.lastSessionDate(c) + ' 종료 · 참석자 · 실제 참석시간 · 서명부 스캔을 올립니다',
+                            due: t.due || c.date,
                             status: 'IN_PROGRESS',
                             dept: state.deptId, dept_label: Edu.deptName(state.deptId),
                             /* 참석자 등록부는 교육 상세에서 등록한다 — 종전에는 목록(edu-reg)으로 보내
                                담당자가 그 교육을 다시 찾아야 했고, 관리감독자 교육(SUP_REG)은 현업근로자
                                목록으로 떨어져 아예 보이지 않았다. */
                             href: 'edu-reg-detail.html?id=' + encodeURIComponent(c.id),
-                            atype: 'menu', action: '신청하러 가기', destLabel: '교육 상세', remind: false
+                            atype: 'menu', action: '등록부 올리러 가기', destLabel: '교육 상세', remind: false
                         });
                         return;
                     }

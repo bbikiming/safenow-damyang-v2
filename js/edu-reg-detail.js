@@ -3,7 +3,8 @@
    ---------------------------------------------------------------------
    집합교육 상세를 모달 대신 별도 화면으로. ?id=course_id 로 진입.
    · 교육 정보(일정·시간·강사·장소·내용·첨부)
-   · 신청현황 테이블: 부서 · 신청자 명단 · 인원 · 서명파일 · 신청일 (전체 노출)
+   · 등록 현황 테이블: 부서 · 참석자 명단 · 인원 · 서명파일 · 등록일 (2026-11-12 «신청» → «등록» — 사전 신청이 없다)
+   · 참석자 등록부는 **교육이 끝난 뒤** 받는다(DYEDU.enrollOpen) — 서명은 참석 증빙이다
    · [참석자 등록부 등록] · [교육 종료 처리] · 이력
    표준: 배지 chip-status+DYV2.toneOf · 표 .table-figma · 부서 선택 ORGPICK ·
         안내 훅 EDUTOUR.onEvent('applied'|'closed')
@@ -33,9 +34,13 @@
             state.mount.innerHTML = '<div class="edu-card"><div class="v2-empty">교육을 찾을 수 없습니다.</div></div>';
             return;
         }
+        var open = E().enrollOpen(c);
         var stChip = c.status === 'DONE'
             ? '<span class="chip-status chip-sm ' + V().toneOf('완료') + '">완료</span>'
-            : '<span class="chip-status chip-sm ' + V().toneOf('진행중') + '">진행중 · 신청 접수</span>';
+            : open
+            ? '<span class="chip-status chip-sm ' + V().toneOf('진행중') + '">등록부 받는 중</span>'
+            : '<span class="chip-status chip-sm ' + V().toneOf('예정') + '">교육 전</span>';
+        var due = E().enrollDue(c), dueLeft = due ? V().daysTo(due) : null;
         var enrolls = E().enrolls(c.id);
         var allEnrolls = E().allEnrolls ? E().allEnrolls(c.id) : enrolls;
         var enrolledCnt = enrolls.reduce(function (n, e) { return n + (e.workerIds || []).length; }, 0);
@@ -48,8 +53,8 @@
         var canApply = E().canRegister();
         if (c.status === 'OPEN') {
             actions =
-                (canApply ? '<button type="button" class="btn btn-outline" onclick="EDURD.openApply()">＋ 참석자 등록부 등록</button>' : '') +
-                (E().canActCourse(c) ? '<button type="button" class="btn btn-primary" data-tour="close" onclick="EDURD.closeCourse()">교육 종료 처리</button>' : '');
+                (canApply && open ? '<button type="button" class="btn btn-outline" onclick="EDURD.openApply()">＋ 참석자 등록부 등록</button>' : '') +
+                (E().canActCourse(c) && open ? '<button type="button" class="btn btn-primary" data-tour="close" onclick="EDURD.closeCourse()">교육 종료 처리</button>' : '');
         } else if (!lockOf(c.id) && canApply) {
             actions = '<button type="button" class="btn btn-outline" onclick="EDURD.openApply()">＋ 정정 등록부 추가</button>';
         }
@@ -68,8 +73,13 @@
                     '<span>시간 <b>' + c.hours + 'h</b>' + (sessions.length > 1 ? ' (' + sessions.length + '일 합계)' : '') + '</span>' +
                     '<span>강사 <b>' + esc(c.instructor || '-') + '</b></span>' +
                     '<span>장소 <b>' + esc(c.place || '-') + '</b></span>' +
-                    '<span>신청 <b>' + deptCnt + '개 부서 · ' + enrolledCnt + '명</b></span>' +
+                    '<span>등록 <b>' + deptCnt + '개 부서 · ' + enrolledCnt + '명</b></span>' +
+                    (c.status === 'OPEN' && due ? '<span>등록 기한 <b>' + esc(due) + '</b>' + (open ? (dueLeft >= 0 ? ' (D-' + dueLeft + ')' : ' (D+' + (-dueLeft) + ' · 기한 지남)') : '') + '</span>' : '') +
                 '</div>' +
+                /* 교육 전에는 등록 수단 대신 «언제부터»를 밝힌다 — 서명은 참석한 뒤에 받는다 */
+                (c.status === 'OPEN' && !open
+                    ? '<div class="check-notice" style="margin-top:8px;">교육이 끝난 뒤(<b>' + esc(E().lastSessionDate(c)) + '</b>부터) 각 부서 담당자가 참석자 등록부를 올립니다 — 참석자 · 실제 참석시간 · 서명부 스캔. 등록 기한 ' + esc(due) + '.</div>'
+                    : '') +
                 /* 다회차 교육은 회차별 일자·시간을 펼쳐 보여준다 (합계만 보이면 일정 확인이 불가) */
                 (sessions.length > 1
                     ? '<div class="edu-detail-files" style="color:var(--text-gray);">🗓 ' +
@@ -93,7 +103,8 @@
             var seeSign = E().canSeePerson(e.deptId);
             var cancelled = e.status === 'CANCELLED';
             return '<tr>' +
-                '<td class="edu-name">' + esc(E().deptName(e.deptId)) + (cancelled ? ' <span class="chip-status chip-sm danger">등록취소</span>' : '') + '</td>' +
+                '<td class="edu-name">' + esc(E().deptName(e.deptId)) + (cancelled ? ' <span class="chip-status chip-sm danger">등록취소</span>' : '') +
+                    (e.proxy ? ' <span class="chip-status chip-sm neutral">대리 등록</span>' : '') + '</td>' +
                 '<td>' + esc(names) + '</td>' +
                 '<td>' + (e.workerIds || []).length + '명</td>' +
                 '<td>' + (e.actualHours == null ? c.hours : e.actualHours) + 'h</td>' +
@@ -110,14 +121,14 @@
                     : enrollLock
                     ? '<button type="button" class="btn btn-outline btn-sm" disabled title="결재 ' + esc(enrollLock) +
                       ' — 공문에 이수자 명단이 실려 나가 취소할 수 없습니다">🔒 ' + esc(enrollLock) + '</button>'
-                    : '<button type="button" class="btn btn-outline btn-sm" style="border-color:var(--status-danger-border);color:var(--status-danger-fg);" onclick="EDURD.confirmCancel(\'' + esc(e.deptId) + '\')">' + (c.status === 'DONE' ? '완료기록 정정' : '신청 취소') + '</button>') + '</td>' +
+                    : '<button type="button" class="btn btn-outline btn-sm" style="border-color:var(--status-danger-border);color:var(--status-danger-fg);" onclick="EDURD.confirmCancel(\'' + esc(e.deptId) + '\')">' + (c.status === 'DONE' ? '완료기록 정정' : '등록 취소') + '</button>') + '</td>' +
             '</tr>';
-        }).join('') : '<tr><td colspan="7"><div class="v2-empty">아직 신청이 없습니다.</div></td></tr>';
+        }).join('') : '<tr><td colspan="7"><div class="v2-empty">' + (open || c.status === 'DONE' ? '아직 등록한 부서가 없습니다.' : '교육이 끝나면 부서가 참석자 등록부를 올립니다.') + '</div></td></tr>';
         var enrollTable =
-            '<div class="edu-card"><div class="edu-card-title">신청현황 (' + deptCnt + '개 부서 · ' + enrolledCnt + '명)</div>' +
-                (enrollLock ? '<div class="check-notice">결재 <b>' + esc(enrollLock) + '</b> — 이 교육의 이수자 명단이 공문 붙임으로 올라가 있어 신청을 취소할 수 없습니다. 정정하려면 반려 후 다시 시도하세요.</div>' : '') +
+            '<div class="edu-card"><div class="edu-card-title">등록 현황 (' + deptCnt + '개 부서 · ' + enrolledCnt + '명)</div>' +
+                (enrollLock ? '<div class="check-notice">결재 <b>' + esc(enrollLock) + '</b> — 이 교육의 이수자 명단이 공문 붙임으로 올라가 있어 등록을 취소할 수 없습니다. 정정하려면 반려 후 다시 시도하세요.</div>' : '') +
                 '<div class="edu-scroll"><table class="table-figma table-compact"><thead><tr>' +
-                    '<th style="width:18%;">부서</th><th>신청자 명단</th><th style="width:9%;">인원</th><th style="width:10%;">실제 참석</th><th style="width:20%;">서명파일</th><th style="width:12%;">신청일</th><th></th>' +
+                    '<th style="width:18%;">부서</th><th>참석자 명단</th><th style="width:9%;">인원</th><th style="width:10%;">실제 참석</th><th style="width:20%;">서명부</th><th style="width:12%;">등록일</th><th></th>' +
                 '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
             '</div>';
 
@@ -142,6 +153,8 @@
     function openApply() {
         var c = E().courseOf(state.courseId);
         if (!E().canRegister()) { deny(E().defaultDeptId()); return; }
+        /* 완료 교육의 정정 등록부는 언제든, 접수 중 교육은 끝난 뒤에만 받는다 */
+        if (c && c.status === 'OPEN' && !E().enrollOpen(c)) { toast('교육이 끝난 뒤(' + E().lastSessionDate(c) + '부터) 참석자 등록부를 올립니다.'); return; }
         /* 기본 부서는 로그인한 사람의 소속 — 목록 첫 부서를 기본으로 두면 남의 부서 명의로 저장된다 */
         G = { deptId: E().defaultDeptId(), workerIds: {}, signFile: '', actualHours: c ? c.hours : 0 };
         renderApply();
@@ -183,18 +196,19 @@
             '<div class="edu-modal-row"><label class="form-label" for="erd-actual-hours">실제 참석시간 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 '<input type="number" class="form-input" id="erd-actual-hours" min="0.1" max="' + c.hours + '" step="0.1" value="' + esc(G.actualHours) + '">' +
                 '<p style="font-size:var(--fs-12);color:var(--text-gray);margin:4px 0 0;">선택 대상자에게 공통 적용됩니다. 교육 예정시간 ' + c.hours + 'h를 넘길 수 없습니다.</p></div>' +
-            '<div class="edu-modal-row"><label class="form-label">서명파일 업로드 <span style="color:var(--status-danger-fg)">*</span></label>' +
+            '<div class="edu-modal-row"><label class="form-label">서명부 스캔 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                '<p class="file-hint" style="margin:0 0 6px;">교육 때 참석자가 서명한 서명부를 스캔해 올립니다.</p>' +
                 /* 업로드 칸은 전 화면 공용 모양 하나(uploadDrop) — 버튼 하나짜리를 두지 않는다
                    (기획확인 4차 D-1, 2026-10-06). 고른 뒤에는 파일명과 [×]로 바꾼다. */
                 (G.signFile
                     ? '<span style="color:var(--main-dark);font-weight:var(--fw-bold);font-size:var(--fs-12);">' + esc(G.signFile) + '</span> ' +
                       '<button type="button" class="btn btn-sm btn-outline" onclick="EDURD.applyClearSign()" aria-label="서명파일 지우기">×</button>' +
                       V().fileHint()
-                    : V().uploadDrop('<b>서명파일을 끌어다 놓거나 눌러서 선택</b>', 'EDURD.applyAttachSign()', { hint: true })) +
+                    : V().uploadDrop('<b>서명부 스캔을 끌어다 놓거나 눌러서 선택</b>', 'EDURD.applyAttachSign()', { hint: true })) +
             '</div>';
         V().openModal('참석자 등록부 등록 · ' + esc(E().deptName(G.deptId)), body,
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-            '<button type="button" class="btn btn-primary" onclick="EDURD.doApply()">신청 완료</button>');
+            '<button type="button" class="btn btn-primary" onclick="EDURD.doApply()">등록</button>');
     }
     function captureApply() {
         var el = document.getElementById('erd-actual-hours');
@@ -211,24 +225,28 @@
         if (!E().canActDept(G.deptId)) { deny(G.deptId); return; }
         var ids = Object.keys(G.workerIds).filter(function (k) { return G.workerIds[k]; });
         if (!ids.length) { toast('근로자를 1명 이상 선택하세요.'); return; }
-        if (!G.signFile) { toast('서명파일을 업로드하세요 (필수).'); return; }
+        if (!G.signFile) { toast('서명부 스캔을 올려 주세요 (필수).'); return; }
         var c = E().courseOf(state.courseId);
+        if (c && c.status === 'OPEN' && !E().enrollOpen(c)) { toast('교육이 끝난 뒤 참석자 등록부를 올립니다.'); return; }
         var actualHours = +(document.getElementById('erd-actual-hours') || {}).value;
         if (!(actualHours > 0) || actualHours > c.hours) { toast('실제 참석시간을 0보다 크고 교육 예정시간 이하로 입력하세요.'); return; }
         /* 같은 부서가 두 번 쌓이면 이수기록이 이중으로 붙어 이수 판정과 공문 수치가
            함께 틀어진다. 인원·서명파일 정정은 신청 취소 후 재등록 경로다. */
         if (E().hasEnroll(state.courseId, G.deptId)) {
-            toast(E().deptName(G.deptId) + '은(는) 이미 등록된 부서입니다 — 신청 취소 후 다시 등록하세요.');
+            toast(E().deptName(G.deptId) + '은(는) 이미 등록된 부서입니다 — 등록 취소 후 다시 등록하세요.');
             return;
         }
         /* 저장 여부는 데이터 계층이 정한다(중복 부서·모집단 불일치 — 운영 E19).
            반환값을 보지 않으면 저장되지 않았는데 «신청 완료»가 뜨고 이수기록만 붙는다. */
-        var enr = { courseId: state.courseId, deptId: G.deptId, workerIds: ids, signFile: G.signFile, actualHours: actualHours, at: E().today() };
+        /* 재난안전과가 다른 부서 몫을 대신 올리면 «대리 등록»으로 남긴다(부서 담당자가 없는 부서용) */
+        var pr = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
+        var enr = { courseId: state.courseId, deptId: G.deptId, workerIds: ids, signFile: G.signFile, actualHours: actualHours, at: E().today(),
+                    by: pr ? pr.name : '', proxy: !!(pr && pr.deptId && pr.deptId !== G.deptId) };
         if (!E().addEnroll(enr)) { toast(E().enrollDenyReason(enr) || '등록부를 저장하지 못했습니다.'); return; }
         if (c.status === 'DONE') E().recordCourseCompletion(state.courseId, ids, actualHours, c.date);
-        E().pushCourseHistory(state.courseId, { type: 'STATUS', by: E().deptName(G.deptId), memo: '참석자 등록부 등록 · ' + ids.length + '명 · 실제 참석 ' + actualHours + 'h · 서명파일 첨부' });
+        E().pushCourseHistory(state.courseId, { type: 'STATUS', by: enr.proxy ? actor() + '(대리 등록)' : E().deptName(G.deptId), memo: '참석자 등록부 등록 · ' + ids.length + '명 · 실제 참석 ' + actualHours + 'h · 서명부 첨부' });
         V().closeModal();
-        toast(E().deptName(G.deptId) + ' · ' + ids.length + '명 신청 완료');
+        toast(E().deptName(G.deptId) + ' · ' + ids.length + '명 참석자 등록부 등록');
         render();
         tourEvt('applied');
     }
@@ -253,13 +271,13 @@
         var mine = E().enrolls(state.courseId).filter(function (e) { return e.deptId === deptId; });
         var cnt = mine.reduce(function (n, e) { return n + (e.workerIds || []).length; }, 0);
         V().openModal(c.status === 'DONE' ? '완료 교육기록 정정' : '참석자 등록부 등록 취소',
-            '<p style="font-size:var(--fs-13);"><b>' + esc(E().deptName(deptId)) + '</b> · 신청 ' + cnt + '명</p>' +
+            '<p style="font-size:var(--fs-13);"><b>' + esc(E().deptName(deptId)) + '</b> · 등록 ' + cnt + '명</p>' +
             (c.status === 'DONE'
                 ? '<div class="check-notice" style="margin-top:10px;"><b>원 등록부는 삭제되지 않고 등록취소 이력으로 보존</b>됩니다. 연결 이수시간만 집계에서 제외한 뒤 정정 등록부를 다시 등록하세요.</div>' +
                   '<div class="edu-modal-row"><label class="form-label" for="erd-cancel-reason">정정 사유 <span style="color:var(--status-danger-fg)">*</span></label><textarea class="form-textarea" id="erd-cancel-reason" rows="2"></textarea></div>'
-                : '<p style="font-size:var(--fs-12);color:var(--text-gray);margin-top:8px;">신청 내역과 서명파일이 삭제됩니다.</p>'),
+                : '<p style="font-size:var(--fs-12);color:var(--text-gray);margin-top:8px;">등록부와 서명부 파일이 삭제됩니다.</p>'),
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-            '<button type="button" class="btn btn-primary" onclick="EDURD.doCancel(\'' + esc(deptId) + '\')">' + (c.status === 'DONE' ? '취소이력 남기기' : '신청 취소') + '</button>');
+            '<button type="button" class="btn btn-primary" onclick="EDURD.doCancel(\'' + esc(deptId) + '\')">' + (c.status === 'DONE' ? '취소이력 남기기' : '등록 취소') + '</button>');
     }
     function doCancel(deptId) {
         if (!E().canActDept(deptId)) { V().closeModal(); deny(deptId); return; }
@@ -280,7 +298,7 @@
             });
         }
         V().closeModal();
-        toast(r ? (c && c.status === 'DONE' ? E().deptName(deptId) + ' 원 기록을 보존하고 취소이력을 남겼습니다.' : E().deptName(deptId) + ' 신청을 취소했습니다.') : '신청 내역이 없습니다.');
+        toast(r ? (c && c.status === 'DONE' ? E().deptName(deptId) + ' 원 기록을 보존하고 취소이력을 남겼습니다.' : E().deptName(deptId) + ' 등록부를 취소했습니다.') : '등록 내역이 없습니다.');
         render();
     }
 
@@ -289,10 +307,13 @@
         var c = E().courseOf(state.courseId); if (!c) return;
         /* 종료 처리는 되돌릴 수 없다 — 그 교육을 연 쪽(집합교육 = 재난안전과 담당자)만 한다 */
         if (!E().canActCourse(c)) { deny(E().courseDeptOf(c)); return; }
+        if (!E().enrollOpen(c)) { toast('교육이 끝난 뒤 종료 처리합니다.'); return; }
         var enrolls = E().enrolls(state.courseId);
+        var due = E().enrollDue(c), early = due && E().today() <= due;
         var totalCnt = enrolls.reduce(function (n, e) { return n + (e.workerIds || []).length; }, 0);
         V().openModal('교육 종료 처리',
-            '<p style="font-size:var(--fs-13);"><b>' + esc(c.desc) + '</b><br>신청 <b>' + enrolls.length + '개 부서 · ' + totalCnt + '명</b>에게 등록부별 실제 참석시간을 카운트합니다.</p>' +
+            '<p style="font-size:var(--fs-13);"><b>' + esc(c.desc) + '</b><br>등록 <b>' + enrolls.length + '개 부서 · ' + totalCnt + '명</b>에게 등록부별 실제 참석시간을 카운트합니다.</p>' +
+            (early ? '<div class="check-notice" style="margin-top:8px;">아직 등록 기한(' + esc(due) + ') 전입니다. 지금 종료하면 그 뒤에 올리려던 부서는 이 교육 이수가 0 이 됩니다.</div>' : '') +
             '<p style="font-size:var(--fs-12);color:var(--text-gray);margin-top:6px;">종료 후 원 기록은 고치거나 지우지 않습니다. 정정은 취소이력 후 재등록합니다.</p>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="EDURD.doClose()">종료 처리</button>');
@@ -308,7 +329,7 @@
             total += (e.workerIds || []).length;
         });
         E().updateCourse(state.courseId, { status: 'DONE' });
-        E().pushCourseHistory(state.courseId, { type: 'STATUS', by: actor(), memo: '교육 종료 처리 · 신청자 ' + total + '명 실제 참석시간 카운트' });
+        E().pushCourseHistory(state.courseId, { type: 'STATUS', by: actor(), memo: '교육 종료 처리 · 등록 ' + total + '명 실제 참석시간 카운트' });
         V().closeModal();
         toast('교육 종료 · ' + total + '명 카운트 완료');
         render();

@@ -75,7 +75,7 @@
         var fields = [
             { type: 'search', id: 'er-q', value: state.q, placeholder: '교육명·강사·장소 검색', on: "EDUR.setF('q', this.value)" },
             { type: 'select', id: 'er-st', value: state.st, label: '진행 상태',
-              options: [['', '상태 전체'], ['OPEN', '신청 접수 중'], ['DONE', '완료']], on: "EDUR.setF('st', this.value)" },
+              options: [['', '상태 전체'], ['OPEN', '진행 중'], ['DONE', '완료']], on: "EDUR.setF('st', this.value)" },
             { type: 'select', id: 'er-year', value: state.year, label: '연도',
               options: EDUFILTER.yearOptions(all.map(function (c) { return c.date; })), on: "EDUR.setF('year', this.value)" },
             { type: 'select', id: 'er-month', value: state.month, label: '월',
@@ -124,7 +124,9 @@
     }
 
     function courseCard(c, tabKey) {
-        var stChip = c.status === 'DONE' ? chip('완료') : chip('진행중');
+        /* 집합교육은 «교육 전 / 등록부 받는 중 / 완료» — 등록부는 교육이 끝난 뒤 받는다(2026-11-12) */
+        var grpOpen = tabKey === 'group' && c.status === 'OPEN';
+        var stChip = c.status === 'DONE' ? chip('완료') : grpOpen ? (E().enrollOpen(c) ? chip('등록부 받는 중', tone('진행중')) : chip('교육 전', tone('예정'))) : chip('진행중');
         var sessCnt = E().courseSessions(c).length;
         var enrolls = E().enrolls(c.id);
         var enrolledCnt = enrolls.reduce(function (n, e) { return n + (e.workerIds || []).length; }, 0);
@@ -136,7 +138,7 @@
         if (detailHref) {
             /* 신청 접수 중(OPEN)인 집합교육은 목록에서도 바로 [참석자 등록부 등록] 가능 (v1.1 후속).
                신청은 각 부서 담당자가 자기 부서 몫을 올린다 — 관리·감독 계층에는 내지 않는다 */
-            if (c.status === 'OPEN' && E().canRegister()) {
+            if (c.status === 'OPEN' && E().canRegister() && E().enrollOpen(c)) {
                 actions += '<button type="button" class="btn btn-outline btn-sm" data-tour="apply" onclick="EDUR.openApply(\'' + c.id + '\')">＋ 참석자 등록부 등록</button> ';
             }
             actions += '<a class="btn btn-primary btn-sm" href="' + detailHref + '">상세 →</a> ';
@@ -158,7 +160,8 @@
                 '<span>시간 <b>' + c.hours + 'h</b>' + (sessCnt > 1 ? ' (' + sessCnt + '일 합계)' : '') + '</span>' +
                 '<span>강사 <b>' + esc(c.instructor || '-') + '</b></span>' +
                 '<span>장소 <b>' + esc(c.place || '-') + '</b></span>' +
-                '<span>신청 <b>' + enrolledDepts + '개 부서 · ' + enrolledCnt + '명</b></span>' +
+                '<span>등록 <b>' + enrolledDepts + '개 부서 · ' + enrolledCnt + '명</b></span>' +
+                (grpOpen ? '<span>' + (E().enrollOpen(c) ? '등록 기한 <b>' + esc(E().enrollDue(c)) + '</b>' : '등록부는 <b>교육이 끝난 뒤</b> 받습니다') + '</span>' : '') +
             '</div>' +
         '</div>';
     }
@@ -214,7 +217,7 @@
             sessions: [EDUFORM.newSession({ end: SUP_MODE ? '18:00' : '17:00' })],
             sIdx: 0,
             instructor: '', place: '', desc: '', files: [], photos: [],
-            workerIds: {}
+            workerIds: {}, enrollDays: 7
         };
         renderCreate();
     }
@@ -235,7 +238,8 @@
             edit: courseId, mode: c.deptId ? 'self' : 'group', kind: c.kind,
             deptId: c.deptId || '', sessions: ss, sIdx: 0, legacyHours: c.hours,
             instructor: c.instructor || '', place: c.place || '', desc: c.desc || '',
-            files: (c.files || []).slice(), photos: (c.photos || []).slice(), workerIds: {}
+            files: (c.files || []).slice(), photos: (c.photos || []).slice(), workerIds: {},
+            enrollDays: E().enrollDays(c)
         };
         renderCreate();
     }
@@ -252,6 +256,13 @@
                 '<input type="text" class="form-input" id="er-place" value="' + esc(F.place) + '"></div>' +
             '<div class="edu-modal-row"><label class="form-label" for="er-desc">내용 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 '<textarea class="form-textarea" id="er-desc" rows="2">' + esc(F.desc) + '</textarea></div>' +
+            /* 집합교육 — 부서는 교육이 끝난 뒤 참석자 등록부를 올린다. 언제까지인지를 등록할 때 정한다(2026-11-12) */
+            (F.mode === 'group'
+                ? '<div class="edu-modal-row"><label class="form-label" for="er-enrolldays">참석자 등록부 기한 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                    '<div style="display:flex;align-items:center;gap:8px;">마지막 회차가 끝난 뒤 ' +
+                    '<input type="number" class="form-input" id="er-enrolldays" min="1" max="30" value="' + esc(F.enrollDays) + '" style="width:90px;"> 일 안에</div>' +
+                    '<p class="file-hint">부서는 교육이 끝난 날부터 참석자·실제 참석시간·서명부 스캔을 올립니다. 기한이 지나면 종료 처리합니다.</p></div>'
+                : '') +
             /* 첨부 — 집합은 [참석자 명단·교육 자료] 2칸, 자체는 [교육일지 및 교육사진 등] 1칸 (2026-07-30 회의) */
             EDUFORM.renderAttach(F, 'EDUR', F.mode === 'group' ? 'group' : 'done') +
             (F.mode === 'group'
@@ -303,6 +314,7 @@
         if (el('er-inst')) F.instructor = el('er-inst').value.trim();
         if (el('er-place')) F.place = el('er-place').value.trim();
         if (el('er-desc')) F.desc = el('er-desc').value.trim();
+        if (el('er-enrolldays')) F.enrollDays = el('er-enrolldays').value;
     }
     function pickDept(id, name) {
         if (!E().canActDept(id)) { deny(id); return; }
@@ -325,6 +337,7 @@
             return;
         }
         if (!F.desc) { toast('교육 내용을 입력하세요.'); return; }
+        if (F.mode === 'group' && !(+F.enrollDays >= 1 && +F.enrollDays <= 30)) { toast('참석자 등록부 기한을 1~30일로 정하세요.'); return; }
         var pr = EDUFORM.sessionPayload(F);
         if (!pr.ok) { F.sIdx = pr.badIdx; renderCreate(); toast(pr.msg); return; }
         var S = pr.payload;
@@ -343,7 +356,8 @@
             E().updateCourse(F.edit, {
                 deptId: F.deptId, date: S.date, time: S.time, endTime: S.endTime,
                 sessions: S.sessions, hours: S.hours,
-                instructor: F.instructor, place: F.place, desc: F.desc, files: F.files, photos: F.photos
+                instructor: F.instructor, place: F.place, desc: F.desc, files: F.files, photos: F.photos,
+                enrollDays: F.mode === 'group' ? +F.enrollDays : undefined
             });
             /* 회차를 고치면 시간이 자동으로 바뀐다 — 이미 쌓인 이수기록도 함께 맞춰야
              * 카드의 교육시간과 이수현황 인정시간이 어긋나지 않는다. */
@@ -383,10 +397,10 @@
                 kind: F.kind, date: S.date, time: S.time, endTime: S.endTime,
                 sessions: S.sessions, hours: S.hours,
                 instructor: F.instructor, place: F.place, desc: F.desc, files: F.files, photos: F.photos,
-                status: 'OPEN', createdBy: '재난안전과'
+                status: 'OPEN', createdBy: '재난안전과', enrollDays: +F.enrollDays
             });
             V().closeModal();
-            toast(SUP_MODE ? '관리감독자 집합교육 등록' : '집합교육 등록 · 참석자 등록부 접수 개시');
+            toast((SUP_MODE ? '관리감독자 집합교육 등록' : '집합교육 등록') + ' — 교육이 끝나면 부서가 참석자 등록부를 올립니다');
             tourEvt('created');
         }
         render();
@@ -397,6 +411,7 @@
         var c = E().courseOf(courseId); if (!c) return;
         /* 신청은 부서 담당자가 자기 부서 몫을 올린다(주관부서 담당자는 전 부서) */
         if (!E().canRegister()) { deny(E().defaultDeptId()); return; }
+        if (c.status === 'OPEN' && !E().enrollOpen(c)) { toast('교육이 끝난 뒤(' + E().lastSessionDate(c) + '부터) 참석자 등록부를 올립니다.'); return; }
         G = { courseId: courseId, deptId: E().defaultDeptId(), workerIds: {}, signFile: '' };
         renderApply();
     }
@@ -423,7 +438,7 @@
                 '<span style="color:var(--text-gray);font-weight:var(--fw-regular);">(' + selCnt + ' / ' + ws.length + '명)</span></label>' +
                 '<div class="edu-tg-body">' + rows + '</div>' +
             '</div>' +
-            '<div class="edu-modal-row"><label class="form-label">서명파일 업로드 <span style="color:var(--status-danger-fg)">*</span></label>' +
+            '<div class="edu-modal-row"><label class="form-label">서명부 스캔 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 /* 업로드 칸은 전 화면 공용 모양 하나(uploadDrop) — 버튼 하나짜리를 두지 않는다
                    (기획확인 4차 D-1, 2026-10-06). 고른 뒤에는 파일명과 [×]로 바꾼다. */
                 (G.signFile
@@ -434,7 +449,7 @@
             '</div>';
         V().openModal('참석자 등록부 등록 · ' + esc(E().deptName(G.deptId)), body,
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-            '<button type="button" class="btn btn-primary" onclick="EDUR.doApply()">신청 완료</button>');
+            '<button type="button" class="btn btn-primary" onclick="EDUR.doApply()">등록</button>');
     }
     function applyPickDept(id, name) {
         if (!E().canActDept(id)) { deny(id); return; }
@@ -447,10 +462,10 @@
         if (!E().canActDept(G.deptId)) { deny(G.deptId); return; }
         var ids = Object.keys(G.workerIds).filter(function (k) { return G.workerIds[k]; });
         if (!ids.length) { toast('근로자를 1명 이상 선택하세요.'); return; }
-        if (!G.signFile) { toast('서명파일을 업로드하세요 (필수).'); return; }
+        if (!G.signFile) { toast('서명부 스캔을 올려 주세요 (필수).'); return; }
         /* 같은 부서가 두 번 쌓이면 이수기록이 이중으로 붙는다 — 정정은 취소 후 재등록 */
         if (E().hasEnroll(G.courseId, G.deptId)) {
-            toast(E().deptName(G.deptId) + '은(는) 이미 등록된 부서입니다 — 신청 취소 후 다시 등록하세요.');
+            toast(E().deptName(G.deptId) + '은(는) 이미 등록된 부서입니다 — 등록 취소 후 다시 등록하세요.');
             return;
         }
         /* 저장 여부는 데이터 계층이 정한다(중복 부서·모집단 불일치 — 운영 E19).
@@ -459,7 +474,7 @@
         if (!E().addEnroll(enr)) { toast(E().enrollDenyReason(enr) || '등록부를 저장하지 못했습니다.'); return; }
         E().pushCourseHistory(G.courseId, { type: 'STATUS', by: E().deptName(G.deptId), memo: '참석자 등록부 등록 · ' + ids.length + '명 · 서명파일 첨부' });
         V().closeModal();
-        toast(E().deptName(G.deptId) + ' · ' + ids.length + '명 신청 완료');
+        toast(E().deptName(G.deptId) + ' · ' + ids.length + '명 참석자 등록부 등록');
         render();
         tourEvt('applied');
     }

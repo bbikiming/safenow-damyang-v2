@@ -3976,6 +3976,10 @@ p > .dx-note-gap { display: inline; }
 /* 2단 트리가 든 모달은 넓게 — 500px 에서는 칸이 205px 로 눌려 긴 할 일 이름이
    네 줄로 접힌다. 내용으로 폭을 정하는 기존 관례를 따른다(.table-figma 선례). */
 .modal:has(.dyp) .modal-content { max-width: 860px; }
+/* 이행점검 마감 보고 미리보기 — 부서별 표가 5열이라 기본 폭에서 칸이 접힌다(2026-11-12) */
+.modal:has(.cmp-report) .modal-content { max-width: 860px; }
+/* 부서·날짜 칸(첫·끝 칸)은 줄바꿈하지 않는다 — 사유·내용 칸만 접힌다 */
+.cmp-report .table-figma td:first-child, .cmp-report .table-figma td:last-child { white-space: nowrap; }
 /* 전체메뉴 — 대메뉴 11축을 3열로 펼치므로 기본 500px 로는 한 열이 150px 로 눌린다 */
 .modal:has(.dy-sitemap) .modal-content { max-width: 920px; }
 
@@ -4086,6 +4090,7 @@ p > .dx-note-gap { display: inline; }
   .du-grid, .du-conf-meta { grid-template-columns: 1fr; }
   .du-steps li { flex: 1 1 100%; }
   .modal:has(.dyp) .modal-content { max-width: 100%; }
+  .modal:has(.cmp-report) .modal-content { max-width: 100%; }
   .modal:has(.dy-sitemap) .modal-content { max-width: 100%; }
 }
 .dl-more-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; margin-top: 10px;
@@ -4780,6 +4785,15 @@ p > .dx-note-gap { display: inline; }
    규칙이 없어 본문과 같은 크기로 붙어 있었다. */
 .dchk-ro,
 .sh-pill-none { font-size: var(--fs-12); color: var(--text-gray); }
+
+/* 이행점검 배포 흐름(2026-11-12) — 이 회차 대상이 아닌 부서 줄. 분모에 들지 않으므로
+   흐리게 두되 라벨(«대상 아님»)을 함께 써서 색만으로 말하지 않는다. */
+.dchk-off > td { color: var(--text-gray); background: var(--surface-alt); }
+/* 회차 머리 — 배포 내용(기한·양식·안내)과 재난안전과 배포 수단 */
+.cmp-dist { border: 1px solid var(--card-line); border-radius: var(--radius-card); background: var(--surface-alt);
+  padding: var(--sp-3) var(--sp-4); margin-bottom: var(--stack-base); font-size: var(--fs-13); line-height: 1.7; }
+.cmp-dist-h { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); font-weight: var(--fw-semibold); color: var(--text-black); }
+.cmp-dist-act { display: flex; flex-wrap: wrap; gap: var(--sp-1-5); margin-top: var(--sp-2); }
 
 /* 규칙 없는 의미 훅 — 스타일을 주면 안 되는 것들. 검사에서 «빠뜨린 것»으로
    오인하지 않도록 여기 남긴다(§7-1 `.rskdoc-send` 와 같은 처리).

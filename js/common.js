@@ -307,6 +307,11 @@
         '예정': 'info',
         /* 부서 전수 이행 체크리스트 (dept-check.js) — 미이행·미게시는 조치 대상이라 danger */
         '게시': 'success', '미이행': 'danger', '미게시': 'danger',
+        /* 이행점검 배포 흐름(2026-11-12) — 진행 축(미제출→확인 대기→보완 요청/확인 완료)과 결과 축.
+           '미제출'은 아래 업무 자동발행 구획에 이미 danger 로 있다. 회차 상태도 함께 둔다. */
+        '미등록': 'warning', '대상 아님': 'neutral', '확인 대기': 'info', '보완 요청': 'warning', '확인 완료': 'success',
+        '전 항목 이행': 'success', '일부 미이행': 'danger', '지연 제출': 'warning',
+        '배포 전': 'neutral', '기한 경과': 'warning', '마감 보고됨': 'info',
         '지연': 'warning', '보완필요': 'warning', '보완 필요': 'warning', '주의': 'warning',
         '기한초과': 'danger', '기한 초과': 'danger', '부적합': 'danger', '반려': 'danger',
         '수시': 'purple', '임시저장': 'purple',
@@ -414,6 +419,9 @@
         bulk:  { formats: 'XLSX(엑셀)', extensions: ['xlsx'], maxMB: 20, maxCount: 1 },
         /* 가이드 자료 — 시스템 관리 › 가이드 관리가 헤더 [가이드 다운로드]에 올리는 PDF 한 건(2026-11-05) */
         guide: { formats: 'PDF', extensions: ['pdf'], maxMB: 20, maxCount: 1 },
+        /* 용역 보고서 — 정기 위험성평가의 용역 통합 보고서 칸만 쓴다(2026-11-10). 외부 용역 보고서가
+           수백 쪽이라 20MB 를 넘는다(2026 보고서 755쪽 · 24MB). 형식·개수는 일반 증빙과 같고 용량만 다르다. */
+        report: { formats: FILE_LIMITS.formats, extensions: FILE_LIMITS.extensions, maxMB: 30, maxCount: FILE_LIMITS.maxCount },
     };
     function limitsOf(profile) { return FILE_PROFILES[profile] || FILE_LIMITS; }
     /* 업로드 영역 하단에 붙이는 안내 문구 HTML — profile 을 주지 않으면 일반 증빙 */

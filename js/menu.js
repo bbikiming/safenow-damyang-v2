@@ -2781,7 +2781,11 @@
          * 관계 법령 목록이 오기 전에는 확인된 공통 항목만 쓰고 목록 미완결을 표시한다. */
         comply() {
             /* 점검표는 **고른 회차**의 것이다 — id 를 '2026H1' 로 박아 두면 하반기를 골라도 상반기 점검표가 열린다(운영 E03). */
-            PG.cmpCheck = () => { if (actGate('체계 점검표 작성')) return; E.openForm({
+            /* 배포·확인·점검표·마감은 **재난안전과 담당자** 일이다 — canAct()(부서 미지정)는 부서 담당자도
+               통과시켜 운영에서 부서 계정에 [반기 마감]이 뜨던 것과 같은 구멍이 된다(운영 재검수 2-1). */
+            const ownerOK = () => !window.DYROLE || DYROLE.canAct(DYROLE.OWNER_DEPT);
+            const ownerGate = (what) => { if (ownerOK()) return false; V.toast(what + '은(는) 재난안전과 담당자가 합니다.'); return true; };
+            PG.cmpCheck = () => { if (ownerGate('체계 점검표 작성')) return; E.openForm({
                 id: 'EDOC-의무이행점검-' + S.period.replace('-', ''), title: periodLabel(S.period) + ' 의무이행 점검표 (중처법 시행령 §4·§5)', form: 'F5',
                 ctx: { menuLabel: '이행관리 · 반기', checklist: T.CHECKLIST_PRESETS.comply }, onChange: render,
             }); };
@@ -2794,14 +2798,64 @@
              *
              * 이행점검은 **결재 결과를 받지 않는 도메인**이다(공통 §7-4) — 결재 결과가
              * 후속 업무를 열지 않으므로 `결재중` 하나만 만들고 진행은 온나라에서 확인한다. */
+            /* 상신 기록은 회차별로 **저장소에** 남긴다 — 화면 메모리에만 두면 다시 들어올 때 «상신 전»으로
+               보여 같은 회차를 또 올릴 수 있었다. 상신하면 그 회차(두 축)를 잠근다 — 군수에게 올라간 보고와
+               시스템 값이 갈리면 안 된다. 반려·반송 회신이 오면 풀린다(연계 회신 몫). */
+            const closedOf = (per) => (window.DEPTCHK && DEPTCHK.flow) ? DEPTCHK.flow.closed(per) : null;
+            const lockOf = (per) => { const c = closedOf(per); return c && (c.status === '결재중' || c.status === '결재완료') ? c.status : ''; };
             PG.cmpClose = () => {
-                if (actGate('반기 마감 상신')) return;
+                if (ownerGate('반기 마감 상신')) return;
                 const per = periodLabel(S.period);
-                if (S.closed && S.closed[S.period]) { V.toast(per + ' 마감 보고는 이미 상신되었습니다.'); return; }
-                apprSubmit(per + ' 의무이행 점검 마감 보고', snap => {
-                    S.closed = S.closed || {};
-                    S.closed[S.period] = Object.assign({ at: V.today(), status: '결재중' }, snap);
-                    S.closed[S.period].docNo = E.onnaraPopup(per + ' 의무이행 점검 마감 보고', '', snap);
+                if (lockOf(S.period)) { V.toast(per + ' 마감 보고는 이미 상신되었습니다.'); return; }
+                const ax = Object.keys(AXES).map(k => {
+                    const key = AXES[k].key + '|' + S.period, d = DEPTCHK.flow.dist(key);
+                    return { k, label: AXES[k].label, dist: d, s: d ? DEPTCHK.summary(key, { dist: d }) : null };
+                });
+                if (!ax.some(a => a.dist)) { V.toast('배포한 점검이 없는 회차입니다 — 점검표를 먼저 배포하세요.'); return; }
+                /* 상신을 막지는 않는다(전 부서 제출을 게이트로 걸면 보고가 갇힌다, CLAUDE.md §14-9) —
+                   대신 무엇이 빠진 채 올라가는지 밝힌다. 미제출과 미이행은 따로 센다. */
+                const line = a => a.dist
+                    ? '<li><b>' + esc(a.label) + '</b> — 대상 ' + a.s.total + ' · 제출 ' + a.s.submitted + ' · 확인 완료 ' + a.s.ok +
+                      ' · <b>미제출 ' + a.s.none + '</b> · 확인 대기 ' + a.s.wait + ' · 반려 ' + a.s.returned + ' · 일부 미이행 ' + a.s.todo + '</li>'
+                    : '<li><b>' + esc(a.label) + '</b> — 배포하지 않음</li>';
+                /* 보고서 미리보기 — 무엇을 올리는지 보고 상신한다(기안 → 미리보기 → 상신, CLAUDE.md §7-1 의 순서).
+                   지면은 화면 값을 그대로 옮긴다(정의서 SCR-SBM-006 §6 «반기 마감 보고의 지면»):
+                   회차·배포 내용 · 축별 요약 · 부서별 표(대상 부서만) · 일부 미이행과 조치계획 · 미제출 부서. */
+                const FL = DEPTCHK.FLOW_LABELS;
+                const progLbl = { NONE: '미제출', WAIT: '미확인', RETURNED: '반려', OK: '확인 완료' };
+                const sec = a => {
+                    if (!a.dist) return '<h4 style="margin:16px 0 6px;">' + esc(a.label) + '</h4><p class="file-hint">이 회차는 배포하지 않았습니다.</p>';
+                    const key = AXES[a.k].key + '|' + S.period;
+                    const tg = DEPTCHK.depts().filter(d => DEPTCHK.isTarget({ dist: a.dist }, d.id));
+                    const rowsAll = tg.map(d => ({ d, p: DEPTCHK.progressOf(key, d.id, { dist: a.dist }), st: DEPTCHK.stateOf(key, d.id) }));
+                    const miss = rowsAll.filter(r => r.st.exists && r.st.status === 'TODO');
+                    const none = rowsAll.filter(r => r.p === 'NONE');
+                    return '<h4 style="margin:16px 0 6px;">' + esc(a.label) + '</h4>' +
+                        '<p style="font-size:var(--fs-12);">배포 ' + esc(a.dist.at) + ' · 기한 ' + esc(a.dist.due) + ' · 양식 제' + (a.dist.ver || 1) + '판 · ' +
+                        '대상 ' + a.s.total + ' · 제출 ' + a.s.submitted + ' · 확인 완료 ' + a.s.ok + ' · 전 항목 이행 ' + a.s.done + ' · 일부 미이행 ' + a.s.todo + ' · 해당없음 ' + a.s.na + ' · 미제출 ' + a.s.none + '</p>' +
+                        tbl(['부서', '진행', '결과', '해당없음 사유', '제출일'], rowsAll.map(r => [esc(r.d.name), progLbl[r.p] || '-',
+                            r.st.exists ? FL[r.st.status] : '-', r.st.exists && r.st.status === 'NA' ? esc(r.st.naReason || '사유 미기재') : '',
+                            r.st.exists ? esc(r.st.submittedAt || '') + (a.dist.due && (r.st.submittedAt || '') > a.dist.due ? ' (지연)' : '') : '-'])) +
+                        '<p style="font-size:var(--fs-13); font-weight:700; margin:10px 0 4px;">일부 미이행 사항과 조치계획</p>' +
+                        (miss.length ? tbl(['부서', '미이행 내용', '조치계획', '예정일'], miss.map(r => [esc(r.d.name), esc(r.st.missText || ''), esc(r.st.plan || ''), esc(r.st.planDue || '')]))
+                                     : '<p class="file-hint">없음</p>') +
+                        '<p style="font-size:var(--fs-13); font-weight:700; margin:10px 0 4px;">미제출 부서</p>' +
+                        '<p style="font-size:var(--fs-12);">' + (none.length ? none.map(r => { const n = DEPTCHK.remindLog(key, r.d.id).length; return esc(r.d.name) + (n ? ' (독촉 ' + n + '회)' : ''); }).join(' · ') : '없음') + '</p>';
+                };
+                const unconfirmed = ax.reduce((n, a) => n + (a.s ? a.s.wait + a.s.returned : 0), 0);
+                V.openModal(per + ' 의무이행 점검 마감 보고 — 문서 미리보기',
+                    '<div class="pdf-noprint check-notice" style="margin-bottom:10px;">군수께 올라갈 보고 내용입니다. 확인하고 <b>[결재선 지정 →]</b>으로 넘어가면 상신합니다. 상신하면 이 회차는 잠깁니다.' +
+                        (unconfirmed ? '<br><b>확인되지 않은 줄 ' + unconfirmed + '건</b>은 «미확인»·«반려»로 그대로 올라갑니다.' : '') + '</div>' +
+                    '<div class="cmp-report" style="border:1px solid var(--card-line); border-radius:var(--radius-card); padding:16px 18px; max-height:56vh; overflow:auto;">' +
+                        '<h3 style="text-align:center; margin:0 0 4px;">' + esc(per) + ' 중대재해 예방을 위한 안전·보건 확보의무 이행점검 결과 보고</h3>' +
+                        ax.map(sec).join('') +
+                    '</div>',
+                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+                    '<button class="btn btn-primary" onclick="PG._cmpCloseGo()">결재선 지정 →</button>');
+                PG._cmpCloseGo = () => apprSubmit(per + ' 의무이행 점검 마감 보고', snap => {
+                    const rec = Object.assign({ at: V.today(), status: '결재중' }, snap);
+                    rec.docNo = E.onnaraPopup(per + ' 의무이행 점검 마감 보고', '', snap);
+                    DEPTCHK.flow.setClosed(S.period, rec);
                     render();
                 });
             };
@@ -2822,7 +2876,12 @@
                 '수신 전에는 확인된 공통 항목만 운영하고 목록 미완결을 계속 표시합니다.</p>',
                 '<button class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');
             /* ── 부서별 이행 현황 (전수) ── */
-            window.COMPLY_STATE = window.COMPLY_STATE || { axis: 'industrial' };
+            if (!window.COMPLY_STATE) {
+                /* 딥링크 — 내 할일 «확인 대기» 카드가 그 축·회차로 곧바로 연다 */
+                const q = new URLSearchParams(location.search);
+                window.COMPLY_STATE = { axis: q.get('axis') === 'citizen' ? 'citizen' : 'industrial' };
+                if (/^\d{4}-H[12]$/.test(q.get('period') || '')) window.COMPLY_STATE.period = q.get('period');
+            }
             const S = window.COMPLY_STATE;
             S.axis = S.axis || 'industrial';
             /* 회차 축 — 이행점검은 **반기**다. key 에 회차가 없으면 상·하반기가
@@ -2838,6 +2897,17 @@
                 periodOpts.push({ v: y + '-H2', label: y + '년 하반기' });
                 periodOpts.push({ v: y + '-H1', label: y + '년 상반기' });
             });
+            /* 회차 선택지에 그 회차 상태를 붙인다 — 열기 전에 «배포 전 / 진행 중 / 기한 경과 / 마감 보고됨»을 안다 */
+            const periodState = (v, axKey) => {
+                if (window.DEPTCHK && DEPTCHK.flow) {
+                    const c = DEPTCHK.flow.closed(v);
+                    if (c && (c.status === '결재중' || c.status === '결재완료')) return '마감 보고됨';
+                    const d = DEPTCHK.flow.dist(axKey + '|' + v);
+                    if (!d) return '배포 전';
+                    return V.today() > d.due ? '기한 경과' : '진행 중';
+                }
+                return '';
+            };
             const AXES = {
                 industrial: { key: 'comply-industrial', label: '중대산업재해 이행점검',
                               note: '종사자 안전·보건 확보의무(중처법 §4·§5) 이행 여부를 부서·사업장 단위로 점검합니다.' },
@@ -2848,10 +2918,12 @@
             const cmpKey = axis.key + '|' + S.period;
             PG.cmpAxis = (a) => { S.axis = a; render(); };
             /* DEPTCHK 위임 래퍼 — 표의 버튼이 부르는 전역 진입점 */
+            /* 배포 흐름(2026-11-12) — 재난안전과 배포 → 부서 [결과 제출] → 재난안전과 [확인]/[보완 요청] → 마감 보고·잠금 */
+            const curDist = () => DEPTCHK.flow.dist(cmpKey);
             const cmpOpts = () => ({
-                ns: 'PG.CMPCHK', title: axis.label + ' 확인 등록',
-                placeLabel: '점검 결과·비고', placePlaceholder: '예: 점검표 작성 완료 · 지적 없음',
-                evidenceLabel: '증빙 사진·문서', onChange: render,
+                ns: 'PG.CMPCHK', title: axis.label + ' 결과 제출', periodLabel: periodLabel(S.period) + ' ' + axis.label,
+                flow: { dist: curDist(), locked: lockOf(S.period), period: S.period },
+                onChange: render,
             });
             PG.CMPCHK = {
                 open: (id) => DEPTCHK.open(cmpKey, id, cmpOpts()),
@@ -2860,7 +2932,138 @@
                 mDelPhoto: (i) => DEPTCHK.mDelPhoto(i),
                 save: () => DEPTCHK.save(),
                 delPhoto: (id, i) => { DEPTCHK.delPhoto(cmpKey, id, i); render(); },
-                remind: (id) => DEPTCHK.remind(cmpKey, id),
+                remind: (id) => DEPTCHK.remind(cmpKey, id, cmpOpts()),
+                unsubmit: (id) => DEPTCHK.unsubmit(cmpKey, id, cmpOpts()),
+                doUnsubmit: (id) => DEPTCHK.doUnsubmit(cmpKey, id, cmpOpts()),
+                review: (id) => DEPTCHK.review(cmpKey, id, cmpOpts()),
+                doConfirm: (id) => DEPTCHK.doConfirm(cmpKey, id, cmpOpts()),
+                doReturn: (id) => DEPTCHK.doReturn(cmpKey, id, cmpOpts()),
+                uncfm: (id) => DEPTCHK.uncfm(cmpKey, id, cmpOpts()),
+                doUncfm: (id) => DEPTCHK.doUncfm(cmpKey, id, cmpOpts()),
+                dl: (id, i) => DEPTCHK.download(cmpKey, id, i),
+            };
+
+            /* ── 점검 배포 (재난안전과) ──────────────────────────────────────
+             * 회차마다 «무엇을(양식) · 누구에게(대상 부서) · 언제까지(기한)» 내려보냈는지가 남아야
+             * 그 반기에 무엇을 점검했는지 증명할 수 있다. 배포하면 대상 부서 내 할일에 «결과 제출»이 뜬다. */
+            const prevPeriod = (p) => { const y = +p.slice(0, 4), h = p.slice(-1); return h === '2' ? y + '-H1' : (y - 1) + '-H2'; };
+            const periodEnd = (p) => p.slice(0, 4) + (p.slice(-1) === '1' ? '-06-30' : '-12-31');
+            const submittedIds = () => DEPTCHK.depts().filter(d => DEPTCHK.stateOf(cmpKey, d.id).exists).map(d => d.id);
+            PG._distSel = () => (PG._DF ? PG._DF.sel : {});
+            PG._distTog = (id, on) => {
+                if (!PG._DF) return;
+                if (!on && PG._DF.edit && submittedIds().indexOf(id) !== -1) {
+                    V.toast('이미 제출한 부서는 대상에서 뺄 수 없습니다.'); PG._DF.sel[id] = true;
+                    if (window.ORGPICK) ORGPICK.refreshDepts('cmp-dist-depts'); return;
+                }
+                if (on) PG._DF.sel[id] = true; else delete PG._DF.sel[id];
+            };
+            PG.cmpDistOpen = () => {
+                if (ownerGate('점검 배포')) return;
+                if (lockOf(S.period)) { V.toast('마감 보고된 회차는 바꿀 수 없습니다.'); return; }
+                const cur = curDist();
+                const prev = DEPTCHK.flow.dist(axis.key + '|' + prevPeriod(S.period));
+                const tg = cur ? cur.targets : (S.axis === 'citizen' ? DEPTCHK.flow.civilDefaultTargets() : DEPTCHK.depts().map(d => d.id));
+                PG._DF = { edit: !!cur, forms: cur ? cur.forms.slice() : [], formsChanged: false, note: cur ? cur.note : (prev ? prev.note : ''),
+                    due: cur ? cur.due : periodEnd(S.period), sel: tg.reduce((m, id) => { m[id] = true; return m; }, {}), prev };
+                PG._cmpDistRender();
+            };
+            PG.cmpDistAdd = (files) => { PG._cmpDistCap(); PG._DF.forms = PG._DF.forms.concat(files || []).slice(0, 10); PG._DF.formsChanged = true; PG._cmpDistRender(); };
+            PG.cmpDistDel = (i) => { PG._cmpDistCap(); PG._DF.forms.splice(i, 1); PG._DF.formsChanged = true; PG._cmpDistRender(); };
+            PG.cmpDistPrev = () => { PG._cmpDistCap(); PG._DF.forms = (PG._DF.prev.forms || []).map(f => Object.assign({}, f)); PG._DF.formsChanged = true; PG._cmpDistRender(); };
+            PG._cmpDistCap = () => {
+                const n = document.getElementById('cmp-dist-note'), d = document.getElementById('cmp-dist-due');
+                if (n) PG._DF.note = n.value.trim(); if (d) PG._DF.due = d.value;
+            };
+            PG._cmpDistRender = () => {
+                const F = PG._DF, cur = curDist();
+                V.openModal(periodLabel(S.period) + ' ' + axis.label + ' — ' + (F.edit ? '배포 내용 고치기' : '점검 배포'),
+                    '<div class="dchk-mrow"><label class="form-label">점검 양식 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                        V.uploadDrop('<b>부서가 내려받을 점검표</b> <span style="font-size:var(--fs-12);color:var(--text-gray);">클릭 또는 끌어놓기</span>',
+                            null, { hint: true, multiple: true, pick: 'PG.cmpDistAdd', style: 'padding:12px;' }) +
+                        (F.forms.length ? '<ul class="dchk-shots">' + F.forms.map((f, i) =>
+                            '<li><span class="dchk-shot is-plain">파일</span><span class="dchk-shot-n">' + esc(f.name) + '</span>' +
+                            '<button type="button" class="edu-attach-del" onclick="PG.cmpDistDel(' + i + ')" aria-label="' + esc(f.name) + ' 빼기">×</button></li>').join('') + '</ul>' : '') +
+                        (F.prev && (F.prev.forms || []).length && !F.forms.length
+                            ? '<button type="button" class="btn btn-sm btn-outline" style="margin-top:6px;" onclick="PG.cmpDistPrev()">지난 회차 양식 이어받기 (' + esc(F.prev.forms[0].name) + ')</button>' : '') +
+                        (F.edit ? '<p class="file-hint">양식을 바꾸면 판 번호가 올라갑니다. 이미 제출한 부서의 제출은 그대로 둡니다.</p>' : '') +
+                    '</div>' +
+                    '<div class="dchk-mrow"><label class="form-label" for="cmp-dist-note">안내</label>' +
+                        '<textarea class="form-textarea" id="cmp-dist-note" rows="2" placeholder="예: 부서장 서명 후 스캔본을 올려 주세요">' + esc(F.note) + '</textarea></div>' +
+                    '<div class="dchk-mrow"><label class="form-label" for="cmp-dist-due">제출 기한 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                        '<input type="date" class="form-input" id="cmp-dist-due" value="' + esc(F.due) + '" style="max-width:200px;">' +
+                        (F.edit ? '<p class="file-hint">기한은 늘릴 수만 있습니다.</p>' : '') + '</div>' +
+                    '<div class="dchk-mrow"><label class="form-label">대상 부서 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                        '<p class="file-hint">' + (S.axis === 'citizen' ? '기본값은 공중이용시설을 관리하는 부서입니다.' : '기본값은 전 부서입니다.') +
+                        (F.edit ? ' 이미 제출한 부서는 뺄 수 없습니다.' : '') + '</p>' +
+                        (window.ORGPICK ? ORGPICK.deptsPanel('cmp-dist-depts', { selectedPath: 'PG._distSel', onToggle: 'PG._distTog' }) : '') +
+                    '</div>',
+                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+                    (F.edit && cur && !submittedIds().length ? '<button class="btn btn-outline" onclick="PG.cmpDistCancel()">배포 취소</button>' : '') +
+                    '<button class="btn btn-primary" onclick="PG.cmpDistSave()">' + (F.edit ? '저장' : '점검 배포') + '</button>');
+            };
+            PG.cmpDistSave = () => {
+                if (ownerGate('점검 배포')) return;
+                if (lockOf(S.period)) { V.closeModal(); return; }
+                PG._cmpDistCap();
+                const F = PG._DF, cur = curDist();
+                const targets = Object.keys(F.sel).filter(k => F.sel[k]);
+                if (!F.forms.length) { V.toast('부서가 내려받을 점검표를 올려 주세요.'); return; }
+                if (!F.due) { V.toast('제출 기한을 정하세요.'); return; }
+                if (!targets.length) { V.toast('대상 부서를 1개 이상 고르세요.'); return; }
+                if (!cur && F.due < V.today()) { V.toast('기한은 오늘 이후로 정하세요.'); return; }
+                if (cur && F.due < cur.due) { V.toast('기한은 늘릴 수만 있습니다.'); return; }
+                const lost = cur ? submittedIds().filter(id => targets.indexOf(id) === -1) : [];
+                if (lost.length) { V.toast('이미 제출한 부서는 대상에서 뺄 수 없습니다.'); return; }
+                const saved = DEPTCHK.flow.setDist(cmpKey, {
+                    at: cur ? cur.at : V.today(), by: cur ? cur.by : ((window.DYROLE && DYROLE.current()) || {}).name || '재난안전과',
+                    due: F.due, note: F.note, targets,
+                    forms: F.forms.map(f => ({ name: f.name, size: f.size })),
+                    ver: cur ? (cur.ver || 1) + (F.formsChanged ? 1 : 0) : 1,
+                    changedAt: cur ? V.today() : '',
+                });
+                PG._distFiles = PG._distFiles || {};
+                F.forms.forEach((f, i) => { PG._distFiles[cmpKey + '#' + i] = f; });
+                V.closeModal();
+                V.toast(cur ? '배포 내용을 고쳤습니다' + (F.formsChanged ? ' — 양식 제' + saved.ver + '판' : '')
+                            : '점검 배포 — 대상 ' + targets.length + '개 부서 담당자(없으면 부서장)에게 할 일·알림이 갑니다');
+                render();
+            };
+            PG.cmpDistCancel = () => {
+                if (ownerGate('배포 취소')) return;
+                if (submittedIds().length) { V.toast('제출한 부서가 있어 배포를 취소할 수 없습니다.'); return; }
+                DEPTCHK.flow.removeDist(cmpKey); V.closeModal(); V.toast('배포를 취소했습니다 — 대상 부서 할 일이 회수됩니다'); render();
+            };
+            /* 점검표 내려받기 — 이 화면에서 방금 올린 파일만 내려받을 수 있다(저장소에는 파일명만 남는다) */
+            PG.cmpDl = (i) => {
+                const f = (PG._distFiles || {})[cmpKey + '#' + i];
+                if (f && f.file) { const a = document.createElement('a'); a.href = URL.createObjectURL(f.file); a.download = f.name; a.click(); return; }
+                V.notReady('점검표 내려받기', '첨부 저장 연계');
+            };
+            const distHead = () => {
+                const d = curDist(), locked = lockOf(S.period), own = ownerOK();
+                if (!d) {
+                    return '<div class="cmp-dist"><div class="cmp-dist-h">' +
+                        '<span class="chip-status chip-sm ' + V.toneOf('배포 전') + '">배포 전</span> ' + esc(periodLabel(S.period) + ' ' + axis.label) + '</div>' +
+                        (own && !locked
+                            ? '<div class="cmp-dist-act"><button class="btn btn-sm btn-primary" onclick="PG.cmpDistOpen()">점검 배포</button>' +
+                              '<span class="file-hint" style="align-self:center;">점검표 양식 · 안내 · 기한 · 대상 부서를 올리면 대상 부서에 할 일이 갑니다.</span></div>'
+                            : '<p class="file-hint" style="margin:4px 0 0;">재난안전과가 점검표를 배포하면 이 화면에서 내려받아 작성한 뒤 결과를 제출합니다.</p>') +
+                        '</div>';
+                }
+                const left = V.daysTo(d.due);
+                const st = locked ? '마감 보고됨' : left < 0 ? '기한 경과' : '진행 중';
+                return '<div class="cmp-dist"><div class="cmp-dist-h">' +
+                        '<span class="chip-status chip-sm ' + V.toneOf(st) + '">' + st + '</span> ' +
+                        esc(periodLabel(S.period) + ' ' + axis.label) +
+                        '<span style="font-weight:var(--fw-regular); color:var(--text-gray);">· 배포 ' + esc(d.at) + ' · 기한 ' + esc(d.due) +
+                        (locked ? '' : left >= 0 ? ' (D-' + left + ')' : ' (D+' + (-left) + ')') + ' · 대상 ' + d.targets.length + '개 부서</span></div>' +
+                        (d.note ? '<div>' + esc(d.note) + '</div>' : '') +
+                        '<div class="cmp-dist-act">' +
+                            d.forms.map((f, i) => '<button class="btn btn-sm btn-outline" onclick="PG.cmpDl(' + i + ')">⬇ ' + esc(f.name) + '</button>').join('') +
+                            '<span class="file-hint" style="align-self:center;">제' + (d.ver || 1) + '판' + (d.changedAt ? ' · ' + esc(d.changedAt) + ' 고침' : '') + '</span>' +
+                            (own && !locked ? '<button class="btn btn-sm btn-outline" onclick="PG.cmpDistOpen()">배포 내용 고치기</button>' : '') +
+                        '</div></div>';
             };
             const axisTabs =
                 '<div class="tabs" style="margin-bottom:12px;">' +
@@ -2871,7 +3074,7 @@
                 '<div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">' +
                     '<span style="font-size:var(--fs-12); font-weight:700; color:var(--text-gray);">점검 회차</span>' +
                     '<select class="form-select" style="width:auto; min-width:150px;" onchange="PG.cmpPeriod(this.value)">' +
-                    periodOpts.map(o => '<option value="' + o.v + '"' + (S.period === o.v ? ' selected' : '') + '>' + o.label + '</option>').join('') +
+                    periodOpts.map(o => '<option value="' + o.v + '"' + (S.period === o.v ? ' selected' : '') + '>' + o.label + ' · ' + periodState(o.v, axis.key) + '</option>').join('') +
                     '</select>' +
                 '</div>';
 
@@ -2902,7 +3105,10 @@
             return sectionCard('부서별 이행 현황 (전수 점검)',
                 axisTabs +
                 '<p style="font-size:var(--fs-12); color:var(--text-gray); margin-bottom:10px;">' + axis.note +
-                ' 이행으로 등록하려면 <b>증빙</b>이 있어야 하고, <b>해당없음</b>은 사유를 적어야 합니다.</p>' +
+                ' 재난안전과가 점검표를 배포하면 부서가 내려받아 작성해 <b>결과를 제출</b>하고, 재난안전과가 <b>확인</b>합니다.' +
+                /* 이행 축 셋은 서로의 판정을 읽지 않는다(CLAUDE.md §5) — 대신 역할을 한 줄로 밝힌다 */
+                ' 온나라 서류(부서 회신 공문 · 마감 보고 공문)의 이행 판정은 <a href="cmp-status.html" style="color:var(--main-dark);">업무 관리 › 이행 관리</a>가 따로 합니다.</p>' +
+                distHead() +
                 DEPTCHK.render(Object.assign({ key: cmpKey }, cmpOpts())),
                 '') +
             sectionCard('안전보건관리체계 점검 (' + periodLabel(S.period) + ') ' + docStChip('EDOC-의무이행점검-' + pid),
@@ -2914,14 +3120,14 @@
                     ['§4-7 종사자 의견청취', '<a href="menu.html?m=opinion" style="color:var(--main-dark); font-weight:700;">의견청취</a>', '접수·처리 현황은 의견청취에서 확인'],
                 ]),
                 '<div style="display:flex; gap:6px;">' +
-                (canAct() ? '<button class="btn btn-sm btn-primary" onclick="PG.cmpCheck()">점검표 작성</button>' : '') +
-                ((S.closed && S.closed[S.period])
+                (ownerOK() ? '<button class="btn btn-sm btn-primary" onclick="PG.cmpCheck()">점검표 작성</button>' : '') +
+                (closedOf(S.period)
                     ? '<span class="opn-muted" style="font-size:var(--fs-12); align-self:center;">' +
-                        periodLabel(S.period) + ' 마감 보고 <b>상신됨</b>' + (S.closed[S.period].docNo ? ' · ' + esc(S.closed[S.period].docNo) : '') + ' — ' + esc(S.closed[S.period].lineText || '') +
-                        ' · 결재 진행은 온나라에서 확인하세요</span>'
-                    : (canAct()
+                        periodLabel(S.period) + ' 마감 보고 <b>상신됨</b>' + (closedOf(S.period).docNo ? ' · ' + esc(closedOf(S.period).docNo) : '') + ' — ' + esc(closedOf(S.period).lineText || '') +
+                        ' · 이 회차는 잠겼습니다 · 결재 진행은 온나라에서 확인하세요</span>'
+                    : (ownerOK()
                         ? '<button class="btn btn-sm btn-outline" onclick="PG.cmpClose()">반기 마감 · 온나라 상신</button>'
-                        : '<span class="opn-muted" style="font-size:var(--fs-12); align-self:center;">상신은 <b>담당자</b>가 합니다 — 관리·감독 계층은 조회만 합니다.</span>')) +
+                        : '<span class="opn-muted" style="font-size:var(--fs-12); align-self:center;">점검표 작성과 마감 상신은 <b>재난안전과 담당자</b>가 합니다.</span>')) +
                 '</div>') +
             sectionCard('중대재해 예방 매뉴얼·업무처리절차 점검',
                 /* 2026-09-03 — 기준문서함(docs-archive)을 메뉴에서 뺐다. 원문을 두는 자리는
@@ -2941,7 +3147,14 @@
                 '<p style="font-size:12px; color:var(--text-gray);">중처법 시행령 <b>§5</b>(종사자 · 반기 1회) · <b>§11</b>(공중이용시설 이용자 · 연 1회)이 요구하는 점검입니다. ' +
                 '담양군 관리대상에 적용되는 관계 법령 목록을 정하면 점검할 수 있습니다.</p>' +
                 tbl(['점검 항목', '주기', '현황'], [
-                    ['§5-1 관계 법령 의무이행 점검 (종사자)', '반기 1회', '<span class="chip-status warning">관계 법령 목록 미등록</span>'],
+                    /* 산업 축 부서 자체점검이 곧 §5②1 점검이다(분류기준 IND-10 근거에 §5② 포함) — 그 회차 현황을 잇는다 */
+                    ['§5-1 관계 법령 의무이행 점검 (종사자)', '반기 1회', (() => {
+                        const k = 'comply-industrial|' + S.period, d = DEPTCHK.flow.dist(k);
+                        if (!d) return '<span class="chip-status warning">' + esc(periodLabel(S.period)) + ' 배포 전</span>';
+                        const q = DEPTCHK.summary(k, { dist: d });
+                        return esc(periodLabel(S.period)) + ' · 제출 ' + q.submitted + '/' + q.total + ' · 확인 ' + q.ok + ' · 일부 미이행 ' + q.todo +
+                            ' <span class="file-hint">— 점검 항목은 배포한 점검표에 있습니다</span>';
+                    })()],
                     ['§5-3 유해·위험작업 안전보건교육 실시 점검', '반기 1회', '<a href="edu-status.html" style="color:var(--main-dark); font-weight:700;">이수현황</a> 연결 가능'],
                     ['§11-1 관계 법령 의무이행 점검 (공중이용시설)', '연 1회', '<span class="chip-status warning">관계 법령 목록 미등록</span>'],
                     ['§11-3 시설 안전관리자 의무교육 이수 점검', '연 1회', '<span class="chip-status warning">기관 대상자 명단 미수신</span>'],

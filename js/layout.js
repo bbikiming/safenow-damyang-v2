@@ -419,6 +419,36 @@
           work: 'my-work.html?dept=water&cat=improve', basis: 'cse-4-3' },
     ];
     const NTF_DEFAULT_UNREAD = ['n1', 'n2', 'n3'];
+    /* ── 업무가 만든 알림 (2026-11-12) ──────────────────────────────────────
+     * 위 NTF_ITEMS 는 고정 예시다. 이행점검 제출·반려처럼 **업무 화면에서 실제로 일어난 일**은
+     * 여기 쌓고(ntfPush) 받는 사람(부서 · 등급)에게만 보인다. 새로 쌓인 알림은 안 읽음으로 시작한다.
+     * 실제 문자·메일 발송은 알림 연계 몫이다 — 이 목록은 시스템 안 알림함이다. */
+    const NTF_DYN_KEY = 'dy-ntf-dyn-v1';
+    function ntfDynAll() {
+        try { return JSON.parse(sessionStorage.getItem(NTF_DYN_KEY) || '[]'); } catch (e) { return []; }
+    }
+    function ntfForMe(n) {
+        const p = rolePersona();
+        if (!p) return true;
+        if (n.toDept && n.toDept !== p.deptId) return false;
+        if (n.toTier && n.toTier.indexOf(p.tier) === -1) return false;
+        return true;
+    }
+    /* 업무가 만든 알림 제목에는 사람이 적은 사유가 들어간다 — 그대로 넣지 않는다 */
+    function ntfTitle(n) {
+        return n.dyn ? String(n.title).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]) : n.title;
+    }
+    function ntfItems() { return ntfDynAll().filter(ntfForMe).concat(NTF_ITEMS); }
+    function ntfPush(o) {
+        const all = ntfDynAll();
+        const t = new Date();
+        const id = 'd' + Date.now().toString(36) + Math.floor(Math.random() * 1000);
+        all.unshift(Object.assign({ id: id, dyn: true,
+            time: (window.DYV2 && window.DYV2.today ? window.DYV2.today().slice(5) + ' ' : '') + ('0' + t.getHours()).slice(-2) + ':' + ('0' + t.getMinutes()).slice(-2) }, o));
+        try { sessionStorage.setItem(NTF_DYN_KEY, JSON.stringify(all.slice(0, 50))); } catch (e) {}
+        ntfSyncBadge(); ntfRenderList();
+        return id;
+    }
     const NTF_READ_KEY = 'dy-ntf-read-v1';
     let ntfFilter = '';
 
@@ -430,11 +460,11 @@
         try { sessionStorage.setItem(NTF_READ_KEY, JSON.stringify(Array.from(set))); } catch (e) {}
     }
     function ntfIsUnread(id, readSet) {
-        return NTF_DEFAULT_UNREAD.indexOf(id) >= 0 && !readSet.has(id);
+        return (NTF_DEFAULT_UNREAD.indexOf(id) >= 0 || /^d/.test(id)) && !readSet.has(id);
     }
     function ntfUnreadCount() {
         const rs = ntfReadSet();
-        return NTF_ITEMS.filter(n => ntfIsUnread(n.id, rs)).length;
+        return ntfItems().filter(n => ntfIsUnread(n.id, rs)).length;
     }
     function ntfMarkRead(id) {
         const rs = ntfReadSet(); rs.add(id); ntfSaveRead(rs);
@@ -443,6 +473,7 @@
     function ntfMarkAllRead() {
         const rs = ntfReadSet();
         NTF_DEFAULT_UNREAD.forEach(id => rs.add(id));
+        ntfItems().forEach(n => { if (n.dyn) rs.add(n.id); });
         ntfSaveRead(rs);
         ntfRenderList();
         ntfSyncBadge();
@@ -481,11 +512,11 @@
         const basisRead = (window.DYLAW && n.basis)
             ? ' 근거 ' + DYLAW.shortRef(DYLAW.resolveBasis(n.basis)) + ' ' + DYLAW.basisTitle(n.basis, { short: true }) + '.' : '';
         return '<div class="dy-ntf-item' + (unread ? ' is-unread' : '') + '" role="link" tabindex="0"' +
-            ' data-id="' + n.id + '" data-href="' + workHref + '" aria-label="' + n.catLabel + ' 알림: ' + n.title + '.' + basisRead + ' 내 할일에서 처리">' +
+            ' data-id="' + n.id + '" data-href="' + workHref + '" aria-label="' + n.catLabel + ' 알림: ' + ntfTitle(n) + '.' + basisRead + ' 내 할일에서 처리">' +
             '<span class="dy-ntf-dot ' + n.cat + '"></span>' +
             '<div class="dy-ntf-item-body">' +
                 '<div class="dy-ntf-item-head"><span class="dy-ntf-item-cat ' + n.cat + '">' + n.catLabel + '</span></div>' +
-                '<div class="dy-ntf-item-title">' + n.title + '</div>' +
+                '<div class="dy-ntf-item-title">' + ntfTitle(n) + '</div>' +
                 basisLine +
                 workLink +
                 '<div class="dy-ntf-item-time">' + n.time + '</div>' +
@@ -496,7 +527,7 @@
         const listEl = document.getElementById('dy-ntf-list');
         if (!listEl) return;
         const rs = ntfReadSet();
-        const items = NTF_ITEMS.filter(n => !ntfFilter || n.cat === ntfFilter);
+        const items = ntfItems().filter(n => !ntfFilter || n.cat === ntfFilter);
         listEl.innerHTML = items.length
             ? items.map(n => ntfItemHtml(n, rs)).join('')
             : '<div class="dy-ntf-empty">이 분류의 알림이 없습니다.</div>';
@@ -1571,6 +1602,7 @@
         /* 알림 내부 핸들러 (인라인 onclick 용) */
         _ntfFilter: ntfSetFilter,
         _ntfReadAll: ntfMarkAllRead,
+        ntfPush: ntfPush,
         _ntfRead: ntfMarkRead,
     };
 
