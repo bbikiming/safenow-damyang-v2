@@ -157,6 +157,10 @@
         var mine = (p && p.deptId) || '';
         return (mine && a && canWriteReview(mine)) ? mine : '';
     }
+    /* 작성표 블록을 볼 수 있는가 — 조회 범위 하나로 판정한다(재난안전과·군수 = 전 부서, 그 밖 = 본인 부서) */
+    function canSeeBlock(deptId) {
+        return !global.DYROLE || !global.DYROLE.inScope || global.DYROLE.inScope(deptId);
+    }
     /* 작성 중인 부서 — 조치 요청을 받았고 입력 완료 전 */
     function writingDepts(a) {
         return (a.depts || []).filter(function (dp) { return dp.request && !dp.inputDone; }).map(function (dp) { return dp.deptId; });
@@ -438,7 +442,10 @@
         if (state.tab !== 'depts') body = renderHistory(a);
         else if (canManage()) body = confirmBanner(a) + docBar(a) + renderDepts(a);
         else if (myReviewDept(a)) body = confirmBanner(a) + docBar(a) + renderReviewPanel(a);
-        else body = confirmBanner(a) + docBar(a) + manageNote(a) + renderDeptsReadOnly(a);
+        else body = confirmBanner(a) + docBar(a) + manageNote(a) +
+            /* 조회 계정도 작성 중인 내용은 본다 — 범위 안 블록만, 읽기 전용(과장·팀장 = 본인 부서 · 재난안전과·군수 = 전 부서) */
+            (a.status !== 'COMPLETED' && writingDepts(a).some(canSeeBlock) ? renderReviewPanel(a) : '') +
+            renderDeptsReadOnly(a);
         /* 시설물에서 넘어온 안내는 **누가 보든** 낸다 — 종전에는 주관부서 담당자의 부서별 조치
            탭 안에만 있어 부서 담당자·조회 계층은 넘어온 사실 자체를 볼 수 없었다. */
         state.mount.innerHTML = head + fromFacilNote(a) + myDeptPanel(a) + summary + tabs + body;
@@ -1133,7 +1140,9 @@
         /* 부서 담당자에게는 **자기 부서 블록만** 그린다 — 남의 부서 조치 내용은
            조회 범위 밖이다(§12). 주관부서는 종전대로 전 부서를 본다. */
         /* 조치 요청을 받고 아직 입력 완료 전인 부서만 — 2026-11-11 흐름 전환으로 작성표가 «요청 뒤»에 열린다 */
-        var deptIds = writingDepts(a).filter(function (id) { return owner || canWriteReview(id); });
+        /* 보이는 범위 = 조회 범위(DYROLE.inScope) — 재난안전과(전 계층)·군수는 전 부서, 그 밖은 본인 부서만.
+           적는 수단은 따로 canWriteReview 로 연다 — 조회만 하는 블록은 읽기 전용으로 그린다(2026-11-11 사용자 지시). */
+        var deptIds = writingDepts(a).filter(function (id) { return owner || canSeeBlock(id); });
         var deptBlocks = deptIds.map(function (deptId) {
             var rows = pd[deptId] || [];
             totalRows += rows.length;
@@ -1147,11 +1156,16 @@
                         (rows.length ? rows.length + '건 작성' : '미작성') + '</span>' +
                 '</div>';
             var body = '';
+            var ro = !canWriteReview(deptId);
             if (open) {
                 var tbody = rows.map(function (r, i) { return reviewRow(a.id, deptId, i, r); }).join('');
-                if (!rows.length) tbody = '<tr><td colspan="9" style="text-align:center;color:var(--text-gray);padding:14px;">위 자료(통합 보고서·설문조사표 제출본)를 열어 보고 [＋행 추가]로 조치할 내용을 적으세요.</td></tr>';
+                if (!rows.length) tbody = '<tr><td colspan="9" style="text-align:center;color:var(--text-gray);padding:14px;">' + (ro
+                    ? '아직 작성한 행이 없습니다 — ' + esc(name) + ' 담당자가 적고 있습니다.'
+                    : '위 자료(통합 보고서·설문조사표 제출본)를 열어 보고 [＋행 추가]로 조치할 내용을 적으세요.') + '</td></tr>';
                 body = '<div class="rl-rv-dept-body">' +
                     deptFilesBar(a, deptId) +
+                    /* 읽기 전용 블록은 입력·버튼을 한꺼번에 잠근다 — 값은 보이고 고칠 수는 없다 */
+                    (ro ? '<fieldset disabled class="rl-rv-ro">' : '') +
                     '<div class="rl-rv-scroll"><table class="rl-rv-table"><thead><tr>' +
                         '<th style="width:132px;">시설물</th>' +
                         '<th style="min-width:150px;">유해위험요인</th><th style="width:104px;">분류</th>' +
@@ -1164,18 +1178,21 @@
                        사라져 투어가 가리킬 곳을 잃고 "이 화면에 아직 없는 요소입니다" 경고를
                        띄웠다. 성공한 순간 경고가 뜨면 시연이 어색해진다. 이 단계의 다음 행동이
                        실제로 [＋ 행 추가]이므로(clickPath 2번) 같은 앵커 이름을 붙인다. */
+                    (ro ? '</fieldset><p class="file-hint" style="margin-top:8px;">조회 전용 — 이 블록은 ' + esc(name) + ' 담당자' + (deptId === OWNER_DEPT ? '' : '와 재난안전과 담당자') + '가 적습니다.</p>' :
                     '<div class="rl-rv-blk-acts">' +
                         '<button type="button" class="btn btn-outline btn-sm" data-tour="rsk-complete" onclick="RSKLIST.reviewAdd(\'' + deptId + '\')">＋ 행 추가</button>' +
                         '<span class="file-hint">조치기한 ' + esc(((a.depts || []).filter(function (x) { return x.deptId === deptId; })[0] || {}).dueDate || '-') + ' · 다 적었으면 [입력 완료]를 누르면 유효 행이 개선조치가 됩니다</span>' +
                         '<button type="button" class="btn btn-primary btn-sm" onclick="RSKLIST.inDoneOpen(\'' + deptId + '\')">입력 완료</button>' +
                     '</div>' +
-                    (state.inDoneFor === deptId ? inDoneBox(a, deptId) : '') +
+                    (state.inDoneFor === deptId ? inDoneBox(a, deptId) : '')) +
                 '</div>';
             }
             return '<div class="rl-rv-dept">' + head + body + '</div>';
         }).join('');
 
-        var footNote = owner
+        var footNote = (!owner && !deptIds.some(canWriteReview))
+            ? '<span style="color:var(--text-gray);">조치 요청을 받은 부서 담당자가 적고 <b>[입력 완료]</b>를 누르면 개선조치가 됩니다.</span>'
+            : owner
             ? '<span style="color:var(--text-gray);">조치 요청을 받은 부서가 자기 블록을 적고 <b>[입력 완료]</b>를 누르면 유효 행이 개선조치가 됩니다. 재난안전과도 같은 표에서 대신 적을 수 있습니다.</span>'
             : '<span style="color:var(--text-gray);">적은 내용은 <b>즉시 저장</b>됩니다. 다 적었으면 <b>[입력 완료]</b>로 재난안전과에 알립니다.</span>';
         var footActions = '';
@@ -1187,7 +1204,7 @@
             '<p style="font-size:12px;color:var(--text-gray);margin-bottom:12px;">' +
                 '용역업체 보고서를 <b>시스템이 자동으로 옮기지 않습니다</b> — 부서 블록 상단의 <b>통합 보고서</b>를 열어 보고 조치할 내용을 <b>직접</b> 적습니다. ' +
                 '현재 <b>' + totalRows + '건</b> 작성됨. ' +
-                (owner
+                ((owner || !deptIds.some(canWriteReview))
                     ? '조치 요청을 받은 부서 담당자가 자기 부서 블록을 같은 표에서 직접 적습니다.'
                     : '<b>우리 부서 블록</b>만 표시되며, 여기서 적은 내용은 주관부서가 보는 것과 <b>같은 데이터</b>입니다 — <b>내 할일</b>에서 증빙을 올려도 같은 곳에 쌓입니다.') +
             '</p>' +
