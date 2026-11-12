@@ -429,6 +429,8 @@
     function ntfForMe(n) {
         const p = rolePersona();
         if (!p) return true;
+        /* 사람을 지정한 알림(이행점검 — 받는 사람 = 할 수 있는 사람)은 그 사람들에게만 */
+        if (n.toUids) return n.toUids.indexOf(p.uid) !== -1;
         if (n.toDept && n.toDept !== p.deptId) return false;
         if (n.toTier && n.toTier.indexOf(p.tier) === -1) return false;
         return true;

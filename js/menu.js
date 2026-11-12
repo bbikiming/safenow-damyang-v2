@@ -2986,11 +2986,8 @@
                         DEPTCHK.flow.setDist(t.key, Object.assign({}, p, { at: V.today(), ver: 1, changedAt: '', docs: [doc] }));
                         DEPTCHK.flow.setPending(t.key, null);
                         /* 대상 부서에 알림 — 받는 사람이 할 일이 있다(결과 제출) */
-                        if (window.DYLayout && DYLayout.ntfPush) (p.targets || []).forEach(id => DYLayout.ntfPush({
-                            cat: 'compliance', catLabel: '이행', toDept: id, toTier: ['staff', 'super'], basis: 'cse-5',
-                            title: t.perLbl + ' ' + t.ax + ' 의무이행 자체점검 실시 통보 — 점검표가 배포되었습니다(기한 ' + p.due + ')',
-                            href: 'menu.html?m=comply&axis=' + (/citizen/.test(t.key) ? 'citizen' : 'industrial') + '&period=' + t.per, work: 'my-work.html?cat=comply',
-                        }));
+                        /* 받는 사람 = 할 수 있는 사람 — 지정 담당자, 없으면 그 부서 실무자 전원(DEPTCHK.notify) */
+                        (p.targets || []).forEach(id => DEPTCHK.notify({ kind: 'dist', key: t.key, deptId: id, due: p.due }));
                     },
                 });
                 window.CMPDOC.registerRefresh(render);
@@ -3074,8 +3071,11 @@
                         '<input type="date" class="form-input" id="cmp-dist-due" value="' + esc(F.due) + '" style="max-width:200px;">' +
                         (F.edit ? '<p class="file-hint">기한은 늘릴 수만 있습니다.</p>' : '') + '</div>' +
                     '<div class="dchk-mrow"><label class="form-label">대상 부서 <span style="color:var(--status-danger-fg)">*</span></label>' +
-                        '<p class="file-hint">' + (S.axis === 'citizen' ? '기본값은 공중이용시설을 관리하는 부서입니다.' : '기본값은 전 부서입니다.') +
+                        '<p class="file-hint">' + (S.axis === 'citizen' ? '기본값은 시설물 대장의 관리부서(공중이용시설을 관리하는 부서)입니다.' : '기본값은 전 부서입니다.') +
                         (F.edit ? ' 이미 제출한 부서는 뺄 수 없습니다.' : '') + '</p>' +
+                        (S.axis === 'citizen' && DEPTCHK.civilFacilityNames().missing.length
+                            ? '<p class="file-hint" style="color:var(--status-warning-fg);">시설물 대장 관리부서 중 조직도에서 찾지 못한 이름 ' + DEPTCHK.civilFacilityNames().missing.length + '개(' +
+                              esc(DEPTCHK.civilFacilityNames().missing.join('·')) + ') — 대상에 넣을 부서를 직접 고르세요.</p>' : '') +
                         (window.ORGPICK ? ORGPICK.deptsPanel('cmp-dist-depts', { selectedPath: 'PG._distSel', onToggle: 'PG._distTog' }) : '') +
                     '</div>',
                     '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
@@ -3145,9 +3145,16 @@
                 });
                 PG._distFiles = PG._distFiles || {};
                 F.forms.forEach((f, i) => { PG._distFiles[cmpKey + '#' + i] = f; });
+                /* 배포 뒤 고치기 알림 — 새로 넣은 부서에는 배포 알림, 기한을 늘렸으면 미제출 대상 부서에 기한 변경 알림 */
+                const added = targets.filter(id => (cur.targets || []).indexOf(id) === -1);
+                added.forEach(id => DEPTCHK.notify({ kind: 'dist', key: cmpKey, deptId: id, due: F.due }));
+                const dueMoved = F.due !== cur.due;
+                if (dueMoved) targets.filter(id => added.indexOf(id) === -1 && !DEPTCHK.submitted(cmpKey, id))
+                    .forEach(id => DEPTCHK.notify({ kind: 'due', key: cmpKey, deptId: id, from: cur.due, due: F.due }));
                 V.closeModal();
-                V.toast(cur ? '배포 내용을 고쳤습니다' + (F.formsChanged ? ' — 양식 제' + saved.ver + '판' : '')
-                            : '점검 배포 — 대상 ' + targets.length + '개 부서 담당자(없으면 부서장)에게 할 일·알림이 갑니다');
+                V.toast('배포 내용을 고쳤습니다' + (F.formsChanged ? ' — 양식 제' + saved.ver + '판' : '') +
+                        (added.length ? ' · 새 대상 ' + added.length + '개 부서에 배포 알림' : '') +
+                        (dueMoved ? ' · 미제출 부서에 기한 변경 알림' : ''));
                 render();
             };
             PG.cmpDistCancel = () => {

@@ -302,6 +302,10 @@
                     [['comply-industrial', '중대산업재해', 'industrial'], ['comply-citizen', '중대시민재해', 'citizen']].forEach(function (ax) {
                         var key = ax[0] + '|' + per, d = DCS.flow.dist(key);
                         if (!d || (d.targets || []).indexOf(state.deptId) === -1) return;
+                        /* 받는 사람 = 할 수 있는 사람(요청서 v2 R-15) — 그 부서 사람이면 지정 담당자, 없으면 실무자 전원,
+                           실무자도 없으면 부서장에게만 뜬다. 부서 단위 할 일이라 한 사람이 내면 모두에게서 내려간다. */
+                        var me2 = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
+                        if (me2 && me2.deptId === state.deptId && DCS.workUids && DCS.workUids(state.deptId).indexOf(me2.uid) === -1) return;
                         var st = DCS.stateOf(key, state.deptId);
                         var ret = st.confirm && st.confirm.state === 'RETURNED';
                         var done = DCS.submitted(key, state.deptId);

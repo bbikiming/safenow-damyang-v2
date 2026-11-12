@@ -72,6 +72,42 @@
         if (!n) return true;
         return (n.members || []).some(function (m) { return !m.lead && !LEAD_RE.test(m.role || ''); });
     }
+    /* ===== 알림 받는 사람 — 받는 사람 = 할 수 있는 사람 (요청서 v2 R-14 · 2026-11-12) =====
+     * 지정 담당자 — 운영은 조직 관리 › 부서 상세 한 곳에 저장한다. 프로토타입은 권한 관리의
+     *   «부서 안전보건 담당자» 등급 구성원(DYADM.deptContacts)이 그 자리를 대신한다.
+     * 배포·기한 변경·내 할일 : 지정 담당자 → 없으면 그 부서 실무자 전원 → 없으면 부서장
+     * 반려                    : 제출한 사람 · 고친 사람 + 지정 담당자
+     * 독촉                    : 지정 담당자 → 없으면 부서장(공통 규칙, DYADM.deptContacts)
+     * 검토 요청               : 재난안전과 담당자·팀장(과장 제외) */
+    function membersDeep(deptId) {
+        var n = global.DYV2 && global.DYV2.orgNode ? global.DYV2.orgNode(deptId) : null, out = [];
+        (function walk(x) { if (!x) return; (x.members || []).forEach(function (m) { out.push(m); }); (x.children || []).forEach(walk); })(n);
+        return out;
+    }
+    function designatedUids(deptId) {
+        var A = global.DYADM, c = A && A.deptContacts ? A.deptContacts(deptId) : null;
+        return c && c.kind === 'staff' ? c.people.map(function (x) { return x.uid; }).filter(Boolean) : [];
+    }
+    function practitionerUids(deptId) {
+        return membersDeep(deptId).filter(function (m) { return !m.lead && !LEAD_RE.test(m.role || ''); })
+            .map(function (m) { return m.uid; }).filter(Boolean);
+    }
+    function leadUids(deptId) {
+        var l = R() && R().leadOf ? R().leadOf(deptId) : null;
+        return l && l.uid ? [l.uid] : [];
+    }
+    function workUids(deptId) {
+        var d = designatedUids(deptId); if (d.length) return d;
+        var pr = practitionerUids(deptId); if (pr.length) return pr;
+        return leadUids(deptId);
+    }
+    function remindUids(deptId) { var d = designatedUids(deptId); return d.length ? d : leadUids(deptId); }
+    function reviewerUids() {
+        var own = R() ? R().OWNER_DEPT : 'safety';
+        return membersDeep(own).filter(function (m) { return !/(과장|소장|실장|국장|읍장|면장|군수)$/.test(m.role || ''); })
+            .map(function (m) { return m.uid; }).filter(Boolean);
+    }
+    function uniq(a) { return a.filter(function (x, i) { return x && a.indexOf(x) === i; }); }
     function canSubmit(deptId) {
         var p = me();
         if (!R() || !p) return true;
@@ -226,7 +262,18 @@
         try {
             V().orgWalk(function (n) { if (n && n.attrs && n.attrs.publicFacility) out.push(n.id); });
         } catch (e) {}
+        /* 시설물 대장 관리부서도 기본값에 넣는다(조직도 속성은 예시 보강) */
+        civilFacilityNames().ids.forEach(function (id) { if (out.indexOf(id) === -1) out.push(id); });
         return out;
+    }
+    /* 시민 축 — 시설물 대장의 관리부서 이름(요청서 v2 R-07 · A-42). 조직도에서 못 찾은 이름은 따로 돌려준다.
+       시설물 대장 데이터(DY_FACIL_SEED)가 실린 화면에서만 값이 있다. */
+    function civilFacilityNames() {
+        var seed = global.DY_FACIL_SEED, names = [];
+        if (seed && seed.ext) Object.keys(seed.ext).forEach(function (k) { var n = (seed.ext[k] || {}).deptNm; if (n && names.indexOf(n) === -1) names.push(n); });
+        var ids = [], miss = [];
+        names.forEach(function (n) { var id = V().deptIdOf ? V().deptIdOf(n) : null; if (id) ids.push(id); else miss.push(n); });
+        return { ids: ids, missing: miss, loaded: !!seed };
     }
     var FLOW = {
         dist: function (key) { return fload().dist[key] || null; },
@@ -1013,8 +1060,10 @@
 
     /* ================= 알림 =================
      * 받는 사람이 할 일이 있을 때만 보낸다(SCR-ADMIN-002 §4-1):
-     *   제출 → 재난안전과 담당자(재난안전과 줄이면 팀장 포함) «검토 요청»
-     *   반려 → 그 부서 담당자(없으면 부서장) «반려 — 사유»
+     *   배포·기한 변경 → 지정 담당자(없으면 실무자 전원 · 없으면 부서장)
+     *   제출 → 재난안전과 담당자·팀장 «검토 요청»(과장 제외)
+     *   반려 → 제출한 사람 · 고친 사람 + 지정 담당자 «반려 — 사유»
+     *   독촉 → 지정 담당자(없으면 부서장)
      * 헤더 알림은 DYLayout.ntfPush 한 곳으로 쌓는다(실제 문자·메일 발송은 알림 연계 몫). */
     function notify(o) {
         var L = global.DYLayout;
@@ -1026,17 +1075,26 @@
         var perLbl = per.replace(/^(\d{4})-H([12])$/, function (m, y, h) { return y + ' ' + (h === '1' ? '상반기' : '하반기'); }) +
             (axis === 'citizen' ? ' 중대시민재해' : ' 중대산업재해');
         var href = 'menu.html?m=comply&axis=' + axis + '&period=' + per;
+        if (o.kind === 'dist' || o.kind === 'due') {
+            L.ntfPush({ cat: 'compliance', catLabel: '이행', toUids: workUids(o.deptId),
+                title: perLbl + ' 의무이행 자체점검 ' + (o.kind === 'dist'
+                    ? '실시 통보 — 점검표가 배포되었습니다(기한 ' + o.due + ')'
+                    : '제출 기한이 ' + String(o.from || '').slice(5) + ' → ' + String(o.due || '').slice(5) + ' 로 바뀌었습니다'),
+                href: href, work: 'my-work.html?cat=comply', basis: 'cse-5' });
+            return;
+        }
         if (o.kind === 'remind') {
-            L.ntfPush({ cat: 'compliance', catLabel: '이행', toDept: o.deptId, toTier: ['staff', 'super'],
+            L.ntfPush({ cat: 'compliance', catLabel: '이행', toUids: remindUids(o.deptId),
                 title: perLbl + ' 의무이행 자체점검 ' + o.what + (o.what === '반려 재제출 독촉' ? ' — 반려된 결과를 고쳐 다시 제출해 주세요' : ' — 결과를 제출해 주세요') + (o.due ? '(기한 ' + o.due + ')' : ''),
                 href: href, work: 'my-work.html?cat=comply', basis: 'cse-5' });
             return;
         }
         if (o.kind === 'return') {
-            L.ntfPush({ cat: 'compliance', catLabel: '이행', toDept: o.deptId, toTier: ['staff', 'super'],
+            var st = stateOf(o.key, o.deptId);
+            L.ntfPush({ cat: 'compliance', catLabel: '이행', toUids: uniq([st.submittedByUid, st.editedByUid].concat(designatedUids(o.deptId))),
                 title: perLbl + ' 의무이행 점검 결과 반려 — ' + o.reason, href: href, work: 'my-work.html?cat=comply', basis: 'cse-5' });
         } else if (o.kind === 'submit') {
-            L.ntfPush({ cat: 'compliance', catLabel: '이행', toDept: own, toTier: ['staff', 'super'],
+            L.ntfPush({ cat: 'compliance', catLabel: '이행', toUids: reviewerUids(),
                 title: dn + ' ' + perLbl + ' 의무이행 점검 결과 제출 — 검토 요청', href: href, work: 'my-work.html?cat=comply', basis: 'cse-5' });
         }
     }
@@ -1049,6 +1107,7 @@
         mDelPhoto: mDelPhoto, save: saveModal, delPhoto: delPhoto, remind: remind, remindAll: remindAll, doRemindAll: doRemindAll,
         /* 배포 흐름 (이행점검) */
         closeReady: closeReady, carryOf: carryOf, carrySummary: carrySummary, prevKeyOf: prevKeyOf, CARRY_LABEL: CARRY_LABEL, setCarry: setCarry,
+        notify: notify, workUids: workUids, civilFacilityNames: civilFacilityNames,
         flow: FLOW, remindLog: function (key, deptId) { return ((fload().reminds || {})[key + '|' + deptId] || []).slice(); }, isTarget: isTarget, progressOf: progressOf, submitted: submitted, isOwnerStaff: isOwnerStaff,
         unsubmit: unsubmit, doUnsubmit: doUnsubmit,
         review: review, doConfirm: doConfirm, download: download, doReturn: doReturn, uncfm: uncfm, doUncfm: doUncfm
