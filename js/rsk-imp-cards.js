@@ -396,7 +396,7 @@
             (kind === 'both' || canExtend(m)
                 ? '<div class="rl-modal-row"><label class="form-label" for="imp-am-due">' + (kind === 'both' ? '기한' : '기한 연장') + '</label>' +
                     '<input type="date" class="form-input" id="imp-am-due" value="' + esc(m.due || m.due_date || '') + '"' +
-                        (kind === 'both' ? '' : ' min="' + esc(m.due || m.due_date || '') + '"') + ' style="max-width:200px;">' +
+                        ' min="' + esc(kind === 'both' ? V().today() : (m.due || m.due_date || '')) + '"' + ' style="max-width:200px;">' +
                     (kind === 'both' ? '' : '<p class="file-hint">기한 안에 마치지 못하면 늦출 수 있습니다. 재난안전과에 알림이 갑니다.</p>') + '</div>'
                 /* 부서는 기한을 못 바꾼다 — 왜 없는지 밝히지 않으면 '기능이 빠졌다'로 읽힌다 */
                 : '<div class="rl-modal-row"><label class="form-label">기한</label>' +
@@ -428,6 +428,12 @@
             return;
         }
         var patch = { assigned_to: owner };
+        /* 새로 정하는 기한은 오늘 이후여야 한다 — 지난 날짜로 바꾸면 저장하는 순간 기한 경과다.
+           바꾸지 않은 옛 기한(이미 지난 기한 포함)은 그대로 둔다(담당자만 고치는 경우). */
+        var od0 = mm.due || mm.due_date || '', nd0 = g('imp-am-due');
+        if ((amendKind(mm) === 'both' || canExtend(mm)) && nd0 && nd0 !== od0 && nd0 < V().today()) {
+            V().toast('기한은 오늘(' + V().today() + ') 이후로 정합니다.'); return;
+        }
         /* 부서 담당자가 보낸 요청에 기한이 섞이지 않게 — 화면에 칸이 없어도 막는다 */
         if (amendKind(mm) === 'both') patch.due = g('imp-am-due');
         var extended = false;

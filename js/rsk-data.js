@@ -712,6 +712,13 @@
         /* 순서 ③④ → ⑤ — 설문조사표 요청 공문 전에는 받지 않는다. 화면이 버튼을 잠가도 전역 호출로 뚫리지 않게 */
         if (!surveyRequested(a)) return { error: '설문조사표 요청 공문을 보낸 뒤에 보고서를 첨부합니다.' };
         dues = dues || {};
+        /* 조치기한은 부서에 주는 기한이다 — 지난 날짜면 요청받는 순간 기한 경과다(화면과 같은 판정) */
+        var t0 = today();
+        var past = (a.depts || []).some(function (dp) {
+            var v = (dues.deptDues && dues.deptDues[dp.deptId]) || dues.bulkDue || '';
+            return !!v && v < t0;
+        });
+        if (past) return { error: '조치기한은 오늘(' + t0 + ') 이후로 정합니다.' };
         a.files = a.files || {}; a.files.report = fileName || (a.year + '_정기평가_보고서.hwpx');
         (a.depts || []).forEach(function (dp) {
             dp.dueDate = (dues.deptDues && dues.deptDues[dp.deptId]) || dues.bulkDue || dp.dueDate || '';
@@ -728,6 +735,7 @@
         var a = assessmentOf(aid); if (!a || !a.review || a.review.stage !== 'REVIEW') return null;
         var dp = (a.depts || []).filter(function (x) { return x.deptId === deptId; })[0];
         if (!dp) return null;
+        if (due && due < today()) return null;   /* 지난 날짜 기한은 받지 않는다(uploadReport 와 같은 판정) */
         dp.dueDate = due || '';
         save(); return dp;
     }

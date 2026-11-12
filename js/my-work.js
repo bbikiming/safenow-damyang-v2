@@ -204,6 +204,8 @@
                     }
                     /* 설문조사표 제출은 요청 공문을 받은 뒤에 할 일이 된다(반영안 ③) — 공문 전에는 부서가 받은 것이 없다 */
                     if (!(D().surveyRequested && D().surveyRequested(a)) && !dp.reportFile) return;
+                    /* 보고서가 등록되면 제출은 마감된다 — 내지 못한 부서에 제출 할 일을 남기면 눌러도 거절되는 할 일이 된다 */
+                    if (!dp.reportFile && ((a.review && a.review.stage) || 'NONE') !== 'NONE') return;
                     var f = dp.surveyFile || (a.files && a.files.surveyAll) || '';
                     /* 부서가 정기평가에서 실제로 하는 일은 '점검일에 참여'가 아니라
                      * **설문조사표를 작성해 제출**하는 것이다. 종전에는 양식 다운로드만 있고
