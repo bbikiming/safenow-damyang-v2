@@ -355,7 +355,7 @@
                    같은 데이터를 '내 할일'에서 올려도 같은 곳에 쌓인다(창구만 둘이다). */
                 act: ((!closed || returnedN) && dp.inputDone && doneN < ms.length)
                     ? (isStaff
-                        ? '<button type="button" class="btn btn-primary btn-sm" ' +
+                        ? '<button type="button" class="btn btn-primary btn-sm" data-now="rsk-done" ' +
                           'onclick="RSKLIST.openDept(\'' + esc(mine) + '\')">개선조치 완료 처리</button>'
                         /* 감독자의 행동은 '대신 처리'가 아니라 '재촉'이다 (산안법 §16 지휘·감독) */
                         : '<button type="button" class="btn btn-outline btn-sm" onclick="RSKLIST.remindDept(\'' +
@@ -408,7 +408,104 @@
         '</section>';
     }
 
+    /* ===== «지금 할 일» — 접속한 사람이 이 단계에서 눌러야 할 버튼 하나 (2026-11-12) =====
+     * 판정은 여기 한 곳이다. 단계는 저장값에서 파생하고(저장하지 않는다), 화면을 다시 그릴 때마다
+     * 새로 고른다. 단계별 안내(투어)가 켜져 있으면 그쪽 강조와 겹치지 않게 내지 않는다.
+     * 차례가 남(다른 부서·재난안전과)에게 있으면 아무것도 강조하지 않는다 — 기다리는 사람에게
+     * 누를 것이 있다고 말하지 않는다. */
+    function nowTarget(a) {
+        var p = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
+        if (!p || p.tier !== 'staff') return null;
+        var T = function (sel, text) { return { sel: sel, text: text }; };
+        var W = function (text) { return { wait: text }; };
+        if (canManage()) {
+            if (!a) return T('.rl-empty [data-tour="rsk-create"]', state.year + '년 정기평가를 생성합니다 — 대상 부서 · 점검일 · 설문 제출 기한');
+            if (a.status !== 'COMPLETED' || cfmLeft(a)) {
+                var st = stageOf(a), sp = D().surveyProgress(a.id);
+                if (!D().surveyRequested(a)) return (sp.total && sp.done === sp.total)
+                    ? T('.rl-summary [data-tour="rsk-survey"]', '설문조사표 요청 공문을 보냅니다 — 보내는 순간 대상 부서에 제출 요청이 갑니다')
+                    : T('.rl-summary [data-tour="rsk-survey"]', '설문조사표 양식을 붙입니다');
+                if (st === 'NONE') return T('[data-tour="rsk-report"]', '용역 보고서와 부서별 조치기한을 올립니다');
+                if (st === 'REVIEW') return T('[data-tour="rsk-deliver"]', '개선이 필요한 부서를 골라 조치 요청 공문을 보냅니다');
+                var c = D().confirmCount(a.id);
+                if (c.wait) return T('.rl-cfm-bar [data-tour="rsk-confirm"]', '부서가 완료한 개선조치 ' + c.wait + '건을 확인합니다');
+            }
+            if (D().docReady(a.id) && !D().latestDoc('A|' + a.id)) return T('.rl-doc-bar .btn-primary[data-tour="rsk-doc"]', '전 건 확인이 끝났습니다 — 결과 공문을 기안합니다');
+        }
+        if (!a) return null;
+        var mine = p.deptId, dp = (a.depts || []).filter(function (x) { return x.deptId === mine; })[0];
+        if (dp) {
+            if (D().surveyRequested(a) && !dp.reportFile && !surveyLocked(a)) return T('[data-tour="rsk-submit"]', '설문조사표 작성본을 제출합니다 (기한 ' + (a.surveyDue || '-') + ')');
+            if (D().inputOpen(a.id, mine)) {
+                var nv = D().validDeptRows ? D().validDeptRows(a, mine).length : 0;
+                return nv
+                    ? T('[data-now="indone-' + mine + '"]', '다 적었으면 [입력 완료]를 누릅니다 — 적은 ' + nv + '건이 개선조치가 됩니다')
+                    : T('[data-now="addrow-' + mine + '"]', '우리 부서 유해위험요인·개선조치를 작성표에 적습니다 (조치기한 ' + (dp.dueDate || '-') + ')');
+            }
+            var left = D().improvementsFor(a.id, mine).filter(function (m) { return D().needsAction(m); }).length;
+            if (left) return T('[data-now="rsk-done"]', '조치를 마친 개선조치를 완료 처리합니다 (' + left + '건 남음)');
+        }
+        /* 내 차례가 아니면 무엇을 기다리는지 말한다 — 강조가 사라지기만 하면 고장인지 할 일이 없는지 모른다 */
+        if (canManage()) {
+            var writing = (a.depts || []).filter(function (x) { return x.request; });
+            var doneIn = writing.filter(function (x) { return x.inputDone; }).length;
+            if (doneIn < writing.length) return W('부서 작성 차례입니다 — 입력 완료 ' + doneIn + ' / ' + writing.length + '곳');
+            var cc = D().confirmCount(a.id);
+            if (cc.returned) return W('반려한 ' + cc.returned + '건의 재제출을 기다립니다');
+            if (cc.done < cc.total) return W('부서 조치 차례입니다 — 완료 ' + cc.done + ' / ' + cc.total + '건');
+            var doc = D().latestDoc('A|' + a.id);
+            if (doc) return W(doc.status === '결재완료' ? '이 평가는 끝났습니다' : '결과 공문 ' + doc.status + ' — 온나라 결재 결과를 기다립니다');
+            return null;
+        }
+        if (!dp) return null;
+        if (!D().surveyRequested(a)) return W('재난안전과의 설문조사표 요청 공문을 기다립니다');
+        var st2 = stageOf(a);
+        if (st2 === 'NONE') return W('제출했습니다 — 재난안전과의 보고서 등록을 기다립니다');
+        if (st2 === 'REVIEW') return W('재난안전과가 조치를 요청할 부서를 고르는 중입니다');
+        if (!dp.request) return W('우리 부서는 조치 요청 대상이 아닙니다(지적사항 없음)');
+        var mc = D().confirmCount(a.id, mine);
+        if (mc.wait) return W('완료한 ' + mc.wait + '건을 재난안전과가 확인하는 중입니다');
+        return W('우리 부서 몫은 모두 끝났습니다');
+    }
+    /* 맥동은 강조 대상이 바뀔 때만 — 같은 단계에서 다시 그릴 때마다 깜빡이면 작성 중에 거슬린다 */
+    var lastNow = '';
+    function markNow(a) {
+        if (!state.mount) return;
+        if (global.RSKTOUR && RSKTOUR.active && RSKTOUR.active()) return;
+        var t = nowTarget(a); if (!t) { lastNow = ''; return; }
+        var el = t.sel ? state.mount.querySelector(t.sel) : null;
+        /* 첫 화면에 들어오도록 도구 줄 바로 아래 한 줄 — 내 차례면 [바로 가기 ↓], 아니면 기다리는 이유 */
+        var bar = '<div class="dy-now-bar' + (el ? '' : ' is-wait') + '" role="status">' +
+            '<span class="dy-now-bar-k">' + (el ? '지금 할 일' : '기다리는 중') + '</span>' +
+            '<span class="dy-now-bar-t">' + esc(el ? t.text : (t.wait || t.text)) + '</span>' +
+            (el ? '<button type="button" class="btn btn-outline btn-sm" onclick="RSKLIST.goNow()">바로 가기 ↓</button>' : '') +
+        '</div>';
+        var tb = state.mount.querySelector('.rl-toolbar');
+        if (tb) tb.insertAdjacentHTML('afterend', bar);
+        if (!el) { lastNow = ''; return; }
+        el.classList.add('dy-now');
+        if (t.sel !== lastNow) el.classList.add('dy-now-pulse');
+        lastNow = t.sel;
+        el.insertAdjacentHTML('afterend', '<span class="dy-now-tag" id="dy-now-tag">지금 할 일</span>');
+        el.setAttribute('aria-describedby', 'dy-now-tag');
+        /* 부서 화면: «내 부서 진행 상황»의 지금 단계에 버튼이 없으면(작성표에 있으면) 같은 바로 가기를 단다 */
+        var step = state.mount.querySelector('.rl-my-step.is-now');
+        if (step && !step.querySelector('.rl-my-act') && !step.contains(el)) {
+            step.insertAdjacentHTML('beforeend', '<span class="rl-my-act"><button type="button" class="btn btn-outline btn-sm" onclick="RSKLIST.goNow()">바로 가기 ↓</button></span>');
+        }
+    }
+    function goNow() {
+        var el = state.mount && state.mount.querySelector('.dy-now'); if (!el) return;
+        /* 바로 옮긴다 — 부드러운 스크롤은 환경에 따라 멈춰 «눌렀는데 그대로»가 된다. 도착은 맥동이 알린다 */
+        el.scrollIntoView({ block: 'center' });
+        el.classList.remove('dy-now-pulse'); void el.offsetWidth; el.classList.add('dy-now-pulse');
+        try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); }
+    }
     function render() {
+        renderBody();
+        try { markNow((D().assessments(state.year) || [])[0] ? D().assessmentOf((D().assessments(state.year) || [])[0].id) : null); } catch (e) {}
+    }
+    function renderBody() {
         if (!state.mount) return;
         var years = D().assessmentYears();
         if (years.indexOf(state.year) === -1) years.unshift(state.year);
@@ -1211,9 +1308,9 @@
                        실제로 [＋ 행 추가]이므로(clickPath 2번) 같은 앵커 이름을 붙인다. */
                     (ro ? '</fieldset><p class="file-hint" style="margin-top:8px;">조회 전용 — 이 블록은 ' + esc(name) + ' 담당자' + (deptId === OWNER_DEPT ? '' : '와 재난안전과 담당자') + '가 적습니다.</p>' :
                     '<div class="rl-rv-blk-acts">' +
-                        '<button type="button" class="btn btn-outline btn-sm" data-tour="rsk-complete" onclick="RSKLIST.reviewAdd(\'' + deptId + '\')">＋ 행 추가</button>' +
+                        '<button type="button" class="btn btn-outline btn-sm" data-tour="rsk-complete" data-now="addrow-' + deptId + '" onclick="RSKLIST.reviewAdd(\'' + deptId + '\')">＋ 행 추가</button>' +
                         '<span class="file-hint">조치기한 ' + esc(((a.depts || []).filter(function (x) { return x.deptId === deptId; })[0] || {}).dueDate || '-') + '</span>' +
-                        '<button type="button" class="btn btn-primary btn-sm" onclick="RSKLIST.inDoneOpen(\'' + deptId + '\')">입력 완료</button>' +
+                        '<button type="button" class="btn btn-primary btn-sm" data-now="indone-' + deptId + '" onclick="RSKLIST.inDoneOpen(\'' + deptId + '\')">입력 완료</button>' +
                     '</div>' +
                     (state.inDoneFor === deptId ? inDoneBox(a, deptId) : '')) +
                 '</div>';
@@ -2265,7 +2362,7 @@
         uploadReport: uploadReport, doUploadReport: doUploadReport, repApplyBulk: repApplyBulk,
         clearReport: clearReport, doClearReport: doClearReport,
         /* 요청 공문 두 종 (반영안 ③·⑥) — 공용 골격 RSKREQ(DYDOC simple) */
-        openSurveyReq: openSurveyReq, openActionReq: openActionReq, reqToggle: reqToggle, reqDue: reqDue,
+        goNow: goNow, openSurveyReq: openSurveyReq, openActionReq: openActionReq, reqToggle: reqToggle, reqDue: reqDue,
         /* 부서 직접 입력 (반영안 ⑦) */
         inDone: inDone, inDoneOpen: inDoneOpen, inUndo: inUndo,
         /* 작성표 (종전 그대로 — 조치 요청 뒤 그 부서가 쓴다) */

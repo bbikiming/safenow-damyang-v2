@@ -70,7 +70,7 @@
     function courseLabel() {
         var c = demoCourse();
         if (!c) return '접수 중인 집합교육 없음';
-        return c.id + ' · ' + (c.date || '') + ' · ' + (c.status === 'OPEN' ? '접수 중' : '종료');
+        return c.id + ' · ' + (c.date || '') + ' · ' + (c.status !== 'OPEN' ? '종료' : (E().enrollOpen && E().enrollOpen(c) ? '등록부 받는 중' : '교육 전'));
     }
 
     var STEPS = [
@@ -87,7 +87,7 @@
             ],
             desc: '과정 일정·시간·강사·장소·내용과 첨부를 한 건으로 등록합니다. 교육이 끝나면 부서가 참석자 등록부를 올립니다.',
             script: '엑셀로 나눠 관리하던 월별 교육 일정·계획 문서를 하나의 교육 건으로 등록합니다.',
-            modalGuide: '교육이 끝난 날부터 부서가 참석자 등록부를 올립니다(등록부 기한 안에). 일자·시간·내용을 확인하고 <b>[등록]</b>을 누르세요.',
+            modalGuide: '교육이 끝난 날부터 부서가 참석자 등록부를 올립니다(등록부 기한 안에). <b>이어서 다음 단계를 시연하려면 교육 일자를 오늘 또는 지난 날짜로</b> 넣으세요 — 앞날짜면 교육이 끝날 때까지 등록부를 받지 않습니다. 일자·시간·내용을 확인하고 <b>[등록]</b>을 누르세요.',
             actionLabel: '집합교육 등록 열기',
             action: function () { global.EDUR.openCreate('group'); },
             done: function () { return !!demoCourse(); },
@@ -182,17 +182,17 @@
             key: 'doc', label: '공문', page: 'edu-reg.html',
             persona: ownerP, href: function () { return 'edu-reg.html'; },
             selector: '[data-tour="edu-doc"]',
-            title: '실시 결과를 공문으로 기안 → 온나라 상신',
+            title: '실시 결과를 공문으로 기안 → 온나라로 보내기',
             where: '종료된 교육 카드의 <b>[공문 기안]</b>',
             clickPath: [
                 '[공문 기안] → 공문 본문을 직접 씁니다 (삽입 조각으로 수치를 넣습니다)',
                 '붙임은 이미 올려 둔 파일에서 고릅니다 — 교육일지·부서별 서명부',
                 '이수자 명단은 붙임 별지로 자동으로 짜입니다',
-                '[문서 미리보기 →] → [온나라로 결재 상신] → [상신]'
+                '[문서 미리보기 →] → [온나라로 보내기] → [보내기] — 검토·결재는 온나라 기안함에서 지정합니다'
             ],
-            desc: '본문은 담당자가 직접 쓰고 시스템은 붙임을 엮어 건넵니다. 기안 화면에는 상신 수단이 없습니다 — 반드시 미리보기를 거칩니다.',
+            desc: '본문은 담당자가 직접 쓰고 시스템은 붙임을 엮어 건넵니다. 결재선은 여기서 고르지 않고 온나라 기안함까지만 보냅니다 — 보내기는 미리보기 화면에만 있습니다.',
             script: '결재 상신을 먼저 붙였다가 "공문 작성 단계 없이 결재만 올라간다"는 지적을 받았습니다. 지금은 말씀하신 순서대로 공문을 쓰고 나서 올라갑니다.',
-            modalGuide: '본문을 쓰고 붙임을 고른 뒤 <b>[문서 미리보기 →]</b> 로 넘어갑니다. 상신은 미리보기 화면에 있습니다.',
+            modalGuide: '본문을 쓰고 붙임을 고른 뒤 <b>[문서 미리보기 →]</b> 로 넘어갑니다. <b>[온나라로 보내기]</b>는 미리보기 화면에 있습니다.',
             actionLabel: '공문 기안 열기',
             action: function () {
                 var c = demoCourse();
@@ -206,7 +206,7 @@
                 var c = demoCourse(); if (!c) return '교육 등록 후';
                 if (c.status !== 'DONE') return '종료 처리 후';
                 var d = global.EDUDOC && global.EDUDOC.latestDoc(c.id);
-                return d ? '상신됨 · ' + d.no : '기안 전';
+                return d ? '온나라로 보냄 · ' + d.no : '기안 전';
             }
         }
     ];
@@ -224,7 +224,7 @@
         },
         barTitle: function () { return '안전보건교육 사용법 — ' + STEPS.length + '걸음'; },
         barDesc: function () {
-            return '집합교육 등록 → 참석자 등록부 등록(서명 업로드) → 교육 종료 처리 → 이수현황 반영까지 ' +
+            return '집합교육 등록 → 참석자 등록부 등록(서명 업로드) → 교육 종료 처리 → 이수현황 반영 → 실시 결과 공문까지 ' +
                 '실제 화면 흐름 그대로 안내합니다. <b>어디를 누를지</b> 짚어 드립니다.';
         }
     });

@@ -121,24 +121,26 @@
                     : !canCancel(e)
                     ? (e.bulk && E().canActDept(e.deptId) ? '<span style="font-size:var(--fs-12);color:var(--text-gray);">일괄 등록 — 정정은 재난안전과</span>' : '')
                     : enrollLock
-                    ? '<button type="button" class="btn btn-outline btn-sm" disabled title="결재 ' + esc(enrollLock) +
+                    ? '<button type="button" class="btn btn-outline btn-sm" disabled title="공문 ' + esc(enrollLock) +
                       ' — 공문에 이수자 명단이 실려 나가 취소할 수 없습니다">🔒 ' + esc(enrollLock) + '</button>'
                     : '<button type="button" class="btn btn-outline btn-sm" style="border-color:var(--status-danger-border);color:var(--status-danger-fg);" onclick="EDURD.confirmCancel(\'' + esc(e.deptId) + '\')">' + (c.status === 'DONE' ? '완료기록 정정' : '등록 취소') + '</button>') + '</td>' +
             '</tr>';
         }).join('') : '<tr><td colspan="7"><div class="v2-empty">' + (open || c.status === 'DONE' ? '아직 등록한 부서가 없습니다.' : '교육이 끝나면 부서가 참석자 등록부를 올립니다.') + '</div></td></tr>';
         var enrollTable =
             '<div class="edu-card"><div class="edu-card-title">등록 현황 (' + deptCnt + '개 부서 · ' + enrolledCnt + '명)</div>' +
-                (enrollLock ? '<div class="check-notice">결재 <b>' + esc(enrollLock) + '</b> — 이 교육의 이수자 명단이 공문 붙임으로 올라가 있어 등록을 취소할 수 없습니다. 정정하려면 반려 후 다시 시도하세요.</div>' : '') +
+                (enrollLock ? '<div class="check-notice">공문 <b>' + esc(enrollLock) + '</b> — 이 교육의 이수자 명단이 공문 붙임으로 나가 있어 등록을 취소할 수 없습니다. 온나라에서 반려·반송되면 다시 열립니다.</div>' : '') +
                 '<div class="edu-scroll"><table class="table-figma table-compact"><thead><tr>' +
                     '<th style="width:18%;">부서</th><th>참석자 명단</th><th style="width:9%;">인원</th><th style="width:10%;">실제 참석</th><th style="width:20%;">서명부</th><th style="width:12%;">등록일</th><th></th>' +
                 '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
             '</div>';
 
         /* 이력 */
+        /* 이력 유형은 저장 코드(CREATE·STATUS)를 화면에 내지 않고 담당자 말로 바꾼다(CLAUDE.md §15) */
+        var HIST_LABEL = { CREATE: '등록', STATUS: '처리' };
         var hist = (c.history || []).length ? (c.history || []).map(function (h) {
             return '<div class="edu-hist-row">' +
                 '<span class="edu-hist-at">' + esc(h.at || '') + '</span>' +
-                '<span class="edu-hist-type">' + esc(h.type || '') + '</span>' +
+                '<span class="edu-hist-type">' + esc(HIST_LABEL[h.type] || '기록') + '</span>' +
                 '<span class="edu-hist-body">' + esc(h.memo || '') +
                     (h.by ? '<span class="edu-hist-by">— ' + esc(h.by) + '</span>' : '') +
                 '</span>' +
@@ -375,7 +377,7 @@
         if (!E().canActDept(deptId)) { deny(deptId); return; }
         if (!canCancel(enrollOfDept(deptId))) { toast('일괄 등록한 등록부는 재난안전과 담당자가 정정합니다.'); return; }
         var lock = lockOf(state.courseId);
-        if (lock) { toast('결재 ' + lock + ' 상태라 등록부를 취소할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
+        if (lock) { toast('공문이 ' + lock + ' 상태라 등록부를 취소할 수 없습니다 — 온나라에서 반려·반송되면 다시 열립니다.'); return; }
         var mine = E().enrolls(state.courseId).filter(function (e) { return e.deptId === deptId; });
         var cnt = mine.reduce(function (n, e) { return n + (e.workerIds || []).length; }, 0);
         V().openModal(c.status === 'DONE' ? '완료 교육기록 정정' : '참석자 등록부 등록 취소',
@@ -391,7 +393,7 @@
         if (!E().canActDept(deptId)) { V().closeModal(); deny(deptId); return; }
         if (!canCancel(enrollOfDept(deptId))) { V().closeModal(); toast('일괄 등록한 등록부는 재난안전과 담당자가 정정합니다.'); return; }
         var lock = lockOf(state.courseId);
-        if (lock) { V().closeModal(); toast('결재 ' + lock + ' 상태라 등록부를 취소할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
+        if (lock) { V().closeModal(); toast('공문이 ' + lock + ' 상태라 등록부를 취소할 수 없습니다 — 온나라에서 반려·반송되면 다시 열립니다.'); return; }
         var c = E().courseOf(state.courseId);
         var reason = c && c.status === 'DONE' ? ((document.getElementById('erd-cancel-reason') || {}).value || '').trim() : '';
         if (c && c.status === 'DONE' && !reason) { toast('정정 사유를 입력하세요.'); return; }

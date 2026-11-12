@@ -4900,3 +4900,32 @@ p > .dx-note-gap { display: inline; }
 .bd-catbar .form-select { width: auto; min-width: 140px; }
 .bd-table th:nth-child(-n+2), .bd-table td:nth-child(-n+2) { text-align: left; }
 @media (max-width: 767px) { .bd-table { min-width: 600px; } .bd-table-wide { min-width: 820px; } }
+
+/* ===== «지금 할 일» 강조 (2026-11-12) =====
+ * 한 화면에 버튼 하나만 — 지금 접속한 사람이 이 단계에서 눌러야 할 버튼에 고리·바깥 빛을 두르고
+ * 옆에 «지금 할 일» 꼬리표를 단다. 화면을 덮는 오버레이는 쓰지 않는다(작업을 막고, 단계별 안내가 이미
+ * 그 역할을 한다). 보조 모양 버튼(파일 버튼·외곽선)은 이때만 채운 모양으로 올린다 — 크기는 그대로. */
+.dy-now { position: relative; box-shadow: var(--ring-now); }
+/* 채운 색은 주 버튼과 같은 진한 녹색 — 흰 글자 대비 5:1 이상(--main 은 3.85:1 로 미달) */
+.rl-file-btn.dy-now:not(:disabled),
+.btn-outline.dy-now:not(:disabled) { background: var(--main-dark); border-color: var(--main-dark); color: var(--surface); }
+.dy-now-pulse:not(:disabled) { animation: dy-now-pulse 1.6s ease-out 2; }
+@keyframes dy-now-pulse { 0%, 100% { box-shadow: var(--ring-now); } 50% { box-shadow: var(--ring-now-wide); } }
+@media (prefers-reduced-motion: reduce) { .dy-now, .dy-now-pulse { animation: none; } }
+.dy-now-tag {
+  display: inline-flex; align-items: center; margin-left: var(--sp-2); padding: var(--sp-0-5) var(--sp-2);
+  border-radius: var(--radius-pill); background: var(--brand-100); color: var(--main-dark2);
+  font-size: var(--fs-12); font-weight: var(--fw-bold); white-space: nowrap; vertical-align: middle;
+}
+@media (max-width: 559px) { .dy-now-tag { display: none; } }
+/* 도구 줄 아래 «지금 할 일» 한 줄 — 첫 화면 안에서 지금 차례와 바로 가기를 준다(확인 대기 띠와 같은 골격) */
+.dy-now-bar {
+  display: flex; align-items: center; gap: var(--sp-2-5, 10px); flex-wrap: wrap;
+  padding: var(--sp-2-5, 10px) var(--sp-3-5, 14px); margin-bottom: var(--sp-3, 12px);
+  border: 1px solid var(--card-line); border-left: 3px solid var(--main-dark); border-radius: var(--radius-md);
+  background: var(--brand-100); font-size: var(--fs-13); color: var(--text-black);
+}
+.dy-now-bar-k { font-weight: var(--fw-bold); color: var(--main-dark2); white-space: nowrap; }
+.dy-now-bar .btn { margin-left: auto; }
+.dy-now-bar.is-wait { background: var(--surface); border-left-color: var(--gray-300, var(--card-line)); color: var(--text-gray); }
+.dy-now-bar.is-wait .dy-now-bar-k { color: var(--text-gray); }
