@@ -364,9 +364,9 @@
                 else if (isOwnerLead()) mineTxt = '<b>전 부서 검토(승인·반려)·독촉</b>을 합니다. 결과 제출·배포·마감은 담당자가 합니다.';
                 else if (p.tier === 'staff') mineTxt = '<b>우리 부서 줄의 결과 제출</b>만 합니다(우리 부서 실무자 누구나). 검토는 재난안전과가 합니다.';
                 else if (p.tier === 'super' && p.deptId !== own && !hasPractitioner(p.deptId)) mineTxt = '<b>우리 부서 결과 제출</b>과 <b>독촉</b>을 합니다 — 우리 부서에 실무자 계정이 없어 부서장이 냅니다.';
-                else if (p.tier === 'super' && p.deptId === own) mineTxt = '<b>조회</b>와 <b>전 부서 독촉</b>을 합니다. 결과 제출은 부서 담당자, 검토는 재난안전과 담당자·팀장이 합니다.';
-                else if (p.tier === 'super') mineTxt = '<b>조회</b>와 <b>우리 부서 독촉</b>을 합니다. 결과 제출은 부서 담당자가 합니다.';
-                else mineTxt = '<b>조회 전용입니다.</b> 결과 제출은 각 부서 담당자, 검토는 재난안전과가 합니다.';
+                else if (p.tier === 'super' && p.deptId === own) mineTxt = '<b>조회</b>와 <b>전 부서 독촉</b>을 합니다. 결과 제출은 부서 실무자, 검토는 재난안전과 담당자·팀장이 합니다.';
+                else if (p.tier === 'super') mineTxt = '<b>조회</b>와 <b>우리 부서 독촉</b>을 합니다. 결과 제출은 부서 실무자가 합니다.';
+                else mineTxt = '<b>조회 전용입니다.</b> 결과 제출은 각 부서 실무자, 검토는 재난안전과가 합니다.';
                 roleNote = '<div class="check-notice" style="margin-bottom:10px;">' + mineTxt + '</div>';
             } else if (!anyAct) {
                 roleNote = '<div class="check-notice" style="margin-bottom:10px;">' +
@@ -642,8 +642,8 @@
     function canEdit(deptId, opts) { return (opts && opts.flow) ? canSubmit(deptId) : canAct(deptId); }
     function denySubmit() {
         toast(canReviewer()
-            ? '결과 제출은 그 부서 담당자가 합니다 — 고칠 것이 있으면 [검토]에서 반려하세요.'
-            : '결과 제출은 그 부서 담당자가 자기 부서 줄에서 합니다.');
+            ? '결과 제출은 그 부서 실무자가 합니다 — 고칠 것이 있으면 [검토]에서 반려하세요.'
+            : '결과 제출은 그 부서 실무자가 자기 부서 줄에서 합니다.');
     }
     function open(key, deptId, opts) {
         if (!canEdit(deptId, opts)) { if (opts.flow) denySubmit(); else denied(deptId); return; }
