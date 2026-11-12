@@ -178,7 +178,7 @@
         return global.EDUDOC && global.EDUDOC.lockOf ? global.EDUDOC.lockOf(courseId) : null;
     }
     function lockBtn(lock) {
-        return '<button type="button" class="btn btn-outline btn-sm" disabled title="결재 ' + esc(lock) +
+        return '<button type="button" class="btn btn-outline btn-sm" disabled title="공문 ' + esc(lock) +
             ' — 공문 기록이 남아 수정·삭제할 수 없습니다">🔒 ' + esc(lock) + '</button>';
     }
     /* 카드 공통 [수정]·[삭제] — 등록만 있고 회수 수단이 없으면 시연을 반복할수록 데이터가 쌓인다.
@@ -230,7 +230,7 @@
            권한은 DYEDU.canActCourse, 잠금은 EDUDOC.lockOf 한 곳이고 여기서는 결과만 쓴다. */
         if (!E().canActCourse(c)) { deny(E().courseDeptOf(c)); return; }
         var lock = lockOf(courseId);
-        if (lock) { toast('결재 ' + lock + ' 상태라 수정할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
+        if (lock) { toast('공문이 ' + lock + ' 상태라 수정할 수 없습니다 — 온나라에서 반려·반송되면 다시 열립니다.'); return; }
         /* 회차가 없는 구 데이터는 대표값(date·time)에서 1회차를 파생해 그대로 편집한다 */
         var ss = E().courseSessions(c).map(function (s) { return { date: s.date, start: s.start || '', end: s.end || '' }; });
         if (!ss.length) ss = [{ date: c.date || E().today(), start: c.time || '', end: '' }];
@@ -488,7 +488,7 @@
            권한은 DYEDU.canActCourse, 잠금은 EDUDOC.lockOf 한 곳이고 여기서는 결과만 쓴다. */
         if (!E().canActCourse(c)) { deny(E().courseDeptOf(c)); return; }
         var lock = lockOf(courseId);
-        if (lock) { toast('결재 ' + lock + ' 상태라 삭제할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
+        if (lock) { toast('공문이 ' + lock + ' 상태라 삭제할 수 없습니다 — 온나라에서 반려·반송되면 다시 열립니다.'); return; }
         var enrolls = E().enrolls(courseId);
         var cnt = enrolls.reduce(function (n, e) { return n + (e.workerIds || []).length; }, 0);
         var counted = c.status === 'DONE' && cnt;
@@ -508,7 +508,7 @@
         if (c && !E().canActCourse(c)) { V().closeModal(); deny(E().courseDeptOf(c)); return; }
         /* 확인창을 띄운 뒤에 결재가 올라갔을 수 있다 — 저장 직전에 한 번 더 본다 */
         var lk = lockOf(courseId);
-        if (lk) { V().closeModal(); toast('결재 ' + lk + ' 상태라 삭제할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
+        if (lk) { V().closeModal(); toast('공문이 ' + lk + ' 상태라 삭제할 수 없습니다 — 온나라에서 반려·반송되면 다시 열립니다.'); return; }
         var r = E().removeCourse(courseId);
         V().closeModal();
         toast(r ? '교육을 삭제했습니다 · 등록부 ' + r.enrolls + '건 · 이수기록 ' + r.records + '건 회수' : '교육을 찾을 수 없습니다.');

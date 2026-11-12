@@ -524,16 +524,31 @@
                               (F.rcOpen && global.ORGPICK ? '<div style="margin-top:6px;">' + global.ORGPICK.deptsPanel(NS + '-rcpanel', { selectedPath: NS + '.rcSel', onToggle: NS + '.rcTog' }) + '</div>' : '') +
                           '</div>'
                         : '<div class="rskdoc-block"><label class="form-label">수신</label>' +
-                              '<p style="margin:0;">' + esc(F.to || '수신자 참조') + (rc.length ? ' — <b>' + rc.length + '곳</b> <span class="file-hint">' + esc(rc.join(', ')) + '</span>' : '') + '</p></div>') +
+                              /* 내부결재(교육 실시 결과 보고 등)는 수신자가 없다 — 지면과 같은 말을 쓴다 */
+                              '<p style="margin:0;">' + (F.docType === '외부발송'
+                                  ? esc(F.to || '수신자 참조') + (rc.length ? ' — <b>' + rc.length + '곳</b> <span class="file-hint">' + esc(rc.join(', ')) + '</span>' : '')
+                                  : '내부결재') + '</p></div>') +
                     '<div class="rskdoc-block"><label class="form-label" for="' + NS + '-title">제목 <span class="roc-req">*</span></label>' +
                         '<input type="text" class="form-input" id="' + NS + '-title" value="' + esc(F.title) + '"></div>' +
                     '<div class="rskdoc-block"><label class="form-label" for="' + NS + '-body">본문 <span class="roc-req">*</span>' +
                         ' <span class="file-hint">직접 작성합니다 — 아래 조각을 눌러 넣을 수 있습니다</span></label>' +
                         chipsHtml(t) +
                         '<textarea class="form-textarea" id="' + NS + '-body" rows="8" placeholder="공문 본문을 직접 입력하세요.">' + esc(F.body) + '</textarea></div>' +
-                    '<div class="rskdoc-block"><label class="form-label">붙임</label>' +
-                        (att.length ? '<p style="margin:0;">' + att.map(function (n, i) { return (i + 1) + '. ' + esc(n); }).join('<br>') + '</p>' : '<p class="file-hint">없음</p>') +
-                        '<p class="file-hint" id="' + NS + '-attach-sum">' + esc(attachSumText()) + '</p></div>' +
+                    /* cfg.simplePick — 붙임을 «이미 올려 둔 파일에서 고르는» 도메인(교육 실시 결과 공문, 2026-11-12 E-4).
+                       결재선만 걷고 붙임 고르기·별지·관련 근거는 종전 기안 폼과 같다. 기본(고정 붙임)은 배포 공문용. */
+                    (cfg.simplePick
+                        ? basisHtml(t) +
+                          '<div class="rskdoc-block"><label class="form-label">붙임 <span class="file-hint">이미 올려 둔 파일에서 고릅니다</span></label>' +
+                              attachPickHtml() +
+                              ((cfg.annexes && cfg.annexes(t, null).length)
+                                  ? '<label class="rskdoc-ck" style="margin-top:6px;"><input type="checkbox"' + (F.annex ? ' checked' : '') +
+                                      ' onchange="' + NS + '.setAnnex(this.checked)"><span><b>붙임 별지</b> <span class="file-hint">' +
+                                      esc(cfg.annexes(t, null).map(function (x) { return x.title; }).join(' · ')) + '</span></span></label>'
+                                  : '') +
+                              '<p class="file-hint" id="' + NS + '-attach-sum" aria-live="polite">' + esc(attachSumText()) + '</p></div>'
+                        : '<div class="rskdoc-block"><label class="form-label">붙임</label>' +
+                              (att.length ? '<p style="margin:0;">' + att.map(function (n, i) { return (i + 1) + '. ' + esc(n); }).join('<br>') + '</p>' : '<p class="file-hint">없음</p>') +
+                              '<p class="file-hint" id="' + NS + '-attach-sum">' + esc(attachSumText()) + '</p></div>') +
                 '</div>',
                 '<span class="rskdoc-foot-note">검토·결재는 온나라 기안함에서 지정합니다.</span>' +
                 '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
@@ -767,7 +782,7 @@
                             ['문서', doc.title],
                             ['연계 번호', no, '문서번호는 결재가 끝나면 온나라가 부여합니다.'],
                             ['붙임', sentAttach.join(' · ')],
-                            ['다음 할 일', '온나라 기안함에서 검토·결재를 지정해 상신하세요.', '결재가 끝나면 온나라가 수신 부서로 시행합니다.']
+                            ['다음 할 일', '온나라 기안함에서 검토·결재를 지정해 상신하세요.', doc.docType === '외부발송' ? '결재가 끝나면 온나라가 수신 부서로 시행합니다.' : '결재 진행은 온나라에서 확인합니다.']
                         ]
                     }),
                     '<button type="button" class="btn btn-primary" onclick="DYV2.closeModal()">확인</button>');

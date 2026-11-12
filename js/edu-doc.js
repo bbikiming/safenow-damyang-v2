@@ -46,7 +46,7 @@
         save(d);
         E().pushCourseHistory(courseId, {
             type: 'STATUS', at: V().today(),
-            by: doc.dept, memo: '공문 온나라 상신 — ' + doc.title + ' (' + doc.no + ')'
+            by: doc.dept, memo: '공문 온나라로 보냄 — ' + doc.title + ' (' + doc.no + ')'
         });
     }
     /* 임시 문서번호 — 실제 채번은 온나라가 한다(지면에 '임시 채번'으로 밝힌다).
@@ -66,7 +66,9 @@
     function lockOf(courseId) {
         var d = latestDoc(courseId);
         if (!d) return null;
-        return (d.status === '결재중' || d.status === '결재완료') ? d.status : null;
+        /* «기안함 전송»(온나라로 보낸 직후)부터 잠근다 — 보낸 공문의 이수자 명단은 열 때마다 다시
+           파생되므로, 보낸 뒤 등록을 취소하면 이미 나간 문서의 명단이 줄어든다(§4). 반려·반송만 풀린다. */
+        return (d.status === '기안함 전송' || d.status === '결재중' || d.status === '결재완료') ? d.status : null;
     }
 
     /* ===================== 교육 파생 ===================== */
@@ -85,6 +87,11 @@
     /* ===================== DYDOC 설정 ===================== */
     var T = global.DYDOC.define({
         ns: 'EDUDOC', lkey: LKEY, skey: SKEY,
+        /* 결재선 없이 «온나라로 보내기» — 온나라 기안함까지만 보내고 검토·결재는 담당자가 온나라에서
+           지정해 상신한다(운영 결정 2026-11-06 · 흐름전환 v2 E-4, 2026-11-12). 붙임은 종전처럼 이미
+           올려 둔 파일에서 고른다(simplePick). 결재 결과를 사람이 옮겨 적는 수단은 두지 않는다. */
+        simple: true, simplePick: true,
+        sentNote: '실시 결과 공문을 온나라 연계기안함에 보냈고, 이 교육을 잠갔습니다.',
 
         targetOf: function (id) { return courseOf(id); },
         subjectOf: function (c) { return c ? c.desc : ''; },
@@ -188,7 +195,7 @@
         save: function (c, doc) { pushDoc(c.id, doc); },
         docsFor: function (c) { return c ? docsOf(c.id) : []; },
         nextNo: nextNo,
-        lockNote: '상신 후에는 이 교육의 정보·대상자·이수기록을 수정하거나 삭제할 수 없습니다.'
+        lockNote: '보낸 뒤에는 이 교육의 정보·대상자·이수기록을 수정·삭제하거나 참석자 등록을 취소할 수 없습니다.'
     });
 
     /* 기안·상신 권한 — 골격(cfg.canDraft)과 화면(control)이 **같은 함수**를 본다.
@@ -239,10 +246,10 @@
                 ' onclick="EDUDOC.open(\'' + esc(courseId) + '\')">공문 기안</button>';
         }
         /* 문서 보기는 권한과 무관하다 — 조회는 막지 않는다(조회 범위와 조작은 다른 축).
-           상신 뒤에는 결재 진행 상황을 이 시스템이 알 수 없으므로 어디서 보는지 밝힌다. */
+           보낸 뒤에는 검토·결재 진행을 이 시스템이 알 수 없으므로 어디서 보는지 밝힌다. */
         return '<span class="chip-status chip-sm ' + V().toneOf(d.status) + '">' + esc(d.status) + '</span> ' +
             '<button type="button" class="btn btn-outline btn-sm" onclick="EDUDOC.openDoc(\'' + esc(courseId) + '\',\'' + esc(d.sid) + '\')">문서 보기</button> ' +
-            '<span class="file-hint">결재 진행은 온나라에서 확인</span>';
+            '<span class="file-hint">' + (d.status === '기안함 전송' && canDraft(c).ok ? '온나라 기안함에서 검토·결재를 지정해 상신하세요' : '결재 진행은 온나라에서 확인') + '</span>';
     }
 
     /* ===================== 결재 이력 소비 API =====================

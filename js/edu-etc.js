@@ -147,7 +147,7 @@
                 '<div class="edu-course-actions">' + docCtl +
                     '<button type="button" class="btn btn-outline btn-sm" onclick="EDUE.viewDetail(\'' + c.id + '\')">상세</button>' +
                     (lock
-                        ? '<button type="button" class="btn btn-outline btn-sm" disabled title="결재 ' + esc(lock) +
+                        ? '<button type="button" class="btn btn-outline btn-sm" disabled title="공문 ' + esc(lock) +
                           ' — 공문 기록이 남아 수정·삭제할 수 없습니다">🔒 ' + esc(lock) + '</button>'
                         : !mayEdit ? ''
                         : '<button type="button" class="btn btn-outline btn-sm" onclick="EDUE.openEdit(\'' + c.id + '\')">수정</button>' +
@@ -192,7 +192,7 @@
            권한은 DYEDU.canActCourse, 잠금은 EDUDOC.lockOf 한 곳이고 여기서는 결과만 쓴다. */
         if (!E().canActCourse(c)) { deny(E().courseDeptOf(c)); return; }
         var lock = lockOf(courseId);
-        if (lock) { toast('결재 ' + lock + ' 상태라 수정할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
+        if (lock) { toast('공문이 ' + lock + ' 상태라 수정할 수 없습니다 — 온나라에서 반려·반송되면 다시 열립니다.'); return; }
         F = {
             edit: courseId,
             etcType: c.etcType || E().etcTypes(SUP_MODE)[0], deptId: c.deptId || E().defaultDeptId(),
@@ -446,7 +446,7 @@
            권한은 DYEDU.canActCourse, 잠금은 EDUDOC.lockOf 한 곳이고 여기서는 결과만 쓴다. */
         if (!E().canActCourse(c)) { deny(E().courseDeptOf(c)); return; }
         var lock = lockOf(courseId);
-        if (lock) { toast('결재 ' + lock + ' 상태라 삭제할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
+        if (lock) { toast('공문이 ' + lock + ' 상태라 삭제할 수 없습니다 — 온나라에서 반려·반송되면 다시 열립니다.'); return; }
         var cnt = E().enrolls(courseId).reduce(function (n, e) { return n + (e.workerIds || []).length; }, 0);
         V().openModal('기타 교육 삭제',
             '<p style="font-size:var(--fs-13);"><b>' + esc(c.etcType || '기타 교육') + '</b> · ' + esc(c.desc) + '<br>' +
@@ -460,7 +460,7 @@
         var c = E().courseOf(courseId);
         if (c && !E().canActCourse(c)) { V().closeModal(); deny(E().courseDeptOf(c)); return; }
         var lk = lockOf(courseId);
-        if (lk) { V().closeModal(); toast('결재 ' + lk + ' 상태라 삭제할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
+        if (lk) { V().closeModal(); toast('공문이 ' + lk + ' 상태라 삭제할 수 없습니다 — 온나라에서 반려·반송되면 다시 열립니다.'); return; }
         var r = E().removeCourse(courseId);
         V().closeModal();
         toast(r ? '기타 교육을 삭제했습니다 · 이수기록 ' + r.records + '건 회수' : '교육을 찾을 수 없습니다.');

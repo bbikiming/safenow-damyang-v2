@@ -45,8 +45,9 @@
         var done = cnt('결재완료'), rej = cnt('반려');
         var stats =
             '<div class="statbox-grid cols-4" style="margin-bottom:12px;">' +
-                '<div class="statbox info"><div class="statbox-num">' + list.length + '</div><div class="statbox-label">상신한 공문 (건)</div></div>' +
-                '<div class="statbox info"><div class="statbox-num">' + cnt('결재중') + '</div><div class="statbox-label">결재 진행 중</div></div>' +
+                '<div class="statbox info"><div class="statbox-num">' + list.length + '</div><div class="statbox-label">온나라로 보낸 공문 (건)</div></div>' +
+                /* 보낸 직후는 «기안함 전송»(담당자가 온나라에서 상신 전), 연계가 상신을 알려 오면 «결재중» — 둘 다 진행 중이다 */
+                '<div class="statbox info"><div class="statbox-num">' + (cnt('기안함 전송') + cnt('결재중')) + '</div><div class="statbox-label">온나라에서 진행 중</div></div>' +
                 (done || rej
                     ? '<div class="statbox success"><div class="statbox-num">' + done + '</div><div class="statbox-label">결재완료</div></div>' +
                       '<div class="statbox ' + (rej ? 'danger' : 'neutral') + '"><div class="statbox-num">' + rej + '</div><div class="statbox-label">반려</div></div>'
@@ -61,27 +62,27 @@
             { type: 'select', id: 'eal-status', value: state.fStatus, label: '상태',
               /* 목록에 실재하는 상태만 고르게 한다 — 없는 값을 두면 고를 때마다 0건이 된다 */
               options: [['', '상태 전체']].concat(
-                  ['결재중', '결재완료', '반려'].filter(function (st) { return cnt(st) > 0; })
+                  ['기안함 전송', '결재중', '결재완료', '반려', '반송'].filter(function (st) { return cnt(st) > 0; })
                       .map(function (st) { return [st, st]; })),
               on: "EDUAPVLOG.setF('Status', this.value)" },
-            { type: 'select', id: 'eal-year', value: state.fYear, label: '상신연도',
-              options: EDUFILTER.yearOptions(list.map(function (s) { return s.at; }), '상신연도 전체'),
+            { type: 'select', id: 'eal-year', value: state.fYear, label: '보낸 연도',
+              options: EDUFILTER.yearOptions(list.map(function (s) { return s.at; }), '보낸 연도 전체'),
               on: "EDUAPVLOG.setF('Year', this.value)" }
         ], { count: rows.length, unit: '건', reset: 'EDUAPVLOG.resetF()' });
 
         var body = rows.length ? rows.map(rowHtml).join('')
-            : '<tr><td colspan="8"><div class="v2-empty">' +
+            : '<tr><td colspan="7"><div class="v2-empty">' +
                 /* 빈 상태는 **도달 가능한 행동만** 약속한다 — 실제로 갈 수 있는 곳은
                    종료 처리된 교육의 [공문 기안] 하나다. */
-                (list.length ? '조건에 맞는 상신 이력이 없습니다.'
-                             : '아직 상신한 결재 문서가 없습니다. 종료 처리된 교육의 <b>[공문 기안]</b>으로 공문을 써서 상신하면 여기에 쌓입니다.') +
+                (list.length ? '조건에 맞는 공문이 없습니다.'
+                             : '아직 온나라로 보낸 공문이 없습니다. 종료 처리된 교육의 <b>[공문 기안]</b>으로 공문을 써서 온나라로 보내면 여기에 쌓입니다.') +
               '</div></td></tr>';
 
         state.mount.innerHTML = stats + bar +
             '<div class="edu-card"><div class="edu-scroll">' +
             '<table class="table-figma table-compact table-nowrap"><thead><tr>' +
-                '<th>문서번호</th><th>상신일</th><th>교육 구분</th><th>문서명</th>' +
-                '<th>대상</th><th>결재선</th><th>상태</th><th>관리</th>' +
+                '<th>연계 번호</th><th>보낸 날</th><th>교육 구분</th><th>문서명</th>' +
+                '<th>대상</th><th>상태</th><th>관리</th>' +
             '</tr></thead><tbody>' + body + '</tbody></table>' +
             '</div></div>';
     }
@@ -93,9 +94,8 @@
             '<td><span class="chip-status chip-sm neutral">' + esc(s.kindLabel) + '</span></td>' +
             '<td style="white-space:normal;min-width:220px;">' + esc(s.label) + '</td>' +
             '<td>' + esc(s.scope) + '</td>' +
-            '<td style="white-space:normal;min-width:200px;color:var(--text-gray);font-size:var(--fs-12);">' + esc(s.line) + '</td>' +
             '<td><span class="chip-status chip-sm ' + V().toneOf(s.status) + '">' + esc(s.status) + '</span>' +
-                (s.latest ? '' : ' <span class="chip-status chip-sm neutral" title="이후 재상신되어 최신 건이 아닙니다">이전</span>') + '</td>' +
+                (s.latest ? '' : ' <span class="chip-status chip-sm neutral" title="이후 다시 보내 최신 건이 아닙니다">이전</span>') + '</td>' +
             '<td class="col-action">' +
                 '<button type="button" class="btn btn-outline btn-sm" onclick="EDUAPVLOG.openDoc(\'' + esc(s.sid) + '\')">문서</button> ' +
             '</td>' +

@@ -301,7 +301,7 @@
     function editBtnHtml(w) {
         var lock = lockOf(w.id);
         if (lock) {
-            return '<button type="button" class="btn btn-outline btn-sm" disabled title="결재 ' + esc(lock) +
+            return '<button type="button" class="btn btn-outline btn-sm" disabled title="공문 ' + esc(lock) +
                 ' — 공문 기록이 남아 수정할 수 없습니다">🔒 ' + esc(lock) + '</button>';
         }
         /* 그 사람이 속한 부서의 담당자(주관부서 담당자는 전 부서)에게만 낸다 */
@@ -318,7 +318,7 @@
         var w = E().workerOf(workerId); if (!w) return;
         if (!E().canActDept(w.deptId)) { deny(w.deptId); return; }
         var lock = lockOf(workerId);
-        if (lock) { toast('결재 ' + lock + ' 상태라 수정할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
+        if (lock) { toast('공문이 ' + lock + ' 상태라 수정할 수 없습니다 — 온나라에서 반려·반송되면 다시 열립니다.'); return; }
         var hs = E().hireStatus(workerId);
         var recs = E().records().filter(function (r) { return r.workerId === workerId && r.kind === 'HIRE'; });
         V().openModal('채용시교육 이수 수정',
@@ -328,7 +328,7 @@
             '<div class="edu-modal-row"><label class="form-label">인정 시간</label>' +
                 '<p style="font-size:var(--fs-13);margin:0;"><b>' + hs.done + 'h</b> / 필요 ' + hs.need + 'h ' +
                 '<span style="color:var(--text-gray);">(이수기록 ' + recs.length + '건 · 시간은 교육 건의 회차에서 파생됩니다)</span></p></div>' +
-            '<div class="check-notice" style="margin-top:10px;">결재 상신 후에는 공문 기록이 남아 <b>수정할 수 없습니다</b>. 상신 전에 확정하세요.</div>',
+            '<div class="check-notice" style="margin-top:10px;">공문을 온나라로 보낸 뒤에는 기록이 남아 <b>수정할 수 없습니다</b>. 보내기 전에 확정하세요.</div>',
             '<button type="button" class="btn btn-outline" style="border-color:var(--status-danger-border);color:var(--status-danger-fg);margin-right:auto;" onclick="EDUH.confirmUndo(\'' + workerId + '\')">이수 기록 삭제</button>' +
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="EDUH.saveEditDone(\'' + workerId + '\')">저장</button>');
@@ -337,7 +337,7 @@
         var w = E().workerOf(workerId);
         if (!w || !E().canActDept(w.deptId)) { V().closeModal(); deny(w && w.deptId); return; }
         var lk = lockOf(workerId);
-        if (lk) { V().closeModal(); toast('결재 ' + lk + ' 상태라 수정할 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
+        if (lk) { V().closeModal(); toast('공문이 ' + lk + ' 상태라 수정할 수 없습니다 — 온나라에서 반려·반송되면 다시 열립니다.'); return; }
         var el = document.getElementById('eh-ed-date');
         var d = el ? el.value : '';
         if (!d) { toast('이수일을 입력하세요.'); if (el) el.focus(); return; }
@@ -365,7 +365,7 @@
         var w = E().workerOf(workerId); if (!w) return;
         if (!E().canActDept(w.deptId)) { deny(w.deptId); return; }
         var lk = lockOf(workerId);
-        if (lk) { toast('결재 ' + lk + ' 상태라 되돌릴 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
+        if (lk) { toast('공문이 ' + lk + ' 상태라 되돌릴 수 없습니다 — 온나라에서 반려·반송되면 다시 열립니다.'); return; }
         var mine = coursesOfWorker(workerId);
         if (!mine.length) { toast('되돌릴 채용시교육 이수 건이 없습니다.'); return; }
         /* 본인 외 대상자가 남는 교육 건(묶인 건)은 삭제되지 않고 유지됨을 명시한다 */
@@ -387,7 +387,7 @@
         var w = E().workerOf(workerId);
         if (!w || !E().canActDept(w.deptId)) { V().closeModal(); deny(w && w.deptId); return; }
         var lk = lockOf(workerId);
-        if (lk) { V().closeModal(); toast('결재 ' + lk + ' 상태라 되돌릴 수 없습니다 — 반려 후 다시 시도하세요.'); return; }
+        if (lk) { V().closeModal(); toast('공문이 ' + lk + ' 상태라 되돌릴 수 없습니다 — 온나라에서 반려·반송되면 다시 열립니다.'); return; }
         var mine = coursesOfWorker(workerId);
         var recs = 0, removed = 0;
         mine.forEach(function (c) {
