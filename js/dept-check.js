@@ -96,8 +96,17 @@
         var l = R() && R().leadOf ? R().leadOf(deptId) : null;
         return l && l.uid ? [l.uid] : [];
     }
+    /* 지정 담당자 가운데 «결과를 낼 수 있는 사람»만 — 재난안전과는 전담부서 등급(팀 단위)이 지정 담당자 자리를
+       대신해 팀장이 섞인다. 팀장은 제출하지 않으므로(canSubmit) 할 일·배포 알림·반려 알림에서 뺀다(2026-11-12 검수) */
+    function designatedSubmitters(deptId) {
+        var d = designatedUids(deptId);
+        if (!hasPractitioner(deptId)) return d;
+        var lead = {};
+        membersDeep(deptId).forEach(function (m) { if (m.lead || LEAD_RE.test(m.role || '')) lead[m.uid] = 1; });
+        return d.filter(function (u) { return !lead[u]; });
+    }
     function workUids(deptId) {
-        var d = designatedUids(deptId); if (d.length) return d;
+        var d = designatedSubmitters(deptId); if (d.length) return d;
         var pr = practitionerUids(deptId); if (pr.length) return pr;
         return leadUids(deptId);
     }
@@ -936,7 +945,7 @@
                     ? '<div class="dchk-sub">배포한 양식: ' + opts.flow.dist.forms.map(function (f) { return esc(f.name); }).join(' · ') + ' (제' + (opts.flow.dist.ver || 1) + '판) — 위 회차 머리에서 내려받습니다</div>' : '') +
                 '</div></div>' +
             '<div class="dchk-mrow"><span class="form-label">제출</span><div>' + esc(st.submittedAt || '') + ' · ' + esc(st.submittedBy || '') + '</div></div>' +
-            '<div class="dchk-mrow"><label class="form-label" for="dchk-ret">반려 사유 <span class="dchk-sub">(반려할 때 필수 — 부서 담당자에게 알림으로 갑니다)</span></label>' +
+            '<div class="dchk-mrow"><label class="form-label" for="dchk-ret">반려 사유 <span class="dchk-sub">(반려할 때 필수 — 제출한 사람에게 알림으로 갑니다)</span></label>' +
                 '<textarea class="form-textarea" id="dchk-ret" rows="2" placeholder="부서가 무엇을 고칠지 적어 주세요"></textarea></div>';
         V().openModal('제출 검토 — ' + esc((deptOf(deptId) || {}).name || ''), body,
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
@@ -1091,7 +1100,7 @@
         }
         if (o.kind === 'return') {
             var st = stateOf(o.key, o.deptId);
-            L.ntfPush({ cat: 'compliance', catLabel: '이행', toUids: uniq([st.submittedByUid, st.editedByUid].concat(designatedUids(o.deptId))),
+            L.ntfPush({ cat: 'compliance', catLabel: '이행', toUids: uniq([st.submittedByUid, st.editedByUid].concat(designatedSubmitters(o.deptId))),
                 title: perLbl + ' 의무이행 점검 결과 반려 — ' + o.reason, href: href, work: 'my-work.html?cat=comply', basis: 'cse-5' });
         } else if (o.kind === 'submit') {
             L.ntfPush({ cat: 'compliance', catLabel: '이행', toUids: reviewerUids(),
