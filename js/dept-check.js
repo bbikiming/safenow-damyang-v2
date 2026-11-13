@@ -77,7 +77,7 @@
      *   «부서 안전보건 담당자» 등급 구성원(DYADM.deptContacts)이 그 자리를 대신한다.
      * 배포·기한 변경·내 할일 : 지정 담당자 → 없으면 그 부서 실무자 전원 → 없으면 부서장
      * 반려                    : 제출한 사람 · 고친 사람 + 지정 담당자
-     * 독촉                    : 지정 담당자 → 없으면 부서장 → 없으면 실무자 전원(공통 규칙, DYADM.deptContacts)
+     * 독촉                    : 지정 담당자 → 없으면 부서장(공통 규칙, DYADM.deptContacts — 11-12 답신 그대로)
      * 검토 요청               : 재난안전과 담당자·팀장(과장 제외) */
     function membersDeep(deptId) {
         var n = global.DYV2 && global.DYV2.orgNode ? global.DYV2.orgNode(deptId) : null, out = [];

@@ -322,7 +322,9 @@
                     ? '제출 ' + (dp.reportAt || '') + (dp.reportBy ? ' · ' + dp.reportBy : '')
                     : (survOff ? '미제출 — 보고서가 등록되어 제출이 마감되었습니다'
                     : (!D().surveyRequested(a) ? ownerLabel + '의 요청 공문을 기다립니다'
-                        : '기한 ' + (a.surveyDue || '-') + (dp.inspectDate ? ' · 점검일 ' + dp.inspectDate : ''))),
+                        : '기한 ' + (a.surveyDue || '-') + (dp.inspectDate ? ' · 점검일 ' + dp.inspectDate : '') +
+                          /* 기한이 지나도 보고서 등록 전이면 받는다(2026-11-13 답신 2-5) */
+                          (D().surveyLate && D().surveyLate(a, dp) ? ' · 기한 지남 — 보고서 등록 전까지 제출할 수 있습니다' : ''))),
                 /* 제출은 **이 화면 안에서** 끝난다. 종전에는 '내 할일'로 보냈는데,
                    그러면 위험성평가 흐름 한가운데가 다른 화면에 의존해 이 축만 떼어
                    개발할 수 없다. '내 할일'은 여러 도메인 할 일을 **모아 보는 곳**이지
@@ -701,6 +703,10 @@
             '</div></div>';
     }
 
+    /* 설문 제출 기한이 지났는데 아직 안 낸 부서 — 표시만 한다(판정 DYRSK.surveyLate · 2026-11-13 답신 2-5) */
+    function surveyLateChip(a, dp) {
+        return (D().surveyLate && D().surveyLate(a, dp)) ? ' <span class="chip-status ' + (window.DYV2 && DYV2.toneOf ? DYV2.toneOf('기한 지남') : 'warning') + ' chip-sm">기한 지남</span>' : '';
+    }
     /* 설문조사표 첨부 가능 시점 — **보고서 등록 전까지만** (발주처 지시).
      * 설문조사표는 방문 전·중에 부서에서 받아 오는 입력 자료이고, 용역업체 보고서가 등록되면
      * 그 단계는 끝난 것이다. 보고서가 나온 뒤에 입력 자료를 바꾸면 보고서와 근거가 어긋난다.
@@ -1074,7 +1080,7 @@
                 '<td>' + esc(dp.inspectDate || '-') + '</td>' +
                 '<td>' + (dp.reportFile
                     ? '<span class="rl-ro-file">' + esc(dp.reportFile) + '</span>'
-                    : '<span class="rl-ro-none">미제출</span>') + '</td>' +
+                    : '<span class="rl-ro-none">미제출</span>' + surveyLateChip(a, dp)) + '</td>' +
                 '<td>' + (c.total ? c.done + ' / ' + c.total : '-') + '</td>' +
                 '<td>' + esc(dp.dueDate || '-') + '</td>' +
                 '<td><span class="chip-status ' + V().toneOf(lbl) + ' chip-sm">' + lbl + '</span></td>' +
@@ -1412,7 +1418,7 @@
         } else {
             reportCell = locked
                 ? '<span style="color:var(--text-gray);">-</span>'
-                : '<button type="button" class="rl-file-btn" onclick="RSKLIST.openDeptReport(\'' + dp.deptId + '\')">＋ 제출본 대리 등록</button>';
+                : '<button type="button" class="rl-file-btn" onclick="RSKLIST.openDeptReport(\'' + dp.deptId + '\')">＋ 제출본 대리 등록</button>' + surveyLateChip(a, dp);
         }
         var impCell = c.total ? c.done + ' / ' + c.total : '<span style="color:var(--text-gray);">-</span>';
         var dueCell = dp.dueDate
@@ -2130,7 +2136,7 @@
             (canManage()
                 ? '<p class="file-hint"><b>담당자는 원칙적으로 해당 부서가 정합니다.</b> ' +
                     '비워 두면 전달 후 그 부서가 지정합니다 — 이미 아는 경우에만 여기서 미리 적어 주세요.</p>'
-                : '<p class="file-hint">우리 부서 구성원 중에서 담당자를 고릅니다.</p>') +
+                : '<p class="file-hint">우리 부서 구성원 중에서 담당자를 고릅니다. 알림은 [입력 완료]를 누를 때 담당자에게 갑니다.</p>') +
             '<div class="rl-modal-row" style="margin-top:10px;">' +
                 '<label class="form-label" for="rl-owner-name">담당자</label>' +
                 '<div class="orgpick-field" id="rl-owner-field"><div style="display:flex;gap:8px;align-items:center;">' +
@@ -2413,8 +2419,9 @@
                 (dp.inputDone && (dp.inputDone.workers || []).length ? '<span>참여 근로자 <b>' + esc(dp.inputDone.workers.map(function (w) { return w.name; }).join(', ')) + '</b>' +
                     (dp.inputDone.workersNote ? ' · ' + esc(dp.inputDone.workersNote) : '') + '</span>' : '') +
                 (dp.inputDone ? '<span>입력 완료 <b>' + esc(dp.inputDone.at) + '</b>' + (canUndoInput(a, dp) ? ' <button type="button" class="rl-file-btn" onclick="RSKLIST.inUndo(\'' + deptId + '\')">입력 완료 취소</button>' : '') + '</span>' : ''),
-            noteHtml: '부서 담당자는 <b>이 카드에서 바로</b> 완료 처리·재촉 응답을 합니다 — ' +
-                '같은 건을 <b>내 할일</b>에서 올려도 같은 곳에 쌓입니다.',
+            /* «재촉 응답»은 이 카드에 없고 내 할일에만 있다 — 카드에서 한다고 쓰면 없는 버튼을 약속한다(2026-11-13 답신 2-3) */
+            noteHtml: '부서 담당자는 <b>이 카드에서 바로</b> 완료 처리를 합니다 — ' +
+                '같은 건을 <b>내 할일</b>에서 올려도 같은 곳에 쌓입니다. 재촉 응답은 <b>내 할일</b>에서 합니다.',
             items: function () { return D().improvementsFor(a.id, deptId); },
             /* 재촉은 주관부서와 그 부서 사람이 한다 — 판정은 DYROLE.canRemind 단일 출처다.
                총괄 책임자(군수)는 진행 상황을 조회하고 재촉 수단을 갖지 않는다(2026-09-28 확정 ·

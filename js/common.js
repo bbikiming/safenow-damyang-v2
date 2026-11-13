@@ -316,7 +316,7 @@
         '미등록': 'warning', '대상 아님': 'neutral', '확인 대기': 'info', '보완 요청': 'warning', '확인 완료': 'success',
         '전 항목 이행': 'success', '일부 미이행': 'danger', '지연 제출': 'warning',
         '배포 전': 'neutral', '기한 경과': 'warning', '마감 보고됨': 'info',
-        '지연': 'warning', '보완필요': 'warning', '보완 필요': 'warning', '주의': 'warning',
+        '지연': 'warning', '기한 지남': 'warning', '보완필요': 'warning', '보완 필요': 'warning', '주의': 'warning',
         '기한초과': 'danger', '기한 초과': 'danger', '부적합': 'danger', '반려': 'danger',
         '수시': 'purple', '임시저장': 'purple',
         /* 업무 관리 이행 판정 — 분류기준 「단계별현황」 시트의 어휘 그대로다.

@@ -5,6 +5,7 @@
    온나라 결재 상신 공문을 한 화면에서 조회한다. **상신 단위는 교육 1건 하나**다 —
    구 3종(총괄·교육별·개인별)은 v1.2 에서 폐기했다(되살리지 말 것 · CLAUDE.md §4).
    · 데이터는 EDUDOC.submissions() 만 소비한다 — 스토어 구조·라벨을 화면이 직접 읽지 않는다.
+   · 보는 사람은 재난안전과 소속만(2026-11-13 답신 5장) — EDUDOC.canViewHistory 가 판정하고 그 밖에는 안내만 그린다.
    · 행 액션: [문서] 상신 당시 컨텍스트로 문서 다시 보기. **[상태] 버튼은 두지 않는다** —
      결재 완료·반려 회신은 온나라 연동 몫이라 이 화면이 만들 수 있는 것이 없다.
    · 재상신으로 밀려난 과거 건은 '이전' 배지로 구분한다.
@@ -35,6 +36,12 @@
 
     function render() {
         if (!state.mount) return;
+        /* 보는 사람은 재난안전과만(답신 5장) — 판정은 EDUDOC.canViewHistory 한 곳 */
+        if (global.EDUDOC && global.EDUDOC.canViewHistory && !global.EDUDOC.canViewHistory()) {
+            state.mount.innerHTML = '<div class="edu-card"><div class="v2-empty">' + esc(global.EDUDOC.historyDenyNote()) +
+                '<br>교육 실시 결과는 각 교육 화면의 이수 현황에서 확인합니다.</div></div>';
+            return;
+        }
         var list = all();
         var rows = filtered(list);
         /* 다시 보내 밀려난 이전 건(latest=false)은 상태 지표에서 뺀다 — 반려 뒤 재기안해 결재완료된 공문이 «반려»에 계속 남으면 지금 반려 상태인 공문 수가 부풀어 보인다(2026-11-13) */

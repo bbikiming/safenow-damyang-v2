@@ -2120,12 +2120,20 @@
         return true;
     }
     /* 조치기한 재촉 알림 — 받는 사람은 조치 담당자, 담당자를 찾지 못하면 그 부서 담당자(SCR-ADMIN-002 §4-1).
-       정기·수시 두 화면의 [재촉]이 같은 알림을 낸다. */
+       정기·수시 두 화면의 [재촉]이 같은 알림을 낸다. 담당자가 없을 때의 «부서 담당자»는
+       DYADM.deptContacts 순서(부서 안전보건 담당자 → 부서장 → 없음)다(2026-11-13 답신 1-2·5장).
+       종전에는 부서 실무자 등급 전체로 보내 다른 독촉과 받는 사람이 갈렸다. DYADM 이 없는 화면만 종전대로. */
     function remindNotify(m, by) {
         if (!m) return;
         var uid = ownerUid(m);
         var aa = m.assessment_id ? (assessmentOf(m.assessment_id) || {}) : null;
-        notify(Object.assign(uid ? { toUids: [uid] } : { toDept: m.dept_id, toTier: ['staff'] }, {
+        var to = uid ? { toUids: [uid] } : { toDept: m.dept_id, toTier: ['staff'] };
+        if (!uid && global.DYADM && global.DYADM.deptContacts) {
+            var cu = inputRemindTo(m.dept_id).uids;
+            if (!cu.length) return;   /* 담당자·부서장 미등록 — 받는 사람 없음(화면이 그 사실을 밝힌다) */
+            to = { toUids: cu };
+        }
+        notify(Object.assign(to, {
             basis: 'osh-36',
             title: '위험성평가 조치기한 재촉 — ' + ((m.hazard && m.hazard.name) || '') +
                 ' (기한 ' + (m.due || m.due_date || '-') + (by ? ' · ' + by : '') + ')',
@@ -2265,6 +2273,13 @@
      * 알림이 가면 안 된다. 요청은 **공문을 온나라로 보내는 순간** 한 번이고, 보낸 뒤에는
      * 양식을 바꾸지 않는다(바꾸려면 새 평가 · 이력이 갈린다). */
     function surveyRequested(a) { return !!(a && a.surveyReq && a.surveyReq.at); }
+    /* 설문 제출 기한이 지났는데 아직 안 낸 부서 — 보고서 등록 전이면 **그대로 받는다**(2026-11-13 답신 2-5).
+       기한은 막는 값이 아니라 «기한 지남» 표시에만 쓴다. 기한 임박·초과 알림은 만들지 않는다. */
+    function surveyLate(a, dp) {
+        if (!a || !dp || dp.reportFile || !a.surveyDue || !surveyRequested(a)) return false;
+        if (a.status === 'COMPLETED' || ((a.review && a.review.stage) || 'NONE') !== 'NONE') return false;
+        return a.surveyDue < today();
+    }
     function sendSurveyRequest(aid, doc, by) {
         var a = assessmentOf(aid); if (!a) return null;
         a.surveyReq = { at: today(), by: by || actorNow(), docs: (a.surveyReq && a.surveyReq.docs || []).concat(doc ? [doc] : []) };
@@ -2357,12 +2372,29 @@
             .map(function (w) { return { uid: w.uid || '', name: w.name || '', role: w.role || '' }; });
         if (!ws.length) return { error: '위험성평가에 참여한 근로자를 1명 이상 고르세요.' };
         commitDeptRows(aid, deptId, by);
+        notifyRowOwners(a, deptId);
         dp.inputDone = { at: today(), by: by || '', reason: n ? '' : r, count: n, workers: ws, workersNote: String(workersNote || '').trim() };
         if (!n) dp.noFindings = true;
         pushHistory(aid, { type: 'STATUS', by: by || deptName(deptId),
             memo: deptName(deptId) + ' 조치 입력 완료 · ' + (n ? n + '건' : '조치 대상 없음 — ' + r) + ' · 참여 근로자 ' + ws.length + '명' });
         refreshAssessmentStatus(aid);
         return dp;
+    }
+    /* 작성표 행 담당자 알림 — 입력 완료 순간 한 번(2026-11-13 답신 2-1). 작성 중에 행에 담당자를 적어도
+       보내지 않는다 — 그때는 개선조치가 아직 없어, 받은 사람이 열 건이 없다. 입력 완료로 생긴 개선조치 중
+       담당자가 있는 건마다 그 사람에게 «개선조치 담당자 지정»을 보낸다(본인 지정은 제외). 담당자 라벨로
+       사람을 찾지 못하면(동명이인 등) 보내지 않는다 — 이름으로 엉뚱한 사람에게 보내지 않는다(ownerUid).
+       입력 완료를 취소했다가 다시 완료하면 개선조치가 새로 생기므로 그때 다시 보낸다. */
+    function notifyRowOwners(a, deptId) {
+        var me = global.DYROLE && global.DYROLE.current ? (global.DYROLE.current() || {}).uid : '';
+        improvementsFor(a.id, deptId).forEach(function (m) {
+            var uid = ownerUid(m);
+            if (!uid || uid === me) return;
+            notify({ toUids: [uid], basis: 'osh-36',
+                title: a.year + '년 정기 위험성평가 — 개선조치 담당자 지정: ' + ((m.hazard && m.hazard.name) || '') +
+                    ' (조치기한 ' + (m.due || m.due_date || '-') + ')',
+                href: 'rsk-list.html?year=' + a.year + '&dept=' + deptId, work: 'my-work.html?cat=improve' });
+        });
     }
     function undoInputDone(aid, deptId, by) {
         var a = assessmentOf(aid), dp = deptOf(a, deptId);
@@ -2421,7 +2453,7 @@
     /* ===== D-2 입력 미완료 재촉 =====
      * 작성(입력 완료) 기한은 따로 두지 않는다 — 조치기한이 곧 작성 마감이다. 대신 조치 요청을 받고
      * 아직 [입력 완료]를 누르지 않은 부서를 재촉한다. 받는 사람은 그 부서 담당자(DYADM.deptContacts —
-     * 부서 안전보건 담당자 → 부서장 → 실무자 전원). 발신자는 실제 접속자(by). 권한 판정은 화면이 한다
+     * 부서 안전보건 담당자 → 부서장 → 없음 · 2026-11-13 답신 1-2). 발신자는 실제 접속자(by). 권한 판정은 화면이 한다
      * (DYROLE.canRemind — 이 계층은 역할을 보지 않는다, confirmImprovement 와 같은 분담). */
     function inputRemindTo(deptId) {
         var c = (global.DYADM && global.DYADM.deptContacts) ? global.DYADM.deptContacts(deptId) : null;
@@ -3305,7 +3337,7 @@
         reviewSet: reviewSet, reviewDel: reviewDel, reviewAdd: reviewAdd,
         deliverFromReview: deliverFromReview,
         /* 2026-11-11 흐름 전환 — 설문 요청 공문 · 보고서+기한 · 조치 요청 공문 · 부서 직접 입력 */
-        setDeptDue: setDeptDue, surveyRequested: surveyRequested, sendSurveyRequest: sendSurveyRequest,
+        setDeptDue: setDeptDue, surveyRequested: surveyRequested, surveyLate: surveyLate, sendSurveyRequest: sendSurveyRequest,
         requestAction: requestAction, inputOpen: inputOpen, validDeptRows: validDeptRows,
         setInputDone: setInputDone, undoInputDone: undoInputDone,
         deptStage: deptStage,

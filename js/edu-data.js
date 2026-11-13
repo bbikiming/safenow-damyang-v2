@@ -15,7 +15,8 @@
 
     /* r5 — 2026-07-30 회의: 기타교육 분류를 법정 3유형으로 재정의(구 5종 폐지) ·
      * 첨부 슬롯(file.slot) 도입. 구 etcType 이 남으면 필터·표시가 어긋나므로 버전 범프. */
-    var SKEY = 'damyangEduV1r13';  /* r13 — 정기교육 주기를 달력 반기(관리감독자 달력 연도)로 · 독촉 이력을 그 기준에 맞춤 · 예정 교육 안내 (2026-11-13 X-1·X-2) */
+    var SKEY = 'damyangEduV1r14';  /* r14 — 주기 전환을 2027-01-01 로 미룸(답신 3-2): 2026 은 개인별 주기 · 독촉 이력(사람·메모)·재난안전과 현업 시드를 그 기준으로 맞춤 (2026-11-13) */
+    /* r13 — 정기교육 주기를 달력 반기(관리감독자 달력 연도)로 · 독촉 이력을 그 기준에 맞춤 · 예정 교육 안내 (2026-11-13 X-1·X-2) */
     /* r12 — 등록부 사람별 참석시간(hoursBy) · 공문 붙임 5개 이내 · 재난안전과 현업 미이수 1명 · 이력 시각 정리 (2026-11-13) */
     /* r11 */  /* r10 — 예시 자료를 «11월 13일까지 운영한 시스템»으로 다시 짰다 (2026-11-13) */
     /* r9 — 시드 이력 문구 «신청» 걷기 (2026-11-12) */
@@ -31,32 +32,55 @@
 
     /* ================= 계산 함수 (설계서 §2) ================= */
 
-    /* ===== 정기교육 주기 — 달력 반기 · 달력 연도 (2026-11-13 X-2 확정) =====
+    /* ===== 정기교육 주기 — 2026년까지 개인별 · 2027-01-01부터 달력 반기 (2026-11-13 답신 3-2) =====
      * 별표4(`oshr-t4`) 제1호가목은 근로자 정기교육을 «매반기», 제1호의2가목은 관리감독자 정기교육을
-     * «연간»으로 정한다. 그래서 주기는 사람마다가 아니라 **달력으로 같다** —
-     *   · 현업근로자(사무직·판매·그 밖): 상반기 1/1~6/30 · 하반기 7/1~12/31
-     *   · 관리감독자: 1/1~12/31
-     * 종전에는 채용일(관리감독자는 지정일) 기준 개인별 6·12개월로 셌다 — 사람마다 마감이 달라
-     * 독촉·D-day 가 흩어지고, 집합교육 한 번이 누구에게는 이번 주기·누구에게는 지난 주기가 됐다.
+     * «연간»으로 정한다. 주기를 세는 방식이 기준일에 따라 둘이다 —
+     *   · 기준일 < CYCLE_SWITCH (지금 운영 규칙): 현업근로자 = 채용일부터 6개월씩 · 관리감독자 = 지정일부터 12개월씩
+     *   · 기준일 ≥ CYCLE_SWITCH: 현업근로자 = 상반기 1/1~6/30 · 하반기 7/1~12/31 · 관리감독자 = 1/1~12/31
+     * 전환 시점은 기획 답신(2026-11-13, «답신-개발-위험성평가·교육-확인요청» 3-2)이 정했다 — 2026 하반기는
+     * 지금 주기 그대로 마친다(반기 중간에 바꾸면 이미 들은 시간이 이수로 인정되지 않는 사람이 생긴다).
+     * 달력 반기 쪽:
      * · 기간 중간에 채용·지정된 사람도 **그 기간의 시간 전체**를 채운다 — 별표4 에 비례 감면 규정이 없다
      *   (채용 첫 기간을 따로 빼지 않는다. 담양군이 달리 정하면 여기만 고친다).
      * · 관리감독자는 지정일이 있어야 판정한다(X-4 · EXT-12) — 없으면 «지정일 미등록»(판정 불가).
      *   지정일·채용일이 기준일보다 뒤면 아직 대상이 아니다(판정 불가).
      * 이수현황·독촉·D-day·내 할일 독촉 카드·대시보드가 모두 이 함수 하나를 본다. */
+    var CYCLE_SWITCH = '2027-01-01';
     function fmtDate(d) {
         var y = d.getFullYear(), m = d.getMonth() + 1, dd = d.getDate();
         return y + '-' + (m < 10 ? '0' : '') + m + '-' + (dd < 10 ? '0' : '') + dd;
     }
+    function addMonths(d, months) {
+        return new Date(d.getFullYear(), d.getMonth() + months, d.getDate());
+    }
     function isoDays(a, b) {   /* b - a (일) — 둘 다 'YYYY-MM-DD' */
         return Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000);
     }
-    function cycleOf(worker, dateISO) {
+    /* 지금 운영 규칙 — 채용일(관리감독자는 지정일)부터 개인별 6·12개월 (2026-11-13 이전 구현 그대로) */
+    function personalCycleOf(worker, dateISO) {
+        var anchorISO = worker.category === 'SUPERVISOR' ? worker.designatedAt : worker.hireDate;
+        if (!anchorISO) return { valid: false, reason: worker.category === 'SUPERVISOR' ? '지정일 미등록' : '채용일 미등록', start: '', end: '', label: '', index: 0, months: 0, daysToEnd: null };
+        var hire = new Date(anchorISO);
+        if (isNaN(hire.getTime())) return { valid: false, reason: '기준일 오류', start: '', end: '', label: '', index: 0, months: 0, daysToEnd: null };
+        var today = new Date(dateISO || todayIso());
+        var cycleMonths = worker.category === 'SUPERVISOR' ? 12 : 6;
+        var months = (today.getFullYear() - hire.getFullYear()) * 12 + (today.getMonth() - hire.getMonth());
+        if (today.getDate() < hire.getDate()) months--;
+        if (months < 0) months = 0;
+        var cycleIndex = Math.floor(months / cycleMonths);
+        var start = addMonths(hire, cycleIndex * cycleMonths);
+        var endExclusive = addMonths(hire, (cycleIndex + 1) * cycleMonths);
+        var end = new Date(endExclusive.getTime() - 86400000);
+        var dToEnd = Math.round((end - today) / 86400000);
+        return { valid: true, reason: '', start: fmtDate(start), end: fmtDate(end), label: '', index: cycleIndex, months: cycleMonths, daysToEnd: dToEnd };
+    }
+    /* 2027-01-01부터 — 달력 반기(현업근로자) · 달력 연도(관리감독자) */
+    function calendarCycleOf(worker, day) {
         var sup = worker.category === 'SUPERVISOR';
         var bad = function (why) { return { valid: false, reason: why, start: '', end: '', label: '', index: 0, months: 0, daysToEnd: null }; };
         if (sup && !worker.designatedAt) return bad('지정일 미등록');
         var anchor = sup ? worker.designatedAt : (worker.hireDate || '');
         if (anchor && !/^\d{4}-\d{2}-\d{2}$/.test(anchor)) return bad('기준일 오류');
-        var day = String(dateISO || todayIso()).slice(0, 10);
         if (anchor && anchor > day) return bad(sup ? '지정 전' : '채용 전');
         var y = day.slice(0, 4), first = +day.slice(5, 7) <= 6;
         var start = sup ? y + '-01-01' : (first ? y + '-01-01' : y + '-07-01');
@@ -64,6 +88,10 @@
         var label = sup ? y + '년' : y + (first ? ' 상반기' : ' 하반기');
         return { valid: true, reason: '', start: start, end: end, label: label,
                  index: sup ? 0 : (first ? 1 : 2), months: sup ? 12 : 6, daysToEnd: isoDays(day, end) };
+    }
+    function cycleOf(worker, dateISO) {
+        var day = String(dateISO || todayIso()).slice(0, 10);
+        return day < CYCLE_SWITCH ? personalCycleOf(worker, day) : calendarCycleOf(worker, day);
     }
     /* 정기교육 필요시간 — 한 주기(현업근로자 반기 · 관리감독자 연간)에 채울 시간 (별표4) */
     function requiredHours(worker /*, dateISO */) {
@@ -88,7 +116,7 @@
         return 8;
     }
     /* 인정시간: records를 kind로 필터 후 hours 단순 합산.
-       정기교육 인정은 현재 주기(cycleOf — 달력 반기·연도) 안에서 완료된 REG만. */
+       정기교육 인정은 현재 주기(cycleOf — 2026년까지 개인별 · 2027년부터 달력 반기·연도) 안에서 완료된 REG만. */
     function acknowledgedRegHours(workerId, dateISO) {
         var w = workerOf(workerId); if (!w) return 0;
         var c = cycleOf(w, dateISO);
@@ -256,8 +284,8 @@
         mk('w_con_c4', '박서연', 'construct', 'FIELD', 'CONTRACT', '2026-09-14', 6, 'EXCEL');
         /* 재난안전과 */
         mk('w_safety_c1', '조안나', 'safety', 'OFFICE', 'CONTRACT', '2025-04-01', 12, 'HR');
-        /* 재난안전과 현업 — 7~9월 현장 배치로 집합교육에 오지 못해 하반기 정기교육이 모자라다. 11월 교육(3h)을 종료 처리해
-           이수해도 12h 에 못 미쳐 과장·팀장의 «재난안전과 미이수자 독촉»(ES-14) 실습 대상이 남는다 */
+        /* 재난안전과 현업 — 새 주기(채용일 기준 11-12~)가 막 시작해 미이수다. 실습으로 집합교육 한 건(3h)을 이수해도 12h 에 못 미쳐
+           과장·팀장의 «재난안전과 미이수자 독촉»(ES-14) 실습 대상이 남는다 */
         mk('w_safety_c2', '송민재', 'safety', 'FIELD', 'CONTRACT', '2025-05-12', 12, 'HR');
         /* 문화체육과 — 체육·문화시설 */
         mk('w_cul_c1', '이하영', 'culture', 'FIELD', 'CONTRACT', '2025-05-01', 12, 'HR');
@@ -365,8 +393,6 @@
         var DEPT_ORDER = ['safety', 'plan', 'acct', 'finance', 'culture', 'env', 'health', 'construct', 'facility', 'water', 'town_damyang'];
         /* 매달 빠짐없이 참석한 사람 — 운영 담당(박안전)과 부서 교육 담당 */
         var ALWAYS = { w_u_jjt2: 1, w_u_plan2: 1 };
-        /* 그 달 집합교육에 오지 못한 사람 — 현장 배치 */
-        var AWAY = { w_safety_c2: { '07': 1, '08': 1, '09': 1 } };
         var fieldPool = workers.filter(function (w) { return w.category !== 'SUPERVISOR'; });
 
         MONTHLY.forEach(function (mm) {
@@ -398,7 +424,6 @@
                 /* 가끔 등록부를 올리지 않은 달이 있다(그 부서는 그 달 이수 0) */
                 if (!open && dept !== 'safety' && dept !== 'env' && hash01(cid + dept + 'skip') < 0.1) return;
                 var ids = fieldPool.filter(function (w) {
-                    if (AWAY[w.id] && AWAY[w.id][mm.m]) return false;
                     return w.deptId === dept && w.hireDate <= mm.date && (ALWAYS[w.id] || hash01(cid + w.id) < (RATE[dept] || 0.6));
                 }).map(function (w) { return w.id; });
                 if (!ids.length) return;
@@ -591,7 +616,9 @@
 
         /* ───────── 6. 실시 결과 공문 — 온나라로 보낸 기록 ─────────
          * 상태는 연계 회신으로 바뀐 값이다. 6월은 한 번 반려돼(붙임 누락) 고쳐 다시 보냈다.
-         * 공공시설사업소 자체교육은 반려된 채 다시 보내기 전이다(잠금 풀림). 11월 4일 이후 끝난 교육은 아직 기안 전이다. */
+         * 공공시설사업소 자체교육은 반려된 채 다시 보내기 전이다(잠금 풀림). 11월 4일 이후 끝난 교육은 아직 기안 전이다.
+         * 기안은 전부 재난안전과 박안전이다 — 부서가 등록한 자체·채용시·기타 교육도 실시 결과 공문은 재난안전과가 쓴다
+         * (2026-11-13 기획 답신 3-3 «지금대로»). */
         var C = {}; courses.forEach(function (c) { C[c.id] = c; });
         var MDOC = {
             '01': ['2026-01-27', '결재완료'], '02': ['2026-02-24', '결재완료'], '03': ['2026-03-24', '결재완료'],
@@ -604,18 +631,18 @@
         pend.push({ c: C['C-M06'], at: '2026-06-26', by: '박안전', st: '결재완료' });     /* 반려 뒤 다시 보냄 */
         pend.push({ c: sr1, at: '2026-04-02', by: '박안전', st: '결재완료' });
         pend.push({ c: sr2, at: '2026-11-05', by: '박안전', st: '기안함 전송' });
-        pend.push({ c: e5, at: '2026-03-20', by: '정환경', st: '결재완료' });
-        pend.push({ c: e1, at: '2026-04-10', by: '하정수', st: '결재완료' });
-        pend.push({ c: e3, at: '2026-05-26', by: '하정수', st: '결재완료' });
+        pend.push({ c: e5, at: '2026-03-20', by: '박안전', st: '결재완료' });
+        pend.push({ c: e1, at: '2026-04-10', by: '박안전', st: '결재완료' });
+        pend.push({ c: e3, at: '2026-05-26', by: '박안전', st: '결재완료' });
         pend.push({ c: se1, at: '2026-04-27', by: '박안전', st: '결재완료' });     /* 관리감독자 기타교육 — 재난안전과가 등록·기안 */
-        pend.push({ c: e6, at: '2026-09-14', by: '이보건', st: '결재완료' });
-        pend.push({ c: hWat3, at: '2026-01-20', by: '하정수', st: '결재완료' });
-        pend.push({ c: hEnv3, at: '2026-02-03', by: '정환경', st: '결재완료' });
-        pend.push({ c: hCon4, at: '2026-09-17', by: '박현장', st: '결재완료' });
-        pend.push({ c: sCul, at: '2026-06-22', by: '한지훈', st: '결재완료' });
-        pend.push({ c: sEnv, at: '2026-09-29', by: '정환경', st: '결재완료' });
-        pend.push({ c: sFac, at: '2026-10-13', by: '한담당', st: '반려' });
-        pend.push({ c: sWat, at: '2026-10-26', by: '하정수', st: '결재중' });
+        pend.push({ c: e6, at: '2026-09-14', by: '박안전', st: '결재완료' });
+        pend.push({ c: hWat3, at: '2026-01-20', by: '박안전', st: '결재완료' });
+        pend.push({ c: hEnv3, at: '2026-02-03', by: '박안전', st: '결재완료' });
+        pend.push({ c: hCon4, at: '2026-09-17', by: '박안전', st: '결재완료' });
+        pend.push({ c: sCul, at: '2026-06-22', by: '박안전', st: '결재완료' });
+        pend.push({ c: sEnv, at: '2026-09-29', by: '박안전', st: '결재완료' });
+        pend.push({ c: sFac, at: '2026-10-13', by: '박안전', st: '반려' });
+        pend.push({ c: sWat, at: '2026-10-26', by: '박안전', st: '결재중' });
         pend.sort(function (a, b) { return a.at.localeCompare(b.at); });
         var seq = 2600;
         pend.forEach(function (p) {
@@ -642,11 +669,11 @@
 
         /* ───────── 7. 미이수 독촉 이력(9~11월) — 재난안전과 박안전이 보냈다 ───────── */
         var reminders = [
-            { at: '2026-09-15 10:05', by: SAFETY, deptId: 'culture', workerIds: ['w_cul_c1'], memo: '하반기 정기교육 12시간 중 5시간 · 10월 집합교육(10-16) 참석 요청' },
-            { at: '2026-09-25 10:20', by: SAFETY, deptId: 'town_damyang', workerIds: ['w_twn_c1'], memo: '하반기 정기교육 12시간 중 5시간 · 12월 말 반기 종료 전 보충 요청' },
-            { at: '2026-10-19 14:05', by: SAFETY, deptId: 'facility', workerIds: ['w_fac_c1', 'w_u_fac2'], memo: '하반기 정기교육 미달 · 11월 집합교육 참석 요청' },
-            { at: '2026-10-30 09:40', by: SAFETY, deptId: 'health', workerIds: ['w_hlth_c1'], memo: '하반기 정기교육 12시간 중 11시간 · 부서 자체교육 계획 회신 요청' },
-            { at: '2026-11-06 16:15', by: SAFETY, deptId: 'construct', workerIds: ['w_con_c4'], memo: '하반기 정기교육 12시간 중 9시간 · 11월 집합교육(11-11) 참석 요청' }
+            { at: '2026-09-15 10:05', by: SAFETY, deptId: 'culture', workerIds: ['w_u_cul2'], memo: '정기교육 6시간 중 3시간 · 10월 집합교육(10-16) 참석 요청' },
+            { at: '2026-09-25 10:20', by: SAFETY, deptId: 'town_damyang', workerIds: ['w_twn_c1'], memo: '11월 말 주기 종료 예정 · 정기교육 보충 요청' },
+            { at: '2026-10-19 14:05', by: SAFETY, deptId: 'facility', workerIds: ['w_fac_c1', 'w_u_fac3'], memo: '정기교육 미달 · 11월 집합교육 참석 요청' },
+            { at: '2026-10-30 09:40', by: SAFETY, deptId: 'health', workerIds: ['w_hlth_c1'], memo: '정기교육 12시간 중 3시간 · 부서 자체교육 계획 회신 요청' },
+            { at: '2026-11-06 16:15', by: SAFETY, deptId: 'construct', workerIds: ['w_con_c1', 'w_con_c2'], memo: '12시간 중 9시간 · 11월 집합교육(11-11) 참석 요청' }
         ];
         return {
             seqW: 100, seqC: 30, seqR: 30,
@@ -1512,7 +1539,7 @@
         lastSessionDate: lastSessionDate, enrollDue: enrollDue, enrollOpen: enrollOpen, enrollDays: enrollDays,
         groupHoursConflicts: groupHoursConflicts,
         /* 계산 */
-        cycleOf: cycleOf, requiredHours: requiredHours, hireHours: hireHours, hireAnchor: hireAnchor,
+        cycleOf: cycleOf, CYCLE_SWITCH: CYCLE_SWITCH, requiredHours: requiredHours, hireHours: hireHours, hireAnchor: hireAnchor,
         etcMinHours: etcMinHours, etcShortfall: etcShortfall, isShortTermWorker: isShortTermWorker,
         acknowledgedRegHours: acknowledgedRegHours, hireStatus: hireStatus,
         statusRow: statusRow, deptSummary: deptSummary,

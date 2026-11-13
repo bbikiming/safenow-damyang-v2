@@ -27,7 +27,7 @@
     var E = function () { return global.DYEDU; };
     function esc(s) { return V().esc(String(s == null ? '' : s)); }
 
-    var SKEY = 'dy-edu-doc-v3';      /* 교육 공문 저장 — v2: 1~10월 실시 결과 공문 예시를 처음에 채운다 (2026-11-13) */
+    var SKEY = 'dy-edu-doc-v4';      /* 교육 공문 저장 — v2: 1~10월 실시 결과 공문 예시를 처음에 채운다 · v4: 예시 공문 기안자를 전부 재난안전과로(답신 3-3) (2026-11-13) */
     var LKEY = 'dy-edu-docline-v1';  /* 결재선 */
 
     /* ===================== 저장 ===================== */
@@ -137,24 +137,12 @@
             return { ok: true };
         },
 
-        /* 기안·상신 **권한** — `DYROLE.canAct` 한 곳에서만 판정한다(CLAUDE.md §12).
-         *   담당자(staff)만 · 재난안전과 담당자는 전 부서 · 그 밖은 자기 부서 건만.
-         *
-         * **등록 주체 = 기안 주체**다. 자체·기타·채용시 교육은 각 과가 직접 실시하고
-         * 등록하므로(§4) 그 과가 자기 실시 결과를 보고할 수 있어야 한다. 재난안전과로만
-         * 좁히면 40개 과의 공문을 주관부서가 대필하게 되고, 등록한 부서는 자기 교육의
-         * 결과를 영영 보고하지 못한다.
-         *
-         * 위험성평가 공문이 '주관부서만'인 것과 규칙이 갈리는 것은 결함이 아니라
-         * **도메인이 실제로 다르기 때문**이다 — 위험성평가는 주관부서가 총괄해
-         * 내려보내지만, 교육은 각 과가 실시한다.
-         *
-         * 부서가 비어 있는 건(집합교육·여러 부서를 묶은 채용시교육)은 재난안전과가 연
-         * 것이므로 주관부서 담당자만 기안한다. **이건 저절로 되지 않는다** — 빈 부서를
-         * canAct('') 에 그대로 넘기면 «부서 없는 전사 항목»으로 읽혀 담당자 전원이
-         * 통과했다(부서 담당자에게 집합교육 [공문 기안]이 뜨던 결함, 2026-09-28).
-         * 소관 부서 환원은 DYEDU.canActCourse 한 곳에서 한다 — 수정·삭제와 같은 판정이다.
-         * 관리·감독 계층(군수·과장·소장)은 어느 경우에도 조회만 한다. */
+        /* 기안·상신 **권한** — 재난안전과 담당자만 (2026-11-13 기획 답신 3-3 «지금대로»).
+         * 실시 결과 공문은 집합·자체·채용시·기타 어느 교육이든 **재난안전과가 기안한다** — 운영 중인
+         * 시스템이 그렇게 돌고 있고, 확정본의 «그 교육을 등록한 부서 담당자 + 재난안전과»는 흐름 전환에
+         * 필요한 것이 아니어서 거뒀다. 판정은 `DYROLE.canAct(OWNER_DEPT)`(staff · 재난안전과) 한 줄이고
+         * 화면(control)·골격(기안·미리보기·확인·보내기 네 경로)이 아래 지역 함수 하나를 본다.
+         * 관리·감독 계층(군수·과장·팀장·소장)은 어느 경우에도 조회만 한다. */
         canDraft: function (c) { return canDraft(c); },
 
         /* 본문 삽입 조각 — 문장을 지어내지 않고 **수치만** 건넨다 */
@@ -227,26 +215,24 @@
     });
 
     /* 기안·상신 권한 — 골격(cfg.canDraft)과 화면(control)이 **같은 함수**를 본다.
-       두 곳이 따로 판정하면 버튼은 보이는데 눌러도 거절되는 상태가 생긴다. */
+       두 곳이 따로 판정하면 버튼은 보이는데 눌러도 거절되는 상태가 생긴다.
+       재난안전과 담당자만 기안한다(답신 3-3) — 등록 부서와 무관하다. */
     function canDraft(c) {
         var R = global.DYROLE;
         if (!c || !R || !R.canAct) return { ok: true };   /* 롤 스위처 없는 환경은 종전대로 */
-        /* 등록 주체 = 기안 주체 — 수정·삭제와 같은 판정(부서 없는 건은 주관부서 소관) */
-        if (E().canActCourse(c)) return { ok: true };
+        var owner = R.OWNER_DEPT || 'safety';
+        var p = R.current ? R.current() : null;
+        if (p && p.tier === 'staff' && p.deptId === owner && R.canAct(owner)) return { ok: true };
         return { ok: false, why: draftDenyNote(c) };
     }
 
-    /* 차단 사유는 한 곳에서만 낸다 — 계층마다 막히는 이유가 다르므로 그 이유를 말한다.
-       "재난안전과만 가능합니다"로 뭉뚱그리면 등록 부서 담당자에게 거짓말이 된다. */
-    function draftDenyNote(c) {
+    /* 차단 사유는 한 곳에서만 낸다 — 누가 기안하는지를 말한다. */
+    function draftDenyNote(/* c */) {
         var p = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
         if (p && p.tier !== 'staff') {
-            return '관리·감독 계층은 공문을 조회만 합니다 — 기안은 담당자가 합니다.';
+            return '관리·감독 계층은 공문을 조회만 합니다 — 실시 결과 공문은 재난안전과 담당자가 기안합니다.';
         }
-        var dn = c && c.deptId ? E().deptName(c.deptId) : '';
-        return dn
-            ? '이 교육을 등록한 ' + dn + ' 담당자 또는 재난안전과 담당자가 기안합니다.'
-            : '여러 부서를 묶은 건이라 재난안전과 담당자가 기안합니다.';
+        return '실시 결과 공문은 재난안전과 담당자가 기안합니다.';
     }
 
     /* 종료 처리 전 안내 — 기안 조건(ready)과 화면이 **같은 문장**을 쓴다 */
@@ -302,21 +288,25 @@
      * 결재 이력 화면(edu-approval.html)은 **여기만 읽는다** — 상신을 이 모듈이 하므로
      * 이력도 이 모듈이 낸다. 종전 구 축(EDUAPV)을 읽으면 공문을 올려도 이력이 0건으로
      * 남는다(실제로 그랬다). 화면이 스토어 구조를 직접 파헤치지 않도록 형태를 맞춰 준다. */
-    /* 이 공문을 볼 수 있는가 — 조회 범위(DYROLE.scope) 한 곳에서 판정한다(CLAUDE.md §12 · 운영 P01·P05).
-     * 부서가 등록한 교육(자체·채용시·기타)의 공문은 그 부서 것이다 — 범위 밖 부서 담당자에게는 목록에서 뺀다
-     * (채용시교육 공문 제목에는 사람 이름이 들어 있다). 부서가 비어 있는 전사 교육(집합·관리감독자 정기)은
-     * 모든 부서가 참석했으므로 목록에 두고, 별지의 다른 부서 이름만 가린다(annexes → personLabel). */
-    function canSeeDoc(c) {
+    /* 결재 이력을 볼 수 있는가 — **재난안전과 소속만** (2026-11-13 기획 답신 5장 «지금대로»).
+     * 공문 기안이 재난안전과 담당자만이라(3-3) 부서에 열 필요가 없다. 메뉴 권한 프로필도 같은 판정이다
+     * (adm-perm `MENU_PROFILE['edu-approval'] = 'ownerView'` — 재난안전과 부서 지정, 보기 전용).
+     * 과장·팀장·주무관 모두 소속으로 본다. 군수·다른 부서는 목록을 받지 않고 문서도 열지 않는다.
+     * (종전 «부서 소관 교육의 공문은 그 부서도 본다» 조회 범위 판정은 이 판정으로 대체돼 지웠다.
+     *  별지의 «#번호» 가리기는 남는다 — 교육 카드의 [문서 보기]로 다른 부서 사람이 별지를 열 수 있다.) */
+    function canViewHistory() {
         var R = global.DYROLE;
-        if (!c || !c.deptId || !R || !R.inScope) return true;
-        return R.inScope(c.deptId);
+        var p = R && R.current ? R.current() : null;
+        if (!p) return true;                                   /* 롤 스위처 없는 환경은 종전대로 */
+        return p.deptId === (R.OWNER_DEPT || 'safety');
     }
+    var HISTORY_DENY = '결재 이력은 재난안전과에서 봅니다 — 실시 결과 공문은 재난안전과 담당자가 기안해 온나라로 보냅니다.';
     function submissions() {
+        if (!canViewHistory()) return [];
         var d = store(), out = [];
         Object.keys(d.docs || {}).forEach(function (cid) {
             var arr = d.docs[cid] || [];
             var c = courseOf(cid);
-            if (!canSeeDoc(c)) return;
             arr.forEach(function (doc, i) {
                 out.push({
                     sid: doc.sid, no: doc.no, at: doc.at, status: doc.status,
@@ -341,14 +331,16 @@
             (d.docs[cid] || []).forEach(function (doc) { if (doc.sid === sid) hit = { cid: cid, doc: doc }; });
         });
         if (!hit) { V().toast('문서를 찾지 못했습니다.'); return; }
-        /* 목록에서 뺀 공문은 전역 호출로도 열지 않는다(§12 — 렌더에서만 지우면 뚫린다) */
-        if (!canSeeDoc(courseOf(hit.cid))) { V().toast('조회 범위 밖 부서의 공문입니다.'); return; }
+        /* 목록을 받지 않는 사람은 전역 호출로도 열지 않는다(§12 — 렌더에서만 지우면 뚫린다) */
+        if (!canViewHistory()) { V().toast(HISTORY_DENY); return; }
         T.openDoc(hit.cid, sid);
     }
 
     /* 화면이 권한을 재구현하지 않도록 판정을 그대로 내준다 */
     T.canDraftOf = canDraft;
     T.submissions = submissions;
+    T.canViewHistory = canViewHistory;
+    T.historyDenyNote = function () { return HISTORY_DENY; };
     T.openDocSid = openDocSid;
     T.control = control;
     T.lockOf = lockOf;

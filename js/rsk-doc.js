@@ -202,6 +202,28 @@
 
     /* ===================== 대상 데이터 ===================== */
     function assess(aid) { return D().assessmentOf(aid); }
+
+    /* ── 동결 예외 (2026-11-13 · 답신-개발-위험성평가·교육-확인요청-20261113-v1 §2-7) ──
+     * 이 모듈은 발주처 지시로 동결이다. **이 갈래만** 예외로 고쳤다 — 개선조치 0건으로 끝난 평가
+     * (평가 종결 · 요청받은 부서 모두 0건 입력 완료)의 «조치 대상 없음» 결과 공문이다.
+     *   · 본문 삽입 칩 = 답신의 한 줄(종결 사유 포함) 하나
+     *   · 붙임 없음 — 확인 결과표·사진철은 내용이 없고, 용역 통합 보고서는 온나라 붙임 한도(파일당 10MB)를 넘는다
+     *   · 지면에 별지(확인 결과표 · «확인 진행 중»)를 그리지 않는다 — 고른 관련 근거만 본문 아래에 찍는다
+     * 개선조치가 1건이라도 있는 평가(정상 갈래)는 한 글자도 바꾸지 않았다. 결재 회신 수동 기록도 그대로다(답신 1-3). */
+    function noAct(a) { return !!(a && D().noActionClosed && D().noActionClosed(a)); }
+    function noActSentence(a) {
+        var r = (a && a.noAction && a.noAction.reason) || '요청받은 부서 모두 조치할 것 없음';
+        return '용역 보고서 검토 결과 개선이 필요한 부서가 없어 조치 요청 없이 평가를 마칩니다(종결 사유: ' + r + ').';
+    }
+    function noActBasisHtml(src) {
+        var keys = (src && src.basis) || [];
+        if (!keys.length || !global.DYLAW) return '';
+        return '<div class="pdf-gm-annex-sub">관련 근거</div><ul class="pdf-list">' +
+            keys.map(function (k) {
+                var art = DYLAW.ARTICLES[k];
+                return '<li><b>' + esc(DYLAW.shortRef ? DYLAW.shortRef(k) : k) + '</b> ' + esc(art ? art.title : '') + '</li>';
+            }).join('') + '</ul>';
+    }
     function targetKey(aid) { return 'A|' + aid; }
 
     /* 부서별 확인 결과 — 문서 표·수치의 단일 출처. 결재용 별도 시드를 만들지 않는다. */
@@ -246,7 +268,7 @@
             F = {
                 aid: aid, docType: '내부결재',
                 title: '', to: '', body: '',
-                basis: [], attach: [
+                basis: [], attach: noAct(a) ? [] : [   /* 조치 대상 없음 — 붙임 없음(답신 2-7) */
                     { label: '부서별 개선조치 확인 결과표', auto: true, on: true },
                     { label: '개선 전·후 증빙 사진철', auto: true, on: true }
                 ],
@@ -305,6 +327,12 @@
             '<p class="file-hint">산업안전보건법 시행규칙 제37조의4에 따라 실시 시기·담당자, 참여자, 유해·위험요인, 위험성 결정 내용, 감소대책과 실시 결과를 기록하고 <b>3년간 보존</b>합니다.</p></div>';
     }
     function attachHtml() {
+        /* 조치 대상 없음 — 붙임 없이 보낸다(답신 2-7) */
+        if (noAct(assess(F.aid))) {
+            return '<div class="rskdoc-block"><label class="form-label">붙임</label>' +
+                '<p class="file-hint"><b>붙임 없이 보냅니다.</b> 확인 결과표·전후 사진철은 내용이 없고, ' +
+                    '용역 통합 보고서는 온나라 붙임 한도(파일당 10MB)를 넘어 붙이지 않습니다.</p></div>';
+        }
         var auto = F.attach.map(function (x, i) {
             return '<label class="rskdoc-ck"><input type="checkbox"' + (x.on ? ' checked' : '') +
                 ' onchange="DYRSKDOC.setAttach(' + i + ',this.checked)">' +
@@ -327,13 +355,18 @@
     function renderDraft() {
         var a = assess(F.aid); if (!a) return;
         var t = totals(a);
-        var chips = [
+        var na = noAct(a);
+        var chips = (na
+            /* 조치 대상 없음 — 답신 2-7 의 한 줄. 종결 사유는 사람이 친 값이라 JS 문자열로 한 번 더 막는다 */
+            ? [['조치 대상 없음 문장', noActSentence(a).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r?\n/g, ' ')]]
+            : [
             ['대상 부서 ' + t.depts + '개', '대상 부서 ' + t.depts + '개'],
             ['개선조치 ' + t.total + '건', '개선조치 ' + t.total + '건'],
             ['확인 완료 ' + t.ok + '건', '확인 완료 ' + t.ok + '건'],
             ['재제출 ' + t.re + '개 부서', '재제출 ' + t.re + '개 부서']
-        ].map(function (c) {
-            return '<button type="button" class="rskdoc-ins" onclick="DYRSKDOC.insert(\'' + esc(c[1]) + '\')">' +
+        ]).map(function (c) {
+            return '<button type="button" class="rskdoc-ins" onclick="DYRSKDOC.insert(\'' + esc(c[1]) + '\')"' +
+                (na ? ' title="' + esc(noActSentence(a)) + '"' : '') + '>' +
                 '＋ ' + esc(c[0]) + '</button>';
         }).join('');
 
@@ -375,7 +408,8 @@
                             x[1].replace(/\n/g, '\\n') + '\')">' + x[0] + '</button>';
                      }).join('') +
                 '</div>' +
-                '<div class="rskdoc-inslist"><span class="rskdoc-inslead">수치 삽입</span>' + chips + '</div>' +
+                '<div class="rskdoc-inslist"><span class="rskdoc-inslead">' + (na ? '문장 삽입' : '수치 삽입') + '</span>' + chips + '</div>' +
+                (na ? '<p class="file-hint">' + esc(noActSentence(a)) + '</p>' : '') +
                 '<p class="file-hint">표준 항목 체계는 <b>1. → 가. → 1) → 가)</b> 순이고 상위 항목보다 두 칸씩 들여 씁니다. ' +
                     '문서 끝의 <b>끝.</b> 표시는 붙임 유무에 따라 지면에서 자동으로 붙습니다.</p></div>' +
 
@@ -480,6 +514,7 @@
 
             /* ③ 본문 + ④ 붙임 */
             bodyHtml(src.body) +
+            (noAct(a) ? noActBasisHtml(src) : '') +   /* 조치 대상 없음 — 별지가 없어 고른 근거를 본문 아래에(답신 2-7) */
             attachHtmlDoc(attachNames(doc)) +
 
             /* ⑤ 발신명의 — 외부발송만 */
@@ -551,6 +586,8 @@
     }
 
     function paperHtml(a, doc) {
+        /* 조치 대상 없음 — 확인 결과표 별지를 그리지 않는다(«확인 진행 중»이 찍히던 자리 · 답신 2-7) */
+        if (noAct(a)) return paperMain(a, doc);
         return paperMain(a, doc) + paperAnnex(a, doc);
     }
 
@@ -591,7 +628,9 @@
                 '<table class="table-figma table-doc pdf-meta"><tbody>' +
                     '<tr><td class="k">문서</td><td><b>' + esc(F.title) + '</b></td></tr>' +
                     '<tr><td class="k">유형</td><td>' + esc(F.docType) + '</td></tr>' +
-                    '<tr><td class="k">대상</td><td>' + t.depts + '개 부서 · 개선조치 ' + t.total + '건 (확인 완료 ' + t.ok + '건)</td></tr>' +
+                    '<tr><td class="k">대상</td><td>' + (noAct(a)
+                        ? '조치 대상 없음 — ' + (a.depts || []).length + '개 부서 모두 지적사항 없음'
+                        : t.depts + '개 부서 · 개선조치 ' + t.total + '건 (확인 완료 ' + t.ok + '건)') + '</td></tr>' +
                     '<tr><td class="k">붙임</td><td>' + attachOn + '건</td></tr>' +
                     '<tr><td class="k">결재선</td><td>' + esc(lineText(L)) + '</td></tr>' +
                 '</tbody></table>' +

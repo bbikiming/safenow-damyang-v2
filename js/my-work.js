@@ -220,7 +220,9 @@
                         title: a.title + ' — 유해위험요인 설문조사표 작성·제출',
                         sub: (a.surveyReq ? '재난안전과 ' + a.surveyReq.at + ' 요청 · ' : '') + (dp.inspectDate ? '점검일 ' + dp.inspectDate + ' · ' : '') +
                              '양식 ' + (f || '미배포') +
-                             (done ? ' · 제출 ' + esc(dp.reportFile) : ''),
+                             (done ? ' · 제출 ' + esc(dp.reportFile) : '') +
+                             /* 기한이 지나도 보고서 등록 전이면 받는다(2026-11-13 답신 2-5) — 표시만 한다 */
+                             (D().surveyLate && D().surveyLate(a, dp) ? ' · 기한 지남 — 보고서 등록 전까지 제출할 수 있습니다' : ''),
                         due: a.surveyDue || dp.inspectDate || '',
                         status: done ? 'DONE' : 'IN_PROGRESS',
                         dept: dp.deptId, dept_label: D().deptName(dp.deptId),

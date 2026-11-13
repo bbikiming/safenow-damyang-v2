@@ -75,7 +75,7 @@
                 (E().canActCourse(c) && open ? '<button type="button" class="btn btn-primary" data-tour="close" onclick="EDURD.closeCourse()">교육 종료 처리</button>' : '');
         } else if (!lockOf(c.id) && canApply) {
             /* 종료 뒤 정정 — 잘못 올라간 등록부는 그 줄의 [이수 기록 정정]으로 빼고, 바른 명단은 이 버튼으로 다시 올린다 */
-            actions = '<button type="button" class="btn btn-outline" onclick="EDURD.openApply()" title="종료한 교육에 빠졌거나 정정한 부서의 등록부를 다시 올립니다">＋ 정정 등록부 올리기</button>';
+            actions = '<button type="button" class="btn btn-outline" onclick="EDURD.openApply()" title="종료 뒤 늦게 내는 부서나 정정한 부서의 등록부를 올립니다 — 실시 결과 공문을 보내기 전까지">＋ 등록부 추가</button>';
         }
 
         var sessions = E().courseSessions(c);
@@ -149,7 +149,7 @@
                 (enrollLock ? '<div class="check-notice">공문 <b>' + esc(enrollLock) + '</b> — 이 교육의 이수자 명단이 공문 붙임으로 나가 있어 등록을 취소할 수 없습니다. 온나라에서 반려·반송되면 다시 열립니다.</div>'
                     /* 종료 뒤 정정 길을 한 줄로 밝힌다 — 버튼 이름만으로는 무엇이 일어나는지 모른다 */
                     : (c.status === 'DONE' && canApply && allEnrolls.length)
-                    ? '<p class="file-hint" style="margin:0 0 8px;">등록부가 잘못됐으면 그 부서 줄의 [이수 기록 정정]으로 원래 등록부를 «정정됨»으로 남기고 이수시간을 뺀 뒤, [＋ 정정 등록부 올리기]로 바른 명단을 다시 올립니다. 실시 결과 공문을 온나라로 보내면 잠깁니다.</p>'
+                    ? '<p class="file-hint" style="margin:0 0 8px;">등록부가 잘못됐으면 그 부서 줄의 [이수 기록 정정]으로 원래 등록부를 «정정됨»으로 남기고 이수시간을 뺀 뒤, [＋ 등록부 추가]로 바른 명단을 다시 올립니다. 실시 결과 공문을 온나라로 보내면 잠깁니다.</p>'
                     : '') +
                 '<div class="edu-scroll"><table class="table-figma table-compact"><thead><tr>' +
                     '<th style="width:18%;">부서</th><th>참석자 명단</th><th style="width:9%;">인원</th><th style="width:10%;">실제 참석</th><th style="width:20%;">서명부</th><th style="width:12%;">등록일</th><th></th>' +
@@ -410,7 +410,7 @@
             '<p style="font-size:var(--fs-13);"><b>' + esc(E().deptName(deptId)) + '</b> · 등록 ' + cnt + '명</p>' +
             (c.status === 'DONE'
                 ? '<div class="check-notice" style="margin-top:10px;">원래 등록부는 지우지 않고 <b>«정정됨»</b>으로 남깁니다. 이 부서 ' + cnt + '명의 이 교육 이수시간만 빠집니다. ' +
-                  '바른 명단은 이어서 <b>[＋ 정정 등록부 올리기]</b>로 다시 올립니다.</div>' +
+                  '바른 명단은 이어서 <b>[＋ 등록부 추가]</b>로 다시 올립니다.</div>' +
                   '<div class="edu-modal-row"><label class="form-label" for="erd-cancel-reason">정정 사유 <span style="color:var(--status-danger-fg)">*</span></label><textarea class="form-textarea" id="erd-cancel-reason" rows="2"></textarea></div>'
                 : '<p style="font-size:var(--fs-12);color:var(--text-gray);margin-top:8px;">등록부와 서명부 파일이 삭제됩니다.</p>'),
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
@@ -436,7 +436,7 @@
             });
         }
         V().closeModal();
-        toast(r ? (c && c.status === 'DONE' ? E().deptName(deptId) + ' 이수 기록을 정정했습니다 — 바른 명단은 [＋ 정정 등록부 올리기]로 올립니다.' : E().deptName(deptId) + ' 등록부를 취소했습니다.') : '등록 내역이 없습니다.');
+        toast(r ? (c && c.status === 'DONE' ? E().deptName(deptId) + ' 이수 기록을 정정했습니다 — 바른 명단은 [＋ 등록부 추가]로 올립니다.' : E().deptName(deptId) + ' 등록부를 취소했습니다.') : '등록 내역이 없습니다.');
         render();
     }
 
@@ -452,7 +452,7 @@
         V().openModal('교육 종료 처리',
             '<p style="font-size:var(--fs-13);"><b>' + esc(c.desc) + '</b><br>등록 <b>' + enrolls.length + '개 부서 · ' + totalCnt + '명</b>에게 등록부별 실제 참석시간을 카운트합니다.</p>' +
             (early ? '<div class="check-notice" style="margin-top:8px;">아직 등록 기한(' + esc(due) + ') 전입니다. 지금 종료하면 그 뒤에 올리려던 부서는 이 교육 이수가 0 이 됩니다.</div>' : '') +
-            '<p style="font-size:var(--fs-12);color:var(--text-gray);margin-top:6px;">종료하면 등록부를 더 받지 않습니다. 종료한 뒤 등록부가 잘못된 것을 알면 그 부서 줄의 [이수 기록 정정]으로 이수시간을 빼고 [＋ 정정 등록부 올리기]로 다시 올립니다 — 실시 결과 공문을 온나라로 보내기 전까지만 됩니다.</p>',
+            '<p style="font-size:var(--fs-12);color:var(--text-gray);margin-top:6px;">종료하면 등록부를 더 받지 않습니다. 종료한 뒤 등록부가 잘못된 것을 알면 그 부서 줄의 [이수 기록 정정]으로 이수시간을 빼고 [＋ 등록부 추가]로 다시 올립니다 — 실시 결과 공문을 온나라로 보내기 전까지만 됩니다.</p>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="EDURD.doClose()">종료 처리</button>');
     }
