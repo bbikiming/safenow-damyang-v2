@@ -27,7 +27,7 @@
     var E = function () { return global.DYEDU; };
     function esc(s) { return V().esc(String(s == null ? '' : s)); }
 
-    var SKEY = 'dy-edu-doc-v2';      /* 교육 공문 저장 — v2: 1~10월 실시 결과 공문 예시를 처음에 채운다 (2026-11-13) */
+    var SKEY = 'dy-edu-doc-v3';      /* 교육 공문 저장 — v2: 1~10월 실시 결과 공문 예시를 처음에 채운다 (2026-11-13) */
     var LKEY = 'dy-edu-docline-v1';  /* 결재선 */
 
     /* ===================== 저장 ===================== */

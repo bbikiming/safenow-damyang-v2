@@ -137,7 +137,8 @@
      * 드롭존은 접근성 렌더러 DYV2.uploadDrop 만 사용(CLAUDE.md §2). */
     var ATTACH_SLOTS = {
         group: [
-            /* 참석자 명단(서명 포함) — 운영 화면과 같은 이름으로 맞춘다(2026-11-13 사용자 지시, 종전 «서명부 양식»).
+            /* 드롭 칸 굵은 글씨는 칸마다 «파일 첨부»로 같다(운영 화면과 같음 — 위 라벨이 칸 이름이다).
+             * 참석자 명단(서명 포함) — 운영 화면과 같은 이름으로 맞춘다(2026-11-13 사용자 지시, 종전 «서명부 양식»).
              * 교육 때 쓸 참석자 명단·출석부(서명란 포함)를 붙인다. 교육 뒤 부서가 서명받은 스캔본을 등록부로 올린다. */
             { key: 'roster',   label: '참석자 명단', note: '서명 포함', drop: '파일 첨부', sub: '참석자 명단·출석부' },
             { key: 'material', label: '교육 자료',   sub: '교육에 사용할 자료' }
@@ -171,7 +172,7 @@
             return '<div class="edu-modal-row"><label class="form-label">' + s.label +
                     (s.note ? ' <span class="edu-drop-sub">(' + s.note + ')</span>' : '') + '</label>' +
                 V().uploadDrop(
-                    '<b>' + (s.drop || s.label) + '</b> <span class="edu-drop-sub">' + s.sub + ' (클릭 또는 끌어놓기)</span>',
+                    '<b>' + (s.drop || '파일 첨부') + '</b> <span class="edu-drop-sub">' + s.sub + ' (클릭 또는 끌어놓기)</span>',
                     ns + '.addFile(\'' + s.key + '\')', { hint: true, style: 'padding:12px;' }) +
                 fileListHtml(F.files, ns, s.key, slots) +
             '</div>';

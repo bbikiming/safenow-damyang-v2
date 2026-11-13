@@ -325,7 +325,7 @@
                 courseId: c.id, at: at, status: status, docType: '내부결재',
                 title: c.date.slice(0, 4) + '년 안전보건교육 실시 결과 보고 — ' + c.desc, to: '',
                 /* 관련 근거는 본문에 쓰지 않는다 — 고른 근거(basis)를 지면의 «근거» 줄이 싣는다(DYDOC) */
-                body: '1. ' + c.desc + '을(를) 아래와 같이 실시하였기에 그 결과를 보고합니다.\n' +
+                body: '1. ' + c.desc + (global.DYV2 && global.DYV2.josa ? global.DYV2.josa(c.desc, '을', '를') : '을(를)') + ' 아래와 같이 실시하였기에 그 결과를 보고합니다.\n' +
                       '  가. 일시: ' + (c.sessions && c.sessions.length > 1 ? c.sessions[0].date + ' 외 ' + (c.sessions.length - 1) + '일' : c.date + ' ' + c.time + '~' + (c.endTime || endOf(c.time, c.hours))) + ' (' + c.hours + '시간)\n' +
                       '  나. 장소: ' + (c.place || '-') + '\n' +
                       '  다. 강사: ' + (c.instructor || '-') + '\n' +
@@ -1004,7 +1004,7 @@
         if (pop) return pop;
         var hi = enrollHoursIssue(o);
         if (hi) return hi;
-        if (hasEnroll(o.courseId, o.deptId)) return deptName(o.deptId) + '은(는) 이미 등록된 부서입니다 — 등록 취소 후 다시 등록하세요.';
+        if (hasEnroll(o.courseId, o.deptId)) return deptName(o.deptId) + (global.DYV2 && global.DYV2.josa ? global.DYV2.josa(deptName(o.deptId), '은', '는') : '은(는)') + ' 이미 등록된 부서입니다 — 등록 취소 후 다시 등록하세요.';
         if (c && c.status === 'OPEN' && isGroupCourse(c) && !enrollOpen(c)) return '교육이 끝난 뒤(' + lastSessionDate(c) + '부터) 참석자 등록부를 올립니다.';
         return '';
     }

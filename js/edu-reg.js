@@ -449,7 +449,7 @@
                    (기획확인 4차 D-1, 2026-10-06). 고른 뒤에는 파일명과 [×]로 바꾼다. 서명부는 한 파일이라 안내도 «1개» */
                 (G.signFile
                     ? '<span style="color:var(--main-dark);font-weight:var(--fw-bold);font-size:var(--fs-12);">' + esc(G.signFile) + '</span> ' +
-                      '<button type="button" class="btn btn-sm btn-outline" onclick="EDUR.applyClearSign()" aria-label="서명파일 지우기">×</button>' +
+                      '<button type="button" class="btn btn-sm btn-outline" onclick="EDUR.applyClearSign()" aria-label="서명부 지우기">×</button>' +
                       EDUFORM.oneFile(V().fileHint())
                     : EDUFORM.oneFile(V().uploadDrop('<b>서명부 스캔을 끌어다 놓거나 눌러서 선택</b>', 'EDUR.applyAttachSign()', { hint: true }))) +
             '</div>';
@@ -479,7 +479,7 @@
         if (!G.signFile) { toast('서명부 스캔을 올려 주세요 (필수).'); return; }
         /* 같은 부서가 두 번 쌓이면 이수기록이 이중으로 붙는다 — 정정은 취소 후 재등록 */
         if (E().hasEnroll(G.courseId, G.deptId)) {
-            toast(E().deptName(G.deptId) + '은(는) 이미 등록된 부서입니다 — 등록 취소 후 다시 등록하세요.');
+            toast(E().deptName(G.deptId) + V().josa(E().deptName(G.deptId), '은', '는') + ' 이미 등록된 부서입니다 — 등록 취소 후 다시 등록하세요.');
             return;
         }
         /* 저장 여부는 데이터 계층이 정한다(중복 부서·모집단 불일치 — 운영 E19).

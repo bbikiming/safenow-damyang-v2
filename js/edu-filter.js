@@ -11,7 +11,7 @@
    사용:
      EDUFILTER.bar([
        { type:'search', id:'er-q', value:S.q, placeholder:'교육명·강사·장소', on:"EDUR.setF('q', this.value)" },
-       { type:'select', id:'er-st', value:S.st, label:'상태', options:[['','상태 전체'],['OPEN','신청 접수 중']], on:"EDUR.setF('st', this.value)" },
+       { type:'select', id:'er-st', value:S.st, label:'상태', options:[['','상태 전체'],['OPEN','진행 중']], on:"EDUR.setF('st', this.value)" },
        { type:'check',  id:'er-x',  value:S.x, label:'미달자만', on:"EDUR.setF('x', this.checked?1:'')" },
      ], { count:list.length, unit:'건', reset:'EDUR.resetF()', actions:'<button …>' })
 

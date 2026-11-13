@@ -227,7 +227,7 @@
                    (기획확인 4차 D-1, 2026-10-06). 고른 뒤에는 파일명과 [×]로 바꾼다. */
                 (G.signFile
                     ? '<span style="color:var(--main-dark);font-weight:var(--fw-bold);font-size:var(--fs-12);">' + esc(G.signFile) + '</span> ' +
-                      '<button type="button" class="btn btn-sm btn-outline" onclick="EDURD.applyClearSign()" aria-label="서명파일 지우기">×</button>' +
+                      '<button type="button" class="btn btn-sm btn-outline" onclick="EDURD.applyClearSign()" aria-label="서명부 지우기">×</button>' +
                       FORM().oneFile(V().fileHint())
                     : FORM().oneFile(V().uploadDrop('<b>서명부 스캔을 끌어다 놓거나 눌러서 선택</b>', 'EDURD.applyAttachSign()', { hint: true }))) +
             '</div>';
@@ -258,7 +258,7 @@
         /* 같은 부서가 두 번 쌓이면 이수기록이 이중으로 붙어 이수 판정과 공문 수치가
            함께 틀어진다. 인원·서명파일 정정은 신청 취소 후 재등록 경로다. */
         if (E().hasEnroll(state.courseId, G.deptId)) {
-            toast(E().deptName(G.deptId) + '은(는) 이미 등록된 부서입니다 — 등록 취소 후 다시 등록하세요.');
+            toast(E().deptName(G.deptId) + V().josa(E().deptName(G.deptId), '은', '는') + ' 이미 등록된 부서입니다 — 등록 취소 후 다시 등록하세요.');
             return;
         }
         /* 저장 여부는 데이터 계층이 정한다(중복 부서·모집단 불일치 — 운영 E19).
@@ -327,7 +327,7 @@
             '<div class="edu-modal-row"><label class="form-label">서명부 스캔 (한 파일) <span style="color:var(--status-danger-fg)">*</span></label>' +
                 (B.signFile
                     ? '<span style="color:var(--main-dark);font-weight:var(--fw-bold);font-size:var(--fs-12);">' + esc(B.signFile) + '</span> ' +
-                      '<button type="button" class="btn btn-sm btn-outline" onclick="EDURD.bulkClearSign()" aria-label="서명파일 지우기">×</button>' + FORM().oneFile(V().fileHint())
+                      '<button type="button" class="btn btn-sm btn-outline" onclick="EDURD.bulkClearSign()" aria-label="서명부 지우기">×</button>' + FORM().oneFile(V().fileHint())
                     : FORM().oneFile(V().uploadDrop('<b>서명부 스캔을 끌어다 놓거나 눌러서 선택</b>', 'EDURD.bulkAttachSign()', { hint: true }))) +
             '</div>';
         V().openModal('참석자 일괄 등록', body,
