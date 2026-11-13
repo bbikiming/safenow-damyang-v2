@@ -24,7 +24,7 @@
                             </select>
                         </div>
                         <div class="form-group"><label class="form-label" for="report-from">시작일 <span class="req">*</span></label><input class="form-input" id="report-from" type="date" value="2026-01-01" onchange="updateReportPreview()"></div>
-                        <div class="form-group"><label class="form-label" for="report-to">종료일 <span class="req">*</span></label><input class="form-input" id="report-to" type="date" value="2026-06-30" onchange="updateReportPreview()"></div>
+                        <div class="form-group"><label class="form-label" for="report-to">종료일 <span class="req">*</span></label><input class="form-input" id="report-to" type="date" value="2026-10-31" onchange="updateReportPreview()"></div>
                         <div class="form-group" id="report-target-group" style="display:none;">
                             <div id="report-person-fields">
                                 <label class="form-label" for="report-person">발급 대상자 <span class="req">*</span></label>
@@ -46,7 +46,7 @@
             </div>
             <div class="card">
                 <div class="card-header">
-                    <span class="card-title" id="report-preview-title">총괄보고서 미리보기 — 2026-01-01 ~ 2026-06-30</span>
+                    <span class="card-title" id="report-preview-title">총괄보고서 미리보기 — 2026-01-01 ~ 2026-10-31</span>
                     <div style="display:flex; gap:8px;">
                         <button class="btn btn-secondary btn-sm" onclick="reportAction('PDF 출력')">PDF 출력</button>
                         <!-- 결재 버튼은 **보고서 계열에만** 나타난다. 증명서(개인 이수 확인서·
@@ -61,8 +61,8 @@
                         <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none;">
                             <span style="font-size:var(--fs-38); font-weight:700; color:var(--brand-100); transform:rotate(-24deg); white-space:nowrap;">담양군 대외주의 · WATERMARK</span>
                         </div>
-                        <p id="report-document-heading" style="text-align:center; font-size:var(--fs-18); font-weight:700; margin-bottom:6px;">2026-01-01 ~ 2026-06-30 중대재해예방 총괄보고서</p>
-                        <p style="text-align:center; font-size:var(--fs-12); color:var(--text-gray); margin-bottom:26px;">담양군 재난안전과 중대재해팀 · 출력일 <span id="report-issued-at">2026-06-11</span> · 발급번호 <b id="report-issue-number">DY-2026-0004</b></p>
+                        <p id="report-document-heading" style="text-align:center; font-size:var(--fs-18); font-weight:700; margin-bottom:6px;">2026-01-01 ~ 2026-10-31 중대재해예방 총괄보고서</p>
+                        <p style="text-align:center; font-size:var(--fs-12); color:var(--text-gray); margin-bottom:26px;">담양군 재난안전과 중대재해팀 · 출력일 <span id="report-issued-at">2026-11-13</span> · 발급번호 <b id="report-issue-number">DY-2026-0009</b></p>
                         <table class="table-figma" style="margin-bottom:20px;">
                             <thead><tr><th>구분</th><th>내용</th></tr></thead>
                             <tbody id="report-preview-body">
@@ -85,6 +85,11 @@
                     <table class="table-figma">
                         <thead><tr><th>발급번호</th><th>보고서</th><th>출력일</th><th>출력자</th></tr></thead>
                         <tbody id="report-history-body">
+                            <tr><td>DY-2026-0008</td><td style="font-weight:600;">개선조치 현황 보고서</td><td>2026-11-09</td><td>박안전</td></tr>
+                            <tr><td>DY-2026-0007</td><td style="font-weight:600;">개인 안전보건교육 이수 확인서</td><td>2026-10-27</td><td>김안전</td></tr>
+                            <tr><td>DY-2026-0006</td><td style="font-weight:600;">3분기 총괄보고서</td><td>2026-10-08</td><td>박안전</td></tr>
+                            <tr><td>DY-2026-0005</td><td style="font-weight:600;">의무이행 점검 결과 보고서 (상반기)</td><td>2026-07-15</td><td>박안전</td></tr>
+                            <tr><td>DY-2026-0004</td><td style="font-weight:600;">상반기 총괄보고서</td><td>2026-07-09</td><td>김중대</td></tr>
                             <tr><td>DY-2026-0003</td><td style="font-weight:600;">1분기 총괄보고서</td><td>2026-04-05</td><td>박안전</td></tr>
                             <tr><td>DY-2026-0002</td><td style="font-weight:600;">2025년 연간 총괄보고서</td><td>2026-01-12</td><td>김중대</td></tr>
                             <tr><td>DY-2025-0001</td><td style="font-weight:600;">의무이행 점검 결과 보고</td><td>2025-12-28</td><td>박안전</td></tr>
@@ -98,7 +103,7 @@
                 <div class="card-header"><span class="card-title">발급번호 진위확인</span></div>
                 <div class="card-body">
                     <div style="display:flex;gap:8px;max-width:560px;">
-                        <input class="form-input" id="report-verify-number" type="text" placeholder="예: DY-2026-0003">
+                        <input class="form-input" id="report-verify-number" type="text" placeholder="예: DY-2026-0006">
                         <button class="btn btn-primary" onclick="verifyIssuedReport()">조회</button>
                     </div>
                     <div id="report-verify-result" class="check-notice" style="display:none;margin-top:10px;"></div>
@@ -121,11 +126,16 @@
     <script src="./js/edu-data.js"></script>
     <script>
         const issuedReports = [
+            { no: 'DY-2026-0008', kind: '개선조치 현황 보고서', date: '2026-11-09', by: '박안전' },
+            { no: 'DY-2026-0007', kind: '개인 안전보건교육 이수 확인서', date: '2026-10-27', by: '김안전' },
+            { no: 'DY-2026-0006', kind: '3분기 총괄보고서', date: '2026-10-08', by: '박안전' },
+            { no: 'DY-2026-0005', kind: '의무이행 점검 결과 보고서 (상반기)', date: '2026-07-15', by: '박안전' },
+            { no: 'DY-2026-0004', kind: '상반기 총괄보고서', date: '2026-07-09', by: '김중대' },
             { no: 'DY-2026-0003', kind: '1분기 총괄보고서', date: '2026-04-05', by: '박안전' },
             { no: 'DY-2026-0002', kind: '2025년 연간 총괄보고서', date: '2026-01-12', by: '김중대' },
             { no: 'DY-2025-0001', kind: '의무이행 점검 결과 보고', date: '2025-12-28', by: '박안전' }
         ];
-        let reportOutputSeq = 4;
+        let reportOutputSeq = 9;
         function reportCondition() {
             const kind = document.getElementById('report-kind').value;
             const from = document.getElementById('report-from').value;

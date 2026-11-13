@@ -27,7 +27,9 @@
     /* r11 — 개선조치 증빙 사진 객체(before_photos/after_photos) 승계.
      * r10 — 2026-07-30 회의 반영: 부서별 보고서(dept.reportFile) · 수시평가 실시 사유 6종(고시 §15②) ·
      *       안전관리자 검토파일(occ.reviewFile) · 개선조치 완료일·전자서명 추가. 시드 변경 시 버전 범프. */
-    var SKEY = 'damyangRskV2r12';   /* r12 — 개선조치 시드에 시설물 3상태 연결(지정 6·해당 없음 3·미지정 1) */
+    /* r13 (2026-11-13) — 운영 기록형 예시 자료: 2024·2025 정기평가 8단계 완료 기록 · 수시 2025 4건/2026 10건 ·
+     *       개선조치 34건(진행 7 · 기한 경과 2). 2026 정기평가는 등록하지 않는다. r12 — 시설물 3상태 연결. */
+    var SKEY = 'damyangRskV2r14';
 
     /* ================= 스토어 ================= */
     var db = null;
@@ -109,37 +111,124 @@
             },
 
             /* --- 재설계 v1 스키마 --- */
-            seqAsmt: 5, seqImp: 210, seqOcc: 2,
+            seqAsmt: 5, seqImp: 210, seqOcc: 0,
 
-            /* 정기 위험성평가: 연도별 1건 원칙, 부서별 조치 상태·기한 관리
-             * 2026: 시연 시작점 — **미등록 상태** (사용자가 마법사로 직접 생성해 라이브 시연)
-             * 2025: 전 부서 조치완료 · 승인 완료 (참고용) */
+            /* 정기 위험성평가: 연도별 1건 원칙 — 2024·2025 는 8단계를 모두 마친 기록이다
+             * (설문 요청 공문 → 부서 제출 → 용역 보고서·기한 → 조치 요청 공문 → 부서 입력 완료 → 조치·확인 → 결과 공문 결재완료).
+             * 2026 은 **등록하지 않는다** — 재난안전과 담당자가 [＋ 정기평가 생성]으로 직접 시작한다. */
             assessments: [
                 {
-                    id: 'RA-2025-01', year: 2025, type: 'REGULAR', status: 'COMPLETED',
-                    title: '2025년 정기 위험성평가', createdAt: '2025-04-01',
-                    targetId: 'f_jns', scope: 'ALL', method: '4x4', team: [], worker_participation: false,
-                    change_reason: '', changed_processes: [], completed_at: '2025-11-20', approval: '승인',
-                    files: { surveyAll: '2025_정기평가_유해위험요인설문조사표.hwpx', report: '2025_정기평가_보고서.hwpx' },
-                    review: { stage: 'DELIVERED', extractedAt: '2025-05-15', parsedDepts: {} },
+                    id: "RA-2025-01",
+                    year: 2025,
+                    type: "REGULAR",
+                    status: "COMPLETED",
+                    title: "2025년 정기 위험성평가",
+                    createdAt: "2025-03-27",
+                    surveyDue: "2025-04-25",
+                    targetId: "",
+                    scope: "ALL",
+                    method: "4x4",
+                    team: [],
+                    worker_participation: false,
+                    change_reason: "",
+                    changed_processes: [],
+                    completed_at: "2025-09-29",
+                    approval: "승인",
+                    files: { surveyAll: "2025_유해위험요인_설문조사표.hwpx", report: "2025_정기 위험성평가_용역 통합 보고서.pdf" },
+                    review: { stage: "DELIVERED", extractedAt: "2025-05-15 15:30", parsedDepts: {} },
+                    surveyReq: {
+                        at: "2025-04-01",
+                        by: "재난안전과 박안전",
+                        docs: [
+                            { sid: "재난안전과-2025-118-0", no: "재난안전과-2025-118", at: "2025-04-01", status: "결재완료", docType: "외부발송", title: "2025년 정기 위험성평가 유해위험요인 설문조사표 제출 요청", to: "수신자 참조", body: "1. 2025년 정기 위험성평가를 위하여 유해위험요인 설문조사표를 붙임과 같이 보내오니, 부서별로 작성하여 기한 내 제출하여 주시기 바랍니다.\n  가. 대상: 붙임 별지의 5개 부서\n  나. 제출 기한: 2025-04-25\n  다. 제출 방법: 중대재해 통합관리시스템 › 내 할일 › 위험성평가 [설문조사표 제출]에서 양식을 내려받아 작성한 뒤 제출", attach: [{ label: "2025_유해위험요인_설문조사표.hwpx", meta: "설문조사표 양식", on: true }], annex: true, basis: ["osh-36"], line: [], lineText: "", by: "박안전", byUid: "u_jjt2", dept: "재난안전과", deptIds: ["safety", "env", "water", "facility", "construct"], sample: true }
+                        ]
+                    },
+                    actionReq: {
+                        at: "2025-05-20",
+                        by: "재난안전과 박안전",
+                        depts: ["safety", "env", "water", "facility"],
+                        docs: [
+                            { sid: "재난안전과-2025-176-0", no: "재난안전과-2025-176", at: "2025-05-20", status: "결재완료", docType: "외부발송", title: "2025년 정기 위험성평가 결과 개선조치 이행 요청", to: "수신자 참조", body: "1. 2025년 정기 위험성평가 용역 결과 개선이 필요한 유해위험요인이 확인되어, 붙임 보고서를 확인하시고 부서별 개선조치를 이행하여 주시기 바랍니다.\n  가. 대상: 붙임 별지의 4개 부서(부서별 조치기한은 별지 참고)\n  나. 입력: 중대재해 통합관리시스템 › 위험성평가 › 정기 위험성평가에서 보고서를 내려받아 우리 부서 유해위험요인과 조치 내용을 직접 입력\n  다. 완료: 조치를 마친 뒤 개선 후 사진을 올려 완료 처리 — 기한 안에 마치지 못하면 사유를 적어 기한 연장", attach: [{ label: "2025_정기 위험성평가_용역 통합 보고서.pdf", meta: "용역 통합 보고서", on: true }], annex: true, basis: ["osh-36"], line: [], lineText: "", by: "박안전", byUid: "u_jjt2", dept: "재난안전과", deptIds: ["safety", "env", "water", "facility"], sample: true }
+                        ]
+                    },
                     depts: [
-                        { deptId: 'safety', inspectDate: '2025-05-08', surveyFile: '', status: 'DONE',
-                          reportFile: '재난안전과_설문조사표_작성본.hwpx', reportAt: '2025-05-12', reportBy: '재난안전과 · 박안전',
-                          deliveredAt: '2025-05-20', dueDate: '2025-07-31', hazards: [] },
-                        { deptId: 'env',    inspectDate: '2025-05-10', surveyFile: '', status: 'DONE',
-                          reportFile: '환경과_설문조사표_작성본.hwpx', reportAt: '2025-05-13', reportBy: '환경과 · 정환경',
-                          deliveredAt: '2025-05-20', dueDate: '2025-08-15', hazards: [] },
-                        { deptId: 'water',  inspectDate: '2025-05-14', surveyFile: '', status: 'DONE',
-                          reportFile: '물순환사업소_설문조사표_작성본.hwpx', reportAt: '2025-05-16', reportBy: '물순환사업소 · 하정수',
-                          deliveredAt: '2025-05-25', dueDate: '2025-09-30', hazards: [] }
+                        { deptId: "safety", inspectDate: "2025-04-14", surveyFile: "", reportFile: "재난안전과_2025_설문조사표_작성본.hwpx", reportAt: "2025-04-11", reportBy: "재난안전과 · 박안전", status: "DONE", deliveredAt: "2025-05-20", dueDate: "2025-07-31", hazards: [{ name: "옥상 점검통로 안전난간 미설치", category: "물리적", cause: "난간 미설치 구간 30m", basis: "oshs-43", action: "점검통로 전 구간 안전난간(H=1.2m) 설치 및 추락주의 표지 부착", facilNo: "AR1968-0000226", facilNm: "담양군청(본관동)", facilNa: false }, { name: "비상발전기실 소화기 미비치", category: "화학적", cause: "소화기 노후·수량 부족", basis: "", action: "ABC분말소화기 4대 교체 비치 및 점검표 부착", facilNo: "AR1968-0000226", facilNm: "담양군청(본관동)", facilNa: false }], request: { at: "2025-05-20", by: "재난안전과 박안전", no: "재난안전과-2025-176" }, noFindings: false, inputDone: { at: "2025-05-22", by: "박안전", reason: "", count: 2 } },
+                        { deptId: "env", inspectDate: "2025-04-16", surveyFile: "", reportFile: "환경과_2025_설문조사표_작성본.hwpx", reportAt: "2025-04-15", reportBy: "환경과 · 정환경", status: "DONE", deliveredAt: "2025-05-20", dueDate: "2025-08-14", hazards: [{ name: "폐기물 적치장 붕괴 위험", category: "물리적", cause: "적치 높이 기준 초과", basis: "", action: "적치 높이 제한선 도색 및 방호벽 설치, 주 1회 점검 지정", facilNo: "", facilNm: "", facilNa: false }, { name: "자원순환팀 파쇄기 방호덮개 파손", category: "기계적", cause: "덮개 균열·고정볼트 이완", basis: "oshs-87", action: "방호덮개 교체 및 비상정지 스위치 동작 점검", facilNo: "", facilNm: "", facilNa: true }], request: { at: "2025-05-20", by: "재난안전과 박안전", no: "재난안전과-2025-176" }, noFindings: false, inputDone: { at: "2025-05-23", by: "정환경", reason: "", count: 2 } },
+                        { deptId: "water", inspectDate: "2025-04-21", surveyFile: "", reportFile: "물순환사업소_2025_설문조사표_작성본.hwpx", reportAt: "2025-04-18", reportBy: "물순환사업소 · 하정수", status: "DONE", deliveredAt: "2025-05-20", dueDate: "2025-09-30", hazards: [{ name: "정수장 약품투입실 환기 불량", category: "화학적", cause: "국소배기장치 용량 부족", basis: "oshs-607", action: "국소배기장치 2대 증설 및 MSDS 게시, 보호구 비치", facilNo: "WS1996-0000011", facilNm: "신계정수장", facilNa: false }, { name: "침전지 개구부 추락 위험", category: "물리적", cause: "개구부 덮개·난간 미설치", basis: "oshs-43", action: "개구부 안전덮개 6개소 설치 및 추락주의 표지 부착", facilNo: "WS1996-0000011", facilNm: "신계정수장", facilNa: false }, { name: "전기 분전반 시건장치 미설치", category: "전기적", cause: "분전반 개방 상태 방치", basis: "", action: "분전반 6면 시건장치 설치 및 활선 경고표지 부착", facilNo: "ST1999-0000017", facilNm: "담양하수종말처리장", facilNa: false }, { name: "슬러지 이송 컨베이어 비상정지 미작동", category: "기계적", cause: "비상정지 스위치 접점 불량", basis: "", action: "비상정지 스위치 전량 교체 및 월 1회 작동 점검 지정", facilNo: "", facilNm: "", facilNa: false }], request: { at: "2025-05-20", by: "재난안전과 박안전", no: "재난안전과-2025-176" }, noFindings: false, inputDone: { at: "2025-05-26", by: "하정수", reason: "", count: 4 } },
+                        { deptId: "facility", inspectDate: "2025-04-23", surveyFile: "", reportFile: "공공시설사업소_2025_설문조사표_작성본.hwpx", reportAt: "2025-04-22", reportBy: "공공시설사업소 · 한담당", status: "DONE", deliveredAt: "2025-05-20", dueDate: "2025-08-29", hazards: [{ name: "체육관 천장 조명 교체 작업 중 추락", category: "고소작업", cause: "이동식 비계 안전난간 미설치", basis: "", action: "이동식 비계 안전난간·아웃트리거 설치 후 작업, 2인 1조 작업 지정", facilNo: "AR2008-0003610", facilNm: "담양종합체육관", facilNa: false }, { name: "환경시설팀 펌프실 회전체 노출", category: "기계적", cause: "커플링 방호덮개 탈락", basis: "oshs-87", action: "펌프 커플링 방호덮개 재설치 및 점검표에 덮개 상태 항목 추가", facilNo: "", facilNm: "", facilNa: true }], request: { at: "2025-05-20", by: "재난안전과 박안전", no: "재난안전과-2025-176" }, noFindings: false, inputDone: { at: "2025-05-27", by: "한담당", reason: "", count: 2 } },
+                        { deptId: "construct", inspectDate: "2025-04-24", surveyFile: "", reportFile: "건설과_2025_설문조사표_작성본.hwpx", reportAt: "2025-04-24", reportBy: "건설과 · 박현장", status: "DONE", deliveredAt: "2025-05-20", dueDate: "", hazards: [], request: null, noFindings: true, inputDone: null }
                     ],
                     history: [
-                        { type: 'CREATE',    at: '2025-04-01', by: '재난안전과 홍길동', memo: '2025 정기평가 생성 · 3개 부서 선정' },
-                        { type: 'DELIVER',   at: '2025-05-20', by: '재난안전과 홍길동', memo: '전 부서 개선조치 전달 (총 8건)' },
-                        { type: 'CONFIRM',   at: '2025-10-05', by: '박안전', memo: '전 부서 조치 완료 확인 (8건)' },
-                        { type: 'DISPATCH',  at: '2025-11-10', by: '박안전', memo: '공문 온나라 상신 — 2025년 정기 위험성평가 개선조치 완료 확인 결과 통보 (재난안전과-2025-412)' },
-                        { type: 'RECEIVE',   at: '2025-11-18', by: '온나라', memo: '결재 회신 — 결재완료' },
-                        { type: 'COMPLETE',  at: '2025-11-20', by: '재난안전과 홍길동', memo: '전 부서 조치완료 · 보고서 승인' }
+                        { type: "CREATE", at: "2025-03-27 09:30", by: "박안전", memo: "정기평가 생성 · 5개 부서 선정 · 설문 제출 기한 2025-04-25" },
+                        { type: "FILE", at: "2025-03-27 14:00", by: "박안전", memo: "설문조사표 양식 첨부 (공통) · 2025_유해위험요인_설문조사표.hwpx" },
+                        { type: "NOTIFY", at: "2025-04-01 10:00", by: "박안전", memo: "5개 부서에 설문조사표 요청 공문 발송 (제출 기한 2025-04-25) · 연계 번호 재난안전과-2025-118" },
+                        { type: "STATUS", at: "2025-05-15 15:30", by: "박안전", memo: "보고서 첨부 · 조치기한 설정 (부서별)" },
+                        { type: "REVIEW", at: "2025-05-20 10:00", by: "재난안전과 박안전", memo: "건설과 — 지적사항 없음(조치 요청 대상 아님)" },
+                        { type: "DELIVER", at: "2025-05-20 10:05", by: "재난안전과 박안전", memo: "4개 부서에 조치 요청 공문 발송 · 지적사항 없는 1개 부서 완료 · 연계 번호 재난안전과-2025-176" },
+                        { type: "STATUS", at: "2025-05-22 14:20", by: "박안전", memo: "재난안전과 조치 입력 완료 · 2건" },
+                        { type: "STATUS", at: "2025-05-23 10:30", by: "정환경", memo: "환경과 조치 입력 완료 · 2건" },
+                        { type: "STATUS", at: "2025-05-26 16:00", by: "하정수", memo: "물순환사업소 조치 입력 완료 · 4건" },
+                        { type: "STATUS", at: "2025-05-27 11:15", by: "한담당", memo: "공공시설사업소 조치 입력 완료 · 2건" },
+                        { type: "COMPLETE", at: "2025-09-29 15:30", by: "시스템", memo: "전 부서 조치 완료 — 완료 확인을 마치면 평가 완료" },
+                        { type: "CONFIRM", at: "2025-10-02 10:30", by: "박안전", memo: "전 부서 조치 완료 확인 (10건)" },
+                        { type: "DISPATCH", at: "2025-11-10 14:20", by: "박안전", memo: "공문 온나라 상신 — 2025년 정기 위험성평가 개선조치 완료 확인 결과 통보 (연계 번호 재난안전과-2025-412)" },
+                        { type: "RECEIVE", at: "2025-11-18 10:05", by: "온나라", memo: "결재 회신 — 결재완료 (생산등록번호 재난안전과-4127 · 결재일 2025-11-18)" }
+                    ]
+                },
+                {
+                    id: "RA-2024-01",
+                    year: 2024,
+                    type: "REGULAR",
+                    status: "COMPLETED",
+                    title: "2024년 정기 위험성평가",
+                    createdAt: "2024-03-20",
+                    surveyDue: "2024-04-19",
+                    targetId: "",
+                    scope: "ALL",
+                    method: "4x4",
+                    team: [],
+                    worker_participation: false,
+                    change_reason: "",
+                    changed_processes: [],
+                    completed_at: "2024-08-20",
+                    approval: "승인",
+                    files: { surveyAll: "2024_유해위험요인_설문조사표.hwpx", report: "2024_정기 위험성평가_용역 통합 보고서.pdf" },
+                    review: { stage: "DELIVERED", extractedAt: "2024-05-13 15:30", parsedDepts: {} },
+                    surveyReq: {
+                        at: "2024-03-25",
+                        by: "재난안전과 박안전",
+                        docs: [
+                            { sid: "재난안전과-2024-097-0", no: "재난안전과-2024-097", at: "2024-03-25", status: "결재완료", docType: "외부발송", title: "2024년 정기 위험성평가 유해위험요인 설문조사표 제출 요청", to: "수신자 참조", body: "1. 2024년 정기 위험성평가를 위하여 유해위험요인 설문조사표를 붙임과 같이 보내오니, 부서별로 작성하여 기한 내 제출하여 주시기 바랍니다.\n  가. 대상: 붙임 별지의 4개 부서\n  나. 제출 기한: 2024-04-19\n  다. 제출 방법: 중대재해 통합관리시스템 › 내 할일 › 위험성평가 [설문조사표 제출]에서 양식을 내려받아 작성한 뒤 제출", attach: [{ label: "2024_유해위험요인_설문조사표.hwpx", meta: "설문조사표 양식", on: true }], annex: true, basis: ["osh-36"], line: [], lineText: "", by: "박안전", byUid: "u_jjt2", dept: "재난안전과", deptIds: ["env", "water", "safety", "construct"], sample: true }
+                        ]
+                    },
+                    actionReq: {
+                        at: "2024-05-17",
+                        by: "재난안전과 박안전",
+                        depts: ["env", "water", "construct"],
+                        docs: [
+                            { sid: "재난안전과-2024-163-0", no: "재난안전과-2024-163", at: "2024-05-17", status: "결재완료", docType: "외부발송", title: "2024년 정기 위험성평가 결과 개선조치 이행 요청", to: "수신자 참조", body: "1. 2024년 정기 위험성평가 용역 결과 개선이 필요한 유해위험요인이 확인되어, 붙임 보고서를 확인하시고 부서별 개선조치를 이행하여 주시기 바랍니다.\n  가. 대상: 붙임 별지의 3개 부서(부서별 조치기한은 별지 참고)\n  나. 입력: 중대재해 통합관리시스템 › 위험성평가 › 정기 위험성평가에서 보고서를 내려받아 우리 부서 유해위험요인과 조치 내용을 직접 입력\n  다. 완료: 조치를 마친 뒤 개선 후 사진을 올려 완료 처리 — 기한 안에 마치지 못하면 사유를 적어 기한 연장", attach: [{ label: "2024_정기 위험성평가_용역 통합 보고서.pdf", meta: "용역 통합 보고서", on: true }], annex: true, basis: ["osh-36"], line: [], lineText: "", by: "박안전", byUid: "u_jjt2", dept: "재난안전과", deptIds: ["env", "water", "construct"], sample: true }
+                        ]
+                    },
+                    depts: [
+                        { deptId: "env", inspectDate: "2024-04-08", surveyFile: "", reportFile: "환경과_2024_설문조사표_작성본.hwpx", reportAt: "2024-04-05", reportBy: "환경과 · 정환경", status: "DONE", deliveredAt: "2024-05-17", dueDate: "2024-07-31", hazards: [{ name: "재활용선별장 컨베이어 하부 청소 중 끼임", category: "기계적", cause: "하부 방호울 미설치", basis: "oshs-87", action: "컨베이어 하부 방호울 설치 및 청소 시 전원 차단·표지 부착 절차 게시", facilNo: "", facilNm: "", facilNa: true }, { name: "수집차량 적재함 승하차 시 추락", category: "물리적", cause: "발판·손잡이 미설치", basis: "", action: "수집차량 6대 적재함 발판·손잡이 설치", facilNo: "", facilNm: "", facilNa: false }], request: { at: "2024-05-17", by: "재난안전과 박안전", no: "재난안전과-2024-163" }, noFindings: false, inputDone: { at: "2024-05-21", by: "정환경", reason: "", count: 2 } },
+                        { deptId: "water", inspectDate: "2024-04-10", surveyFile: "", reportFile: "물순환사업소_2024_설문조사표_작성본.hwpx", reportAt: "2024-04-09", reportBy: "물순환사업소 · 하정수", status: "DONE", deliveredAt: "2024-05-17", dueDate: "2024-08-30", hazards: [{ name: "여과지 점검 개구부 추락", category: "물리적", cause: "개구부 덮개 미고정", basis: "oshs-43", action: "여과지 점검 개구부 4개소 잠금형 덮개 교체 및 추락주의 표지 부착", facilNo: "WS1996-0000011", facilNm: "신계정수장", facilNa: false }, { name: "수질분석실 시약 증기 흡입", category: "화학적", cause: "시약장 배기 미흡", basis: "oshs-607", action: "시약장 국소배기장치 설치 및 MSDS 비치·교육", facilNo: "ST1999-0000017", facilNm: "담양하수종말처리장", facilNa: false }], request: { at: "2024-05-17", by: "재난안전과 박안전", no: "재난안전과-2024-163" }, noFindings: false, inputDone: { at: "2024-05-22", by: "하정수", reason: "", count: 2 } },
+                        { deptId: "safety", inspectDate: "2024-04-15", surveyFile: "", reportFile: "재난안전과_2024_설문조사표_작성본.hwpx", reportAt: "2024-04-12", reportBy: "재난안전과 · 박안전", status: "DONE", deliveredAt: "2024-05-17", dueDate: "", hazards: [], request: null, noFindings: true, inputDone: null },
+                        { deptId: "construct", inspectDate: "2024-04-18", surveyFile: "", reportFile: "건설과_2024_설문조사표_작성본.hwpx", reportAt: "2024-04-17", reportBy: "건설과 · 박현장", status: "DONE", deliveredAt: "2024-05-17", dueDate: "2024-07-31", hazards: [{ name: "도로 보수 현장 차량 충돌", category: "작업특성", cause: "신호수 미배치", basis: "", action: "도로 보수 작업 시 신호수 배치 및 교통통제 계획서 작성 의무화", facilNo: "", facilNm: "", facilNa: false }, { name: "예초 작업 중 비산물 상해", category: "기계적", cause: "보호구 착용 미흡", basis: "oshs-32", action: "예초 작업자 보안면·각반 지급 및 착용 점검", facilNo: "", facilNm: "", facilNa: false }], request: { at: "2024-05-17", by: "재난안전과 박안전", no: "재난안전과-2024-163" }, noFindings: false, inputDone: { at: "2024-05-24", by: "박현장", reason: "", count: 2 } }
+                    ],
+                    history: [
+                        { type: "CREATE", at: "2024-03-20 09:30", by: "박안전", memo: "정기평가 생성 · 4개 부서 선정 · 설문 제출 기한 2024-04-19" },
+                        { type: "FILE", at: "2024-03-20 14:00", by: "박안전", memo: "설문조사표 양식 첨부 (공통) · 2024_유해위험요인_설문조사표.hwpx" },
+                        { type: "NOTIFY", at: "2024-03-25 10:00", by: "박안전", memo: "4개 부서에 설문조사표 요청 공문 발송 (제출 기한 2024-04-19) · 연계 번호 재난안전과-2024-097" },
+                        { type: "STATUS", at: "2024-05-13 15:30", by: "박안전", memo: "보고서 첨부 · 조치기한 설정 (부서별)" },
+                        { type: "REVIEW", at: "2024-05-17 10:00", by: "재난안전과 박안전", memo: "재난안전과 — 지적사항 없음(조치 요청 대상 아님)" },
+                        { type: "DELIVER", at: "2024-05-17 10:05", by: "재난안전과 박안전", memo: "3개 부서에 조치 요청 공문 발송 · 지적사항 없는 1개 부서 완료 · 연계 번호 재난안전과-2024-163" },
+                        { type: "STATUS", at: "2024-05-21 15:10", by: "정환경", memo: "환경과 조치 입력 완료 · 2건" },
+                        { type: "STATUS", at: "2024-05-22 11:40", by: "하정수", memo: "물순환사업소 조치 입력 완료 · 2건" },
+                        { type: "STATUS", at: "2024-05-24 10:05", by: "박현장", memo: "건설과 조치 입력 완료 · 2건" },
+                        { type: "COMPLETE", at: "2024-08-20 17:20", by: "시스템", memo: "전 부서 조치 완료 — 완료 확인을 마치면 평가 완료" },
+                        { type: "CONFIRM", at: "2024-08-27 10:30", by: "박안전", memo: "전 부서 조치 완료 확인 (6건)" },
+                        { type: "DISPATCH", at: "2024-10-14 15:00", by: "박안전", memo: "공문 온나라 상신 — 2024년 정기 위험성평가 개선조치 완료 확인 결과 통보 (연계 번호 재난안전과-2024-371)" },
+                        { type: "RECEIVE", at: "2024-10-21 11:20", by: "온나라", memo: "결재 회신 — 결재완료 (생산등록번호 재난안전과-3561 · 결재일 2024-10-21)" }
                     ]
                 }
             ],
@@ -178,270 +267,1616 @@
                 }
             },
 
-            /* 개선조치 —
-             *  · **2025 = 완성된 사례**(시연 첫 화면의 '이미 끝난 모습'). 전달 → 완료(증빙·서명)
-             *    → 주관부서 확인(confirm.state OK) → 공문 상신·결재완료 까지 다 채워 둔다.
-             *    2026 을 라이브로 만드는 시연이 중간에 막혀도 **주무관이 완성형을 조작 없이 볼 수 있어야** 한다.
-             *  · **2026 = 비어 있음**(마법사로 직접 생성해 라이브 시연) — 이 의도는 유지한다.
-             *  · 증빙 썸네일은 코드 안 data-URI(96~160px, 각 1~2KB)다. 실제 파일 저장소가 없는
-             *    프로토타입에서 '전·후 대조'를 보여주는 유일한 방법이고, 용량은 전체 14KB 수준이다. */
+            /* 개선조치 — 2024·2025 정기평가분은 전 건 완료·확인. 수시평가분은 2025~2026 에 걸쳐 있고
+             * 최근 건(2026-08 이후)이 진행 중이다 — 기한 경과 2건(IMP-224·IMP-226)·담당자 미지정 1건(IMP-232).
+             * 증빙 썸네일은 코드 안 data-URI(160×120, 각 1~2KB)다. */
             improvements: [
                 {
-                    id: 'IMP-201', source_type: 'risk_assessment', assessment_id: 'RA-2025-01', dept_id: 'safety',
-                    target_id: '', process_id: '', occ_id: '',
-                    hazard: { name: '옥상 점검통로 안전난간 미설치', category: '물리적', cause: '난간 미설치 구간 30m', basis: '', facilNo: 'AR1968-0000226', facilNm: '담양군청(본관동)' },
-                    hazard_risk_factor: '옥상 점검통로 안전난간 미설치',
-                    description: '점검통로 전 구간 안전난간(H=1.2m) 설치 및 추락주의 표지 부착', action: '점검통로 전 구간 안전난간(H=1.2m) 설치 및 추락주의 표지 부착',
-                    assigned_to: '재난안전과 · 안전관리 주무관 / 박안전', due: '2025-07-31', due_date: '2025-07-31',
-                    before_photo: '옥상난간_개선전.jpg', after_photo: '옥상난간_개선후.jpg',
-                    before_photos: [{ name: '옥상난간_개선전.jpg', size: 184320, type: 'image/jpeg', w: 1600, h: 1200, thumb: T.b1 }], after_photos: [{ name: '옥상난간_개선후.jpg', size: 184320, type: 'image/jpeg', w: 1600, h: 1200, thumb: T.a1 }],
-                    action_content: '점검통로 전 구간 안전난간(H=1.2m) 설치 및 추락주의 표지 부착 완료', completed_date: '2025-07-18',
-                    signature: { by: '박안전', at: '2025-07-18' },
-                    status: 'DONE', reassessed: true, created: '2025-05-20',
-                    /* 주관부서 확인까지 끝난 완성 사례 — 공문 상신의 전제 */
-                    confirm: { state: 'OK', by: '박안전', at: '2025-08-01', reason: '', round: 1 },
+                    id: "IMP-101",
+                    source_type: "risk_assessment",
+                    assessment_id: "RA-2024-01",
+                    dept_id: "env",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "",
+                    hazard: { name: "재활용선별장 컨베이어 하부 청소 중 끼임", category: "기계적", cause: "하부 방호울 미설치", basis: "oshs-87", facilNa: true },
+                    hazard_risk_factor: "재활용선별장 컨베이어 하부 청소 중 끼임",
+                    description: "컨베이어 하부 방호울 설치 및 청소 시 전원 차단·표지 부착 절차 게시",
+                    action: "컨베이어 하부 방호울 설치 및 청소 시 전원 차단·표지 부착 절차 게시",
+                    assigned_to: "환경과 · 주무관 / 정수빈",
+                    due: "2024-07-31",
+                    due_date: "2024-07-31",
+                    before_photo: "선별장컨베이어_개선전.jpg",
+                    after_photo: "선별장컨베이어_개선후.jpg",
+                    before_photos: [
+                        { name: "선별장컨베이어_개선전.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.b2 }
+                    ],
+                    after_photos: [
+                        { name: "선별장컨베이어_개선후.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.a2 }
+                    ],
+                    action_content: "컨베이어 하부 방호울 설치 및 전원 차단·표지 부착 절차 게시 완료",
+                    completed_date: "2024-07-12",
+                    signature: { by: "정수빈", at: "2024-07-12" },
+                    status: "DONE",
+                    reassessed: true,
+                    created: "2024-05-21",
+                    confirm: { state: "OK", by: "박안전", at: "2024-07-19", reason: "", round: 1 },
                     history: [
-                        { type: 'NOTIFY',  at: '2025-05-20 10:00', by: '재난안전과', memo: '개선조치 전달 (기한 2025-07-31)' },
-                        { type: 'STATUS',  at: '2025-07-18 16:20', by: '박안전', memo: '완료 처리 · 완료일 2025-07-18 · 전자서명 박안전' },
-                        { type: 'CONFIRM', at: '2025-08-01 09:40', by: '박안전', memo: '조치 완료 확인' }
+                        { type: "REGISTER", at: "2024-05-21 15:10", by: "정환경", memo: "부서 작성 · 입력 완료 (기한 2024-07-31)" },
+                        { type: "STATUS", at: "2024-07-12 16:30", by: "정수빈", memo: "완료 처리 · 완료일 2024-07-12 · 개선 후 사진 선별장컨베이어_개선후.jpg · 전자서명 정수빈" },
+                        { type: "CONFIRM", at: "2024-07-19 10:20", by: "박안전", memo: "조치 완료 확인" }
                     ]
                 },
                 {
-                    id: 'IMP-202', source_type: 'risk_assessment', assessment_id: 'RA-2025-01', dept_id: 'safety',
-                    target_id: '', process_id: '', occ_id: '',
-                    hazard: { name: '비상발전기실 소화기 미비치', category: '화학적', cause: '소화기 노후·수량 부족', basis: '', facilNo: 'AR1968-0000226', facilNm: '담양군청(본관동)' },
-                    hazard_risk_factor: '비상발전기실 소화기 미비치',
-                    description: 'ABC분말소화기 4대 교체 비치 및 점검표 부착', action: 'ABC분말소화기 4대 교체 비치 및 점검표 부착',
-                    assigned_to: '재난안전과 · 안전관리담당 / 박담당', due: '2025-07-31', due_date: '2025-07-31',
-                    before_photo: false, after_photo: '발전기실_개선후.jpg',
-                    before_photos: [], after_photos: [{ name: '발전기실_개선후.jpg', size: 152000, type: 'image/jpeg' }],
-                    action_content: 'ABC분말소화기 4대 교체 비치 및 점검표 부착 완료', completed_date: '2025-07-22',
-                    signature: { by: '박담당', at: '2025-07-22' },
-                    status: 'DONE', reassessed: true, created: '2025-05-20',
-                    /* 주관부서 확인까지 끝난 완성 사례 — 공문 상신의 전제 */
-                    confirm: { state: 'OK', by: '박안전', at: '2025-08-01', reason: '', round: 1 },
+                    id: "IMP-102",
+                    source_type: "risk_assessment",
+                    assessment_id: "RA-2024-01",
+                    dept_id: "env",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "",
+                    hazard: { name: "수집차량 적재함 승하차 시 추락", category: "물리적", cause: "발판·손잡이 미설치", basis: "" },
+                    hazard_risk_factor: "수집차량 적재함 승하차 시 추락",
+                    description: "수집차량 6대 적재함 발판·손잡이 설치",
+                    action: "수집차량 6대 적재함 발판·손잡이 설치",
+                    assigned_to: "환경과 · 주무관 / 김지도",
+                    due: "2024-07-31",
+                    due_date: "2024-07-31",
+                    before_photo: false,
+                    after_photo: "수집차량_개선후.jpg",
+                    before_photos: [],
+                    after_photos: [
+                        { name: "수집차량_개선후.jpg", size: 152000, type: "image/jpeg" }
+                    ],
+                    action_content: "수집차량 6대 적재함 발판·손잡이 설치 완료",
+                    completed_date: "2024-07-25",
+                    signature: { by: "김지도", at: "2024-07-25" },
+                    status: "DONE",
+                    reassessed: true,
+                    created: "2024-05-21",
+                    confirm: { state: "OK", by: "박안전", at: "2024-08-01", reason: "", round: 1 },
                     history: [
-                        { type: 'NOTIFY',  at: '2025-05-20 10:00', by: '재난안전과', memo: '개선조치 전달 (기한 2025-07-31)' },
-                        { type: 'STATUS',  at: '2025-07-22 16:20', by: '박담당', memo: '완료 처리 · 완료일 2025-07-22 · 전자서명 박담당' },
-                        { type: 'CONFIRM', at: '2025-08-01 09:40', by: '박안전', memo: '조치 완료 확인' }
+                        { type: "REGISTER", at: "2024-05-21 15:10", by: "정환경", memo: "부서 작성 · 입력 완료 (기한 2024-07-31)" },
+                        { type: "STATUS", at: "2024-07-25 14:00", by: "김지도", memo: "완료 처리 · 완료일 2024-07-25 · 개선 후 사진 수집차량_개선후.jpg · 전자서명 김지도" },
+                        { type: "CONFIRM", at: "2024-08-01 09:30", by: "박안전", memo: "조치 완료 확인" }
                     ]
                 },
                 {
-                    id: 'IMP-203', source_type: 'risk_assessment', assessment_id: 'RA-2025-01', dept_id: 'env',
-                    target_id: '', process_id: '', occ_id: '',
-                    hazard: { name: '폐기물 적치장 붕괴 위험', category: '물리적', cause: '적치 높이 기준 초과', basis: '' },
-                    hazard_risk_factor: '폐기물 적치장 붕괴 위험',
-                    description: '적치 높이 제한선 도색 및 방호벽 설치, 주 1회 점검 지정', action: '적치 높이 제한선 도색 및 방호벽 설치, 주 1회 점검 지정',
-                    assigned_to: '환경과 · 유해·위험요인 담당 주무관 / 정환경', due: '2025-08-15', due_date: '2025-08-15',
-                    before_photo: '적치장_개선전.jpg', after_photo: '적치장_개선후.jpg',
-                    before_photos: [{ name: '적치장_개선전.jpg', size: 184320, type: 'image/jpeg', w: 1600, h: 1200, thumb: T.b4 }], after_photos: [{ name: '적치장_개선후.jpg', size: 184320, type: 'image/jpeg', w: 1600, h: 1200, thumb: T.a4 }],
-                    action_content: '적치 높이 제한선 도색 및 방호벽 설치, 주 1회 점검 지정 완료', completed_date: '2025-08-05',
-                    signature: { by: '정환경', at: '2025-08-05' },
-                    status: 'DONE', reassessed: true, created: '2025-05-20',
-                    /* 주관부서 확인까지 끝난 완성 사례 — 공문 상신의 전제 */
-                    confirm: { state: 'OK', by: '박안전', at: '2025-08-20', reason: '', round: 1 },
+                    id: "IMP-103",
+                    source_type: "risk_assessment",
+                    assessment_id: "RA-2024-01",
+                    dept_id: "water",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "",
+                    hazard: { name: "여과지 점검 개구부 추락", category: "물리적", cause: "개구부 덮개 미고정", basis: "oshs-43", facilNo: "WS1996-0000011", facilNm: "신계정수장" },
+                    hazard_risk_factor: "여과지 점검 개구부 추락",
+                    description: "여과지 점검 개구부 4개소 잠금형 덮개 교체 및 추락주의 표지 부착",
+                    action: "여과지 점검 개구부 4개소 잠금형 덮개 교체 및 추락주의 표지 부착",
+                    assigned_to: "물순환사업소 · 주무관 / 하정수",
+                    due: "2024-08-30",
+                    due_date: "2024-08-30",
+                    before_photo: "여과지개구부_개선전.jpg",
+                    after_photo: "여과지개구부_개선후.jpg",
+                    before_photos: [
+                        { name: "여과지개구부_개선전.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.b4 }
+                    ],
+                    after_photos: [
+                        { name: "여과지개구부_개선후.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.a4 }
+                    ],
+                    action_content: "여과지 점검 개구부 4개소 잠금형 덮개 교체 및 표지 부착 완료",
+                    completed_date: "2024-08-08",
+                    signature: { by: "하정수", at: "2024-08-08" },
+                    status: "DONE",
+                    reassessed: true,
+                    created: "2024-05-22",
+                    confirm: { state: "OK", by: "박안전", at: "2024-08-16", reason: "", round: 1 },
                     history: [
-                        { type: 'NOTIFY',  at: '2025-05-20 10:00', by: '재난안전과', memo: '개선조치 전달 (기한 2025-08-15)' },
-                        { type: 'STATUS',  at: '2025-08-05 16:20', by: '정환경', memo: '완료 처리 · 완료일 2025-08-05 · 전자서명 정환경' },
-                        { type: 'CONFIRM', at: '2025-08-20 09:40', by: '박안전', memo: '조치 완료 확인' }
+                        { type: "REGISTER", at: "2024-05-22 11:40", by: "하정수", memo: "부서 작성 · 입력 완료 (기한 2024-08-30)" },
+                        { type: "STATUS", at: "2024-08-08 15:20", by: "하정수", memo: "완료 처리 · 완료일 2024-08-08 · 개선 후 사진 여과지개구부_개선후.jpg · 전자서명 하정수" },
+                        { type: "CONFIRM", at: "2024-08-16 10:00", by: "박안전", memo: "조치 완료 확인" }
                     ]
                 },
                 {
-                    id: 'IMP-204', source_type: 'risk_assessment', assessment_id: 'RA-2025-01', dept_id: 'env',
-                    target_id: '', process_id: '', occ_id: '',
-                    hazard: { name: '자원순환팀 파쇄기 방호덮개 파손', category: '기계적', cause: '덮개 균열·고정볼트 이완', basis: '', facilNa: true },
-                    hazard_risk_factor: '자원순환팀 파쇄기 방호덮개 파손',
-                    description: '방호덮개 교체 및 비상정지 스위치 동작 점검', action: '방호덮개 교체 및 비상정지 스위치 동작 점검',
-                    assigned_to: '환경과 · 주무관 / 정수빈', due: '2025-08-15', due_date: '2025-08-15',
-                    before_photo: false, after_photo: '파쇄기_개선후.jpg',
-                    before_photos: [], after_photos: [{ name: '파쇄기_개선후.jpg', size: 152000, type: 'image/jpeg' }],
-                    action_content: '방호덮개 교체 및 비상정지 스위치 동작 점검 완료', completed_date: '2025-08-11',
-                    signature: { by: '정수빈', at: '2025-08-11' },
-                    status: 'DONE', reassessed: true, created: '2025-05-20',
-                    /* 주관부서 확인까지 끝난 완성 사례 — 공문 상신의 전제 */
-                    confirm: { state: 'OK', by: '박안전', at: '2025-08-20', reason: '', round: 1 },
+                    id: "IMP-104",
+                    source_type: "risk_assessment",
+                    assessment_id: "RA-2024-01",
+                    dept_id: "water",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "",
+                    hazard: { name: "수질분석실 시약 증기 흡입", category: "화학적", cause: "시약장 배기 미흡", basis: "oshs-607", facilNo: "ST1999-0000017", facilNm: "담양하수종말처리장" },
+                    hazard_risk_factor: "수질분석실 시약 증기 흡입",
+                    description: "시약장 국소배기장치 설치 및 MSDS 비치·교육",
+                    action: "시약장 국소배기장치 설치 및 MSDS 비치·교육",
+                    assigned_to: "물순환사업소 · 주무관 / 오수질",
+                    due: "2024-08-30",
+                    due_date: "2024-08-30",
+                    before_photo: "시약장_개선전.jpg",
+                    after_photo: "시약장_개선후.jpg",
+                    before_photos: [
+                        { name: "시약장_개선전.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.b1 }
+                    ],
+                    after_photos: [
+                        { name: "시약장_개선후.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.a1 }
+                    ],
+                    action_content: "시약장 국소배기장치 설치 및 MSDS 비치·취급자 교육 완료",
+                    completed_date: "2024-08-20",
+                    signature: { by: "오수질", at: "2024-08-20" },
+                    status: "DONE",
+                    reassessed: true,
+                    created: "2024-05-22",
+                    confirm: { state: "OK", by: "박안전", at: "2024-08-27", reason: "", round: 1 },
                     history: [
-                        { type: 'NOTIFY',  at: '2025-05-20 10:00', by: '재난안전과', memo: '개선조치 전달 (기한 2025-08-15)' },
-                        { type: 'STATUS',  at: '2025-08-11 16:20', by: '정수빈', memo: '완료 처리 · 완료일 2025-08-11 · 전자서명 정수빈' },
-                        { type: 'CONFIRM', at: '2025-08-20 09:40', by: '박안전', memo: '조치 완료 확인' }
+                        { type: "REGISTER", at: "2024-05-22 11:40", by: "하정수", memo: "부서 작성 · 입력 완료 (기한 2024-08-30)" },
+                        { type: "STATUS", at: "2024-08-20 17:00", by: "오수질", memo: "완료 처리 · 완료일 2024-08-20 · 개선 후 사진 시약장_개선후.jpg · 전자서명 오수질" },
+                        { type: "CONFIRM", at: "2024-08-27 14:10", by: "박안전", memo: "조치 완료 확인" }
                     ]
                 },
                 {
-                    id: 'IMP-205', source_type: 'risk_assessment', assessment_id: 'RA-2025-01', dept_id: 'water',
-                    target_id: '', process_id: '', occ_id: '',
-                    hazard: { name: '정수장 약품투입실 환기 불량', category: '화학적', cause: '국소배기장치 용량 부족', basis: '', facilNo: 'WS1996-0000011', facilNm: '신계정수장' },
-                    hazard_risk_factor: '정수장 약품투입실 환기 불량',
-                    description: '국소배기장치 2대 증설 및 MSDS 게시, 보호구 비치', action: '국소배기장치 2대 증설 및 MSDS 게시, 보호구 비치',
-                    assigned_to: '물순환사업소 · 주무관 / 하정수', due: '2025-09-30', due_date: '2025-09-30',
-                    before_photo: '약품실_개선전.jpg', after_photo: '약품실_개선후.jpg',
-                    before_photos: [{ name: '약품실_개선전.jpg', size: 184320, type: 'image/jpeg', w: 1600, h: 1200, thumb: T.b2 }], after_photos: [{ name: '약품실_개선후.jpg', size: 184320, type: 'image/jpeg', w: 1600, h: 1200, thumb: T.a2 }],
-                    action_content: '국소배기장치 2대 증설 및 MSDS 게시, 보호구 비치 완료', completed_date: '2025-09-12',
-                    signature: { by: '하정수', at: '2025-09-12' },
-                    status: 'DONE', reassessed: true, created: '2025-05-20',
-                    /* 주관부서 확인까지 끝난 완성 사례 — 공문 상신의 전제 */
-                    confirm: { state: 'OK', by: '박안전', at: '2025-10-05', reason: '', round: 1 },
+                    id: "IMP-105",
+                    source_type: "risk_assessment",
+                    assessment_id: "RA-2024-01",
+                    dept_id: "construct",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "",
+                    hazard: { name: "도로 보수 현장 차량 충돌", category: "작업특성", cause: "신호수 미배치", basis: "" },
+                    hazard_risk_factor: "도로 보수 현장 차량 충돌",
+                    description: "도로 보수 작업 시 신호수 배치 및 교통통제 계획서 작성 의무화",
+                    action: "도로 보수 작업 시 신호수 배치 및 교통통제 계획서 작성 의무화",
+                    assigned_to: "건설과 · 현장안전 담당 주무관 / 박현장",
+                    due: "2024-07-31",
+                    due_date: "2024-07-31",
+                    before_photo: false,
+                    after_photo: "도로보수_개선후.jpg",
+                    before_photos: [],
+                    after_photos: [
+                        { name: "도로보수_개선후.jpg", size: 152000, type: "image/jpeg" }
+                    ],
+                    action_content: "신호수 배치 기준 마련 및 교통통제 계획서 양식 배포 완료",
+                    completed_date: "2024-07-19",
+                    signature: { by: "박현장", at: "2024-07-19" },
+                    status: "DONE",
+                    reassessed: true,
+                    created: "2024-05-24",
+                    confirm: { state: "OK", by: "박안전", at: "2024-07-26", reason: "", round: 1 },
                     history: [
-                        { type: 'NOTIFY',  at: '2025-05-20 10:00', by: '재난안전과', memo: '개선조치 전달 (기한 2025-09-30)' },
-                        { type: 'STATUS',  at: '2025-09-12 16:20', by: '하정수', memo: '완료 처리 · 완료일 2025-09-12 · 전자서명 하정수' },
-                        { type: 'CONFIRM', at: '2025-10-05 09:40', by: '박안전', memo: '조치 완료 확인' }
+                        { type: "REGISTER", at: "2024-05-24 10:05", by: "박현장", memo: "부서 작성 · 입력 완료 (기한 2024-07-31)" },
+                        { type: "STATUS", at: "2024-07-19 11:30", by: "박현장", memo: "완료 처리 · 완료일 2024-07-19 · 개선 후 사진 도로보수_개선후.jpg · 전자서명 박현장" },
+                        { type: "CONFIRM", at: "2024-07-26 09:50", by: "박안전", memo: "조치 완료 확인" }
                     ]
                 },
                 {
-                    id: 'IMP-206', source_type: 'risk_assessment', assessment_id: 'RA-2025-01', dept_id: 'water',
-                    target_id: '', process_id: '', occ_id: '',
-                    hazard: { name: '침전지 개구부 추락 위험', category: '물리적', cause: '개구부 덮개·난간 미설치', basis: '', facilNo: 'WS1996-0000011', facilNm: '신계정수장' },
-                    hazard_risk_factor: '침전지 개구부 추락 위험',
-                    description: '개구부 안전덮개 6개소 설치 및 추락주의 표지 부착', action: '개구부 안전덮개 6개소 설치 및 추락주의 표지 부착',
-                    assigned_to: '물순환사업소 · 주무관 / 하정수', due: '2025-09-30', due_date: '2025-09-30',
-                    before_photo: '개구부_개선전.jpg', after_photo: '개구부_개선후.jpg',
-                    before_photos: [{ name: '개구부_개선전.jpg', size: 184320, type: 'image/jpeg', w: 1600, h: 1200, thumb: T.b1 }], after_photos: [{ name: '개구부_개선후.jpg', size: 184320, type: 'image/jpeg', w: 1600, h: 1200, thumb: T.a1 }],
-                    action_content: '개구부 안전덮개 6개소 설치 및 추락주의 표지 부착 완료', completed_date: '2025-09-18',
-                    signature: { by: '하정수', at: '2025-09-18' },
-                    status: 'DONE', reassessed: true, created: '2025-05-20',
-                    /* 주관부서 확인까지 끝난 완성 사례 — 공문 상신의 전제 */
-                    confirm: { state: 'OK', by: '박안전', at: '2025-10-05', reason: '', round: 1 },
+                    id: "IMP-106",
+                    source_type: "risk_assessment",
+                    assessment_id: "RA-2024-01",
+                    dept_id: "construct",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "",
+                    hazard: { name: "예초 작업 중 비산물 상해", category: "기계적", cause: "보호구 착용 미흡", basis: "oshs-32" },
+                    hazard_risk_factor: "예초 작업 중 비산물 상해",
+                    description: "예초 작업자 보안면·각반 지급 및 착용 점검",
+                    action: "예초 작업자 보안면·각반 지급 및 착용 점검",
+                    assigned_to: "건설과 · 주무관 / 이준호",
+                    due: "2024-07-31",
+                    due_date: "2024-07-31",
+                    before_photo: "예초작업_개선전.jpg",
+                    after_photo: "예초작업_개선후.jpg",
+                    before_photos: [
+                        { name: "예초작업_개선전.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.b3 }
+                    ],
+                    after_photos: [
+                        { name: "예초작업_개선후.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.a3 }
+                    ],
+                    action_content: "예초 작업자 12명 보안면·각반 지급 및 착용 점검 완료",
+                    completed_date: "2024-07-29",
+                    signature: { by: "이준호", at: "2024-07-29" },
+                    status: "DONE",
+                    reassessed: true,
+                    created: "2024-05-24",
+                    confirm: { state: "OK", by: "박안전", at: "2024-08-05", reason: "", round: 1 },
                     history: [
-                        { type: 'NOTIFY',  at: '2025-05-20 10:00', by: '재난안전과', memo: '개선조치 전달 (기한 2025-09-30)' },
-                        { type: 'STATUS',  at: '2025-09-18 16:20', by: '하정수', memo: '완료 처리 · 완료일 2025-09-18 · 전자서명 하정수' },
-                        { type: 'CONFIRM', at: '2025-10-05 09:40', by: '박안전', memo: '조치 완료 확인' }
+                        { type: "REGISTER", at: "2024-05-24 10:05", by: "박현장", memo: "부서 작성 · 입력 완료 (기한 2024-07-31)" },
+                        { type: "STATUS", at: "2024-07-29 16:00", by: "이준호", memo: "완료 처리 · 완료일 2024-07-29 · 개선 후 사진 예초작업_개선후.jpg · 전자서명 이준호" },
+                        { type: "CONFIRM", at: "2024-08-05 10:30", by: "박안전", memo: "조치 완료 확인" }
                     ]
                 },
                 {
-                    id: 'IMP-207', source_type: 'risk_assessment', assessment_id: 'RA-2025-01', dept_id: 'water',
-                    target_id: '', process_id: '', occ_id: '',
-                    hazard: { name: '전기 분전반 시건장치 미설치', category: '전기적', cause: '분전반 개방 상태 방치', basis: '', facilNo: 'ST1999-0000017', facilNm: '담양하수종말처리장' },
-                    hazard_risk_factor: '전기 분전반 시건장치 미설치',
-                    description: '분전반 6면 시건장치 설치 및 활선 경고표지 부착', action: '분전반 6면 시건장치 설치 및 활선 경고표지 부착',
-                    assigned_to: '물순환사업소 · 주무관 / 오수질', due: '2025-09-30', due_date: '2025-09-30',
-                    before_photo: '분전반_개선전.jpg', after_photo: '분전반_개선후.jpg',
-                    before_photos: [{ name: '분전반_개선전.jpg', size: 184320, type: 'image/jpeg', w: 1600, h: 1200, thumb: T.b3 }], after_photos: [{ name: '분전반_개선후.jpg', size: 184320, type: 'image/jpeg', w: 1600, h: 1200, thumb: T.a3 }],
-                    action_content: '분전반 6면 시건장치 설치 및 활선 경고표지 부착 완료', completed_date: '2025-09-25',
-                    signature: { by: '오수질', at: '2025-09-25' },
-                    status: 'DONE', reassessed: true, created: '2025-05-20',
-                    /* 주관부서 확인까지 끝난 완성 사례 — 공문 상신의 전제 */
-                    confirm: { state: 'OK', by: '박안전', at: '2025-10-05', reason: '', round: 1 },
+                    id: "IMP-211",
+                    source_type: "occasional",
+                    assessment_id: "",
+                    dept_id: "water",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "OCC-2025-01",
+                    hazard: { name: "염소투입기 교체 후 배관 접속부 누출", category: "화학적", cause: "신규 설비 누출감지기 미연동", basis: "oshs-420", facilNo: "WS1996-0000011", facilNm: "신계정수장" },
+                    hazard_risk_factor: "염소투입기 교체 후 배관 접속부 누출",
+                    description: "누출감지기 신규 설비 연동 및 비상 세안설비 위치 조정",
+                    action: "누출감지기 신규 설비 연동 및 비상 세안설비 위치 조정",
+                    assigned_to: "물순환사업소 · 시설 담당 / 서담당",
+                    due: "2025-03-31",
+                    due_date: "2025-03-31",
+                    before_photo: "염소투입기_개선전.jpg",
+                    after_photo: "염소투입기_개선후.jpg",
+                    before_photos: [
+                        { name: "염소투입기_개선전.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.b2 }
+                    ],
+                    after_photos: [
+                        { name: "염소투입기_개선후.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.a2 }
+                    ],
+                    action_content: "누출감지기 연동 및 비상 세안설비 위치 조정 완료",
+                    completed_date: "2025-03-21",
+                    signature: { by: "서담당", at: "2025-03-21" },
+                    status: "DONE",
+                    reassessed: true,
+                    created: "2025-02-19",
                     history: [
-                        { type: 'NOTIFY',  at: '2025-05-20 10:00', by: '재난안전과', memo: '개선조치 전달 (기한 2025-09-30)' },
-                        { type: 'STATUS',  at: '2025-09-25 16:20', by: '오수질', memo: '완료 처리 · 완료일 2025-09-25 · 전자서명 오수질' },
-                        { type: 'CONFIRM', at: '2025-10-05 09:40', by: '박안전', memo: '조치 완료 확인' }
+                        { type: "NOTIFY", at: "2025-02-19 10:30", by: "물순환사업소", memo: "수시평가(OCC-2025-01) 실시 결과 — 위험성 감소대책 등록 (조치기한 2025-03-31)" },
+                        { type: "STATUS", at: "2025-03-21 15:00", by: "서담당", memo: "완료 처리 · 완료일 2025-03-21 · 개선 후 사진 염소투입기_개선후.jpg · 전자서명 서담당" },
+                        { type: "CONFIRM", at: "2025-03-26 09:30", by: "박안전", memo: "조치 완료 확인" }
                     ]
                 },
                 {
-                    id: 'IMP-208', source_type: 'risk_assessment', assessment_id: 'RA-2025-01', dept_id: 'water',
-                    target_id: '', process_id: '', occ_id: '',
-                    hazard: { name: '슬러지 이송 컨베이어 비상정지 미작동', category: '기계적', cause: '비상정지 스위치 접점 불량', basis: '', facilNa: true },
-                    hazard_risk_factor: '슬러지 이송 컨베이어 비상정지 미작동',
-                    description: '비상정지 스위치 전량 교체 및 월 1회 작동 점검 지정', action: '비상정지 스위치 전량 교체 및 월 1회 작동 점검 지정',
-                    assigned_to: '물순환사업소 · 시설 담당 / 서담당', due: '2025-09-30', due_date: '2025-09-30',
-                    before_photo: false, after_photo: '컨베이어_개선후.jpg',
-                    before_photos: [], after_photos: [{ name: '컨베이어_개선후.jpg', size: 152000, type: 'image/jpeg' }],
-                    action_content: '비상정지 스위치 전량 교체 및 월 1회 작동 점검 지정 완료', completed_date: '2025-09-29',
-                    signature: { by: '서담당', at: '2025-09-29' },
-                    status: 'DONE', reassessed: true, created: '2025-05-20',
-                    /* 주관부서 확인까지 끝난 완성 사례 — 공문 상신의 전제 */
-                    confirm: { state: 'OK', by: '박안전', at: '2025-10-05', reason: '', round: 1 },
+                    id: "IMP-201",
+                    source_type: "risk_assessment",
+                    assessment_id: "RA-2025-01",
+                    dept_id: "safety",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "",
+                    hazard: { name: "옥상 점검통로 안전난간 미설치", category: "물리적", cause: "난간 미설치 구간 30m", basis: "oshs-43", facilNo: "AR1968-0000226", facilNm: "담양군청(본관동)" },
+                    hazard_risk_factor: "옥상 점검통로 안전난간 미설치",
+                    description: "점검통로 전 구간 안전난간(H=1.2m) 설치 및 추락주의 표지 부착",
+                    action: "점검통로 전 구간 안전난간(H=1.2m) 설치 및 추락주의 표지 부착",
+                    assigned_to: "재난안전과 · 안전관리자 / 김안전",
+                    due: "2025-07-31",
+                    due_date: "2025-07-31",
+                    before_photo: "옥상난간_개선전.jpg",
+                    after_photo: "옥상난간_개선후.jpg",
+                    before_photos: [
+                        { name: "옥상난간_개선전.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.b4 }
+                    ],
+                    after_photos: [
+                        { name: "옥상난간_개선후.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.a4 }
+                    ],
+                    action_content: "점검통로 전 구간 안전난간(H=1.2m) 설치 및 추락주의 표지 부착 완료",
+                    completed_date: "2025-07-18",
+                    signature: { by: "김안전", at: "2025-07-18" },
+                    status: "DONE",
+                    reassessed: true,
+                    created: "2025-05-22",
+                    confirm: { state: "OK", by: "박안전", at: "2025-08-01", reason: "", round: 1 },
                     history: [
-                        { type: 'NOTIFY',  at: '2025-05-20 10:00', by: '재난안전과', memo: '개선조치 전달 (기한 2025-09-30)' },
-                        { type: 'STATUS',  at: '2025-09-29 16:20', by: '서담당', memo: '완료 처리 · 완료일 2025-09-29 · 전자서명 서담당' },
-                        { type: 'CONFIRM', at: '2025-10-05 09:40', by: '박안전', memo: '조치 완료 확인' }
-                    ]
-                }
-                ,
-                {
-                    id: 'IMP-209', source_type: 'occasional', assessment_id: '', dept_id: 'water',
-                    target_id: '', process_id: '', occ_id: 'OCC-2026-01',
-                    hazard: { name: '밸브실 고압 배관 파손 시 수증기 분출', category: '물리적', cause: '노후 밸브·차폐 부재', basis: '', facilNo: 'WS2008-0000016', facilNm: '담양지방상수도' },
-                    hazard_risk_factor: '밸브실 고압 배관 파손 시 수증기 분출',
-                    description: '노후 밸브 3개소 교체 및 작업 전 차단 절차 게시, 보호구 비치',
-                    action: '노후 밸브 3개소 교체 및 작업 전 차단 절차 게시, 보호구 비치',
-                    assigned_to: '물순환사업소 · 시설 담당 / 서담당', due: '2026-06-30', due_date: '2026-06-30',
-                    before_photo: '밸브실_개선전.jpg', after_photo: '밸브실_개선후.jpg',
-                    before_photos: [{ name: '밸브실_개선전.jpg', size: 176000, type: 'image/jpeg', w: 1600, h: 1200, thumb: T.b2 }],
-                    after_photos: [{ name: '밸브실_개선후.jpg', size: 168000, type: 'image/jpeg', w: 1600, h: 1200, thumb: T.a2 }],
-                    action_content: '노후 밸브 3개소 교체 완료, 차단 절차 게시 및 보호구 비치',
-                    completed_date: '2026-06-24',
-                    signature: { by: '서담당', at: '2026-06-24' },
-                    status: 'DONE', reassessed: true, created: '2026-05-21',
-                    confirm: { state: 'OK', by: '박안전', at: '2026-06-27', reason: '', round: 1 },
-                    history: [
-                        { type: 'NOTIFY',  at: '2026-05-21 11:10', by: '물순환사업소', memo: '수시평가(OCC-2026-01) 실시 결과 — 위험성 감소대책 등록 (조치기한 2026-06-30)' },
-                        { type: 'STATUS',  at: '2026-06-24 15:40', by: '서담당', memo: '완료 처리 · 완료일 2026-06-24 · 전자서명 서담당' },
-                        { type: 'CONFIRM', at: '2026-06-27 09:20', by: '박안전', memo: '조치 완료 확인' }
+                        { type: "REGISTER", at: "2025-05-22 14:20", by: "박안전", memo: "부서 작성 · 입력 완료 (기한 2025-07-31)" },
+                        { type: "STATUS", at: "2025-07-18 16:20", by: "김안전", memo: "완료 처리 · 완료일 2025-07-18 · 개선 후 사진 옥상난간_개선후.jpg · 전자서명 김안전" },
+                        { type: "CONFIRM", at: "2025-08-01 09:40", by: "박안전", memo: "조치 완료 확인" }
                     ]
                 },
                 {
-                    id: 'IMP-210', source_type: 'occasional', assessment_id: '', dept_id: 'env',
-                    target_id: '', process_id: '', occ_id: 'OCC-2026-02',
-                    hazard: { name: '신규 압축기 회전부 끼임 위험', category: '기계적', cause: '방호덮개 미설치 상태 반입', basis: '', facilNa: true },
-                    hazard_risk_factor: '신규 압축기 회전부 끼임 위험',
-                    description: '방호덮개 설치 및 비상정지 스위치 설치, 취급자 특별교육 실시',
-                    action: '방호덮개 설치 및 비상정지 스위치 설치, 취급자 특별교육 실시',
-                    assigned_to: '환경과 · 주무관 / 정수빈', due: '2026-08-31', due_date: '2026-08-31',
-                    before_photo: '압축기_개선전.jpg', after_photo: false,
-                    before_photos: [{ name: '압축기_개선전.jpg', size: 181000, type: 'image/jpeg', w: 1600, h: 1200, thumb: T.b3 }],
+                    id: "IMP-202",
+                    source_type: "risk_assessment",
+                    assessment_id: "RA-2025-01",
+                    dept_id: "safety",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "",
+                    hazard: { name: "비상발전기실 소화기 미비치", category: "화학적", cause: "소화기 노후·수량 부족", basis: "", facilNo: "AR1968-0000226", facilNm: "담양군청(본관동)" },
+                    hazard_risk_factor: "비상발전기실 소화기 미비치",
+                    description: "ABC분말소화기 4대 교체 비치 및 점검표 부착",
+                    action: "ABC분말소화기 4대 교체 비치 및 점검표 부착",
+                    assigned_to: "재난안전과 · 안전관리담당 / 박담당",
+                    due: "2025-07-31",
+                    due_date: "2025-07-31",
+                    before_photo: false,
+                    after_photo: "발전기실_개선후.jpg",
+                    before_photos: [],
+                    after_photos: [
+                        { name: "발전기실_개선후.jpg", size: 152000, type: "image/jpeg" }
+                    ],
+                    action_content: "ABC분말소화기 4대 교체 비치 및 점검표 부착 완료",
+                    completed_date: "2025-07-22",
+                    signature: { by: "박담당", at: "2025-07-22" },
+                    status: "DONE",
+                    reassessed: true,
+                    created: "2025-05-22",
+                    confirm: { state: "OK", by: "박안전", at: "2025-08-01", reason: "", round: 1 },
+                    history: [
+                        { type: "REGISTER", at: "2025-05-22 14:20", by: "박안전", memo: "부서 작성 · 입력 완료 (기한 2025-07-31)" },
+                        { type: "STATUS", at: "2025-07-22 16:20", by: "박담당", memo: "완료 처리 · 완료일 2025-07-22 · 개선 후 사진 발전기실_개선후.jpg · 전자서명 박담당" },
+                        { type: "CONFIRM", at: "2025-08-01 09:45", by: "박안전", memo: "조치 완료 확인" }
+                    ]
+                },
+                {
+                    id: "IMP-203",
+                    source_type: "risk_assessment",
+                    assessment_id: "RA-2025-01",
+                    dept_id: "env",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "",
+                    hazard: { name: "폐기물 적치장 붕괴 위험", category: "물리적", cause: "적치 높이 기준 초과", basis: "" },
+                    hazard_risk_factor: "폐기물 적치장 붕괴 위험",
+                    description: "적치 높이 제한선 도색 및 방호벽 설치, 주 1회 점검 지정",
+                    action: "적치 높이 제한선 도색 및 방호벽 설치, 주 1회 점검 지정",
+                    assigned_to: "환경과 · 유해·위험요인 담당 주무관 / 정환경",
+                    due: "2025-08-14",
+                    due_date: "2025-08-14",
+                    before_photo: "적치장_개선전.jpg",
+                    after_photo: "적치장_개선후.jpg",
+                    before_photos: [
+                        { name: "적치장_개선전.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.b2 }
+                    ],
+                    after_photos: [
+                        { name: "적치장_개선후.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.a2 }
+                    ],
+                    action_content: "적치 높이 제한선 도색 및 방호벽 설치, 주 1회 점검 지정 완료",
+                    completed_date: "2025-08-05",
+                    signature: { by: "정환경", at: "2025-08-05" },
+                    status: "DONE",
+                    reassessed: true,
+                    created: "2025-05-23",
+                    confirm: { state: "OK", by: "박안전", at: "2025-08-20", reason: "", round: 1 },
+                    history: [
+                        { type: "REGISTER", at: "2025-05-23 10:30", by: "정환경", memo: "부서 작성 · 입력 완료 (기한 2025-08-14)" },
+                        { type: "STATUS", at: "2025-08-05 16:20", by: "정환경", memo: "완료 처리 · 완료일 2025-08-05 · 개선 후 사진 적치장_개선후.jpg · 전자서명 정환경" },
+                        { type: "CONFIRM", at: "2025-08-20 09:40", by: "박안전", memo: "조치 완료 확인" }
+                    ]
+                },
+                {
+                    id: "IMP-204",
+                    source_type: "risk_assessment",
+                    assessment_id: "RA-2025-01",
+                    dept_id: "env",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "",
+                    hazard: { name: "자원순환팀 파쇄기 방호덮개 파손", category: "기계적", cause: "덮개 균열·고정볼트 이완", basis: "oshs-87", facilNa: true },
+                    hazard_risk_factor: "자원순환팀 파쇄기 방호덮개 파손",
+                    description: "방호덮개 교체 및 비상정지 스위치 동작 점검",
+                    action: "방호덮개 교체 및 비상정지 스위치 동작 점검",
+                    assigned_to: "환경과 · 주무관 / 정수빈",
+                    due: "2025-08-14",
+                    due_date: "2025-08-14",
+                    before_photo: false,
+                    after_photo: "파쇄기_개선후.jpg",
+                    before_photos: [],
+                    after_photos: [
+                        { name: "파쇄기_개선후.jpg", size: 152000, type: "image/jpeg" }
+                    ],
+                    action_content: "방호덮개 교체 및 비상정지 스위치 동작 점검 완료",
+                    completed_date: "2025-08-11",
+                    signature: { by: "정수빈", at: "2025-08-11" },
+                    status: "DONE",
+                    reassessed: true,
+                    created: "2025-05-23",
+                    confirm: { state: "OK", by: "박안전", at: "2025-08-20", reason: "", round: 1 },
+                    history: [
+                        { type: "REGISTER", at: "2025-05-23 10:30", by: "정환경", memo: "부서 작성 · 입력 완료 (기한 2025-08-14)" },
+                        { type: "STATUS", at: "2025-08-11 16:20", by: "정수빈", memo: "완료 처리 · 완료일 2025-08-11 · 개선 후 사진 파쇄기_개선후.jpg · 전자서명 정수빈" },
+                        { type: "CONFIRM", at: "2025-08-20 09:50", by: "박안전", memo: "조치 완료 확인" }
+                    ]
+                },
+                {
+                    id: "IMP-205",
+                    source_type: "risk_assessment",
+                    assessment_id: "RA-2025-01",
+                    dept_id: "water",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "",
+                    hazard: { name: "정수장 약품투입실 환기 불량", category: "화학적", cause: "국소배기장치 용량 부족", basis: "oshs-607", facilNo: "WS1996-0000011", facilNm: "신계정수장" },
+                    hazard_risk_factor: "정수장 약품투입실 환기 불량",
+                    description: "국소배기장치 2대 증설 및 MSDS 게시, 보호구 비치",
+                    action: "국소배기장치 2대 증설 및 MSDS 게시, 보호구 비치",
+                    assigned_to: "물순환사업소 · 주무관 / 하정수",
+                    due: "2025-09-30",
+                    due_date: "2025-09-30",
+                    before_photo: "약품실_개선전.jpg",
+                    after_photo: "약품실_개선후.jpg",
+                    before_photos: [
+                        { name: "약품실_개선전.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.b4 }
+                    ],
+                    after_photos: [
+                        { name: "약품실_개선후.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.a4 }
+                    ],
+                    action_content: "국소배기장치 2대 증설 및 MSDS 게시, 보호구 비치 완료",
+                    completed_date: "2025-09-12",
+                    signature: { by: "하정수", at: "2025-09-12" },
+                    status: "DONE",
+                    reassessed: true,
+                    created: "2025-05-26",
+                    confirm: { state: "OK", by: "박안전", at: "2025-10-02", reason: "", round: 1 },
+                    history: [
+                        { type: "REGISTER", at: "2025-05-26 16:00", by: "하정수", memo: "부서 작성 · 입력 완료 (기한 2025-09-30)" },
+                        { type: "STATUS", at: "2025-09-12 16:20", by: "하정수", memo: "완료 처리 · 완료일 2025-09-12 · 개선 후 사진 약품실_개선후.jpg · 전자서명 하정수" },
+                        { type: "CONFIRM", at: "2025-10-02 09:40", by: "박안전", memo: "조치 완료 확인" }
+                    ]
+                },
+                {
+                    id: "IMP-206",
+                    source_type: "risk_assessment",
+                    assessment_id: "RA-2025-01",
+                    dept_id: "water",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "",
+                    hazard: { name: "침전지 개구부 추락 위험", category: "물리적", cause: "개구부 덮개·난간 미설치", basis: "oshs-43", facilNo: "WS1996-0000011", facilNm: "신계정수장" },
+                    hazard_risk_factor: "침전지 개구부 추락 위험",
+                    description: "개구부 안전덮개 6개소 설치 및 추락주의 표지 부착",
+                    action: "개구부 안전덮개 6개소 설치 및 추락주의 표지 부착",
+                    assigned_to: "물순환사업소 · 주무관 / 하정수",
+                    due: "2025-09-30",
+                    due_date: "2025-09-30",
+                    before_photo: "개구부_개선전.jpg",
+                    after_photo: "개구부_개선후.jpg",
+                    before_photos: [
+                        { name: "개구부_개선전.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.b1 }
+                    ],
+                    after_photos: [
+                        { name: "개구부_개선후.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.a1 }
+                    ],
+                    action_content: "개구부 안전덮개 6개소 설치 및 추락주의 표지 부착 완료",
+                    completed_date: "2025-09-18",
+                    signature: { by: "하정수", at: "2025-09-18" },
+                    status: "DONE",
+                    reassessed: true,
+                    created: "2025-05-26",
+                    confirm: { state: "OK", by: "박안전", at: "2025-10-02", reason: "", round: 1 },
+                    history: [
+                        { type: "REGISTER", at: "2025-05-26 16:00", by: "하정수", memo: "부서 작성 · 입력 완료 (기한 2025-09-30)" },
+                        { type: "STATUS", at: "2025-09-18 16:20", by: "하정수", memo: "완료 처리 · 완료일 2025-09-18 · 개선 후 사진 개구부_개선후.jpg · 전자서명 하정수" },
+                        { type: "CONFIRM", at: "2025-10-02 09:45", by: "박안전", memo: "조치 완료 확인" }
+                    ]
+                },
+                {
+                    id: "IMP-207",
+                    source_type: "risk_assessment",
+                    assessment_id: "RA-2025-01",
+                    dept_id: "water",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "",
+                    hazard: { name: "전기 분전반 시건장치 미설치", category: "전기적", cause: "분전반 개방 상태 방치", basis: "", facilNo: "ST1999-0000017", facilNm: "담양하수종말처리장" },
+                    hazard_risk_factor: "전기 분전반 시건장치 미설치",
+                    description: "분전반 6면 시건장치 설치 및 활선 경고표지 부착",
+                    action: "분전반 6면 시건장치 설치 및 활선 경고표지 부착",
+                    assigned_to: "물순환사업소 · 주무관 / 오수질",
+                    due: "2025-09-30",
+                    due_date: "2025-09-30",
+                    before_photo: "분전반_개선전.jpg",
+                    after_photo: "분전반_개선후.jpg",
+                    before_photos: [
+                        { name: "분전반_개선전.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.b2 }
+                    ],
+                    after_photos: [
+                        { name: "분전반_개선후.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.a2 }
+                    ],
+                    action_content: "분전반 6면 시건장치 설치 및 활선 경고표지 부착 완료",
+                    completed_date: "2025-09-29",
+                    signature: { by: "오수질", at: "2025-09-29" },
+                    status: "DONE",
+                    reassessed: true,
+                    created: "2025-05-26",
+                    confirm: { state: "OK", by: "박안전", at: "2025-10-02", reason: "", round: 2 },
+                    history: [
+                        { type: "REGISTER", at: "2025-05-26 16:00", by: "하정수", memo: "부서 작성 · 입력 완료 (기한 2025-09-30)" },
+                        { type: "STATUS", at: "2025-09-19 16:20", by: "오수질", memo: "완료 처리 · 완료일 2025-09-19 · 개선 후 사진 분전반_개선후.jpg · 전자서명 오수질" },
+                        { type: "RETURN", at: "2025-09-24 10:10", by: "박안전", memo: "조치 확인 반려 — 분전반 2면의 시건장치 설치 사진이 없습니다 — 6면 전부 확인되도록 사진을 다시 올려 주세요" },
+                        { type: "STATUS", at: "2025-09-29 15:30", by: "오수질", memo: "완료 처리 · 완료일 2025-09-29 · 개선 후 사진 분전반_개선후.jpg · 전자서명 오수질" },
+                        { type: "CONFIRM", at: "2025-10-02 10:00", by: "박안전", memo: "조치 완료 확인 (2회차 제출)" }
+                    ]
+                },
+                {
+                    id: "IMP-208",
+                    source_type: "risk_assessment",
+                    assessment_id: "RA-2025-01",
+                    dept_id: "water",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "",
+                    hazard: { name: "슬러지 이송 컨베이어 비상정지 미작동", category: "기계적", cause: "비상정지 스위치 접점 불량", basis: "" },
+                    hazard_risk_factor: "슬러지 이송 컨베이어 비상정지 미작동",
+                    description: "비상정지 스위치 전량 교체 및 월 1회 작동 점검 지정",
+                    action: "비상정지 스위치 전량 교체 및 월 1회 작동 점검 지정",
+                    assigned_to: "물순환사업소 · 시설 담당 / 서담당",
+                    due: "2025-09-30",
+                    due_date: "2025-09-30",
+                    before_photo: false,
+                    after_photo: "컨베이어_개선후.jpg",
+                    before_photos: [],
+                    after_photos: [
+                        { name: "컨베이어_개선후.jpg", size: 152000, type: "image/jpeg" }
+                    ],
+                    action_content: "비상정지 스위치 전량 교체 및 월 1회 작동 점검 지정 완료",
+                    completed_date: "2025-09-26",
+                    signature: { by: "서담당", at: "2025-09-26" },
+                    status: "DONE",
+                    reassessed: true,
+                    created: "2025-05-26",
+                    confirm: { state: "OK", by: "박안전", at: "2025-10-02", reason: "", round: 1 },
+                    history: [
+                        { type: "REGISTER", at: "2025-05-26 16:00", by: "하정수", memo: "부서 작성 · 입력 완료 (기한 2025-09-30)" },
+                        { type: "STATUS", at: "2025-09-26 16:20", by: "서담당", memo: "완료 처리 · 완료일 2025-09-26 · 개선 후 사진 컨베이어_개선후.jpg · 전자서명 서담당" },
+                        { type: "CONFIRM", at: "2025-10-02 10:05", by: "박안전", memo: "조치 완료 확인" }
+                    ]
+                },
+                {
+                    id: "IMP-215",
+                    source_type: "risk_assessment",
+                    assessment_id: "RA-2025-01",
+                    dept_id: "facility",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "",
+                    hazard: { name: "체육관 천장 조명 교체 작업 중 추락", category: "고소작업", cause: "이동식 비계 안전난간 미설치", basis: "", facilNo: "AR2008-0003610", facilNm: "담양종합체육관" },
+                    hazard_risk_factor: "체육관 천장 조명 교체 작업 중 추락",
+                    description: "이동식 비계 안전난간·아웃트리거 설치 후 작업, 2인 1조 작업 지정",
+                    action: "이동식 비계 안전난간·아웃트리거 설치 후 작업, 2인 1조 작업 지정",
+                    assigned_to: "공공시설사업소 · 주무관 / 한운영",
+                    due: "2025-08-29",
+                    due_date: "2025-08-29",
+                    before_photo: "체육관비계_개선전.jpg",
+                    after_photo: "체육관비계_개선후.jpg",
+                    before_photos: [
+                        { name: "체육관비계_개선전.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.b4 }
+                    ],
+                    after_photos: [
+                        { name: "체육관비계_개선후.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.a4 }
+                    ],
+                    action_content: "이동식 비계 안전난간·아웃트리거 보강 및 2인 1조 작업 지정 완료",
+                    completed_date: "2025-08-21",
+                    signature: { by: "한운영", at: "2025-08-21" },
+                    status: "DONE",
+                    reassessed: true,
+                    created: "2025-05-27",
+                    confirm: { state: "OK", by: "박안전", at: "2025-09-02", reason: "", round: 1 },
+                    history: [
+                        { type: "REGISTER", at: "2025-05-27 11:15", by: "한담당", memo: "부서 작성 · 입력 완료 (기한 2025-08-29)" },
+                        { type: "STATUS", at: "2025-08-21 15:40", by: "한운영", memo: "완료 처리 · 완료일 2025-08-21 · 개선 후 사진 체육관비계_개선후.jpg · 전자서명 한운영" },
+                        { type: "CONFIRM", at: "2025-09-02 10:10", by: "박안전", memo: "조치 완료 확인" }
+                    ]
+                },
+                {
+                    id: "IMP-216",
+                    source_type: "risk_assessment",
+                    assessment_id: "RA-2025-01",
+                    dept_id: "facility",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "",
+                    hazard: { name: "환경시설팀 펌프실 회전체 노출", category: "기계적", cause: "커플링 방호덮개 탈락", basis: "oshs-87", facilNa: true },
+                    hazard_risk_factor: "환경시설팀 펌프실 회전체 노출",
+                    description: "펌프 커플링 방호덮개 재설치 및 점검표에 덮개 상태 항목 추가",
+                    action: "펌프 커플링 방호덮개 재설치 및 점검표에 덮개 상태 항목 추가",
+                    assigned_to: "공공시설사업소 · 주무관 / 민설비",
+                    due: "2025-08-29",
+                    due_date: "2025-08-29",
+                    before_photo: "펌프실_개선전.jpg",
+                    after_photo: "펌프실_개선후.jpg",
+                    before_photos: [
+                        { name: "펌프실_개선전.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.b1 }
+                    ],
+                    after_photos: [
+                        { name: "펌프실_개선후.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.a1 }
+                    ],
+                    action_content: "펌프 커플링 방호덮개 재설치 및 점검표 항목 추가 완료",
+                    completed_date: "2025-08-27",
+                    signature: { by: "민설비", at: "2025-08-27" },
+                    status: "DONE",
+                    reassessed: true,
+                    created: "2025-05-27",
+                    confirm: { state: "OK", by: "박안전", at: "2025-09-02", reason: "", round: 1 },
+                    history: [
+                        { type: "REGISTER", at: "2025-05-27 11:15", by: "한담당", memo: "부서 작성 · 입력 완료 (기한 2025-08-29)" },
+                        { type: "STATUS", at: "2025-08-27 14:30", by: "민설비", memo: "완료 처리 · 완료일 2025-08-27 · 개선 후 사진 펌프실_개선후.jpg · 전자서명 민설비" },
+                        { type: "CONFIRM", at: "2025-09-02 10:15", by: "박안전", memo: "조치 완료 확인" }
+                    ]
+                },
+                {
+                    id: "IMP-212",
+                    source_type: "occasional",
+                    assessment_id: "",
+                    dept_id: "construct",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "OCC-2025-02",
+                    hazard: { name: "콘크리트 절단기 칼날 접촉 절창", category: "기계적", cause: "칼날 덮개 탈락 상태 사용", basis: "oshs-32" },
+                    hazard_risk_factor: "콘크리트 절단기 칼날 접촉 절창",
+                    description: "절단기 칼날 덮개 교체, 방호장갑·보안면 지급 및 작업 전 점검표 운영",
+                    action: "절단기 칼날 덮개 교체, 방호장갑·보안면 지급 및 작업 전 점검표 운영",
+                    assigned_to: "건설과 · 주무관 / 김도현",
+                    due: "2025-06-30",
+                    due_date: "2025-06-30",
+                    before_photo: "절단기_개선전.jpg",
+                    after_photo: "절단기_개선후.jpg",
+                    before_photos: [
+                        { name: "절단기_개선전.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.b3 }
+                    ],
+                    after_photos: [
+                        { name: "절단기_개선후.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.a3 }
+                    ],
+                    action_content: "절단기 3대 칼날 덮개 교체 및 보호구 지급, 작업 전 점검표 운영 개시",
+                    completed_date: "2025-06-20",
+                    signature: { by: "김도현", at: "2025-06-20" },
+                    status: "DONE",
+                    reassessed: true,
+                    created: "2025-06-10",
+                    history: [
+                        { type: "NOTIFY", at: "2025-06-10 14:00", by: "건설과", memo: "수시평가(OCC-2025-02) 실시 결과 — 위험성 감소대책 등록 (조치기한 2025-06-30)" },
+                        { type: "STATUS", at: "2025-06-20 11:20", by: "김도현", memo: "완료 처리 · 완료일 2025-06-20 · 개선 후 사진 절단기_개선후.jpg · 전자서명 김도현" },
+                        { type: "CONFIRM", at: "2025-06-25 10:00", by: "박안전", memo: "조치 완료 확인" }
+                    ]
+                },
+                {
+                    id: "IMP-213",
+                    source_type: "occasional",
+                    assessment_id: "",
+                    dept_id: "facility",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "OCC-2025-03",
+                    hazard: { name: "고압세척기 사용 중 미끄러짐·감전", category: "전기적", cause: "습윤 바닥 · 누전차단기 없는 콘센트 사용", basis: "oshs-304", facilNo: "AR2002-0000563", facilNm: "담양문화회관" },
+                    hazard_risk_factor: "고압세척기 사용 중 미끄러짐·감전",
+                    description: "이동식 누전차단기 배치 및 미끄럼 방지 장화 지급",
+                    action: "이동식 누전차단기 배치 및 미끄럼 방지 장화 지급",
+                    assigned_to: "공공시설사업소 · 주무관 / 한운영",
+                    due: "2025-09-30",
+                    due_date: "2025-09-30",
+                    before_photo: "고압세척_개선전.jpg",
+                    after_photo: "고압세척_개선후.jpg",
+                    before_photos: [
+                        { name: "고압세척_개선전.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.b4 }
+                    ],
+                    after_photos: [
+                        { name: "고압세척_개선후.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.a4 }
+                    ],
+                    action_content: "이동식 누전차단기 2대 배치 및 미끄럼 방지 장화 지급 완료",
+                    completed_date: "2025-09-23",
+                    signature: { by: "한운영", at: "2025-09-23" },
+                    status: "DONE",
+                    reassessed: true,
+                    created: "2025-09-04",
+                    history: [
+                        { type: "NOTIFY", at: "2025-09-04 09:40", by: "공공시설사업소", memo: "수시평가(OCC-2025-03) 실시 결과 — 위험성 감소대책 등록 (조치기한 2025-09-30)" },
+                        { type: "STATUS", at: "2025-09-23 16:10", by: "한운영", memo: "완료 처리 · 완료일 2025-09-23 · 개선 후 사진 고압세척_개선후.jpg · 전자서명 한운영" },
+                        { type: "CONFIRM", at: "2025-09-26 10:30", by: "박안전", memo: "조치 완료 확인" }
+                    ]
+                },
+                {
+                    id: "IMP-214",
+                    source_type: "occasional",
+                    assessment_id: "",
+                    dept_id: "env",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "OCC-2025-04",
+                    hazard: { name: "침출수 이송펌프 보수 중 질식", category: "작업특성", cause: "집수정 내부 환기 미확보", basis: "oshs-619" },
+                    hazard_risk_factor: "침출수 이송펌프 보수 중 질식",
+                    description: "집수정 진입 작업허가제 운영 및 산소·유해가스 농도 측정기 비치",
+                    action: "집수정 진입 작업허가제 운영 및 산소·유해가스 농도 측정기 비치",
+                    assigned_to: "환경과 · 유해·위험요인 담당 주무관 / 정환경",
+                    due: "2026-01-16",
+                    due_date: "2026-01-16",
+                    before_photo: "집수정_개선전.jpg",
+                    after_photo: "집수정_개선후.jpg",
+                    before_photos: [
+                        { name: "집수정_개선전.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.b1 }
+                    ],
+                    after_photos: [
+                        { name: "집수정_개선후.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.a1 }
+                    ],
+                    action_content: "집수정 작업허가서 양식 운영 개시 및 복합가스 측정기 2대 비치 완료",
+                    completed_date: "2026-01-09",
+                    signature: { by: "정환경", at: "2026-01-09" },
+                    status: "DONE",
+                    reassessed: true,
+                    created: "2025-12-03",
+                    history: [
+                        { type: "NOTIFY", at: "2025-12-03 11:00", by: "환경과", memo: "수시평가(OCC-2025-04) 실시 결과 — 위험성 감소대책 등록 (조치기한 2026-01-16)" },
+                        { type: "STATUS", at: "2026-01-09 15:20", by: "정환경", memo: "완료 처리 · 완료일 2026-01-09 · 개선 후 사진 집수정_개선후.jpg · 전자서명 정환경" },
+                        { type: "CONFIRM", at: "2026-01-14 09:40", by: "박안전", memo: "조치 완료 확인" }
+                    ]
+                },
+                {
+                    id: "IMP-221",
+                    source_type: "occasional",
+                    assessment_id: "",
+                    dept_id: "construct",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "OCC-2026-01",
+                    hazard: { name: "제설기 부착 덤프 후진 중 협착", category: "작업특성", cause: "후방 시야 확보 불량 · 유도자 없음", basis: "" },
+                    hazard_risk_factor: "제설기 부착 덤프 후진 중 협착",
+                    description: "제설 덤프 4대 후방카메라·후진경보기 설치 및 상차장 유도자 지정",
+                    action: "제설 덤프 4대 후방카메라·후진경보기 설치 및 상차장 유도자 지정",
+                    assigned_to: "건설과 · 주무관 / 이준호",
+                    due: "2026-02-27",
+                    due_date: "2026-02-27",
+                    before_photo: "제설덤프_개선전.jpg",
+                    after_photo: "제설덤프_개선후.jpg",
+                    before_photos: [
+                        { name: "제설덤프_개선전.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.b2 }
+                    ],
+                    after_photos: [
+                        { name: "제설덤프_개선후.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.a2 }
+                    ],
+                    action_content: "후방카메라·후진경보기 4대 설치 및 상차장 유도자 지정 완료",
+                    completed_date: "2026-02-13",
+                    signature: { by: "이준호", at: "2026-02-13" },
+                    status: "DONE",
+                    reassessed: true,
+                    created: "2026-01-23",
+                    history: [
+                        { type: "NOTIFY", at: "2026-01-23 09:30", by: "건설과", memo: "수시평가(OCC-2026-01) 실시 결과 — 위험성 감소대책 등록 (조치기한 2026-02-27)" },
+                        { type: "STATUS", at: "2026-02-13 14:40", by: "이준호", memo: "완료 처리 · 완료일 2026-02-13 · 개선 후 사진 제설덤프_개선후.jpg · 전자서명 이준호" },
+                        { type: "CONFIRM", at: "2026-02-20 10:00", by: "박안전", memo: "조치 완료 확인" }
+                    ]
+                },
+                {
+                    id: "IMP-210",
+                    source_type: "occasional",
+                    assessment_id: "",
+                    dept_id: "env",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "OCC-2026-02",
+                    hazard: { name: "신규 압축기 회전부 끼임 위험", category: "기계적", cause: "방호덮개 미설치 상태 반입", basis: "oshs-87", facilNa: true },
+                    hazard_risk_factor: "신규 압축기 회전부 끼임 위험",
+                    description: "방호덮개 설치 및 비상정지 스위치 설치, 취급자 특별교육 실시",
+                    action: "방호덮개 설치 및 비상정지 스위치 설치, 취급자 특별교육 실시",
+                    assigned_to: "환경과 · 주무관 / 정수빈",
+                    due: "2026-04-30",
+                    due_date: "2026-04-30",
+                    before_photo: "압축기_개선전.jpg",
+                    after_photo: "압축기_개선후.jpg",
+                    before_photos: [
+                        { name: "압축기_개선전.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.b3 }
+                    ],
+                    after_photos: [
+                        { name: "압축기_개선후.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.a3 }
+                    ],
+                    action_content: "방호덮개·비상정지 스위치 설치 및 취급자 3명 특별교육 실시 완료",
+                    completed_date: "2026-04-17",
+                    signature: { by: "정수빈", at: "2026-04-17" },
+                    status: "DONE",
+                    reassessed: true,
+                    created: "2026-03-11",
+                    history: [
+                        { type: "NOTIFY", at: "2026-03-11 14:00", by: "환경과", memo: "수시평가(OCC-2026-02) 실시 결과 — 위험성 감소대책 등록 (조치기한 2026-04-30)" },
+                        { type: "STATUS", at: "2026-04-17 15:30", by: "정수빈", memo: "완료 처리 · 완료일 2026-04-17 · 개선 후 사진 압축기_개선후.jpg · 전자서명 정수빈" },
+                        { type: "CONFIRM", at: "2026-04-22 09:40", by: "박안전", memo: "조치 완료 확인" }
+                    ]
+                },
+                {
+                    id: "IMP-222",
+                    source_type: "occasional",
+                    assessment_id: "",
+                    dept_id: "facility",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "OCC-2026-03",
+                    hazard: { name: "지붕 방수 보수 작업 중 추락", category: "고소작업", cause: "지붕 단부 안전난간 없음", basis: "oshs-43", facilNo: "AR2002-0000559", facilNm: "담양군여성문화회관" },
+                    hazard_risk_factor: "지붕 방수 보수 작업 중 추락",
+                    description: "지붕 단부 임시 안전난간 설치 및 안전대 부착설비 설치 후 작업",
+                    action: "지붕 단부 임시 안전난간 설치 및 안전대 부착설비 설치 후 작업",
+                    assigned_to: "공공시설사업소 · 주무관 / 민설비",
+                    due: "2026-05-15",
+                    due_date: "2026-05-15",
+                    before_photo: "지붕방수_개선전.jpg",
+                    after_photo: "지붕방수_개선후.jpg",
+                    before_photos: [
+                        { name: "지붕방수_개선전.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.b4 }
+                    ],
+                    after_photos: [
+                        { name: "지붕방수_개선후.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.a4 }
+                    ],
+                    action_content: "임시 안전난간·안전대 부착설비 설치 후 방수 보수 완료",
+                    completed_date: "2026-05-08",
+                    signature: { by: "민설비", at: "2026-05-08" },
+                    status: "DONE",
+                    reassessed: true,
+                    created: "2026-04-15",
+                    history: [
+                        { type: "NOTIFY", at: "2026-04-15 10:20", by: "공공시설사업소", memo: "수시평가(OCC-2026-03) 실시 결과 — 위험성 감소대책 등록 (조치기한 2026-05-15)" },
+                        { type: "STATUS", at: "2026-05-08 16:00", by: "민설비", memo: "완료 처리 · 완료일 2026-05-08 · 개선 후 사진 지붕방수_개선후.jpg · 전자서명 민설비" },
+                        { type: "CONFIRM", at: "2026-05-13 10:10", by: "박안전", memo: "조치 완료 확인" }
+                    ]
+                },
+                {
+                    id: "IMP-209",
+                    source_type: "occasional",
+                    assessment_id: "",
+                    dept_id: "water",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "OCC-2026-04",
+                    hazard: { name: "밸브실 고압 배관 파손 시 수증기 분출", category: "물리적", cause: "노후 밸브·차폐 부재", basis: "", facilNo: "WS2008-0000016", facilNm: "담양지방상수도" },
+                    hazard_risk_factor: "밸브실 고압 배관 파손 시 수증기 분출",
+                    description: "노후 밸브 3개소 교체 및 작업 전 차단 절차 게시, 보호구 비치",
+                    action: "노후 밸브 3개소 교체 및 작업 전 차단 절차 게시, 보호구 비치",
+                    assigned_to: "물순환사업소 · 시설 담당 / 서담당",
+                    due: "2026-06-30",
+                    due_date: "2026-06-30",
+                    before_photo: "밸브실_개선전.jpg",
+                    after_photo: "밸브실_개선후.jpg",
+                    before_photos: [
+                        { name: "밸브실_개선전.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.b1 }
+                    ],
+                    after_photos: [
+                        { name: "밸브실_개선후.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.a1 }
+                    ],
+                    action_content: "노후 밸브 3개소 교체 완료, 차단 절차 게시 및 보호구 비치",
+                    completed_date: "2026-06-24",
+                    signature: { by: "서담당", at: "2026-06-24" },
+                    status: "DONE",
+                    reassessed: true,
+                    created: "2026-05-21",
+                    history: [
+                        { type: "NOTIFY", at: "2026-05-21 11:10", by: "물순환사업소", memo: "수시평가(OCC-2026-04) 실시 결과 — 위험성 감소대책 등록 (조치기한 2026-06-30)" },
+                        { type: "STATUS", at: "2026-06-24 15:40", by: "서담당", memo: "완료 처리 · 완료일 2026-06-24 · 개선 후 사진 밸브실_개선후.jpg · 전자서명 서담당" },
+                        { type: "CONFIRM", at: "2026-06-27 09:20", by: "박안전", memo: "조치 완료 확인" }
+                    ]
+                },
+                {
+                    id: "IMP-223",
+                    source_type: "occasional",
+                    assessment_id: "",
+                    dept_id: "construct",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "OCC-2026-05",
+                    hazard: { name: "자재창고 신축 후 상부 적재물 낙하", category: "물리적", cause: "랙 상단 낙하방지망 없음", basis: "oshs-14" },
+                    hazard_risk_factor: "자재창고 신축 후 상부 적재물 낙하",
+                    description: "랙 상단 낙하방지망 설치 및 중량물 하단 적재 기준 게시",
+                    action: "랙 상단 낙하방지망 설치 및 중량물 하단 적재 기준 게시",
+                    assigned_to: "건설과 · 주무관 / 박서준",
+                    due: "2026-08-31",
+                    due_date: "2026-08-31",
+                    before_photo: "자재창고_개선전.jpg",
+                    after_photo: "자재창고_개선후.jpg",
+                    before_photos: [
+                        { name: "자재창고_개선전.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.b2 }
+                    ],
+                    after_photos: [
+                        { name: "자재창고_개선후.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.a2 }
+                    ],
+                    action_content: "랙 상단 낙하방지망 설치 및 적재 기준 게시 완료",
+                    completed_date: "2026-08-19",
+                    signature: { by: "박서준", at: "2026-08-19" },
+                    status: "DONE",
+                    reassessed: true,
+                    created: "2026-07-09",
+                    history: [
+                        { type: "NOTIFY", at: "2026-07-09 15:00", by: "건설과", memo: "수시평가(OCC-2026-05) 실시 결과 — 위험성 감소대책 등록 (조치기한 2026-08-31)" },
+                        { type: "STATUS", at: "2026-08-19 11:00", by: "박서준", memo: "완료 처리 · 완료일 2026-08-19 · 개선 후 사진 자재창고_개선후.jpg · 전자서명 박서준" },
+                        { type: "CONFIRM", at: "2026-08-25 10:20", by: "박안전", memo: "조치 완료 확인" }
+                    ]
+                },
+                {
+                    id: "IMP-224",
+                    source_type: "occasional",
+                    assessment_id: "",
+                    dept_id: "construct",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "OCC-2026-05",
+                    hazard: { name: "자재창고 적재 랙 전도", category: "물리적", cause: "랙 바닥 앵커 미고정", basis: "" },
+                    hazard_risk_factor: "자재창고 적재 랙 전도",
+                    description: "적재 랙 12조 바닥 앵커 고정 및 최대 적재하중 표지 부착",
+                    action: "적재 랙 12조 바닥 앵커 고정 및 최대 적재하중 표지 부착",
+                    assigned_to: "건설과 · 주무관 / 박서준",
+                    due: "2026-10-30",
+                    due_date: "2026-10-30",
+                    before_photo: "적재랙_개선전.jpg",
+                    after_photo: false,
+                    before_photos: [
+                        { name: "적재랙_개선전.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.b3 }
+                    ],
                     after_photos: [],
-                    action_content: '', completed_date: '', signature: null,
-                    status: 'IN_PROGRESS', reassessed: false, created: '2026-06-16',
+                    action_content: "",
+                    completed_date: "",
+                    signature: null,
+                    status: "IN_PROGRESS",
+                    reassessed: false,
+                    created: "2026-07-09",
                     history: [
-                        { type: 'NOTIFY', at: '2026-06-16 14:00', by: '환경과', memo: '수시평가(OCC-2026-02) 실시 결과 — 위험성 감소대책 등록 (조치기한 2026-08-31)' }
+                        { type: "NOTIFY", at: "2026-07-09 15:00", by: "건설과", memo: "수시평가(OCC-2026-05) 실시 결과 — 위험성 감소대책 등록 (조치기한 2026-09-30)" },
+                        { type: "AMEND", at: "2026-09-25 10:40", by: "박서준", memo: "기한 2026-09-30 → 2026-10-30 — 사유: 앵커 볼트 자재 납품 지연" },
+                        { type: "REMIND", at: "2026-11-04 09:10", by: "재난안전과 박안전", memo: "기한초과 재촉 (기한 2026-10-30)" }
+                    ]
+                },
+                {
+                    id: "IMP-225",
+                    source_type: "occasional",
+                    assessment_id: "",
+                    dept_id: "water",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "OCC-2026-06",
+                    hazard: { name: "반응조 산기관 교체 중 산소결핍", category: "작업특성", cause: "반응조 내부 환기·측정 절차 없음", basis: "oshs-619", facilNo: "ST1999-0000017", facilNm: "담양하수종말처리장" },
+                    hazard_risk_factor: "반응조 산기관 교체 중 산소결핍",
+                    description: "밀폐공간 작업허가제 적용, 송풍기·산소농도 측정기 비치 후 작업",
+                    action: "밀폐공간 작업허가제 적용, 송풍기·산소농도 측정기 비치 후 작업",
+                    assigned_to: "물순환사업소 · 주무관 / 오수질",
+                    due: "2026-09-30",
+                    due_date: "2026-09-30",
+                    before_photo: "반응조_개선전.jpg",
+                    after_photo: "반응조_개선후.jpg",
+                    before_photos: [
+                        { name: "반응조_개선전.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.b4 }
+                    ],
+                    after_photos: [
+                        { name: "반응조_개선후.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.a4 }
+                    ],
+                    action_content: "밀폐공간 작업허가서 운영 및 송풍기·산소농도 측정기 비치 완료",
+                    completed_date: "2026-09-15",
+                    signature: { by: "오수질", at: "2026-09-15" },
+                    status: "DONE",
+                    reassessed: true,
+                    created: "2026-08-27",
+                    history: [
+                        { type: "NOTIFY", at: "2026-08-27 10:00", by: "물순환사업소", memo: "수시평가(OCC-2026-06) 실시 결과 — 위험성 감소대책 등록 (조치기한 2026-09-30)" },
+                        { type: "STATUS", at: "2026-09-15 14:30", by: "오수질", memo: "완료 처리 · 완료일 2026-09-15 · 개선 후 사진 반응조_개선후.jpg · 전자서명 오수질" },
+                        { type: "CONFIRM", at: "2026-09-21 09:50", by: "박안전", memo: "조치 완료 확인" }
+                    ]
+                },
+                {
+                    id: "IMP-226",
+                    source_type: "occasional",
+                    assessment_id: "",
+                    dept_id: "water",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "OCC-2026-06",
+                    hazard: { name: "반응조 상부 점검발판 추락", category: "물리적", cause: "점검발판 난간 부식·높이 미달", basis: "oshs-43", facilNo: "ST1999-0000017", facilNm: "담양하수종말처리장" },
+                    hazard_risk_factor: "반응조 상부 점검발판 추락",
+                    description: "반응조 상부 점검발판 난간 교체(H=1.2m) 및 발끝막이판 설치",
+                    action: "반응조 상부 점검발판 난간 교체(H=1.2m) 및 발끝막이판 설치",
+                    assigned_to: "물순환사업소 · 주무관 / 오수질",
+                    due: "2026-11-10",
+                    due_date: "2026-11-10",
+                    before_photo: "점검발판_개선전.jpg",
+                    after_photo: false,
+                    before_photos: [
+                        { name: "점검발판_개선전.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.b1 }
+                    ],
+                    after_photos: [],
+                    action_content: "",
+                    completed_date: "",
+                    signature: null,
+                    status: "IN_PROGRESS",
+                    reassessed: false,
+                    created: "2026-08-27",
+                    history: [
+                        { type: "NOTIFY", at: "2026-08-27 10:00", by: "물순환사업소", memo: "수시평가(OCC-2026-06) 실시 결과 — 위험성 감소대책 등록 (조치기한 2026-11-10)" }
+                    ]
+                },
+                {
+                    id: "IMP-227",
+                    source_type: "occasional",
+                    assessment_id: "",
+                    dept_id: "safety",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "OCC-2026-07",
+                    hazard: { name: "비상발전기 교체 후 배기관 화상", category: "물리적", cause: "배기관 단열재·접근 방지 펜스 없음", basis: "", facilNo: "AR1997-0003452", facilNm: "담양군청(문화행복동)" },
+                    hazard_risk_factor: "비상발전기 교체 후 배기관 화상",
+                    description: "배기관 단열 피복 시공 및 접근 방지 펜스·고온주의 표지 설치",
+                    action: "배기관 단열 피복 시공 및 접근 방지 펜스·고온주의 표지 설치",
+                    assigned_to: "재난안전과 · 안전관리자 / 김안전",
+                    due: "2026-11-20",
+                    due_date: "2026-11-20",
+                    before_photo: "발전기배기관_개선전.jpg",
+                    after_photo: false,
+                    before_photos: [
+                        { name: "발전기배기관_개선전.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.b2 }
+                    ],
+                    after_photos: [],
+                    action_content: "",
+                    completed_date: "",
+                    signature: null,
+                    status: "IN_PROGRESS",
+                    reassessed: false,
+                    created: "2026-09-23",
+                    history: [
+                        { type: "NOTIFY", at: "2026-09-23 16:20", by: "재난안전과", memo: "수시평가(OCC-2026-07) 실시 결과 — 위험성 감소대책 등록 (조치기한 2026-11-20)" }
+                    ]
+                },
+                {
+                    id: "IMP-228",
+                    source_type: "occasional",
+                    assessment_id: "",
+                    dept_id: "env",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "OCC-2026-08",
+                    hazard: { name: "선별장 컨베이어 이물 제거 중 끼임", category: "기계적", cause: "운전 중 손으로 이물 제거 · 정지 수단 멀리 있음", basis: "oshs-87", facilNa: true },
+                    hazard_risk_factor: "선별장 컨베이어 이물 제거 중 끼임",
+                    description: "작업 전 전원 차단·잠금(LOTO) 절차서 게시 및 이물 제거 전용 공구 비치",
+                    action: "작업 전 전원 차단·잠금(LOTO) 절차서 게시 및 이물 제거 전용 공구 비치",
+                    assigned_to: "환경과 · 주무관 / 정수빈",
+                    due: "2026-11-06",
+                    due_date: "2026-11-06",
+                    before_photo: "선별장LOTO_개선전.jpg",
+                    after_photo: "선별장LOTO_개선후.jpg",
+                    before_photos: [
+                        { name: "선별장LOTO_개선전.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.b3 }
+                    ],
+                    after_photos: [
+                        { name: "선별장LOTO_개선후.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.a3 }
+                    ],
+                    action_content: "LOTO 절차서 게시 및 전용 공구 비치, 선별 작업자 교육 완료",
+                    completed_date: "2026-11-03",
+                    signature: { by: "정수빈", at: "2026-11-03" },
+                    status: "DONE",
+                    reassessed: true,
+                    created: "2026-10-16",
+                    history: [
+                        { type: "NOTIFY", at: "2026-10-16 10:40", by: "환경과", memo: "수시평가(OCC-2026-08) 실시 결과 — 위험성 감소대책 등록 (조치기한 2026-11-06)" },
+                        { type: "STATUS", at: "2026-11-03 15:10", by: "정수빈", memo: "완료 처리 · 완료일 2026-11-03 · 개선 후 사진 선별장LOTO_개선후.jpg · 전자서명 정수빈" },
+                        { type: "CONFIRM", at: "2026-11-06 10:30", by: "박안전", memo: "조치 완료 확인" }
+                    ]
+                },
+                {
+                    id: "IMP-229",
+                    source_type: "occasional",
+                    assessment_id: "",
+                    dept_id: "env",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "OCC-2026-08",
+                    hazard: { name: "선별장 컨베이어 비상정지 수단 부족", category: "기계적", cause: "비상정지 버튼 2개소뿐(작업 위치에서 6m)", basis: "", facilNa: true },
+                    hazard_risk_factor: "선별장 컨베이어 비상정지 수단 부족",
+                    description: "컨베이어 전 구간 비상정지 로프스위치 설치",
+                    action: "컨베이어 전 구간 비상정지 로프스위치 설치",
+                    assigned_to: "환경과 · 주무관 / 정수빈",
+                    due: "2026-11-30",
+                    due_date: "2026-11-30",
+                    before_photo: "로프스위치_개선전.jpg",
+                    after_photo: false,
+                    before_photos: [
+                        { name: "로프스위치_개선전.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.b4 }
+                    ],
+                    after_photos: [],
+                    action_content: "",
+                    completed_date: "",
+                    signature: null,
+                    status: "IN_PROGRESS",
+                    reassessed: false,
+                    created: "2026-10-16",
+                    history: [
+                        { type: "NOTIFY", at: "2026-10-16 10:40", by: "환경과", memo: "수시평가(OCC-2026-08) 실시 결과 — 위험성 감소대책 등록 (조치기한 2026-11-30)" }
+                    ]
+                },
+                {
+                    id: "IMP-230",
+                    source_type: "occasional",
+                    assessment_id: "",
+                    dept_id: "env",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "OCC-2026-09",
+                    hazard: { name: "야간 수집작업 중 차량 접촉", category: "작업특성", cause: "야간 시인성 확보 수단 없음", basis: "" },
+                    hazard_risk_factor: "야간 수집작업 중 차량 접촉",
+                    description: "야간 수집 작업자 반사조끼·경광봉 지급 및 차량 후방 작업등 설치",
+                    action: "야간 수집 작업자 반사조끼·경광봉 지급 및 차량 후방 작업등 설치",
+                    assigned_to: "환경과 · 주무관 / 김지도",
+                    due: "2026-12-10",
+                    due_date: "2026-12-10",
+                    before_photo: "야간수집_개선전.jpg",
+                    after_photo: false,
+                    before_photos: [
+                        { name: "야간수집_개선전.jpg", size: 184320, type: "image/jpeg", w: 1600, h: 1200, thumb: T.b1 }
+                    ],
+                    after_photos: [],
+                    action_content: "",
+                    completed_date: "",
+                    signature: null,
+                    status: "IN_PROGRESS",
+                    reassessed: false,
+                    created: "2026-11-06",
+                    history: [
+                        { type: "NOTIFY", at: "2026-11-06 14:30", by: "환경과", memo: "수시평가(OCC-2026-09) 실시 결과 — 위험성 감소대책 등록 (조치기한 2026-12-10)" }
+                    ]
+                },
+                {
+                    id: "IMP-231",
+                    source_type: "occasional",
+                    assessment_id: "",
+                    dept_id: "env",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "OCC-2026-09",
+                    hazard: { name: "야간 수집 경로 노면 결빙 미끄러짐", category: "작업특성", cause: "야간 작업계획서에 노면 확인 절차 없음", basis: "" },
+                    hazard_risk_factor: "야간 수집 경로 노면 결빙 미끄러짐",
+                    description: "야간 작업계획서에 노면 상태 확인·작업중지 기준 반영 및 미끄럼 방지 안전화 지급",
+                    action: "야간 작업계획서에 노면 상태 확인·작업중지 기준 반영 및 미끄럼 방지 안전화 지급",
+                    assigned_to: "환경과 · 유해·위험요인 담당 주무관 / 정환경",
+                    due: "2026-12-31",
+                    due_date: "2026-12-31",
+                    before_photo: false,
+                    after_photo: false,
+                    before_photos: [],
+                    after_photos: [],
+                    action_content: "",
+                    completed_date: "",
+                    signature: null,
+                    status: "IN_PROGRESS",
+                    reassessed: false,
+                    created: "2026-11-06",
+                    history: [
+                        { type: "NOTIFY", at: "2026-11-06 14:30", by: "환경과", memo: "수시평가(OCC-2026-09) 실시 결과 — 위험성 감소대책 등록 (조치기한 2026-12-31)" }
+                    ]
+                },
+                {
+                    id: "IMP-232",
+                    source_type: "occasional",
+                    assessment_id: "",
+                    dept_id: "facility",
+                    target_id: "",
+                    process_id: "",
+                    occ_id: "OCC-2026-10",
+                    hazard: { name: "고소작업대 신규 도입 — 작업대 전도·끼임", category: "고소작업", cause: "전도방지 아웃트리거 설치 기준·조작자 지정 없음", basis: "", facilNo: "AR2008-0003610", facilNm: "담양종합체육관" },
+                    hazard_risk_factor: "고소작업대 신규 도입 — 작업대 전도·끼임",
+                    description: "고소작업대 조작자 지정·교육 및 아웃트리거 설치 기준서 게시",
+                    action: "고소작업대 조작자 지정·교육 및 아웃트리거 설치 기준서 게시",
+                    assigned_to: "",
+                    due: "2026-12-18",
+                    due_date: "2026-12-18",
+                    before_photo: false,
+                    after_photo: false,
+                    before_photos: [],
+                    after_photos: [],
+                    action_content: "",
+                    completed_date: "",
+                    signature: null,
+                    status: "IN_PROGRESS",
+                    reassessed: false,
+                    created: "2026-11-11",
+                    history: [
+                        { type: "NOTIFY", at: "2026-11-11 11:00", by: "공공시설사업소", memo: "수시평가(OCC-2026-10) 실시 결과 — 위험성 감소대책 등록 (조치기한 2026-12-18)" }
                     ]
                 }
             ],
 
-            /* 공문(온나라 이관) — 2025 완성 사례 1건.
-             * 초기 화면에서 [문서 보기]로 표준 공문 서식을 조작 없이 열어볼 수 있게 한다. */
-            seqDoc: 1,
+            /* 공문(온나라 이관) — 정기평가 결과 공문 2건(2024·2025, 결재완료). */
+            seqDoc: 2,
             docs: [
                 {
-                    sid: 'RD-1', kind: 'assessment', target: 'A|RA-2025-01', aid: 'RA-2025-01', deptId: '',
-                    no: '재난안전과-2025-412', docType: '외부발송',
-                    title: '2025년 정기 위험성평가 개선조치 완료 확인 결과 통보',
-                    to: '수신자 참조(재난안전과장, 환경과장, 물순환사업소장)',
-                    body: '1. 관련: 산업안전보건법 제36조에 따른 2025년 정기 위험성평가 실시 계획(재난안전과-2025-118, 2025. 4. 1.)\n\n' +
-                          '2. 위 호와 관련하여 2025년 정기 위험성평가에 따라 각 부서에 전달한 개선조치의 이행 결과를 확인하였기에 아래와 같이 통보합니다.\n\n' +
-                          '  가. 대상 부서: 3개 부서(재난안전과, 환경과, 물순환사업소)\n\n' +
-                          '  나. 개선조치: 8건(전 건 조치 완료 및 확인)\n\n' +
-                          '  다. 확인 방법: 개선 전·후 사진 및 담당자 전자서명 대조\n\n' +
-                          '3. 아울러 각 부서에서는 조치 완료 사항이 지속 유지될 수 있도록 관리하여 주시기 바랍니다.',
-                    basis: ['osh-36'],
-                    attach: [{ label: '부서별 개선조치 확인 결과표', auto: true },
-                             { label: '개선 전·후 증빙 사진철', auto: true }],
+                    sid: "RD-1",
+                    kind: "assessment",
+                    target: "A|RA-2025-01",
+                    aid: "RA-2025-01",
+                    deptId: "",
+                    no: "재난안전과-4127",
+                    docType: "외부발송",
+                    title: "2025년 정기 위험성평가 개선조치 완료 확인 결과 통보",
+                    to: "수신자 참조(재난안전과장, 환경과장, 물순환사업소장, 공공시설사업소장)",
+                    body: "1. 관련: 산업안전보건법 제36조에 따른 2025년 정기 위험성평가 결과 개선조치 이행 요청(재난안전과-2025-176)\n\n2. 위 호와 관련하여 2025년 정기 위험성평가에 따라 각 부서에 요청한 개선조치의 이행 결과를 확인하였기에 아래와 같이 통보합니다.\n\n  가. 대상 부서: 5개 부서(조치 요청 4개 부서: 재난안전과, 환경과, 물순환사업소, 공공시설사업소)\n\n  나. 개선조치: 10건(전 건 조치 완료 및 확인)\n\n  다. 확인 방법: 개선 전·후 사진 및 담당자 전자서명 대조\n\n3. 아울러 각 부서에서는 조치 완료 사항이 지속 유지될 수 있도록 관리하여 주시기 바랍니다.",
+                    basis: ["osh-36"],
+                    attach: [
+                        { label: "부서별 개선조치 확인 결과표", auto: true },
+                        { label: "개선 전·후 증빙 사진철", auto: true }
+                    ],
                     files: [],
-                    /* 결재선은 **계정 식별자(uid)** 로 보관한다 — 온나라로 넘어가는 값이 그것이다.
-                       지난 문서라 예시 값이지만 uid 는 조직도 실인물이어야 한다(§15). */
-                    line: [{ uid: 'u_jjt1', dept: '재난안전과', role: '중대재해팀장', name: '김중대' },
-                           { uid: 'u_safe1', dept: '재난안전과', role: '재난안전과장', name: '홍길동' }],
-                    status: '결재완료', at: '2025-11-10 14:20', by: '박안전', byUid: 'u_jjt2', sample: true,
+                    line: [
+                        { uid: "u_jjt1", dept: "재난안전과", role: "중대재해팀장", name: "김중대" },
+                        { uid: "u_safe1", dept: "재난안전과", role: "재난안전과장", name: "홍길동" }
+                    ],
+                    status: "결재완료",
+                    at: "2025-11-10 14:20",
+                    by: "박안전",
+                    byUid: "u_jjt2",
+                    sample: true,
                     log: [
-                        { at: '2025-11-10 14:20', st: '결재중',   by: '박안전', memo: '온나라 상신' },
-                        { at: '2025-11-18 10:05', st: '결재완료', by: '온나라', memo: '' }
+                        { at: "2025-11-10 14:20", st: "결재중", by: "박안전", memo: "온나라 상신" },
+                        { at: "2025-11-18 10:05", st: "결재완료", by: "온나라", memo: "생산등록번호 재난안전과-4127 · 결재일 2025-11-18" }
+                    ]
+                },
+                {
+                    sid: "RD-2",
+                    kind: "assessment",
+                    target: "A|RA-2024-01",
+                    aid: "RA-2024-01",
+                    deptId: "",
+                    no: "재난안전과-3561",
+                    docType: "외부발송",
+                    title: "2024년 정기 위험성평가 개선조치 완료 확인 결과 통보",
+                    to: "수신자 참조(환경과장, 물순환사업소장, 건설과장)",
+                    body: "1. 관련: 산업안전보건법 제36조에 따른 2024년 정기 위험성평가 결과 개선조치 이행 요청(재난안전과-2024-163)\n\n2. 위 호와 관련하여 2024년 정기 위험성평가에 따라 각 부서에 요청한 개선조치의 이행 결과를 확인하였기에 아래와 같이 통보합니다.\n\n  가. 대상 부서: 4개 부서(조치 요청 3개 부서: 환경과, 물순환사업소, 건설과)\n\n  나. 개선조치: 6건(전 건 조치 완료 및 확인)\n\n  다. 확인 방법: 개선 전·후 사진 및 담당자 전자서명 대조\n\n3. 아울러 각 부서에서는 조치 완료 사항이 지속 유지될 수 있도록 관리하여 주시기 바랍니다.",
+                    basis: ["osh-36"],
+                    attach: [
+                        { label: "부서별 개선조치 확인 결과표", auto: true },
+                        { label: "개선 전·후 증빙 사진철", auto: true }
+                    ],
+                    files: [],
+                    line: [
+                        { uid: "u_jjt1", dept: "재난안전과", role: "중대재해팀장", name: "김중대" },
+                        { uid: "u_safe1", dept: "재난안전과", role: "재난안전과장", name: "홍길동" }
+                    ],
+                    status: "결재완료",
+                    at: "2024-10-14 15:00",
+                    by: "박안전",
+                    byUid: "u_jjt2",
+                    sample: true,
+                    log: [
+                        { at: "2024-10-14 15:00", st: "결재중", by: "박안전", memo: "온나라 상신" },
+                        { at: "2024-10-21 11:20", st: "결재완료", by: "온나라", memo: "생산등록번호 재난안전과-3561 · 결재일 2024-10-21" }
                     ]
                 }
             ],
 
-            /* 수시 위험성평가 (사유별 등록·검토) */
+            /* 수시 위험성평가 (사유별 등록·검토) — 2025 4건 · 2026 10건. 최근 2건(11월)은 안전관리자 검토 전이다. */
             occasionals: [
                 {
-                    id: 'OCC-2026-01', year: 2026, deptId: 'water', reason: 'ACCIDENT',
-                    date: '2026-05-20', desc: '정수장 밸브실 작업 중 밸브 파손으로 수증기 분출 · 경상 1명',
-                    files: [{ name: '재해_현장_사진.zip' }, { name: '경위서.hwpx' }],
-                    status: 'REVIEWED', reviewedAt: '2026-05-25', hazardCount: 1,
-                    /* 검토 완료의 근거는 안전관리자가 서명한 파일이다 (외부 용역이라 전자결재 불가) */
-                    reviewFile: 'OCC-2026-01_안전관리자검토_서명본.pdf', reviewer: '한국안전기술원 이안전',
+                    id: "OCC-2025-01",
+                    year: 2025,
+                    deptId: "water",
+                    reason: "EQUIP_CHANGE",
+                    date: "2025-02-18",
+                    desc: "신계정수장 염소투입기 교체 · 신규 설비 위험성 평가",
+                    files: [
+                        { name: "염소투입기_사양서.pdf" },
+                        { name: "설치_배치도.pdf" }
+                    ],
+                    status: "REVIEWED",
+                    accident: "",
+                    resumeDate: "",
+                    hazards: [
+                        { name: "염소투입기 교체 후 배관 접속부 누출", cause: "신규 설비 누출감지기 미연동", action: "누출감지기 신규 설비 연동 및 비상 세안설비 위치 조정", owner: "물순환사업소 · 시설 담당 / 서담당", facilNo: "WS1996-0000011", facilNm: "신계정수장", facilNa: false, due: "2025-03-31" }
+                    ],
+                    hazardCount: 1,
+                    reviewedAt: "2025-02-27",
+                    reviewFile: "OCC-2025-01_안전관리자검토_서명본.pdf",
+                    reviewer: "한국안전기술원 안전관리자",
                     history: [
-                        { type: 'REGISTER', at: '2026-05-21', by: '물순환사업소 서담당',   memo: '수시평가 등록 (사유: 중대산업사고 또는 산업재해 발생)' },
-                        { type: 'STATUS',   at: '2026-05-21', by: '물순환사업소 서담당',   memo: '위험성 감소대책 1건 등록 — 개선조치로 전환' },
-                        { type: 'REVIEW',   at: '2026-05-25', by: '한국안전기술원 이안전', memo: '안전관리자 검토파일 등록 · OCC-2026-01_안전관리자검토_서명본.pdf → 검토 완료' }
+                        { type: "REGISTER", at: "2025-02-19 10:30", by: "물순환사업소 서담당", memo: "수시평가 등록 (사유: 기계·설비·원재료 신규 도입·변경)" },
+                        { type: "STATUS", at: "2025-02-19 10:30", by: "물순환사업소 서담당", memo: "위험성 감소대책 1건 등록 — 개선조치로 전환" },
+                        { type: "REVIEW", at: "2025-03-04 11:00", by: "한국안전기술원 안전관리자", memo: "안전관리자 검토파일 등록 · OCC-2025-01_안전관리자검토_서명본.pdf → 검토 완료" }
                     ]
                 },
                 {
-                    id: 'OCC-2026-02', year: 2026, deptId: 'env', reason: 'EQUIP_CHANGE',
-                    date: '2026-06-15', desc: '자원순환팀 신규 압축기 도입 · 위험성 재평가 필요',
-                    files: [{ name: '설비사양서.pdf' }],
-                    status: 'REGISTERED', hazardCount: 1,
+                    id: "OCC-2025-02",
+                    year: 2025,
+                    deptId: "construct",
+                    reason: "ACCIDENT",
+                    date: "2025-06-09",
+                    desc: "도로 보수 중 콘크리트 절단기 칼날 접촉 · 손등 열상 경상 1명",
+                    files: [
+                        { name: "재해_현장_사진.jpg" },
+                        { name: "경위서.hwpx" }
+                    ],
+                    status: "REVIEWED",
+                    accident: "2025-06-09 14시경 군도 5호선 보수 현장에서 콘크리트 절단 작업 중 칼날 덮개가 탈락한 절단기에 손등을 베임(병원 치료 후 귀가) · 절단 작업 중지",
+                    resumeDate: "2025-06-16",
+                    hazards: [
+                        { name: "콘크리트 절단기 칼날 접촉 절창", cause: "칼날 덮개 탈락 상태 사용", action: "절단기 칼날 덮개 교체, 방호장갑·보안면 지급 및 작업 전 점검표 운영", owner: "건설과 · 주무관 / 김도현", facilNo: "", facilNm: "", facilNa: false, due: "2025-06-30" }
+                    ],
+                    hazardCount: 1,
+                    reviewedAt: "2025-06-13",
+                    reviewFile: "OCC-2025-02_안전관리자검토_서명본.pdf",
+                    reviewer: "한국안전기술원 안전관리자",
                     history: [
-                        { type: 'REGISTER', at: '2026-06-16', by: '환경과 정수빈', memo: '수시평가 등록 (사유: 기계·설비·원재료 신규 도입·변경)' },
-                        { type: 'STATUS',   at: '2026-06-16', by: '환경과 정수빈', memo: '위험성 감소대책 1건 등록 — 개선조치로 전환' }
+                        { type: "REGISTER", at: "2025-06-10 14:00", by: "건설과 김도현", memo: "수시평가 등록 (사유: 중대산업사고 또는 산업재해 발생)" },
+                        { type: "STATUS", at: "2025-06-10 14:00", by: "건설과 김도현", memo: "위험성 감소대책 1건 등록 — 개선조치로 전환" },
+                        { type: "REVIEW", at: "2025-06-16 09:30", by: "한국안전기술원 안전관리자", memo: "안전관리자 검토파일 등록 · OCC-2025-02_안전관리자검토_서명본.pdf → 검토 완료" }
+                    ]
+                },
+                {
+                    id: "OCC-2025-03",
+                    year: 2025,
+                    deptId: "facility",
+                    reason: "METHOD",
+                    date: "2025-09-03",
+                    desc: "공공시설 외벽·바닥 청소에 고압세척기 사용 도입",
+                    files: [
+                        { name: "작업절차서_고압세척.hwpx" }
+                    ],
+                    status: "REVIEWED",
+                    accident: "",
+                    resumeDate: "",
+                    hazards: [
+                        { name: "고압세척기 사용 중 미끄러짐·감전", cause: "습윤 바닥 · 누전차단기 없는 콘센트 사용", action: "이동식 누전차단기 배치 및 미끄럼 방지 장화 지급", owner: "공공시설사업소 · 주무관 / 한운영", facilNo: "AR2002-0000563", facilNm: "담양문화회관", facilNa: false, due: "2025-09-30" }
+                    ],
+                    hazardCount: 1,
+                    reviewedAt: "2025-09-12",
+                    reviewFile: "OCC-2025-03_안전관리자검토_서명본.pdf",
+                    reviewer: "한국안전기술원 안전관리자",
+                    history: [
+                        { type: "REGISTER", at: "2025-09-04 09:40", by: "공공시설사업소 한운영", memo: "수시평가 등록 (사유: 작업방법·작업절차 신규 도입·변경)" },
+                        { type: "STATUS", at: "2025-09-04 09:40", by: "공공시설사업소 한운영", memo: "위험성 감소대책 1건 등록 — 개선조치로 전환" },
+                        { type: "REVIEW", at: "2025-09-15 14:20", by: "한국안전기술원 안전관리자", memo: "안전관리자 검토파일 등록 · OCC-2025-03_안전관리자검토_서명본.pdf → 검토 완료" }
+                    ]
+                },
+                {
+                    id: "OCC-2025-04",
+                    year: 2025,
+                    deptId: "env",
+                    reason: "REPAIR",
+                    date: "2025-12-02",
+                    desc: "위생매립장 침출수 이송펌프 보수 · 집수정 진입 작업",
+                    files: [
+                        { name: "보수_작업계획서.hwpx" }
+                    ],
+                    status: "REVIEWED",
+                    accident: "",
+                    resumeDate: "",
+                    hazards: [
+                        { name: "침출수 이송펌프 보수 중 질식", cause: "집수정 내부 환기 미확보", action: "집수정 진입 작업허가제 운영 및 산소·유해가스 농도 측정기 비치", owner: "환경과 · 유해·위험요인 담당 주무관 / 정환경", facilNo: "", facilNm: "", facilNa: false, due: "2026-01-16" }
+                    ],
+                    hazardCount: 1,
+                    reviewedAt: "2025-12-10",
+                    reviewFile: "OCC-2025-04_안전관리자검토_서명본.pdf",
+                    reviewer: "한국안전기술원 안전관리자",
+                    history: [
+                        { type: "REGISTER", at: "2025-12-03 11:00", by: "환경과 정환경", memo: "수시평가 등록 (사유: 건설물·기계·설비 정비 또는 보수)" },
+                        { type: "STATUS", at: "2025-12-03 11:00", by: "환경과 정환경", memo: "위험성 감소대책 1건 등록 — 개선조치로 전환" },
+                        { type: "REVIEW", at: "2025-12-12 10:00", by: "한국안전기술원 안전관리자", memo: "안전관리자 검토파일 등록 · OCC-2025-04_안전관리자검토_서명본.pdf → 검토 완료" }
+                    ]
+                },
+                {
+                    id: "OCC-2026-01",
+                    year: 2026,
+                    deptId: "construct",
+                    reason: "METHOD",
+                    date: "2026-01-22",
+                    desc: "제설작업 방식 변경 — 제설기 부착 덤프 운용·상차장 작업 절차 도입",
+                    files: [
+                        { name: "제설작업_절차서.hwpx" }
+                    ],
+                    status: "REVIEWED",
+                    accident: "",
+                    resumeDate: "",
+                    hazards: [
+                        { name: "제설기 부착 덤프 후진 중 협착", cause: "후방 시야 확보 불량 · 유도자 없음", action: "제설 덤프 4대 후방카메라·후진경보기 설치 및 상차장 유도자 지정", owner: "건설과 · 주무관 / 이준호", facilNo: "", facilNm: "", facilNa: false, due: "2026-02-27" }
+                    ],
+                    hazardCount: 1,
+                    reviewedAt: "2026-01-30",
+                    reviewFile: "OCC-2026-01_안전관리자검토_서명본.pdf",
+                    reviewer: "한국안전기술원 안전관리자",
+                    history: [
+                        { type: "REGISTER", at: "2026-01-23 09:30", by: "건설과 이준호", memo: "수시평가 등록 (사유: 작업방법·작업절차 신규 도입·변경)" },
+                        { type: "STATUS", at: "2026-01-23 09:30", by: "건설과 이준호", memo: "위험성 감소대책 1건 등록 — 개선조치로 전환" },
+                        { type: "REVIEW", at: "2026-02-02 10:10", by: "한국안전기술원 안전관리자", memo: "안전관리자 검토파일 등록 · OCC-2026-01_안전관리자검토_서명본.pdf → 검토 완료" }
+                    ]
+                },
+                {
+                    id: "OCC-2026-02",
+                    year: 2026,
+                    deptId: "env",
+                    reason: "EQUIP_CHANGE",
+                    date: "2026-03-10",
+                    desc: "자원순환팀 신규 압축기 도입 · 위험성 재평가 필요",
+                    files: [
+                        { name: "설비사양서.pdf" }
+                    ],
+                    status: "REVIEWED",
+                    accident: "",
+                    resumeDate: "",
+                    hazards: [
+                        { name: "신규 압축기 회전부 끼임 위험", cause: "방호덮개 미설치 상태 반입", action: "방호덮개 설치 및 비상정지 스위치 설치, 취급자 특별교육 실시", owner: "환경과 · 주무관 / 정수빈", facilNo: "", facilNm: "", facilNa: true, due: "2026-04-30" }
+                    ],
+                    hazardCount: 1,
+                    reviewedAt: "2026-03-20",
+                    reviewFile: "OCC-2026-02_안전관리자검토_서명본.pdf",
+                    reviewer: "한국안전기술원 안전관리자",
+                    history: [
+                        { type: "REGISTER", at: "2026-03-11 14:00", by: "환경과 정수빈", memo: "수시평가 등록 (사유: 기계·설비·원재료 신규 도입·변경)" },
+                        { type: "STATUS", at: "2026-03-11 14:00", by: "환경과 정수빈", memo: "위험성 감소대책 1건 등록 — 개선조치로 전환" },
+                        { type: "REVIEW", at: "2026-03-23 11:30", by: "한국안전기술원 안전관리자", memo: "안전관리자 검토파일 등록 · OCC-2026-02_안전관리자검토_서명본.pdf → 검토 완료" }
+                    ]
+                },
+                {
+                    id: "OCC-2026-03",
+                    year: 2026,
+                    deptId: "facility",
+                    reason: "REPAIR",
+                    date: "2026-04-14",
+                    desc: "담양군여성문화회관 지붕 방수 보수 공사",
+                    files: [
+                        { name: "보수_작업계획서.hwpx" },
+                        { name: "현장_사진.jpg" }
+                    ],
+                    status: "REVIEWED",
+                    accident: "",
+                    resumeDate: "",
+                    hazards: [
+                        { name: "지붕 방수 보수 작업 중 추락", cause: "지붕 단부 안전난간 없음", action: "지붕 단부 임시 안전난간 설치 및 안전대 부착설비 설치 후 작업", owner: "공공시설사업소 · 주무관 / 민설비", facilNo: "AR2002-0000559", facilNm: "담양군여성문화회관", facilNa: false, due: "2026-05-15" }
+                    ],
+                    hazardCount: 1,
+                    reviewedAt: "2026-04-24",
+                    reviewFile: "OCC-2026-03_안전관리자검토_서명본.pdf",
+                    reviewer: "한국안전기술원 안전관리자",
+                    history: [
+                        { type: "REGISTER", at: "2026-04-15 10:20", by: "공공시설사업소 민설비", memo: "수시평가 등록 (사유: 건설물·기계·설비 정비 또는 보수)" },
+                        { type: "STATUS", at: "2026-04-15 10:20", by: "공공시설사업소 민설비", memo: "위험성 감소대책 1건 등록 — 개선조치로 전환" },
+                        { type: "REVIEW", at: "2026-04-27 15:00", by: "한국안전기술원 안전관리자", memo: "안전관리자 검토파일 등록 · OCC-2026-03_안전관리자검토_서명본.pdf → 검토 완료" }
+                    ]
+                },
+                {
+                    id: "OCC-2026-04",
+                    year: 2026,
+                    deptId: "water",
+                    reason: "ACCIDENT",
+                    date: "2026-05-20",
+                    desc: "정수장 밸브실 작업 중 밸브 파손으로 수증기 분출 · 경상 1명",
+                    files: [
+                        { name: "재해_현장_사진.jpg" },
+                        { name: "경위서.hwpx" }
+                    ],
+                    status: "REVIEWED",
+                    accident: "2026-05-20 10시경 담양지방상수도 밸브실에서 노후 밸브 조작 중 밸브 몸체 파손 · 수증기 분출로 작업자 1명 팔 화상(경상) · 밸브실 작업 중지",
+                    resumeDate: "2026-05-27",
+                    hazards: [
+                        { name: "밸브실 고압 배관 파손 시 수증기 분출", cause: "노후 밸브·차폐 부재", action: "노후 밸브 3개소 교체 및 작업 전 차단 절차 게시, 보호구 비치", owner: "물순환사업소 · 시설 담당 / 서담당", facilNo: "WS2008-0000016", facilNm: "담양지방상수도", facilNa: false, due: "2026-06-30" }
+                    ],
+                    hazardCount: 1,
+                    reviewedAt: "2026-05-25",
+                    reviewFile: "OCC-2026-04_안전관리자검토_서명본.pdf",
+                    reviewer: "한국안전기술원 안전관리자",
+                    history: [
+                        { type: "REGISTER", at: "2026-05-21 11:10", by: "물순환사업소 서담당", memo: "수시평가 등록 (사유: 중대산업사고 또는 산업재해 발생)" },
+                        { type: "STATUS", at: "2026-05-21 11:10", by: "물순환사업소 서담당", memo: "위험성 감소대책 1건 등록 — 개선조치로 전환" },
+                        { type: "REVIEW", at: "2026-05-26 09:40", by: "한국안전기술원 안전관리자", memo: "안전관리자 검토파일 등록 · OCC-2026-04_안전관리자검토_서명본.pdf → 검토 완료" }
+                    ]
+                },
+                {
+                    id: "OCC-2026-05",
+                    year: 2026,
+                    deptId: "construct",
+                    reason: "BUILDING",
+                    date: "2026-07-08",
+                    desc: "도로관리팀 자재창고 신축 · 적재 랙 설치",
+                    files: [
+                        { name: "창고_배치도.pdf" }
+                    ],
+                    status: "REVIEWED",
+                    accident: "",
+                    resumeDate: "",
+                    hazards: [
+                        { name: "자재창고 신축 후 상부 적재물 낙하", cause: "랙 상단 낙하방지망 없음", action: "랙 상단 낙하방지망 설치 및 중량물 하단 적재 기준 게시", owner: "건설과 · 주무관 / 박서준", facilNo: "", facilNm: "", facilNa: false, due: "2026-08-31" },
+                        { name: "자재창고 적재 랙 전도", cause: "랙 바닥 앵커 미고정", action: "적재 랙 12조 바닥 앵커 고정 및 최대 적재하중 표지 부착", owner: "건설과 · 주무관 / 박서준", facilNo: "", facilNm: "", facilNa: false, due: "2026-09-30" }
+                    ],
+                    hazardCount: 2,
+                    reviewedAt: "2026-07-17",
+                    reviewFile: "OCC-2026-05_안전관리자검토_서명본.pdf",
+                    reviewer: "한국안전기술원 안전관리자",
+                    history: [
+                        { type: "REGISTER", at: "2026-07-09 15:00", by: "건설과 박서준", memo: "수시평가 등록 (사유: 건설물 설치·이전·변경·해체)" },
+                        { type: "STATUS", at: "2026-07-09 15:00", by: "건설과 박서준", memo: "위험성 감소대책 2건 등록 — 개선조치로 전환" },
+                        { type: "REVIEW", at: "2026-07-20 10:30", by: "한국안전기술원 안전관리자", memo: "안전관리자 검토파일 등록 · OCC-2026-05_안전관리자검토_서명본.pdf → 검토 완료" }
+                    ]
+                },
+                {
+                    id: "OCC-2026-06",
+                    year: 2026,
+                    deptId: "water",
+                    reason: "REPAIR",
+                    date: "2026-08-26",
+                    desc: "담양하수종말처리장 반응조 산기관 교체 · 반응조 내부 진입",
+                    files: [
+                        { name: "산기관_교체_작업계획서.hwpx" }
+                    ],
+                    status: "REVIEWED",
+                    accident: "",
+                    resumeDate: "",
+                    hazards: [
+                        { name: "반응조 산기관 교체 중 산소결핍", cause: "반응조 내부 환기·측정 절차 없음", action: "밀폐공간 작업허가제 적용, 송풍기·산소농도 측정기 비치 후 작업", owner: "물순환사업소 · 주무관 / 오수질", facilNo: "ST1999-0000017", facilNm: "담양하수종말처리장", facilNa: false, due: "2026-09-30" },
+                        { name: "반응조 상부 점검발판 추락", cause: "점검발판 난간 부식·높이 미달", action: "반응조 상부 점검발판 난간 교체(H=1.2m) 및 발끝막이판 설치", owner: "물순환사업소 · 주무관 / 오수질", facilNo: "ST1999-0000017", facilNm: "담양하수종말처리장", facilNa: false, due: "2026-11-10" }
+                    ],
+                    hazardCount: 2,
+                    reviewedAt: "2026-09-04",
+                    reviewFile: "OCC-2026-06_안전관리자검토_서명본.pdf",
+                    reviewer: "한국안전기술원 안전관리자",
+                    history: [
+                        { type: "REGISTER", at: "2026-08-27 10:00", by: "물순환사업소 오수질", memo: "수시평가 등록 (사유: 건설물·기계·설비 정비 또는 보수)" },
+                        { type: "STATUS", at: "2026-08-27 10:00", by: "물순환사업소 오수질", memo: "위험성 감소대책 2건 등록 — 개선조치로 전환" },
+                        { type: "REVIEW", at: "2026-09-07 14:00", by: "한국안전기술원 안전관리자", memo: "안전관리자 검토파일 등록 · OCC-2026-06_안전관리자검토_서명본.pdf → 검토 완료" }
+                    ]
+                },
+                {
+                    id: "OCC-2026-07",
+                    year: 2026,
+                    deptId: "safety",
+                    reason: "EQUIP_CHANGE",
+                    date: "2026-09-22",
+                    desc: "군청 문화행복동 비상발전기 교체 · 배기관 경로 변경",
+                    files: [
+                        { name: "발전기_사양서.pdf" }
+                    ],
+                    status: "REVIEWED",
+                    accident: "",
+                    resumeDate: "",
+                    hazards: [
+                        { name: "비상발전기 교체 후 배기관 화상", cause: "배기관 단열재·접근 방지 펜스 없음", action: "배기관 단열 피복 시공 및 접근 방지 펜스·고온주의 표지 설치", owner: "재난안전과 · 안전관리자 / 김안전", facilNo: "AR1997-0003452", facilNm: "담양군청(문화행복동)", facilNa: false, due: "2026-11-20" }
+                    ],
+                    hazardCount: 1,
+                    reviewedAt: "2026-10-02",
+                    reviewFile: "OCC-2026-07_안전관리자검토_서명본.pdf",
+                    reviewer: "한국안전기술원 안전관리자",
+                    history: [
+                        { type: "REGISTER", at: "2026-09-23 16:20", by: "재난안전과 김안전", memo: "수시평가 등록 (사유: 기계·설비·원재료 신규 도입·변경)" },
+                        { type: "STATUS", at: "2026-09-23 16:20", by: "재난안전과 김안전", memo: "위험성 감소대책 1건 등록 — 개선조치로 전환" },
+                        { type: "REVIEW", at: "2026-10-05 11:00", by: "한국안전기술원 안전관리자", memo: "안전관리자 검토파일 등록 · OCC-2026-07_안전관리자검토_서명본.pdf → 검토 완료" }
+                    ]
+                },
+                {
+                    id: "OCC-2026-08",
+                    year: 2026,
+                    deptId: "env",
+                    reason: "ACCIDENT",
+                    date: "2026-10-15",
+                    desc: "재활용선별장 컨베이어 이물 제거 중 손가락 끼임 · 경상 1명",
+                    files: [
+                        { name: "재해_현장_사진.jpg" },
+                        { name: "경위서.hwpx" }
+                    ],
+                    status: "REVIEWED",
+                    accident: "2026-10-15 15시경 재활용선별장에서 운전 중인 컨베이어의 이물을 손으로 제거하다 오른손 검지 끼임(골절 없음, 통원 치료) · 해당 라인 운전 중지",
+                    resumeDate: "2026-10-27",
+                    hazards: [
+                        { name: "선별장 컨베이어 이물 제거 중 끼임", cause: "운전 중 손으로 이물 제거 · 정지 수단 멀리 있음", action: "작업 전 전원 차단·잠금(LOTO) 절차서 게시 및 이물 제거 전용 공구 비치", owner: "환경과 · 주무관 / 정수빈", facilNo: "", facilNm: "", facilNa: true, due: "2026-11-06" },
+                        { name: "선별장 컨베이어 비상정지 수단 부족", cause: "비상정지 버튼 2개소뿐(작업 위치에서 6m)", action: "컨베이어 전 구간 비상정지 로프스위치 설치", owner: "환경과 · 주무관 / 정수빈", facilNo: "", facilNm: "", facilNa: true, due: "2026-11-30" }
+                    ],
+                    hazardCount: 2,
+                    reviewedAt: "2026-10-23",
+                    reviewFile: "OCC-2026-08_안전관리자검토_서명본.pdf",
+                    reviewer: "한국안전기술원 안전관리자",
+                    history: [
+                        { type: "REGISTER", at: "2026-10-16 10:40", by: "환경과 정수빈", memo: "수시평가 등록 (사유: 중대산업사고 또는 산업재해 발생)" },
+                        { type: "STATUS", at: "2026-10-16 10:40", by: "환경과 정수빈", memo: "위험성 감소대책 2건 등록 — 개선조치로 전환" },
+                        { type: "REVIEW", at: "2026-10-26 09:30", by: "한국안전기술원 안전관리자", memo: "안전관리자 검토파일 등록 · OCC-2026-08_안전관리자검토_서명본.pdf → 검토 완료" }
+                    ]
+                },
+                {
+                    id: "OCC-2026-09",
+                    year: 2026,
+                    deptId: "env",
+                    reason: "METHOD",
+                    date: "2026-11-05",
+                    desc: "생활폐기물 야간 수집(22시~05시) 도입 · 작업 절차 신규",
+                    files: [
+                        { name: "야간수집_작업계획서.hwpx" }
+                    ],
+                    status: "REGISTERED",
+                    accident: "",
+                    resumeDate: "",
+                    hazards: [
+                        { name: "야간 수집작업 중 차량 접촉", cause: "야간 시인성 확보 수단 없음", action: "야간 수집 작업자 반사조끼·경광봉 지급 및 차량 후방 작업등 설치", owner: "환경과 · 주무관 / 김지도", facilNo: "", facilNm: "", facilNa: false, due: "2026-12-10" },
+                        { name: "야간 수집 경로 노면 결빙 미끄러짐", cause: "야간 작업계획서에 노면 확인 절차 없음", action: "야간 작업계획서에 노면 상태 확인·작업중지 기준 반영 및 미끄럼 방지 안전화 지급", owner: "환경과 · 유해·위험요인 담당 주무관 / 정환경", facilNo: "", facilNm: "", facilNa: false, due: "2026-12-31" }
+                    ],
+                    hazardCount: 2,
+                    reviewFile: "",
+                    reviewer: "",
+                    history: [
+                        { type: "REGISTER", at: "2026-11-06 14:30", by: "환경과 정환경", memo: "수시평가 등록 (사유: 작업방법·작업절차 신규 도입·변경)" },
+                        { type: "STATUS", at: "2026-11-06 14:30", by: "환경과 정환경", memo: "위험성 감소대책 2건 등록 — 개선조치로 전환" }
+                    ]
+                },
+                {
+                    id: "OCC-2026-10",
+                    year: 2026,
+                    deptId: "facility",
+                    reason: "EQUIP_CHANGE",
+                    date: "2026-11-10",
+                    desc: "담양종합체육관 시설관리용 고소작업대 신규 도입",
+                    files: [
+                        { name: "고소작업대_사양서.pdf" }
+                    ],
+                    status: "REGISTERED",
+                    accident: "",
+                    resumeDate: "",
+                    hazards: [
+                        { name: "고소작업대 신규 도입 — 작업대 전도·끼임", cause: "전도방지 아웃트리거 설치 기준·조작자 지정 없음", action: "고소작업대 조작자 지정·교육 및 아웃트리거 설치 기준서 게시", owner: "", facilNo: "AR2008-0003610", facilNm: "담양종합체육관", facilNa: false, due: "2026-12-18" }
+                    ],
+                    hazardCount: 1,
+                    reviewFile: "",
+                    reviewer: "",
+                    history: [
+                        { type: "REGISTER", at: "2026-11-11 11:00", by: "공공시설사업소 한운영", memo: "수시평가 등록 (사유: 기계·설비·원재료 신규 도입·변경)" },
+                        { type: "STATUS", at: "2026-11-11 11:00", by: "공공시설사업소 한운영", memo: "위험성 감소대책 1건 등록 — 개선조치로 전환" }
                     ]
                 }
             ]
@@ -464,7 +1899,19 @@
             if (global.DYV2 && DYV2.toast) DYV2.toast('저장 공간이 가득 차 반영되지 않았습니다 — 사진 일부를 삭제해 주세요.');
         }
     }
-    function reset() { db = seed(); save(); return db; }
+    function reset() {
+        db = seed(); save();
+        /* 실습에서 올린 파일·위험성평가 알림도 함께 지운다 — 남겨 두면 없어진 평가를 가리키는
+           알림이 알림함에 남는다. 알림 저장소(DYLayout)의 위험성평가 항목만 걷는다. */
+        MEMF = {};
+        try { global.sessionStorage.removeItem(FILEKEY); } catch (e) {}
+        try {
+            var NK = 'dy-ntf-dyn-v1';
+            var all = JSON.parse(global.sessionStorage.getItem(NK) || '[]');
+            global.sessionStorage.setItem(NK, JSON.stringify(all.filter(function (n) { return n.cat !== 'risk'; })));
+        } catch (e) {}
+        return db;
+    }
 
     /* ================= 레거시 공정(processes) — 유지 ================= */
     function processes(targetId) {
@@ -535,7 +1982,7 @@
                 /* 생성만으로는 부서에 아무것도 가지 않는다 — 부서 요청은 설문조사표 요청 공문을
                    온나라로 보내는 순간이다(sendSurveyRequest). 종전 «생성 = 점검예정일 통보»는
                    공문 없이 알림만 가는 순서라 2차 교육 반영안과 맞지 않았다. */
-                { type: 'CREATE', at: today(), by: '재난안전과',
+                { type: 'CREATE', at: nowTs(), by: actorNow(),
                   memo: '정기평가 생성 · ' + deptCount + '개 부서 선정' + (surveyDue ? ' · 설문 제출 기한 ' + surveyDue : '') }
             ]
         };
@@ -551,7 +1998,7 @@
         var a = assessmentOf(aid); if (!a) return null;
         a.files = a.files || {};
         a.files.surveyAll = fileName || '';
-        pushHistory(aid, { type: 'FILE', by: '재난안전과',
+        pushHistory(aid, { type: 'FILE', by: actorNow(),
             memo: fileName ? '공통 유해위험요인 설문조사표 첨부 · ' + fileName : '공통 유해위험요인 설문조사표 삭제' });
         save(); return a;
     }
@@ -560,7 +2007,7 @@
         var dp = (a.depts || []).filter(function (x) { return x.deptId === deptId; })[0];
         if (!dp) return null;
         dp.surveyFile = fileName || '';
-        pushHistory(aid, { type: 'FILE', by: '재난안전과',
+        pushHistory(aid, { type: 'FILE', by: actorNow(),
             memo: deptName(deptId) + (fileName ? ' 부서 설문조사표 첨부 · ' + fileName : ' 부서 설문조사표 삭제(공통본 적용)') });
         save(); return dp;
     }
@@ -584,8 +2031,8 @@
         if (!dp) return null;
         dp.reportFile = fileName || '';
         dp.reportAt = fileName ? today() : '';
-        dp.reportBy = fileName ? (by || '재난안전과') : '';
-        pushHistory(aid, { type: 'FILE', by: by || '재난안전과',
+        dp.reportBy = fileName ? (by || actorNow()) : '';
+        pushHistory(aid, { type: 'FILE', by: by || actorNow(),
             memo: deptName(deptId) + (fileName ? ' 설문조사표 작성본 제출 · ' + fileName : ' 설문조사표 제출본 삭제') });
         save(); return dp;
     }
@@ -603,7 +2050,7 @@
         var a = assessmentOf(aid); if (!a) return null;
         a.files = a.files || {};
         a.files.report = fileName || '';
-        pushHistory(aid, { type: 'FILE', by: '재난안전과',
+        pushHistory(aid, { type: 'FILE', by: actorNow(),
             memo: fileName ? '보고서 첨부·교체 · ' + fileName + ' (개선 건수·조치 내역 유지)' : '보고서 삭제' });
         save(); return a;
     }
@@ -629,6 +2076,66 @@
     function nowTs() {
         var t = new Date(), pad = function (n) { return (n < 10 ? '0' : '') + n; };
         return today() + ' ' + pad(t.getHours()) + ':' + pad(t.getMinutes());
+    }
+    /* 이력에 남길 처리자 — 접속한 사람(부서 + 이름). 종전에는 '재난안전과' 를 박아 두어
+       누가 생성·첨부했는지 이력에서 알 수 없었다. 접속 정보가 없을 때만 부서명으로 남긴다. */
+    function actorNow() {
+        var p = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
+        return p && p.name ? ((p.deptName ? p.deptName + ' ' : '') + p.name) : '재난안전과';
+    }
+    /* 알림 — 헤더 알림함(DYLayout.ntfPush). 받는 사람이 할 일이 있을 때만 보낸다(SCR-ADMIN-002 §4-1). */
+    var OWNER = 'safety';
+    function notify(o) {
+        if (!global.DYLayout || !global.DYLayout.ntfPush) return;
+        try { global.DYLayout.ntfPush(Object.assign({ cat: 'risk', catLabel: '위험성평가' }, o)); } catch (e) {}
+    }
+    /* 조치 담당자 라벨(«부서 · 역할 / 이름»)에서 사람 uid 를 되찾는다 — 그 부서 사람 중 이름이 같은 한 사람만.
+       동명이인이거나 못 찾으면 null(부서 담당자 단위로 보낸다 — 이름으로 엉뚱한 사람에게 보내지 않는다). */
+    function ownerUid(m) {
+        var label = String((m && m.assigned_to) || ''); if (!label) return null;
+        var nm = label.split('/').pop().trim();
+        var ms = (global.DYV2 && global.DYV2.orgMembers ? global.DYV2.orgMembers(m.dept_id) : []).filter(function (x) { return x.name === nm; });
+        return ms.length === 1 ? ms[0].uid : null;
+    }
+    /* ===== 이 세션에 올린 파일 — 내려받기 (양식 받기 실습) =====
+       실제 파일 보관은 첨부 저장 연계 몫이다. 시연·실습 확인용으로 작은 파일(1MB 이하)만
+       이 브라우저 세션에 담아 두고, 없으면 받은 척하지 않는다(이행점검 DEPTCHK 와 같은 방식). */
+    var FILEKEY = 'dy-rsk-files-v1', MEMF = {};
+    function fileStore() { try { return JSON.parse(global.sessionStorage.getItem(FILEKEY) || '{}'); } catch (e) { return {}; } }
+    function stashFile(name, file) {
+        if (!name || !file) return false;
+        MEMF[name] = file;
+        if (file.size > 1024 * 1024 || !global.FileReader) return true;
+        var r = new FileReader();
+        r.onload = function () {
+            var st = fileStore(); st[name] = r.result;
+            try { global.sessionStorage.setItem(FILEKEY, JSON.stringify(st)); } catch (e) {}
+        };
+        r.readAsDataURL(file);
+        return true;
+    }
+    /* 조치기한 재촉 알림 — 받는 사람은 조치 담당자, 담당자를 찾지 못하면 그 부서 담당자(SCR-ADMIN-002 §4-1).
+       정기·수시 두 화면의 [재촉]이 같은 알림을 낸다. */
+    function remindNotify(m, by) {
+        if (!m) return;
+        var uid = ownerUid(m);
+        var aa = m.assessment_id ? (assessmentOf(m.assessment_id) || {}) : null;
+        notify(Object.assign(uid ? { toUids: [uid] } : { toDept: m.dept_id, toTier: ['staff'] }, {
+            basis: 'osh-36',
+            title: '위험성평가 조치기한 재촉 — ' + ((m.hazard && m.hazard.name) || '') +
+                ' (기한 ' + (m.due || m.due_date || '-') + (by ? ' · ' + by : '') + ')',
+            href: aa ? 'rsk-list.html?year=' + (aa.year || '') + '&dept=' + m.dept_id : 'rsk-occ.html',
+            work: 'my-work.html?cat=improve' }));
+    }
+    function hasFile(name) { return !!(name && (MEMF[name] || fileStore()[name])); }
+    function downloadFile(name) {
+        if (!name) return false;
+        var url = MEMF[name] ? URL.createObjectURL(MEMF[name]) : fileStore()[name];
+        if (!url) return false;
+        var a = document.createElement('a');
+        a.href = url; a.download = name;
+        document.body.appendChild(a); a.click(); a.remove();
+        return true;
     }
 
     /* 평가 전체 진행률 (개선조치 완료건/총 개선조치건) */
@@ -671,7 +2178,7 @@
             a.status = 'COMPLETED';
             a.completed_at = today();
             a.history = a.history || [];
-            a.history.push({ type: 'COMPLETE', at: nowTs(), by: '시스템', memo: '전 부서 조치완료 · 평가 자동 완료' });
+            a.history.push({ type: 'COMPLETE', at: nowTs(), by: '시스템', memo: '전 부서 조치 완료 — 완료 확인을 마치면 평가 완료' });
         }
         save();
     }
@@ -725,7 +2232,7 @@
         });
         a.review = { stage: 'REVIEW', extractedAt: nowTs(), parsedDepts: {} };
         a.history = a.history || [];
-        a.history.push({ type: 'STATUS', at: nowTs(), by: '재난안전과',
+        a.history.push({ type: 'STATUS', at: nowTs(), by: actorNow(),
             memo: '보고서 첨부 · 조치기한 설정 (' + (dues.bulkDue ? '일괄 ' + dues.bulkDue : '부서별') + ')' });
         save();
         return { deptCount: (a.depts || []).length };
@@ -747,8 +2254,8 @@
     function surveyRequested(a) { return !!(a && a.surveyReq && a.surveyReq.at); }
     function sendSurveyRequest(aid, doc, by) {
         var a = assessmentOf(aid); if (!a) return null;
-        a.surveyReq = { at: today(), by: by || '재난안전과', docs: (a.surveyReq && a.surveyReq.docs || []).concat(doc ? [doc] : []) };
-        pushHistory(aid, { type: 'NOTIFY', by: by || '재난안전과',
+        a.surveyReq = { at: today(), by: by || actorNow(), docs: (a.surveyReq && a.surveyReq.docs || []).concat(doc ? [doc] : []) };
+        pushHistory(aid, { type: 'NOTIFY', by: by || actorNow(),
             memo: (a.depts || []).length + '개 부서에 설문조사표 요청 공문 발송' + (a.surveyDue ? ' (제출 기한 ' + a.surveyDue + ')' : '') +
                 (doc && doc.no ? ' · 연계 번호 ' + doc.no : '') });
         save(); return a;
@@ -765,18 +2272,18 @@
         (a.depts || []).forEach(function (dp) {
             dp.deliveredAt = today();
             if (sel[dp.deptId]) {
-                dp.request = { at: today(), by: by || '재난안전과', no: (doc && doc.no) || '' };
+                dp.request = { at: today(), by: by || actorNow(), no: (doc && doc.no) || '' };
                 dp.noFindings = false; dp.inputDone = null; dp.status = 'BEFORE';
                 asked++;
             } else {
                 dp.request = null; dp.noFindings = true; dp.status = 'DONE'; dp.dueDate = '';
-                pushHistory(aid, { type: 'REVIEW', by: by || '재난안전과', memo: deptName(dp.deptId) + ' — 지적사항 없음(조치 요청 대상 아님)' });
+                pushHistory(aid, { type: 'REVIEW', by: by || actorNow(), memo: deptName(dp.deptId) + ' — 지적사항 없음(조치 요청 대상 아님)' });
                 none++;
             }
         });
         a.review.stage = 'DELIVERED';
-        a.actionReq = { at: today(), by: by || '재난안전과', depts: Object.keys(sel), docs: (a.actionReq && a.actionReq.docs || []).concat(doc ? [doc] : []) };
-        pushHistory(aid, { type: 'DELIVER', by: by || '재난안전과',
+        a.actionReq = { at: today(), by: by || actorNow(), depts: Object.keys(sel), docs: (a.actionReq && a.actionReq.docs || []).concat(doc ? [doc] : []) };
+        pushHistory(aid, { type: 'DELIVER', by: by || actorNow(),
             memo: asked + '개 부서에 조치 요청 공문 발송' + (none ? ' · 지적사항 없는 ' + none + '개 부서 완료' : '') +
                 (doc && doc.no ? ' · 연계 번호 ' + doc.no : '') });
         refreshAssessmentStatus(aid);
@@ -922,7 +2429,7 @@
                 dp.dueDate = '';
                 dp.deliveredAt = today();
                 dp.status = 'DONE';
-                pushHistory(aid, { type: 'REVIEW', by: '재난안전과',
+                pushHistory(aid, { type: 'REVIEW', by: actorNow(),
                     memo: deptNm + ' — 지적사항 없음(조치 대상 제외)' });
                 deptsExcluded++;
                 return;
@@ -944,7 +2451,7 @@
                 var before = beforeF.map(function (f) { return f.name; });
                 var after = afterF.map(function (f) { return f.name; });
                 var alreadyDone = !!r.done && after.length > 0;
-                var hist = [{ type: 'NOTIFY', at: nowTs(), by: '재난안전과',
+                var hist = [{ type: 'NOTIFY', at: nowTs(), by: actorNow(),
                     memo: '개선조치 전달 (기한 ' + deptDue + ')' + basisMemo(r.basis) }];
                 if (alreadyDone) {
                     hist.push({ type: 'STATUS', at: nowTs(), by: r.owner || (deptNm + ' 담당자'),
@@ -982,7 +2489,7 @@
         a.review.stage = 'DELIVERED';
         var deliverMemo = deptsTouched + '개 부서에 개선조치 ' + total + '건 자동 전달 (일괄 기한 ' + (bulkDue || '개별') + ')';
         if (deptsExcluded) deliverMemo += ' · 지적사항 없는 ' + deptsExcluded + '개 부서는 조치 대상 제외';
-        pushHistory(aid, { type: 'DELIVER', by: '재난안전과', memo: deliverMemo });
+        pushHistory(aid, { type: 'DELIVER', by: actorNow(), memo: deliverMemo });
         refreshAssessmentStatus(aid);
         return { total: total, deptsTouched: deptsTouched, deptsExcluded: deptsExcluded };
     }
@@ -1154,6 +2661,16 @@
                 ' · 전자서명 ' + m.signature.by });
         save();
         if (m.assessment_id) refreshAssessmentStatus(m.assessment_id);
+        /* 정기평가 조치는 주관부서가 확인해야 끝난다 — 완료·재제출 즉시 «완료 확인 요청»(SCR-ADMIN-002 §4-1).
+           수시평가는 확인 주체가 외부 용역 안전관리자라 보내지 않는다. */
+        if (m.assessment_id && m.source_type !== 'occasional') {
+            var aa = assessmentOf(m.assessment_id) || {};
+            var rd = m.confirm.round || 1;
+            notify({ toDept: OWNER, toTier: ['staff'], basis: 'osh-36',
+                title: (aa.year ? aa.year + '년 정기 위험성평가 — ' : '') + deptName(m.dept_id) + ' 개선조치 완료 확인 요청 — ' +
+                    ((m.hazard && m.hazard.name) || '') + (rd > 1 ? ' (재제출 ' + rd + '회차)' : ''),
+                href: 'rsk-list.html?year=' + (aa.year || '') + '&confirm=1', work: 'my-work.html' });
+        }
         return m;
     }
     /* ================= 조치 완료 확인 (2026-07-31 신설) =================
@@ -1185,9 +2702,9 @@
         var m = improvementOf(id); if (!m) return { error: '개선조치를 찾을 수 없습니다.' };
         if (!confirmable(m)) return { error: '완료된 개선조치만 확인할 수 있습니다.' };
         var prev = confirmOf(m);
-        m.confirm = { state: CFM_OK, by: by || '재난안전과', at: today(), reason: '', round: prev.round || 1 };
+        m.confirm = { state: CFM_OK, by: by || actorNow(), at: today(), reason: '', round: prev.round || 1 };
         m.history = m.history || [];
-        m.history.push({ type: 'CONFIRM', at: nowTs(), by: by || '재난안전과',
+        m.history.push({ type: 'CONFIRM', at: nowTs(), by: by || actorNow(),
             memo: '조치 완료 확인' + ((prev.round || 1) > 1 ? ' (' + prev.round + '회차 제출)' : '') });
         save(); return m;
     }
@@ -1198,10 +2715,19 @@
         /* 사유 없는 반려는 담당자가 무엇을 고쳐야 할지 알 수 없어 반려가 작동하지 않는다 */
         if (!r) return { error: '반려 사유를 입력하세요 — 담당자가 무엇을 다시 해야 하는지 알아야 합니다.' };
         var prev = confirmOf(m);
-        m.confirm = { state: CFM_RETURN, by: by || '재난안전과', at: today(), reason: r, round: prev.round || 1 };
+        m.confirm = { state: CFM_RETURN, by: by || actorNow(), at: today(), reason: r, round: prev.round || 1 };
         m.history = m.history || [];
-        m.history.push({ type: 'RETURN', at: nowTs(), by: by || '재난안전과', memo: '조치 확인 반려 — ' + r });
-        save(); return m;
+        m.history.push({ type: 'RETURN', at: nowTs(), by: by || actorNow(), memo: '조치 확인 반려 — ' + r });
+        save();
+        /* 반려는 그 조치 담당자에게 사유와 함께 — 담당자를 찾지 못하면(미지정·동명이인) 그 부서 담당자에게 */
+        var ra = assessmentOf(m.assessment_id) || {};
+        var uid = ownerUid(m);
+        notify(Object.assign(uid ? { toUids: [uid] } : { toDept: m.dept_id, toTier: ['staff'] }, {
+            basis: 'osh-36',
+            title: (ra.year ? ra.year + '년 정기 위험성평가 — ' : '') + '개선조치 확인 반려 — ' +
+                ((m.hazard && m.hazard.name) || '') + ' (사유: ' + r + ')',
+            href: 'rsk-list.html?year=' + (ra.year || '') + '&dept=' + m.dept_id, work: 'my-work.html?cat=improve' }));
+        return m;
     }
     /* 확인 취소 — 상신 전에만. 잠금 판정은 화면(DYRSKDOC.lockOf)이 하고 여기선 상태만 되돌린다. */
     function cancelConfirm(id, by) {
@@ -1209,7 +2735,7 @@
         var prev = confirmOf(m);
         m.confirm = { state: CFM_WAIT, by: '', at: '', reason: '', round: prev.round || 1 };
         m.history = m.history || [];
-        m.history.push({ type: 'REOPEN', at: nowTs(), by: by || '재난안전과', memo: '확인 취소 — 확인 대기로 되돌림' });
+        m.history.push({ type: 'REOPEN', at: nowTs(), by: by || actorNow(), memo: '확인 취소 — 확인 대기로 되돌림' });
         save(); return m;
     }
     /* 담당자가 **다시 손대야 하는가** — 화면이 '할 일'로 취급할지의 단일 판정.
@@ -1346,10 +2872,13 @@
         var d = load(), s = {};
         d.occasionals.forEach(function (o) { s[o.year] = true; });
         var arr = Object.keys(s).map(Number);
-        if (arr.indexOf(new Date().getFullYear()) === -1) arr.push(2026);
+        var cy = +String(today()).slice(0, 4);   /* 기준일 단일 출처(§11) — 실제 시계를 보지 않는다 */
+        if (arr.indexOf(cy) === -1) arr.push(cy);
         return arr.sort(function (a, b) { return b - a; });
     }
     function addOccasional(o) {
+        /* 부서에 주는 기한은 오늘 이후(정기평가와 같은 판정) — 지난 날짜로 등록하면 등록 즉시 기한 초과가 된다 */
+        if (o.due && o.due < today()) return { error: '조치기한은 오늘(' + today() + ') 이후로 정합니다.' };
         var d = load(); d.seqOcc++;
         var it = {
             id: 'OCC-' + o.year + '-' + String(10 + d.seqOcc).slice(-2),
@@ -1436,6 +2965,8 @@
      * 자동 기록하면 법정 기록으로서 날짜가 틀린다. 입력받되 비면 등록일로 떨어진다. */
     function setOccReviewFile(id, fileName, reviewer, reviewedAt) {
         var it = occasionalOf(id); if (!it) return null;
+        /* 검토일은 검토를 마친 날 — 앞날로 적으면 하지 않은 검토를 했다고 남는다 */
+        if (fileName && reviewedAt && reviewedAt > today()) return { error: '검토일은 오늘(' + today() + ') 이전 날짜로 적습니다.' };
         it.reviewFile = fileName || '';
         it.reviewer = fileName ? (reviewer || '') : '';
         if (fileName) {
@@ -1444,14 +2975,14 @@
                 memo: '안전관리자 검토파일 등록 · ' + fileName + ' → 검토 완료' });
         } else {
             it.status = 'REGISTERED'; it.reviewedAt = '';
-            it.history.push({ type: 'REVIEW', at: nowTs(), by: '재난안전과', memo: '검토파일 삭제 · 검토 완료 해제' });
+            it.history.push({ type: 'REVIEW', at: nowTs(), by: actorNow(), memo: '검토파일 삭제 · 검토 완료 해제' });
         }
         save(); return it;
     }
     function reviewOccasional(id, by) {
         var it = occasionalOf(id); if (!it) return;
         it.status = 'REVIEWED'; it.reviewedAt = today();
-        it.history.push({ type: 'REVIEW', at: nowTs(), by: by || '재난안전과', memo: '검토 완료' });
+        it.history.push({ type: 'REVIEW', at: nowTs(), by: by || actorNow(), memo: '검토 완료' });
         save(); return it;
     }
 
@@ -1546,6 +3077,8 @@
            단계별 안내가 이 이미지를 '개선 후 사진'으로 넣는다. 실사용 경로(실제 파일
            선택)는 그대로 남는다 — 증빙 요건을 낮추는 것이 아니라 시연 수단이다. */
         demoShot: function (kind) { return T[(kind === 'before' ? 'b' : 'a') + '2']; },
+        /* 이 세션에 올린 파일 내려받기 (양식 받기 실습) */
+        stashFile: stashFile, hasFile: hasFile, downloadFile: downloadFile, remindNotify: remindNotify,
         assessments: assessments, assessmentOf: assessmentOf, assessmentYears: assessmentYears,
         addRegular: addRegular, addAssessment: addAssessment, saveAssessment: saveAssessment,
         assessmentProgress: assessmentProgress, deptImpCount: deptImpCount,

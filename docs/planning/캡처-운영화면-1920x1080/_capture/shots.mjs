@@ -71,7 +71,7 @@ const EDOC_SEED = `
   put('EDOC-도급점검-G-4166-2026H2', '확정'); put('EDOC-도급위험성-G-4166-최초', '확정');
   put('EDOC-도급점검-M-1-2026H2', '확정'); put('EDOC-도급위험성-M-1-최초', '확정');
   put('EDOC-도급점검-M-2-2026H2', '작성중'); put('EDOC-도급위험성-M-2-최초', '확정');
-  localStorage.setItem('dy-edoc-v1', JSON.stringify(ds));`;
+  localStorage.setItem('dy-edoc-v2', JSON.stringify(ds));`;
 
 const FAC_EXT_SEED = `
   const recs = DYFACIL.seedRecs();

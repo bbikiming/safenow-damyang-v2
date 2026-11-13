@@ -15,7 +15,9 @@
     function esc(s) { return V().esc(String(s == null ? '' : s)); }
     function toast(m) { V().toast(m); }
 
-    var state = { mount: null, year: 2026, fReason: '' };
+    /* 기본 연도 = 기준일(DYV2.today)의 연도(§11) */
+    function curYear() { try { return +String(global.DYV2.today()).slice(0, 4); } catch (e) { return new Date().getFullYear(); } }
+    var state = { mount: null, year: curYear(), fReason: '' };
 
     /* ===== 조회 범위 · 조작 권한 =====
      * 수시평가는 **부서가 자기 사업장 건을 등록**하고, **안전관리자 검토 서명**은
@@ -182,8 +184,37 @@
                 '그 부서 담당자는 <b>이 카드에서 바로</b> 완료 처리하며, 같은 건을 <b>내 할일</b>에서 올려도 같은 곳에 쌓입니다.',
             emptyHtml: '이 수시평가에는 등록된 감소대책이 없습니다.',
             items: function () { return D().occImprovements(occId); },
-            canRemind: false
+            /* 기한이 지난 감소대책도 재촉한다 — 정기평가 카드와 같은 판정(DYROLE.canRemind)·같은 알림.
+               종전에는 수시 건에 재촉 수단이 없어 기한 초과가 쌓여도 알릴 길이 없었다. */
+            canRemind: canRemindDept(o.deptId),
+            onRemind: 'RSKOCC.remindOne',
+            onChange: render
         });
+    }
+    function canRemindDept(deptId) {
+        return !!R() && (!R().canRemind || R().canRemind(deptId)) && (!R().inScope || R().inScope(deptId));
+    }
+    function remindBy() {
+        var p = R() && R().current ? R().current() : null;
+        return p ? ((p.deptName ? p.deptName + ' ' : '') + p.name) : '재난안전과';
+    }
+    function remindOne(impId) {
+        var m = D().improvementOf(impId); if (!m) return;
+        if (R() && R().inScope && !R().inScope(m.dept_id)) { toast('소속 부서 소관이 아닙니다.'); return; }
+        if (!canRemindDept(m.dept_id)) {
+            toast(R() && R().remindDenyNote ? R().remindDenyNote('재촉') : '재촉은 주관부서(재난안전과)와 그 부서가 합니다.');
+            return;
+        }
+        if (!D().isOverdue(m)) { toast('기한초과 건이 아닙니다.'); return; }
+        var by = remindBy();
+        D().pushImpHistory(m.id, { type: 'REMIND', by: by, memo: '기한초과 재촉 (기한 ' + (m.due || m.due_date) + ')' });
+        D().remindNotify(m, by);
+        var who = m.assigned_to ? String(m.assigned_to).split('/').pop().trim()
+            : (global.DYADM && global.DYADM.contactText ? global.DYADM.contactText(m.dept_id) : '부서 담당자');
+        toast('재촉 · 받는 사람 ' + who);
+        /* 카드를 그 자리에서 다시 그려 재촉 이력이 바로 보이게 한다 */
+        if (global.IMPCARD && IMPCARD.render) { try { IMPCARD.render(); } catch (e) {} }
+        render();
     }
     function rowHtml(o) {
         var rMeta = D().OCC_REASONS[o.reason] || { label: o.reason };
@@ -262,8 +293,8 @@
             '<p style="font-size:var(--fs-13);line-height:1.6;">위험성평가 예시 자료를 처음 상태로 되돌립니다.</p>' +
             '<p style="font-size:var(--fs-13);line-height:1.6;margin-top:8px;">' +
                 '<b>수시평가뿐 아니라 정기 위험성평가·개선조치도 함께</b> 초기화됩니다 — ' +
-                '한 저장소를 쓰기 때문입니다. 2026년 진행 내역이 모두 사라지고 ' +
-                '<b>처음 상태</b>(2026 미등록 · 2025 완료)로 돌아갑니다.</p>' +
+                '한 저장소를 쓰기 때문입니다. 새로 등록·처리한 내역이 모두 사라지고 ' +
+                '<b>처음 예시 자료</b>(정기평가 ' + curYear() + ' 미등록 · 2024·2025 완료)로 돌아갑니다.</p>' +
             '<p style="font-size:var(--fs-12);color:var(--text-gray);margin-top:8px;">진행 중인 단계별 안내도 함께 닫힙니다.</p>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="RSKOCC.doResetDemo()">초기화</button>');
@@ -279,7 +310,7 @@
             var t = global[n];
             if (t && t.active && t.active()) t.stop();
         });
-        toast('예시 데이터를 처음 상태로 되돌렸습니다 · 2026년 미등록');
+        toast('예시 데이터를 처음 상태로 되돌렸습니다');
         render();
     }
 
@@ -442,7 +473,7 @@
                 '<button type="button" class="btn btn-outline btn-sm" onclick="RSKOCC.hzAdd()">＋ 요인 추가</button>' +
             '</div>' +
             '<div class="roc-modal-row"><label class="form-label" for="roc-r-due">조치기한</label>' +
-                '<input type="date" class="form-input" id="roc-r-due" value="' + esc(F.due) + '" style="max-width:200px;">' +
+                '<input type="date" class="form-input" id="roc-r-due" value="' + esc(F.due) + '" min="' + esc(D().today()) + '" style="max-width:200px;">' +
                 '<p class="file-hint">비워 두면 기한 없이 등록됩니다.</p></div>';
         V().openModal('수시 위험성평가 등록', body,
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
@@ -577,6 +608,11 @@
             var el = document.getElementById('roc-hz-n0'); if (el) el.focus();
             return;
         }
+        if (F.due && F.due < D().today()) {
+            toast('조치기한은 오늘(' + D().today() + ') 이후로 정합니다.');
+            var de = document.getElementById('roc-r-due'); if (de) de.focus();
+            return;
+        }
         var it = D().addOccasional({
             year: state.year, deptId: F.deptId, reason: F.reason,
             date: F.date, desc: F.desc, files: F.files,
@@ -586,6 +622,7 @@
                저장 단계에서 지워 버리면 담당자가 적어 둔 내용이 소리 없이 사라진다. */
             hazards: F.hazards, due: F.due
         });
+        if (it && it.error) { toast(it.error); return; }
         V().closeModal();
         toast('수시평가 등록 · 개선조치 ' + hz.length + '건 생성 — 목록의 [조치 상세]에서 조치를 마무리하세요');
         render();
@@ -616,7 +653,7 @@
             /* 검토일은 업로드일과 다르다 — 외부 용역이 검토를 마친 날을 적는다.
                비워 두면 등록일로 기록되며 그 사실을 안내로 밝힌다. */
             '<div class="roc-modal-row"><label class="form-label" for="roc-rv-at">검토일</label>' +
-                '<input type="date" class="form-input" id="roc-rv-at" value="' + esc(o.reviewedAt || '') + '" style="max-width:200px;">' +
+                '<input type="date" class="form-input" id="roc-rv-at" value="' + esc(o.reviewedAt || '') + '" max="' + esc(D().today()) + '" style="max-width:200px;">' +
                 '<span class="file-hint">안전관리자가 검토를 마친 날입니다. 비워 두면 오늘 등록일로 기록됩니다.</span></div>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="RSKOCC.doReviewFile(\'' + id + '\')">등록 · 검토완료</button>');
@@ -646,7 +683,10 @@
            라는 총칭만 남는다. 파일명과 같은 강도로 막는다. */
         var by = ((byEl && byEl.value) || '').trim();
         if (!by) { toast('검토한 안전관리자 이름을 입력하세요.'); if (byEl) byEl.focus(); return; }
-        D().setOccReviewFile(id, name, by, ((atEl && atEl.value) || '').trim());
+        var at = ((atEl && atEl.value) || '').trim();
+        if (at && at > D().today()) { toast('검토일은 오늘(' + D().today() + ') 이전 날짜로 적습니다.'); if (atEl) atEl.focus(); return; }
+        var rv = D().setOccReviewFile(id, name, by, at);
+        if (rv && rv.error) { toast(rv.error); return; }
         V().closeModal(); toast('안전관리자 검토파일 등록 · 검토완료 처리'); render();
     }
     /* 해제는 안전관리자 서명 검토본을 지우고 검토완료를 되돌린다 — 종전에는 누르는 즉시
@@ -709,7 +749,7 @@
         hzAdd: hzAdd, hzDel: hzDel, hzPickOwner: hzPickOwner, hzDelPhoto: hzDelPhoto,
         /* 행 시설물 — FMS 시설물 대장(SCR-FAC-001) 연계. 선택 항목이다 */
         hzPickFacil: hzPickFacil, hzClearFacil: hzClearFacil, hzNaFacil: hzNaFacil,
-        openImp: openImp,
+        openImp: openImp, remindOne: remindOne,
         /* 안전관리자 검토 — 서명 파일 등록이 곧 검토 완료 */
         openReviewFile: openReviewFile, onPickReview: onPickReview, doReviewFile: doReviewFile, clearReviewFile: clearReviewFile, doClearReviewFile: doClearReviewFile,
         openView: openView

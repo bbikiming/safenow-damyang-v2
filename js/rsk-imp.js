@@ -99,7 +99,7 @@
                 (facil ? '<div class="ri-hrf"><span class="chip-mini wt-elec">시설물</span> ' + esc(facil) + '</div>' : '');
             var owner = m.assigned_to ? esc(m.assigned_to)
                 : (canEdit()
-                    ? '<a href="#" onclick="RSKIMP.assign(\'' + m.id + '\');return false;" style="color:var(--main-dark);">지정</a>'
+                    ? '<span style="color:var(--text-gray);">미지정</span> <a href="#" onclick="RSKIMP.assign(\'' + m.id + '\');return false;" style="color:var(--main-dark);">지정하기</a>'
                     : '<span style="color:var(--text-gray);">미지정</span>');
             var due = m.due || m.due_date || '';
             return '<tr onclick="RSKIMP.detail(\'' + m.id + '\')">' +
@@ -108,7 +108,10 @@
                 '<td>' + titleCell + '</td>' +
                 '<td onclick="event.stopPropagation()">' + owner + '</td>' +
                 '<td class="ri-due ' + dueClass(due, m.status) + '">' + (due ? esc(due) : '<span style="color:var(--status-info-fg);">미지정</span>') + '</td>' +
-                '<td>' + stChip(m.status) + '</td></tr>';
+                /* 기한이 지난 미완료 건은 «진행중»이 아니라 «기한 초과»로 — 기한 칸 색만으로 말하지 않는다 */
+                '<td>' + (m.status !== 'DONE' && D().isOverdue && D().isOverdue(m)
+                    ? '<span class="chip-status chip-sm ' + V().toneOf('기한 초과') + '">기한 초과</span>'
+                    : stChip(m.status)) + '</td></tr>';
         }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text-gray);padding:24px;">조건에 맞는 개선조치가 없습니다.</td></tr>';
 
         state.mount.innerHTML = head + scopeNote() +

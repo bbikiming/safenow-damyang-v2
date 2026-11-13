@@ -201,7 +201,7 @@
             '<div style="margin-bottom:12px;"><label class="form-label">미완료(미실시) 사유 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 '<textarea class="form-textarea" id="wd-reason" rows="3" placeholder="예: 위탁업체 일정 지연 / 현장 여건">' + esc(r.reason || '') + '</textarea></div>' +
             '<div><label class="form-label">예상 완료일</label>' +
-                '<input type="date" class="form-input" id="wd-exp" value="' + esc(r.expectedDone || '2026-08-31') + '"></div>',
+                '<input type="date" class="form-input" id="wd-exp" value="' + esc(r.expectedDone || S().addDays(S().TODAY, 30)) + '"></div>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="WENVD.saveReason()">저장</button>');
     }
@@ -223,7 +223,7 @@
         V().openModal('기한 재설정',
             '<p style="font-size:13px;margin-bottom:10px;">' + (isImp ? '개선조치 기한을 재설정합니다.' : '측정 예정일을 재설정합니다.') + '</p>' +
             '<label class="form-label">' + (isImp ? '개선조치 기한' : '측정 예정일') + '</label>' +
-            '<input type="date" class="form-input" id="wd-due" value="' + esc(cur || '2026-08-31') + '">',
+            '<input type="date" class="form-input" id="wd-due" value="' + esc(cur || S().addDays(S().TODAY, 30)) + '">',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="WENVD.saveDue(\'' + field + '\')">저장</button>');
     }
@@ -275,7 +275,7 @@
                 '<div style="margin-bottom:12px;"><label class="form-label" for="wd-c-req">개선 요구사항</label>' +
                     '<textarea class="form-textarea" id="wd-c-req" rows="2" placeholder="노출기준 초과 항목·개선 방향"></textarea></div>' +
                 '<div><label class="form-label" for="wd-c-due">개선조치 기한</label>' +
-                    '<input type="date" class="form-input" id="wd-c-due" value="2026-09-30"></div>' +
+                    '<input type="date" class="form-input" id="wd-c-due" value="' + S().addDays(S().TODAY, 60) + '"></div>' +
             '</div>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="WENVD.saveComplete()">완료 처리</button>');

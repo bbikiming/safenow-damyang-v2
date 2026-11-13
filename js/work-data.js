@@ -27,7 +27,7 @@
     var T = function () { return global.DYWORKT; };
     var R = function () { return global.DYROLE; };
 
-    var SKEY = 'dy-work-v1';
+    var SKEY = 'dy-work-v2';   /* 2026-11-13 예시 자료 개편(운영 중 상태)으로 범프 */
 
     /* 상태 어휘 — 코드로 저장하고 문구는 화면이 정한다.
        표시 라벨은 DYV2.STATUS_TONE 이 아는 말이어야 색이 붙는다(CLAUDE.md §7). */
@@ -687,13 +687,29 @@
     }
 
     /* ================= 예시 자료 ================= */
-    /* 기준일(DYV2.today() = 2026-07-16)에 **전 상태가 한 화면에** 보이도록
-       심는다 — 기한초과·미제출·미배정·배정완료·제출·확인·종결·발행예정.
+    /* 기준일(DYV2.today() — 2026-11-13 운영 중)에 **지난 회차는 처리된 이력**으로,
+       이번 회차는 **진행 중**으로 보이도록 심는다(2026-11-13 개편).
+         · 1~9월 회차는 전부 발행돼 있다 — 시스템이 그동안 자동 발행해 온 상태다.
+           비워 두면 «창 밖 미발행» 이 수십 건으로 떠 «자동이 안 돌았다» 로 읽힌다.
+         · 지난 회차의 부서 업무는 **페르소나가 아닌 구성원**에게 배정해 둔다 — 완료 판정이
+           도메인 원본(DYEDU·DEPTCHK)에서 파생되므로, 원본에 기록이 없는 부서는 미완료로
+           남는다. 그 건이 시연 계정의 내 할일에 지난 회차 할 일로 끼어들지 않게 한다.
+         · 11월 월 정기교육(발행일 11-13)은 **일부러 심지 않는다** — 업무 발행 관리에
+           들어오는 순간 자동 발행되는 장면이 이것이다(최근 30일 창).
+         · 이행점검 하반기(11-21·11-23)·4분기 교육 결과(11-19)·4분기 산보위(12-15)는 발행 예정.
        상태·D-day 는 시드에 박지 않고 날짜에서 파생된다. */
     function seed() {
         db = blank();
+        var SYS = '시스템 자동발행', OWNER = '재난안전과 박안전';
+        /* 지난 회차 담당 — 시연 페르소나(u_jjt2·u_wat3·u_env2 …)가 아닌 같은 부서 구성원 */
+        var HIST = {
+            safety: ['u_jjt3', '김안전'], env: ['u_env4', '김지도', '환경지도팀'], construct: ['u_con4', '박서준', '시설관리팀'],
+            facility: ['u_fac4', '민설비', '환경시설팀'], water: ['u_wat6', '서한별', '정수팀'], culture: ['u_cul1', '한지훈', '체육시설팀'],
+            finance: ['u_fin1', '최재무', '회계팀'], health: ['u_hlth2', '이보건'], town_damyang: ['u_twn2', '배주민'],
+            plan: ['u_plan2', '한열람'], acct: ['u_acct2', '최회계'],
+        };
         function mk(tplId, periodKey, opt) {
-            var r = issueBatch(tplId, periodKey, Object.assign({ origin: 'SCHEDULED' }, opt || {}));
+            var r = issueBatch(tplId, periodKey, Object.assign({ origin: 'SCHEDULED', issuedBy: SYS }, opt || {}));
             return r.ok ? r.issue : null;
         }
         function setTask(iss, deptId, patch) {
@@ -714,78 +730,152 @@
                 files: files || [{ name: deptName(deptId) + '_제출.pdf', size: 240000 }],
             });
         }
-
-        /* ① 상반기 중대산업재해 이행점검 — 발행 05-14 · 기한 06-30 → **기한 초과**
-              완료 판정은 DEPTCHK 시드(5개 부서 이행)에서 파생된다. */
-        var a = mk('W-CMP-IND', '2026-H1', { issuedAt: '2026-05-14', issuedBy: '재난안전과 박안전' });
-        if (a) {
-            asg(a, 'water', 'u_wat3', '하정수', '2026-05-18', '정수팀');
-            asg(a, 'env', 'u_env2', '정환경', '2026-05-19');
-            asg(a, 'construct', 'u_con3', '김도현', '2026-05-20', '안전관리팀');
-            asg(a, 'facility', 'u_fac3', '한운영', '2026-05-21', '시설운영팀');
-            sub(a, 'water', '2026-06-29'); sub(a, 'env', '2026-06-30'); sub(a, 'construct', '2026-06-30');
-            setTask(a, 'water', { confirm: { state: CFM.OK, by: '재난안전과 박안전', at: '2026-07-01', reason: '', round: 1 } });
-            setTask(a, 'env', { confirm: { state: CFM.RETURNED, by: '재난안전과 박안전', at: '2026-07-02',
-                                           reason: '증빙 사진이 점검표와 다른 장소입니다 — 해당 사업장 사진으로 다시 올려주세요', round: 1 } });
-            /* 미배정 잔류 — 부서장 화면의 '미배정 지연'을 시연한다 */
-            db.tasks[taskId(a.id, 'culture')].reminds = [{ at: '2026-07-08', by: '재난안전과 박안전', round: 1, memo: '' }];
-            pushHistory(a, 'REMIND', '문화체육과 · 1차');
+        function ok(iss, deptId, at, round) {
+            setTask(iss, deptId, { confirm: { state: CFM.OK, by: OWNER, at: at, reason: '', round: round || 1 } });
         }
-
-        /* ② 상반기 중대시민재해 이행점검 — 시설 보유 부서만 */
-        var b = mk('W-CMP-CIV', '2026-H1', { issuedAt: '2026-05-15', issuedBy: '재난안전과 박안전' });
-        if (b) {
-            asg(b, 'facility', 'u_fac4', '민설비', '2026-05-20', '환경시설팀');
-            asg(b, 'water', 'u_wat4', '오수질', '2026-05-20', '수질관리팀');
-            sub(b, 'facility', '2026-06-27'); sub(b, 'water', '2026-06-30');
+        /* 이력은 **그날 날짜**로 남긴다 — pushHistory 는 오늘 날짜를 쓰므로 지난 회차에 쓰면 거짓이 된다 */
+        function hist(iss, type, at, memo, by) {
+            if (!iss) return;
+            iss.history = iss.history || [];
+            iss.history.push({ type: type, at: at, by: by || OWNER, memo: memo || '' });
         }
-
-        /* ③ 7월 현업근로자 정기교육 — **일부러 발행하지 않는다.**
-         * 기준일(2026-07-16) 기준으로 발행일 07-14 가 이미 지났으므로
-         * 업무 관리 화면 '다음 자동 발행'에 **[발행일 도래] + [지금 발행]** 으로 뜬다.
-         * 이게 없으면 시연에서 '자동 발행'을 눌러 보이는 장면 자체가 없다 —
-         * 화면에 미래 날짜만 나열되고 아무 일도 일어나지 않는다.
-         * 누르면 근로자 명단 보유 10개 부서에 한꺼번에 생성되고, 각 부서의
-         * '부서 업무함'과 담당자 '내 할일'에 배정 대기로 즉시 나타난다. */
-
-        /* ④ 2분기 안전보건교육 결과 — 발행 07-01 · 기한 07-29 → 진행 중 */
-        var d2 = mk('W-EDU-QTR', '2026-Q2', { issuedAt: '2026-07-01', issuedBy: '재난안전과 박안전' });
-        if (d2) {
-            asg(d2, 'facility', 'u_fac3', '한운영', '2026-07-03', '시설운영팀');
-            /* 물순환사업소는 **일부러 비워 둔다** — 부서장이 팀원에게 배정하는 장면이
-               시연의 핵심인데, 시드가 전부 배정돼 있으면 누를 것이 없다. */
+        function close(iss, at, memo) {
+            if (!iss) return;
+            iss.status = IST.CLOSED;
+            hist(iss, 'CLOSE', at, memo);
         }
-
-        /* ⑤ 하반기 관리감독자 지정 — **일부러 발행하지 않는다.**
-         * 발행일 07-03 이 기준일보다 앞서므로 '발행일 도래'로 뜨고,
-         * [지금 발행]을 누르면 **11개 부서 전부가 미배정**이 된다(attach 프로필이라
-         * 연동 완료 파생이 없다). 그래야 '발행 → 부서 도착 → 부서장이 배정' 이
-         * 한 흐름으로 보인다. 기한이 07-17(D-1)이라 긴박감도 함께 보인다.
-         * ※ ③ 월교육과 대비된다 — 월교육은 발행하면 8/10 이 이미 완료로 잡혀
-         *   '연동이 살아 있다'를 보여주고, 이쪽은 '배정이 필요하다'를 보여준다. */
-
-        /* ⑥ 2분기 산업안전보건위원회 — 발행 06-12 · 기한 06-30 → 종결 */
-        var f = mk('W-CMT-QTR', '2026-Q2', { issuedAt: '2026-06-12', issuedBy: '재난안전과 박안전' });
-        if (f) {
-            (f.depts || []).forEach(function (dep) {
-                sub(f, dep, '2026-06-22', [{ name: deptName(dep) + '_2분기_회의록.pdf', size: 310000, slot: '회의록' }]);
-                setTask(f, dep, { confirm: { state: CFM.OK, by: '재난안전과 박안전', at: '2026-06-25', reason: '', round: 1 } });
+        /* 지난 회차 일괄 — 배정 → 제출(→ 첨부형은 확인)까지 끝난 상태. skip 부서는 미제출로 남는다. */
+        function past(iss, asgAt, subAt, cfmAt, opt) {
+            if (!iss) return;
+            opt = opt || {};
+            var slot = opt.slot, label = opt.label || '';
+            (iss.depts || []).forEach(function (dep) {
+                var h = HIST[dep] || ['', ''];
+                if (h[0]) asg(iss, dep, h[0], h[1], asgAt, h[2]);
+                if ((opt.skip || []).indexOf(dep) >= 0) return;
+                sub(iss, dep, subAt, slot ? [{ name: deptName(dep) + '_' + label + '.pdf', size: 280000, slot: slot }] : null);
+                if (cfmAt) ok(iss, dep, cfmAt);
             });
-            f.status = IST.CLOSED;
-            pushHistory(f, 'CLOSE', '전 부서 회수 완료');
         }
 
-        /* ⑦ 2026 중대재해 예방 안전계획 — 발행 02-04 · 기한 03-09 → 종결(촉구 이력 포함) */
-        var g = mk('W-PLN-ANN', '2026', { issuedAt: '2026-02-04', issuedBy: '재난안전과 박안전' });
+        /* ① 2026 중대재해 예방 안전계획 — 발행 02-04 · 기한 03-09 → 종결(촉구 이력 포함) */
+        var g = mk('W-PLN-ANN', '2026', { issuedAt: '2026-02-04' });
         if (g) {
             (g.depts || []).forEach(function (dep, i) {
+                var h = HIST[dep] || ['', ''];
+                if (h[0]) asg(g, dep, h[0], h[1], '2026-02-06', h[2]);
                 if (i % 4 === 3) return;                     /* 일부 미제출 — 촉구 대상이었던 부서 */
                 sub(g, dep, '2026-03-06', [{ name: deptName(dep) + '_안전계획서.hwpx', size: 420000, slot: '안전계획서' }]);
-                setTask(g, dep, { confirm: { state: CFM.OK, by: '재난안전과 박안전', at: '2026-03-12', reason: '', round: 1 } });
+                ok(g, dep, '2026-03-12');
             });
-            pushHistory(g, 'REMIND', '미제출 부서 · 1차 (2026-03-10 촉구)');
-            g.status = IST.CLOSED;
-            pushHistory(g, 'CLOSE', '반기 취합 종료 · 미제출 부서는 다음 회차로 이월');
+            hist(g, 'REMIND', '2026-03-10', '미제출 부서 · 1차 촉구');
+            close(g, '2026-03-31', '연간 취합 종료 · 미제출 부서는 하반기 점검에서 확인');
+        }
+
+        /* ② 관리감독자 지정·재지정 — 상·하반기 모두 종결 */
+        var s1 = mk('W-SUP-ASG', '2026-H1', { issuedAt: '2026-01-06' });
+        past(s1, '2026-01-07', '2026-01-16', '2026-01-21', { slot: '관리감독자 지정서', label: '관리감독자_지정서' });
+        close(s1, '2026-01-30', '전 부서 회수 완료');
+        var s2 = mk('W-SUP-ASG', '2026-H2', { issuedAt: '2026-07-03' });
+        past(s2, '2026-07-06', '2026-07-15', '2026-07-20', { slot: '관리감독자 지정서', label: '관리감독자_지정서', skip: ['acct'] });
+        if (s2) db.tasks[taskId(s2.id, 'acct')].reminds = [{ at: '2026-07-21', by: OWNER, round: 1, memo: '' }];
+        hist(s2, 'REMIND', '2026-07-21', '회계과 · 1차');
+        close(s2, '2026-07-31', '반기 취합 종료 · 회계과 미제출(조직 개편 대상)');
+
+        /* ③ 산업안전보건위원회 분기 회의 — 1~3분기 종결, 4분기는 12-15 발행 예정 */
+        [['Q1', '2026-03-11', '2026-03-24', '2026-03-27'],
+         ['Q2', '2026-06-12', '2026-06-22', '2026-06-25'],
+         ['Q3', '2026-09-16', '2026-09-25', '2026-09-30']].forEach(function (q) {
+            var f = mk('W-CMT-QTR', '2026-' + q[0], { issuedAt: q[1] });
+            past(f, q[1], q[2], q[3], { slot: '회의록', label: q[0].slice(1) + '분기_회의록' });
+            close(f, q[3], '전 부서 회수 완료');
+        });
+
+        /* ④ 상반기 의무이행 자체점검(산업·시민) — 05-14/15 발행 · 06-30 기한 → 07-10 마감 보고·종결
+              완료 판정은 DEPTCHK 원본에서 파생된다(제출하면 끝). 이력은 그 원본과 같은 이야기다:
+              산업 축 10곳 확인 · 담양읍 미제출 · 공공시설사업소 반려 → 2차 제출 ·
+              일부 미이행 제출 = 문화체육과·건설과(산업), 환경과(시민).
+              하반기는 11-21·11-23 발행 예정 — 재난안전과 배포 전이다. */
+        var a = mk('W-CMP-IND', '2026-H1', { issuedAt: '2026-05-14' });
+        if (a) {
+            (a.depts || []).forEach(function (dep) {
+                var h = HIST[dep] || ['', ''];
+                if (h[0]) asg(a, dep, h[0], h[1], '2026-05-18', h[2]);
+                if (dep === 'town_damyang') return;                    /* 미제출 */
+                sub(a, dep, dep === 'facility' ? '2026-07-03' : '2026-06-29');
+                ok(a, dep, dep === 'facility' ? '2026-07-06' : '2026-07-02', dep === 'facility' ? 2 : 1);
+            });
+            hist(a, 'RETURN', '2026-07-01', '공공시설사업소 · 증빙 사진이 점검표와 다른 장소');
+            if (db.tasks[taskId(a.id, 'town_damyang')]) db.tasks[taskId(a.id, 'town_damyang')].reminds = [{ at: '2026-07-06', by: OWNER, round: 1, memo: '' }];
+            hist(a, 'REMIND', '2026-07-06', '담양읍 · 1차');
+            close(a, '2026-07-10', '상반기 마감 보고 · 담양읍 미제출');
+        }
+        var b = mk('W-CMP-CIV', '2026-H1', { issuedAt: '2026-05-15' });
+        if (b) {
+            (b.depts || []).forEach(function (dep) {
+                var h = HIST[dep] || ['', ''];
+                if (h[0]) asg(b, dep, h[0], h[1], '2026-05-19', h[2]);
+                sub(b, dep, '2026-06-30');
+                ok(b, dep, '2026-07-02');
+            });
+            close(b, '2026-07-10', '상반기 마감 보고');
+        }
+
+        /* ⑤ 분기 안전보건교육 실시 결과 — 1·2분기 종결, 3분기 진행(미배정·지연 부서가 남았다)
+         *   ※ 카탈로그의 2·3분기 발행일(07-01·10-01)이 분기 말일보다 늦어 PERIOD_END 기한이
+         *     발행일 앞이 된다 — 예시 자료는 실제 회신 소요(D+28)로 기한을 준다. */
+        var q1 = mk('W-EDU-QTR', '2026-Q1', { issuedAt: '2026-04-01', due: '2026-04-29' });
+        past(q1, '2026-04-02', '2026-04-24');
+        close(q1, '2026-05-08', '분기 취합 종료');
+        var q2 = mk('W-EDU-QTR', '2026-Q2', { issuedAt: '2026-07-01', due: '2026-07-29' });
+        past(q2, '2026-07-02', '2026-07-27');
+        close(q2, '2026-08-07', '분기 취합 종료');
+        var q3 = mk('W-EDU-QTR', '2026-Q3', { issuedAt: '2026-10-01', due: '2026-10-29' });
+        if (q3) {
+            (q3.depts || []).forEach(function (dep) {
+                /* 물순환사업소는 **비워 둔다** — 부서장이 팀원에게 배정하는 장면이 남아 있어야 한다.
+                   공공시설사업소는 배정만 됐고 아직 제출 전(기한 경과) */
+                if (dep === 'water' || dep === 'facility') return;
+                var h = HIST[dep]; if (!h) return;
+                asg(q3, dep, h[0], h[1], '2026-10-05', h[2]);
+                sub(q3, dep, '2026-10-27');
+            });
+            asg(q3, 'facility', 'u_fac3', '한운영', '2026-10-06', '시설운영팀');
+            if (db.tasks[taskId(q3.id, 'water')]) db.tasks[taskId(q3.id, 'water')].reminds = [{ at: '2026-11-05', by: OWNER, round: 1, memo: '' }];
+            hist(q3, 'REMIND', '2026-11-05', '물순환사업소 · 1차');
+        }
+
+        /* ⑥ 현업근로자 월 정기교육 — 1~9월 종결, 10월 진행(기한 10-31 경과 부서가 남았다),
+              11월(발행일 11-13)은 심지 않는다 — 화면 진입 시 자동 발행된다 */
+        for (var m = 1; m <= 10; m++) {
+            var mm = pad(m);
+            var pl = planOf('W-EDU-MON', 2026).filter(function (x) { return x.periodKey === '2026-' + mm; })[0];
+            if (!pl) continue;
+            var mi = mk('W-EDU-MON', '2026-' + mm, { issuedAt: pl.issueDate });
+            if (!mi) continue;
+            var subAt = addDays(pl.due, -3);
+            if (m < 10) {
+                past(mi, addDays(pl.issueDate, 1), subAt);
+                close(mi, shift(addDays(pl.due, 7), +1), '월 취합 종료');
+            } else {
+                (mi.depts || []).forEach(function (dep) {
+                    if (dep === 'water') { asg(mi, dep, 'u_wat3', '하정수', '2026-10-15', '정수팀'); return; }
+                    var h = HIST[dep]; if (!h) return;
+                    asg(mi, dep, h[0], h[1], '2026-10-15', h[2]);
+                    if (dep !== 'construct') sub(mi, dep, '2026-10-29');
+                });
+            }
+        }
+
+        /* ⑦ 근로자 특수건강검진 실시 — 11-04 발행 · 진행(첨부형: 검진 결과 통보서 제출) */
+        var hx = mk('W-HLT-EXE', '2026', { issuedAt: '2026-11-04' });
+        if (hx) {
+            asg(hx, 'water', 'u_wat3', '하정수', '2026-11-05', '정수팀');
+            asg(hx, 'env', 'u_env2', '정환경', '2026-11-05');
+            sub(hx, 'env', '2026-11-12', [{ name: '환경과_특수건강검진_결과통보서.pdf', size: 512000, slot: '검진 결과 통보서' }]);
+            asg(hx, 'construct', 'u_con3', '김도현', '2026-11-06', '안전관리팀');
+            asg(hx, 'health', 'u_hlth2', '이보건', '2026-11-06');
+            /* 공공시설사업소는 미배정 — 배정 기한(3근무일) 경과 */
         }
 
         save();

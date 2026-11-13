@@ -18,15 +18,19 @@
      *   rsk-data.today()/isOverdue
      *
      * '' (빈 문자열)로 두면 실제 시스템 날짜를 쓴다(실 개발 전환 시).
+     *
+     * 2026-11-13 — 예시 데이터를 «11월까지 운영한 시스템»으로 다시 짰다(사용자 지시).
+     * 기준일은 **하한**이다: 실제 날짜가 이보다 늦으면 실제 날짜를 쓴다. 그래야 실습 날
+     * (11월 셋째 주) «오늘 날짜로 등록»이 그대로 되고, 지난 기록은 처리한 이력으로 남는다.
      * ========================================================================= */
-    const DEMO_TODAY = '2026-07-16';
+    const DEMO_TODAY = '2026-11-13';
 
     function realToday() {
         const t = new Date(), mm = t.getMonth() + 1, dd = t.getDate();
         return t.getFullYear() + '-' + (mm < 10 ? '0' : '') + mm + '-' + (dd < 10 ? '0' : '') + dd;
     }
     /* 전 모듈의 '오늘' 단일 출처 */
-    function today() { return DEMO_TODAY || realToday(); }
+    function today() { var r = realToday(); return DEMO_TODAY && DEMO_TODAY > r ? DEMO_TODAY : r; }
     /* 두 ISO 날짜의 일수 차 (미래 +, 과거 −) — D-day 계산도 한 곳에서 */
     function daysTo(iso, from) {
         if (!iso) return null;

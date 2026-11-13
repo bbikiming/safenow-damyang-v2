@@ -98,42 +98,44 @@
     function otherSeeds() {
         return [
             /* 결재 — 메뉴 이동형 */
-            { id: 'A-01', cat: 'approval',   title: '안전·보건 목표와 경영방침 결재 요청 (온나라 상신)',
-              due: '2026-07-18', dept: 'safety', dept_label: '재난안전과',
-              atype: 'menu', href: 'menu.html?m=policy', action: '검토하러 가기', destLabel: '경영방침' },
-            { id: 'A-02', cat: 'approval',   title: '2026 하반기 안전보건 예산 편성안 결재',
-              due: '2026-07-22', dept: 'plan', dept_label: '기획예산실',
+            /* 경영방침 v2.0 은 2026-01-29 결재완료 현행본이고 작성 중인 판이 없다 — «결재 요청» 카드는 예시 데이터와 어긋나
+               게시 현황 확인으로 바꿨다(2026-11-13). 미게시(재무과)·미등록(담양읍) 부서가 실제로 남아 있다. */
+            { id: 'A-01', cat: 'comply',     title: '경영방침(v2.0) 게시 현황 확인 — 미게시·미등록 부서',
+              due: '2026-11-20', dept: 'safety', dept_label: '재난안전과',
+              atype: 'menu', href: 'menu.html?m=policy', action: '게시 현황 보기', destLabel: '경영방침' },
+            { id: 'A-02', cat: 'approval',   title: '2027 안전보건 예산 편성안 결재',
+              due: '2026-11-25', dept: 'plan', dept_label: '기획예산실',
               /* 이 시스템에는 결재함이 없다(공통 권한정의 §7-4) — 결재는 온나라에서 한다.
                  「결재하러 가기」는 없는 동작을 약속하므로 실제로 하는 일로 고친다(검수 E). */
               atype: 'menu', href: 'bgt-main.html', action: '상신 상태 보기', destLabel: '예산 총괄표' },
             /* 점검 */
             /* I-01 «업무문서 안전점검 계열 16건 분류 확인»과 그 뒤를 이은 «문서 원장 미분류 N건 분류 확인»
                카드는 2026-10-12 에 걷었다 — 분류는 업무목록 엑셀이 정하고 이 시스템에서 하지 않는다. */
-            { id: 'I-02', cat: 'inspection', title: '공중이용시설 안전점검 결과 정리 (담양읍 문화의전당)',
-              due: '2026-07-17', dept: 'culture', dept_label: '문화체육과',
+            { id: 'I-02', cat: 'inspection', title: '하반기 공중이용시설 안전점검 결과 정리 (담양읍 문화의전당)',
+              due: '2026-11-18', dept: 'culture', dept_label: '문화체육과',
               atype: 'menu', href: 'fac-list.html', action: '처리하러 가기', destLabel: '시설물 대장' },
             /* 의견 — 파일 첨부형 (회의록 첨부로 완료) */
-            { id: 'O-01', cat: 'opinion',    title: '산업안전보건위원회 반기 회의록 등록',
+            { id: 'O-01', cat: 'opinion',    title: '산업안전보건위원회 수시회의(11-06) 회의록 등록',
               sub: '서명된 회의록 스캔본을 첨부하면 완료됩니다',
-              due: '2026-07-15', dept: 'safety', dept_label: '재난안전과',
+              due: '2026-11-20', dept: 'safety', dept_label: '재난안전과',
               atype: 'attach', href: 'menu.html?m=opinion&sub=committee', destLabel: '산업안전보건위원회' },
             /* 이행 */
             /* C-01 «의무이행 점검표 반기 마감 — 점검표 작성»은 2026-11-12 에 걷었다 — 이행점검 화면의 점검표 작성(F5)을
                걷었고, 반기 마감은 배포 기록에서 만드는 카드 10(«반기 마감 · 군수 보고»)이 맡는다. */
-            { id: 'C-02', cat: 'comply',     title: '안전보건교육 상반기 실시 결과 정리',
-              due: '2026-07-25', dept: 'safety', dept_label: '재난안전과',
+            { id: 'C-02', cat: 'comply',     title: '안전보건교육 3분기 실시 결과 정리',
+              due: '2026-11-14', dept: 'safety', dept_label: '재난안전과',
               atype: 'menu', href: 'edu-status.html', action: '보러 가기', destLabel: '이수현황' },
             /* 도급 — 파일 첨부형 (점검표 첨부로 완료) */
             { id: 'K-01', cat: 'contract',   title: '도급사업 안전보건 점검표 제출 (군도 5호선)',
               sub: '현장 점검표(서명본)를 첨부하면 완료됩니다',
-              due: '2026-07-30', dept: 'construct', dept_label: '건설과',
+              due: '2026-11-17', dept: 'construct', dept_label: '건설과',
               atype: 'attach', href: 'menu.html?m=contract', destLabel: '도급관리' },
             { id: 'K-02', cat: 'contract',   title: '용역계약 재해예방 조치 검토',
-              due: '2026-08-05', dept: 'acct', dept_label: '회계과',
+              due: '2026-11-24', dept: 'acct', dept_label: '회계과',
               atype: 'menu', href: 'menu.html?m=contract', action: '검토하러 가기', destLabel: '도급관리' },
             /* 평가 */
-            { id: 'E-01', cat: 'eval',       title: '2026년 반기 인력평가 응답 (안전보건관리책임자)',
-              due: '2026-07-31', dept: 'safety', dept_label: '재난안전과',
+            { id: 'E-01', cat: 'eval',       title: '2026년 하반기 인력평가 응답 (안전보건관리책임자)',
+              due: '2026-11-30', dept: 'safety', dept_label: '재난안전과',
               atype: 'menu', href: 'evl-eval.html', action: '평가하러 가기', destLabel: '인력 평가' }
         ];
     }
@@ -152,7 +154,7 @@
         pubType: '', pubStatus: 'open', /* 발행 업무 필터 (open=미시행+진행) */
         /* 개선조치 완료 모달 입력 보존 — cmplPhotos 는 썸네일을 가진 파일 객체 배열 */
         cmplId: null, cmplDesc: '', cmplPhoto: '', cmplPhotos: [], cmplSign: '', cmplDate: '',
-        syncedAt: '2026-07-16 09:15'
+        syncedAt: '2026-11-13 09:15'
     };
 
     /* 개선조치가 생긴 평가로 가는 주소 — 연도·부서를 함께 싣는다(운영 E08·E13, 2026-11-04).
@@ -246,14 +248,18 @@
                 var DC = global.DEPTCHK;
                 WK.deptTasks(state.deptId).forEach(function (t) {
                     if (t.issue.status === WK.IST.CANCELED) return;
+                    /* 종결된 회차의 미완료는 할 일이 아니다 — 재난안전과가 취합을 끝냈으므로 더 낼 곳이 없다(이력으로만 남는다) */
+                    if (t.issue.status === WK.IST.CLOSED && !t.done) return;
                     var cax = t.tpl && CMPAX[t.tpl.id];
                     var cdist = null;
                     /* 이행점검은 아래 «배포» 블록이 카드를 낸다 — 날짜 자동발행 카드는 내지 않는다(중복 방지) */
                     if (cax) return;
                     var mine = me && t.assign.to === me.uid;
                     var unassigned = t.unassigned && !t.done;
-                    /* 남이 배정받은 건은 내 할일이 아니다 */
-                    if (!mine && !unassigned) return;
+                    /* 남이 배정받은 건은 내 할일이 아니다 — 부서 관점(대시보드 itemsFor)은 부서 전체를 센다 */
+                    /* 관리·감독 계층(조회 전용)의 내 할일은 부서 전체를 본다 — 대시보드 «부서 할 일»과 같은 모수 */
+                    var deptWide = state.deptView || (me && me.tier !== 'staff');
+                    if (!mine && !unassigned && !deptWide) return;
                     state.wkMap['WK-' + t.id] = { issueId: t.issueId, deptId: t.deptId,
                         slots: (t.tpl && t.tpl.slots) || [] };
                     if (t.done && !mine) return;
@@ -305,7 +311,8 @@
                         /* 받는 사람 = 할 수 있는 사람(요청서 v2 R-15) — 그 부서 사람이면 지정 담당자, 없으면 실무자 전원,
                            실무자도 없으면 부서장에게만 뜬다. 부서 단위 할 일이라 한 사람이 내면 모두에게서 내려간다. */
                         var me2 = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
-                        if (me2 && me2.deptId === state.deptId && DCS.workUids && DCS.workUids(state.deptId).indexOf(me2.uid) === -1) return;
+                        /* 관리·감독 계층은 부서 전체를 «조회»한다(처리는 canAct 가 막는다) — 대시보드 부서 할 일과 같은 모수 */
+                        if (!state.deptView && me2 && me2.tier === 'staff' && me2.deptId === state.deptId && DCS.workUids && DCS.workUids(state.deptId).indexOf(me2.uid) === -1) return;
                         var st = DCS.stateOf(key, state.deptId);
                         var ret = st.confirm && st.confirm.state === 'RETURNED';
                         var done = DCS.submitted(key, state.deptId);
@@ -474,7 +481,7 @@
                         status: 'IN_PROGRESS',
                         dept: state.deptId, dept_label: Edu.deptName(state.deptId),
                         /* 관리감독자는 관리감독자 정기교육 화면으로 — 현업근로자 화면에는 그 교육이 없다 */
-                        href: w.category === 'SUPERVISOR' ? 'edu-sup.html' : 'edu-reg.html',
+                        href: w.category === 'SUPERVISOR' ? 'edu-sup.html' : 'edu-reg.html?tab=self',
                         atype: 'menu', action: '자체교육 진행',
                         destLabel: w.category === 'SUPERVISOR' ? '관리감독자 정기교육' : '정기교육', remind: true
                     });
@@ -632,7 +639,10 @@
         }
 
         var items = collectItems();
-        var k = kpis(items);
+        /* KPI 는 목록과 **같은 원본**을 센다 — 마감 할일 탭이 그리는 미완료 건(카테고리 조건 안)만.
+           종전에는 완료 건까지 «전체»에 넣어 «전체 21» 옆에 카드가 11장이었다. 렌더마다 다시 센다. */
+        var openItems = items.filter(function (i) { return i.status !== 'DONE' && (!state.fCat || i.cat === state.fCat); });
+        var k = kpis(openItems);
         var pubs = pubDocs();
         var pubOpenN = pubs.filter(function (d) { return d.status !== '완료'; }).length;
 
@@ -644,7 +654,7 @@
         var head = '';
         injectHeadActions(depts, deptOpts);
 
-        var arrivedN = items.filter(function (i) { return i.wk && i.wk.unassigned && i.status !== 'DONE'; }).length;
+        var arrivedN = openItems.filter(function (i) { return i.wk && i.wk.unassigned; }).length;
         /* KPI 4칩 — 실측(2026-08-11) 당시 6칩 중 4개가 0이었고 카드는 3장뿐이었다.
          * '오늘 마감'은 '이번주'에 포함되는 부분집합이고, '결재 대기'는 담당자
          * 처리 축이 아니라 결재 도메인이다. 축이 겹치거나 남의 도메인인 칩을 뺀다. */
@@ -881,7 +891,7 @@
             var m0 = D().improvementOf(it.impId);
             var ownerBtn = (m0 && global.IMPCARD && IMPCARD.amendOpen)
                 ? '<button type="button" class="btn btn-outline btn-sm" onclick="IMPCARD.amendOpen(\'' + it.impId + '\')">' +
-                  (m0.assigned_to ? '담당자 변경' : '담당자 지정') + '</button> '
+                  (IMPCARD.amendLabel ? IMPCARD.amendLabel(m0) : (m0.assigned_to ? '담당자 변경' : '담당자 지정')) + '</button> '
                 : '';
             return ownerBtn +
                 '<button type="button" class="btn btn-primary btn-sm" data-tour="mw-improve" onclick="MYWORK.complete(\'' + it.impId + '\')">' +
@@ -1594,7 +1604,8 @@
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="MYWORK.doReport()">제출</button>');
     }
-    function dlForm(name) { V().notReady('설문조사표 내려받기', '서식 파일 등록'); }
+    /* 이 세션에 재난안전과가 올린 양식이면 실제로 내려받는다(위험성평가 화면 [지금 제출하기]와 같은 창·같은 동작) */
+    function dlForm(name) { if (D().downloadFile && D().downloadFile(name)) return; V().notReady('설문조사표 내려받기', '서식 파일 등록'); }
     function onPickReport(files) { RPT.files = files.slice(0, 1); renderReport(); }
     function delReport(n) { RPT.files.splice(n, 1); renderReport(); }
     /* 예시 파일명 — 무대에서 OS 파일 대화상자를 여는 건 느리고 위험하다
@@ -1618,7 +1629,7 @@
         var who = p ? (D().deptName(RPT.deptId) + ' · ' + p.name) : (D().deptName(RPT.deptId) + ' 담당자');
         D().setDeptReport(RPT.aid, RPT.deptId, RPT.files[0].name, who);
         RPT = null;
-        V().closeModal(); toast('설문조사표 제출 · 재난안전과로 전달되었습니다'); render();
+        V().closeModal(); toast('설문조사표를 제출했습니다 — 재난안전과에 전달됩니다'); render();
     }
 
     /* ================= init ================= */
@@ -1647,7 +1658,17 @@
         global.WKASSIGN.claimAt(issueId, deptId, render);
     }
 
+    /* 부서 관점 할 일 — 대시보드가 내 할일과 **같은 원본**으로 세게 한다(2026-11-13).
+       opts.deptView: 배정된 사람과 무관하게 그 부서 업무 전체(관리감독자·군수 관점). */
+    function itemsFor(deptId, opts) {
+        var prev = state.deptId, prevView = state.deptView, prevMap = state.wkMap;
+        state.deptId = deptId; state.deptView = !!(opts && opts.deptView); state.wkMap = {};
+        try { return collectItems(); } catch (e) { return []; }
+        finally { state.deptId = prev; state.deptView = prevView; state.wkMap = prevMap; }
+    }
+
     global.MYWORK = {
+        itemsFor: itemsFor, CATS: CATS,
         wkAssign: wkAssign, wkClaim: wkClaim,
         onPickAfter: onPickAfter, delAfter: delAfter, pickAfterDemo: pickAfterDemo,
         onPickBefore: onPickBefore, delBefore: delBefore, pickBeforeDemo: pickBeforeDemo,

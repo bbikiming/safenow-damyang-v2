@@ -66,7 +66,7 @@
             tasks: []
         },
         'edu-reg': {
-            lead: '현업근로자 정기교육을 등록하고 부서 신청을 받아 이수 결과를 기록합니다. 종료 처리한 교육은 실시 결과 공문을 기안할 수 있습니다.',
+            lead: '현업근로자 정기교육을 등록하고 부서가 올린 참석자 등록부로 이수 결과를 기록합니다. 종료 처리한 교육은 실시 결과 공문을 기안할 수 있습니다.',
             tasks: [
                 { t: '교육 등록하기', go: "EDUR && EDUR.openCreate && EDUR.openCreate()" },
                 { t: '이수 현황 보기', go: 'edu-status.html' }
@@ -76,15 +76,15 @@
         'edu-status': {
             lead: '부서별·개인별 이수 상태를 봅니다. 완료율이 낮은 부서를 눌러 미이수자 명단으로 바로 들어갑니다.',
             tasks: [{ t: '미달 부서만 보기', go: 'edu-status.html?short=1' }],
-            tour: 'EDUTOUR'
+            tour: 'EDUTOUR', reset: 'EDUTOUR'
         },
         'edu-workers': {
             lead: '교육 대상 근로자 명단을 관리합니다. 이 명단이 이수율의 분모가 됩니다.',
-            tasks: [], tour: 'EDUTOUR'
+            tasks: [], tour: 'EDUTOUR', reset: 'EDUTOUR'
         },
-        'edu-hire': { lead: '채용 시 교육 대상자와 이수 상태를 봅니다. 기준일은 채용일과 지정일 중 늦은 쪽입니다.', tasks: [], tour: 'EDUTOUR' },
-        'edu-etc':  { lead: '작업내용 변경 시·특별교육 등 그 밖의 법정 교육을 기록합니다.', tasks: [], tour: 'EDUTOUR' },
-        'edu-approval': { lead: '교육 실시 결과 공문을 온나라로 올린 이력을 봅니다. 조회 전용입니다.', tasks: [], tour: 'EDUTOUR' },
+        'edu-hire': { lead: '채용 시 교육 대상자와 이수 상태를 봅니다. 기준일은 채용일과 지정일 중 늦은 쪽입니다.', tasks: [], tour: 'EDUTOUR', reset: 'EDUTOUR' },
+        'edu-etc':  { lead: '작업내용 변경 시·특별교육 등 그 밖의 법정 교육을 기록합니다.', tasks: [], tour: 'EDUTOUR', reset: 'EDUTOUR' },
+        'edu-approval': { lead: '교육 실시 결과 공문을 온나라로 보낸 이력을 봅니다. 조회 전용입니다.', tasks: [], tour: 'EDUTOUR', reset: 'EDUTOUR' },
         /* 업무 관리(현행) — 2026-09-03 추가. 종전에는 도움말이 **은퇴 화면에만** 있어,
            살아 있는 이행 관리·문서 목록에는 [?] 버튼이 뜨지 않고 도달할 수 없는
            업무 목록·이행 목록에만 도움말이 남아 있었다. */
@@ -129,8 +129,9 @@
             lead: '이용자 안전 관점에서 점검 순서를 정합니다. 값이 모자라 순위를 못 매긴 시설물은 보완입력으로 채웁니다.',
             tasks: [{ t: '시설물 대장으로', go: 'fac-list.html' }]
         },
-        'sbm-comply': { lead: '반기마다 부서별 의무 이행 여부를 증빙과 함께 점검합니다.', tasks: [] },
-        'sbm-policy': { lead: '안전보건 경영방침을 등록하고 부서별 게시 여부를 확인합니다.', tasks: [] },
+        /* 이행점검·경영방침 게시 현황은 같은 스토어(DEPTCHK)라 되돌리기도 같은 함수다 — 확인 창이 둘 다 되돌아간다고 밝힌다 */
+        'sbm-comply': { lead: '재난안전과가 반기 점검표를 배포하면 부서가 작성해 결과를 제출하고, 재난안전과가 검토한 뒤 반기 마감 보고를 온나라로 보냅니다.', tasks: [], reset: 'DEPTCHK' },
+        'sbm-policy': { lead: '안전보건 경영방침을 등록하고 부서별 게시 여부를 확인합니다.', tasks: [], reset: 'DEPTCHK' },
         'admin-law': { lead: '화면에 붙는 법령 근거를 관리합니다. 조문 원문은 법제처 수집 결과이므로 이 화면에서 고치지 않습니다.', tasks: [] },
         'admin-integration': { lead: '외부 시스템 연계 상태와, 아직 받지 못한 자료·규격을 봅니다.', tasks: [] }
     };

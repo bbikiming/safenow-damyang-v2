@@ -412,7 +412,7 @@
         /* 신청은 부서 담당자가 자기 부서 몫을 올린다(주관부서 담당자는 전 부서) */
         if (!E().canRegister()) { deny(E().defaultDeptId()); return; }
         if (c.status === 'OPEN' && !E().enrollOpen(c)) { toast('교육이 끝난 뒤(' + E().lastSessionDate(c) + '부터) 참석자 등록부를 올립니다.'); return; }
-        G = { courseId: courseId, deptId: E().defaultDeptId(), workerIds: {}, signFile: '' };
+        G = { courseId: courseId, deptId: E().defaultDeptId(), workerIds: {}, signFile: '', actualHours: c.hours, hoursBy: {}, hoursOpen: false };
         renderApply();
     }
     function renderApply() {
@@ -438,26 +438,36 @@
                 '<span style="color:var(--text-gray);font-weight:var(--fw-regular);">(' + selCnt + ' / ' + ws.length + '명)</span></label>' +
                 '<div class="edu-tg-body">' + rows + '</div>' +
             '</div>' +
+            /* 실제 참석시간 — 모두에게 같은 시간 + 사람별 예외. 상세 화면·일괄 등록과 같은 블록(EDUFORM) */
+            EDUFORM.hoursBlockHtml(G, ws.filter(function (w) { return G.workerIds[w.id]; }), c.hours, 'EDUR') +
             '<div class="edu-modal-row"><label class="form-label">서명부 스캔 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 /* 업로드 칸은 전 화면 공용 모양 하나(uploadDrop) — 버튼 하나짜리를 두지 않는다
-                   (기획확인 4차 D-1, 2026-10-06). 고른 뒤에는 파일명과 [×]로 바꾼다. */
+                   (기획확인 4차 D-1, 2026-10-06). 고른 뒤에는 파일명과 [×]로 바꾼다. 서명부는 한 파일이라 안내도 «1개» */
                 (G.signFile
                     ? '<span style="color:var(--main-dark);font-weight:var(--fw-bold);font-size:var(--fs-12);">' + esc(G.signFile) + '</span> ' +
                       '<button type="button" class="btn btn-sm btn-outline" onclick="EDUR.applyClearSign()" aria-label="서명파일 지우기">×</button>' +
-                      V().fileHint()
-                    : V().uploadDrop('<b>서명파일을 끌어다 놓거나 눌러서 선택</b>', 'EDUR.applyAttachSign()', { hint: true })) +
+                      EDUFORM.oneFile(V().fileHint())
+                    : EDUFORM.oneFile(V().uploadDrop('<b>서명부 스캔을 끌어다 놓거나 눌러서 선택</b>', 'EDUR.applyAttachSign()', { hint: true }))) +
             '</div>';
         V().openModal('참석자 등록부 등록 · ' + esc(E().deptName(G.deptId)), body,
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="EDUR.doApply()">등록</button>');
     }
+    function capApply() { if (G) EDUFORM.captureHours(G); }
+    function hoursOpen(o) { if (G) G.hoursOpen = !!o; }
     function applyPickDept(id, name) {
         if (!E().canActDept(id)) { deny(id); return; }
-        G.deptId = id; G.workerIds = {}; renderApply();
+        capApply(); G.deptId = id; G.workerIds = {}; G.hoursBy = {}; renderApply();
     }
-    function applyToggle(id, on) { if (on) G.workerIds[id] = true; else delete G.workerIds[id]; renderApply(); }
-    function applyAttachSign() { G.signFile = E().deptName(G.deptId) + '_서명_' + G.courseId + '.pdf'; renderApply(); }
-    function applyClearSign() { G.signFile = ''; renderApply(); }
+    function applyToggle(id, on) { capApply(); if (on) G.workerIds[id] = true; else delete G.workerIds[id]; renderApply(); }
+    /* 파일 이름은 교육 일자로 — 내부 교육 번호를 사용자 눈에 띄는 이름에 넣지 않는다(§15) */
+    function applyAttachSign() {
+        capApply();
+        var c = E().courseOf(G.courseId);
+        G.signFile = E().deptName(G.deptId) + '_' + String((c && c.date) || E().today()).replace(/-/g, '') + '_참석자서명부.pdf';
+        renderApply();
+    }
+    function applyClearSign() { capApply(); G.signFile = ''; renderApply(); }
     function doApply() {
         if (!E().canActDept(G.deptId)) { deny(G.deptId); return; }
         var ids = Object.keys(G.workerIds).filter(function (k) { return G.workerIds[k]; });
@@ -470,9 +480,18 @@
         }
         /* 저장 여부는 데이터 계층이 정한다(중복 부서·모집단 불일치 — 운영 E19).
            반환값을 보지 않으면 저장되지 않았는데 «신청 완료»가 뜬다. */
-        var enr = { courseId: G.courseId, deptId: G.deptId, workerIds: ids, signFile: G.signFile, at: E().today() };
+        capApply();
+        var c = E().courseOf(G.courseId);
+        var hp = EDUFORM.hoursPayload(G, ids, c ? c.hours : 0);
+        if (!hp.ok) { toast(hp.why); return; }
+        var pr = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
+        var enr = { courseId: G.courseId, deptId: G.deptId, workerIds: ids, signFile: G.signFile, at: E().today(),
+                    actualHours: hp.actualHours, hoursBy: hp.hoursBy,
+                    by: pr ? pr.name : '', proxy: !!(pr && pr.deptId && pr.deptId !== G.deptId) };
         if (!E().addEnroll(enr)) { toast(E().enrollDenyReason(enr) || '등록부를 저장하지 못했습니다.'); return; }
-        E().pushCourseHistory(G.courseId, { type: 'STATUS', by: E().deptName(G.deptId), memo: '참석자 등록부 등록 · ' + ids.length + '명 · 서명파일 첨부' });
+        E().pushCourseHistory(G.courseId, { type: 'STATUS', by: enr.proxy ? actor() + '(대리 등록)' : actor(),
+            memo: '참석자 등록부 등록 · ' + ids.length + '명 · 실제 참석 ' + (hp.actualHours == null ? c.hours : hp.actualHours) + 'h' +
+                (hp.exceptions ? ' (사람별 ' + hp.exceptions + '명 따로)' : '') + ' · 서명부 첨부' });
         V().closeModal();
         toast(E().deptName(G.deptId) + ' · ' + ids.length + '명 참석자 등록부 등록');
         render();
@@ -562,6 +581,9 @@
         state.mount = document.getElementById(mountId);
         if (!state.mount) return;
         if (global.EDUDOC) global.EDUDOC.registerRefresh(render);
+        /* ?tab=self — 자체교육 탭으로 바로 연다(내 할일 «재촉» 카드의 [자체교육 진행]) */
+        var qt = new URLSearchParams(location.search).get('tab');
+        if (qt === 'self' || qt === 'group') state.tab = qt;
         render();
     }
     global.EDUR = {
@@ -572,7 +594,7 @@
         addFile: addFile, delFile: delFile,
         confirmRemove: confirmRemove, doRemove: doRemove,
         openApply: openApply, applyPickDept: applyPickDept, applyToggle: applyToggle,
-        applyAttachSign: applyAttachSign, applyClearSign: applyClearSign, doApply: doApply,
+        applyAttachSign: applyAttachSign, applyClearSign: applyClearSign, doApply: doApply, hoursOpen: hoursOpen,
         viewDetail: viewDetail
     };
 })(window);

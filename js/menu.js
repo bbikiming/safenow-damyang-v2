@@ -261,25 +261,35 @@
         if (!window.POLICY_STATE) {
             window.POLICY_STATE = {
                 tab: 'policy', view: 'list', ver: null, draftType: null, draftVer: null,
+                /* 예시 자료 — 2026-11-13 기준 운영 이력(2026-11-13 개정).
+                   v1.0(2024 최초) → v1.1(2025-07 개정) → v2.0(2026-02 제정, 현행). 결재일·생산등록번호는 온나라 결재 결과 */
                 VERSIONS: [
                     { ver: '2.0', type: '제정', title: '담양군 안전·보건 경영방침', goal: '군민과 종사자의 생명·안전을 최우선으로 하는 안전 담양',
                       details: ['중대산업재해·중대시민재해 ZERO', '정기 위험성평가 이행률 100%', '안전보건교육 이수율 95% 이상'],
-                      inspector: '재난안전과 · 재난안전과장 / 홍길동', effDate: '2026-02-03', appr: '승인완료',
+                      inspector: '재난안전과 · 재난안전과장 / 홍길동', effDate: '2026-02-02', appr: '승인완료',
+                      prodNo: '재난안전과-0386', apprDate: '2026-01-29',
                       inspections: [{ half: '2026 상반기', date: '2026-06-22', result: '적합', inspector: '홍길동' }],
-                      postings: [{ id: 'L1', loc: '군청 본관 1층 게시판', photo: '본관 1층 게시판 게시 사진', date: '2026-02-05', status: '게시완료' },
-                                 { id: 'L2', loc: '내부망(새올) 전자게시', photo: '새올 전자게시 화면 캡처', date: '2026-02-03', status: '게시완료' }],
-                      evidence: [{ id: 'E1', name: '경영방침_2026.pdf', kind: '본문' }, { id: 'E2', name: '의견수렴결과.xlsx', kind: '의견수렴' }],
-                      postedDate: '2026-02-05', pdf: { docNo: '온나라-2026-3174', issued: '2026-02-03', signer: '담양군수 김담양' } },
+                      postings: [{ id: 'L1', loc: '군청 본관 1층 게시판', photo: '본관 1층 게시판 게시 사진', date: '2026-02-03', status: '게시완료' },
+                                 { id: 'L2', loc: '내부망(새올) 전자게시', photo: '새올 전자게시 화면 캡처', date: '2026-02-02', status: '게시완료' }],
+                      evidence: [{ id: 'E1', name: '담양군_안전보건_경영방침_2026.pdf', kind: '본문' }, { id: 'E2', name: '경영방침_의견수렴결과(2026-01-12~01-21).xlsx', kind: '의견수렴' },
+                                 { id: 'E3', name: '산업안전보건위원회_2025_4분기_심의결과.pdf', kind: '심의' }],
+                      postedDate: '2026-02-03', pdf: { docNo: '재난안전과-0386', issued: '2026-01-29', signer: '담양군수 김담양' } },
                     { ver: '1.1', type: '개정', title: '담양군 안전·보건 경영방침', goal: '안전한 일터, 건강한 담양',
                       details: ['중대재해 ZERO 유지', '위험성평가 이행률 100%', '안전보건교육 이수율 90% 이상'], inspector: '재난안전과 · 재난안전과장 / 홍길동',
-                      effDate: '2025-07-01', appr: '승인완료', inspections: [{ half: '2025 하반기', date: '2025-12-10', result: '보완 필요', inspector: '홍길동' }],
+                      effDate: '2025-07-01', appr: '승인완료', prodNo: '재난안전과-2071', apprDate: '2025-06-26',
+                      inspections: [{ half: '2025 하반기', date: '2025-12-10', result: '보완 필요', inspector: '홍길동' }],
                       postings: [{ id: 'L1', loc: '군청 본관 1층 게시판', photo: '본관 1층 게시판 게시 사진', date: '2025-07-03', status: '게시완료' }],
-                      evidence: [{ id: 'E1', name: '개정_방침_v1.1.pdf', kind: '본문' }], postedDate: '2025-07-03',
-                      pdf: { docNo: '온나라-2025-2210', issued: '2025-07-01', signer: '담양군수 김담양' } },
+                      evidence: [{ id: 'E1', name: '담양군_안전보건_경영방침_v1.1(개정).pdf', kind: '본문' }], postedDate: '2025-07-03',
+                      pdf: { docNo: '재난안전과-2071', issued: '2025-06-26', signer: '담양군수 김담양' } },
                     { ver: '1.0', type: '최초', title: '담양군 안전·보건 경영방침', goal: '안전 담양 원년 — 중대재해 예방 체계 구축',
                       details: ['중대재해 예방 관리체계 구축', '위험성평가 도입'], inspector: '재난안전과 · 재난안전과장 / 홍길동',
-                      effDate: '2024-03-01', appr: '승인완료', inspections: [], postings: [], evidence: [], postedDate: '',
-                      pdf: { docNo: '온나라-2024-1102', issued: '2024-03-01', signer: '담양군수 김담양' } },
+                      effDate: '2024-03-01', appr: '승인완료', prodNo: '재난안전과-0598', apprDate: '2024-02-26',
+                      inspections: [{ half: '2024 상반기', date: '2024-06-20', result: '적합', inspector: '홍길동' },
+                                    { half: '2024 하반기', date: '2024-12-12', result: '적합', inspector: '홍길동' },
+                                    { half: '2025 상반기', date: '2025-06-19', result: '보완 필요', inspector: '홍길동' }],
+                      postings: [{ id: 'L1', loc: '군청 본관 1층 게시판', photo: '본관 1층 게시판 게시 사진', date: '2024-03-04', status: '게시완료' }],
+                      evidence: [{ id: 'E1', name: '담양군_안전보건_경영방침_v1.0.pdf', kind: '본문' }], postedDate: '2024-03-04',
+                      pdf: { docNo: '재난안전과-0598', issued: '2024-02-26', signer: '담양군수 김담양' } },
                 ],
             };
         }
@@ -550,8 +560,19 @@
             };
             /* 칩 유틸 */
             const apprColor = a => ({ '미상신': 'neutral', '결재중': 'info', '승인완료': 'success', '반려': 'danger' }[a] || 'neutral');
-            const apprChip = a => '<span class="chip-status ' + apprColor(a) + '">' + (a || '미상신') + '</span>';
-            const checkChip = v => { const i = POL.lastInspection(v); return i ? '<span class="chip-status success">점검완료 · ' + i.date + '</span>' : '<span class="chip-status neutral">미점검</span>'; };
+            /* 저장 값은 '승인완료' 그대로 두고(회신·현행본 판정이 이 값을 본다) 화면 말은 «결재완료»로 낸다 —
+               이행점검·교육·위험성평가 공문과 운영 가이드가 모두 «결재완료»라 이 화면만 다른 말을 하고 있었다 */
+            const apprLbl = a => a === '승인완료' ? '결재완료' : (a || '미상신');
+            const apprChip = a => '<span class="chip-status ' + apprColor(a) + '">' + apprLbl(a) + '</span>';
+            /* 반기 점검 — 마지막 점검이 **어느 반기**인지 붙인다. 현행본인데 이번 반기 점검이 없으면 그 사실을 함께 낸다
+               («점검완료 · 06-22»만 있으면 11월에 하반기 점검까지 끝난 것으로 읽혔다, 2026-11-13 실습 점검) */
+            const curHalf = () => { const t = V.today(); return t.slice(0, 4) + ' ' + (+t.slice(5, 7) <= 6 ? '상반기' : '하반기'); };
+            const checkChip = v => {
+                const i = POL.lastInspection(v);
+                const due = POL.isActive(v) && (!i || i.half !== curHalf());
+                return (i ? '<span class="chip-status success">' + esc(i.half || '') + ' 점검 완료 · ' + i.date + '</span>' : '<span class="chip-status neutral">미점검</span>') +
+                    (due && i ? ' <span class="chip-status warning">' + curHalf() + ' 미점검</span>' : '');
+            };
             const typeChip = t => '<span class="chip-mini ' + (t === '제정' ? 'wt-elec' : t === '개정' ? 'wt' : 'st-done') + '">' + t + '</span>';
             /* 버전 상태는 **결재로 정한다** (운영 E09 · 23건 #9, 2026-11-04 확정):
                결재완료 최신본 = 현행 · 결재 전 최신본 = 작성중(미상신·반려면 수정 가능, 상신하면 잠김)
@@ -900,7 +921,7 @@
                             : ((isAct && polCan())
                                 ? '<button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); PG.polCheckWrite(\'' + v.ver + '\')">점검 작성</button>'
                                 : '<span style="font-size:12px; color:var(--text-gray);">' + (isAct ? '미점검' : '이력 없음') + '</span>');
-                        return '<tr style="cursor:pointer;" onclick="PG.polOpen(\'' + v.ver + '\')"><td><b>v' + v.ver + '</b></td><td>' + stateChip(v) + '</td><td>' + V.esc(v.title) + '</td><td>' + (i ? '<span class="chip-status success">완료</span>' : '<span class="chip-status neutral">미점검</span>') + '</td><td>' + (i ? i.date : '-') + '</td><td>' + (i ? resultChip(i.result) : '-') + '</td><td>' + action + '</td></tr>';
+                        return '<tr style="cursor:pointer;" onclick="PG.polOpen(\'' + v.ver + '\')"><td><b>v' + v.ver + '</b></td><td>' + stateChip(v) + '</td><td>' + V.esc(v.title) + '</td><td>' + checkChip(v) + '</td><td>' + (i ? i.date : '-') + '</td><td>' + (i ? resultChip(i.result) : '-') + '</td><td>' + action + '</td></tr>';
                     }).join('') +
                     '</tbody></table></div>';
                 const foot = (act && polCan()) ? '<button class="btn btn-sm btn-outline" onclick="PG.polChkBasis(\'' + act.ver + '\')">점검표 근거 설정</button><button class="btn btn-sm btn-primary" onclick="PG.polCheckWrite(\'' + act.ver + '\')">현행본 이행점검 작성</button>' : '';
@@ -928,7 +949,7 @@
                 ns: 'PG.POLCHK', title: '경영방침 게시 확인',
                 labels: { DONE: '게시', TODO: '미게시', NA: '해당없음' }, statusLabel: '게시 여부', rateLabel: '게시율',
                 placeLabel: '게시 위치', placePlaceholder: '예: 군청 본관 1층 게시판 / 내부망 전자게시',
-                evidenceLabel: '게시 사진', onChange: render,
+                evidenceLabel: '게시 사진', uploadProfile: 'image', onChange: render,
             });
             PG.POLCHK = {
                 open: (id) => DEPTCHK.open(BOARD_KEY, id, boardOpts()),
@@ -1038,11 +1059,15 @@
                선임 공백은 그 자체가 법정 의무 미이행이라, 등록했는데 반영되지 않으면
                담당자는 선임이 끝난 줄 알고 공백을 그대로 둔다. */
             if (!window.ORG_APPOINT_STATE) {
+                /* 예시 자료(2026-11-13 기준) — 조직도 실인물. 공공시설사업소 관리감독자는 10-30 인사발령으로 공석이라 미선임 */
                 window.ORG_APPOINT_STATE = [
                     { kind: '안전관리자', name: '김안전', date: '2025-03-02', cert: '산업안전기사', paper: true },
-                    { kind: '보건관리자', name: '이보건', date: '2025-03-02', cert: '간호사', paper: true },
-                    { kind: '안전보건관리책임자', name: '홍길동', date: '2025-01-02', cert: '재난안전과장', paper: false },
-                    { kind: '관리감독자 (도시과)', name: '', date: '', cert: '', paper: false },
+                    { kind: '보건관리자', name: '최보건', date: '2025-03-02', cert: '간호사', paper: true },
+                    { kind: '안전보건관리책임자', name: '홍길동', date: '2025-01-02', cert: '재난안전과장', paper: true },
+                    { kind: '관리감독자 (건설과)', name: '정안전', date: '2026-01-02', cert: '안전관리팀장', paper: true },
+                    { kind: '관리감독자 (물순환사업소)', name: '문정수', date: '2026-01-02', cert: '정수팀장', paper: true },
+                    { kind: '관리감독자 (환경과)', name: '조환경', date: '2026-07-06', cert: '환경지도팀장', paper: false },
+                    { kind: '관리감독자 (공공시설사업소)', name: '', date: '', cert: '', paper: false },
                 ];
             }
             const appoint = window.ORG_APPOINT_STATE;
@@ -1355,80 +1380,210 @@
             }
             /* ===== SSOT (window.OPINION_STATE) ===== */
             if (!window.OPINION_STATE) {
-                const named = [
-                    { id: 'OPN-24', cat: '아차사고', title: '지게차 후진 중 충돌 위험 상황 발생', author: '박작업', date: '2026-04-22', status: '접수대기', via: '온라인', location: '물류창고 하역장', content: '지게차 후진 시 후방 작업자와 충돌 위험. 후방 감지센서·유도자 배치 필요.', inspectLink: false, link: '', plan: '', progress: [], result: '' },
-                    { id: 'OPN-23', cat: '안전제안', title: '용접작업장 환기시설 개선 제안', author: '이기술', date: '2026-04-21', status: '처리중', via: '온라인', location: '정비동 용접실', content: '용접 흄 배기 불량. 국소배기장치 증설 제안.', inspectLink: true, link: '', plan: '용접실 국소배기장치 현장 점검 예정', progress: [], result: '' },
-                    { id: 'OPN-22', cat: '위험신고', title: '2층 계단 난간 흔들림 현상', author: '최안전', date: '2026-04-20', status: '처리중', via: '온라인', location: '본관 2층 계단', content: '난간 고정부 풀림으로 흔들림. 낙상 위험.', inspectLink: false, link: 'IMP-204', plan: '난간 고정부 전수 점검 및 재시공', progress: [{ date: '2026-04-22', text: '현장 점검 완료 — 3개소 고정부 풀림 확인' }], result: '' },
-                    { id: 'OPN-21', cat: '청취조사', title: '야간작업 피로도 관련 의견', author: '정근로', date: '2026-04-19', status: '처리중', via: '오프라인', location: '-', content: '야간 연속작업 피로 누적. 교대 주기 단축 검토 요청.', inspectLink: true, link: '', plan: '', progress: [], result: '' },
-                    { id: 'OPN-20', cat: '안전제안', title: '안전모 턱끈 자동잠금 장치 도입 제안', author: '한제안', date: '2026-04-18', status: '완료', via: '온라인', location: '전 현장', content: '턱끈 미체결 방지 자동잠금 버클 도입 제안.', inspectLink: false, link: '', plan: '시범 도입 후 확대', progress: [{ date: '2026-04-25', text: '시범 물량 20개 도입' }], result: '시범 운영 양호 — 전 현장 확대 적용 완료' },
-                    { id: 'OPN-19', cat: '아차사고', title: '자재 낙하 위험 상황 (B구역)', author: '강현장', date: '2026-04-17', status: '완료', via: '오프라인', location: 'B구역 자재적치장', content: '적치 높이 초과로 낙하 위험. 적치 기준 재정비.', inspectLink: false, link: 'IMP-198', plan: '적치 높이 기준 표지 부착·재배치', progress: [{ date: '2026-04-19', text: '적치 재배치 완료' }], result: '적치 기준 표지 부착 및 일일 점검 체계 수립 완료' },
-                    { id: 'OPN-18', cat: '위험신고', title: '전기배선 피복 손상 발견', author: '오전기', date: '2026-04-16', status: '완료', via: '오프라인', location: '기계실 분전반', content: '배선 피복 손상으로 감전 위험.', inspectLink: false, link: 'IMP-195', plan: '손상 배선 즉시 교체', progress: [{ date: '2026-04-16', text: '긴급 차단 후 교체' }], result: '손상 배선 전량 교체 완료' },
-                    { id: 'OPN-17', cat: '청취조사', title: '보호구 착용 불편사항 의견', author: '윤작업', date: '2026-04-15', status: '반려', via: '온라인', location: '-', content: '보호장갑 사이즈 부족 의견.', inspectLink: false, link: '', plan: '', progress: [], result: '', rejectReason: '규격 보호구 비치 완료 — 기존 조치와 중복' },
+                /* 예시 자료 — 2026-01~11 접수된 의견(2026-11-13 기준). 작성자·담당부서는 조직도 실인물·실부서.
+                   지난 건은 처리가 끝났고(완료·반려), 11월 접수분만 접수대기·점검중·개선조치중이다. */
+                const H = (stage, at, text, actor) => ({ stage: stage, actor: actor || '박안전', text: text, at: at });
+                const V0 = (o) => Object.assign({ via: '온라인', location: '-', owner: '', inspectLink: false, inspect: null, link: '', plan: '', progress: [], result: '' }, o);
+                /* 완료 건 — 접수 → 조치 → 완료 이력을 날짜대로 */
+                const done = (o, how, doneAt, result) => V0(Object.assign(o, { status: '완료', result: result, completedAt: doneAt + ' 16:30', completedBy: '박안전',
+                    history: [H('접수', o.date + ' 09:10', '의견 접수 — ' + (o.via || '온라인') + ' 경로'), how, H('완료', doneAt + ' 16:30', result)] }));
+                const seed = [
+                    V0({ id: 'OPN-24', cat: '아차사고', title: '정수장 약품 투입실 바닥 미끄럼 — 작업자 넘어질 뻔함', author: '서한별', date: '2026-11-12', status: '접수대기', location: '담양정수장 약품 투입실',
+                         content: '응집제 보충 중 바닥에 흘린 약품 때문에 미끄러질 뻔했습니다. 미끄럼 방지 매트와 바닥 배수 정비가 필요합니다.',
+                         history: [H('접수', '2026-11-12 08:52', '의견 접수 — 온라인 경로')] }),
+                    V0({ id: 'OPN-23', cat: '위험신고', title: '담양종합체육관 관람석 계단 손잡이 고정 풀림', author: '오세영', date: '2026-11-10', status: '점검중', location: '담양종합체육관 2층 관람석',
+                         content: '관람석 B구역 계단 손잡이 2곳의 고정볼트가 풀려 흔들립니다. 주말 대회 전에 점검이 필요합니다.', owner: '문화체육과', inspectLink: true,
+                         inspect: { kind: '특별점검', date: '2026-11-17', owner: '문화체육과 · 주무관 / 한지훈' },
+                         history: [H('접수', '2026-11-10 10:05', '의견 접수 — 온라인 경로'), H('현장점검 생성', '2026-11-11 09:30', '현장점검 생성 — 특별점검 · 담당 문화체육과 · 주무관 / 한지훈 · 예정 2026-11-17')] }),
+                    V0({ id: 'OPN-22', cat: '안전제안', title: '도로 보수 현장 야간 작업 경광등 추가 배치 제안', author: '박서준', date: '2026-11-05', status: '개선조치중', via: '오프라인', location: '군도 5호선 보수 구간',
+                         content: '해가 빨리 져 17시 이후 작업 구간 진입 차량이 작업자를 늦게 봅니다. 구간 시작·끝에 경광등을 1대씩 더 두면 좋겠습니다.', owner: '건설과', link: 'IMP-2611',
+                         history: [H('접수', '2026-11-05 14:20', '의견 접수 — 오프라인 경로(담당자 대리 등록)'), H('개선조치 생성', '2026-11-06 10:10', '개선조치 IMP-2611 생성 — 담당 건설과 · 안전관리팀장 / 정안전 · 예정 2026-11-27')] }),
+                    V0({ id: 'OPN-21', cat: '청취조사', title: '하반기 의견청취 — 동절기 방한 보호구 지급 시기', author: '곽문석', date: '2026-10-29', status: '개선조치중', via: '오프라인',
+                         content: '현장 근무자 방한장갑·방한화 지급이 매년 12월 중순이라 늦습니다. 11월 중 지급을 요청합니다.', owner: '재난안전과', link: 'IMP-2608',
+                         history: [H('접수', '2026-10-29 15:00', '의견 접수 — 오프라인 경로(하반기 의견청취 간담회)'), H('개선조치 생성', '2026-10-30 09:40', '개선조치 IMP-2608 생성 — 담당 재난안전과 · 안전관리 주무관 / 박안전 · 예정 2026-11-20'),
+                                   H('경과', '2026-11-09 11:20', '방한 보호구 구매 요청 완료 — 11-18 납품 예정')] }),
+                    done({ id: 'OPN-20', cat: '위험신고', title: '하수처리장 맨홀 뚜껑 잠금장치 파손', author: '오수질', date: '2026-10-21', location: '담양공공하수처리시설 유입동',
+                           content: '유입동 앞 맨홀 뚜껑 잠금장치가 부서져 열린 채로 있습니다. 추락 위험이 있습니다.', owner: '물순환사업소' },
+                         H('개선조치 생성', '2026-10-21 13:40', '개선조치 IMP-2597 생성 — 담당 물순환사업소 · 수질관리팀장 / 남수질 · 예정 2026-10-28'), '2026-10-24',
+                         '잠금장치 교체 완료(10-24) · 같은 형식 맨홀 6개소 일제 점검, 추가 이상 없음'),
+                    done({ id: 'OPN-19', cat: '아차사고', title: '예초기 작업 중 비산물에 보행자 맞을 뻔', author: '민설비', date: '2026-10-14', via: '오프라인', location: '관방제림 산책로',
+                           content: '산책로 옆 예초 작업 중 돌이 튀어 지나가던 주민이 맞을 뻔했습니다.', owner: '공공시설사업소' },
+                         H('현장점검 생성', '2026-10-15 09:20', '현장점검 생성 — 특별점검 · 담당 공공시설사업소 · 시설안전 담당 / 한담당 · 예정 2026-10-17'), '2026-10-20',
+                         '비산 방지망 사용 · 작업 구간 통제 인원 1명 배치를 예초 작업 기준에 반영(10-20)'),
+                    done({ id: 'OPN-18', cat: '안전제안', title: '쓰레기 수거차량 후방카메라 설치 제안', author: '김지도', date: '2026-09-30', location: '자원순환센터',
+                           content: '수거차량 후진 시 뒤에서 작업하는 상차원이 보이지 않습니다. 후방카메라와 후진 경보음 설치를 제안합니다.', owner: '환경과' },
+                         H('개선조치 생성', '2026-10-02 10:00', '개선조치 IMP-2584 생성 — 담당 환경과 · 환경지도팀장 / 조환경 · 예정 2026-10-31'), '2026-10-28',
+                         '수거차량 7대 후방카메라·후진 경보음 설치 완료(10-28)'),
+                    done({ id: 'OPN-17', cat: '청취조사', title: '체육시설 위탁 운영 종사자 간담회 — 야간 혼자 문단속', author: '한지훈', date: '2026-09-16', via: '오프라인', location: '담양종합체육관',
+                           content: '상반기 점검 미이행 조치로 연 위탁 운영 종사자 간담회 의견입니다. 야간 마감을 혼자 해 사고가 나도 알릴 사람이 없습니다.', owner: '문화체육과' },
+                         H('개선조치 생성', '2026-09-17 11:00', '개선조치 IMP-2570 생성 — 담당 문화체육과 · 주무관 / 한지훈 · 예정 2026-09-30'), '2026-09-29',
+                         '10월부터 야간 마감 2인 1조 근무 적용 · 위탁 운영사와 근무표 변경 합의(09-29)'),
+                    done({ id: 'OPN-16', cat: '위험신고', title: '정수장 염소 저장실 환기팬 가동 불량', author: '하정수', date: '2026-09-03', location: '담양정수장 염소 저장실',
+                           content: '환기팬에서 소음이 나고 가끔 멈춥니다. 염소가스 누출 시 환기가 되지 않을 수 있습니다.', owner: '물순환사업소' },
+                         H('개선조치 생성', '2026-09-03 15:10', '개선조치 IMP-2561 생성 — 담당 물순환사업소 · 정수팀장 / 문정수 · 예정 2026-09-12'), '2026-09-10',
+                         '환기팬 교체(09-10) · 가스누출 경보기 작동 시험 정상'),
+                    done({ id: 'OPN-15', cat: '아차사고', title: '폭염 중 도로 포장 작업자 어지럼증 호소', author: '이준호', date: '2026-08-19', via: '오프라인', location: '창평면 도로 보수 현장',
+                           content: '오후 2시 포장 작업 중 작업자 1명이 어지럼증을 호소해 쉬게 했습니다.', owner: '건설과' },
+                         H('현장점검 생성', '2026-08-19 16:00', '현장점검 생성 — 특별점검 · 담당 건설과 · 안전관리팀장 / 정안전 · 예정 2026-08-20'), '2026-08-20',
+                         '폭염특보 시 14~17시 옥외작업 중지 · 현장 그늘막·생수·이온음료 비치(08-20)'),
+                    done({ id: 'OPN-14', cat: '안전제안', title: '행정복지센터 민원실 소화기 위치 표지 개선', author: '배주민', date: '2026-08-05', location: '담양읍 행정복지센터 1층',
+                           content: '민원실 소화기가 기둥 뒤에 있어 찾기 어렵습니다. 눈에 띄는 표지가 필요합니다.', owner: '담양읍' },
+                         H('개선조치 생성', '2026-08-06 09:30', '개선조치 IMP-2538 생성 — 담당 담양읍 · 주민복지 담당 / 배주민 · 예정 2026-08-14'), '2026-08-12',
+                         '축광 소화기 표지 4곳 부착(08-12)'),
+                    done({ id: 'OPN-13', cat: '위험신고', title: '보건소 옥상 출입문 상시 개방', author: '백지영', date: '2026-07-22', location: '보건소 옥상',
+                           content: '옥상 출입문이 늘 열려 있고 난간이 낮습니다. 추락 위험이 있습니다.', owner: '보건소' },
+                         H('개선조치 생성', '2026-07-23 10:20', '개선조치 IMP-2519 생성 — 담당 보건소 · 보건행정 주무관 / 이보건 · 예정 2026-07-31'), '2026-07-29',
+                         '옥상 출입문 잠금장치 설치 · 열쇠는 시설 담당 관리(07-29)'),
+                    done({ id: 'OPN-12', cat: '청취조사', title: '장마철 배수로 정비 작업 우천 중지 기준 문의', author: '박현장', date: '2026-07-08', via: '오프라인',
+                           content: '비가 올 때 작업을 언제 멈춰야 하는지 현장마다 판단이 다릅니다.', owner: '건설과' },
+                         H('경과', '2026-07-09 10:00', '건설과·재난안전과 협의 — 우천 작업 중지 기준 마련'), '2026-07-10',
+                         '시간당 강우 10mm 이상 또는 호우특보 시 작업 중지 기준을 전 현장에 공지(07-10)'),
+                    V0({ id: 'OPN-11', cat: '안전제안', title: '청사 주차장 보행자 통로 도색', author: '강세무', date: '2026-06-24', status: '반려', location: '군청 주차장',
+                         content: '주차장에 보행 통로 표시가 없어 차량과 보행자가 섞입니다.', owner: '재무과',
+                         rejectReason: '청사 주차장 재포장 공사(8월 시행)에 보행 통로 도색이 포함되어 있어 별도 조치와 중복 — 공사 일정 회신',
+                         history: [H('접수', '2026-06-24 11:30', '의견 접수 — 온라인 경로'), H('반려', '2026-06-26 14:00', '청사 주차장 재포장 공사(8월 시행)에 보행 통로 도색이 포함되어 있어 별도 조치와 중복 — 공사 일정 회신')] }),
+                    done({ id: 'OPN-10', cat: '아차사고', title: '사다리 작업 중 미끄러짐', author: '한운영', date: '2026-06-10', via: '오프라인', location: '공공시설사업소 자재창고',
+                           content: '선반 위 자재를 꺼내다 사다리 다리가 미끄러졌습니다. 다친 사람은 없습니다.', owner: '공공시설사업소' },
+                         H('개선조치 생성', '2026-06-11 09:00', '개선조치 IMP-2488 생성 — 담당 공공시설사업소 · 시설안전 담당 / 한담당 · 예정 2026-06-19'), '2026-06-17',
+                         'A형 사다리 미끄럼 방지 고무·아웃트리거 부착 · 2인 1조 작업 지침 배포(06-17)'),
+                    done({ id: 'OPN-09', cat: '위험신고', title: '담양천 산책로 안전난간 부식', author: '서담당', date: '2026-05-27', location: '담양천 산책로',
+                           content: '산책로 안전난간 하부가 부식돼 기대면 흔들립니다.', owner: '물순환사업소' },
+                         H('개선조치 생성', '2026-05-28 10:00', '개선조치 IMP-2471 생성 — 담당 물순환사업소 · 시설 담당 / 서담당 · 예정 2026-06-15'), '2026-06-12',
+                         '부식 난간 32m 교체(06-12)'),
+                    done({ id: 'OPN-08', cat: '청취조사', title: '집합교육 일정 사전 공지 요청', author: '김도현', date: '2026-05-13', owner: '재난안전과',
+                           content: '집합교육 공지가 1주 전에 와서 현장 일정을 빼기 어렵습니다.' },
+                         H('경과', '2026-05-14 09:30', '교육 일정 공지 시점 검토'), '2026-05-20',
+                         '집합교육은 3주 전 공지를 원칙으로 정하고 교육 화면에 미리 등록(05-20)'),
+                    done({ id: 'OPN-07', cat: '안전제안', title: '분진 작업 방진마스크 규격 상향', author: '정수빈', date: '2026-04-22', location: '자원순환센터 선별장',
+                           content: '선별장 분진이 심해 지금 마스크로는 부족합니다.', owner: '환경과' },
+                         H('개선조치 생성', '2026-04-23 10:40', '개선조치 IMP-2433 생성 — 담당 환경과 · 유해·위험요인 담당 주무관 / 정환경 · 예정 2026-05-08'), '2026-05-06',
+                         '특급 방진마스크로 교체 지급(05-06) · 작업환경측정 시 분진 항목 추가'),
+                    done({ id: 'OPN-06', cat: '위험신고', title: '체육관 지하 기계실 누수', author: '오세영', date: '2026-04-08', location: '담양종합체육관 지하 기계실',
+                           content: '기계실 천장에서 물이 떨어져 분전반 근처가 젖어 있습니다.', owner: '문화체육과' },
+                         H('개선조치 생성', '2026-04-08 15:30', '개선조치 IMP-2410 생성 — 담당 문화체육과 · 주무관 / 한지훈 · 예정 2026-04-17'), '2026-04-15',
+                         '배관 누수 보수 · 분전반 방수 커버 설치(04-15)'),
+                    done({ id: 'OPN-05', cat: '아차사고', title: '수거차량 상차 중 손 끼임 위험', author: '김지도', date: '2026-03-25', via: '오프라인', location: '자원순환센터',
+                           content: '압축 장치 작동 중 손이 들어갈 뻔했습니다.', owner: '환경과' },
+                         H('개선조치 생성', '2026-03-26 09:10', '개선조치 IMP-2386 생성 — 담당 환경과 · 환경지도팀장 / 조환경 · 예정 2026-04-10'), '2026-04-07',
+                         '압축 장치 양손 조작 버튼 점검 · 상차원 안전교육 실시(04-07)'),
+                    done({ id: 'OPN-04', cat: '청취조사', title: '해빙기 절개지 점검 요청', author: '박현장', date: '2026-03-11', via: '오프라인', owner: '건설과',
+                           content: '해빙기 낙석 우려 절개지 점검을 요청합니다.' },
+                         H('현장점검 생성', '2026-03-12 09:00', '현장점검 생성 — 정기점검 · 담당 건설과 · 현장안전 담당 주무관 / 박현장 · 예정 2026-03-18'), '2026-03-19',
+                         '절개지 5개소 점검 · 1개소 낙석 방지망 보수(03-19)'),
+                    done({ id: 'OPN-03', cat: '안전제안', title: '전기실 절연매트 추가 비치', author: '민설비', date: '2026-02-24', location: '군청 본관 전기실',
+                           content: '수배전반 앞 절연매트가 낡아 갈라졌습니다.', owner: '공공시설사업소' },
+                         H('개선조치 생성', '2026-02-25 10:00', '개선조치 IMP-2342 생성 — 담당 공공시설사업소 · 주무관 / 민설비 · 예정 2026-03-06'), '2026-03-04',
+                         '절연매트 교체(03-04)'),
+                    V0({ id: 'OPN-02', cat: '위험신고', title: '시가지 빙판길 제설함 부족', author: '배주민', date: '2026-02-10', status: '반려', location: '담양읍 시가지', owner: '담양읍',
+                         content: '읍 시가지 이면도로에 제설함이 부족해 빙판길 미끄럼 사고가 우려됩니다.',
+                         rejectReason: '제설함 설치·관리는 건설과 소관 — 건설과 제설 대책(02-12 제설함 12개소 추가)으로 처리되어 종결',
+                         history: [H('접수', '2026-02-10 09:40', '의견 접수 — 온라인 경로'), H('반려', '2026-02-12 15:20', '제설함 설치·관리는 건설과 소관 — 건설과 제설 대책(02-12 제설함 12개소 추가)으로 처리되어 종결')] }),
+                    done({ id: 'OPN-01', cat: '청취조사', title: '동절기 현장 근무 보호구 의견', author: '곽문석', date: '2026-01-20', via: '오프라인', owner: '재난안전과',
+                           content: '한파 때 현장 근무자 방한 보호구가 부족합니다.' },
+                         H('개선조치 생성', '2026-01-21 10:00', '개선조치 IMP-2305 생성 — 담당 재난안전과 · 안전관리 주무관 / 박안전 · 예정 2026-01-30'), '2026-01-28',
+                         '방한장갑·방한화 추가 지급(01-28)'),
                 ];
-                const fCat = ['안전제안', '위험신고', '아차사고', '청취조사'];
-                const fSt = ['완료', '완료', '접수대기', '처리중'];
-                const fDept = ['재난안전과', '행정과', '환경과', '도시과'];
-                const fTitle = ['배수로 덮개 파손 신고', '휴게실 환기 개선 제안', '고소작업 안전대 부착설비 요청', '중장비 신호수 배치 건의', '소화기 비치 위치 의견', '미끄럼 방지 매트 설치 제안', '분진 마스크 지급 요청', '경고표지 추가 설치 신고'];
-                const seed = named.slice();
-                for (let k = 0; k < 16; k++) {
-                    const n = 16 - k;
-                    const mo = 3 - (k % 3);
-                    const dy = 28 - k;
-                    seed.push({ id: 'OPN-' + (n < 10 ? '0' + n : n), cat: fCat[k % 4], title: fTitle[k % 8], author: '종사자' + (k + 1), date: '2026-0' + mo + '-' + (dy < 10 ? '0' + dy : dy), status: fSt[k % 4], via: (k % 2 ? '온라인' : '오프라인'), location: '-', content: '(현장 종사자 등록 의견)', owner: (fSt[k % 4] === '접수대기' ? '' : fDept[k % 4]), inspectLink: (k % 3 === 0), link: (fSt[k % 4] === '완료' ? 'IMP-' + (180 + k) : ''), plan: '', progress: [], result: '' });
-                }
-                ['', '재난안전과', '도시과', '재난안전과', '행정과', '재난안전과', '도시과', '재난안전과'].forEach((d, i) => { if (named[i]) named[i].owner = d; });
                 window.OPINION_STATE = {
                     tab: 'voice', view: 'list', id: null, page: 1, fcat: '', fstatus: '', fdept: '',
                     VOICES: seed,
+                    /* 예시 자료(2026-11-13 기준) — 위원·참석자는 조직도 실인물. 분기 정기회의는 3분기(09-24)까지 확정,
+                       11-06 수시회의는 회의록 작성 중. 4분기 정기회의는 12월 예정이라 아직 없다. */
                     COMMITTEE: {
                         members: [
-                            { role: '위원장(사용자대표)', dept: '재난안전과', position: '과장', name: '홍길동' },
-                            { role: '사용자위원', dept: '행정과', position: '과장', name: '김행정' },
-                            { role: '근로자대표', dept: '환경과', position: '주무관', name: '이근로' },
-                            { role: '근로자위원', dept: '도시과', position: '주무관', name: '박작업' },
-                            { role: '간사', dept: '재난안전과', position: '중대재해팀장', name: '정안전' },
+                            { role: '위원장(사용자대표)', dept: '재난안전과', position: '재난안전과장', name: '홍길동' },
+                            { role: '사용자위원', dept: '회계과', position: '회계과장', name: '조회계' },
+                            { role: '사용자위원', dept: '건설과', position: '건설과장', name: '이건설' },
+                            { role: '근로자대표', dept: '물순환사업소', position: '주무관', name: '하정수' },
+                            { role: '근로자위원', dept: '환경과', position: '주무관', name: '정수빈' },
+                            { role: '근로자위원', dept: '공공시설사업소', position: '주무관', name: '한운영' },
+                            { role: '간사', dept: '재난안전과', position: '중대재해팀장', name: '김중대' },
                         ],
-                        meetings: [
-                            { round: '2026 2분기', type: '정기', date: '2026-06-25', place: '군청 상황실', attendeeList: [{ dept: '재난안전과', position: '과장', name: '홍길동' }, { dept: '행정과', position: '과장', name: '김행정' }, { dept: '환경과', position: '주무관', name: '이근로' }, { dept: '도시과', position: '주무관', name: '박작업' }, { dept: '재난안전과', position: '중대재해팀장', name: '정안전' }], agenda: '위험성평가 결과 공유, 의견청취 처리 현황, 하반기 점검계획', decisions: ['하반기 정기 점검계획 확정', '의견청취 처리 지연 건 부서별 조치 지시', '위험성평가 미조치 항목 개선 요구'], status: '확정' },
-                            { round: '2026 1분기', type: '정기', date: '2026-03-20', place: '군청 대회의실', attendeeList: [{ dept: '재난안전과', position: '과장', name: '홍길동' }, { dept: '행정과', position: '과장', name: '김행정' }, { dept: '환경과', position: '주무관', name: '이근로' }], agenda: '2026 안전보건 목표, 예산 심의', decisions: ['2026 안전보건 목표 승인', '안전보건 예산안 심의 통과'], status: '확정' },
-                            { round: '2025 4분기', type: '정기', date: '2025-12-18', place: '군청 상황실', attendeeList: [{ dept: '재난안전과', position: '과장', name: '홍길동' }, { dept: '재난안전과', position: '중대재해팀장', name: '정안전' }], agenda: '연간 안전보건 실적 보고', decisions: ['연간 실적 보고 채택', '차년도 개선 방향 논의'], status: '확정' },
-                        ],
+                        meetings: (function () {
+                            const A = (list) => list.map(x => ({ dept: x[0], position: x[1], name: x[2] }));
+                            const ALL = [['재난안전과', '재난안전과장', '홍길동'], ['회계과', '회계과장', '조회계'], ['건설과', '건설과장', '이건설'],
+                                ['물순환사업소', '주무관', '하정수'], ['환경과', '주무관', '정수빈'], ['공공시설사업소', '주무관', '한운영'], ['재난안전과', '중대재해팀장', '김중대']];
+                            return [
+                                { round: '2026 수시', type: '수시', date: '2026-11-06', place: '군청 상황실', attendeeList: A(ALL.slice(0, 2).concat(ALL.slice(3))),
+                                  agenda: '동절기(12~2월) 안전보건 대책 · 2027 안전보건 예산안 사전 협의',
+                                  decisions: ['동절기 방한 보호구 11월 중 지급', '2027 안전보건 예산안 12월 정기회의에 상정'], status: '작성' },
+                                { round: '2026 3분기', type: '정기', date: '2026-09-24', place: '군청 상황실', attendeeList: A(ALL),
+                                  agenda: '상반기 의무이행 점검 결과 보고 · 폭염 대응 결과 · 하반기 정기 위험성평가 일정',
+                                  decisions: ['상반기 일부 미이행 3개 부서 조치계획 이행 확인', '폭염특보 시 옥외작업 중지 기준 상시화', '하반기 위험성평가 10~11월 실시'], status: '확정' },
+                                { round: '2026 2분기', type: '정기', date: '2026-06-25', place: '군청 상황실', attendeeList: A(ALL.slice(0, 5).concat([ALL[6]])),
+                                  agenda: '정기 위험성평가 결과 공유 · 의견청취 처리 현황 · 하절기 온열질환 예방대책',
+                                  decisions: ['위험성평가 개선조치 기한 경과 건 부서별 조치 지시', '하절기 그늘막·생수 현장 비치'], status: '확정' },
+                                { round: '2026 1분기', type: '정기', date: '2026-03-19', place: '군청 대회의실', attendeeList: A(ALL),
+                                  agenda: '2026 안전보건 목표(경영방침 v2.0) 공유 · 2026 안전보건 예산 집행계획',
+                                  decisions: ['2026 안전보건 목표 공유', '안전보건 예산 집행계획 의결'], status: '확정' },
+                                { round: '2025 4분기', type: '정기', date: '2025-12-18', place: '군청 상황실', attendeeList: A(ALL.slice(0, 4).concat([ALL[6]])),
+                                  agenda: '2025 안전보건 실적 보고 · 경영방침 v2.0 제정안 심의',
+                                  decisions: ['2025 실적 보고 채택', '경영방침 v2.0 제정안 원안 의결'], status: '확정' },
+                            ];
+                        })(),
                         agendaItems: [
-                            { agenda: '위험성평가 미조치 항목 개선', dept: '도시과', due: '2026-07-15', status: '진행' },
-                            { agenda: '의견청취 처리 지연 건 해소', dept: '재난안전과', due: '2026-06-30', status: '완료' },
-                            { agenda: '노후 시설 안전점검 강화', dept: '행정과', due: '2026-07-31', status: '지연' },
-                            { agenda: '하반기 안전보건교육 계획 수립', dept: '행정과', due: '2026-07-10', status: '진행' },
+                            { agenda: '동절기 방한 보호구 11월 중 지급', dept: '재난안전과', due: '2026-11-20', status: '진행' },
+                            { agenda: '2027 안전보건 예산안 정기회의 상정', dept: '기획예산실', due: '2026-12-17', status: '진행' },
+                            { agenda: '하반기 정기 위험성평가 실시(10~11월)', dept: '재난안전과', due: '2026-11-30', status: '진행' },
+                            { agenda: '상반기 일부 미이행 조치계획 이행 확인', dept: '건설과', due: '2026-07-31', status: '완료' },
+                            { agenda: '체육시설 위탁 종사자 의견청취 실시', dept: '문화체육과', due: '2026-09-30', status: '완료' },
+                            { agenda: '공중화장실 안전점검 계획 수립', dept: '환경과', due: '2026-08-31', status: '완료' },
+                            { agenda: '폭염특보 시 옥외작업 중지 기준 상시화', dept: '건설과', due: '2026-10-15', status: '지연' },
+                            { agenda: '하절기 그늘막·생수 현장 비치', dept: '공공시설사업소', due: '2026-07-15', status: '완료' },
                         ],
                     },
+                    /* 도급인·수급인 안전보건 협의체(매월) — 수급인 측은 계약 원장의 업체(현장대리인) */
                     COUNCIL: {
                         cycle: '월간',
                         members: [
-                            { role: '협의체 의장', dept: '재난안전과', position: '중대재해팀장', name: '정안전' },
-                            { role: '도급인 측', dept: '회계과', position: '주무관', name: '서회계' },
-                            { role: '수급인 측', dept: '(주)안전건설', position: '현장소장', name: '강현장' },
-                            { role: '수급인 측', dept: '(주)클린환경', position: '반장', name: '오환경' },
+                            { role: '협의체 의장', dept: '재난안전과', position: '중대재해팀장', name: '김중대' },
+                            { role: '도급인 측', dept: '회계과', position: '계약·도급 담당 주무관', name: '최회계' },
+                            { role: '도급인 측', dept: '물순환사업소', position: '시설 담당', name: '서담당' },
+                            { role: '수급인 측', dept: '(주)태성기술개발', position: '현장대리인', name: '정태성' },
+                            { role: '수급인 측', dept: '주식회사 길성이앤시', position: '현장대리인', name: '김길성' },
+                            { role: '수급인 측', dept: '(주)대림환경', position: '현장소장', name: '이대림' },
                         ],
                         results: [
-                            { round: '2026-06', date: '2026-06-15', content: '5월 합동순회점검 결과 공유, 하절기 온열질환 예방대책 논의', result: '온열질환 예방 그늘막·아이스조끼 현장 배치 완료', status: '완료' },
-                            { round: '2026-05', date: '2026-05-14', content: '4월 협의체 운영 결과 점검, 수급인 안전교육 이수 현황 점검', result: '미이수자 3명 추가 교육 실시 완료', status: '완료' },
-                            { round: '2026-04', date: '2026-04-16', content: '신규 수급업체 (주)클린환경 합류 안내, 작업장 순회점검 주기 조정 논의', result: '순회점검 주기 월 2회로 조정 — 시행 여부 후속 확인 필요', status: '진행중' },
+                            { round: '2026-11', date: '2026-11-12', content: '10월 합동순회점검 결과 공유 · 동절기 동파·결빙 작업 안전대책 논의', result: '하수처리시설 점검 용역 현장 결빙 구간 미끄럼 방지 조치 — 다음 회의에서 이행 확인', status: '진행중' },
+                            { round: '2026-10', date: '2026-10-15', content: '9월 협의체 결과 이행 확인 · 정밀안전점검 용역 착수 현장 안전교육', result: '수급인 신규 투입자 8명 안전교육 실시 완료', status: '완료' },
+                            { round: '2026-09', date: '2026-09-10', content: '추석 연휴 전 현장 정리정돈 · 밀폐공간(맨홀) 작업 허가 절차 공유', result: '밀폐공간 작업 허가서 양식 통일, 전 수급인 적용', status: '완료' },
+                            { round: '2026-08', date: '2026-08-13', content: '폭염 대응 현장 점검 결과 · 휴게시간 보장 확인', result: '폭염특보 시 휴게 15분/시간 보장 확인 완료', status: '완료' },
+                            { round: '2026-07', date: '2026-07-16', content: '하반기 신규 용역(기술진단·정기안전점검) 수급인 합류 · 순회점검 일정 조정', result: '합동순회점검 월 2회 일정 확정', status: '완료' },
+                            { round: '2026-06', date: '2026-06-11', content: '5월 합동순회점검 결과 공유 · 하절기 온열질환 예방대책', result: '그늘막·아이스조끼 현장 배치 완료', status: '완료' },
                         ],
+                        /* 점검결과지 — 하반기분은 10~11월 작성. 지난 반기분은 온나라 결재 결과(연계 회신)가 반영된 상태 */
                         checklists: [
-                            { id: 'CHK-06', cat: '용역', date: '2026-06-20', inspector: '정안전', result: '미흡', appr: '미상신', items: [
+                            { id: 'CHK-08', cat: '용역', date: '2026-11-11', inspector: '김안전', result: '미흡', appr: '미상신', items: [
                                 { q: '도급 시 안전·보건 협의체를 구성·운영하였는가', r: '확인' },
-                                { q: '작업장 합동 순회점검(2일 1회)을 실시하였는가', r: '미흡', note: '6월 1회 누락' },
+                                { q: '작업장 합동 순회점검(2일 1회)을 실시하였는가', r: '미흡', note: '10월 셋째 주 1회 누락 — 11월부터 점검표에 일자 기록' },
                                 { q: '수급인에게 안전·보건 정보를 사전 제공하였는가', r: '확인' },
                                 { q: '종사자 의견청취를 실시하고 결과를 반영하였는가', r: '확인' },
                             ] },
-                            { id: 'CHK-05', cat: '구매설치', date: '2026-06-18', inspector: '정안전', result: '적합', appr: '승인완료', items: [
+                            { id: 'CHK-07', cat: '위탁사업', date: '2026-10-28', inspector: '김안전', result: '적합', appr: '결재중', items: [
+                                { q: '위탁 종사자 안전교육 이수를 확인하였는가', r: '확인' },
+                                { q: '위탁 시설 비상연락체계를 공유하였는가', r: '확인' },
+                            ] },
+                            { id: 'CHK-06', cat: '용역', date: '2026-06-19', inspector: '김안전', result: '미흡', appr: '승인완료', items: [
+                                { q: '도급 시 안전·보건 협의체를 구성·운영하였는가', r: '확인' },
+                                { q: '작업장 합동 순회점검(2일 1회)을 실시하였는가', r: '미흡', note: '6월 1회 누락 — 7월 일정 확정으로 조치' },
+                                { q: '수급인에게 안전·보건 정보를 사전 제공하였는가', r: '확인' },
+                                { q: '종사자 의견청취를 실시하고 결과를 반영하였는가', r: '확인' },
+                            ] },
+                            { id: 'CHK-05', cat: '구매설치', date: '2026-06-17', inspector: '김안전', result: '적합', appr: '승인완료', items: [
                                 { q: '설치 작업 위험성평가를 실시하였는가', r: '확인' },
                                 { q: '안전작업 절차서를 공유하였는가', r: '확인' },
                             ] },
-                            { id: 'CHK-04', cat: '위탁사업', date: '2026-05-30', inspector: '정안전', result: '적합', appr: '미상신', items: [
+                            { id: 'CHK-04', cat: '위탁사업', date: '2026-05-29', inspector: '김안전', result: '적합', appr: '승인완료', items: [
                                 { q: '위탁 종사자 안전교육 이수를 확인하였는가', r: '확인' },
                             ] },
-                            { id: 'CHK-03', cat: '기타', date: '2026-05-15', inspector: '정안전', result: '미흡', appr: '반려', items: [
+                            { id: 'CHK-03', cat: '기타', date: '2026-05-14', inspector: '김안전', result: '미흡', appr: '반려', items: [
                                 { q: '안전보건 협의체 결과를 게시·공유하였는가', r: '미흡', note: '게시 누락' },
+                            ] },
+                            { id: 'CHK-02', cat: '용역', date: '2025-12-10', inspector: '김안전', result: '적합', appr: '승인완료', items: [
+                                { q: '도급 시 안전·보건 협의체를 구성·운영하였는가', r: '확인' },
+                                { q: '작업장 합동 순회점검(2일 1회)을 실시하였는가', r: '확인' },
+                            ] },
+                            { id: 'CHK-01', cat: '구매설치', date: '2025-11-26', inspector: '김안전', result: '적합', appr: '승인완료', items: [
+                                { q: '설치 작업 위험성평가를 실시하였는가', r: '확인' },
                             ] },
                         ],
                     },
@@ -1444,7 +1599,8 @@
             if (OPN_SUB) S.tab = OPN_SUB;
             const PER = 8;
             const CATS = ['아차사고', '안전제안', '위험신고', '청취조사'];
-            const DEPTS = ['재난안전과', '행정과', '환경과', '도시과', '미배정'];
+            /* 담당부서 필터 — 조직도 부서(DYV2.ORG 파생) + 미배정. 조직도에 없는 부서를 박아 두지 않는다 */
+            const DEPTS = (V.deptNames ? V.deptNames() : ['재난안전과']).concat(['미배정']);
             const CHK_CATS = ['용역', '구매설치', '위탁사업', '기타'];
             const CHK_QS = ['도급 시 안전·보건 협의체를 구성·운영하였는가', '작업장 합동 순회점검을 주기적으로 실시하였는가', '수급인에게 안전·보건 정보를 사전 제공하였는가', '종사자 의견청취를 실시하고 결과를 반영하였는가', '안전보건 협의체 결과를 게시·공유하였는가'];
             /* 5단계 상태 (DESIGN-TOKENS §5): 접수대기 → 점검중 | 개선조치중 → 완료 (+반려) */
@@ -1798,7 +1954,7 @@
                         ex.cat = cat; ex.date = date; ex.items = newItems; ex.result = unfit ? '미흡' : '적합';
                         V.closeModal(); render(); V.toast('점검결과지가 수정되었습니다' + (unfit ? ' — 미흡 ' + unfit + '건' : ''));
                     } else {
-                        S.COUNCIL.checklists.unshift({ id: 'CHK-' + String(nextNum(S.COUNCIL.checklists)).padStart(2, '0'), cat: cat, date: date, inspector: '정안전', result: unfit ? '미흡' : '적합', appr: '미상신', items: newItems });
+                        S.COUNCIL.checklists.unshift({ id: 'CHK-' + String(nextNum(S.COUNCIL.checklists)).padStart(2, '0'), cat: cat, date: date, inspector: '김안전', result: unfit ? '미흡' : '적합', appr: '미상신', items: newItems });
                         if (unfit) { newItems.forEach(it => { if (it.r === '미흡') E.addImprovement({ title: '[협의체 점검 미흡] ' + it.q, sourceMenu: '의견청취·협의체', sourceDoc: cat + ' 점검표', owner: it.owner, due: it.due }); }); }
                         V.closeModal(); render(); V.toast('점검결과지가 등록되었습니다' + (unfit ? ' — 미흡 ' + unfit + '건 개선조치 연계' : ''));
                     }
@@ -2860,8 +3016,20 @@
                    보내는 순간 그 회차(두 축)를 잠근다 — 군수 보고로 올라간 값과 시스템 값이 갈리면 안 된다. */
                 PG._cmpCloseGo = () => {
                     if (ownerGate('반기 마감 보고')) return;
+                    /* 마감 보고 차례 전(전 부서 확인 완료도, 기한 경과도 아님)에는 막지 않되(정의서 §1-9 — 전 부서 제출을
+                       게이트로 걸면 보고가 갇힌다) 무엇이 끝나지 않았는지 숫자로 경고한다. 잠그면 남은 부서는 제출할 수 없다. */
+                    const notNone = ax.reduce((n, a) => n + (a.s ? a.s.none : 0), 0);
+                    const notOk = ax.reduce((n, a) => n + (a.s ? a.s.wait + a.s.returned : 0), 0);
+                    const early = !(DEPTCHK.closeReady && DEPTCHK.closeReady(S.period));
+                    const dues = ax.filter(a => a.dist).map(a => a.dist.due).sort();
+                    const warnEarly = early && (notNone || notOk)
+                        ? '<div class="rskdoc-lock-warn" style="margin-bottom:8px;"><b>아직 ' + (notNone ? notNone + '개 부서 미제출' : '') + (notNone && notOk ? ' · ' : '') + (notOk ? notOk + '개 부서 미확인' : '') +
+                          '</b> — 지금 보내면 이 회차가 잠겨 남은 부서는 결과를 낼 수 없고 되돌릴 수 없습니다.' +
+                          (dues.length ? ' 제출 기한은 ' + esc(dues[dues.length - 1]) + '입니다.' : '') +
+                          ' 보통은 전 부서 확인을 마치거나 기한이 지난 뒤(«마감 보고 차례») 보냅니다.</div>'
+                        : '';
                     V.openModal('온나라로 보내면 되돌릴 수 없습니다',
-                        '<div class="rskdoc-send"><div class="rskdoc-lock-warn"><b>보내는 순간 ' + esc(per) + ' 이행점검(두 축)이 잠깁니다 — 제출·검토·배포 수정이 모두 막힙니다.</b><br>' +
+                        '<div class="rskdoc-send">' + warnEarly + '<div class="rskdoc-lock-warn"><b>보내는 순간 ' + esc(per) + ' 이행점검(두 축)이 잠깁니다 — 제출·검토·배포 수정이 모두 막힙니다.</b><br>' +
                         '<span class="file-hint">보고 공문은 온나라 연계기안함에 들어갑니다. 검토·결재를 지정해 상신하는 것은 온나라에서 합니다. 반려·반송되면 다시 열립니다.</span></div></div>',
                         '<button class="btn btn-secondary" onclick="PG.cmpClose()">← 미리보기</button>' +
                         '<button class="btn btn-primary" onclick="PG._cmpCloseSend()">보내기</button>');
@@ -2870,7 +3038,7 @@
                     if (ownerGate('반기 마감 보고')) return;
                     if (lockOf(S.period)) { V.closeModal(); return; }
                     const p = (window.DYROLE && DYROLE.current()) || {};
-                    let n = 3100; try { n = (+sessionStorage.getItem('dy-cmpclose-seq') || 3100) + 1; sessionStorage.setItem('dy-cmpclose-seq', String(n)); } catch (e) {}
+                    let n = 4680; try { n = (+sessionStorage.getItem('dy-cmpclose-seq') || 4680) + 1; sessionStorage.setItem('dy-cmpclose-seq', String(n)); } catch (e) {}
                     const rec = { at: V.today(), status: '기안함 전송', by: p.name || '', byUid: p.uid || '', docNo: '재난안전과-' + n, title: per + ' 의무이행 점검 결과 보고' };
                     DEPTCHK.flow.setClosed(S.period, rec);
                     V.openModal('온나라 기안함에 보냈습니다',
@@ -2975,11 +3143,11 @@
                         { label: '미이행 작성 안내', text: '  라. 일부 항목이 이행되지 않은 경우 미이행 내용과 조치계획·조치 예정일을 함께 적어 제출' },
                     ].concat(t.src.note ? [{ label: '배포 안내 문구', text: '  마. ' + t.src.note }] : []),
                     attachOf: (t) => (t.src.forms || []).map(f => ({ label: f.name, meta: '점검표 양식', size: f.size, on: true })),
-                    annexes: (t) => [{ title: '점검 대상 부서', html: tbl(['연번', '부서', '받는 사람'], (t.src.targets || []).map((id, i) => [String(i + 1), esc(dn(id)), esc(window.DYADM && DYADM.contactText ? DYADM.contactText(id) : '부서 담당자')])) }],
+                    annexes: (t) => [{ title: '점검 대상 부서', html: tbl(['연번', '부서', '받는 사람'], (t.src.targets || []).map((id, i) => [String(i + 1), esc(dn(id)), esc(DEPTCHK.workText ? DEPTCHK.workText(id) : (window.DYADM && DYADM.contactText ? DYADM.contactText(id) : '부서 담당자'))])) }],
                     lockNote: '보내는 순간 대상 부서에 점검이 배포됩니다(할 일·알림). 배포를 취소할 수 없습니다.',
                     sentNote: '시달 공문을 온나라 연계기안함에 보냈고, 대상 부서에 점검이 배포되었습니다.',
                     /* 연계 번호(임시 채번) — 교육 공문과 같은 «처리과-일련» 모양. 문서번호는 결재가 끝나면 온나라가 준다 */
-                    nextNo: () => { let n = 2700; try { n = (+sessionStorage.getItem('dy-cmpdoc-seq') || 2700) + 1; sessionStorage.setItem('dy-cmpdoc-seq', String(n)); } catch (e) {} return '재난안전과-' + n; },
+                    nextNo: () => { let n = 4580; try { n = (+sessionStorage.getItem('dy-cmpdoc-seq') || 4580) + 1; sessionStorage.setItem('dy-cmpdoc-seq', String(n)); } catch (e) {} return '재난안전과-' + n; },
                     docsFor: (t) => (t.dist && t.dist.docs) || [],
                     save: (t, doc) => {
                         const p = t.pend; if (!p) return;
@@ -2997,6 +3165,7 @@
             const cmpOpts = () => ({
                 ns: 'PG.CMPCHK', title: axis.label + ' 결과 제출', periodLabel: periodLabel(S.period) + ' ' + axis.label,
                 flow: { dist: curDist(), locked: lockOf(S.period), period: S.period },
+                formDl: 'PG.cmpDl',
                 onChange: render,
             });
             PG.CMPCHK = {
@@ -3047,7 +3216,18 @@
             };
             PG.cmpDistAdd = (files) => { PG._cmpDistCap(); PG._DF.forms = PG._DF.forms.concat(files || []).slice(0, 10); PG._DF.formsChanged = true; PG._cmpDistRender(); };
             PG.cmpDistDel = (i) => { PG._cmpDistCap(); PG._DF.forms.splice(i, 1); PG._DF.formsChanged = true; PG._cmpDistRender(); };
-            PG.cmpDistPrev = () => { PG._cmpDistCap(); PG._DF.forms = (PG._DF.prev.forms || []).map(f => Object.assign({}, f)); PG._DF.formsChanged = true; PG._cmpDistRender(); };
+            /* 지난 회차 양식 이어받기 — 이름에 박힌 회차(«2026년_상반기»)를 이번 회차로 바꾸고 판 표기를 뗀다.
+               상반기 이름 그대로 하반기에 배포하면 부서가 «지난번 양식을 잘못 받았다»고 읽는다(2026-11-13 실습 점검).
+               내용은 바뀌지 않으므로 화면이 그 사실을 밝힌다 — 항목이 바뀌었으면 새 양식을 올린다. */
+            PG.cmpDistPrev = () => {
+                PG._cmpDistCap();
+                const y = S.period.slice(0, 4), h = S.period.slice(-1) === '1' ? '상반기' : '하반기';
+                PG._DF.forms = (PG._DF.prev.forms || []).map(f => {
+                    const nm = String(f.name || '').replace(/\d{4}년_(상|하)반기/, y + '년_' + h).replace(/\(제\d+판\)/, '');
+                    return Object.assign({}, f, { name: nm, inheritedFrom: nm !== f.name ? f.name : '' });
+                });
+                PG._DF.formsChanged = true; PG._cmpDistRender();
+            };
             PG._cmpDistCap = () => {
                 const n = document.getElementById('cmp-dist-note'), d = document.getElementById('cmp-dist-due');
                 if (n) PG._DF.note = n.value.trim(); if (d) PG._DF.due = d.value;
@@ -3061,6 +3241,8 @@
                         (F.forms.length ? '<ul class="dchk-shots">' + F.forms.map((f, i) =>
                             '<li><span class="dchk-shot is-plain">파일</span><span class="dchk-shot-n">' + esc(f.name) + '</span>' +
                             '<button type="button" class="edu-attach-del" onclick="PG.cmpDistDel(' + i + ')" aria-label="' + esc(f.name) + ' 빼기">×</button></li>').join('') + '</ul>' : '') +
+                        (F.forms.some(f => f.inheritedFrom)
+                            ? '<p class="file-hint" style="color:var(--status-warning-fg);">지난 회차 양식(«' + esc(F.forms.filter(f => f.inheritedFrom)[0].inheritedFrom) + '»)을 <b>이름만 이번 회차로 바꿔</b> 이어받았습니다. 점검 항목이 바뀌었으면 ×로 빼고 하반기 양식을 새로 올리세요.</p>' : '') +
                         (F.prev && (F.prev.forms || []).length && !F.forms.length
                             ? '<button type="button" class="btn btn-sm btn-outline" style="margin-top:6px;" onclick="PG.cmpDistPrev()">지난 회차 양식 이어받기 (' + esc(F.prev.forms[0].name) + ')</button>' : '') +
                         (F.edit ? '<p class="file-hint">양식을 바꾸면 판 번호가 올라갑니다. 이미 제출한 부서의 제출은 그대로 둡니다.</p>' : '') +
@@ -3164,9 +3346,33 @@
                 DEPTCHK.flow.removeDist(cmpKey); V.closeModal(); V.toast('배포를 취소했습니다 — 대상 부서 할 일이 회수됩니다'); render();
             };
             /* 점검표 내려받기 — 이 화면에서 방금 올린 파일만 내려받을 수 있다(저장소에는 파일명만 남는다) */
+            /* 예시 양식 — 예시 이력에 실린 양식(파일명만 저장)과 그것을 이어받은 양식은 실제 파일이 없다.
+               «내려받아 작성» 단계가 막히지 않게 그 자리에서 점검 항목을 적은 텍스트 파일을 만들어 준다.
+               실제 양식(hwpx)인 척하지 않도록 파일 이름 앞에 «예시자료_»를 붙이고 .txt 로 낸다. */
+            const sampleForm = (f) => {
+                const civil = S.axis === 'citizen';
+                const items = civil
+                    ? ['공중이용시설 안전·보건 관리 담당자 지정', '공중화장실 등 관리 시설 안전점검 계획 수립', '공중이용시설 정기점검 결과 보고',
+                       '시설 결함·위험요인 발견 시 보수·보강 조치', '이용자 안전 안내(표지·안내문) 게시', '재해 발생 시 비상 연락·대피 체계 점검']
+                    : ['안전·보건 경영방침 부서 게시', '부서 안전보건 담당자 지정', '종사자 안전보건교육 실시(정기·채용시)', '관리 시설 안전점검 결과 기록',
+                       '보호구 지급·착용 지도', '종사자 의견청취 결과 반영', '유해·위험요인 개선조치 이행', '위험성평가 개선조치 기한 내 완료',
+                       '도급·용역 수급인 안전보건 수준 평가', '안전보건 예산 편성·집행 내역'];
+                const txt = '\uFEFF[예시 자료] ' + periodLabel(S.period) + ' ' + axis.label + ' 자체점검표\r\n' +
+                    '이 파일은 시스템이 만든 예시 양식입니다 — 실제 양식은 재난안전과가 배포한 파일입니다.\r\n\r\n' +
+                    '부서명: \r\n점검일: \r\n점검자: \r\n\r\n번호\t점검 항목\t이행(○/×/해당없음)\t비고\r\n' +
+                    items.map((t, i) => (i + 1) + '\t' + t + '\t\t').join('\r\n') +
+                    '\r\n\r\n미이행 항목: 미이행 내용 · 조치계획 · 조치 예정일을 적습니다.\r\n부서장 확인(서명): \r\n';
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(new Blob([txt], { type: 'text/plain;charset=utf-8' }));
+                a.download = '예시자료_' + String(f.name || '자체점검표').replace(/\.[^.]+$/, '') + '.txt';
+                document.body.appendChild(a); a.click(); a.remove();
+                V.toast('예시 양식을 내려받았습니다(텍스트) — 실제 양식은 재난안전과가 올린 파일입니다');
+            };
             PG.cmpDl = (i) => {
                 const f = (PG._distFiles || {})[cmpKey + '#' + i];
                 if (f && f.file) { const a = document.createElement('a'); a.href = URL.createObjectURL(f.file); a.download = f.name; a.click(); return; }
+                const d = curDist(), meta = d && (d.forms || [])[i];
+                if (meta) { sampleForm(meta); return; }
                 V.notReady('점검표 내려받기', '첨부 저장 연계');
             };
             const distHead = () => {
@@ -3203,7 +3409,9 @@
                         /* 시달 공문 — 배포는 공문 상신과 한 행위다. 결재 진행은 온나라 회신으로만 바뀐다 */
                         ((d.docs || []).length
                             ? '<div class="file-hint" style="margin-top:4px;">시달 공문 ' + d.docs.map(doc =>
-                                '<span class="chip-status chip-sm ' + V.toneOf(doc.status) + '">' + esc(doc.status) + '</span> ' + esc(doc.at) + ' 보냄 · 연계 번호 ' + esc(doc.no) +
+                                '<span class="chip-status chip-sm ' + V.toneOf(doc.status) + '">' + esc(doc.status) + '</span> ' + esc(doc.at) + ' 보냄 · ' +
+                                /* 결재가 끝난 공문은 생산등록번호로 부른다 — «연계 번호»는 상신 때 받은 값이다 */
+                                (doc.status === '결재완료' && doc.prodNo ? '생산등록번호 ' + esc(doc.prodNo) + ' · 결재일 ' + esc(doc.apprDate || '-') : '연계 번호 ' + esc(doc.no)) +
                                 ' <button class="btn btn-sm btn-outline" onclick="PG.cmpDocView(\'' + esc(doc.sid) + '\')">공문 보기</button>').join(' ') +
                               (own && d.docs[d.docs.length - 1].status === '기안함 전송'
                                   ? ' · <b>온나라 기안함에서 검토·결재를 지정해 상신하세요</b> — 결재가 끝나면 각 부서로 시행됩니다'
@@ -3237,7 +3445,12 @@
             const closeDue = (per) => DEPTCHK.closeReady ? DEPTCHK.closeReady(per) : '';
             const closeCtl = closedOf(S.period)
                 ? '<span class="opn-muted" style="font-size:var(--fs-12); align-self:center;">' +
-                    periodLabel(S.period) + ' 마감 보고 <b>' + esc(closedOf(S.period).status || '보냄') + '</b>' + (closedOf(S.period).docNo ? ' · ' + esc(closedOf(S.period).docNo) : '') +
+                    periodLabel(S.period) + ' 마감 보고 <b>' + esc(closedOf(S.period).status || '보냄') + '</b>' +
+                    (closedOf(S.period).docNo
+                        ? (closedOf(S.period).status === '결재완료' && closedOf(S.period).apprDate
+                            ? ' · 생산등록번호 ' + esc(closedOf(S.period).docNo) + ' · 결재일 ' + esc(closedOf(S.period).apprDate)
+                            : ' · 연계 번호 ' + esc(closedOf(S.period).docNo))
+                        : '') +
                     ' · 이 회차는 잠겼습니다' + (closedOf(S.period).status === '기안함 전송' && ownerOK() ? ' · 온나라 기안함에서 상신하세요' : '') + '</span>'
                 : (ownerOK() ? (closeDue(S.period) ? '<span class="chip-status chip-sm ' + V.toneOf('마감 보고 차례') + '" style="align-self:center;">' + esc(closeDue(S.period)) + '</span> ' : '') +
                     '<button class="btn btn-sm ' + (closeDue(S.period) ? 'btn-primary' : 'btn-outline') + '" onclick="PG.cmpClose()">반기 마감 · 군수 보고</button>' : '');

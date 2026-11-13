@@ -481,7 +481,7 @@
 
         /* 신원 출처를 하나로 — 종전에는 이 상수·지면 고정 문자열·DYROLE 세 벌이었다(검수 E) */
         const CURRENT_USER = (window.DYROLE && DYROLE.current) ? DYROLE.current().name : '박안전';
-        const TODAY = '2026-06-30';
+        const TODAY = (window.DYV2 && DYV2.today) ? DYV2.today() : '2026-11-13';
 
         /* ─── 공식 평가 항목·세부평가기준 — 단일 출처 DYEVL(js/evl-data.js)에서 파생 ───
          *   설정화면(evl-settings)이 같은 DYEVL을 편집하므로 변경이 평가화면에 반영된다. */
@@ -515,7 +515,10 @@
             });
             return out;
         }
-        const DEPTS = buildDepts();
+        /* 평가 사이클 연도마다 매트릭스를 따로 둔다 — 종전에는 연도를 바꿔도 같은 칸이 보였다.
+         * 명단은 지금 조직도 파생이고 상태만 연도별 예시 시드로 덧입힌다(deptsOf). */
+        const DEPTS_BY_YEAR = {};
+        let DEPTS = null;
 
         /* 예시 시드: 조직도 파생 위에 평가자 지정·임시저장 상태만 덧입힘(목업 시연용) */
         function seedCell(dept, name, half, patch) {
@@ -523,13 +526,79 @@
             const row = rows.find(r => r.name === name); if (!row) return;
             Object.assign(row[half], patch);
         }
-        (function seedDemo() {
-            seedCell('건설과', '이건설', 'H1', { evaluator: '박안전' });          // 부서장(책임자) — 본인 지정 → 평가등록 가능
-            seedCell('건설과', '이건설', 'H2', { evaluator: '박안전' });
-            seedCell('건설과', '박서준', 'H1', { evaluator: '김안전' });          // 타인 지정 → 평가등록 비활성
-            seedCell('건설과', '김도현', 'H1', { evaluator: '박안전', draft: true, grades: ['양호', '보통', '양호', null, null] });  // 임시저장(진행 중 3/5)
-            seedCell('공공시설사업소', '임시설', 'H1', { evaluator: '박안전' });   // 부서장(책임자) — 본인 지정
-        })();
+        /* 예시 시드(2026-11-13 기준) — 조직도 파생 명단 위에 평가 상태만 덧입힌다.
+         *   상반기(4~6월): 전원 평가 완료 · 부서별 결과 보고 결재완료(생산등록번호·결재일 — 예시 값, §15)
+         *   하반기(10~12월): 진행 중 — 완료 10 · 임시저장 4 · 평가자 지정만 8 · 미지정 7(공공시설사업소는 전원 완료)
+         *   평가자는 주관부서 박안전(책임자)·김안전(관리감독자, 안전관리자)이다. */
+        const SEED26 = {
+            H1: {
+                '서기획': ['박안전', '2026-06-19', '양호'], '홍길동': ['박안전', '2026-06-19', '양호'],
+                '조회계': ['박안전', '2026-06-18', '보통'], '차환경': ['박안전', '2026-06-17', '양호'],
+                '조환경': ['김안전', '2026-06-17', '양호'], '김지도': ['김안전', '2026-06-17', '양호'],
+                '정수빈': ['김안전', '2026-06-17', '보통'], '한지훈': ['김안전', '2026-06-12', '양호'],
+                '오세영': ['김안전', '2026-06-12', '양호'], '최재무': ['김안전', '2026-06-18', '양호'],
+                '강세무': ['김안전', '2026-06-18', '보통'], '강보건': ['박안전', '2026-06-23', '양호'],
+                '백지영': ['김안전', '2026-06-23', '양호'], '곽문석': ['김안전', '2026-06-23', '양호'],
+                '이건설': ['박안전', '2026-06-24', '양호'], '정안전': ['박안전', '2026-06-24', '양호'],
+                '김도현': ['박안전', '2026-06-24', '양호'], '박서준': ['김안전', '2026-06-24', '양호'],
+                '이준호': ['김안전', '2026-06-24', '보통'], '임시설': ['박안전', '2026-06-16', '양호'],
+                '한운영': ['김안전', '2026-06-16', '양호'], '민설비': ['김안전', '2026-06-16', '보통'],
+                '오순환': ['박안전', '2026-06-15', '양호'], '문정수': ['김안전', '2026-06-15', '양호'],
+                '하정수': ['김안전', '2026-06-15', '양호'], '서한별': ['김안전', '2026-06-15', '양호'],
+                '남수질': ['김안전', '2026-06-15', '양호'], '오수질': ['김안전', '2026-06-15', '미흡'],
+                '노읍장': ['박안전', '2026-06-25', '보통'],
+            },
+            /* [평가자, 평가일|null, 결과|null, 임시저장 판정(진행 중일 때)] */
+            H2: {
+                '이건설': ['박안전'], '정안전': ['김안전', '2026-11-06', '양호'],
+                '김도현': ['박안전', null, null, ['양호', '보통', '양호', null, null]],
+                '박서준': ['김안전', '2026-11-04', '양호'],
+                '이준호': ['김안전', null, null, ['양호', '양호', null, null, null]],
+                '임시설': ['박안전', '2026-11-10', '양호'], '한운영': ['김안전', '2026-11-10', '보통'], '민설비': ['김안전', '2026-11-11', '양호'],
+                '오순환': ['박안전', '2026-11-12', '양호'], '문정수': ['김안전', '2026-11-12', '양호'],
+                '하정수': ['김안전', null, null, ['양호', '양호', '보통', '양호', null]],
+                '서한별': ['김안전'], '남수질': ['김안전', '2026-11-12', '양호'], '오수질': ['김안전'],
+                '차환경': ['박안전', null, null, ['양호', '양호', '양호', '보통', '양호', null, null, null]],
+                '조환경': ['김안전', '2026-11-05', '양호'], '김지도': ['김안전'],
+                '서기획': ['박안전'], '홍길동': ['박안전'],
+                '한지훈': ['김안전', '2026-10-29', '양호'], '오세영': ['김안전'],
+                '강보건': ['박안전'],
+            },
+        };
+        function seed26(D) {
+            Object.keys(D).forEach(dept => D[dept].forEach(row => {
+                ['H1', 'H2'].forEach(h => {
+                    const s = SEED26[h][row.name]; if (!s) return;
+                    const c = row[h];
+                    c.evaluator = s[0];
+                    if (s[2]) { c.date = s[1]; c.result = s[2]; c.grades = makeGrades(row.role, s[2]); }
+                    else if (s[3]) { c.draft = true; c.grades = s[3].slice(); }
+                });
+            }));
+        }
+        /* 2025 — 상·하반기 모두 종결(HIST25). 2024 이전은 이 시스템 도입 전이라 빈 매트릭스다. */
+        function seed25(D) {
+            Object.keys(D).forEach(dept => D[dept].forEach(row => {
+                [['H1', '2025 상반기'], ['H2', '2025 하반기']].forEach(([h, cyc]) => {
+                    const H = HIST25[cyc];
+                    if (H.skip.indexOf(row.name) >= 0) return;
+                    const s = H.set[row.name] || [];
+                    const res = s[1] || '양호';
+                    Object.assign(row[h], { evaluator: s[2] || (row.role === 'RESPONSIBLE' ? '박안전' : '김안전'),
+                        date: s[0] || (H.date + String(row.role === 'RESPONSIBLE' ? 2 : 0)), result: res, grades: makeGrades(row.role, res) });
+                });
+            }));
+        }
+        function deptsOf(y) {
+            y = String(y);
+            if (!DEPTS_BY_YEAR[y]) {
+                DEPTS_BY_YEAR[y] = buildDepts();
+                if (y === '2026') seed26(DEPTS_BY_YEAR[y]);
+                else if (y === '2025') seed25(DEPTS_BY_YEAR[y]);
+            }
+            return DEPTS_BY_YEAR[y];
+        }
+        DEPTS = deptsOf('2026');
 
         let currentDept = DEPTS['건설과'] ? '건설과' : (Object.keys(DEPTS)[0] || '');
         let evalYear = '2026';
@@ -585,15 +654,31 @@
         function rec(date, cycle, dept, role, roleLabel, name, team, evaluator, result) {
             return { date: date, cycle: cycle, dept: dept, role: role, roleLabel: roleLabel, name: name, team: team, evaluator: evaluator, result: result, grades: makeGrades(role, result) };
         }
-        const HISTORY = [
-            rec('2025-12-22', '2025 하반기', '건설과',         'RESPONSIBLE', '안전보건관리책임자', '이건설', '부서장',     '박안전', '양호'),
-            rec('2025-12-22', '2025 하반기', '건설과',         'SUPERVISOR',  '관리감독자',         '김도현', '안전관리팀', '박안전', '보통'),
-            rec('2025-12-20', '2025 하반기', '건설과',         'SUPERVISOR',  '관리감독자',         '박서준', '시설관리팀', '김안전', '양호'),
-            rec('2025-12-19', '2025 하반기', '환경과',         'SUPERVISOR',  '관리감독자',         '정수빈', '자원순환팀', '김안전', '미흡'),
-            rec('2025-12-18', '2025 하반기', '공공시설사업소', 'RESPONSIBLE', '안전보건관리책임자', '임시설', '부서장',     '박안전', '양호'),
-            rec('2025-06-25', '2025 상반기', '건설과',         'RESPONSIBLE', '안전보건관리책임자', '이건설', '부서장',     '박안전', '보통'),
-            rec('2025-06-24', '2025 상반기', '건설과',         'SUPERVISOR',  '관리감독자',         '김도현', '안전관리팀', '박안전', '양호'),
-        ];
+        /* 평가 이력 — 2025 상·하반기(지난 기록) + 2026 매트릭스에서 완료된 칸.
+         * 2025 하반기 김지도(환경과)는 장기 교육 파견으로 미평가 종결이다(평가 현황과 같은 값). */
+        const HIST25 = {
+            '2025 하반기': { date: '2025-12-1', skip: ['김지도'],
+                set: { '이건설': ['2025-12-22', '양호'], '김도현': ['2025-12-22', '보통', '박안전'], '박서준': ['2025-12-20', '양호', '김안전'],
+                       '정수빈': ['2025-12-19', '미흡', '김안전'], '임시설': ['2025-12-18', '양호'], '조회계': ['2025-12-17', '보통'],
+                       '오수질': ['2025-12-16', '보통'], '이준호': ['2025-12-22', '보통'] } },
+            '2025 상반기': { date: '2025-06-2', skip: [],
+                set: { '이건설': ['2025-06-25', '보통'], '김도현': ['2025-06-24', '양호', '박안전'], '노읍장': ['2025-06-20', '보통'],
+                       '민설비': ['2025-06-18', '보통'], '정수빈': ['2025-06-19', '보통'] } },
+        };
+        const HISTORY = (function () {
+            const out = [];
+            ['2026', '2025'].forEach(y => {
+                const D = deptsOf(y);
+                Object.keys(D).forEach(dept => D[dept].forEach(row => {
+                    ['H2', 'H1'].forEach(h => {
+                        const c = row[h];
+                        if (c.result) out.push({ date: c.date, cycle: y + ' ' + (h === 'H1' ? '상반기' : '하반기'), dept: dept, role: row.role, roleLabel: row.roleLabel,
+                            name: row.name, team: row.team, evaluator: c.evaluator, result: c.result, grades: c.grades.slice() });
+                    });
+                }));
+            });
+            return out.sort((a, b) => b.date.localeCompare(a.date));
+        })();
 
         const histBody$ = document.getElementById('ev-history-body');
         function histKey(r) { return r.dept + '|' + r.cycle + '|' + r.name + '|' + r.roleLabel; }
@@ -1031,17 +1116,18 @@
                     rows: ITEMS[r.role].map((t, i) => [String(i + 1), t, docGrade((r.grades || [])[i])]),
                 },
                 summary: { label: '종합 결과', value: docGrade(r.result), note: '미흡 1개↑=미흡 · 전항목 양호=양호 · 그 외 보통' },
-                approval: apprCols('평가자', r.evaluator, subOf(r.dept)),
+                approval: apprCols('평가자', r.evaluator, subOf(r.dept, cycleKeyOf(r.cycle))),
                 stamp: '평가완료',
                 foot: '근거: 중대재해처벌법 시행령 제4조제1항제5호 · 산업안전보건법 §15·§16<br>담양군 중대재해예방 통합관리시스템에서 생성된 문서입니다.',
             };
         }
 
         function buildReportDocSpec(dept) {
-            const recs = HISTORY.filter(r => r.dept === dept);
+            const cyc = cycleLabel(reportCycle());
+            const recs = HISTORY.filter(r => r.dept === dept && r.cycle === cyc);
             const cnt = g => recs.filter(r => r.result === g).length;
             return {
-                title: dept + ' 업무수행 평가 결과 보고',
+                title: cyc + ' ' + dept + ' 업무수행 평가 결과 보고',
                 meta: [
                     ['부서', dept],
                     ['평가 대상', recs.length + '명 (안전보건관리책임자 · 관리감독자)'],
@@ -1078,6 +1164,11 @@
                         if (sub && sub.status === '결재중') return '온나라 결재가 진행 중입니다 — 결재선 <strong>' + DYV2.esc(sub.lineText || '') + '</strong>. 결재가 끝나면 [결재 결과 회신 등록]에 생산등록번호·결재일을 적습니다.';
                         if (sub && sub.status === '반려') return '반려된 보고서입니다(' + DYV2.esc(sub.rejDate || '-') + ' · ' + DYV2.esc(sub.reason || '') + ') — 고친 뒤 다시 상신합니다.';
                         return '이 보고서를 온나라 전자결재에 상신합니다. 결재선은 <strong>[온나라로 결재 상신]</strong>에서 조직도로 고르며, 기안·검토·결재는 서로 다른 사람이어야 합니다.';
+                    })() + (function () {
+                        const past = pastSubs(currentDept).slice(0, 2);
+                        if (!past.length) return '';
+                        return '<br><span style="color:var(--text-gray);">지난 보고 — ' + past.map(p => DYV2.esc(cycleLabel(p.ck)) + ' ' + DYV2.esc(p.status || '-') +
+                            (p.no ? ' (' + DYV2.esc(p.no) + ' · ' + DYV2.esc(p.apprDate || '-') + ')' : '')).join(' · ') + '</span>';
                     })() + '</span>';
             } else {
                 banner.style.display = 'none';
@@ -1134,12 +1225,54 @@
         function canDraft() { return !window.DYROLE || window.DYROLE.canAct(''); }
         const DRAFT_DENY = '상신은 <b>담당자</b>가 합니다 — 관리·감독 계층은 조회만 합니다.';
 
-        const SUBKEY = 'dy-evl-onnara-v1';
-        function subs() { try { return JSON.parse(localStorage.getItem(SUBKEY)) || {}; } catch (e) { return {}; } }
-        function subOf(dept) { return subs()[dept] || null; }
-        function saveSub(dept, rec) {
-            const all = subs(); all[dept] = Object.assign({}, all[dept], rec);
+        const SUBKEY = 'dy-evl-onnara-v3';   /* v3: 키 = 부서|연도-반기 · 예시 이력 2025~2026(2026-11-13) */
+        try { localStorage.removeItem('dy-evl-onnara-v1'); localStorage.removeItem('dy-evl-onnara-v2'); } catch (e) {}
+        /* 예시 이력 — 반기마다 부서별 결과 보고를 결재완료했다(생산등록번호·결재일 — 예시 값, §15).
+         * 2026 하반기는 진행 중이다: 건설과가 11월에 먼저 올렸다가 «평가 미완료»로 반려돼 다시 올릴 차례이고,
+         * 공공시설사업소는 전원 평가를 마쳐 상신할 차례다(기록 없음).
+         * 저장소가 비어 있을 때만 깐다 — 담당자가 이 화면에서 남긴 기록을 덮지 않는다. */
+        (function seedSubs() {
+            try { if (localStorage.getItem(SUBKEY)) return; } catch (e) { return; }
+            const line = [{ uid: 'u_jjt1', name: '김중대', role: '중대재해팀장', dept: '재난안전과' },
+                          { uid: 'u_safe1', name: '홍길동', role: '재난안전과장', dept: '재난안전과' }];
+            const lineText = '기안 박안전 → 검토 김중대 → 결재 홍길동';
+            const DEPT_ORDER = ['기획예산실', '재난안전과', '회계과', '환경과', '문화체육과', '재무과', '보건소', '건설과', '공공시설사업소', '물순환사업소', '담양읍'];
+            /* [연도-반기, 상신일, 결재일 목록(부서 순), 번호 시작] */
+            const CYC = [['2025-H1', '2025-07-01', ['07-03', '07-03', '07-04', '07-04', '07-07', '07-07', '07-08', '07-08', '07-09', '07-09', '07-10'], 2025, 1361],
+                         ['2025-H2', '2026-01-05', ['01-08', '01-08', '01-09', '01-09', '01-12', '01-12', '01-13', '01-13', '01-14', '01-14', '01-15'], 2026, 41],
+                         ['2026-H1', '2026-07-01', ['07-03', '07-03', '07-06', '07-06', '07-06', '07-07', '07-07', '07-07', '07-08', '07-08', '07-10'], 2026, 1402]];
+            const all = {};
+            CYC.forEach(([ck, at, days, ay, no0]) => DEPT_ORDER.forEach((d, i) => {
+                all[d + '|' + ck] = { dept: d, cycle: cycleLabel(ck), by: '박안전', byUid: 'u_jjt2', line: line, lineText: lineText, sample: true,
+                    at: at, status: '결재완료', no: '재난안전과-' + (no0 + i), apprDate: ay + '-' + days[i] };
+            }));
+            all['건설과|2026-H2'] = { dept: '건설과', cycle: '2026 하반기', by: '박안전', byUid: 'u_jjt2', line: line, lineText: lineText, sample: true,
+                at: '2026-11-05', status: '반려', rejDate: '2026-11-10',
+                reason: '하반기 평가 미완료 3명(이건설·김도현·이준호) — 완료 후 재상신', no: '', apprDate: '' };
             try { localStorage.setItem(SUBKEY, JSON.stringify(all)); } catch (e) {}
+        })();
+        function subs() { try { return JSON.parse(localStorage.getItem(SUBKEY)) || {}; } catch (e) { return {}; } }
+        /* 결과 보고는 **부서 × 연도·반기** 단위다 — 키 `${dept}|2026-H2`. 종전에는 부서만 키라
+         * 상반기 보고가 결재완료면 하반기 보고를 영영 올릴 수 없었다. 보고 대상 반기는
+         * 지금 보는 연도가 기준일 연도면 기준일의 반기, 지난 연도면 하반기다. */
+        function reportCycle() {
+            const td = TODAY, y = td.slice(0, 4);
+            const h = String(evalYear) === y ? (Number(td.slice(5, 7)) >= 7 ? 'H2' : 'H1') : 'H2';
+            return evalYear + '-' + h;
+        }
+        function cycleLabel(ck) { return ck.slice(0, 4) + ' ' + (ck.slice(5) === 'H1' ? '상반기' : '하반기'); }
+        function cycleKeyOf(label) { return String(label).slice(0, 4) + '-' + (String(label).indexOf('상반기') >= 0 ? 'H1' : 'H2'); }
+        function subOf(dept, ck) { return subs()[dept + '|' + (ck || reportCycle())] || null; }
+        function saveSub(dept, rec) {
+            const ck = reportCycle(), k = dept + '|' + ck;
+            const all = subs(); all[k] = Object.assign({ cycle: cycleLabel(ck) }, all[k], rec);
+            try { localStorage.setItem(SUBKEY, JSON.stringify(all)); } catch (e) {}
+        }
+        /* 같은 부서의 지난 반기 보고(결재 결과) — 배너에 한 줄로 밝힌다 */
+        function pastSubs(dept) {
+            const cur = reportCycle(), all = subs();
+            return Object.keys(all).filter(k => k.indexOf(dept + '|') === 0 && k.split('|')[1] < cur)
+                .sort().reverse().map(k => Object.assign({ ck: k.split('|')[1] }, all[k]));
         }
 
         /* 지면 결재란 — 결재선에서 파생한다. 빈 칸을 남기지 않는다.
@@ -1261,7 +1394,7 @@
         /* 외부 노출 */
         window.EVL = {
             changeDept(v) { currentDept = v; renderMatrix(); },
-            changeYear(v) { evalYear = v; renderCycle(); },
+            changeYear(v) { evalYear = String(v); DEPTS = deptsOf(evalYear); renderCycle(); renderMatrix(); },
             openEval, closeEval, saveDraft, completeEval, tickEval,
             openPicker, closePicker, confirmPicker,
             pickMember(name) { pickMember = name; renderMembers(); updatePickFoot(); },

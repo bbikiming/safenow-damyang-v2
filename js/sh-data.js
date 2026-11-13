@@ -12,15 +12,17 @@
 (function (global) {
     'use strict';
 
-    /* v4 — 작업환경측정 시드를 사업장 관리(DYSITE) 식별값에 연결(siteId·마스터 이름·판정 상태).
+    /* v5 — 예시 자료를 2026-11-13 기준 운영 상태로 다시 깔았다(2026 상반기 측정·개선 완료 · 하반기 9~10월
+            측정, 개선 진행 1건 · 11월 예정 · 이력은 최신이 위). id 를 WE/HC-2026-10 까지 늘렸다.
+       v4 — 작업환경측정 시드를 사업장 관리(DYSITE) 식별값에 연결(siteId·마스터 이름·판정 상태).
             WE-2026-02(하수처리장)의 소관을 물순환사업소로 바로잡았다.
        v3 — 관리 버전 3종(단순/상세/절차)을 단순 첨부형 하나로 확정하면서
             개인별 결과(persons)·절차 진행 상태(proc)·열람권한(privacy) 시드를 걷어냈다.
        시드 스키마·값이 바뀌면 키를 올린다 — 안 올리면 옛 브라우저의 스토어가 살아남아
        화면과 시드가 조용히 갈린다. */
-    var SKEY = 'damyangShV4';
+    var SKEY = 'damyangShV5';
     /* 기준일·기준연도 — DYV2.today() 단일 출처 (시연일 변경은 common.js DEMO_TODAY 한 줄) */
-    var TODAY = (global.DYV2 && global.DYV2.today) ? global.DYV2.today() : '2026-07-16';
+    var TODAY = (global.DYV2 && global.DYV2.today) ? global.DYV2.today() : '2026-11-13';
     var CURYEAR = Number(TODAY.slice(0, 4));
 
     /* ================= 공용 상태 메타 ================= */
@@ -67,7 +69,11 @@
            구체 작업 위치(약품동·탈수기실·기계실)는 targetBasis 가 갖는다.
            siteId 가 없으면 중복 계획 검사와 사업장 사용중 판정이 이름 대조로 떨어져
            마스터와 한 글자만 달라도 조용히 어긋난다. */
+        /* 이력(history)은 **최신이 위**다 — 화면 처리(pushHist)가 unshift 로 쌓으므로 시드도 같은 순서로 둔다.
+           예시 자료 기간: 2025 상·하반기(지난 기록) → 2026 상반기(측정·개선 완료) → 2026 하반기(9~10월 측정,
+           개선 진행 1건 · 11월 예정 2건). 담당자는 조직도(DYV2.ORG) 실인물만 쓴다. */
         var workenv = [
+            /* ── 2026 상반기 ── */
             { id: 'WE-2026-01', year: 2026, half: 'H1', dept: '물순환사업소',
               siteId: 'S01', site: '담양정수장', siteTargetState: '검토 중',
               subject: '소음·분진·염소가스 등 12종', vendor: '(주)한국산업보건환경연구원',
@@ -77,63 +83,136 @@
               reason: '', expectedDone: '',
               carcinogen: false, targetBasis: '현업 종사자 · 유해인자 노출(정수처리 약품동)',
               history: [
-                { at: '2026-04-30', actor: '서담당', event: '측정 계획 수립 · 위탁계약 체결' },
+                { at: '2026-06-10', actor: '서담당', event: '결과보고서 접수 · 결과 「적정」 확인' },
                 { at: '2026-05-22', actor: '(주)한국산업보건환경연구원', event: '측정 실시 완료' },
-                { at: '2026-06-10', actor: '서담당', event: '결과보고서 접수 · 결과 「적정」 확인' }
+                { at: '2026-04-30', actor: '서담당', event: '측정 계획 수립 · 위탁계약 체결' }
               ] },
             { id: 'WE-2026-02', year: 2026, half: 'H1', dept: '물순환사업소',
               siteId: 'S02', site: '담양하수처리장', siteTargetState: '검토 중',
               subject: '황화수소·분진·소음 등 9종', vendor: '(주)그린환경보건원',
               planned: '2026-05-18', done: '2026-05-25', report: true,
               result: '개선 필요', improveReq: '탈수기실 국소배기장치 성능 저하 — 후드 풍속 기준 미달, 배기설비 보수 및 재측정 필요',
-              improveDue: '2026-08-31', improveDone: false,
-              beforePhoto: true, afterPhoto: false, owner: '물순환사업소 · 서담당',
+              improveDue: '2026-07-24', improveDone: true,
+              improveDoneAt: '2026-07-17', improveResult: '탈수기실 후드 교체·배기덕트 보수 후 재측정 — 후드 풍속 기준 충족',
+              beforePhoto: true, afterPhoto: true, owner: '물순환사업소 · 서담당',
               reason: '', expectedDone: '',
               carcinogen: false, targetBasis: '현업 종사자 · 유해인자 노출(하수처리 탈수기실)',
               history: [
-                { at: '2026-04-28', actor: '서담당', event: '측정 계획 수립 · 위탁계약 체결' },
+                { at: '2026-07-17', actor: '서담당', event: '개선조치 완료 · 탈수기실 후드 교체·배기덕트 보수 후 재측정 기준 충족 · 조치 후 증빙 등록' },
+                { at: '2026-07-02', actor: '서담당', event: '국소배기장치 보수 착공(후드·덕트)' },
+                { at: '2026-06-05', actor: '서담당', event: '결과보고서 접수 · 결과 「개선 필요」 · 개선기한 2026-07-24 설정' },
                 { at: '2026-05-25', actor: '(주)그린환경보건원', event: '측정 실시 완료' },
-                { at: '2026-06-05', actor: '서담당', event: '결과보고서 접수 · 결과 「개선 필요」 · 개선기한 2026-08-31 설정' }
+                { at: '2026-04-28', actor: '서담당', event: '측정 계획 수립 · 위탁계약 체결' }
               ] },
             { id: 'WE-2026-03', year: 2026, half: 'H1', dept: '환경과',
               siteId: 'S07', site: '자원순환센터(재활용선별)', siteTargetState: '검토 중',
               subject: '분진·악취·중금속 등 8종', vendor: '(주)한국산업보건환경연구원',
-              planned: '2026-07-28', done: '', report: false,
-              result: null, improveReq: '', improveDue: '', improveDone: false,
+              planned: '2026-06-16', done: '2026-06-18', report: true,
+              result: '적정', improveReq: '', improveDue: '', improveDone: false,
               beforePhoto: false, afterPhoto: false, owner: '환경과 · 정환경',
               reason: '', expectedDone: '',
               carcinogen: true, targetBasis: '현업 종사자 · 발암성 유해인자(결정질 실리카 분진) 노출',
               history: [
-                { at: '2026-06-20', actor: '정환경', event: '측정 계획 수립 · 위탁계약 체결(예정일 2026-07-28)' }
+                { at: '2026-07-03', actor: '정환경', event: '결과보고서 접수 · 결과 「적정」(분진 노출기준 근접 — 하반기 재확인)' },
+                { at: '2026-06-18', actor: '(주)한국산업보건환경연구원', event: '측정 실시 완료' },
+                { at: '2026-05-20', actor: '정환경', event: '측정 계획 수립 · 위탁계약 체결(예정일 2026-06-16)' }
               ] },
             { id: 'WE-2026-04', year: 2026, half: 'H1', dept: '건설과',
               siteId: 'S09', site: '도로보수 작업현장(직영보수반)', siteTargetState: '검토 중',
               subject: '소음·진동·분진 등 6종', vendor: '(주)그린환경보건원',
-              planned: '2026-06-05', done: '', report: false,
-              result: null, improveReq: '', improveDue: '', improveDone: false,
+              planned: '2026-06-05', done: '2026-06-26', report: true,
+              result: '적정', improveReq: '', improveDue: '', improveDone: false,
               beforePhoto: false, afterPhoto: false, owner: '건설과 · 박현장',
               reason: '위탁업체 일정 지연 및 현장 우천으로 예정일 내 미실시',
-              expectedDone: '2026-07-25',
+              expectedDone: '2026-06-30',
               carcinogen: false, targetBasis: '현업 종사자 · 유해인자 노출(도로보수 현장)',
               history: [
-                { at: '2026-05-10', actor: '박현장', event: '측정 계획 수립 · 위탁계약 체결(예정일 2026-06-05)' },
-                { at: '2026-06-06', actor: '박현장', event: '미실시 사유 등록 · 예상 완료일 2026-07-25' }
+                { at: '2026-07-10', actor: '박현장', event: '결과보고서 접수 · 결과 「적정」 확인' },
+                { at: '2026-06-26', actor: '(주)그린환경보건원', event: '측정 실시 완료' },
+                { at: '2026-06-08', actor: '박현장', event: '미완료 사유 등록 · 예상완료일 2026-06-30' },
+                { at: '2026-05-10', actor: '박현장', event: '측정 계획 수립 · 위탁계약 체결(예정일 2026-06-05)' }
               ] },
             { id: 'WE-2026-05', year: 2026, half: 'H1', dept: '공공시설사업소',
               siteId: 'S04', site: '담양국민체육센터(실내수영장)', siteTargetState: '검토 중',
               subject: '염소가스·습도·소음 등 5종', vendor: '(주)한국산업보건환경연구원',
               planned: '2026-06-10', done: '2026-06-12', report: true,
               result: '개선 필요', improveReq: '염소가스 농도 노출기준 초과 — 자동염소주입기 밀폐 및 배기 개선 필요',
-              improveDue: '2026-06-30', improveDone: false,
-              beforePhoto: true, afterPhoto: false, owner: '공공시설사업소 · 한담당',
+              improveDue: '2026-08-10', improveDone: true,
+              improveDoneAt: '2026-07-29', improveResult: '기계실 자동염소주입기 밀폐커버 설치·배기팬 증설 후 재측정 — 노출기준 이내',
+              beforePhoto: true, afterPhoto: true, owner: '공공시설사업소 · 한담당',
               reason: '', expectedDone: '',
               carcinogen: false, targetBasis: '현업 종사자 · 유해인자 노출(실내수영장 염소가스)',
               history: [
-                { at: '2026-05-15', actor: '한담당', event: '측정 계획 수립 · 위탁계약 체결' },
+                { at: '2026-07-29', actor: '한담당', event: '개선조치 완료 · 염소주입기 밀폐커버 설치·배기팬 증설 후 재측정 노출기준 이내 · 조치 후 증빙 등록' },
+                { at: '2026-06-18', actor: '한담당', event: '결과보고서 접수 · 결과 「개선 필요」 · 개선기한 2026-08-10 설정' },
                 { at: '2026-06-12', actor: '(주)한국산업보건환경연구원', event: '측정 실시 완료' },
-                { at: '2026-06-18', actor: '한담당', event: '결과보고서 접수 · 결과 「개선 필요」 · 개선기한 2026-06-30 설정' }
+                { at: '2026-05-15', actor: '한담당', event: '측정 계획 수립 · 위탁계약 체결' }
               ] },
-            /* 전년도(2025 하반기) — 연도 필터 확인용 */
+            /* ── 2026 하반기 ── */
+            { id: 'WE-2026-06', year: 2026, half: 'H2', dept: '물순환사업소',
+              siteId: 'S01', site: '담양정수장', siteTargetState: '검토 중',
+              subject: '소음·분진·염소가스 등 12종', vendor: '(주)한국산업보건환경연구원',
+              planned: '2026-09-15', done: '2026-09-16', report: true,
+              result: '적정', improveReq: '', improveDue: '', improveDone: false,
+              beforePhoto: false, afterPhoto: false, owner: '물순환사업소 · 서담당',
+              reason: '', expectedDone: '',
+              carcinogen: false, targetBasis: '현업 종사자 · 유해인자 노출(정수처리 약품동)',
+              history: [
+                { at: '2026-10-02', actor: '서담당', event: '결과보고서 접수 · 결과 「적정」 확인' },
+                { at: '2026-09-16', actor: '(주)한국산업보건환경연구원', event: '측정 실시 완료' },
+                { at: '2026-08-20', actor: '서담당', event: '측정 계획 수립 · 위탁계약 체결(예정일 2026-09-15)' }
+              ] },
+            { id: 'WE-2026-07', year: 2026, half: 'H2', dept: '물순환사업소',
+              siteId: 'S02', site: '담양하수처리장', siteTargetState: '검토 중',
+              subject: '황화수소·분진·소음 등 9종', vendor: '(주)그린환경보건원',
+              planned: '2026-09-22', done: '2026-09-23', report: true,
+              result: '적정', improveReq: '', improveDue: '', improveDone: false,
+              beforePhoto: false, afterPhoto: false, owner: '물순환사업소 · 서담당',
+              reason: '', expectedDone: '',
+              carcinogen: false, targetBasis: '현업 종사자 · 유해인자 노출(하수처리 탈수기실)',
+              history: [
+                { at: '2026-10-08', actor: '서담당', event: '결과보고서 접수 · 결과 「적정」(상반기 개선 후 탈수기실 기준 충족 유지)' },
+                { at: '2026-09-23', actor: '(주)그린환경보건원', event: '측정 실시 완료' },
+                { at: '2026-08-21', actor: '서담당', event: '측정 계획 수립 · 위탁계약 체결(예정일 2026-09-22)' }
+              ] },
+            { id: 'WE-2026-08', year: 2026, half: 'H2', dept: '환경과',
+              siteId: 'S07', site: '자원순환센터(재활용선별)', siteTargetState: '검토 중',
+              subject: '분진·악취·중금속 등 8종', vendor: '(주)한국산업보건환경연구원',
+              planned: '2026-10-13', done: '2026-10-14', report: true,
+              result: '개선 필요', improveReq: '선별라인 투입구 분진(결정질 실리카) 노출기준 초과 — 집진기 필터 교체 및 투입구 국소배기 보강 필요',
+              improveDue: '2026-12-11', improveDone: false,
+              beforePhoto: true, afterPhoto: false, owner: '환경과 · 정환경',
+              reason: '', expectedDone: '',
+              carcinogen: true, targetBasis: '현업 종사자 · 발암성 유해인자(결정질 실리카 분진) 노출',
+              history: [
+                { at: '2026-11-09', actor: '정환경', event: '집진기 필터 교체 완료 · 투입구 국소배기 보강 공사 발주(11월 말 준공 예정)' },
+                { at: '2026-10-28', actor: '정환경', event: '결과보고서 접수 · 결과 「개선 필요」 · 개선기한 2026-12-11 설정 · 조치 전 사진 등록' },
+                { at: '2026-10-14', actor: '(주)한국산업보건환경연구원', event: '측정 실시 완료' },
+                { at: '2026-09-10', actor: '정환경', event: '측정 계획 수립 · 위탁계약 체결(예정일 2026-10-13)' }
+              ] },
+            { id: 'WE-2026-09', year: 2026, half: 'H2', dept: '공공시설사업소',
+              siteId: 'S04', site: '담양국민체육센터(실내수영장)', siteTargetState: '검토 중',
+              subject: '염소가스·습도·소음 등 5종', vendor: '(주)한국산업보건환경연구원',
+              planned: '2026-11-18', done: '', report: false,
+              result: null, improveReq: '', improveDue: '', improveDone: false,
+              beforePhoto: false, afterPhoto: false, owner: '공공시설사업소 · 한담당',
+              reason: '', expectedDone: '',
+              carcinogen: false, targetBasis: '현업 종사자 · 유해인자 노출(실내수영장 염소가스)',
+              history: [
+                { at: '2026-10-21', actor: '한담당', event: '측정 계획 수립 · 위탁계약 체결(예정일 2026-11-18 — 수영장 정기휴관일)' }
+              ] },
+            { id: 'WE-2026-10', year: 2026, half: 'H2', dept: '건설과',
+              siteId: 'S09', site: '도로보수 작업현장(직영보수반)', siteTargetState: '검토 중',
+              subject: '소음·진동·분진 등 6종', vendor: '(주)그린환경보건원',
+              planned: '2026-11-25', done: '', report: false,
+              result: null, improveReq: '', improveDue: '', improveDone: false,
+              beforePhoto: false, afterPhoto: false, owner: '건설과 · 박현장',
+              reason: '', expectedDone: '',
+              carcinogen: false, targetBasis: '현업 종사자 · 유해인자 노출(도로보수 현장)',
+              history: [
+                { at: '2026-11-02', actor: '박현장', event: '측정 계획 수립 · 위탁계약 체결(예정일 2026-11-25)' }
+              ] },
+            /* ── 2025 (지난 기록) ── */
             { id: 'WE-2025-01', year: 2025, half: 'H2', dept: '물순환사업소',
               siteId: 'S01', site: '담양정수장', siteTargetState: '검토 중',
               subject: '소음·분진·염소가스 등 12종', vendor: '(주)한국산업보건환경연구원',
@@ -143,8 +222,35 @@
               reason: '', expectedDone: '',
               carcinogen: false, targetBasis: '현업 종사자 · 유해인자 노출(정수처리 약품동)',
               history: [
-                { at: '2025-11-20', actor: '(주)한국산업보건환경연구원', event: '측정 실시 완료' },
-                { at: '2025-12-05', actor: '서담당', event: '결과보고서 접수 · 결과 「적정」' }
+                { at: '2025-12-05', actor: '서담당', event: '결과보고서 접수 · 결과 「적정」' },
+                { at: '2025-11-20', actor: '(주)한국산업보건환경연구원', event: '측정 실시 완료' }
+              ] },
+            { id: 'WE-2025-02', year: 2025, half: 'H2', dept: '공공시설사업소',
+              siteId: 'S04', site: '담양국민체육센터(실내수영장)', siteTargetState: '검토 중',
+              subject: '염소가스·습도·소음 등 5종', vendor: '(주)한국산업보건환경연구원',
+              planned: '2025-11-11', done: '2025-11-12', report: true,
+              result: '개선 필요', improveReq: '기계실 염소가스 농도 노출기준 근접·환기 부족 — 기계실 급배기 개선 필요',
+              improveDue: '2026-01-09', improveDone: true,
+              improveDoneAt: '2025-12-30', improveResult: '기계실 급기구 신설·배기팬 교체 — 재측정 노출기준 이내',
+              beforePhoto: true, afterPhoto: true, owner: '공공시설사업소 · 한담당',
+              reason: '', expectedDone: '',
+              carcinogen: false, targetBasis: '현업 종사자 · 유해인자 노출(실내수영장 염소가스)',
+              history: [
+                { at: '2025-12-30', actor: '한담당', event: '개선조치 완료 · 기계실 급기구 신설·배기팬 교체 · 조치 후 증빙 등록' },
+                { at: '2025-11-26', actor: '한담당', event: '결과보고서 접수 · 결과 「개선 필요」 · 개선기한 2026-01-09 설정' },
+                { at: '2025-11-12', actor: '(주)한국산업보건환경연구원', event: '측정 실시 완료' }
+              ] },
+            { id: 'WE-2025-03', year: 2025, half: 'H1', dept: '물순환사업소',
+              siteId: 'S02', site: '담양하수처리장', siteTargetState: '검토 중',
+              subject: '황화수소·분진·소음 등 9종', vendor: '(주)그린환경보건원',
+              planned: '2025-05-21', done: '2025-05-21', report: true,
+              result: '적정', improveReq: '', improveDue: '', improveDone: false,
+              beforePhoto: false, afterPhoto: false, owner: '물순환사업소 · 서담당',
+              reason: '', expectedDone: '',
+              carcinogen: false, targetBasis: '현업 종사자 · 유해인자 노출(하수처리 탈수기실)',
+              history: [
+                { at: '2025-06-09', actor: '서담당', event: '결과보고서 접수 · 결과 「적정」' },
+                { at: '2025-05-21', actor: '(주)그린환경보건원', event: '측정 실시 완료' }
               ] }
         ];
 
@@ -155,13 +261,16 @@
         var health = [
             { id: 'HC-2026-01', year: 2026, type: '일반건강검진', dept: '건설과',
               agency: '담양군보건소', planned: '2026-04-10', done: '2026-04-15',
-              targetCount: 24, examinedCount: 22, evidence: true,
-              followupNeeded: true, followupDone: false, followupResult: '', owner: '건설과 · 박현장', reason: '', extraExamDate: '',
+              targetCount: 24, examinedCount: 24, evidence: true,
+              followupNeeded: true, followupDone: true, followupResult: '유소견 1명 2차검사 실시 — 정상 종결(2026-05-12)',
+              owner: '건설과 · 박현장', reason: '', extraExamDate: '2026-05-08',
               carcinogen: false, targetBasis: '일반건강검진(상시근로자 대상)',
               history: [
-                { at: '2026-03-20', actor: '박현장', event: '검진 계획 수립 · 담양군보건소 위탁' },
+                { at: '2026-05-12', actor: '박현장', event: '사후관리 완료 · 유소견 1명 2차검사 정상 종결' },
+                { at: '2026-05-08', actor: '박현장', event: '추가검진 반영 (수검 24/24)' },
+                { at: '2026-04-30', actor: '박현장', event: '실시 증빙 등록 · 사후관리 대상 확인(유소견 1) · 미수검 2명 추가검진 2026-05-08 예정' },
                 { at: '2026-04-15', actor: '담양군보건소', event: '단체검진 실시(수검 22/24)' },
-                { at: '2026-04-30', actor: '박현장', event: '실시 증빙 등록 · 사후관리 대상 확인(유소견 1)' }
+                { at: '2026-03-20', actor: '박현장', event: '검진 계획 수립 · 담양군보건소 위탁' }
               ] },
             { id: 'HC-2026-02', year: 2026, type: '일반건강검진', dept: '환경과',
               agency: '국민건강보험공단(지정검진기관)', planned: '2026-03-18', done: '2026-03-22',
@@ -170,42 +279,48 @@
               owner: '환경과 · 최보건', reason: '', extraExamDate: '',
               carcinogen: false, targetBasis: '일반건강검진(상시근로자 대상)',
               history: [
-                { at: '2026-02-25', actor: '최보건', event: '검진 계획 수립' },
+                { at: '2026-04-05', actor: '최보건', event: '실시 증빙 등록 · 사후관리 대상 없음' },
                 { at: '2026-03-22', actor: '지정검진기관', event: '검진 실시(수검 18/18)' },
-                { at: '2026-04-05', actor: '최보건', event: '실시 증빙 등록 · 사후관리 대상 없음' }
+                { at: '2026-02-25', actor: '최보건', event: '검진 계획 수립' }
               ] },
             { id: 'HC-2026-03', year: 2026, type: '특수건강진단', dept: '물순환사업소',
               agency: '(주)녹십자헬스케어 특수검진센터', planned: '2026-05-10', done: '2026-05-14',
-              targetCount: 12, examinedCount: 9, evidence: true,
-              followupNeeded: true, followupDone: false,
-             
-              followupResult: '', owner: '물순환사업소 · 서담당', reason: '교대근무자 3명 일정 미조정',
-              extraExamDate: '2026-08-05',
+              targetCount: 12, examinedCount: 12, evidence: true,
+              followupNeeded: true, followupDone: true,
+              followupResult: '소음성 난청 요관찰 2명 — 청력보호구 지급·청력 재검(8월) 결과 변화 없음, 관찰 유지',
+              owner: '물순환사업소 · 서담당', reason: '교대근무자 3명 일정 미조정',
+              extraExamDate: '2026-06-03',
               carcinogen: false, targetBasis: '특수건강진단 대상(염소·소음 노출자)',
               history: [
-                { at: '2026-04-15', actor: '서담당', event: '특수검진 대상자 선정(염소·소음 노출 12명)' },
+                { at: '2026-08-20', actor: '서담당', event: '사후관리 완료 · 요관찰 2명 청력 재검 결과 변화 없음(관찰 유지)' },
+                { at: '2026-06-03', actor: '서담당', event: '추가검진 반영 (수검 12/12)' },
+                { at: '2026-05-28', actor: '서담당', event: '미수검 3명 추가검진 2026-06-03 예정 등록 · 실시 증빙 등록' },
                 { at: '2026-05-14', actor: '(주)녹십자헬스케어', event: '특수검진 실시(수검 9/12)' },
-                { at: '2026-05-28', actor: '서담당', event: '미수검 3명 추가검진 2026-08-05 예정 등록' }
+                { at: '2026-04-15', actor: '서담당', event: '특수검진 대상자 선정(염소·소음 노출 12명)' }
               ] },
             { id: 'HC-2026-04', year: 2026, type: '특수건강진단', dept: '공공시설사업소',
-              agency: '(주)녹십자헬스케어 특수검진센터', planned: '2026-06-05', done: '',
-              targetCount: 15, examinedCount: 0, evidence: false,
-              followupNeeded: false, followupDone: false, followupResult: '',
+              agency: '(주)녹십자헬스케어 특수검진센터', planned: '2026-06-05', done: '2026-07-08',
+              targetCount: 15, examinedCount: 15, evidence: true,
+              followupNeeded: true, followupDone: true, followupResult: '염소 노출 유소견 1명 — 직업환경의학 상담·호흡보호구 지급, 8월 재검 정상',
               owner: '공공시설사업소 · 한담당',
-              reason: '위탁 검진기관 예약 지연 — 재예약 진행 중', extraExamDate: '',
-             
+              reason: '위탁 검진기관 예약 지연 — 재예약 진행', extraExamDate: '',
               carcinogen: false, targetBasis: '특수건강진단 대상(유해인자 노출자)',
               history: [
-                { at: '2026-05-01', actor: '한담당', event: '특수검진 대상자 선정(15명) · 예정일 2026-06-05' },
-                { at: '2026-06-08', actor: '한담당', event: '미실시 사유 등록(검진기관 예약 지연)' }
+                { at: '2026-08-04', actor: '한담당', event: '사후관리 완료 · 유소견 1명 상담·보호구 지급 후 재검 정상' },
+                { at: '2026-07-20', actor: '한담당', event: '실시 증빙 등록 · 사후관리 대상 확인(유소견 1)' },
+                { at: '2026-07-08', actor: '(주)녹십자헬스케어', event: '특수검진 실시(수검 15/15)' },
+                { at: '2026-06-08', actor: '한담당', event: '미완료 사유 등록(검진기관 예약 지연) · 2026-07-08 재예약' },
+                { at: '2026-05-01', actor: '한담당', event: '특수검진 대상자 선정(15명) · 예정일 2026-06-05' }
               ] },
             { id: 'HC-2026-05', year: 2026, type: '일반건강검진', dept: '문화체육과',
-              agency: '국민건강보험공단(지정검진기관)', planned: '2026-07-30', done: '',
-              targetCount: 9, examinedCount: 0, evidence: false,   /* 미실시(예정 미래) → 수검 0 (done=''↔examinedCount=0 불변식) */
+              agency: '국민건강보험공단(지정검진기관)', planned: '2026-07-30', done: '2026-07-30',
+              targetCount: 9, examinedCount: 9, evidence: true,
               followupNeeded: false, followupDone: false, followupResult: '',
               owner: '문화체육과 · 오세영', reason: '', extraExamDate: '',
               carcinogen: false, targetBasis: '일반건강검진(상시근로자 대상)',
               history: [
+                { at: '2026-08-12', actor: '오세영', event: '실시 증빙 등록 · 사후관리 대상 없음' },
+                { at: '2026-07-30', actor: '지정검진기관', event: '검진 실시(수검 9/9)' },
                 { at: '2026-06-25', actor: '오세영', event: '검진 계획 수립 · 개인별 검진 안내(예정일 2026-07-30)' }
               ] },
             { id: 'HC-2026-06', year: 2026, type: '특수건강진단', dept: '건설과',
@@ -215,24 +330,87 @@
               owner: '건설과 · 박현장', reason: '', extraExamDate: '',
               carcinogen: true, targetBasis: '특수건강진단 대상(발암성 분진 노출자)',
               history: [
-                { at: '2026-04-30', actor: '박현장', event: '특수검진 대상자 선정(분진·소음 노출 8명)' },
+                { at: '2026-06-05', actor: '박현장', event: '실시 증빙 등록' },
                 { at: '2026-05-28', actor: '(주)녹십자헬스케어', event: '특수검진 실시(수검 8/8) · 사후관리 대상 없음' },
-                { at: '2026-06-05', actor: '박현장', event: '실시 증빙 등록' }
+                { at: '2026-04-30', actor: '박현장', event: '특수검진 대상자 선정(분진·소음 노출 8명)' }
               ] },
-            /* 전년도(2025) — 연도 필터 확인용 */
-            { id: 'HC-2025-01', year: 2025, type: '일반건강검진', dept: '건설과',
-              agency: '담양군보건소', planned: '2025-04-12', done: '2025-04-16',
-              targetCount: 22, examinedCount: 21, evidence: true,
-              followupNeeded: false, followupDone: true,
-              followupResult: '2차검사 정상 종결', owner: '건설과 · 박현장', reason: '', extraExamDate: '',
+            { id: 'HC-2026-07', year: 2026, type: '일반건강검진', dept: '담양읍',
+              agency: '국민건강보험공단(지정검진기관)', planned: '2026-09-09', done: '2026-09-10',
+              targetCount: 5, examinedCount: 5, evidence: true,
+              followupNeeded: false, followupDone: false, followupResult: '',
+              owner: '담양읍 · 배주민', reason: '', extraExamDate: '',
               carcinogen: false, targetBasis: '일반건강검진(상시근로자 대상)',
               history: [
-                { at: '2025-04-16', actor: '담양군보건소', event: '단체검진 실시(수검 21/22)' },
-                { at: '2025-06-10', actor: '박현장', event: '사후관리 완료(2차검사 정상)' }
+                { at: '2026-09-24', actor: '배주민', event: '실시 증빙 등록 · 사후관리 대상 없음' },
+                { at: '2026-09-10', actor: '지정검진기관', event: '검진 실시(수검 5/5)' },
+                { at: '2026-08-14', actor: '배주민', event: '검진 계획 수립(예정일 2026-09-09)' }
+              ] },
+            { id: 'HC-2026-08', year: 2026, type: '일반건강검진', dept: '보건소',
+              agency: '담양군보건소', planned: '2026-10-14', done: '2026-10-16',
+              targetCount: 11, examinedCount: 10, evidence: true,
+              followupNeeded: false, followupDone: false, followupResult: '',
+              owner: '보건소 · 윤담당', reason: '1명 병가 중 — 복귀 후 추가검진', extraExamDate: '2026-11-27',
+              carcinogen: false, targetBasis: '일반건강검진(상시근로자 대상 · 방역·소독반 포함)',
+              history: [
+                { at: '2026-10-30', actor: '윤담당', event: '실시 증빙 등록 · 미수검 1명 추가검진 2026-11-27 예정 등록' },
+                { at: '2026-10-16', actor: '담양군보건소', event: '단체검진 실시(수검 10/11)' },
+                { at: '2026-09-22', actor: '윤담당', event: '검진 계획 수립(예정일 2026-10-14)' }
+              ] },
+            { id: 'HC-2026-09', year: 2026, type: '특수건강진단', dept: '환경과',
+              agency: '(주)녹십자헬스케어 특수검진센터', planned: '2026-10-27', done: '2026-10-29',
+              targetCount: 6, examinedCount: 6, evidence: true,
+              followupNeeded: true, followupDone: false, followupResult: '',
+              owner: '환경과 · 최보건', reason: '', extraExamDate: '',
+              carcinogen: true, targetBasis: '특수건강진단 대상(자원순환센터 결정질 실리카 분진 노출자)',
+              history: [
+                { at: '2026-11-10', actor: '최보건', event: '실시 증빙 등록 · 사후관리 대상 확인(흉부 요관찰 1명) · 2차검사 예약 2026-11-20' },
+                { at: '2026-10-29', actor: '(주)녹십자헬스케어', event: '특수검진 실시(수검 6/6)' },
+                { at: '2026-10-05', actor: '최보건', event: '특수검진 대상자 선정(선별라인 분진 노출 6명)' }
+              ] },
+            { id: 'HC-2026-10', year: 2026, type: '일반건강검진', dept: '물순환사업소',
+              agency: '국민건강보험공단(지정검진기관)', planned: '2026-11-24', done: '',
+              targetCount: 7, examinedCount: 0, evidence: false,   /* 미실시(예정 미래) → 수검 0 (done=''↔examinedCount=0 불변식) */
+              followupNeeded: false, followupDone: false, followupResult: '',
+              owner: '물순환사업소 · 서담당', reason: '', extraExamDate: '',
+              carcinogen: false, targetBasis: '일반건강검진(상시근로자 대상)',
+              history: [
+                { at: '2026-10-26', actor: '서담당', event: '검진 계획 수립 · 개인별 검진 안내(예정일 2026-11-24)' }
+              ] },
+            /* ── 2025 (지난 기록) ── */
+            { id: 'HC-2025-01', year: 2025, type: '일반건강검진', dept: '건설과',
+              agency: '담양군보건소', planned: '2025-04-12', done: '2025-04-16',
+              targetCount: 22, examinedCount: 22, evidence: true,
+              followupNeeded: true, followupDone: true,
+              followupResult: '2차검사 정상 종결', owner: '건설과 · 박현장', reason: '', extraExamDate: '2025-05-07',
+              carcinogen: false, targetBasis: '일반건강검진(상시근로자 대상)',
+              history: [
+                { at: '2025-06-10', actor: '박현장', event: '사후관리 완료(2차검사 정상)' },
+                { at: '2025-05-07', actor: '박현장', event: '추가검진 반영 (수검 22/22)' },
+                { at: '2025-04-16', actor: '담양군보건소', event: '단체검진 실시(수검 21/22)' }
+              ] },
+            { id: 'HC-2025-02', year: 2025, type: '특수건강진단', dept: '물순환사업소',
+              agency: '(주)녹십자헬스케어 특수검진센터', planned: '2025-05-20', done: '2025-05-22',
+              targetCount: 12, examinedCount: 12, evidence: true,
+              followupNeeded: true, followupDone: true, followupResult: '소음 요관찰 1명 — 청력보호구 지급·관찰 유지',
+              owner: '물순환사업소 · 서담당', reason: '', extraExamDate: '',
+              carcinogen: false, targetBasis: '특수건강진단 대상(염소·소음 노출자)',
+              history: [
+                { at: '2025-06-19', actor: '서담당', event: '사후관리 완료 · 요관찰 1명 청력보호구 지급' },
+                { at: '2025-05-22', actor: '(주)녹십자헬스케어', event: '특수검진 실시(수검 12/12)' }
+              ] },
+            { id: 'HC-2025-03', year: 2025, type: '특수건강진단', dept: '공공시설사업소',
+              agency: '(주)녹십자헬스케어 특수검진센터', planned: '2025-06-11', done: '2025-06-12',
+              targetCount: 14, examinedCount: 14, evidence: true,
+              followupNeeded: false, followupDone: false, followupResult: '',
+              owner: '공공시설사업소 · 한담당', reason: '', extraExamDate: '',
+              carcinogen: false, targetBasis: '특수건강진단 대상(유해인자 노출자)',
+              history: [
+                { at: '2025-06-26', actor: '한담당', event: '실시 증빙 등록 · 사후관리 대상 없음' },
+                { at: '2025-06-12', actor: '(주)녹십자헬스케어', event: '특수검진 실시(수검 14/14)' }
               ] }
         ];
 
-        return { workenv: workenv, health: health, seqWE: 5, seqHC: 6 };
+        return { workenv: workenv, health: health, seqWE: 13, seqHC: 13 };
     }
 
     function load() {

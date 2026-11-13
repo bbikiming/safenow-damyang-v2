@@ -178,7 +178,7 @@
             '<div style="margin-bottom:12px;"><label class="form-label">미검진 사유 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 '<textarea class="form-textarea" id="hd-reason" rows="3" placeholder="예: 교대근무자 일정 미조정 / 검진기관 예약 지연">' + esc(r.reason || '') + '</textarea></div>' +
             '<div><label class="form-label">추가검진 예정일</label>' +
-                '<input type="date" class="form-input" id="hd-extra" value="' + esc(r.extraExamDate || '2026-08-31') + '"></div>',
+                '<input type="date" class="form-input" id="hd-extra" value="' + esc(r.extraExamDate || S().addDays(S().TODAY, 30)) + '"></div>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="HEXD.saveReason()">저장</button>');
     }
@@ -200,7 +200,7 @@
         V().openModal('기한 재설정',
             '<p style="font-size:13px;margin-bottom:10px;">' + (useExtra ? '추가검진 예정일을 재설정합니다.' : '검진 예정일을 재설정합니다.') + '</p>' +
             '<label class="form-label">' + (useExtra ? '추가검진 예정일' : '검진 예정일') + '</label>' +
-            '<input type="date" class="form-input" id="hd-due" value="' + esc(cur || '2026-08-31') + '">',
+            '<input type="date" class="form-input" id="hd-due" value="' + esc(cur || S().addDays(S().TODAY, 30)) + '">',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="HEXD.saveDue(\'' + field + '\')">저장</button>');
     }

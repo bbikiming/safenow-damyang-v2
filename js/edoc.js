@@ -8,17 +8,138 @@
  * ========================================================================= */
 (function () {
     'use strict';
+    /* 점검표 X 항목에서 생기는 개선조치의 기본 예정일 — 오늘 + 30일(종전 고정값 2026-07-31 은 기준일을 11월로 옮기며 지난 날짜가 됐다) */
+    function impDue() { var V = window.DYV2; var t = V && V.today ? V.today() : new Date().toISOString().slice(0, 10); var d = new Date(t + 'T00:00:00'); d.setDate(d.getDate() + 30); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
     const T = window.EDOC_T;
     const V = () => window.DYV2;
 
     /* ── 스토어 ── */
     function load(key, def) { try { return JSON.parse(localStorage.getItem(key)) || def; } catch (e) { return def; } }
     function save(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); } catch (e) {} }
+    /* ── 예시 자료 (2026-11-13 기준) ─────────────────────────────────────
+     * 도급관리 — 계약 원장(DYCON 예시 자료)의 계약별 반기 점검표 · 위험성평가 실시 확인 · 수급인 평가.
+     *   2026 상반기: 그때 진행 중이던 공사 2건(M-1·M-2) 확정.
+     *   2026 하반기: 용역 대부분 확정 · 1건 등록완료(상신 전) · 1건 작성중 · 진행 중 공사 M-2·M-3·M-4 는 미작성(지금 할 일).
+     *   도급 서식은 결재 결과를 옮겨 적지 않는 도메인이라(CLAUDE.md §7-1) «확정 · 온나라 상신»에서 멈춘다.
+     * 조직 — 2026 상반기 수행평가 후속조치(F7) 확정.
+     * 개선조치 — 의견청취 «개선조치중» 2건(IMP-2611·2608)과 점검표 X 항목에서 생긴 1건(IMP-2602).
+     * 경영방침 점검표는 여기 두지 않는다 — 문서 id 가 판(v2.0)마다 하나라 확정본을 넣으면 하반기 점검을 쓸 수 없다.
+     *   점검 이력은 경영방침 화면의 판 데이터(inspections)가 갖는다. */
+    function seedDocs() {
+        const P = (T && T.CHECKLIST_PRESETS) || {};
+        const LINES = {
+            water:  { by: '하정수', byUid: 'u_wat3', line: [{ uid: 'u_wat5', name: '문정수', role: '정수팀장', dept: '물순환사업소' }, { uid: 'u_wat1', name: '오순환', role: '물순환사업소장', dept: '물순환사업소' }], lineText: '기안 하정수 → 검토 문정수 → 결재 오순환' },
+            con:    { by: '김도현', byUid: 'u_con3', line: [{ uid: 'u_con6', name: '정안전', role: '안전관리팀장', dept: '건설과' }, { uid: 'u_con1', name: '이건설', role: '건설과장', dept: '건설과' }], lineText: '기안 김도현 → 검토 정안전 → 결재 이건설' },
+            hlth:   { by: '이보건', byUid: 'u_hlth2', line: [{ uid: 'u_hlth3', name: '윤담당', role: '보건담당', dept: '보건소' }, { uid: 'u_hlth1', name: '강보건', role: '보건소장', dept: '보건소' }], lineText: '기안 이보건 → 검토 윤담당 → 결재 강보건' },
+            cul:    { by: '한지훈', byUid: 'u_cul1', line: [{ uid: 'u_jjt1', name: '김중대', role: '중대재해팀장', dept: '재난안전과' }, { uid: 'u_safe1', name: '홍길동', role: '재난안전과장', dept: '재난안전과' }], lineText: '기안 한지훈 → 검토 김중대 → 결재 홍길동' },
+            safety: { by: '박안전', byUid: 'u_jjt2', line: [{ uid: 'u_jjt1', name: '김중대', role: '중대재해팀장', dept: '재난안전과' }, { uid: 'u_safe1', name: '홍길동', role: '재난안전과장', dept: '재난안전과' }], lineText: '기안 박안전 → 검토 김중대 → 결재 홍길동' },
+        };
+        const WHO = {
+            water: '물순환사업소 · 주무관 / 하정수', con: '건설과 · 주무관 / 김도현', hlth: '보건소 · 보건행정 주무관 / 이보건',
+            cul: '문화체육과 · 주무관 / 한지훈', safety: '재난안전과 · 안전관리 주무관 / 박안전',
+        };
+        const ox = (n, x) => { const o = {}; for (let i = 0; i < n; i++) o[i] = { v: (x && x[i]) ? 'X' : 'O', note: (x && x[i]) || '' }; return o; };
+        let seq = 0;
+        /* status: '작성중' | '등록완료' | '확정' — 확정은 상신까지 한 것 */
+        const F5 = (who, date, status, list, x, sentAt) => {
+            const L = LINES[who], n = list.length;
+            const h = [{ at: date + ' 10:20', ev: status === '작성중' ? '임시저장' : '등록 (작성자: ' + L.by + ')' }];
+            const d = { status: status, fields: { date: date, owner: WHO[who], items: ox(n, x) }, history: h, checklistSnapshot: JSON.parse(JSON.stringify(list)) };
+            if (status === '확정') {
+                h.push({ at: (sentAt || date) + ' 15:40', ev: '확정 · 온나라 결재 상신' });
+                d.approval = Object.assign({ sample: true }, L);
+                d.docNo = '온나라-2026-' + (5100 + (++seq) * 7);
+            }
+            return d;
+        };
+        const CON = (P.contract || []).concat(P.contractBuild || []);   /* 공사 = 공통 3 + 공사기간 */
+        const SVC = P.contract || [];                                     /* 용역 = 공통 3 */
+        const RISK = P.contractRisk || [];
+        const D = {};
+        const chk = (id, half, who, date, status, build, x, sentAt) => { D['EDOC-도급점검-' + id + '-' + half] = F5(who, date, status, build ? CON : SVC, x, sentAt); };
+        const risk = (id, kind, who, date, status, sentAt) => { D['EDOC-도급위험성-' + id + '-' + kind] = F5(who, date, status, RISK, null, sentAt); };
+        /* 2026 상반기 반기 점검표 — 그때 진행 중이던 공사 */
+        chk('M-1', '2026H1', 'con', '2026-06-18', '확정', true, null, '2026-06-22');
+        chk('M-2', '2026H1', 'water', '2026-06-24', '확정', true, null, '2026-06-26');
+        /* 2026 하반기 반기 점검표 */
+        chk('M-1', '2026H2', 'con', '2026-10-14', '확정', true, null, '2026-10-16');
+        chk('G-4173', '2026H2', 'water', '2026-11-03', '확정', false, null, '2026-11-05');
+        chk('G-4170', '2026H2', 'water', '2026-10-27', '확정', false, null, '2026-10-29');
+        chk('G-4169', '2026H2', 'water', '2026-10-22', '확정', false, { 2: '서약서 미수령 — 10월 말까지 받기로 함(개선조치 IMP-2602)' }, '2026-10-23');
+        chk('G-4168', '2026H2', 'water', '2026-10-20', '확정', false, null, '2026-10-21');
+        chk('G-4166', '2026H2', 'water', '2026-11-10', '등록완료', false);
+        chk('G-4165', '2026H2', 'water', '2026-10-28', '확정', false, null, '2026-10-30');
+        chk('G-4164', '2026H2', 'water', '2026-10-28', '확정', false, null, '2026-10-30');
+        chk('G-4167', '2026H2', 'safety', '2026-11-12', '작성중', false);
+        chk('G-4172', '2026H2', 'safety', '2026-10-19', '확정', false, null, '2026-10-20');
+        chk('G-4171', '2026H2', 'hlth', '2026-10-21', '확정', false, null, '2026-10-23');
+        /* M-2·M-3·M-4 하반기 점검표는 미작성 — 진행 중인 공사의 지금 할 일 */
+        /* 도급사업 위험성평가 실시 확인 — 작업 시작 전 최초 1장 + 작업이 바뀔 때 수시 */
+        risk('M-1', '최초', 'con', '2026-02-27', '확정', '2026-02-27');
+        risk('M-1', '수시-1', 'con', '2026-07-21', '확정', '2026-07-22');   /* 우기 배수로 작업 추가 */
+        risk('M-2', '최초', 'water', '2026-05-29', '확정', '2026-05-29');
+        risk('M-3', '최초', 'water', '2026-09-15', '확정', '2026-09-16');
+        risk('M-4', '최초', 'cul', '2026-10-16', '등록완료');
+        risk('G-4173', '최초', 'water', '2026-08-13', '확정', '2026-08-13');
+        risk('G-4170', '최초', 'water', '2026-07-29', '확정', '2026-07-30');
+        risk('G-4169', '최초', 'water', '2026-07-27', '확정', '2026-07-28');
+        risk('G-4168', '최초', 'water', '2026-07-21', '확정', '2026-07-21');
+        risk('G-4166', '최초', 'water', '2026-07-08', '확정', '2026-07-09');
+        risk('G-4165', '최초', 'water', '2026-07-03', '확정', '2026-07-06');
+        risk('G-4167', '최초', 'safety', '2026-07-09', '확정', '2026-07-10');
+        /* 수급인 안전보건 수준 평가(F6) — 업체 단위. 연구·검토 용역 업체 2곳은 아직 미평가 */
+        const sc = (a) => { const o = {}; a.forEach((v, i) => { o[i] = { v: v, note: '' }; }); return o; };
+        const F6 = (who, date, co, scores, opinion, status) => {
+            const L = LINES[who];
+            const d = { status: status || '확정', fields: { date: date, subject: co, items: sc(scores), opinion: opinion },
+                history: [{ at: date + ' 11:00', ev: '등록 (작성자: ' + L.by + ')' }] };
+            if (d.status === '확정') { d.history.push({ at: date + ' 16:10', ev: '확정 · 온나라 결재 상신' }); d.approval = Object.assign({ sample: true }, L); d.docNo = '온나라-2026-' + (5100 + (++seq) * 7); }
+            return d;
+        };
+        D['EDOC-수급인평가-(주)태성기술개발'] = F6('water', '2026-08-05', '(주)태성기술개발', ['5 (우수)', '4', '4', '4'], '안전보건관리체계·교육 양호. 정밀점검 현장 비상연락망 보완 권고.');
+        D['EDOC-수급인평가-주식회사 길성이앤시'] = F6('water', '2026-08-04', '주식회사 길성이앤시', ['4', '4', '3 (보통)', '4'], '적격. 신규 투입자 교육 기록 보관 권고.');
+        D['EDOC-수급인평가-(주)대림환경'] = F6('water', '2026-07-15', '(주)대림환경', ['4', '3 (보통)', '4', '3 (보통)'], '적격. 폐기물 상차 작업 신호수 배치 확인.');
+        D['EDOC-수급인평가-(주)우리종합기술'] = F6('water', '2026-08-19', '(주)우리종합기술', ['4', '5 (우수)', '4', '4'], '적격.');
+        D['EDOC-수급인평가-(주)우진엔지니어링'] = F6('water', '2026-07-24', '(주)우진엔지니어링', ['4', '4', '4', '3 (보통)'], '적격. 지하수 관정 작업 추락 방지 조치 확인.');
+        D['EDOC-수급인평가-(주)진성기술단'] = F6('water', '2026-07-08', '(주)진성기술단', ['4', '4', '3 (보통)', '4'], '적격.');
+        D['EDOC-수급인평가-(주)금성환경산업'] = F6('safety', '2026-11-11', '(주)금성환경산업', ['3 (보통)', '4', '미평가', '미평가'], '', '등록완료');
+        /* 조직 — 2026 상반기 수행평가 후속조치(F7) */
+        D['EDOC-후속조치-2026H1'] = { status: '확정', fields: { source: '2026 상반기 안전보건관리책임자등 수행평가',
+                action: '우수 관리감독자 2명(건설과 정안전·물순환사업소 문정수) 하반기 포상 추천 · 평가 «보통» 항목(안전점검 기록 관리)은 하반기 교육에 반영',
+                due: '2026-08-31', owner: '재난안전과 · 안전관리 주무관 / 박안전', checker: '재난안전과장 홍길동' },
+            history: [{ at: '2026-07-20 10:00', ev: '등록 (작성자: 박안전)' }, { at: '2026-07-22 14:30', ev: '확정 · 온나라 결재 상신' }],
+            approval: Object.assign({ sample: true }, LINES.safety), docNo: '온나라-2026-' + (5100 + (++seq) * 7) };
+        return D;
+    }
+    function seedImps() {
+        return [
+            { id: 'IMP-2611', title: '도로 보수 현장 야간 작업 경광등 추가 배치', sourceMenu: '의견청취', sourceDoc: 'OPN-22',
+              owner: '건설과 · 안전관리팀장 / 정안전', due: '2026-11-27', status: '진행', created: '2026-11-06 10:10',
+              history: [{ at: '2026-11-06 10:10', ev: '접수 — 의견청취 자동 유입' }, { at: '2026-11-07 09:30', ev: '계획 처리 — 구간 시작·끝 경광등 각 1대 추가, 일몰 30분 전 점등' },
+                        { at: '2026-11-11 15:00', ev: '진행 처리 — 경광등 4대 구매 요청(11-20 납품 예정)' }] },
+            { id: 'IMP-2608', title: '동절기 방한 보호구 11월 중 지급', sourceMenu: '의견청취', sourceDoc: 'OPN-21',
+              owner: '재난안전과 · 안전관리 주무관 / 박안전', due: '2026-11-20', status: '진행', created: '2026-10-30 09:40',
+              history: [{ at: '2026-10-30 09:40', ev: '접수 — 의견청취 자동 유입' }, { at: '2026-11-02 10:00', ev: '계획 처리 — 현장 근무자 86명 방한장갑·방한화 지급' },
+                        { at: '2026-11-09 11:20', ev: '진행 처리 — 구매 요청 완료(11-18 납품 예정)' }] },
+            { id: 'IMP-2602', title: '안전보건관리 준수 서약서 수령 — 고서공공하수처리시설 외 1개소 정기안전점검용역', sourceMenu: '도급관리 · 반기',
+              sourceDoc: '2026 하반기 도급사업 안전보건 점검표 — 2026년 고서공공하수처리시설 외 1개소 하반기 정기안전점검용역 시행',
+              owner: '물순환사업소 · 주무관 / 하정수', due: '2026-10-31', status: '종결', created: '2026-10-23 15:40',
+              history: [{ at: '2026-10-23 15:40', ev: '접수 — 도급관리 · 반기 자동 유입' }, { at: '2026-10-24 09:00', ev: '계획 처리' }, { at: '2026-10-24 09:05', ev: '진행 처리' },
+                        { at: '2026-10-29 14:00', ev: '완료확인 처리 — 서약서 원본 수령(10-29)' }, { at: '2026-10-30 10:00', ev: '종결 처리' }] },
+        ];
+    }
+    function loadSeeded(key, make) {
+        let v = null;
+        try { v = JSON.parse(localStorage.getItem(key)); } catch (e) { v = null; }
+        if (v == null) { v = make(); save(key, v); }
+        return v;
+    }
+    /* v2 — 2026-11-13 기준 예시 자료를 처음 한 번 싣는다(아래 seedDocs·seedImps). 키를 올려 옛 빈 저장분을 버린다. */
     const S = {
-        docs() { return load('dy-edoc-v1', {}); },
-        saveDoc(id, inst) { const all = this.docs(); all[id] = inst; save('dy-edoc-v1', all); },
-        imps() { return load('dy-imp-v1', []); },
-        saveImps(list) { save('dy-imp-v1', list); },
+        docs() { return loadSeeded('dy-edoc-v2', seedDocs); },
+        saveDoc(id, inst) { const all = this.docs(); all[id] = inst; save('dy-edoc-v2', all); },
+        imps() { return loadSeeded('dy-imp-v2', seedImps); },
+        saveImps(list) { save('dy-imp-v2', list); },
         ntfs() { return load('dy-ntf-v1', []); },
         pushNtf(n) { const l = this.ntfs(); l.unshift(n); save('dy-ntf-v1', l.slice(0, 50)); },
     };
@@ -36,7 +157,7 @@
             all[id].checklistSnapshot = clone(checklist);
             changed = true;
         });
-        if (changed) save('dy-edoc-v1', all);
+        if (changed) save('dy-edoc-v2', all);
     }
 
     /* ── 알림 발송 시뮬레이션 (COM-008) ── */
@@ -351,7 +472,7 @@
                 const items = renderCtx.checklist || T.CHECKLIST_PRESETS.default;
                 Object.entries(saved.fields[f.k] || {}).forEach(([i, r]) => {
                     if (r.v === 'X') {
-                        addImprovement({ title: (items[i] && typeof items[i] === 'object' ? items[i].item : items[i]) + (r.note ? ' — ' + r.note : ''), sourceMenu: (opts.ctx && opts.ctx.menuLabel) || '점검', sourceDoc: opts.title, due: '2026-07-31' });
+                        addImprovement({ title: (items[i] && typeof items[i] === 'object' ? items[i].item : items[i]) + (r.note ? ' — ' + r.note : ''), sourceMenu: (opts.ctx && opts.ctx.menuLabel) || '점검', sourceDoc: opts.title, due: impDue() });
                         createdImps++;
                     }
                 });
@@ -445,7 +566,7 @@
             formDef.fields.filter(f => f.type === 'checklist').forEach(f => {
                 const items = renderCtx.checklist || T.CHECKLIST_PRESETS.default;
                 Object.entries(saved.fields[f.k] || {}).forEach(([i, r]) => {
-                    if (r.v === 'X') { addImprovement({ title: (items[i] && typeof items[i] === 'object' ? items[i].item : items[i]) + (r.note ? ' — ' + r.note : ''), sourceMenu: (opts.ctx && opts.ctx.menuLabel) || '점검', sourceDoc: opts.title, due: '2026-07-31' }); created++; }
+                    if (r.v === 'X') { addImprovement({ title: (items[i] && typeof items[i] === 'object' ? items[i].item : items[i]) + (r.note ? ' — ' + r.note : ''), sourceMenu: (opts.ctx && opts.ctx.menuLabel) || '점검', sourceDoc: opts.title, due: impDue() }); created++; }
                 });
             });
             const docNo = onnaraPopup(opts.title, '', snap);

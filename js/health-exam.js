@@ -213,7 +213,7 @@
             '<div class="ri-modal-row" style="margin-bottom:12px;"><label class="form-label" for="he-n-target">대상자 수</label>' +
                 '<input type="number" class="form-input" id="he-n-target" value="10" min="1"></div>' +
             '<div class="ri-modal-row" style="margin-bottom:12px;"><label class="form-label" for="he-n-planned">검진 예정일</label>' +
-                '<input type="date" class="form-input" id="he-n-planned" value="2026-09-15"></div>' +
+                '<input type="date" class="form-input" id="he-n-planned" value="' + S().addDays(S().TODAY, 14) + '"></div>' +
             '<div class="ri-modal-row"><label><input type="checkbox" id="he-n-carc"> 고용노동부 고시 30년 보존 대상 물질 취급 기록</label></div>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="HEX.saveNew()">등록</button>');

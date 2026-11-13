@@ -322,7 +322,7 @@
                     '</div>';
             }).join('') + '</div>' +
             '<div class="edu-modal-row" style="margin-top:8px;"><label class="form-label" for="edus-memo">추가 메모 (선택)</label>' +
-            '<textarea class="form-textarea" id="edus-memo" rows="2" placeholder="예: 8월 마감 전 이수 필수"></textarea></div>';
+            '<textarea class="form-textarea" id="edus-memo" rows="2" placeholder="예: 사이클 종료 전 이수 필수"></textarea></div>';
         V().openModal('미이수자 일괄 독촉',
             body,
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +

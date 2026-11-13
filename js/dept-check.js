@@ -77,7 +77,7 @@
      *   «부서 안전보건 담당자» 등급 구성원(DYADM.deptContacts)이 그 자리를 대신한다.
      * 배포·기한 변경·내 할일 : 지정 담당자 → 없으면 그 부서 실무자 전원 → 없으면 부서장
      * 반려                    : 제출한 사람 · 고친 사람 + 지정 담당자
-     * 독촉                    : 지정 담당자 → 없으면 부서장(공통 규칙, DYADM.deptContacts)
+     * 독촉                    : 지정 담당자 → 없으면 부서장 → 없으면 실무자 전원(공통 규칙, DYADM.deptContacts)
      * 검토 요청               : 재난안전과 담당자·팀장(과장 제외) */
     function membersDeep(deptId) {
         var n = global.DYV2 && global.DYV2.orgNode ? global.DYV2.orgNode(deptId) : null, out = [];
@@ -110,7 +110,24 @@
         var pr = practitionerUids(deptId); if (pr.length) return pr;
         return leadUids(deptId);
     }
-    function remindUids(deptId) { var d = designatedUids(deptId); return d.length ? d : leadUids(deptId); }
+    /* 독촉 받는 사람 — 공통 규칙 한 곳(DYADM.deptContacts)을 그대로 쓴다. 독촉 확인 창이 보여 주는
+       «받는 사람»(contactText)과 실제 알림이 같은 사람이어야 한다. */
+    function remindUids(deptId) {
+        var A = global.DYADM, c = A && A.deptContacts ? A.deptContacts(deptId) : null;
+        if (c) return c.people.map(function (x) { return x.uid; }).filter(Boolean);
+        var d = designatedUids(deptId); return d.length ? d : leadUids(deptId);
+    }
+    /* 배포·할 일을 받는 사람 한 줄 — 시달 공문 별지 «받는 사람»이 실제 할 일·알림 대상(workUids)과 같은 말을 한다.
+       지정 담당자 → 실무자 전원 → 부서장(요청서 v2 §1-10) */
+    function workText(deptId) {
+        var names = function (uids) {
+            return uids.map(function (u) { var m = membersDeep(deptId).filter(function (x) { return x.uid === u; })[0]; return m ? m.name : ''; }).filter(Boolean).join('·');
+        };
+        var d = designatedSubmitters(deptId); if (d.length) return names(d) + '(부서 안전보건 담당자)';
+        var pr = practitionerUids(deptId); if (pr.length) return names(pr) + '(실무자 전원 — 담당자 미지정)';
+        var l = leadUids(deptId); if (l.length) return '부서장 ' + names(l) + '(실무자 계정 없음)';
+        return '받는 사람 없음(조직도 미등록)';
+    }
     function reviewerUids() {
         var own = R() ? R().OWNER_DEPT : 'safety';
         return membersDeep(own).filter(function (m) { return !/(과장|소장|실장|국장|읍장|면장|군수)$/.test(m.role || ''); })
@@ -133,11 +150,11 @@
             : '해당 부서 담당자와 주관부서(재난안전과)만 등록할 수 있습니다.');
     }
 
-    /* v5 — 이행점검 배포 흐름(확인 축·미이행 조치계획) 시드 (2026-11-12).
+    /* v6 — 2026-11-13 기준 운영 이력 예시(2025 상반기~2026 상반기 마감 · 2026 하반기 배포 전). v5 는 배포 흐름(확인 축·미이행 조치계획) 시드 (2026-11-12).
      * key 에 **회차 축**이 들어간다 — 호출자가 실어 보낸다.
      *   예) 'comply-industrial|2026-H1'(반기) · 'policy-post|v2.0'(방침 버전) */
-    var SKEY = 'dy-deptcheck-v5';
-    var FKEY = 'dy-comply-flow-v1';   /* 배포·마감 기록 — 회차 단위 */
+    var SKEY = 'dy-deptcheck-v7';   /* v7 — 물순환사업소 게시 미등록(실습 자리) · 보건소 해당없음 사유 (2026-11-13) */
+    var FKEY = 'dy-comply-flow-v3';   /* v3 — 시달 공문에 생산등록번호·결재일 (2026-11-13) */   /* 배포·마감 기록 — 회차 단위 */
 
     /* 회의에서 확인된 전체 대상 수(과 + 사업소). 실제 명단은 발주처 제공 대기. */
     var EXPECTED_DEPTS = 39;
@@ -157,48 +174,130 @@
     var SEED_THUMB = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAwICQsJCAwLCgsODQwOEh4UEhEREiUbHBYeLCcuLisnKyoxN0Y7MTRCNCorPVM+QkhKTk9OLztWXFVMW0ZNTkv/2wBDAQ0ODhIQEiQUFCRLMisyS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0v/wAARCAB4AKADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDmc0ZpuaM1geUOzRmm5ozQA7NGabmjNADs0ZpuaM0AOzRmm5ozQA7NGabmjNADs0ZpuaM0AOzRmm5ozQA7NGabmjNADs0ZpuaM0ANzRmm5ozTGOzRmm5ozQA7NGabmjNADs0ZpuaM0AOzRmm5ozQA7NGabmjNADs0ZpuaM0AOzRmm5ozQA7NGabmjNADs0ZpuaM0ANzRmm5ozQUOzRmm5ozQA7NGabmjNADs0ZpuaM0AOzRmm5ozQA7NGabmjNADs0ZpuaM0AOzRmm5ozQA7NGabmjNADs0ZpuaM0ANzRmkzXVR6RaNdOhssojSC3+dh9rUQyMH6+qoeMD5sU7FKNzls0Zrq4tIsDBbyTWkqzScXMEYJ+zDsSS425HOWyKz4baze1s4jbDzZ7Gedpt7bgyGUrgZx/yzAPFOw+RmJmjNb1zDaW1tcXElqLh1FkFEkj4G+As3Qg8kfh+lWpdGtYZrqKO0M8MaXZacu2Ynj8zYvBx0VTyOd3pRYORnL5ozSZozSJFzRmkzRmgBc0ZpM0ZoAXNGaTNGaAFzRmkzRmgBc0ZpM0ZoAXNGaTNGaAG5qSC4kt3LxNtYoyE4zwylSPyJqHNGaCh2aM03NGaBDs1Zj1C5jtzAjqI9pXOxdwB6gNjIB9Ae59aqZozQMdmjNNzRmgQ7NGabmjNADs0ZpuaM0AOzRmm5ozQA7NGabmjNADs0ZpuaM0AOzRmm5ozQA3NGabmjNModmjNNzRmgB2aM03NGaAHZozTc0ZoAdmjNNzRmgB2aM03NGaAHZozTc0ZoAdmjNNzRmgB2aM03NGaAHZozTc0ZoAbmjNJmjNAxc0ZpM0ZoAXNGaTNGaAFzRmkzRmgBc0ZpM0ZoAXNGaTNGaAFzRmkzRmgBc0ZpM0ZoAXNGaTNGaAFzRmkzRmgBuaM0UUxhmjNFFABmjNFFABmjNFFABmjNFFABmjNFFABmjNFFABmjNFFABmjNFFABmjNFFAH/9k=';
     function ph(n) { return { name: n, size: 164000, type: 'image/jpeg', w: 1600, h: 1200, thumb: SEED_THUMB }; }
     function doc(n) { return { name: n, size: 412000, type: 'application/pdf' }; }
+    /* 예시 자료 — 2026-11-13 기준으로 «운영해 온 시스템»처럼 보이게 짠다(2026-11-13 개정).
+     *   2025 상반기 · 2025 하반기 · 2026 상반기 — 배포(시달 공문) → 부서 제출 → 검토(승인·반려→재제출) → 독촉 → 마감 보고까지 끝나 잠긴 회차
+     *   2026 하반기 — **배포 전**(하반기 점검은 11~12월에 한다). [점검 배포]부터 실습한다.
+     *   지난 반기 «일부 미이행» 부서는 다음 회차에서 조치 결과를 함께 냈다(prevAction) — 2026 상반기 미이행
+     *   (문화체육과·건설과 / 시민 축 환경과)은 하반기를 배포하면 «지난 반기 미이행 조치 결과»로 이어진다.
+     *   사람은 조직도(DYV2.ORG) 실인물, 검토자는 재난안전과 박안전(자기 부서 줄은 김중대 팀장). */
+    function ok(by, at, round) { return { state: 'OK', round: round || 1, by: by, at: at }; }
+    /* 제출 한 줄 — status · 제출일 · 제출자 · uid · 점검표 파일명 · 확인 · 그 밖 */
+    function sub(status, at, who, uid, file, confirm, extra) {
+        return Object.assign({ status: status, date: at, submittedAt: at, submittedBy: who, submittedByUid: uid,
+            photos: [doc(file)], confirm: confirm }, extra || {});
+    }
+    function fn(dept, per, ax) { return dept + '_' + per + '_' + ax + '_자체점검표(부서장 서명).pdf'; }
     var SEED = {
-        /* 경영방침 게시 — 게시 4 · 해당없음(사유O) 1 · 해당없음(사유X) 1 · 나머지 미등록 */
+        /* 경영방침 게시 — 현행 v2.0(2026-01-29 결재, 02-02 시행). 대부분 2월 초 게시 ·
+           재무과는 11월 사무실 이전으로 게시물을 떼어 «미게시» · 보건소는 «해당없음»(사유) ·
+           담양읍·물순환사업소는 미등록 — 물순환사업소는 부서 담당자(하정수) 실습 자리로 비워 둔다(2026-11-13 실습 데이터 점검) */
         'policy-post|v2.0': {
-            safety:   { status: 'DONE', place: '군청 본관 1층 게시판', date: '2026-03-04', photos: [ph('재난안전과_게시_1.jpg')] },
-            env:      { status: 'DONE', place: '환경과 사무실 입구', date: '2026-03-05', photos: [ph('환경과_게시_1.jpg')] },
-            water:    { status: 'DONE', place: '물순환사업소 정문 게시판', date: '2026-03-06', photos: [ph('물순환_게시_1.jpg'), ph('물순환_게시_2.jpg')] },
-            facility: { status: 'DONE', place: '공공시설사업소 현관', date: '2026-03-06', photos: [ph('공공시설_게시_1.jpg')] },
-            health:   { status: 'NA', naReason: '보건소는 별도 청사로 군청 게시판 대상이 아님 — 보건소 자체 게시판에 별도 게시(2026-03-10)', date: '2026-03-10' },
-            culture:  { status: 'NA', naReason: '', date: '' }
+            safety:    { status: 'DONE', place: '군청 본관 1층 게시판 · 내부망(새올) 전자게시', date: '2026-02-03', photos: [ph('재난안전과_게시_1.jpg'), ph('재난안전과_전자게시.jpg')] },
+            plan:      { status: 'DONE', place: '기획예산실 사무실 출입문 게시판', date: '2026-02-04', photos: [ph('기획예산실_게시_1.jpg')] },
+            acct:      { status: 'DONE', place: '회계과 계약 민원창구 옆 게시판', date: '2026-02-04', photos: [ph('회계과_게시_1.jpg')] },
+            env:       { status: 'DONE', place: '환경과 사무실 입구 · 담양군 자원순환센터 관리동', date: '2026-02-05', photos: [ph('환경과_게시_1.jpg'), ph('자원순환센터_게시.jpg')] },
+            culture:   { status: 'DONE', place: '담양종합체육관 1층 로비 게시판', date: '2026-02-10', photos: [ph('문화체육과_체육관_게시.jpg')] },
+            finance:   { status: 'TODO', place: '사무실 이전(11-03)으로 기존 게시물 철거 — 11월 중 새 사무실 게시판에 다시 게시 예정', date: '2026-11-04', photos: [] },
+            health:    { status: 'NA', naReason: '보건소 사무실은 군청 본관 2층에 있고 따로 관리하는 사업장이 없음 — 재난안전과가 본관 1층 게시판·새올 전자게시에 붙인 방침으로 갈음(재난안전과 협의 2026-02-09)', date: '2026-02-09' },
+            construct: { status: 'DONE', place: '건설과 사무실 입구 · 도로보수 현장사무소', date: '2026-02-06', photos: [ph('건설과_게시_1.jpg'), ph('현장사무소_게시.jpg')] },
+            facility:  { status: 'DONE', place: '공공시설사업소 현관 게시판', date: '2026-02-05', photos: [ph('공공시설_게시_1.jpg')] }
+            /* water — 미등록(실습 자리) · town_damyang — 미등록 */
         },
-        /* 중대산업재해 2026 상반기 — 확인 완료·확인 대기·보완 요청·일부 미이행·해당없음·미제출이 한 화면에 다 보이게 */
+
+        /* ── 2025 상반기 (배포 05-12 · 기한 06-30 · 마감 보고 07-11) ── */
+        'comply-industrial|2025-H1': {
+            safety:    sub('DONE', '2025-06-20', '박안전', 'u_jjt2', fn('재난안전과', '2025상반기', '중대산업재해'), ok('김중대', '2025-06-23')),
+            plan:      sub('NA', '2025-06-18', '한열람', 'u_plan2', fn('기획예산실', '2025상반기', '중대산업재해'), ok('박안전', '2025-06-23'),
+                           { naReason: '기획예산실은 현장 작업·관리 시설이 없어 안전조치 항목 대상이 아님 — 예산 편성 항목(점검표 10번)만 작성해 붙임' }),
+            acct:      sub('DONE', '2025-06-25', '최회계', 'u_acct2', fn('회계과', '2025상반기', '중대산업재해'), ok('박안전', '2025-06-27')),
+            env:       sub('TODO', '2025-06-27', '정수빈', 'u_env5', fn('환경과', '2025상반기', '중대산업재해'), ok('박안전', '2025-07-01'),
+                           { missText: '점검표 7번(유해·위험요인 개선조치 이행) — 자원순환센터 슬러지 반출장 안전난간 보수 미완료',
+                             plan: '7월 중 안전난간 보수 공사 발주, 8월 말까지 준공', planDue: '2025-08-29' }),
+            culture:   sub('DONE', '2025-06-26', '한지훈', 'u_cul1', fn('문화체육과', '2025상반기', '중대산업재해'), ok('박안전', '2025-06-27')),
+            finance:   sub('DONE', '2025-06-30', '최재무', 'u_fin1', fn('재무과', '2025상반기', '중대산업재해'), ok('박안전', '2025-07-01')),
+            health:    sub('DONE', '2025-06-24', '이보건', 'u_hlth2', fn('보건소', '2025상반기', '중대산업재해'), ok('박안전', '2025-06-25')),
+            construct: sub('TODO', '2025-06-30', '박현장', 'u_con2', fn('건설과', '2025상반기', '중대산업재해'), ok('박안전', '2025-07-02'),
+                           { missText: '점검표 9번(수급인 안전보건 수준 평가) — 상반기 착공 공사 2건(군도 정비·배수로 정비) 평가 미실시',
+                             plan: '8월까지 두 공사 수급인 평가표 작성·제출', planDue: '2025-08-31' }),
+            /* 반려 → 재제출(2차) 사례 — 06-27 첫 제출은 부서장 서명이 빠져 07-01 반려, 07-03 다시 제출 */
+            facility:  sub('DONE', '2025-07-03', '한담당', 'u_fac2', fn('공공시설사업소', '2025상반기', '중대산업재해'), ok('박안전', '2025-07-04', 2)),
+            water:     sub('DONE', '2025-06-23', '하정수', 'u_wat3', fn('물순환사업소', '2025상반기', '중대산업재해'), ok('박안전', '2025-06-25')),
+            /* 기한을 넘겨 독촉 2회 뒤 제출 */
+            town_damyang: sub('DONE', '2025-07-02', '배주민', 'u_twn2', fn('담양읍', '2025상반기', '중대산업재해'), ok('박안전', '2025-07-03'))
+        },
+        'comply-citizen|2025-H1': {
+            env:       sub('DONE', '2025-06-27', '정수빈', 'u_env5', fn('환경과', '2025상반기', '중대시민재해'), ok('박안전', '2025-07-01')),
+            culture:   sub('DONE', '2025-06-26', '한지훈', 'u_cul1', fn('문화체육과', '2025상반기', '중대시민재해'), ok('박안전', '2025-06-27')),
+            finance:   sub('DONE', '2025-06-30', '최재무', 'u_fin1', fn('재무과', '2025상반기', '중대시민재해'), ok('박안전', '2025-07-01')),
+            construct: sub('DONE', '2025-06-30', '박현장', 'u_con2', fn('건설과', '2025상반기', '중대시민재해'), ok('박안전', '2025-07-02')),
+            facility:  sub('TODO', '2025-06-27', '한담당', 'u_fac2', fn('공공시설사업소', '2025상반기', '중대시민재해'), ok('박안전', '2025-07-01'),
+                           { missText: '점검표 3번(공중이용시설 정기점검 결과 보고) — 담양종합체육관 정밀안전점검 결과를 기한 내 보고하지 않음',
+                             plan: '9월까지 정밀안전점검 결과 보고, 지적사항 보수계획 수립', planDue: '2025-09-30' }),
+            water:     sub('DONE', '2025-06-23', '하정수', 'u_wat3', fn('물순환사업소', '2025상반기', '중대시민재해'), ok('박안전', '2025-06-25'))
+        },
+
+        /* ── 2025 하반기 (배포 11-10 · 기한 12-19 · 마감 보고 12-29) ── */
+        'comply-industrial|2025-H2': {
+            safety:    sub('DONE', '2025-12-05', '박안전', 'u_jjt2', fn('재난안전과', '2025하반기', '중대산업재해'), ok('김중대', '2025-12-08')),
+            plan:      sub('NA', '2025-12-03', '한열람', 'u_plan2', fn('기획예산실', '2025하반기', '중대산업재해'), ok('박안전', '2025-12-04'),
+                           { naReason: '기획예산실은 현장 작업·관리 시설이 없어 안전조치 항목 대상이 아님 — 2026 안전보건 예산 편성 내역(점검표 10번)만 작성해 붙임' }),
+            acct:      sub('DONE', '2025-12-10', '최회계', 'u_acct2', fn('회계과', '2025하반기', '중대산업재해'), ok('박안전', '2025-12-11')),
+            env:       sub('DONE', '2025-12-12', '정환경', 'u_env2', fn('환경과', '2025하반기', '중대산업재해'), ok('박안전', '2025-12-15'),
+                           { prevAction: { state: 'DONE', text: '안전난간 보수 08-22 준공(08-25 준공검사) — 사진대장 붙임', period: '2025 상반기' } }),
+            culture:   sub('TODO', '2025-12-15', '한지훈', 'u_cul1', fn('문화체육과', '2025하반기', '중대산업재해'), ok('박안전', '2025-12-16'),
+                           { missText: '점검표 4번(체육시설 안전점검 결과 기록) — 하반기 정기점검 결과를 시설 대장에 기록하지 않음',
+                             plan: '1월 중 체육시설 3개소 점검 결과를 대장에 기록하고 기록 담당자 지정', planDue: '2026-01-30' }),
+            finance:   sub('DONE', '2025-12-11', '최재무', 'u_fin1', fn('재무과', '2025하반기', '중대산업재해'), ok('박안전', '2025-12-12')),
+            health:    sub('DONE', '2025-12-09', '백지영', 'u_hlth4', fn('보건소', '2025하반기', '중대산업재해'), ok('김중대', '2025-12-10')),
+            construct: sub('DONE', '2025-12-17', '김도현', 'u_con3', fn('건설과', '2025하반기', '중대산업재해'), ok('박안전', '2025-12-18'),
+                           { prevAction: { state: 'DONE', text: '8월 두 공사 수급인 평가 완료(평가표 2부 제출)', period: '2025 상반기' } }),
+            facility:  sub('DONE', '2025-12-16', '한운영', 'u_fac3', fn('공공시설사업소', '2025하반기', '중대산업재해'), ok('박안전', '2025-12-17')),
+            water:     sub('DONE', '2025-12-04', '하정수', 'u_wat3', fn('물순환사업소', '2025하반기', '중대산업재해'), ok('박안전', '2025-12-05')),
+            town_damyang: sub('DONE', '2025-12-23', '배주민', 'u_twn2', fn('담양읍', '2025하반기', '중대산업재해'), ok('박안전', '2025-12-24'))
+        },
+        'comply-citizen|2025-H2': {
+            env:       sub('DONE', '2025-12-12', '정수빈', 'u_env5', fn('환경과', '2025하반기', '중대시민재해'), ok('박안전', '2025-12-15')),
+            culture:   sub('DONE', '2025-12-15', '한지훈', 'u_cul1', fn('문화체육과', '2025하반기', '중대시민재해'), ok('박안전', '2025-12-16')),
+            finance:   sub('DONE', '2025-12-11', '강세무', 'u_fin2', fn('재무과', '2025하반기', '중대시민재해'), ok('박안전', '2025-12-12')),
+            construct: sub('DONE', '2025-12-17', '김도현', 'u_con3', fn('건설과', '2025하반기', '중대시민재해'), ok('박안전', '2025-12-18')),
+            facility:  sub('DONE', '2025-12-16', '한운영', 'u_fac3', fn('공공시설사업소', '2025하반기', '중대시민재해'), ok('박안전', '2025-12-17'),
+                           { prevAction: { state: 'DOING', text: '정밀안전점검 결과 09-26 보고 · 지적 보수공사는 2026년 예산에 반영(3월 착공 예정)', period: '2025 상반기' } }),
+            water:     sub('DONE', '2025-12-04', '하정수', 'u_wat3', fn('물순환사업소', '2025하반기', '중대시민재해'), ok('박안전', '2025-12-05'))
+        },
+
+        /* ── 2026 상반기 (배포 05-14 · 기한 06-30 · 마감 보고 07-10) ── */
         'comply-industrial|2026-H1': {
-            safety:    { status: 'DONE', date: '2026-06-24', photos: [doc('재난안전과_상반기_자체점검표.pdf')], submittedAt: '2026-06-24', submittedBy: '박안전', submittedByUid: 'u_jjt2',
-                         confirm: { state: 'WAIT', round: 1 } },
-            water:     { status: 'DONE', date: '2026-06-26', place: '지적 없음', photos: [doc('물순환사업소_상반기_자체점검표.pdf')], submittedAt: '2026-06-26', submittedBy: '하정수', submittedByUid: 'u_wat3',
-                         confirm: { state: 'OK', round: 1, by: '박안전', at: '2026-06-29' } },
-            env:       { status: 'DONE', date: '2026-06-27', photos: [doc('환경과_상반기_자체점검표.pdf')], submittedAt: '2026-06-27', submittedBy: '정수빈', submittedByUid: 'u_env5',
-                         confirm: { state: 'OK', round: 1, by: '박안전', at: '2026-06-29' } },
-            construct: { status: 'DONE', date: '2026-06-30', photos: [doc('건설과_상반기_자체점검표.pdf')], submittedAt: '2026-06-30', submittedBy: '건설과 담당자', submittedByUid: '',
-                         confirm: { state: 'WAIT', round: 1 } },
-            facility:  { status: 'DONE', date: '2026-07-01', photos: [doc('공공시설사업소_상반기_자체점검표.pdf')], submittedAt: '2026-07-01', submittedBy: '공공시설사업소 담당자', submittedByUid: '',
-                         confirm: { state: 'RETURNED', round: 1, by: '박안전', at: '2026-07-03', reason: '점검표 2쪽 부서장 서명이 빠졌습니다 — 서명본으로 다시 올려 주세요' } },
-            culture:   { status: 'TODO', date: '2026-06-29', photos: [doc('문화체육과_상반기_자체점검표.pdf')], submittedAt: '2026-06-29', submittedBy: '문화체육과 담당자', submittedByUid: '',
-                         missText: '점검표 4번(체육시설 안전점검 결과 기록) — 상반기 정기점검 결과를 대장에 기록하지 않음',
-                         plan: '7월 중 체육시설 3개소 점검 결과를 대장에 기록하고 담당자를 지정', planDue: '2026-07-31', needs: ['부서 자체 처리'],
-                         confirm: { state: 'WAIT', round: 1 } },
-            plan:      { status: 'NA', naReason: '기획예산실은 현장 작업이 없어 안전조치 점검 대상에서 제외 — 예산 편성 항목만 해당', date: '2026-06-25', submittedAt: '2026-06-25', submittedBy: '기획예산실 담당자', submittedByUid: '',
-                         confirm: { state: 'OK', round: 1, by: '박안전', at: '2026-06-29' } }
+            safety:    sub('DONE', '2026-06-24', '박안전', 'u_jjt2', fn('재난안전과', '2026상반기', '중대산업재해'), ok('김중대', '2026-06-26')),
+            plan:      sub('NA', '2026-06-25', '한열람', 'u_plan2', fn('기획예산실', '2026상반기', '중대산업재해'), ok('박안전', '2026-06-29'),
+                           { naReason: '기획예산실은 현장 작업이 없어 안전조치 점검 대상에서 제외 — 예산 편성 항목만 해당' }),
+            acct:      sub('DONE', '2026-06-29', '최회계', 'u_acct2', fn('회계과', '2026상반기', '중대산업재해'), ok('박안전', '2026-06-30')),
+            env:       sub('DONE', '2026-06-30', '정환경', 'u_env2', fn('환경과', '2026상반기', '중대산업재해'), ok('박안전', '2026-07-01')),
+            culture:   sub('TODO', '2026-06-29', '오세영', 'u_cul2', fn('문화체육과', '2026상반기', '중대산업재해'), ok('박안전', '2026-07-01'),
+                           { missText: '점검표 6번(종사자 의견청취 결과 반영) — 체육시설 위탁 운영 종사자 의견청취를 상반기에 실시하지 않음',
+                             plan: '하반기 중 위탁 운영 종사자 간담회 1회 개최, 결과를 의견청취·건의함에 등록', planDue: '2026-09-30',
+                             prevAction: { state: 'DONE', text: '01-28 체육시설 3개소 점검 결과 대장 기록, 기록 담당 한지훈 주무관 지정', period: '2025 하반기' } }),
+            finance:   sub('DONE', '2026-06-26', '강세무', 'u_fin2', fn('재무과', '2026상반기', '중대산업재해'), ok('박안전', '2026-06-29')),
+            health:    sub('DONE', '2026-06-23', '이보건', 'u_hlth2', fn('보건소', '2026상반기', '중대산업재해'), ok('김중대', '2026-06-24')),
+            construct: sub('TODO', '2026-06-30', '김도현', 'u_con3', fn('건설과', '2026상반기', '중대산업재해'), ok('박안전', '2026-07-02'),
+                           { missText: '점검표 8번(위험성평가 개선조치 기한 내 완료) — 도로 보수 현장 개선조치 2건이 기한을 넘김',
+                             plan: '7월 중 2건 조치 완료 후 위험성평가 화면에 완료 등록', planDue: '2026-07-31' }),
+            /* 반려 → 재제출(2차) — 07-01 첫 제출은 점검표 2쪽 부서장 서명 누락으로 07-02 반려, 07-03 서명본으로 다시 제출 */
+            facility:  sub('DONE', '2026-07-03', '한운영', 'u_fac3', fn('공공시설사업소', '2026상반기', '중대산업재해'), ok('박안전', '2026-07-06', 2)),
+            water:     sub('DONE', '2026-06-29', '하정수', 'u_wat3', fn('물순환사업소', '2026상반기', '중대산업재해'), ok('박안전', '2026-07-01'),
+                           { editedAt: '2026-06-30 10:12', editedBy: '서한별', editedByUid: 'u_wat6' })
+            /* town_damyang — 독촉 3회에도 미제출로 마감 보고에 올라갔다 */
         },
-        /* 중대시민재해 2026 상반기 — 대상은 공중이용시설 보유 부서 */
         'comply-citizen|2026-H1': {
-            facility: { status: 'DONE', date: '2026-06-27', photos: [doc('공공시설사업소_시민재해_점검표.pdf')], submittedAt: '2026-06-27', submittedBy: '공공시설사업소 담당자', submittedByUid: '',
-                        confirm: { state: 'OK', round: 1, by: '박안전', at: '2026-06-30' } },
-            culture:  { status: 'DONE', date: '2026-06-29', photos: [doc('문화체육과_시민재해_점검표.pdf')], submittedAt: '2026-06-29', submittedBy: '문화체육과 담당자', submittedByUid: '',
-                        confirm: { state: 'WAIT', round: 1 } },
-            water:    { status: 'DONE', date: '2026-06-30', photos: [doc('물순환사업소_시민재해_점검표.pdf')], submittedAt: '2026-06-30', submittedBy: '하정수', submittedByUid: 'u_wat3',
-                        confirm: { state: 'OK', round: 1, by: '박안전', at: '2026-06-30' } },
-            env:      { status: 'TODO', date: '2026-06-30', photos: [doc('환경과_시민재해_점검표.pdf')], submittedAt: '2026-06-30', submittedBy: '정수빈', submittedByUid: 'u_env5',
-                        missText: '점검표 2번(공중화장실 안전점검 계획) — 하반기 계획 미수립',
-                        plan: '8월까지 공중화장실 12개소 안전점검 계획 수립', planDue: '2026-08-31', needs: ['인력'],
-                        confirm: { state: 'WAIT', round: 1 } }
+            env:       sub('TODO', '2026-06-30', '정수빈', 'u_env5', fn('환경과', '2026상반기', '중대시민재해'), ok('박안전', '2026-07-02'),
+                           { missText: '점검표 2번(공중화장실 안전점검 계획) — 하반기 공중화장실 안전점검 계획 미수립',
+                             plan: '8월까지 공중화장실 12개소 안전점검 계획 수립·시행', planDue: '2026-08-31' }),
+            culture:   sub('DONE', '2026-06-29', '한지훈', 'u_cul1', fn('문화체육과', '2026상반기', '중대시민재해'), ok('박안전', '2026-07-01')),
+            finance:   sub('DONE', '2026-06-26', '강세무', 'u_fin2', fn('재무과', '2026상반기', '중대시민재해'), ok('박안전', '2026-06-29')),
+            construct: sub('DONE', '2026-06-30', '김도현', 'u_con3', fn('건설과', '2026상반기', '중대시민재해'), ok('박안전', '2026-07-02')),
+            facility:  sub('DONE', '2026-06-27', '한운영', 'u_fac3', fn('공공시설사업소', '2026상반기', '중대시민재해'), ok('박안전', '2026-06-30')),
+            water:     sub('DONE', '2026-06-30', '하정수', 'u_wat3', fn('물순환사업소', '2026상반기', '중대시민재해'), ok('박안전', '2026-07-01'))
         }
+        /* 2026 하반기 — 배포 전이라 제출 기록이 없다 */
     };
     function applySeed(d) {
         Object.keys(SEED).forEach(function (key) {
@@ -221,6 +320,36 @@
     }
     function save() { try { global.sessionStorage.setItem(SKEY, JSON.stringify(db)); } catch (e) {} }
     function reset() { db = applySeed({}); save(); fdb = flowSeed(); fsave(); }
+    /* 예시 데이터 되돌리기 — 도움말 시트(DYHELP «예시 데이터 되돌리기»)가 부른다(sbm-comply · sbm-policy).
+     * 이행점검과 경영방침 게시 현황은 같은 스토어(DEPTCHK)라 함께 되돌아간다 — 확인 창이 그 사실을 밝힌다.
+     * 이 화면에서 만든 이행점검 알림(배포·검토 요청·반려·독촉)과 올린 파일·연계 번호 일련도 함께 지운다 —
+     * 남겨 두면 되돌린 뒤에도 «배포되었습니다» 알림이 남아 없는 배포를 가리킨다. */
+    function resetDemo() {
+        V().openModal('예시 데이터 되돌리기',
+            '<p style="font-size:var(--fs-13); margin:0 0 8px;">아래를 처음 예시 상태로 되돌립니다. 되돌린 뒤에는 이 화면에서 한 일이 남지 않습니다.</p>' +
+            '<ul style="font-size:var(--fs-13); margin:0 0 8px; padding-left:18px; line-height:1.7;">' +
+                '<li><b>이행점검</b> — 2025 상·하반기 · 2026 상반기는 마감된 이력 그대로, <b>2026 하반기는 배포 전</b>으로</li>' +
+                '<li>이 화면에서 한 <b>배포(시달 공문)·결과 제출·검토·독촉·마감 보고</b>와 그 알림, 올린 점검표 파일</li>' +
+                '<li><b>경영방침 게시 현황</b> — 부서별 게시·미게시·해당없음 등록(물순환사업소·담양읍은 미등록으로)</li>' +
+            '</ul>' +
+            '<p class="file-hint">다른 메뉴(위험성평가·교육 등)의 예시 데이터는 그대로입니다.</p>',
+            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+            '<button type="button" class="btn btn-primary" onclick="DEPTCHK.doResetDemo()">되돌리기</button>');
+    }
+    function doResetDemo() {
+        reset();
+        MEM = {};
+        try {
+            global.sessionStorage.removeItem(FILEKEY);
+            ['dy-cmpdoc-seq', 'dy-cmpclose-seq'].forEach(function (k) { global.sessionStorage.removeItem(k); });
+            /* 업무가 만든 헤더 알림(DYLayout.ntfPush) 가운데 이행점검 것만 걷는다 */
+            var NK = 'dy-ntf-dyn-v1', dyn = JSON.parse(global.sessionStorage.getItem(NK) || '[]');
+            global.sessionStorage.setItem(NK, JSON.stringify(dyn.filter(function (n) { return !/m=comply/.test(n.href || ''); })));
+        } catch (e) {}
+        V().closeModal();
+        toast('이행점검·경영방침 게시 현황을 처음 예시로 되돌렸습니다');
+        setTimeout(function () { global.location.reload(); }, 400);
+    }
 
     function rowKey(key, deptId) { return key + '|' + deptId; }
     /* 부서 1건의 상태. 기록이 없으면 exists:false — «미등록/미제출»이다(미이행과 다르다). */
@@ -245,17 +374,74 @@
     var fdb = null;
     function flowSeed() {
         var all = depts().map(function (d) { return d.id; });
-        var civ = civilDefaultTargets();
+        /* 시민 축 대상 — 공중이용시설을 관리하는 부서(조직도 속성 · 시설물 대장 관리부서). 회차마다 저장해 둔 값이라
+           화면에 시설물 대장이 실려 있든 없든 같은 대상이 보인다. */
+        var civ = ['env', 'culture', 'finance', 'construct', 'facility', 'water'].filter(function (id) { return all.indexOf(id) !== -1; });
+        var BY = '박안전', BYU = 'u_jjt2';
+        /* 시달 공문 — 온나라로 보낸 뒤 결재를 마치고 각 부서로 시행된 문서(연계 회신 반영) */
+        /* 결재완료 공문은 생산등록번호·결재일을 갖는다 — «연계 번호»(no)는 상신 때 받은 값이고
+           문서번호는 결재가 끝나야 생긴다(CLAUDE.md §7-1 «문서번호는 생산등록번호에만»). */
+        function notice(key, no, at, due, targets, form, note, prodNo, apprDate) {
+            var civil = /citizen/.test(key), per = key.split('|')[1];
+            var perLbl = per.replace(/^(\d{4})-H([12])$/, function (m, y, h) { return y + '년 ' + (h === '1' ? '상반기' : '하반기'); });
+            var ax = civil ? '중대시민재해' : '중대산업재해';
+            return {
+                sid: no + '-0', no: no, at: at, status: '결재완료', prodNo: prodNo || '', apprDate: apprDate || '', docType: '외부발송', to: '수신자 참조',
+                title: perLbl + ' 중대(' + (civil ? '시민' : '산업') + ')재해 이행사항 자체점검 실시 통보',
+                body: '1. ' + perLbl + ' ' + ax + ' 예방을 위한 안전·보건 확보의무 이행사항 자체점검을 아래와 같이 실시하오니, 부서별로 점검표를 작성하여 기한 내 제출하여 주시기 바랍니다.\n' +
+                      '  가. 점검 대상: 붙임 별지의 ' + targets.length + '개 부서\n  나. 제출 기한: ' + due + '\n' +
+                      '  다. 제출 방법: 중대재해 통합관리시스템 › 안전보건관리체계 › 이행점검에서 점검표를 내려받아 작성(부서장 확인)한 뒤 [결과 제출]\n' +
+                      '  라. 일부 항목이 이행되지 않은 경우 미이행 내용과 조치계획·조치 예정일을 함께 적어 제출' +
+                      (note ? '\n  마. ' + note : ''),
+                attach: [{ label: form.name, meta: '점검표 양식', size: form.size, on: true }],
+                annex: true, basis: [], recipients: targets.slice(), line: [], lineText: '',
+                by: BY, byUid: BYU, dept: '재난안전과'
+            };
+        }
+        function dist(key, o) {
+            return Object.assign({ by: BY, ver: 1, changedAt: '' }, o, { docs: [notice(key, o.no, o.at, o.due, o.targets, o.forms[0], o.note, o.prodNo, o.apprDate)] });
+        }
+        var NOTE = '부서장 서명 후 스캔본(PDF)을 올려 주세요. 미이행 항목은 조치계획·예정일을 함께 적어 주세요.';
+        var NOTE_C = '공중이용시설을 관리하는 부서만 작성합니다. 부서장 서명 후 스캔본(PDF)을 올려 주세요.';
+        var NOTE_CARRY = ' 지난 반기 미이행 부서는 조치 결과도 함께 적어 주세요.';
+        var D = {};
+        D['comply-industrial|2025-H1'] = dist('comply-industrial|2025-H1', { at: '2025-05-12', due: '2025-06-30', no: '재난안전과-1712', prodNo: '재난안전과-1716', apprDate: '2025-05-13', note: NOTE,
+            forms: [{ name: '2025년_상반기_중대산업재해_이행사항_자체점검표.hwpx', size: 86000 }], targets: all });
+        D['comply-citizen|2025-H1'] = dist('comply-citizen|2025-H1', { at: '2025-05-13', due: '2025-06-30', no: '재난안전과-1720', prodNo: '재난안전과-1724', apprDate: '2025-05-14', note: NOTE_C,
+            forms: [{ name: '2025년_상반기_중대시민재해_이행사항_자체점검표.hwpx', size: 74000 }], targets: civ });
+        /* 하반기 점검은 11~12월에 한다 — 연말 마감 전에 받으려고 기한을 12월 셋째 주로 둔다.
+           산업 축은 11-18 에 양식을 고쳐(제2판 — 도급 항목 문구 보완) 다시 내려보냈다 */
+        D['comply-industrial|2025-H2'] = dist('comply-industrial|2025-H2', { at: '2025-11-10', due: '2025-12-19', no: '재난안전과-4206', prodNo: '재난안전과-4211', apprDate: '2025-11-11', note: NOTE + NOTE_CARRY,
+            ver: 2, changedAt: '2025-11-18',
+            forms: [{ name: '2025년_하반기_중대산업재해_이행사항_자체점검표(제2판).hwpx', size: 88000 }], targets: all });
+        D['comply-citizen|2025-H2'] = dist('comply-citizen|2025-H2', { at: '2025-11-11', due: '2025-12-19', no: '재난안전과-4215', prodNo: '재난안전과-4219', apprDate: '2025-11-12', note: NOTE_C + NOTE_CARRY,
+            forms: [{ name: '2025년_하반기_중대시민재해_이행사항_자체점검표.hwpx', size: 75000 }], targets: civ });
+        D['comply-industrial|2026-H1'] = dist('comply-industrial|2026-H1', { at: '2026-05-14', due: '2026-06-30', no: '재난안전과-1873', prodNo: '재난안전과-1879', apprDate: '2026-05-15', note: NOTE + NOTE_CARRY,
+            forms: [{ name: '2026년_상반기_중대산업재해_이행사항_자체점검표.hwpx', size: 88000 }], targets: all });
+        D['comply-citizen|2026-H1'] = dist('comply-citizen|2026-H1', { at: '2026-05-15', due: '2026-06-30', no: '재난안전과-1881', prodNo: '재난안전과-1886', apprDate: '2026-05-18', note: NOTE_C,
+            forms: [{ name: '2026년_상반기_중대시민재해_이행사항_자체점검표.hwpx', size: 76000 }], targets: civ });
+        /* 마감 보고 — 온나라 기안함으로 보낸 뒤 결재를 마쳐(연계 회신) 회차가 잠긴 상태 */
+        function closed(per, at, no, apprDate) {
+            var lb = per.replace(/^(\d{4})-H([12])$/, function (m, y, h) { return y + ' ' + (h === '1' ? '상반기' : '하반기'); });
+            return { at: at, status: '결재완료', by: BY, byUid: BYU, docNo: no, title: lb + ' 의무이행 점검 결과 보고', apprDate: apprDate };
+        }
+        /* 독촉 기록 — 회차·부서별. 발신자는 보낸 사람(재난안전과 박안전) */
+        var TOWN = '부서장 노읍장(담당자 미지정 — 대신 받음)';
+        function rm(at, what, to) { return { at: at, by: '재난안전과 ' + BY, what: what || '결과 제출 독촉', to: to || TOWN }; }
         return {
-            dist: {
-                'comply-industrial|2026-H1': { at: '2026-05-14', by: '박안전', due: '2026-06-30', ver: 1,
-                    note: '부서장 서명 후 스캔본을 올려 주세요. 미이행 항목은 조치계획을 함께 적어 주세요.',
-                    forms: [{ name: '2026년_상반기_중대산업재해_이행사항_자체점검표.hwpx', size: 88000 }], targets: all },
-                'comply-citizen|2026-H1': { at: '2026-05-15', by: '박안전', due: '2026-06-30', ver: 1,
-                    note: '공중이용시설을 관리하는 부서만 작성합니다. 부서장 서명 후 스캔본을 올려 주세요.',
-                    forms: [{ name: '2026년_상반기_중대시민재해_이행사항_자체점검표.hwpx', size: 76000 }], targets: civ }
+            dist: D,
+            closed: {
+                '2025-H1': closed('2025-H1', '2025-07-11', '재난안전과-2398', '2025-07-15'),
+                '2025-H2': closed('2025-H2', '2025-12-29', '재난안전과-4871', '2025-12-31'),
+                '2026-H1': closed('2026-H1', '2026-07-10', '재난안전과-2694', '2026-07-14')
             },
-            closed: {}
+            reminds: {
+                'comply-industrial|2025-H1|town_damyang': [rm('2025-06-24 10:05'), rm('2025-06-30 16:40')],
+                'comply-industrial|2025-H1|facility': [rm('2025-07-01 14:20', '반려 재제출 독촉', '부서장 임시설(담당자 미지정 — 대신 받음)')],
+                'comply-industrial|2025-H2|town_damyang': [rm('2025-12-15 09:30'), rm('2025-12-22 11:10')],
+                'comply-industrial|2026-H1|town_damyang': [rm('2026-06-24 09:40'), rm('2026-07-01 10:15'), rm('2026-07-07 15:30')],
+                'comply-industrial|2026-H1|facility': [rm('2026-07-02 16:05', '반려 재제출 독촉', '부서장 임시설(담당자 미지정 — 대신 받음)')]
+            }
         };
     }
     function fload() {
@@ -498,7 +684,8 @@
                 (mayAct
                     ? '<button type="button" class="btn btn-outline btn-sm" onclick="' + ns + '.open(\'' + esc(d.id) + '\')">확인 등록</button>'
                     : '<span class="dchk-ro">조회</span>') +
-                ((!st.exists || st.status !== ST.DONE) && canRemindRow(d.id)
+                /* 독촉은 아직 할 일이 남은 줄만 — 미등록·미게시·사유 없는 해당없음. 사유를 적은 해당없음은 끝난 줄이다 */
+                ((!st.exists || st.status === ST.TODO || (st.status === ST.NA && !st.naReason)) && canRemindRow(d.id)
                     ? ' <button type="button" class="btn btn-outline btn-sm" onclick="' + ns + '.remind(\'' + esc(d.id) + '\')">독촉</button>' : '') +
             '</td>' +
         '</tr>';
@@ -733,7 +920,12 @@
         if (flow && flow.dist) {
             distHead = '<div class="check-notice" style="margin-bottom:12px;">' +
                 '<b>' + esc(o.periodLabel || '') + ' 점검표</b> · 기한 ' + esc(flow.dist.due) +
-                ((flow.dist.forms || []).length ? '<br>' + flow.dist.forms.map(function (f) { return '📎 ' + esc(f.name); }).join(' · ') + ' (제' + (flow.dist.ver || 1) + '판)' : '') +
+                /* 배포한 양식은 이 창에서도 내려받는다 — «내려받아 작성» 단계가 창을 닫으러 가지 않게 한다 */
+                ((flow.dist.forms || []).length ? '<br>' + flow.dist.forms.map(function (f, i) {
+                    return o.formDl
+                        ? '<button type="button" class="btn btn-sm btn-outline" style="margin:4px 4px 0 0;" onclick="' + o.formDl + '(' + i + ')">⬇ ' + esc(f.name) + '</button>'
+                        : '📎 ' + esc(f.name);
+                }).join(o.formDl ? '' : ' · ') + ' (제' + (flow.dist.ver || 1) + '판)' : '') +
                 (flow.dist.note ? '<br>' + esc(flow.dist.note) : '') +
                 (F.resubmit ? '<br><b>반려된 결과를 고쳐 다시 제출합니다.</b>' + (F.retReason ? ' 반려 사유: ' + esc(F.retReason) : '') : '') +
                 '</div>';
@@ -766,7 +958,7 @@
                   '<div class="dchk-mrow"><label class="form-label" for="dchk-plan">조치계획' + req() + '</label>' +
                     '<textarea class="form-textarea" id="dchk-plan" rows="2" placeholder="무엇을 하겠다">' + esc(F.plan) + '</textarea></div>' +
                   '<div class="dchk-mrow"><label class="form-label" for="dchk-plandue">조치 예정일' + req() + '</label>' +
-                    '<input type="date" class="form-input" id="dchk-plandue" value="' + esc(F.planDue) + '" style="max-width:200px;">' +
+                    '<input type="date" class="form-input" id="dchk-plandue" value="' + esc(F.planDue) + '" min="' + esc(today()) + '" style="max-width:200px;">' +
                     '<p class="file-hint">조치했는지는 다음 반기 점검에서 확인합니다.</p></div>'
                 : '') +
             (!flow && F.status !== ST.NA
@@ -784,7 +976,7 @@
             '<div class="dchk-mrow"><label class="form-label">' + esc(evLabel) + (needEv ? req() : '') + '</label>' +
                 V().uploadDrop(
                     '<b>' + esc(evLabel) + '</b> <span style="font-size:var(--fs-12);color:var(--text-gray);">클릭 또는 끌어놓기</span>',
-                    null, { hint: true, multiple: true, pick: ns + '.addPhoto', style: 'padding:12px;' }) +
+                    null, { hint: true, multiple: true, pick: ns + '.addPhoto', style: 'padding:12px;', profile: o.uploadProfile }) +
                 (F.photos.length
                     ? '<ul class="dchk-shots">' + F.photos.map(function (p, i) {
                           var src = p.thumb || p.url;
@@ -812,13 +1004,22 @@
     }
     function setCarry(v) { if (!F) return; capture(); F.carryState = v; }
     function setStatus(v) {
-        if (!F || !canEdit(F.deptId, F.opts)) { denied(F && F.deptId); return; } capture(); F.status = v; renderModal(deptOf(F.deptId)); }
+        if (!F || !canEdit(F.deptId, F.opts)) { denied(F && F.deptId); return; } capture();
+        /* 기본 모드(경영방침 게시) — 게시 여부를 바꾸면 그 판정에 딸린 값을 비우고 확인일을 오늘로 둔다.
+           «미게시»인데 옛 게시 위치·사진·2월 확인일이 남으면 줄이 앞뒤가 맞지 않는다(2026-11-13 실습 데이터 점검) */
+        if (!F.opts.flow && v !== F.status) {
+            if (v !== ST.DONE) { F.photos = []; F.place = ''; }
+            if (v !== ST.NA) F.naReason = '';
+            F.date = today();
+        }
+        F.status = v; renderModal(deptOf(F.deptId)); }
     function deptOf(id) { return depts().filter(function (x) { return x.id === id; })[0]; }
     function addPhoto(files) {
         if (!F || !canEdit(F.deptId, F.opts)) { denied(F && F.deptId); return; }
         capture();
         if (!files || !files.length) return;
-        F.photos = F.photos.concat(files).slice(0, V().FILE_LIMITS.maxCount);
+        var lim = (V().FILE_PROFILES && V().FILE_PROFILES[F.opts.uploadProfile]) || V().FILE_LIMITS;
+        F.photos = F.photos.concat(files).slice(0, lim.maxCount);
         renderModal(deptOf(F.deptId));
         toast('파일 ' + files.length + '건 첨부');
     }
@@ -835,6 +1036,8 @@
         if (flow) {
             if ((F.status === ST.DONE || F.status === ST.TODO) && !F.photos.length) { toast('작성한 점검표를 올려 주세요.'); return; }
             if (F.status === ST.TODO && (!F.missText || !F.plan || !F.planDue)) { toast('미이행 내용과 조치계획, 조치 예정일을 적어 주세요.'); return; }
+            /* 조치 예정일은 오늘 이후 — 지난 날짜로 계획을 적으면 제출하는 순간 이미 늦은 계획이 된다 */
+            if (F.status === ST.TODO && F.planDue < today()) { toast('조치 예정일은 오늘(' + today() + ') 이후로 정하세요.'); var pd = document.getElementById('dchk-plandue'); if (pd) pd.focus(); return; }
             if (F.carry && (!F.carryState || !F.carryText)) { toast('지난 반기 미이행 조치 결과(조치 완료·조치 중·미조치)와 내용을 적어 주세요.'); return; }
         } else {
             if (F.status === ST.DONE && !F.photos.length) {
@@ -1061,9 +1264,14 @@
             '<button class="btn btn-primary" onclick="' + opts.ns + '.doRemindAll()">' + list.length + '개 부서 독촉</button>');
     }
     function doRemindAll(key, opts) {
-        var n = remindTargets(key, opts && opts.flow).filter(function (d) { return remind(key, d.id, opts, true); }).length;
+        var sent = remindTargets(key, opts && opts.flow).filter(function (d) { return remind(key, d.id, opts, true); });
+        var nobody = sent.filter(function (d) { return !remindUids(d.id).length; }).length;
+        var n = sent.length - nobody;
         V().closeModal();
-        toast(n ? n + '개 부서에 결과 제출 독촉을 보냈습니다' : '독촉할 미제출 부서가 없습니다.');
+        /* 받는 사람이 없는 부서는 «보냈다»고 세지 않는다 — 기록만 남는다(CLAUDE.md §15) */
+        toast(!sent.length ? '독촉할 미제출 부서가 없습니다.'
+            : (n ? n + '개 부서에 결과 제출 독촉을 보냈습니다' : '독촉을 받을 사람이 있는 부서가 없습니다') +
+              (nobody ? ' · 받는 사람이 없는 ' + nobody + '개 부서는 기록만 남겼습니다' : ''));
         if (opts && opts.onChange) opts.onChange();
     }
 
@@ -1116,7 +1324,7 @@
         mDelPhoto: mDelPhoto, save: saveModal, delPhoto: delPhoto, remind: remind, remindAll: remindAll, doRemindAll: doRemindAll,
         /* 배포 흐름 (이행점검) */
         closeReady: closeReady, carryOf: carryOf, carrySummary: carrySummary, prevKeyOf: prevKeyOf, CARRY_LABEL: CARRY_LABEL, setCarry: setCarry,
-        notify: notify, workUids: workUids, civilFacilityNames: civilFacilityNames,
+        notify: notify, workUids: workUids, workText: workText, civilFacilityNames: civilFacilityNames, resetDemo: resetDemo, doResetDemo: doResetDemo,
         flow: FLOW, remindLog: function (key, deptId) { return ((fload().reminds || {})[key + '|' + deptId] || []).slice(); }, isTarget: isTarget, progressOf: progressOf, submitted: submitted, isOwnerStaff: isOwnerStaff,
         unsubmit: unsubmit, doUnsubmit: doUnsubmit,
         review: review, doConfirm: doConfirm, download: download, doReturn: doReturn, uncfm: uncfm, doUncfm: doUncfm

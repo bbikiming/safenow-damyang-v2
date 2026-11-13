@@ -137,8 +137,9 @@
      * 드롭존은 접근성 렌더러 DYV2.uploadDrop 만 사용(CLAUDE.md §2). */
     var ATTACH_SLOTS = {
         group: [
-            /* 부서가 교육 때 참석자 서명을 받을 양식 — 끝난 뒤 이 양식의 스캔본이 등록부로 올라온다(2026-11-12) */
-            { key: 'roster',   label: '서명부 양식', sub: '참석자가 서명할 양식' },
+            /* 참석자 명단(서명 포함) — 운영 화면과 같은 이름으로 맞춘다(2026-11-13 사용자 지시, 종전 «서명부 양식»).
+             * 교육 때 쓸 참석자 명단·출석부(서명란 포함)를 붙인다. 교육 뒤 부서가 서명받은 스캔본을 등록부로 올린다. */
+            { key: 'roster',   label: '참석자 명단', note: '서명 포함', drop: '파일 첨부', sub: '참석자 명단·출석부' },
             { key: 'material', label: '교육 자료',   sub: '교육에 사용할 자료' }
         ],
         done: [
@@ -167,9 +168,10 @@
     function renderAttach(F, ns, profile) {
         var slots = ATTACH_SLOTS[profile] || ATTACH_SLOTS.done;
         return slots.map(function (s) {
-            return '<div class="edu-modal-row"><label class="form-label">' + s.label + '</label>' +
+            return '<div class="edu-modal-row"><label class="form-label">' + s.label +
+                    (s.note ? ' <span class="edu-drop-sub">(' + s.note + ')</span>' : '') + '</label>' +
                 V().uploadDrop(
-                    '<b>' + s.label + '</b> <span class="edu-drop-sub">' + s.sub + ' (클릭 또는 끌어놓기)</span>',
+                    '<b>' + (s.drop || s.label) + '</b> <span class="edu-drop-sub">' + s.sub + ' (클릭 또는 끌어놓기)</span>',
                     ns + '.addFile(\'' + s.key + '\')', { hint: true, style: 'padding:12px;' }) +
                 fileListHtml(F.files, ns, s.key, slots) +
             '</div>';
@@ -184,11 +186,66 @@
     }
     function delFile(F, i) { if (F.files) F.files.splice(i, 1); }
 
+    /* ===== 참석자 등록부 — 실제 참석시간 (2026-11-13) =====
+     * 집합교육의 인정시간은 등록부의 **사람별** 실제 참석시간이다(CLAUDE.md §4 · SCR-EDU-004 §6).
+     * 대부분은 전원이 같은 시간이므로 «모두에게 같은 시간» 한 칸을 기본으로 두고(비우면 전 회차),
+     * 일찍 나간 사람만 사람별 칸에 적는다(비우면 위 시간). 부서 등록(목록·상세)과 일괄 등록이 같은 블록을 쓴다.
+     * 폼 객체 규약: H.actualHours(문자열|숫자, '' = 전 회차) · H.hoursBy{workerId: 문자열} · H.hoursOpen
+     * 입력 id: eduf-h-all · eduf-h-<workerId> (동시에 열리는 모달은 1개라 겹치지 않는다) */
+    function hoursBlockHtml(H, people, courseHours, ns) {
+        H.hoursBy = H.hoursBy || {};
+        var diff = people.filter(function (w) { var v = H.hoursBy[w.id]; return v != null && v !== ''; }).length;
+        var all = H.actualHours == null ? '' : H.actualHours;
+        return '<div class="edu-modal-row"><label class="form-label" for="eduf-h-all">실제 참석시간 — 모두에게 같은 시간</label>' +
+            '<input type="number" class="form-input" id="eduf-h-all" min="0.1" max="' + courseHours + '" step="0.1" value="' + esc(all) + '" placeholder="전 회차 ' + courseHours + 'h" style="max-width:160px;">' +
+            '<p class="file-hint" style="margin:4px 0 0;">비우면 전 회차 참석(' + courseHours + 'h)입니다. 교육 시간 ' + courseHours + 'h를 넘을 수 없습니다.</p>' +
+            (people.length
+                ? '<details style="margin-top:6px;"' + (H.hoursOpen ? ' open' : '') + ' ontoggle="' + ns + '.hoursOpen(this.open)">' +
+                    '<summary style="cursor:pointer;font-size:var(--fs-13);">사람별로 다르게 적기 <span class="file-hint">(선택 ' + people.length + '명' + (diff ? ' · 따로 적은 ' + diff + '명' : '') + ')</span></summary>' +
+                    '<p class="file-hint" style="margin:6px 0;">일찍 나가거나 늦게 온 사람만 적습니다. 비우면 위 시간을 씁니다.</p>' +
+                    '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:var(--sp-1-5, 6px) var(--sp-3, 12px);">' +
+                    people.map(function (w) {
+                        var v = H.hoursBy[w.id];
+                        return '<label style="display:flex;align-items:center;gap:6px;font-size:var(--fs-13);"><span style="flex:1;">' + esc(w.name) +
+                            (w.deptLabel ? ' <span class="file-hint">' + esc(w.deptLabel) + '</span>' : '') + '</span>' +
+                            '<input type="number" class="form-input" id="eduf-h-' + esc(w.id) + '" min="0.1" max="' + courseHours + '" step="0.1" value="' + esc(v == null ? '' : v) + '" placeholder="같은 시간" style="width:96px;" aria-label="' + esc(w.name) + ' 실제 참석시간"></label>';
+                    }).join('') + '</div></details>'
+                : '') +
+            '</div>';
+    }
+    function captureHours(H) {
+        var d = global.document;
+        var a = d.getElementById('eduf-h-all');
+        if (a) H.actualHours = a.value;
+        H.hoursBy = H.hoursBy || {};
+        Array.prototype.forEach.call(d.querySelectorAll('input[id^="eduf-h-"]'), function (el) {
+            if (el.id === 'eduf-h-all') return;
+            H.hoursBy[el.id.slice(7)] = el.value;
+        });
+    }
+    /* 저장 값 — { ok, why, actualHours(숫자|null), hoursBy({id:숫자}) }. 공통값과 같은 사람별 값은 담지 않는다 */
+    function hoursPayload(H, ids, courseHours) {
+        var bad = function (v) { return !(+v > 0 && +v <= courseHours); };
+        var all = (H.actualHours == null || H.actualHours === '') ? null : +H.actualHours;
+        if (all != null && bad(all)) return { ok: false, why: '실제 참석시간은 0보다 크고 교육 시간(' + courseHours + 'h) 이하로 적습니다.' };
+        var base = all == null ? courseHours : all, by = {}, n = 0;
+        for (var i = 0; i < ids.length; i++) {
+            var v = (H.hoursBy || {})[ids[i]];
+            if (v == null || v === '') continue;
+            if (bad(v)) return { ok: false, why: '사람별 실제 참석시간은 0보다 크고 교육 시간(' + courseHours + 'h) 이하로 적습니다.' };
+            if (+v !== base) { by[ids[i]] = +v; n++; }
+        }
+        return { ok: true, actualHours: all, hoursBy: n ? by : null, exceptions: n };
+    }
+    /* 서명부는 한 파일이다 — 공용 안내(DYV2.fileHint)의 개수만 «1개»로 바꿔 쓴다(업로드 칸 모양은 그대로, §2) */
+    function oneFile(html) { return String(html || '').replace(/(<b>최대<\/b> )\d+개/, function (m, p) { return p + '1개'; }); }
+
     global.EDUFORM = {
         MAX_SESSIONS: MAX_SESSIONS, newSession: newSession,
         renderSessions: renderSessions, captureSessions: captureSessions,
         sessAdd: sessAdd, sessDel: sessDel, sessionPayload: sessionPayload, totalHours: totalHours,
         ATTACH_SLOTS: ATTACH_SLOTS,
-        renderAttach: renderAttach, addFile: addFile, delFile: delFile
+        renderAttach: renderAttach, addFile: addFile, delFile: delFile,
+        hoursBlockHtml: hoursBlockHtml, captureHours: captureHours, hoursPayload: hoursPayload, oneFile: oneFile
     };
 })(window);

@@ -37,7 +37,8 @@
         if (!state.mount) return;
         var list = all();
         var rows = filtered(list);
-        var cnt = function (st) { return list.filter(function (s) { return s.status === st; }).length; };
+        /* 다시 보내 밀려난 이전 건(latest=false)은 상태 지표에서 뺀다 — 반려 뒤 재기안해 결재완료된 공문이 «반려»에 계속 남으면 지금 반려 상태인 공문 수가 부풀어 보인다(2026-11-13) */
+        var cnt = function (st) { return list.filter(function (s) { return s.status === st && s.latest !== false; }).length; };
 
         /* **도달할 수 없는 축을 지표로 두지 않는다** — 결재 완료·반려는 온나라가 회신해야
            생기는 상태이고 연동이 아직 없다. 칩으로 걸어 두면 영영 0 인 칸이 두 개 남아

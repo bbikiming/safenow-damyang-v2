@@ -31,10 +31,19 @@
        위험성평가처럼 페르소나를 오가지 않는다. */
     var OWNER_P = 'staff';
     function ownerP() { return OWNER_P; }
+    /* 2단계(참석자 등록부)는 **부서의 일**이다 — 부서 담당자로 접속하면 그 사람의 단계로 본다.
+       그러면 부서 담당자는 «조회 전용»이 아니라 «내 역할» 관점을 받는다(등록부만 커서가 머문다).
+       재난안전과 담당자(발표자)에게는 종전과 같이 자기 단계라 페르소나를 오가지 않는다(대리·일괄 등록). */
+    function curP() { var R = global.DYROLE; return R && R.current ? R.current() : null; }
+    function deptP() {
+        var p = curP();
+        return (p && p.tier === 'staff' && p.id !== OWNER_P && p.deptId && p.deptId !== (global.DYROLE.OWNER_DEPT || 'safety')) ? p.id : OWNER_P;
+    }
+    function myDeptOnly() { return deptP() !== OWNER_P; }
 
     /* ── 시연 대상 집합교육 ──
        시연 중 만든 교육은 addCourse 가 'C-2101' 처럼 **숫자 id** 를 준다.
-       시드는 'C-M08' 형태라 둘을 구분할 수 있다. 시연 중 만든 것이 있으면
+       시드는 'C-M11' 형태라 둘을 구분할 수 있다. 시연 중 만든 것이 있으면
        그것을, 없으면 시드의 접수 중(OPEN) 교육을 따라간다.
        (대상 id 를 저장하지 않는 이유는 진행 판정과 같다 — 저장하면 초기화·
         재시연 때 옛 id 를 가리킨 채 멈춘다.) */
@@ -49,7 +58,10 @@
         /* 폴백은 '접수 중'이 아니라 **가장 최근 집합교육**이다(courses() 는 date 내림차순).
            OPEN 만 보면 3단계에서 종료 처리하는 순간 추적 대상을 잃어 전 단계 체크가
            한꺼번에 풀린다 — 실제로 그 결함을 냈다. */
-        return list[0] || null;
+        /* 다만 아직 교육 전인 건(12월)은 등록부 단계를 돌 수 없으므로, 이미 끝난(일자가 오늘 이전인)
+           가장 최근 교육을 먼저 본다 — 11월 교육(등록부 받는 중)이 따라갈 대상이 된다. */
+        var today = V().today();
+        return list.filter(function (c) { return (E().lastSessionDate(c) || c.date) <= today; })[0] || list[0] || null;
     }
     function courseId() { var c = demoCourse(); return c ? c.id : ''; }
     /* 종전 start() 가 쓰던 판정 — 접수 중 집합교육이 없으면 시연을 못 돈다 */
@@ -83,7 +95,7 @@
             clickPath: [
                 '[＋ 집합교육 등록]',
                 '일자·시작~종료 시각을 회차 탭에 적습니다 — 교육 시간은 회차에서 자동 계산됩니다',
-                '강사·장소·내용 · 등록부 기한을 채우고 서명부 양식·교육 자료를 붙인 뒤 [등록]'
+                '강사·장소·내용 · 등록부 기한을 채우고 참석자 명단(서명 포함)·교육 자료를 붙인 뒤 [등록]'
             ],
             desc: '과정 일정·시간·강사·장소·내용과 첨부를 한 건으로 등록합니다. 교육이 끝나면 부서가 참석자 등록부를 올립니다.',
             script: '엑셀로 나눠 관리하던 월별 교육 일정·계획 문서를 하나의 교육 건으로 등록합니다.',
@@ -95,9 +107,9 @@
         },
         {
             key: 'apply', label: '등록부', page: 'edu-reg.html',
-            persona: ownerP, href: function () { return 'edu-reg.html'; },
+            persona: deptP, href: function () { return 'edu-reg.html'; },
             /* 접수 중 집합교육이 여러 건이면 [data-tour="apply"] 가 카드마다 붙고
-               (edu-reg.js) 목록이 일자 내림차순이라 시드 8월 교육이 먼저 걸린다.
+               (edu-reg.js) 목록이 일자 내림차순이라 시드 12월 교육이 먼저 걸린다.
                방금 만든 교육이 아니라 남의 카드를 가리키면, 안내대로 눌러도
                done() 은 계속 false 라 시연이 2단계에서 멈춘다.
                엔진이 selector 를 매번 새로 읽으므로 getter 로 추적 대상만 좁힌다. */
@@ -108,11 +120,15 @@
             },
             title: '교육이 끝난 뒤 부서가 참석자 등록부 등록',
             where: '그 교육 카드의 <b>[＋ 참석자 등록부 등록]</b>',
-            clickPath: [
-                '교육 카드의 [＋ 참석자 등록부 등록]',
-                '조직도에서 부서를 고르고 근로자를 체크합니다',
-                '서명부 스캔을 첨부하고 [등록]'
-            ],
+            get clickPath() {
+                return [
+                    '교육 카드의 [＋ 참석자 등록부 등록]',
+                    myDeptOnly() ? '부서는 우리 부서로 정해져 있습니다 — 실제 온 사람을 체크합니다'
+                                 : '조직도에서 부서를 고르고 근로자를 체크합니다 (여러 부서는 상세의 [＋ 일괄 등록])',
+                    '실제 참석시간을 확인합니다 — 일찍 나간 사람만 [사람별로 다르게 적기]',
+                    '서명부 스캔을 첨부하고 [등록]'
+                ];
+            },
             desc: '교육이 끝난 뒤 부서 담당자가 참석자를 체크하고 실제 참석시간과 서명부 스캔을 올립니다.',
             script: '등록부는 교육이 끝난 뒤 한 번 올립니다. 사전 신청·불참자 처리 없이 등록부 명단이 곧 이수 대상입니다.',
             modalGuide: '근로자를 선택하고 <b>서명부 스캔</b>을 첨부한 뒤 [등록]을 누르세요.',
@@ -122,9 +138,14 @@
                 if (!id) { toast('먼저 1단계에서 집합교육을 등록하세요.'); return; }
                 global.EDUR.openApply(id);
             },
-            done: function () { return enrollCount().depts > 0; },
+            /* 부서 담당자에게는 «우리 부서가 올렸나», 재난안전과에게는 «한 부서라도 올라왔나» */
+            done: function () {
+                if (myDeptOnly()) { var p = curP(), id = courseId(); return !!(id && E().hasEnroll(id, p.deptId)); }
+                return enrollCount().depts > 0;
+            },
             note: function () {
                 if (!demoCourse()) return '교육 등록 후';
+                if (myDeptOnly()) { var p = curP(); return E().hasEnroll(courseId(), p.deptId) ? '우리 부서 등록함' : '우리 부서 미등록'; }
                 var e = enrollCount();
                 return e.depts ? '등록 ' + e.depts + '개 부서 · ' + e.people + '명' : '등록 없음';
             }
@@ -132,7 +153,7 @@
         {
             key: 'close', label: '종료', page: 'edu-reg-detail.html',
             persona: ownerP,
-            href: function () { return 'edu-reg-detail.html?id=' + encodeURIComponent(courseId() || 'C-M08'); },
+            href: function () { return 'edu-reg-detail.html?id=' + encodeURIComponent(courseId() || 'C-M11'); },
             selector: '[data-tour="close"]',
             title: '교육 종료 처리로 이수시간 카운트',
             where: '상세 화면 오른쪽 위 <b>[교육 종료 처리]</b>',
@@ -266,13 +287,15 @@
         if (T.view() === 'read') { toast('조회 전용 관점에서는 예시 데이터를 되돌릴 수 없습니다.'); return; }
         T.stop();
         V().openModal('예시 데이터 되돌리기',
-            '<p style="font-size:var(--fs-13);line-height:1.6;">교육 등록·참석자 등록부·종료 처리와 근로자 명단·독촉 이력 데이터를 처음 상태로 되돌립니다.</p>',
+            '<p style="font-size:var(--fs-13);line-height:1.6;">교육 등록·참석자 등록부·종료 처리·실시 결과 공문(결재 이력)과 근로자 명단·독촉 이력 데이터를 처음 상태로 되돌립니다.</p>',
             '<button class="btn btn-secondary" type="button" onclick="DYV2.closeModal()">취소</button>' +
             '<button class="btn btn-primary" type="button" onclick="EDUTOUR.confirmReset()">되돌리기</button>');
     };
     T.confirmReset = function () {
         if (T.view() === 'read') { toast('조회 전용 관점에서는 예시 데이터를 되돌릴 수 없습니다.'); return; }
         E().reset();
+        /* 공문도 함께 되돌린다 — 교육만 되돌리면 지운 교육의 공문이 결재 이력에 남는다 */
+        if (global.EDUDOC && global.EDUDOC.reset) global.EDUDOC.reset();
         T.stop();
         location.reload();
     };

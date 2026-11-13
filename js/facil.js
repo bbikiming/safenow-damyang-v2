@@ -3,7 +3,7 @@
  *   데이터 레이어(window.DYFACIL) + 5개 화면 렌더
  *   화면: FAC01-V 대장목록 / FAC02-D 상세·보완입력 / FAC03-V 위험도 /
  *         FAC04-S FMS 연계 / FAC05-S 연계 설정
- *   영속 키 'dyfacil-v1' = { recs, ext, syncLog, settings }
+ *   영속 키 'dyfacil-v2' = { recs, ext, syncLog, settings }
  *     recs  = FMS 소유(읽기전용) — 시드는 js/facil-data.js DY_FACIL_SEED.recs (80건)
  *     ext   = 보완입력 { <facilNo>: {...} } — 수신이 덮어쓰지 않는 칸.
  *             입력은 6항목만 받는다(2026-08-13 축소). 그중 4개는 FMS 추가 연계가
@@ -16,7 +16,8 @@
 (function () {
     'use strict';
 
-    const KEY = 'dyfacil-v1';
+    const KEY = 'dyfacil-v2';   /* v2: 연계·보완입력 예시 이력을 2026-11 까지(2026-11-13) */
+    try { localStorage.removeItem('dyfacil-v1'); } catch (e) {}
     const esc = s => (window.DYV2 && DYV2.esc) ? DYV2.esc(s)
         : String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     const V = () => window.DYV2;
@@ -95,7 +96,25 @@
         return {
             recs: JSON.parse(JSON.stringify(S.recs || [])),
             ext: JSON.parse(JSON.stringify(S.ext || {})),
+            /* 연계·변경 이력 예시 — **최신이 위**(logSync 가 unshift). 월 1회 대장 재적재 ·
+               점검 뒤 보완입력 · 보완값 FMS 반영 순서로 2026-11 까지 쌓인 모양이다(예시 자료, §15).
+               보완입력 기록의 일시는 js/facil-data.js ext[].updatedAt 과 같아야 한다. */
             syncLog: [
+                { at: '2026-11-06 13:25', dir: 'SELF', iface: '보완입력', facilNo: 'AR1975-0000366', key: 'AR1975-0000366', result: '저장', detail: 'repairStatus 변경' },
+                { at: '2026-11-02 06:00', dir: 'IN', iface: '엑셀 업로드', facilNo: '(배치)', key: '-', result: '성공', detail: '신규 0건 · 변경 2건 반영' },
+                { at: '2026-10-22 09:40', dir: 'OUT', iface: 'updateBastbMaster', facilNo: 'ST1999-0000017', key: 'ST1999-0000017', result: '0000 성공', detail: '반영키=ST1999-0000017' },
+                { at: '2026-10-21 10:05', dir: 'SELF', iface: '보완입력', facilNo: 'ST1999-0000017', key: 'ST1999-0000017', result: '저장', detail: 'lastInspectYmd 변경' },
+                { at: '2026-10-05 06:00', dir: 'IN', iface: '엑셀 업로드', facilNo: '(배치)', key: '-', result: '성공', detail: '신규 0건 · 변경 1건 반영' },
+                { at: '2026-09-30 14:20', dir: 'SELF', iface: '보완입력', facilNo: 'BR2003-0002797', key: 'BR2003-0002797', result: '저장', detail: 'lastInspectYmd 변경' },
+                { at: '2026-09-16 10:10', dir: 'OUT', iface: 'updateBastbMaster', facilNo: 'WS1996-0000011', key: 'WS1996-0000011', result: '0000 성공', detail: '반영키=WS1996-0000011' },
+                { at: '2026-09-15 16:40', dir: 'SELF', iface: '보완입력', facilNo: 'WS1996-0000011', key: 'WS1996-0000011', result: '저장', detail: 'lastInspectYmd 변경' },
+                { at: '2026-09-03 09:50', dir: 'SELF', iface: '보완입력', facilNo: 'AR2008-0003610', key: 'AR2008-0003610', result: '저장', detail: 'lastInspectYmd 변경' },
+                { at: '2026-09-01 06:00', dir: 'IN', iface: '엑셀 업로드', facilNo: '(배치)', key: '-', result: '성공', detail: '신규 0건 · 변경 0건 반영' },
+                { at: '2026-08-26 10:15', dir: 'SELF', iface: '보완입력', facilNo: 'AR1998-0003469', key: 'AR1998-0003469', result: '저장', detail: 'lastInspectYmd 변경' },
+                { at: '2026-08-03 06:00', dir: 'IN', iface: '엑셀 업로드', facilNo: '(배치)', key: '-', result: '성공', detail: '신규 0건 · 변경 3건 반영' },
+                { at: '2026-07-08 15:10', dir: 'SELF', iface: '보완입력', facilNo: 'AR1968-0000226', key: 'AR1968-0000226', result: '저장', detail: 'lastInspectYmd 변경' },
+                { at: '2026-07-08 14:40', dir: 'SELF', iface: '보완입력', facilNo: 'ST2010-0000042', key: 'ST2010-0000042', result: '저장', detail: 'lastInspectYmd 변경' },
+                { at: '2026-07-01 09:00', dir: 'SELF', iface: '보완입력', facilNo: '(8건)', key: '-', result: '저장', detail: '안전등급·최근 점검일·규모·소관부서 등 최초 보완입력' },
                 { at: '2026-07-01 06:00', dir: 'IN', iface: '엑셀 업로드', facilNo: '(전체)', key: '-', result: '성공', detail: '시설물관리대장 기본현황 80건 초기 적재' },
             ],
             settings: { orgCode: 'D-DAMYANG', userId: 'firex', batchDaily: true, batchLimit: 10, autoApprove: false },

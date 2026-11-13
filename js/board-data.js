@@ -13,12 +13,12 @@
      공지는 주관부서가 내고 자료·사례는 각 부서가 올린다(SCR-RPT-003 §6).
    · 게시판 삭제는 글이 0건일 때만 — 글이 있으면 «사용 끄기»로 내린다(글을 지우면
      언제 무엇을 알렸는지가 사라진다).
-   · 저장: localStorage 한 키(dy-boards-v1). 첫 시드의 글은 예시 자료다(sample).
+   · 저장: localStorage 한 키(dy-boards-v2). 첫 시드의 글은 예시 자료다(sample).
    ===================================================================== */
 (function (global) {
     'use strict';
 
-    var KEY = 'dy-boards-v1';
+    var KEY = 'dy-boards-v2';   /* 2026-11-13 예시 자료 개편으로 범프 */
     var KINDS = {
         notice:  { label: '공지형', cols: ['제목', '작성', '등록일', '조회'] },
         archive: { label: '자료형', cols: ['자료명', '구분', '등록일', '첨부'] },
@@ -41,14 +41,19 @@
                 { id: 'best',    name: '우수사례', kind: 'case',    write: 'dept',  use: true }
             ],
             posts: [
-                { id: 'p1', board: 'notice', title: '[필독] 2026년 상반기 의무이행 점검 일정 안내', body: '부서별 상반기 의무이행 점검 일정을 안내합니다.', author: '재난안전과', authorUid: '', date: '2026-06-02', views: 214, sample: true },
-                { id: 'p2', board: 'notice', title: '위험성평가 담당자 교육 신청 안내 (6/20)', body: '위험성평가 담당자 교육 신청을 받습니다.', author: '재난안전과', authorUid: '', date: '2026-05-28', views: 167, sample: true },
-                { id: 'p3', board: 'notice', title: '시스템 정기 점검에 따른 일시 중단 안내', body: '정기 점검 시간에는 시스템을 쓸 수 없습니다.', author: '시스템 관리자', authorUid: '', date: '2026-05-20', views: 98, sample: true },
-                { id: 'p4', board: 'archive', title: '중대재해처벌법 해설서 (고용노동부)', cat: '법령', body: '', author: '재난안전과', authorUid: '', date: '2026-03-02', files: [{ name: '중대재해처벌법_해설서.pdf' }], sample: true },
-                { id: 'p5', board: 'archive', title: '지자체 위험성평가 실무 가이드', cat: '지침', body: '', author: '재난안전과', authorUid: '', date: '2026-02-14', files: [{ name: '지자체_위험성평가_실무가이드.pdf' }], sample: true },
-                { id: 'p6', board: 'archive', title: 'TBM(작업 전 안전점검회의) 표준 양식', cat: '양식', body: '', author: '재난안전과', authorUid: '', date: '2026-01-30', files: [{ name: 'TBM_표준양식.hwpx' }], sample: true },
-                { id: 'p7', board: 'best', title: '밀폐공간 작업 2인 1조 + 가스측정 정착 사례', body: '밀폐공간 작업 전 가스측정과 2인 1조를 정착시킨 과정입니다.', deptName: '환경과', author: '환경과', authorUid: '', date: '2026-05-15', recs: 12, sample: true },
-                { id: 'p8', board: 'best', title: 'QR 신고함 도입으로 종사자 신고 3배 증가', body: 'QR 신고함을 두고 신고가 늘어난 사례입니다.', deptName: '재난안전과', author: '재난안전과', authorUid: '', date: '2026-04-22', recs: 9, sample: true }
+                { id: 'p9',  board: 'notice', title: '[필독] 2026년 하반기 의무이행 자체점검 배포 안내', body: '하반기 의무이행 자체점검표를 배포합니다. 부서별 결과는 기한 안에 이행점검 화면에서 제출해 주십시오.', author: '재난안전과', authorUid: '', date: '2026-11-10', views: 132, sample: true },
+                { id: 'p10', board: 'notice', title: '정기 위험성평가 개선조치 요청 공문 발송 안내', body: '용역 보고서에 따라 개선이 필요한 부서에 조치 요청 공문을 보냈습니다. 작성표에 조치 내용을 입력한 뒤 입력 완료를 눌러 주십시오.', author: '재난안전과', authorUid: '', date: '2026-11-06', views: 118, sample: true },
+                { id: 'p11', board: 'notice', title: '하반기 관리감독자 집합교육 참석자 등록부 등록 안내', body: '집합교육이 끝났습니다. 부서별 참석자 등록부를 등록 기한 안에 올려 주십시오.', author: '재난안전과', authorUid: '', date: '2026-10-29', views: 97, sample: true },
+                { id: 'p1',  board: 'notice', title: '[필독] 2026년 상반기 의무이행 점검 일정 안내', body: '부서별 상반기 의무이행 점검 일정을 안내합니다.', author: '재난안전과', authorUid: '', date: '2026-05-14', views: 214, sample: true },
+                { id: 'p2',  board: 'notice', title: '위험성평가 담당자 교육 신청 안내 (6/20)', body: '위험성평가 담당자 교육 신청을 받습니다.', author: '재난안전과', authorUid: '', date: '2026-05-28', views: 167, sample: true },
+                { id: 'p3',  board: 'notice', title: '시스템 정기 점검에 따른 일시 중단 안내 (10/24)', body: '정기 점검 시간에는 시스템을 쓸 수 없습니다.', author: '시스템 관리자', authorUid: '', date: '2026-10-20', views: 88, sample: true },
+                { id: 'p12', board: 'archive', title: '2026 정기 위험성평가 설문조사표 양식', cat: '양식', body: '', author: '재난안전과', authorUid: '', date: '2026-09-21', files: [{ name: '2026_위험성평가_설문조사표.xlsx' }], sample: true },
+                { id: 'p4',  board: 'archive', title: '중대재해처벌법 해설서 (고용노동부)', cat: '법령', body: '', author: '재난안전과', authorUid: '', date: '2026-03-02', files: [{ name: '중대재해처벌법_해설서.pdf' }], sample: true },
+                { id: 'p5',  board: 'archive', title: '지자체 위험성평가 실무 가이드', cat: '지침', body: '', author: '재난안전과', authorUid: '', date: '2026-02-14', files: [{ name: '지자체_위험성평가_실무가이드.pdf' }], sample: true },
+                { id: 'p6',  board: 'archive', title: 'TBM(작업 전 안전점검회의) 표준 양식', cat: '양식', body: '', author: '재난안전과', authorUid: '', date: '2026-01-30', files: [{ name: 'TBM_표준양식.hwpx' }], sample: true },
+                { id: 'p13', board: 'best', title: '하수처리장 설비 변경 전 수시 위험성평가 실시 사례', body: '설비 교체 공사 전에 수시 위험성평가를 하고 작업 순서를 바꾼 과정입니다.', deptName: '물순환사업소', author: '물순환사업소', authorUid: '', date: '2026-10-15', recs: 7, sample: true },
+                { id: 'p7',  board: 'best', title: '밀폐공간 작업 2인 1조 + 가스측정 정착 사례', body: '밀폐공간 작업 전 가스측정과 2인 1조를 정착시킨 과정입니다.', deptName: '환경과', author: '환경과', authorUid: '', date: '2026-08-19', recs: 12, sample: true },
+                { id: 'p8',  board: 'best', title: 'QR 신고함 도입으로 종사자 신고 3배 증가', body: 'QR 신고함을 두고 신고가 늘어난 사례입니다.', deptName: '재난안전과', author: '재난안전과', authorUid: '', date: '2026-04-22', recs: 9, sample: true }
             ]
         };
     }

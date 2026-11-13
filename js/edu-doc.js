@@ -27,14 +27,27 @@
     var E = function () { return global.DYEDU; };
     function esc(s) { return V().esc(String(s == null ? '' : s)); }
 
-    var SKEY = 'dy-edu-doc-v1';      /* 교육 공문 저장 */
+    var SKEY = 'dy-edu-doc-v2';      /* 교육 공문 저장 — v2: 1~10월 실시 결과 공문 예시를 처음에 채운다 (2026-11-13) */
     var LKEY = 'dy-edu-docline-v1';  /* 결재선 */
 
     /* ===================== 저장 ===================== */
     function store() {
         var d = null;
         try { d = JSON.parse(global.sessionStorage.getItem(SKEY) || 'null'); } catch (e) { d = null; }
-        if (!d) d = { seq: 2600, docs: {} };
+        if (!d) {
+            /* 처음 열 때는 교육 예시와 같은 곳(DYEDU.seedDocs)에서 만든 공문으로 채운다 —
+               이력·잠금·붙임이 교육 기록과 맞아야 하므로 여기서 따로 지어내지 않는다 */
+            d = { seq: 2600, docs: {} };
+            var sd = E() && E().seedDocs ? E().seedDocs() : null;
+            if (sd) {
+                d.seq = sd.seq || 2600;
+                sd.docs.forEach(function (x) {
+                    var doc = {}; Object.keys(x).forEach(function (k) { if (k !== 'courseId') doc[k] = x[k]; });
+                    (d.docs[x.courseId] = d.docs[x.courseId] || []).push(doc);
+                });
+            }
+            save(d);
+        }
         if (!d.docs) d.docs = {};
         return d;
     }
@@ -44,9 +57,10 @@
         var d = store();
         (d.docs[courseId] = d.docs[courseId] || []).push(doc);
         save(d);
+        /* 시각까지 남긴다 — 다른 이력 줄은 «일자 시각»인데 공문 줄만 일자뿐이면 순서가 어긋나 보인다 */
         E().pushCourseHistory(courseId, {
-            type: 'STATUS', at: V().today(),
-            by: doc.dept, memo: '공문 온나라로 보냄 — ' + doc.title + ' (' + doc.no + ')'
+            type: 'STATUS', at: E().nowTs ? E().nowTs() : V().today(),
+            by: doc.by ? doc.dept + ' ' + doc.by : doc.dept, memo: '공문 온나라로 보냄 — ' + doc.title + ' (' + doc.no + ')'
         });
     }
     /* 임시 문서번호 — 실제 채번은 온나라가 한다(지면에 '임시 채번'으로 밝힌다).
@@ -80,7 +94,9 @@
     function attendees(id) {
         return recordsOf(id).map(function (r) {
             var w = E().workerOf(r.workerId);
-            return w ? { name: w.name, dept: E().deptName(w.deptId), hours: r.hours || 0, date: r.date } : null;
+            /* 별지는 열 때마다 다시 만든다 — 보는 사람의 조회 범위 밖 사람은 «#번호»로 가린다(교육 상세와 같은 판정, 운영 P05).
+               기안하는 사람(그 교육을 등록한 부서 담당자 · 재난안전과)에게는 전원이 범위 안이라 지면이 그대로다 */
+            return w ? { name: E().personLabel ? E().personLabel(w.id) : w.name, dept: E().deptName(w.deptId), hours: r.hours || 0, date: r.date } : null;
         }).filter(Boolean);
     }
 
@@ -91,6 +107,16 @@
            지정해 상신한다(운영 결정 2026-11-06 · 흐름전환 v2 E-4, 2026-11-12). 붙임은 종전처럼 이미
            올려 둔 파일에서 고른다(simplePick). 결재 결과를 사람이 옮겨 적는 수단은 두지 않는다. */
         simple: true, simplePick: true,
+        /* 반려·반송된 공문을 다시 기안하면 앞 기안의 제목·본문을 이어 쓰고 사유를 폼 맨 위에 보인다 —
+           처음부터 다시 쓰게 하면 사유만 고치면 될 공문을 통째로 다시 타이핑한다 */
+        initOf: function (c) {
+            var d = c ? latestDoc(c.id) : null;
+            if (!d || (d.status !== '반려' && d.status !== '반송')) return {};
+            return {
+                title: d.title, body: d.body || '',
+                notice: '앞서 보낸 공문이 ' + d.status + '되었습니다' + (d.rejectReason ? ' — 사유: ' + d.rejectReason : '') + '. 앞 기안의 제목·본문을 이어 왔습니다. 고친 뒤 다시 보냅니다.'
+            };
+        },
         sentNote: '실시 결과 공문을 온나라 연계기안함에 보냈고, 이 교육을 잠갔습니다.',
 
         targetOf: function (id) { return courseOf(id); },
@@ -107,6 +133,7 @@
         ready: function (c) {
             if (!c) return { ok: false, why: '교육을 찾지 못했습니다.' };
             if (c.status !== 'DONE') return { ok: false, why: NOT_CLOSED };
+            if (c.imported) return { ok: false, why: IMPORTED };
             return { ok: true };
         },
 
@@ -150,7 +177,8 @@
             var out = [];
             (c.files || []).forEach(function (f) {
                 /* 크기를 알면 넘긴다 — 붙임 한도(합계 30MB)는 크기를 아는 파일로만 센다(DYDOC) */
-                out.push({ label: f.name, meta: f.slot || '교육 첨부', size: f.size || null });
+                /* 칸 이름은 담당자 말로 — 저장 코드(roster·material·log)를 화면에 내지 않는다(§15) */
+                out.push({ label: f.name, meta: E().slotLabel ? E().slotLabel(f.slot) : '교육 첨부', size: f.size || null });
             });
             /* 일괄 등록(2026-11-11)은 서명부 한 파일을 여러 부서 줄이 함께 가리킨다 — 붙임 후보에는 한 번만 낸다 */
             var seen = {};
@@ -223,6 +251,8 @@
 
     /* 종료 처리 전 안내 — 기안 조건(ready)과 화면이 **같은 문장**을 쓴다 */
     var NOT_CLOSED = '교육을 종료 처리한 뒤 기안할 수 있습니다.';
+    /* 인사기록에서 옮겨 실은 이수 기록 — 이 시스템에서 실시한 교육이 아니라 실시 결과를 보고할 것이 없다 */
+    var IMPORTED = '인사기록에서 옮긴 이수 기록이라 실시 결과 공문 대상이 아닙니다.';
 
     /* 목록·상세가 쓰는 표시 컨트롤 — [공문 기안]은 종료 처리된 교육에만 나타난다.
      * 종료 처리 전에는 버튼 대신 **언제 기안할 수 있는지**를 밝힌다(운영 23건 #1 — 운영에서
@@ -232,9 +262,12 @@
         var c = courseOf(courseId);
         if (!c) return '';
         if (c.status !== 'DONE') {
-            return canDraft(c).ok ? '<span class="file-hint">' + esc(NOT_CLOSED) + '</span>' : '';
+            /* 교육 전에는 아직 기안을 말할 때가 아니다 — 등록부를 받는 중일 때만 «종료 뒤 기안»을 밝힌다 */
+            var receiving = E().enrollOpen ? E().enrollOpen(c) : true;
+            return receiving && canDraft(c).ok ? '<span class="file-hint">' + esc(NOT_CLOSED) + '</span>' : '';
         }
         var d = latestDoc(courseId);
+        if (!d && c.imported) return '';
         if (!d) {
             /* 기안 권한이 없으면 **버튼을 내지 않는다** — 누르면 거절하는 버튼을 남기면
                담당자가 이유를 모른 채 두 번 누른다. 대신 누가 기안하는지를 밝힌다. */
@@ -247,20 +280,43 @@
         }
         /* 문서 보기는 권한과 무관하다 — 조회는 막지 않는다(조회 범위와 조작은 다른 축).
            보낸 뒤에는 검토·결재 진행을 이 시스템이 알 수 없으므로 어디서 보는지 밝힌다. */
+        /* 반려·반송은 잠금이 풀린다 — 고쳐서 다시 보낼 수단을 그 자리에 둔다(CLAUDE.md §7-1).
+           없으면 담당자가 반려를 받고도 다시 올릴 길을 찾지 못한다 */
+        var again = (d.status === '반려' || d.status === '반송') && canDraft(c).ok
+            ? ' <button type="button" class="btn btn-outline btn-sm" onclick="EDUDOC.open(\'' + esc(courseId) + '\')">다시 기안</button>'
+            : '';
+        if (again) {
+            return '<span class="chip-status chip-sm ' + V().toneOf(d.status) + '">' + esc(d.status) + '</span> ' +
+                '<button type="button" class="btn btn-outline btn-sm" onclick="EDUDOC.openDoc(\'' + esc(courseId) + '\',\'' + esc(d.sid) + '\')">문서 보기</button>' + again +
+                (d.rejectReason ? ' <span class="file-hint">' + esc(d.status) + ' 사유: ' + esc(d.rejectReason) + '</span>' : '');
+        }
+        /* 결재가 끝난 공문에는 «진행은 온나라에서 확인»이 맞지 않는다 — 진행 중인 상태에만 단다 */
+        var tip = d.status === '기안함 전송' && canDraft(c).ok ? '온나라 기안함에서 검토·결재를 지정해 상신하세요'
+            : (d.status === '기안함 전송' || d.status === '결재중') ? '결재 진행은 온나라에서 확인' : '';
         return '<span class="chip-status chip-sm ' + V().toneOf(d.status) + '">' + esc(d.status) + '</span> ' +
-            '<button type="button" class="btn btn-outline btn-sm" onclick="EDUDOC.openDoc(\'' + esc(courseId) + '\',\'' + esc(d.sid) + '\')">문서 보기</button> ' +
-            '<span class="file-hint">' + (d.status === '기안함 전송' && canDraft(c).ok ? '온나라 기안함에서 검토·결재를 지정해 상신하세요' : '결재 진행은 온나라에서 확인') + '</span>';
+            '<button type="button" class="btn btn-outline btn-sm" onclick="EDUDOC.openDoc(\'' + esc(courseId) + '\',\'' + esc(d.sid) + '\')">문서 보기</button>' +
+            (tip ? ' <span class="file-hint">' + tip + '</span>' : '');
     }
 
     /* ===================== 결재 이력 소비 API =====================
      * 결재 이력 화면(edu-approval.html)은 **여기만 읽는다** — 상신을 이 모듈이 하므로
      * 이력도 이 모듈이 낸다. 종전 구 축(EDUAPV)을 읽으면 공문을 올려도 이력이 0건으로
      * 남는다(실제로 그랬다). 화면이 스토어 구조를 직접 파헤치지 않도록 형태를 맞춰 준다. */
+    /* 이 공문을 볼 수 있는가 — 조회 범위(DYROLE.scope) 한 곳에서 판정한다(CLAUDE.md §12 · 운영 P01·P05).
+     * 부서가 등록한 교육(자체·채용시·기타)의 공문은 그 부서 것이다 — 범위 밖 부서 담당자에게는 목록에서 뺀다
+     * (채용시교육 공문 제목에는 사람 이름이 들어 있다). 부서가 비어 있는 전사 교육(집합·관리감독자 정기)은
+     * 모든 부서가 참석했으므로 목록에 두고, 별지의 다른 부서 이름만 가린다(annexes → personLabel). */
+    function canSeeDoc(c) {
+        var R = global.DYROLE;
+        if (!c || !c.deptId || !R || !R.inScope) return true;
+        return R.inScope(c.deptId);
+    }
     function submissions() {
         var d = store(), out = [];
         Object.keys(d.docs || {}).forEach(function (cid) {
             var arr = d.docs[cid] || [];
             var c = courseOf(cid);
+            if (!canSeeDoc(c)) return;
             arr.forEach(function (doc, i) {
                 out.push({
                     sid: doc.sid, no: doc.no, at: doc.at, status: doc.status,
@@ -285,6 +341,8 @@
             (d.docs[cid] || []).forEach(function (doc) { if (doc.sid === sid) hit = { cid: cid, doc: doc }; });
         });
         if (!hit) { V().toast('문서를 찾지 못했습니다.'); return; }
+        /* 목록에서 뺀 공문은 전역 호출로도 열지 않는다(§12 — 렌더에서만 지우면 뚫린다) */
+        if (!canSeeDoc(courseOf(hit.cid))) { V().toast('조회 범위 밖 부서의 공문입니다.'); return; }
         T.openDoc(hit.cid, sid);
     }
 

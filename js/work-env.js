@@ -196,7 +196,7 @@
             '<div class="ri-modal-row" style="margin-bottom:12px;"><label class="form-label" for="we-n-vendor">위탁업체</label>' +
                 '<input type="text" class="form-input" id="we-n-vendor" placeholder="예: (주)한국산업보건환경연구원"></div>' +
             '<div class="ri-modal-row" style="margin-bottom:12px;"><label class="form-label" for="we-n-planned">측정 예정일</label>' +
-                '<input type="date" class="form-input" id="we-n-planned" value="2026-09-15"></div>' +
+                '<input type="date" class="form-input" id="we-n-planned" value="' + S().addDays(S().TODAY, 14) + '"></div>' +
             '<div class="ri-modal-row"><label><input type="checkbox" id="we-n-carc"> 고용노동부 고시 30년 보존 대상 물질 기록</label></div>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="WENV.saveNew()">등록</button>');

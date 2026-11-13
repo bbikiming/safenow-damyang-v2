@@ -471,37 +471,47 @@
          *   role: { items, total(대상), done, prog(진행중), notStart, avg(완료자 평균점수) }
          *   depts: [부서명, 완료, 대상, 중점(★)]
          * ══════════════════════════════════════════════════════════ */
+        /* 예시 자료(2026-11-13 기준) — 인력 평가 화면(evl-eval)의 매트릭스·평가 이력과 같은 수다.
+         * 대상 = 조직도 파생(책임자 9 · 관리감독자 20, 11개 부서). 2026 상반기 마감 완료 · 하반기 진행 중.
+         * 마감 D-day 는 기준일(DYV2.today)에서 센다 — 문자열로 박으면 날짜가 지나도 그대로 남는다. */
+        const DDAY = (iso) => {
+            const n = (window.DYV2 && DYV2.daysTo) ? DYV2.daysTo(iso) : null;
+            if (n == null) return { dday: '진행 중', ddayKind: 'warn' };
+            if (n < 0) return { dday: '마감 완료', ddayKind: 'done' };
+            return { dday: '마감 D-' + n, ddayKind: 'warn' };
+        };
         const CY = {
-            '2026-H1': { period: '2026-04-01 ~ 2026-06-30', deadline: '2026-06-30 (금)', dday: '마감 D-15', ddayKind: 'warn',
-                resp: { items: 8, total: 12, done: 7, prog: 3, notStart: 2, avg: 82 },
-                sup:  { items: 5, total: 20, done: 11, prog: 5, notStart: 4, avg: 78 },
-                avgProgress: '3.2/8항목', notNote: '보건소·담양읍 외 4건',
-                depts: [['건설과',7,7,1],['공공시설사업소',8,9,1],['기획예산실',3,4,0],['재무과',2,3,0],['물순환사업소',2,3,1],['환경과',1,2,0],['문화체육과',1,2,1],['담양읍',1,3,0],['보건소',0,2,0]] },
-            '2026-H2': { period: '2026-10-01 ~ 2026-12-31', deadline: '2026-12-31 (수)', dday: '개시 예정', ddayKind: 'upcoming',
-                resp: { items: 8, total: 12, done: 0, prog: 0, notStart: 12, avg: 0 },
-                sup:  { items: 5, total: 20, done: 0, prog: 0, notStart: 20, avg: 0 },
-                avgProgress: '0/8항목', notNote: '하반기 사이클 개시 전',
-                depts: [['건설과',0,7,1],['공공시설사업소',0,9,1],['기획예산실',0,4,0],['재무과',0,3,0],['물순환사업소',0,3,1],['환경과',0,2,0],['문화체육과',0,2,1],['담양읍',0,3,0],['보건소',0,2,0]] },
-            '2025-H2': { period: '2025-10-01 ~ 2025-12-31', deadline: '2025-12-31', dday: '마감 완료', ddayKind: 'done',
-                resp: { items: 8, total: 12, done: 12, prog: 0, notStart: 0, avg: 85 },
-                sup:  { items: 5, total: 20, done: 19, prog: 0, notStart: 1, avg: 80 },
-                avgProgress: '—', notNote: '환경과 1건 미시작 종결',
-                depts: [['건설과',7,7,1],['공공시설사업소',9,9,1],['기획예산실',4,4,0],['재무과',3,3,0],['물순환사업소',3,3,1],['환경과',1,2,0],['문화체육과',2,2,1],['담양읍',3,3,0],['보건소',2,2,0]] },
-            '2025-H1': { period: '2025-04-01 ~ 2025-06-30', deadline: '2025-06-30', dday: '마감 완료', ddayKind: 'done',
-                resp: { items: 8, total: 12, done: 12, prog: 0, notStart: 0, avg: 83 },
-                sup:  { items: 5, total: 20, done: 20, prog: 0, notStart: 0, avg: 79 },
+            '2026-H1': { period: '2026-04-01 ~ 2026-06-30', deadline: '2026-06-30 (화)', dday: '마감 완료', ddayKind: 'done',
+                resp: { items: 8, total: 9, done: 9, prog: 0, notStart: 0, avg: 87 },
+                sup:  { items: 5, total: 20, done: 20, prog: 0, notStart: 0, avg: 85 },
+                avgProgress: '—', notNote: '전 부서 완료 · 결과 보고 11개 부서 결재완료',
+                depts: [['기획예산실',1,1,0],['재난안전과',1,1,0],['회계과',1,1,0],['환경과',4,4,1],['문화체육과',2,2,1],['재무과',2,2,0],['보건소',3,3,0],['건설과',5,5,1],['공공시설사업소',3,3,1],['물순환사업소',6,6,1],['담양읍',1,1,0]] },
+            '2026-H2': Object.assign({ period: '2026-10-01 ~ 2026-12-31', deadline: '2026-12-31 (목)' }, DDAY('2026-12-31'), {
+                resp: { items: 8, total: 9, done: 2, prog: 1, notStart: 6, avg: 90 },
+                sup:  { items: 5, total: 20, done: 8, prog: 3, notStart: 9, avg: 88 },
+                avgProgress: '책임자 5/8 · 감독자 3/5',
+                notNote: '평가자 지정 8 · 미지정 7',
+                depts: [['기획예산실',0,1,0],['재난안전과',0,1,0],['회계과',0,1,0],['환경과',1,4,1],['문화체육과',1,2,1],['재무과',0,2,0],['보건소',0,3,0],['건설과',2,5,1],['공공시설사업소',3,3,1],['물순환사업소',3,6,1],['담양읍',0,1,0]] }),
+            '2025-H2': { period: '2025-10-01 ~ 2025-12-31', deadline: '2025-12-31 (수)', dday: '마감 완료', ddayKind: 'done',
+                resp: { items: 8, total: 9, done: 9, prog: 0, notStart: 0, avg: 86 },
+                sup:  { items: 5, total: 20, done: 19, prog: 0, notStart: 1, avg: 82 },
+                avgProgress: '—', notNote: '환경과 1건 미평가 종결(장기 교육 파견)',
+                depts: [['기획예산실',1,1,0],['재난안전과',1,1,0],['회계과',1,1,0],['환경과',3,4,1],['문화체육과',2,2,1],['재무과',2,2,0],['보건소',3,3,0],['건설과',5,5,1],['공공시설사업소',3,3,1],['물순환사업소',6,6,1],['담양읍',1,1,0]] },
+            '2025-H1': { period: '2025-04-01 ~ 2025-06-30', deadline: '2025-06-30 (월)', dday: '마감 완료', ddayKind: 'done',
+                resp: { items: 8, total: 9, done: 9, prog: 0, notStart: 0, avg: 85 },
+                sup:  { items: 5, total: 20, done: 20, prog: 0, notStart: 0, avg: 84 },
                 avgProgress: '—', notNote: '전 부서 완료',
-                depts: [['건설과',7,7,1],['공공시설사업소',9,9,1],['기획예산실',4,4,0],['재무과',3,3,0],['물순환사업소',3,3,1],['환경과',2,2,0],['문화체육과',2,2,1],['담양읍',3,3,0],['보건소',2,2,0]] },
+                depts: [['기획예산실',1,1,0],['재난안전과',1,1,0],['회계과',1,1,0],['환경과',4,4,1],['문화체육과',2,2,1],['재무과',2,2,0],['보건소',3,3,0],['건설과',5,5,1],['공공시설사업소',3,3,1],['물순환사업소',6,6,1],['담양읍',1,1,0]] },
             '2024-H2': { period: '2024-10-01 ~ 2024-12-31', deadline: '2024-12-31', dday: '마감 완료', ddayKind: 'done',
-                resp: { items: 8, total: 11, done: 11, prog: 0, notStart: 0, avg: 81 },
-                sup:  { items: 5, total: 18, done: 18, prog: 0, notStart: 0, avg: 77 },
+                resp: { items: 8, total: 9, done: 9, prog: 0, notStart: 0, avg: 81 },
+                sup:  { items: 5, total: 17, done: 17, prog: 0, notStart: 0, avg: 77 },
                 avgProgress: '—', notNote: '전 부서 완료',
-                depts: [['건설과',6,6,1],['공공시설사업소',8,8,1],['기획예산실',4,4,0],['재무과',3,3,0],['물순환사업소',3,3,1],['환경과',2,2,0],['문화체육과',2,2,1],['담양읍',3,3,0],['보건소',1,1,0]] },
+                depts: [['기획예산실',1,1,0],['재난안전과',1,1,0],['회계과',1,1,0],['환경과',3,3,1],['문화체육과',2,2,1],['재무과',2,2,0],['보건소',2,2,0],['건설과',5,5,1],['공공시설사업소',3,3,1],['물순환사업소',5,5,1],['담양읍',1,1,0]] },
             '2024-H1': { period: '2024-04-01 ~ 2024-06-30', deadline: '2024-06-30', dday: '마감 완료', ddayKind: 'done',
-                resp: { items: 8, total: 11, done: 10, prog: 0, notStart: 1, avg: 78 },
-                sup:  { items: 5, total: 18, done: 17, prog: 0, notStart: 1, avg: 75 },
-                avgProgress: '—', notNote: '도입 초기(2건 미시작 종결)',
-                depts: [['건설과',6,6,1],['공공시설사업소',7,8,1],['기획예산실',4,4,0],['재무과',3,3,0],['물순환사업소',2,3,1],['환경과',2,2,0],['문화체육과',2,2,1],['담양읍',3,3,0],['보건소',1,1,0]] },
+                resp: { items: 8, total: 9, done: 8, prog: 0, notStart: 1, avg: 78 },
+                sup:  { items: 5, total: 17, done: 16, prog: 0, notStart: 1, avg: 75 },
+                avgProgress: '—', notNote: '도입 초기(2건 미평가 종결)',
+                depts: [['기획예산실',1,1,0],['재난안전과',1,1,0],['회계과',1,1,0],['환경과',3,3,1],['문화체육과',2,2,1],['재무과',2,2,0],['보건소',2,2,0],['건설과',5,5,1],['공공시설사업소',2,3,1],['물순환사업소',5,5,1],['담양읍',0,1,0]] },
         };
 
         const HALF_LABEL = { H1: '상반기', H2: '하반기', ALL: '전체' };
@@ -640,6 +650,12 @@
             });
         });
 
+        /* 기본 반기는 기준일이 속한 반기다(7월 이후 = 하반기) */
+        (function defaultHalf() {
+            const m = (window.DYV2 && DYV2.today) ? Number(DYV2.today().slice(5, 7)) : 1;
+            const want = m >= 7 ? 'H2' : 'H1';
+            document.querySelectorAll('#evl-half button').forEach(x => x.classList.toggle('is-active', x.dataset.half === want));
+        })();
         window.EVLS = { render };
         render();
 

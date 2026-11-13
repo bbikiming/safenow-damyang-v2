@@ -301,7 +301,10 @@
      * 독촉·통지처럼 «그 부서 담당자»에게 가는 알림은 사람 이름이 아니라 **등급**으로 찾는다.
      *   1순위 그 부서의 「부서 안전보건 담당자」(재난안전과는 그 자리가 「전담부서」 등급이다)
      *   2순위 없으면 그 부서장(조직도의 부서장 표시) — «대체 수신»으로 밝힌다
-     *   3순위 둘 다 없으면 받는 사람 없음 — 이력에만 남고, 보냈다고 가장하지 않는다
+     *   3순위 둘 다 없으면 그 부서 실무자 전원(과장·소장·팀장 등 직위자 제외) — 담당자·부서장이 조직도에
+     *          없는 부서(문화체육과·재무과)도 주무관이 있으면 누군가는 받는다(2026-11-13 실습 데이터 점검,
+     *          이행점검 «받는 사람 = 할 수 있는 사람» 요청서 v2 §1-10 과 같은 축)
+     *   4순위 그것도 없으면 받는 사람 없음 — 이력에만 남고, 보냈다고 가장하지 않는다
      * 대체 수신을 두는 이유: 담당자 등급 명단은 담양군 자료 대기(EXT-16)라 지금은 예시 2인뿐이다.
      * 대체가 없으면 거의 모든 부서의 독촉이 0명이 되어 기능이 돌지 않는다. 부서장은 그 부서 일을
      * 누구에게 맡길지 정하는 사람이라(배정은 중간 관리자 — CLAUDE.md §14-7) 대신 받을 자리다.
@@ -316,6 +319,9 @@
         if (staff.length) return { kind: 'staff', label: String(role.name).replace(/\s*\(.*\)\s*$/, ''), people: staff };
         const lead = window.DYROLE && window.DYROLE.leadOf ? window.DYROLE.leadOf(deptId) : null;
         if (lead) return { kind: 'lead', label: '부서장 대체 수신', people: [lead] };
+        const LEAD_RE = /(과장|소장|실장|국장|읍장|면장|군수|팀장)$/;
+        const members = membersUnder(deptId, true).map(personByUid).filter(p => p && !LEAD_RE.test(p.role || ''));
+        if (members.length) return { kind: 'members', label: '실무자 전원 — 담당자·부서장 미등록', people: members };
         return { kind: 'none', label: '받는 사람 없음', people: [] };
     }
     /* 독촉 확인·토스트에 쓰는 한 줄 — «누가 받는가»를 보내기 전에 밝힌다 */
@@ -324,6 +330,7 @@
         const names = c.people.map(p => p.name).join('·');
         if (c.kind === 'staff') return names + '(' + c.label + ')';
         if (c.kind === 'lead') return '부서장 ' + names + '(담당자 미지정 — 대신 받음)';
+        if (c.kind === 'members') return names + '(' + c.label + ')';
         return '받는 사람 없음(담당자·부서장 미등록)';
     }
     function roleMemberCountLabel(role) {

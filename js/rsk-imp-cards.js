@@ -114,7 +114,7 @@
            완료된 건은 어느 쪽도 바꾸지 않는다(끝난 일을 고치는 건 기록 조작이다). */
         if (amendKind(m) && m.status !== 'DONE') {
             meta.push('<button type="button" class="rl-imp-amend" onclick="IMPCARD.amendOpen(\'' + esc(m.id) + '\')">' +
-                (amendKind(m) === 'owner' ? (canExtend(m) ? '담당자 지정 · 기한 연장' : '담당자 지정') : '변경') + '</button>');
+                amendLabel(m) + '</button>');
         }
         if (amendLogHtml(m)) meta.push(amendLogHtml(m));
         return '<article class="rl-imp-card' + (overdue ? ' is-overdue' : '') + '">' +
@@ -358,6 +358,10 @@
     /* 부서의 기한 연장 (2026-11-11 2차 교육 반영안 ⑦ «필요 시 기한 연장») —
      * 정기평가 개선조치는 그 부서 담당자가 **늦추는 쪽으로만** 직접 바꾼다. 사유는 필수이고
      * 이력에 남으며 재난안전과에 알림이 간다. 당기는 것·수시평가 건은 종전대로 주관부서 몫이다. */
+    /* 담당자·기한 변경 버튼 이름 — 카드와 내 할일이 같은 이름을 쓴다(가이드가 한 이름으로 안내한다) */
+    function amendLabel(m) {
+        return amendKind(m) === 'owner' ? (canExtend(m) ? '담당자 지정 · 기한 연장' : '담당자 지정') : '변경';
+    }
     function canExtend(m) {
         return amendKind(m) === 'owner' && m.source_type === 'risk_assessment' && !!m.assessment_id && m.status !== 'DONE';
     }
@@ -676,6 +680,6 @@
         cfmCancel: cfmCancel,
         bulkOpen: bulkOpen, bulkClose: bulkClose, bulkCk: bulkCk, bulkDo: bulkDo,
         /* 목록 화면이 CTA 문구를 같은 기준으로 정하기 위해 함께 공개한다 */
-        canComplete: canComplete
+        canComplete: canComplete, amendLabel: amendLabel
     };
 })(window);

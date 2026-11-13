@@ -3,7 +3,9 @@
    ---------------------------------------------------------------------
    docs/planning/기획-안전보건교육-재설계-v1.md §9 스키마 반영.
    순수 계산 함수(cycleOf/requiredHours/hireHours)를 분리해 법 해석 변경 시
-   함수만 교체 가능하도록 구성. 기준일 2026-07-16(CLAUDE.md currentDate).
+   함수만 교체 가능하도록 구성. 기준일은 DYV2.today()(CLAUDE.md §11).
+   예시 자료는 «2026-11-13 까지 운영한 시스템» 모양이다 — 1~10월 집합교육 완료·공문 회신,
+   11월 교육(C-M11) 등록부 받는 중, 12월 교육(C-M12) 교육 전.
    근로자 조직은 DYV2.ORG 파생 + 계약직/일용 목업 시드.
 
    전역: DYEDU.*  (js/common.js 뒤에 로드)
@@ -13,7 +15,9 @@
 
     /* r5 — 2026-07-30 회의: 기타교육 분류를 법정 3유형으로 재정의(구 5종 폐지) ·
      * 첨부 슬롯(file.slot) 도입. 구 etcType 이 남으면 필터·표시가 어긋나므로 버전 범프. */
-    var SKEY = 'damyangEduV1r9';   /* r9 — 시드 이력 문구 «신청» 걷기 (2026-11-12) */
+    var SKEY = 'damyangEduV1r12';  /* r12 — 등록부 사람별 참석시간(hoursBy) · 공문 붙임 5개 이내 · 재난안전과 현업 미이수 1명 · 이력 시각 정리 (2026-11-13) */
+    /* r11 */  /* r10 — 예시 자료를 «11월 13일까지 운영한 시스템»으로 다시 짰다 (2026-11-13) */
+    /* r9 — 시드 이력 문구 «신청» 걷기 (2026-11-12) */
     /* r8 — 참석자 등록부는 교육이 끝난 뒤(등록 기한) · 끝난 접수 중 교육 시드 1건 (2026-11-12) */
     /* 오늘 기준 — DYV2.today() 단일 출처. TODAY 는 하위호환 게터(DYEDU.TODAY)로 유지. */
     function today() { return (global.DYV2 && global.DYV2.today) ? global.DYV2.today() : realToday(); }
@@ -178,7 +182,7 @@
                 out.push({
                     id: 'w_' + m.uid, name: m.name, deptId: deptId, deptName: deptName,
                     category: isSup ? 'SUPERVISOR' : 'OFFICE',
-                    empType: 'CIVIL', hireDate: '2020-03-02', designatedAt: '', contractMonths: 0,
+                    empType: 'CIVIL', hireDate: HR_HIRE[m.uid] || HR_HIRE_DEFAULT, designatedAt: '', contractMonths: 0,
                     active: true, source: 'HR', role: m.role || ''
                 });
             });
@@ -192,7 +196,26 @@
         return out;
     }
 
-    /* 부서별 계약직·일용 목업 (몇 개 부서에 집중) */
+    /* 인사 연동분의 임용일 — 사람마다 다르다(예시 값). 종전에는 전원 '2020-03-02' 한 값이라
+       정기교육 사이클이 모두 같은 날 시작하고 끝나 이수현황이 한 덩어리로만 움직였다.
+       목록에 없는 사람은 HR_HIRE_DEFAULT 를 쓴다. */
+    var HR_HIRE_DEFAULT = '2020-03-02';
+    var HR_HIRE = {
+        u_plan1: '2004-03-02', u_plan2: '2016-07-01',
+        u_safe1: '2003-09-01', u_safe2: '2012-09-03', u_jjt1: '2008-03-03', u_jjt2: '2019-03-04', u_jjt3: '2023-07-03',
+        u_acct1: '2005-03-02', u_acct2: '2018-01-02',
+        u_env1: '2002-09-02', u_env2: '2017-03-02', u_env3: '2021-09-01', u_env6: '2009-03-02', u_env4: '2022-01-03', u_env5: '2024-07-01',
+        u_cul1: '2015-03-02', u_cul2: '2020-09-01',
+        u_fin1: '2013-01-02', u_fin2: '2019-07-01',
+        u_hlth1: '2001-03-02', u_hlth2: '2014-03-03', u_hlth3: '2018-09-03', u_hlth4: '2021-03-02', u_hlth5: '2025-01-02',
+        u_con1: '2003-03-03', u_con2: '2016-09-01', u_con6: '2010-03-02', u_con3: '2020-03-02', u_con4: '2023-01-02', u_con5: '2025-07-01',
+        u_fac1: '2004-09-01', u_fac2: '2011-03-02', u_fac3: '2019-09-02', u_fac4: '2022-07-01',
+        u_wat1: '2002-03-04', u_wat2: '2010-09-01', u_wat5: '2007-09-03', u_wat3: '2018-03-02', u_wat6: '2024-01-02',
+        u_wat7: '2009-09-01', u_wat4: '2017-07-03',
+        u_twn1: '2001-09-03', u_twn2: '2015-09-01'
+    };
+
+    /* 부서별 계약직·일용 (현업 부서에 집중) — 예시 명단 */
     function seedContractWorkers() {
         var seed = [];
         var mk = function (id, name, deptId, cat, emp, hire, contract, source) {
@@ -202,253 +225,420 @@
         /* 환경과 — 자원순환·환경지도 현업 */
         mk('w_env_c1', '박수완', 'env', 'FIELD', 'CONTRACT', '2025-03-02', 12, 'HR');
         mk('w_env_c2', '이수영', 'env', 'FIELD', 'CONTRACT', '2025-09-01', 12, 'HR');
-        mk('w_env_c3', '조민서', 'env', 'FIELD', 'CONTRACT', '2026-02-01', 12, 'MANUAL'); /* 정기 미달 시나리오 */
-        mk('w_env_c4', '한도영', 'env', 'FIELD', 'DAILY',    '2026-07-10', 0.1, 'MANUAL'); /* 채용시 지연 시나리오 */
-        mk('w_env_c5', '차이수', 'env', 'FIELD', 'CONTRACT', '2026-06-15', 3, 'EXCEL');
+        mk('w_env_c3', '조민서', 'env', 'FIELD', 'CONTRACT', '2026-02-01', 12, 'MANUAL');
+        mk('w_env_c4', '한도영', 'env', 'FIELD', 'DAILY',    '2026-07-10', 0.1, 'MANUAL'); /* 채용시교육 지연 이수 */
+        mk('w_env_c5', '차이수', 'env', 'FIELD', 'CONTRACT', '2026-06-15', 6, 'EXCEL');
         /* 물순환사업소 — 정수·수질 현업 */
         mk('w_wat_c1', '한지훈', 'water', 'FIELD', 'CONTRACT', '2025-03-01', 12, 'HR');
         mk('w_wat_c2', '오태섭', 'water', 'FIELD', 'CONTRACT', '2025-11-01', 12, 'HR');
-        mk('w_wat_c3', '박정민', 'water', 'FIELD', 'CONTRACT', '2026-01-15', 12, 'MANUAL'); /* 정기 미달 */
+        mk('w_wat_c3', '박정민', 'water', 'FIELD', 'CONTRACT', '2026-01-15', 12, 'MANUAL');
         mk('w_wat_c4', '김수빈', 'water', 'FIELD', 'CONTRACT', '2026-05-10', 6, 'EXCEL');
-        mk('w_wat_c5', '이서준', 'water', 'FIELD', 'DAILY',    '2026-07-05', 0.1, 'MANUAL'); /* 채용시 지연 시나리오 */
+        mk('w_wat_c5', '이서준', 'water', 'FIELD', 'DAILY',    '2026-11-10', 0.1, 'MANUAL'); /* 최근 채용 — 채용시교육 전 */
         /* 공공시설사업소 — 시설운영·환경시설 */
         mk('w_fac_c1', '정민수', 'facility', 'FIELD', 'CONTRACT', '2024-08-01', 24, 'HR');
         mk('w_fac_c2', '박현우', 'facility', 'FIELD', 'CONTRACT', '2025-08-01', 12, 'HR');
-        mk('w_fac_c3', '이도현', 'facility', 'FIELD', 'CONTRACT', '2026-02-20', 12, 'MANUAL'); /* 정기 미달 */
-        mk('w_fac_c4', '오세훈', 'facility', 'FIELD', 'DAILY',    '2026-06-25', 0.2, 'EXCEL');
+        mk('w_fac_c3', '이도현', 'facility', 'FIELD', 'CONTRACT', '2026-02-20', 12, 'MANUAL');
+        mk('w_fac_c4', '오세훈', 'facility', 'FIELD', 'DAILY',    '2026-10-27', 0.2, 'EXCEL');
         /* 건설과 — 도로·안전관리 현업 */
         mk('w_con_c1', '최준영', 'construct', 'FIELD', 'CONTRACT', '2025-03-15', 12, 'HR');
         mk('w_con_c2', '강태우', 'construct', 'FIELD', 'CONTRACT', '2025-10-01', 12, 'HR');
-        mk('w_con_c3', '한지원', 'construct', 'FIELD', 'CONTRACT', '2026-03-01', 12, 'MANUAL'); /* 정기 미달 */
-        mk('w_con_c4', '박서연', 'construct', 'FIELD', 'CONTRACT', '2026-04-10', 6, 'EXCEL');
-        /* 재난안전과 — 조회만(정보) */
+        mk('w_con_c3', '한지원', 'construct', 'FIELD', 'CONTRACT', '2026-03-01', 12, 'MANUAL');
+        mk('w_con_c4', '박서연', 'construct', 'FIELD', 'CONTRACT', '2026-09-14', 6, 'EXCEL');
+        /* 재난안전과 */
         mk('w_safety_c1', '조안나', 'safety', 'OFFICE', 'CONTRACT', '2025-04-01', 12, 'HR');
+        /* 재난안전과 현업 — 새 사이클(11-12~)이 막 시작해 미이수다. 실습으로 집합교육 한 건(3h)을 이수해도 12h 에 못 미쳐
+           과장·팀장의 «재난안전과 미이수자 독촉»(ES-14) 실습 대상이 남는다 */
+        mk('w_safety_c2', '송민재', 'safety', 'FIELD', 'CONTRACT', '2025-05-12', 12, 'HR');
         /* 문화체육과 — 체육·문화시설 */
         mk('w_cul_c1', '이하영', 'culture', 'FIELD', 'CONTRACT', '2025-05-01', 12, 'HR');
-        mk('w_cul_c2', '박진호', 'culture', 'FIELD', 'CONTRACT', '2026-01-05', 12, 'MANUAL'); /* 정기 미달 */
+        mk('w_cul_c2', '박진호', 'culture', 'FIELD', 'CONTRACT', '2026-11-09', 4, 'MANUAL'); /* 최근 채용 — 채용시교육 전 */
         /* 보건소 */
         mk('w_hlth_c1', '윤소민', 'health', 'FIELD', 'CONTRACT', '2025-04-15', 12, 'HR');
-        mk('w_hlth_c2', '김하늘', 'health', 'FIELD', 'DAILY',    '2026-07-01', 0.1, 'MANUAL'); /* 채용시 지연 */
+        mk('w_hlth_c2', '김하늘', 'health', 'FIELD', 'DAILY',    '2026-11-02', 0.1, 'MANUAL'); /* 채용 11일째 — 채용시교육 미이수 */
         /* 담양읍 */
-        mk('w_twn_c1', '최민석', 'town_damyang', 'FIELD', 'CONTRACT', '2025-06-01', 12, 'HR');
+        mk('w_twn_c1', '최민석', 'town_damyang', 'FIELD', 'CONTRACT', '2025-06-01', 12, 'HR');   /* 채용시교육 기록 없음 */
         return seed;
     }
 
+    /* ── 예시 자료 생성 도우미 ─────────────────────────────────────────────── */
+    /* 같은 입력이면 늘 같은 값 — 새로 고칠 때마다 참석자가 바뀌지 않게 한다 */
+    function hash01(key) {
+        var h = 2166136261;
+        for (var i = 0; i < key.length; i++) { h ^= key.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+        return (h % 1000) / 1000;
+    }
+    function addDays(iso, n) {
+        var t = new Date(iso + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() + n);
+        return t.toISOString().slice(0, 10);
+    }
+    function endOf(start, hours) {
+        var t = start.split(':'), m = (+t[0]) * 60 + (+t[1]) + Math.round(hours * 60);
+        return ('0' + Math.floor(m / 60)).slice(-2) + ':' + ('0' + (m % 60)).slice(-2);
+    }
+    /* 실제 처리한 사람(DYV2.ORG) — 이력·등록부의 «누가» */
+    var SAFETY = '재난안전과 박안전';
+    var DEPT_STAFF = {
+        safety: '박안전', plan: '한열람', acct: '최회계', env: '정환경', culture: '한지훈', finance: '최재무',
+        health: '이보건', construct: '박현장', facility: '한담당', water: '하정수', town_damyang: '배주민'
+    };
+    var STAFF_UID = { '박안전': 'u_jjt2', '정환경': 'u_env2', '하정수': 'u_wat3', '한담당': 'u_fac2', '박현장': 'u_con2', '이보건': 'u_hlth2' };
+    function staffOf(deptId) { return DEPT_STAFF[deptId] || '박안전'; }
+    /* 교육 첨부 칸 이름 — 저장 코드(file.slot)를 화면·공문 붙임 후보에 그대로 내지 않는다(§15).
+       등록 폼의 칸 이름(EDUFORM.ATTACH_SLOTS)과 같은 말이다 */
+    var SLOT_LABEL = { roster: '참석자 명단 (서명 포함)', material: '교육 자료', log: '교육일지 및 교육사진 등' };
+    function slotLabel(slot) { return SLOT_LABEL[slot] || '교육 첨부'; }
+
     function seed() {
         var workers = orgWorkers().concat(seedContractWorkers());
-        /* v1.1 §8.5: 월별 집합교육 시드 — 2026 1~7월 완료 1건씩 · 8월 예정 1건.
-           각 월 3h · 부서별 신청·서명·records까지 정합. 채용시교육 시드는 없음(근로자 등록 시 자동 미이수). */
-        var months = [
-            { m: '01', date: '2026-01-16', desc: '2026년 1월 정기 안전보건교육 (전체 부서 대상)', inst: '한국산업안전보건공단 김강사' },
-            { m: '02', date: '2026-02-13', desc: '2026년 2월 정기 안전보건교육 (전체 부서 대상)', inst: '한국산업안전보건공단 이강사' },
-            { m: '03', date: '2026-03-13', desc: '2026년 3월 정기 안전보건교육 (전체 부서 대상)', inst: '외부 강사 (안전보건연구원)' },
-            { m: '04', date: '2026-04-17', desc: '2026년 4월 정기 안전보건교육 (전체 부서 대상)', inst: '한국산업안전보건공단 김강사' },
-            { m: '05', date: '2026-05-15', desc: '2026년 5월 정기 안전보건교육 (전체 부서 대상)', inst: '한국산업안전보건공단 이강사' },
-            { m: '06', date: '2026-06-12', desc: '2026년 6월 정기 안전보건교육 (전체 부서 대상)', inst: '외부 강사 (안전보건연구원)' },
-            { m: '07', date: '2026-07-10', desc: '2026년 7월 정기 안전보건교육 (전체 부서 대상)', inst: '한국산업안전보건공단 김강사' }
+        var wById = {}; workers.forEach(function (w) { wById[w.id] = w; });
+        var courses = [], enrolls = [], records = [], docSeed = [];
+        function dn(id) { return deptName(id); }
+        function hist(c, at, by, memo, type) { c.history.push({ type: type || 'STATUS', at: at, by: by, memo: memo }); }
+        /* 공문 예시 — 화면 흐름(기안 → 미리보기 → 온나라로 보내기)을 거친 결과의 모양 그대로.
+           상태는 온나라 연계 회신으로 바뀐 값이다(보낸 직후 «기안함 전송» → 상신 «결재중» → «결재완료/반려»). */
+        function doc(c, at, by, status, extra) {
+            var dept = (by === '박안전') ? '재난안전과' : dn(c.deptId || 'safety');
+            var att = (c.files || []).map(function (f) { return { label: f.name, meta: slotLabel(f.slot), on: true }; });
+            var seen = {};
+            enrolls.forEach(function (e) {
+                if (e.courseId !== c.id || !e.signFile || seen[e.signFile]) return;
+                seen[e.signFile] = 1;
+                att.push({ label: e.signFile, meta: e.bulk ? '일괄 등록 참석자 서명부' : dn(e.deptId) + ' 참석자 서명부', on: true });
+            });
+            /* 온나라 붙임 한도(별지 포함 5개 — DYDOC ATTACH_LIMIT)를 예시 공문도 지킨다. 이수자 명단 별지가 한 자리를
+               쓰므로 파일은 4개까지 — 교육 첨부 → 일괄 등록 서명부 → 부서 서명부 순으로 싣는다.
+               (화면이 6개째를 막는데 예시 공문에 10개가 붙어 있으면 실습하는 사람이 무엇이 맞는지 모른다) */
+            att = att.slice(0, 4);
+            var recs = records.filter(function (r) { return r.courseId === c.id; });
+            var depts = {}; recs.forEach(function (r) { depts[(wById[r.workerId] || {}).deptId] = 1; });
+            var d = {
+                courseId: c.id, at: at, status: status, docType: '내부결재',
+                title: c.date.slice(0, 4) + '년 안전보건교육 실시 결과 보고 — ' + c.desc, to: '',
+                /* 관련 근거는 본문에 쓰지 않는다 — 고른 근거(basis)를 지면의 «근거» 줄이 싣는다(DYDOC) */
+                body: '1. ' + c.desc + '을(를) 아래와 같이 실시하였기에 그 결과를 보고합니다.\n' +
+                      '  가. 일시: ' + (c.sessions && c.sessions.length > 1 ? c.sessions[0].date + ' 외 ' + (c.sessions.length - 1) + '일' : c.date + ' ' + c.time + '~' + (c.endTime || endOf(c.time, c.hours))) + ' (' + c.hours + '시간)\n' +
+                      '  나. 장소: ' + (c.place || '-') + '\n' +
+                      '  다. 강사: ' + (c.instructor || '-') + '\n' +
+                      '  라. 실시 결과: ' + Object.keys(depts).length + '개 부서 ' + recs.length + '명 이수\n' +
+                      '2. 미참석자는 다음 교육 또는 부서 자체교육으로 보충하겠습니다.',
+                attach: att, annex: true, basis: ['osh-29'], line: [], lineText: '',
+                by: by, byUid: STAFF_UID[by] || '', dept: dept
+            };
+            Object.keys(extra || {}).forEach(function (k) { d[k] = extra[k]; });
+            docSeed.push(d);
+            return d;
+        }
+
+        /* ───────── 1. 현업근로자 정기교육(집합) — 매월 1회, 재난안전과 박안전 운영 ─────────
+         * 1~10월은 끝났다: 교육 뒤 부서가 등록부를 올리고(일부는 재난안전과 일괄 등록)
+         * → 등록 기한 무렵 종료 처리 → 실시 결과 공문을 온나라로 보냈다.
+         * 11월(11-11)은 등록부를 받는 중이고 12월은 교육 전이다. */
+        var MONTHLY = [
+            { m: '01', date: '2026-01-16', h: 2, topic: '동절기 한랭질환·빙판길 넘어짐 예방', inst: '안전보건공단 광주광역본부 위촉강사', place: '군청 대회의실' },
+            { m: '02', date: '2026-02-13', h: 2, topic: '산업안전보건법·중대재해처벌법 주요 내용', inst: '재난안전과 안전관리자 김안전', place: '군청 대회의실' },
+            { m: '03', date: '2026-03-13', h: 3, topic: '해빙기 작업장 위험요인과 위험성평가 참여', inst: '안전보건공단 광주광역본부 위촉강사', place: '군청 대회의실' },
+            { m: '04', date: '2026-04-17', h: 2, topic: '보호구 착용과 밀폐공간 질식재해 예방', inst: '대한산업안전협회 전남지회 강사', place: '군청 대회의실' },
+            { m: '05', date: '2026-05-15', h: 3, topic: '근골격계질환 예방과 직무스트레스 관리', inst: '환경과 보건관리자 최보건', place: '담양문화회관 소공연장' },
+            { m: '06', date: '2026-06-12', h: 2, topic: '폭염 대비 온열질환 예방', inst: '안전보건공단 광주광역본부 위촉강사', place: '군청 대회의실' },
+            { m: '07', date: '2026-07-10', h: 3, topic: '집중호우·감전 재해 예방', inst: '한국전기안전공사 담양지사 강사', place: '군청 대회의실' },
+            { m: '08', date: '2026-08-14', h: 2, topic: '응급처치와 심폐소생술 실습', inst: '담양소방서 구급대', place: '담양문화회관 소공연장' },
+            { m: '09', date: '2026-09-11', h: 3, topic: '추락·끼임 사고 사례와 예방', inst: '대한산업안전협회 전남지회 강사', place: '군청 대회의실' },
+            { m: '10', date: '2026-10-16', h: 3, topic: '화재 예방과 소화기 사용·대피 요령', inst: '담양소방서 예방안전과', place: '군청 대회의실' },
+            { m: '11', date: '2026-11-11', h: 3, topic: '동절기 안전수칙과 화학물질(MSDS) 취급', inst: '안전보건공단 광주광역본부 위촉강사', place: '군청 대회의실' },
+            { m: '12', date: '2026-12-11', h: 2, topic: '2026년 안전보건 이행 결과 공유와 2027년 계획', inst: '재난안전과 안전관리자 김안전', place: '군청 대회의실' }
         ];
-        /* 이수 완료율 60~70% 목표: 대다수 FIELD 근로자를 대상으로 반복 신청 */
-        var completedWorkers = {
-            /* 6~7월 집합교육에 참여하여 12h 이상 확보 (현 사이클 완료) */
-            env: ['w_u_env1', 'w_u_env2', 'w_u_env3', 'w_env_c1', 'w_env_c2', 'w_env_c5'],
-            water: ['w_u_wat1', 'w_u_wat2', 'w_wat_c1', 'w_wat_c2', 'w_wat_c4'],
-            facility: ['w_fac_c1', 'w_fac_c2', 'w_fac_c4'],
-            construct: ['w_u_con1', 'w_u_con2', 'w_con_c1', 'w_con_c2', 'w_con_c4'],
-            culture: ['w_cul_c1'],
-            health: ['w_u_hlth1', 'w_hlth_c1'],
-            town_damyang: ['w_twn_c1'],
-            safety: ['w_u_safe1', 'w_u_safe2'],
-            plan: [],
-            acct: []
-        };
-        var courses = [];
-        var enrolls = [];
-        var records = [];
-        months.forEach(function (mm, idx) {
+        /* 부서별 참석률(예시) — 현업 부서는 높고 사무 부서는 낮다 */
+        var RATE = { safety: 0.95, env: 0.9, water: 0.86, facility: 0.9, construct: 0.85, culture: 0.86,
+                     finance: 0.7, health: 0.86, town_damyang: 0.85, plan: 0.9, acct: 0.7 };
+        /* 재난안전과가 한 장 서명부로 일괄 등록한 부서(본청 사무 부서) */
+        var BULK_DEPTS = { safety: 1, plan: 1, acct: 1, finance: 1, culture: 1 };
+        var DEPT_ORDER = ['safety', 'plan', 'acct', 'finance', 'culture', 'env', 'health', 'construct', 'facility', 'water', 'town_damyang'];
+        /* 매달 빠짐없이 참석한 사람 — 운영 담당(박안전)과 부서 교육 담당 */
+        var ALWAYS = { w_u_jjt2: 1, w_u_plan2: 1 };
+        var fieldPool = workers.filter(function (w) { return w.category !== 'SUPERVISOR'; });
+
+        MONTHLY.forEach(function (mm) {
             var cid = 'C-M' + mm.m;
-            /* 첫 3개월 이후부터(4·5·6·7월) 각 부서별 4명씩 신청. 각 3h. */
-            var reportedMonths = idx >= 3; /* 4월 이후에 records 발생 (사이클 안에 포함되도록) */
-            courses.push({
-                id: cid, kind: 'REG_GROUP', date: mm.date, time: '14:00', hours: 3,
-                instructor: mm.inst, place: '군청 대회의실',
-                desc: mm.desc, files: [{ name: '2026_' + mm.m + '월_교육계획서.hwpx' }],
-                status: 'DONE', createdBy: '재난안전과',
-                history: [
-                    { type: 'CREATE', at: mm.date, by: '재난안전과', memo: '월별 집합교육 등록' },
-                    { type: 'STATUS', at: mm.date, by: '재난안전과', memo: '교육 종료 처리 · 등록부 참석자 이수 반영' }
-                ]
-            });
-            Object.keys(completedWorkers).forEach(function (dept) {
-                var ids = completedWorkers[dept];
+            var mNo = +mm.m;
+            var future = mm.date > '2026-11-13';
+            /* 등록일은 교육 24일 전 — 단 앞날 교육은 기준일(11-13)을 넘지 않게 그 전날 등록으로 둔다(앞날 이력 금지) */
+            var created = addDays(mm.date, -24);
+            if (created > '2026-11-12') created = '2026-11-12';
+            var c = {
+                id: cid, kind: 'REG_GROUP', date: mm.date, time: '14:00', endTime: endOf('14:00', mm.h), hours: mm.h, enrollDays: 7,
+                instructor: mm.inst, place: mm.place,
+                desc: '2026년 ' + mNo + '월 정기 안전보건교육 — ' + mm.topic,
+                files: [{ name: '2026_' + mm.m + '월_참석자명단.hwpx', slot: 'roster' },
+                        { name: '2026_' + mm.m + '월_교육자료.pdf', slot: 'material' }],
+                status: 'OPEN', createdBy: '재난안전과', history: []
+            };
+            hist(c, created + ' 10:12', SAFETY, '정기교육(집합) 등록', 'CREATE');
+            courses.push(c);
+            if (future) return;                                     /* 12월 — 교육 전 */
+            var due = addDays(mm.date, 7);
+            var open = mm.m === '11';                               /* 11월 — 등록부 받는 중 */
+            /* 11월은 아직 몇 부서만 올렸다 — 오늘(11-13)까지 올린 부서 */
+            var NOV_DONE = { env: '2026-11-12', safety: '2026-11-12', plan: '2026-11-12', acct: '2026-11-12', finance: '2026-11-12', construct: '2026-11-12' };
+            var bulkFile = '2026_' + mm.m + '월_집합교육_서명부.pdf';
+            var bulkRows = [];
+            DEPT_ORDER.forEach(function (dept, di) {
+                if (open && !NOV_DONE[dept]) return;
+                /* 가끔 등록부를 올리지 않은 달이 있다(그 부서는 그 달 이수 0) */
+                if (!open && dept !== 'safety' && dept !== 'env' && hash01(cid + dept + 'skip') < 0.1) return;
+                var ids = fieldPool.filter(function (w) {
+                    return w.deptId === dept && w.hireDate <= mm.date && (ALWAYS[w.id] || hash01(cid + w.id) < (RATE[dept] || 0.6));
+                }).map(function (w) { return w.id; });
                 if (!ids.length) return;
-                enrolls.push({ courseId: cid, deptId: dept, workerIds: ids,
-                    signFile: dept + '_' + mm.m + '월_서명.pdf', at: mm.date });
-                if (reportedMonths) {
-                    ids.forEach(function (wid) {
-                        records.push({ workerId: wid, courseId: cid, kind: 'REG', hours: 3, date: mm.date });
-                    });
-                }
+                var bulk = !!BULK_DEPTS[dept];
+                var at = open ? NOV_DONE[dept] : addDays(mm.date, bulk ? 1 : 1 + Math.floor(hash01(cid + dept + 'at') * 5));
+                /* 일찍 나간 사람이 있던 부서는 실제 참석시간을 줄여 적었다 */
+                var short = !bulk && hash01(cid + dept + 'hrs') < 0.12;
+                var actual = short ? Math.max(1, mm.h - 1) : mm.h;
+                var by = bulk ? '박안전' : staffOf(dept);
+                var e = { courseId: cid, deptId: dept, workerIds: ids, actualHours: actual, status: 'ACTIVE', at: at,
+                          by: by, proxy: bulk && dept !== 'safety', bulk: bulk,
+                          signFile: bulk ? bulkFile : dn(dept) + '_' + mm.m + '월_참석자서명부.pdf' };
+                enrolls.push(e);
+                if (bulk) bulkRows.push(e);
+                else hist(c, at + ' ' + ('0' + (9 + (di % 8))).slice(-2) + ':' + (10 + di * 3), dn(dept), '참석자 등록부 등록 · ' + ids.length + '명 · 실제 참석 ' + actual + 'h · 서명부 첨부');
             });
+            if (bulkRows.length) {
+                var n = bulkRows.reduce(function (s, e) { return s + e.workerIds.length; }, 0);
+                hist(c, bulkRows[0].at + ' 16:40', SAFETY + '(일괄 등록)', '참석자 일괄 등록 · ' + bulkRows.length + '개 부서 ' + n + '명 · 실제 참석 ' + mm.h + 'h · 서명부 ' + bulkFile);
+            }
+            c.history.sort(function (a, b) { return a.at.localeCompare(b.at); });
+            if (open) return;
+            /* 종료 처리 — 등록 기한 다음 근무일 무렵 */
+            var closeAt = addDays(due, 1);
+            var total = 0;
+            enrolls.forEach(function (e) {
+                if (e.courseId !== cid) return;
+                e.workerIds.forEach(function (wid) { records.push({ workerId: wid, courseId: cid, kind: 'REG', hours: e.actualHours, date: mm.date }); total++; });
+            });
+            c.status = 'DONE';
+            hist(c, closeAt + ' 17:05', SAFETY, '교육 종료 처리 · 등록 ' + total + '명 실제 참석시간 카운트');
         });
-        /* 7월 보충교육(OPEN) — 교육은 끝났고 부서가 참석자 등록부를 올리는 중(등록 기한 07-21).
-           «교육이 끝난 뒤 한 번 올린다»를 보여 주는 예시다(2026-11-12). */
-        courses.push({
-            id: 'C-M07B', kind: 'REG_GROUP', date: '2026-07-14', time: '14:00', hours: 2, enrollDays: 7,
-            instructor: '재난안전과 안전관리 주무관', place: '군청 소회의실',
-            desc: '2026년 7월 현업근로자 보충 안전보건교육 (미이수자 대상)',
-            files: [{ name: '2026_07월_보충교육_서명부양식.hwpx', slot: 'roster' }],
-            status: 'OPEN', createdBy: '재난안전과',
-            history: [{ type: 'CREATE', at: '2026-07-07', by: '재난안전과', memo: '집합교육 등록' }]
+
+        /* ───────── 2. 부서 자체교육(정기) — 현업 부서가 실시하고 바로 완료 처리 ───────── */
+        function selfCourse(id, dept, date, start, hours, desc, inst, place, ids, by) {
+            var c = { id: id, kind: 'REG_SELF', deptId: dept, date: date, time: start, endTime: endOf(start, hours), hours: hours,
+                      instructor: inst, place: place, desc: desc,
+                      files: [{ name: dn(dept) + '_자체교육_' + date.replace(/-/g, '') + '_교육일지_사진.pdf', slot: 'log' }],
+                      status: 'DONE', createdBy: dn(dept), history: [] };
+            hist(c, date + ' 17:20', dn(dept) + ' ' + by, '정기교육(자체) 등록', 'CREATE');
+            hist(c, date + ' 17:21', dn(dept), '자체교육 즉시 완료 · 1일 ' + hours + 'h · 대상자 ' + ids.length + '명 카운트');
+            courses.push(c);
+            enrolls.push({ courseId: id, deptId: dept, workerIds: ids, status: 'ACTIVE', at: date, by: by, proxy: false, bulk: false, signFile: '', actualHours: null });
+            ids.forEach(function (wid) { records.push({ workerId: wid, courseId: id, kind: 'REG', hours: hours, date: date }); });
+            return c;
+        }
+        var sCul = selfCourse('C-SELF-CULTU', 'culture', '2026-06-17', '10:00', 4, '체육시설 운영 현장 안전교육 (상반기)', '문화체육과 체육시설팀 한지훈', '담양종합체육관 회의실', ['w_cul_c1'], '한지훈');
+        var sEnv = selfCourse('C-SELF-ENV', 'env', '2026-09-24', '09:00', 6, '하반기 자원순환 현장 안전교육 (수거·선별 작업)', '환경과 보건관리자 최보건', '환경과 회의실', ['w_env_c1', 'w_env_c2', 'w_env_c3', 'w_env_c4', 'w_env_c5'], '정환경');
+        var sFac = selfCourse('C-SELF-FACIL', 'facility', '2026-10-08', '09:00', 6, '환경시설 운영 현장 안전교육 (하반기)', '공공시설사업소 시설안전 담당 한담당', '공공시설사업소 교육장', ['w_fac_c1', 'w_fac_c2', 'w_fac_c3'], '한담당');
+        var sWat = selfCourse('C-SELF-WATER', 'water', '2026-10-21', '09:00', 6, '정수장 약품 취급·밀폐공간 현장 안전교육 (하반기)', '물순환사업소 정수팀장 문정수', '물순환사업소 교육장', ['w_wat_c1', 'w_wat_c2', 'w_wat_c3', 'w_wat_c4'], '하정수');
+        var sCon = selfCourse('C-SELF-CONST', 'construct', '2026-11-04', '09:00', 6, '동절기 도로 보수·제설 작업 안전교육', '건설과 안전관리팀장 정안전', '건설과 회의실', ['w_con_c1', 'w_con_c2', 'w_con_c3', 'w_con_c4'], '박현장');
+
+        /* ───────── 3. 관리감독자 정기교육 — 상·하반기 각 8h(외부 위탁) ───────── */
+        function supCourse(id, date, desc, created, regs, closeAt, status) {
+            var c = { id: id, kind: 'SUP_REG', date: date, time: '09:30', endTime: '18:30', hours: 8, enrollDays: 7,
+                      instructor: '대한산업안전협회 전남지회 (위탁)', place: '담양문화회관 세미나실', desc: desc,
+                      files: [{ name: date.replace(/-/g, '') + '_관리감독자_참석자명단.hwpx', slot: 'roster' }, { name: date.replace(/-/g, '') + '_관리감독자교육_교재.pdf', slot: 'material' }],
+                      status: status, createdBy: '재난안전과', history: [] };
+            hist(c, created + ' 11:00', SAFETY, '관리감독자 정기교육 등록', 'CREATE');
+            courses.push(c);
+            var total = 0;
+            regs.forEach(function (g) {
+                enrolls.push({ courseId: id, deptId: g.dept, workerIds: g.ids, actualHours: 8, status: 'ACTIVE', at: g.at,
+                               by: staffOf(g.dept), proxy: false, bulk: false, signFile: dn(g.dept) + '_' + date.replace(/-/g, '') + '_감독자_서명부.pdf' });
+                hist(c, g.at + ' 10:30', dn(g.dept), '참석자 등록부 등록 · ' + g.ids.length + '명 · 실제 참석 8h · 서명부 첨부');
+                total += g.ids.length;
+            });
+            if (status === 'DONE') {
+                regs.forEach(function (g) { g.ids.forEach(function (wid) { records.push({ workerId: wid, courseId: id, kind: 'REG', hours: 8, date: date }); }); });
+                hist(c, closeAt + ' 16:50', SAFETY, '교육 종료 처리 · 등록 ' + total + '명 실제 참석시간 카운트');
+            }
+            return c;
+        }
+        var sr1 = supCourse('C-SR1', '2026-03-20', '2026 관리감독자 정기교육 1차 (상반기 8h)', '2026-02-24', [
+            { dept: 'safety', ids: ['w_u_safe1', 'w_u_jjt1'], at: '2026-03-23' },
+            { dept: 'env', ids: ['w_u_env1', 'w_u_env6'], at: '2026-03-23' },
+            { dept: 'water', ids: ['w_u_wat1', 'w_u_wat5', 'w_u_wat7'], at: '2026-03-24' },
+            { dept: 'facility', ids: ['w_u_fac1'], at: '2026-03-24' },
+            { dept: 'construct', ids: ['w_u_con1', 'w_u_con6'], at: '2026-03-25' },
+            { dept: 'health', ids: ['w_u_hlth1'], at: '2026-03-25' },
+            { dept: 'town_damyang', ids: ['w_u_twn1'], at: '2026-03-26' }
+        ], '2026-03-30', 'DONE');
+        var sr2 = supCourse('C-SR2', '2026-10-23', '2026 관리감독자 정기교육 2차 (하반기 8h)', '2026-09-28', [
+            { dept: 'safety', ids: ['w_u_safe1', 'w_u_jjt1'], at: '2026-10-26' },
+            { dept: 'plan', ids: ['w_u_plan1'], at: '2026-10-26' },
+            { dept: 'env', ids: ['w_u_env1'], at: '2026-10-27' },
+            { dept: 'water', ids: ['w_u_wat1', 'w_u_wat5', 'w_u_wat7'], at: '2026-10-27' },
+            { dept: 'facility', ids: ['w_u_fac1'], at: '2026-10-28' },
+            { dept: 'construct', ids: ['w_u_con6'], at: '2026-10-29' },
+            { dept: 'health', ids: ['w_u_hlth1'], at: '2026-10-29' }
+        ], '2026-11-02', 'DONE');
+        /* 상·하반기 미참석자 보충 — 12월, 교육 전 */
+        supCourse('C-SR3', '2026-12-04', '2026 관리감독자 정기교육 보충 (상·하반기 미참석자 8h)', '2026-11-06', [], '', 'OPEN');
+
+        /* ───────── 4. 채용시교육 ─────────
+         * 시스템 도입(2026-01) 전에 채용된 사람의 이수 기록은 인사기록에서 한 건으로 옮겨 실었다.
+         * 2026년 채용자는 부서가 채용 때마다 등록했다. 최근 채용자 몇 명은 아직 교육 전이다. */
+        var preIds = [], preRecs = [];
+        workers.forEach(function (w) {
+            if (w.category === 'SUPERVISOR' || !(w.hireDate < '2026-01-01')) return;
+            if (w.id === 'w_fac_c1' || w.id === 'w_fac_c2' || w.id === 'w_twn_c1') return;   /* 따로 기록 · 기록 없음 */
+            var late = w.id === 'w_con_c2';                                  /* 채용 뒤에 받은 사람 — 지연 이수 */
+            preIds.push(w);
+            preRecs.push({ workerId: w.id, courseId: 'C-H0', kind: 'HIRE', hours: hireHours(w), date: late ? addDays(w.hireDate, 14) : w.hireDate });
         });
-        enrolls.push({ courseId: 'C-M07B', deptId: 'env', workerIds: ['w_env_c2'], signFile: '환경과_07월보충_서명부.pdf', actualHours: 2, at: '2026-07-15', by: '정환경' });
-        /* 8월 예정(OPEN) — 교육 전. 끝난 뒤 등록부를 받는다 */
-        courses.push({
-            id: 'C-M08', kind: 'REG_GROUP', date: '2026-08-14', time: '14:00', hours: 3,
-            instructor: '한국산업안전보건공단 이강사', place: '군청 대회의실',
-            desc: '2026년 8월 정기 안전보건교육 (전체 부서 대상)',
-            files: [{ name: '2026_08월_교육계획서.hwpx' }],
-            status: 'OPEN', createdBy: '재난안전과',
-            history: [{ type: 'CREATE', at: '2026-07-14', by: '재난안전과', memo: '집합교육 등록' }]
-        });
-        /* 부서별 자체 보강교육 (7월) — 후기 채용자·미이수자 대상 · 12h 채워 60~70% 이수율 목표 달성 */
-        var boostSeed = {
-            env: ['w_env_c5'], water: ['w_wat_c4'], facility: ['w_fac_c4'], culture: ['w_cul_c1']
+        var h0 = { id: 'C-H0', kind: 'HIRE', deptId: '', date: '2026-01-09', time: '09:00', endTime: '17:00', hours: 8,
+                   instructor: '각 부서 (인사기록 기준)', place: '-', desc: '2025년 이전 채용자 채용시교육 이수 기록 (인사기록 이관)',
+                   files: [{ name: '채용시교육_이수기록_인사기록발췌_2025이전.xlsx', slot: 'log' }],
+                   status: 'DONE', createdBy: '재난안전과', imported: true, history: [] };
+        hist(h0, '2026-01-09 15:30', SAFETY, '채용시교육 등록', 'CREATE');
+        hist(h0, '2026-01-09 15:32', '재난안전과', '인사기록 이관 · ' + preIds.length + '명 이수 기록 등록');
+        courses.push(h0);
+        var preBy = {};
+        preIds.forEach(function (w) { (preBy[w.deptId] = preBy[w.deptId] || []).push(w.id); });
+        Object.keys(preBy).forEach(function (d) { enrolls.push({ courseId: 'C-H0', deptId: d, workerIds: preBy[d], status: 'ACTIVE', at: '2026-01-09', by: '박안전', proxy: d !== 'safety', bulk: false, signFile: '', actualHours: null }); });
+        records = records.concat(preRecs);
+
+        function hireCourse(id, dept, date, wid, inst, by) {
+            var w = wById[wid], hrs = hireHours(w);
+            var c = { id: id, kind: 'HIRE', deptId: dept, date: date, time: '09:00', endTime: endOf('09:00', hrs), hours: hrs,
+                      instructor: inst, place: dn(dept) + ' 회의실', desc: '채용시 안전보건교육 · ' + w.name,
+                      files: [{ name: dn(dept) + '_채용시교육_' + w.name + '_' + date.replace(/-/g, '') + '.pdf', slot: 'log' }],
+                      status: 'DONE', createdBy: dn(dept), history: [] };
+            hist(c, date + ' 17:40', dn(dept) + ' ' + by, '채용시교육 등록', 'CREATE');
+            hist(c, date + ' 17:41', dn(dept), '채용시교육 이수 처리 · ' + w.name + ' ' + hrs + 'h');
+            courses.push(c);
+            enrolls.push({ courseId: id, deptId: dept, workerIds: [wid], status: 'ACTIVE', at: date, by: by, proxy: false, bulk: false, signFile: '', actualHours: null });
+            records.push({ workerId: wid, courseId: id, kind: 'HIRE', hours: hrs, date: date });
+            return c;
+        }
+        /* C-H1·C-H2 — 공공시설사업소 기존 기록(시스템 도입 전 부서가 따로 관리하던 것) */
+        hireCourse('C-H1', 'facility', '2024-07-25', 'w_fac_c1', '안전보건공단 위탁', '한담당');
+        hireCourse('C-H2', 'facility', '2025-07-30', 'w_fac_c2', '안전보건공단 위탁', '한담당');
+        var hWat3 = hireCourse('C-H3', 'water', '2026-01-15', 'w_wat_c3', '물순환사업소 정수팀장 문정수', '하정수');
+        var hEnv3 = hireCourse('C-H4', 'env', '2026-01-29', 'w_env_c3', '환경과 보건관리자 최보건', '정환경');
+        hireCourse('C-H5', 'facility', '2026-02-20', 'w_fac_c3', '공공시설사업소 시설안전 담당 한담당', '한담당');
+        hireCourse('C-H6', 'construct', '2026-02-27', 'w_con_c3', '건설과 안전관리팀장 정안전', '박현장');
+        hireCourse('C-H7', 'water', '2026-05-08', 'w_wat_c4', '물순환사업소 정수팀장 문정수', '하정수');
+        hireCourse('C-H8', 'env', '2026-06-15', 'w_env_c5', '환경과 보건관리자 최보건', '정환경');
+        hireCourse('C-H9', 'env', '2026-07-14', 'w_env_c4', '환경과 환경지도팀장 조환경', '정환경');   /* 채용 나흘 뒤 — 지연 이수 */
+        var hCon4 = hireCourse('C-H10', 'construct', '2026-09-14', 'w_con_c4', '건설과 안전관리팀장 정안전', '박현장');
+        hireCourse('C-H11', 'facility', '2026-10-27', 'w_fac_c4', '공공시설사업소 시설안전 담당 한담당', '한담당');
+
+        /* ───────── 5. 기타 교육(법정 3유형) — 작업내용 변경 시 · 특별교육 ─────────
+         * C-E2 는 판정 가능한 유형에서 **의도적으로 미달**인 건이다 — 같은 한 건인데 정규 현업(2h 필요)
+         * 에게는 미달이고 일용(1h 필요)에게는 충족이라 최소시간이 사람마다 다르다는 사실이 드러난다.
+         * 특별교육은 분할·단기간 단서가 있어 한 건만으로 판정하지 않는다(etcShortfall). */
+        function etcCourse(o) {
+            var c = { id: o.id, kind: o.kind || 'ETC', etcType: o.type, deptId: o.dept, date: o.date, time: o.start,
+                      endTime: o.sessions ? '' : endOf(o.start, o.hours), hours: o.hours,
+                      instructor: o.inst, place: o.place, desc: o.desc,
+                      specialWorkNos: o.works || [], specialWorkOtherReason: '',
+                      files: [{ name: o.file, slot: 'log' }], status: 'DONE', createdBy: o.by === '박안전' ? '재난안전과' : dn(o.dept), history: [] };
+            if (o.sessions) c.sessions = o.sessions;
+            /* 관리감독자 기타교육은 재난안전과가 등록한다(운영가이드 §7-1) — 부서는 대상 부서일 뿐이다 */
+            var regBy = o.by === '박안전' ? SAFETY : dn(o.dept) + ' ' + o.by;
+            hist(c, o.date + ' 17:30', regBy, (c.kind === 'SUP_ETC' ? '관리감독자 기타 교육' : '기타 교육') + ' 등록', 'CREATE');
+            hist(c, o.date + ' 17:31', o.by === '박안전' ? SAFETY : dn(o.dept), o.type + ' 진행 처리 · ' + o.ids.length + '명 카운트');
+            courses.push(c);
+            enrolls.push({ courseId: o.id, deptId: o.dept, workerIds: o.ids, status: 'ACTIVE', at: o.date, by: o.by, proxy: false, bulk: false, signFile: '', actualHours: null });
+            o.ids.forEach(function (wid) { records.push({ workerId: wid, courseId: o.id, kind: 'ETC', hours: o.hours, date: (o.sessions ? o.sessions[o.sessions.length - 1].date : o.date) }); });
+            return c;
+        }
+        var e5 = etcCourse({ id: 'C-E5', type: '작업내용 변경 시 교육', dept: 'env', date: '2026-03-18', start: '14:00', hours: 2,
+            inst: '환경과 환경지도팀장 조환경', place: '환경과 회의실', by: '정환경', ids: ['w_env_c1', 'w_env_c2'],
+            desc: '자원순환팀 → 환경지도팀 배치 전환에 따른 작업내용 변경 교육', file: '작업변경교육_일지_20260318.pdf' });
+        var e1 = etcCourse({ id: 'C-E1', type: '작업내용 변경 시 교육', dept: 'water', date: '2026-04-08', start: '10:00', hours: 2,
+            inst: '물순환사업소장 오순환', place: '물순환사업소 교육장', by: '하정수', ids: ['w_wat_c1', 'w_wat_c2'],
+            desc: '정수장 → 하수처리장 배치 전환에 따른 작업내용 변경 교육', file: '작업변경교육_일지_20260408.pdf' });
+        var e3 = etcCourse({ id: 'C-E3', type: '특별교육', dept: 'water', date: '2026-05-21', start: '09:00', hours: 4, works: [34],
+            inst: '한국안전기술원 (위탁)', place: '정수장 현장', by: '하정수', ids: ['w_wat_c1', 'w_wat_c3', 'w_wat_c4'],
+            desc: '밀폐공간(정수장 침전지·맨홀) 작업 특별교육 — 최초 작업 전 4시간', file: '특별교육_일지_20260521.pdf' });
+        etcCourse({ id: 'C-E4', type: '특별교육', dept: 'water', date: '2026-07-15', start: '09:00', hours: 12, works: [34],
+            sessions: [{ date: '2026-07-15', start: '09:00', end: '15:00' }, { date: '2026-07-16', start: '09:00', end: '15:00' }],
+            inst: '한국안전기술원 (위탁)', place: '물순환사업소 교육장', by: '하정수', ids: ['w_wat_c1', 'w_wat_c3', 'w_wat_c4'],
+            desc: '밀폐공간 작업 특별교육 — 나머지 12시간 (3개월 내 분할 실시)', file: '특별교육_일지_20260715_16.pdf' });
+        var e6 = etcCourse({ id: 'C-E6', type: '특별교육', dept: 'health', date: '2026-09-09', start: '13:00', hours: 4, works: [35],
+            inst: '보건소 보건담당 윤담당', place: '보건소 교육실', by: '이보건', ids: ['w_hlth_c1'],
+            desc: '방역 소독약품(관리대상 유해물질) 취급 작업 특별교육 — 최초 4시간', file: '특별교육_일지_20260909.pdf' });
+        etcCourse({ id: 'C-E2', type: '작업내용 변경 시 교육', dept: 'facility', date: '2026-10-29', start: '15:00', hours: 1.5,
+            inst: '공공시설사업소장 임시설', place: '공공시설사업소', by: '한담당', ids: ['w_fac_c1', 'w_fac_c4'],
+            desc: '환경시설 점검 업무 전환 교육 — 계약직·일용 혼재', file: '작업변경교육_일지_20261029.pdf' });
+        /* 관리감독자 기타교육 — 같은 모듈을 supMode 로 재사용하는 화면이라 대상이 없으면 화면이 빈다 */
+        var se1 = etcCourse({ id: 'C-SE1', kind: 'SUP_ETC', type: '작업내용 변경 시 교육', dept: 'construct', date: '2026-04-23', start: '14:00', hours: 2,
+            inst: '대한산업안전협회 전남지회 (위탁)', place: '건설과 회의실', by: '박안전', ids: ['w_u_con1', 'w_u_con6'],
+            desc: '도로보수 → 교량점검 감독 업무 전환에 따른 교육', file: '감독자_작업변경교육_20260423.pdf' });
+        etcCourse({ id: 'C-SE2', kind: 'SUP_ETC', type: '특별교육', dept: 'water', date: '2026-08-20', start: '09:00', hours: 4, works: [34],
+            inst: '한국안전기술원 (위탁)', place: '물순환사업소 교육장', by: '박안전', ids: ['w_u_wat5', 'w_u_wat7'],
+            desc: '밀폐공간 작업 감독자 특별교육 — 최초 4시간', file: '감독자_특별교육_20260820.pdf' });
+
+        /* ───────── 6. 실시 결과 공문 — 온나라로 보낸 기록 ─────────
+         * 상태는 연계 회신으로 바뀐 값이다. 6월은 한 번 반려돼(붙임 누락) 고쳐 다시 보냈다.
+         * 공공시설사업소 자체교육은 반려된 채 다시 보내기 전이다(잠금 풀림). 11월 4일 이후 끝난 교육은 아직 기안 전이다. */
+        var C = {}; courses.forEach(function (c) { C[c.id] = c; });
+        var MDOC = {
+            '01': ['2026-01-27', '결재완료'], '02': ['2026-02-24', '결재완료'], '03': ['2026-03-24', '결재완료'],
+            '04': ['2026-04-28', '결재완료'], '05': ['2026-05-26', '결재완료'], '06': ['2026-06-23', '반려'],
+            '07': ['2026-07-21', '결재완료'], '08': ['2026-08-25', '결재완료'], '09': ['2026-09-22', '결재완료'],
+            '10': ['2026-10-27', '결재중']
         };
-        Object.keys(boostSeed).forEach(function (dept) {
-            var ids = boostSeed[dept];
-            if (!ids.length) return;
-            var cid = 'C-SELF-' + dept.toUpperCase().slice(0, 5);
-            courses.push({
-                id: cid, kind: 'REG_SELF', deptId: dept, date: '2026-07-14', time: '10:00', hours: 12,
-                instructor: deptName(dept) + ' 부서장',
-                place: deptName(dept) + ' 회의실', desc: '2026 하반기 자체 보강 안전교육 (후기 채용자 대상)',
-                files: [], status: 'DONE', createdBy: deptName(dept) + ' 담당자',
-                history: [{ type: 'STATUS', at: '2026-07-14', by: '부서 담당자', memo: '자체 보강교육 즉시완료' }]
-            });
-            enrolls.push({ courseId: cid, deptId: dept, workerIds: ids, at: '2026-07-14' });
-            ids.forEach(function (wid) {
-                records.push({ workerId: wid, courseId: cid, kind: 'REG', hours: 12, date: '2026-07-14' });
-            });
-        });
-        /* 관리감독자 정기교육 — 12개월 사이클 16h. 상반기·하반기 반씩 진행. */
-        courses.push({
-            id: 'C-SR1', kind: 'SUP_REG', date: '2026-03-20', time: '13:30', hours: 8,
-            instructor: '노동안전연구원', place: '외부 위탁', desc: '2026 관리감독자 정기교육 1차 (상반기 8h)',
-            files: [], status: 'DONE', createdBy: '재난안전과',
-            history: [{ type: 'CREATE', at: '2026-03-01', by: '재난안전과', memo: '관리감독자 정기교육 등록' },
-                      { type: 'STATUS', at: '2026-03-20', by: '재난안전과', memo: '종료 처리' }]
-        });
-        courses.push({
-            id: 'C-SR2', kind: 'SUP_REG', date: '2026-09-18', time: '13:30', hours: 8,
-            instructor: '노동안전연구원', place: '외부 위탁', desc: '2026 관리감독자 정기교육 2차 (하반기 8h) — 예정',
-            files: [], status: 'OPEN', createdBy: '재난안전과',
-            history: [{ type: 'CREATE', at: '2026-07-10', by: '재난안전과', memo: '관리감독자 정기교육 등록' }]
-        });
-        /* 관리감독자 정기 1차 참석자 */
-        var supAttended = ['w_u_safe1', 'w_u_env1', 'w_u_wat1', 'w_u_fac1', 'w_u_con1', 'w_u_hlth1'];
-        enrolls.push({ courseId: 'C-SR1', deptId: 'safety',    workerIds: ['w_u_safe1'], signFile: '재난안전_감독자_서명.pdf', at: '2026-03-15' });
-        enrolls.push({ courseId: 'C-SR1', deptId: 'env',       workerIds: ['w_u_env1'],  signFile: '환경과_감독자_서명.pdf',   at: '2026-03-15' });
-        enrolls.push({ courseId: 'C-SR1', deptId: 'water',     workerIds: ['w_u_wat1'],  signFile: '물순환_감독자_서명.pdf',  at: '2026-03-15' });
-        enrolls.push({ courseId: 'C-SR1', deptId: 'facility',  workerIds: ['w_u_fac1'],  signFile: '공공시설_감독자_서명.pdf', at: '2026-03-15' });
-        enrolls.push({ courseId: 'C-SR1', deptId: 'construct', workerIds: ['w_u_con1'],  signFile: '건설과_감독자_서명.pdf',  at: '2026-03-15' });
-        enrolls.push({ courseId: 'C-SR1', deptId: 'health',    workerIds: ['w_u_hlth1'], signFile: '보건소_감독자_서명.pdf',  at: '2026-03-15' });
-        supAttended.forEach(function (wid) {
-            records.push({ workerId: wid, courseId: 'C-SR1', kind: 'REG', hours: 8, date: '2026-03-20' });
-        });
-        /* 채용시교육 기존 이수 시드 (w_fac_c1: 채용일 이전 이수 — 정상) */
-        courses.push({
-            id: 'C-H1', kind: 'HIRE', deptId: 'facility', date: '2024-07-25', time: '09:00', hours: 8,
-            instructor: '외부위탁', place: '공공시설사업소', desc: '채용시 안전보건교육 · 임시설·정민수 등',
-            files: [], status: 'DONE', createdBy: '공공시설사업소',
-            history: [{ type: 'CREATE', at: '2024-07-25', by: '공공시설사업소', memo: '채용시 교육 이수' }]
-        });
-        enrolls.push({ courseId: 'C-H1', deptId: 'facility', workerIds: ['w_fac_c1'], at: '2024-07-25' });
-        records.push({ workerId: 'w_fac_c1', courseId: 'C-H1', kind: 'HIRE', hours: 8, date: '2024-07-25' });
-        /* w_fac_c2 (2025-08-01 채용 · 8h 필요) 채용일 당일 이수 */
-        courses.push({
-            id: 'C-H2', kind: 'HIRE', deptId: 'facility', date: '2025-07-30', time: '09:00', hours: 8,
-            instructor: '외부위탁', place: '공공시설사업소', desc: '채용시 안전보건교육 · 박현우',
-            files: [], status: 'DONE', createdBy: '공공시설사업소',
-            history: [{ type: 'CREATE', at: '2025-07-30', by: '공공시설사업소', memo: '채용시 교육 이수' }]
-        });
-        enrolls.push({ courseId: 'C-H2', deptId: 'facility', workerIds: ['w_fac_c2'], at: '2025-07-30' });
-        records.push({ workerId: 'w_fac_c2', courseId: 'C-H2', kind: 'HIRE', hours: 8, date: '2025-07-30' });
-        /* ── 기타교육 (법정 3유형) ────────────────────────────────────────────
-         * 세 유형이 화면에 모두 나와야 분류 필터·법정 최소 안내·미달 표시를 확인할 수 있다.
-         * C-E2 는 **판정 가능한 유형에서 의도적으로 미달**인 건이다 — 같은 한 건인데
-         * 정규 현업(2h 필요)에게는 미달이고 일용(1h 필요)에게는 충족이라, 최소시간이
-         * 사람마다 다르다는 사실이 화면에 드러난다. 특별교육(C-E3)은 분할·단기간 단서가
-         * 있어 한 건만으로 판정하지 않는다(etcShortfall 참고). */
-        courses.push({
-            id: 'C-E1', kind: 'ETC', etcType: '작업내용 변경 시 교육', deptId: 'water',
-            date: '2026-04-08', time: '10:00', hours: 2,
-            instructor: '오순환(자체)', place: '물순환사업소 교육장',
-            desc: '정수장 → 하수처리장 배치 전환에 따른 작업내용 변경 교육',
-            files: [{ name: '작업변경교육_일지_20260408.pdf', slot: '교육일지 및 교육사진 등' }],
-            status: 'DONE', createdBy: '물순환사업소',
-            history: [{ type: 'CREATE', at: '2026-04-08', by: '물순환사업소', memo: '기타교육 등록 · 작업내용 변경 시 교육' }]
-        });
-        enrolls.push({ courseId: 'C-E1', deptId: 'water', workerIds: ['w_wat_c1', 'w_wat_c2'], at: '2026-04-08' });
-        ['w_wat_c1', 'w_wat_c2'].forEach(function (wid) {
-            records.push({ workerId: wid, courseId: 'C-E1', kind: 'ETC', hours: 2, date: '2026-04-08' });
+        var pend = [];
+        Object.keys(MDOC).forEach(function (m) { pend.push({ c: C['C-M' + m], at: MDOC[m][0], by: '박안전', st: MDOC[m][1] }); });
+        pend.push({ c: C['C-M06'], at: '2026-06-26', by: '박안전', st: '결재완료' });     /* 반려 뒤 다시 보냄 */
+        pend.push({ c: sr1, at: '2026-04-02', by: '박안전', st: '결재완료' });
+        pend.push({ c: sr2, at: '2026-11-05', by: '박안전', st: '기안함 전송' });
+        pend.push({ c: e5, at: '2026-03-20', by: '정환경', st: '결재완료' });
+        pend.push({ c: e1, at: '2026-04-10', by: '하정수', st: '결재완료' });
+        pend.push({ c: e3, at: '2026-05-26', by: '하정수', st: '결재완료' });
+        pend.push({ c: se1, at: '2026-04-27', by: '박안전', st: '결재완료' });     /* 관리감독자 기타교육 — 재난안전과가 등록·기안 */
+        pend.push({ c: e6, at: '2026-09-14', by: '이보건', st: '결재완료' });
+        pend.push({ c: hWat3, at: '2026-01-20', by: '하정수', st: '결재완료' });
+        pend.push({ c: hEnv3, at: '2026-02-03', by: '정환경', st: '결재완료' });
+        pend.push({ c: hCon4, at: '2026-09-17', by: '박현장', st: '결재완료' });
+        pend.push({ c: sCul, at: '2026-06-22', by: '한지훈', st: '결재완료' });
+        pend.push({ c: sEnv, at: '2026-09-29', by: '정환경', st: '결재완료' });
+        pend.push({ c: sFac, at: '2026-10-13', by: '한담당', st: '반려' });
+        pend.push({ c: sWat, at: '2026-10-26', by: '하정수', st: '결재중' });
+        pend.sort(function (a, b) { return a.at.localeCompare(b.at); });
+        var seq = 2600;
+        pend.forEach(function (p) {
+            seq++;
+            var dept = p.by === '박안전' ? '재난안전과' : dn(p.c.deptId);
+            var no = dept + '-' + seq;
+            var extra = { no: no, sid: no + '-' + docSeed.filter(function (d) { return d.courseId === p.c.id; }).length };
+            if (p.st === '결재완료') { extra.doneAt = addDays(p.at, 2 + (seq % 4)); extra.regNo = dept + '-' + (seq * 3 + 1100); }
+            /* 반려 사유는 그 공문에 실제로 빠진 것과 맞아야 한다 — 다시 기안하는 사람이 사유대로 고칠 수 있게 */
+            if (p.st === '반려') {
+                extra.rejectAt = addDays(p.at, 1);
+                if (p.c.kind === 'REG_SELF') {
+                    extra.attach = [];          /* 올려 둔 교육일지·사진 파일을 붙이지 않고 보냈다 */
+                    extra.rejectReason = '교육일지·교육사진 붙임 누락 — 올려 둔 교육일지·사진 파일을 붙여 다시 올릴 것';
+                } else {
+                    extra.annex = false;        /* 이수자 명단 별지를 빼고 보냈다 */
+                    extra.rejectReason = '이수자 명단(붙임 별지) 누락 — 별지를 붙여 다시 올릴 것';
+                }
+            }
+            doc(p.c, p.at, p.by, p.st, extra);
+            hist(p.c, p.at + ' 15:20', dept + ' ' + p.by, '공문 온나라로 보냄 — ' + p.c.date.slice(0, 4) + '년 안전보건교육 실시 결과 보고 — ' + p.c.desc + ' (' + no + ')');
+            if (p.st === '반려') hist(p.c, extra.rejectAt + ' 10:05', '온나라 연계', '공문 반려 — ' + extra.rejectReason);
         });
 
-        courses.push({
-            id: 'C-E2', kind: 'ETC', etcType: '작업내용 변경 시 교육', deptId: 'facility',
-            date: '2026-06-11', time: '15:00', hours: 1.5,
-            instructor: '임시설(자체)', place: '공공시설사업소',
-            desc: '환경시설 점검 업무 전환 교육 — 계약직·일용 혼재',
-            files: [{ name: '작업변경교육_일지_20260611.pdf', slot: '교육일지 및 교육사진 등' }],
-            status: 'DONE', createdBy: '공공시설사업소',
-            history: [{ type: 'CREATE', at: '2026-06-11', by: '공공시설사업소', memo: '기타교육 등록 · 작업내용 변경 시 교육' }]
-        });
-        enrolls.push({ courseId: 'C-E2', deptId: 'facility', workerIds: ['w_fac_c1', 'w_fac_c4'], at: '2026-06-11' });
-        ['w_fac_c1', 'w_fac_c4'].forEach(function (wid) {
-            records.push({ workerId: wid, courseId: 'C-E2', kind: 'ETC', hours: 1.5, date: '2026-06-11' });
-        });
-
-        courses.push({
-            id: 'C-E3', kind: 'ETC', etcType: '특별교육', deptId: 'water',
-            date: '2026-05-21', time: '09:00', hours: 4,
-            instructor: '한국안전기술원', place: '정수장 현장',
-            desc: '밀폐공간(정수장 침전지·맨홀) 작업 특별교육 — 최초 4시간분',
-            files: [{ name: '특별교육_일지_20260521.pdf', slot: '교육일지 및 교육사진 등' }],
-            status: 'DONE', createdBy: '물순환사업소',
-            history: [{ type: 'CREATE', at: '2026-05-21', by: '물순환사업소', memo: '기타교육 등록 · 특별교육' }]
-        });
-        enrolls.push({ courseId: 'C-E3', deptId: 'water', workerIds: ['w_wat_c1', 'w_wat_c3', 'w_wat_c5'], at: '2026-05-21' });
-        ['w_wat_c1', 'w_wat_c3', 'w_wat_c5'].forEach(function (wid) {
-            records.push({ workerId: wid, courseId: 'C-E3', kind: 'ETC', hours: 4, date: '2026-05-21' });
-        });
-
-        /* 관리감독자 기타교육 — 같은 모듈을 supMode 플래그로 재사용하는 화면이라
-           대상이 없으면 그 화면이 통째로 빈다(edu-sup-etc.html). */
-        courses.push({
-            id: 'C-SE1', kind: 'SUP_ETC', etcType: '작업내용 변경 시 교육', deptId: 'construct',
-            date: '2026-04-23', time: '14:00', hours: 2,
-            instructor: '외부위탁', place: '건설과 회의실',
-            desc: '도로보수 → 교량점검 감독 업무 전환에 따른 교육',
-            files: [{ name: '감독자_작업변경교육_20260423.pdf', slot: '교육일지 및 교육사진 등' }],
-            status: 'DONE', createdBy: '건설과',
-            history: [{ type: 'CREATE', at: '2026-04-23', by: '건설과', memo: '관리감독자 기타교육 등록' }]
-        });
-        enrolls.push({ courseId: 'C-SE1', deptId: 'construct', workerIds: ['w_u_con1', 'w_u_con6'], at: '2026-04-23' });
-        ['w_u_con1', 'w_u_con6'].forEach(function (wid) {
-            records.push({ workerId: wid, courseId: 'C-SE1', kind: 'ETC', hours: 2, date: '2026-04-23' });
-        });
-
+        /* ───────── 7. 미이수 독촉 이력(9~11월) — 재난안전과 박안전이 보냈다 ───────── */
         var reminders = [
-            { at: '2026-07-15 09:20', by: '재난안전과', deptId: 'env',
-              workerIds: ['w_env_c3'], memo: '7월 말 사이클 종료 예정 · 정기교육 보강 요청' },
-            { at: '2026-07-14 14:10', by: '재난안전과', deptId: 'facility',
-              workerIds: ['w_fac_c3'], memo: '8월 집합교육 참석자 등록부 제출 요청' },
-            { at: '2026-07-11 10:35', by: '재난안전과', deptId: 'construct',
-              workerIds: ['w_con_c3'], memo: '미이수 12시간 확인 · 부서 자체교육 계획 회신 요청' }
+            { at: '2026-09-15 10:05', by: SAFETY, deptId: 'culture', workerIds: ['w_u_cul2'], memo: '상반기 정기교육 미달 · 10월 집합교육(10-16) 참석 요청' },
+            { at: '2026-09-25 10:20', by: SAFETY, deptId: 'town_damyang', workerIds: ['w_twn_c1'], memo: '11월 말 사이클 종료 예정 · 정기교육 보충 요청' },
+            { at: '2026-10-19 14:05', by: SAFETY, deptId: 'facility', workerIds: ['w_fac_c1', 'w_u_fac3'], memo: '하반기 정기교육 미달 · 11월 집합교육 참석 요청' },
+            { at: '2026-10-30 09:40', by: SAFETY, deptId: 'health', workerIds: ['w_hlth_c1'], memo: '정기교육 12시간 중 3시간 · 부서 자체교육 계획 회신 요청' },
+            { at: '2026-11-06 16:15', by: SAFETY, deptId: 'construct', workerIds: ['w_con_c1', 'w_con_c2'], memo: '12시간 중 9시간 · 11월 집합교육(11-11) 참석 요청' }
         ];
         return {
             seqW: 100, seqC: 30, seqR: 30,
             workers: workers, courses: courses, enrolls: enrolls, records: records,
-            reminders: reminders
+            reminders: reminders, docSeed: docSeed, docSeq: seq
         };
     }
 
@@ -557,7 +747,10 @@
         /* 집합교육 등록 기한 — 마지막 회차 뒤 N일(기본 7) */
         if (o.enrollDays != null && o.enrollDays !== '') c.enrollDays = +o.enrollDays;
         d.courses.push(c);
-        c.history.push({ type: 'CREATE', at: nowTs(), by: o.createdBy || '', memo: kindLabel(c.kind) + ' 등록' });
+        /* 누가 등록했는지 — 부서만이 아니라 사람까지(다른 이력 줄과 같은 «부서 이름» 꼴) */
+        var R = global.DYROLE;
+        var who = R && R.actorLabel && R.current && R.current() ? R.actorLabel() : (o.createdBy || '');
+        c.history.push({ type: 'CREATE', at: nowTs(), by: who, memo: kindLabel(c.kind) + ' 등록' });
         save(); return c;
     }
     /* ===== 교육 회차(sessions) — 일자 + 시작~종료 시각 =====
@@ -763,11 +956,33 @@
             ? '관리감독자 교육에는 관리감독자만 등록할 수 있습니다.'
             : '현업근로자 교육에는 관리감독자를 등록할 수 없습니다 — 관리감독자는 관리감독자 교육에 등록합니다.';
     }
+    /* ── 실제 참석시간 — 등록부 한 줄의 공통값(actualHours) + 사람별 예외(hoursBy) ──
+     * 집합교육 인정시간은 등록부의 실제 참석시간이고(§4 · SCR-EDU-004 §6) 사람마다 다를 수 있다
+     * (일찍 나간 사람). 공통값이 비어 있으면(null) 전 회차 참석 = 교육 합계다. 사람별 값이 있으면 그 값이 이긴다.
+     * 이수기록·시간 동기화·합계 축소 검사가 모두 이 한 함수로 사람의 시간을 읽는다. */
+    function enrollHours(e, workerId, courseHours) {
+        if (e && e.hoursBy && e.hoursBy[workerId] != null) return +e.hoursBy[workerId];
+        if (e && e.actualHours != null) return +e.actualHours;
+        return courseHours;
+    }
+    /* 0 보다 크고 교육 합계 이하 — 공통값·사람별 값 모두. 화면 두 곳(목록·상세)과 일괄 등록이 같은 검사를 지난다 */
+    function enrollHoursIssue(o) {
+        var c = courseOf(o.courseId);
+        if (!c || !isGroupCourse(c)) return '';
+        var max = +c.hours || 0;
+        var bad = function (h) { return h != null && h !== '' && !(+h > 0 && +h <= max); };
+        if (bad(o.actualHours)) return '실제 참석시간은 0보다 크고 교육 시간(' + max + 'h) 이하로 적습니다.';
+        var hb = o.hoursBy || {};
+        if (Object.keys(hb).some(function (k) { return bad(hb[k]); })) return '사람별 실제 참석시간은 0보다 크고 교육 시간(' + max + 'h) 이하로 적습니다.';
+        return '';
+    }
     /* 등록부를 저장할 수 없는 이유 — 화면이 addEnroll 의 false 를 사유로 바꿔 말할 때 쓴다 */
     function enrollDenyReason(o) {
         var c = courseOf(o.courseId);
         var pop = c ? populationIssue(c.kind, o.workerIds) : '';
         if (pop) return pop;
+        var hi = enrollHoursIssue(o);
+        if (hi) return hi;
         if (hasEnroll(o.courseId, o.deptId)) return deptName(o.deptId) + '은(는) 이미 등록된 부서입니다 — 등록 취소 후 다시 등록하세요.';
         if (c && c.status === 'OPEN' && isGroupCourse(c) && !enrollOpen(c)) return '교육이 끝난 뒤(' + lastSessionDate(c) + '부터) 참석자 등록부를 올립니다.';
         return '';
@@ -780,10 +995,20 @@
         if (oc && populationIssue(oc.kind, o.workerIds)) return false;
         /* 집합교육 등록부는 교육이 끝난 뒤에만 받는다 — 화면 두 곳(목록·상세)이 같은 판정을 지난다 */
         if (oc && oc.status === 'OPEN' && isGroupCourse(oc) && !enrollOpen(oc)) return false;
+        /* 실제 참석시간 — 0 < h ≤ 교육 합계(공통값·사람별 모두). 화면이 검사를 빠뜨려도 여기서 막는다 */
+        if (enrollHoursIssue(o)) return false;
+        var wids = (o.workerIds || []).slice();
+        var hoursBy = null;
+        Object.keys(o.hoursBy || {}).forEach(function (k) {
+            if (wids.indexOf(k) === -1 || o.hoursBy[k] == null || o.hoursBy[k] === '') return;
+            (hoursBy = hoursBy || {})[k] = +o.hoursBy[k];
+        });
         d.enrolls.push({
             courseId: o.courseId, deptId: o.deptId,
-            workerIds: (o.workerIds || []).slice(),
-            signFile: o.signFile || '', actualHours: o.actualHours == null ? null : +o.actualHours,
+            workerIds: wids,
+            signFile: o.signFile || '', actualHours: o.actualHours == null || o.actualHours === '' ? null : +o.actualHours,
+            /* 사람별 실제 참석시간 — 공통값과 다른 사람만(없으면 키 자체가 없다) */
+            hoursBy: hoursBy || undefined,
             status: 'ACTIVE', at: o.at || today(),
             /* 누가 올렸는지 — 재난안전과가 다른 부서 몫을 대신 올리면 proxy(대리 등록) */
             by: o.by || '', proxy: !!o.proxy,
@@ -838,6 +1063,15 @@
             addRecord({ workerId: wid, courseId: courseId, kind: recordKindForCourse(courseId), hours: hours, date: dateISO || today() });
         });
     }
+    /* 등록부 한 줄을 이수기록으로 — 사람마다 그 사람의 실제 참석시간(enrollHours)으로 남긴다.
+       종료 처리와 종료 뒤 정정 등록부가 같은 함수를 지난다 */
+    function recordEnrollCompletion(e, dateISO) {
+        var c = e ? courseOf(e.courseId) : null; if (!c) return 0;
+        (e.workerIds || []).forEach(function (wid) {
+            addRecord({ workerId: wid, courseId: e.courseId, kind: recordKindForCourse(e.courseId), hours: enrollHours(e, wid, c.hours), date: dateISO || c.date });
+        });
+        return (e.workerIds || []).length;
+    }
     /* 교육 정보 수정으로 시간·일자가 바뀌면 이미 쌓인 이수기록도 맞춘다.
      * (안 맞추면 교육 카드의 'Nh'와 이수현황의 '인정 Nh'가 조용히 어긋난다)
      * 반환 = 갱신된 기록 건수 */
@@ -860,7 +1094,7 @@
             var nh = hours;
             if (group) {
                 var en = enrollOfWorker(courseId, r.workerId);
-                nh = (en && en.actualHours != null) ? +en.actualHours : hours;
+                nh = en ? enrollHours(en, r.workerId, hours) : hours;
             }
             if (r.hours === nh && (!dateISO || r.date === dateISO)) return;
             r.hours = nh;
@@ -875,9 +1109,14 @@
        그 부서 등록부를 먼저 정정(등록 취소 후 재등록)한다. */
     function groupHoursConflicts(courseId, newHours) {
         if (!isGroupCourse(courseOf(courseId))) return [];
-        return enrolls(courseId).filter(function (e) {
-            return e.actualHours != null && +e.actualHours > newHours;
-        }).map(function (e) { return { deptId: e.deptId, deptName: deptName(e.deptId), actualHours: +e.actualHours }; });
+        /* 공통값과 사람별 값 가운데 가장 큰 것으로 본다 — 한 사람이라도 새 합계를 넘으면 그 등록부부터 정정한다 */
+        return enrolls(courseId).map(function (e) {
+            var hs = [];
+            if (e.actualHours != null) hs.push(+e.actualHours);
+            Object.keys(e.hoursBy || {}).forEach(function (k) { hs.push(+e.hoursBy[k]); });
+            return { e: e, max: hs.length ? Math.max.apply(null, hs) : null };
+        }).filter(function (x) { return x.max != null && x.max > newHours; })
+          .map(function (x) { return { deptId: x.e.deptId, deptName: deptName(x.e.deptId), actualHours: x.max }; });
     }
     function recordKindForCourse(courseId) {
         var c = courseOf(courseId); if (!c) return 'ETC';
@@ -1187,6 +1426,8 @@
         enrolls: enrolls, allEnrolls: allEnrolls, addEnroll: addEnroll, hasEnroll: hasEnroll, removeEnroll: removeEnroll,
         enrollDenyReason: enrollDenyReason, populationIssue: populationIssue,
         canSeePerson: canSeePerson, personLabel: personLabel, personLabels: personLabels,
+        enrollHours: enrollHours, enrollHoursIssue: enrollHoursIssue, recordEnrollCompletion: recordEnrollCompletion,
+        slotLabel: slotLabel, SLOT_LABEL: SLOT_LABEL,
         cancelCompletedEnroll: cancelCompletedEnroll,
         removeWorkerFromCourse: removeWorkerFromCourse,
         records: records, recordsFor: recordsFor, addRecord: addRecord,
@@ -1194,6 +1435,9 @@
         syncCourseRecordHours: syncCourseRecordHours,
         /* 독촉 */
         reminders: reminders, addReminder: addReminder, deptTodos: deptTodos,
+        /* 실시 결과 공문 예시 — 교육 공문 저장소(EDUDOC)가 비어 있을 때 처음 채우는 값.
+           교육 예시와 같은 곳에서 만들어야 이력·잠금·붙임이 서로 맞는다 */
+        seedDocs: function () { var d = load(); return { docs: (d.docSeed || []).slice(), seq: d.docSeq || 2600 }; },
         lastSessionDate: lastSessionDate, enrollDue: enrollDue, enrollOpen: enrollOpen, enrollDays: enrollDays,
         groupHoursConflicts: groupHoursConflicts,
         /* 계산 */

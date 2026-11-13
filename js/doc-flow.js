@@ -355,8 +355,10 @@
             var init = cfg.initOf ? (cfg.initOf(t) || {}) : {};
             F = {
                 id: id, docType: init.docType || '내부결재',
-                title: cfg.titleOf ? cfg.titleOf(t) : '',
-                to: init.to || '', body: '',
+                /* init.title · init.body — 반려·반송된 공문을 다시 기안할 때 앞 기안의 제목·본문을 이어 쓴다(선택).
+                   init.notice — 기안 폼 맨 위에 띄울 한 줄(예: 반려 사유). 주지 않으면 종전과 같다. */
+                title: init.title != null ? init.title : (cfg.titleOf ? cfg.titleOf(t) : ''),
+                to: init.to || '', body: init.body || '', notice: init.notice || '',
                 attach: (cfg.attachOf ? cfg.attachOf(t) : []).map(function (a) {
                     /* a.on — 반드시 실려야 하는 붙임(배포 공문의 점검표 양식)은 미리 고른 채 시작한다 */
                     return { label: a.label, meta: a.meta || '', on: !!a.on, size: (a.size > 0 ? +a.size : null) };
@@ -513,6 +515,7 @@
                 .concat(F.annex && cfg.annexes ? cfg.annexes(t, null).map(function (x) { return x.title + '(별지)'; }) : []);
             V().openModal('공문 기안 — ' + esc(cfg.subjectOf ? cfg.subjectOf(t) : ''),
                 '<div class="rskdoc-draft">' +
+                    noticeHtml() +
                     (F.rc
                         ? '<div class="rskdoc-block"><label class="form-label">수신 <span class="roc-req">*</span> ' +
                               '<span class="file-hint">기본값은 ' + esc(cfg.recipientsDefaultLabel || '도메인 기본 수신처') + '입니다</span></label>' +
@@ -554,12 +557,17 @@
                 '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
                 '<button type="button" class="btn btn-primary" onclick="' + NS + '.preview()">문서 미리보기 →</button>');
         }
+        /* 기안 폼 맨 위 한 줄 — 반려·반송 뒤 다시 기안할 때 사유를 보이며 고치게 한다(cfg.initOf 의 notice) */
+        function noticeHtml() {
+            return F && F.notice ? '<div class="check-notice" style="margin-bottom:10px;">' + esc(F.notice) + '</div>' : '';
+        }
         function renderDraft() {
             var t = cfg.targetOf(F.id);
             if (SIMPLE) { renderSimple(t); return; }
             var out = F.docType === '외부발송';
             V().openModal('공문 기안 — ' + esc(cfg.subjectOf ? cfg.subjectOf(t) : ''),
                 '<div class="rskdoc-draft">' +
+                    noticeHtml() +
                     '<div class="rskdoc-block"><label class="form-label" for="' + NS + '-type">문서 종류</label>' +
                         '<select class="form-select" id="' + NS + '-type" onchange="' + NS + '.setType(this.value)">' +
                             ['내부결재', '외부발송'].map(function (k) {
@@ -638,12 +646,36 @@
             }
             return names;
         }
+        /* 관련 근거 — 담당자가 기안 폼에서 **고른 것만** 지면에 싣는다. 하나도 안 골랐으면 줄 자체가 없다.
+           표기는 DYLAW 가 만든다(CLAUDE.md §10 — 화면이 조문 표기를 조립하지 않는다). 기안 중에는 F.basis({key:true}),
+           저장된 문서는 doc.basis([key]) 다. 근거 후보를 주지 않는 도메인(배포·요청 공문)은 늘 비어 있어 지면이 그대로다. */
+        function basisKeys(src) {
+            var b = src && src.basis;
+            if (!b) return [];
+            return Array.isArray(b) ? b.slice() : Object.keys(b).filter(function (k) { return b[k]; });
+        }
+        function basisLabel(t, key) {
+            var L = global.DYLAW;
+            if (L && L.shortRef && L.basisTitle && L.basisTitle(key)) return L.shortRef(key) + ' ' + L.basisTitle(key);
+            var hit = (cfg.basisOf ? cfg.basisOf(t) : []).filter(function (b) { return b.key === key; })[0];
+            return hit ? hit.label : key;
+        }
+        function basisRowHtml(t, src) {
+            var keys = basisKeys(src);
+            if (!keys.length) return '';
+            return '<div class="pdf-gm-row"><span class="k">근거</span><span class="v">' +
+                keys.map(function (k) { return esc(basisLabel(t, k)); }).join('<br>') + '</span></div>';
+        }
         function paperMain(t, doc) {
             var src = doc || F;
             var L = doc ? doc.line : line();
             var out = src.docType === '외부발송';
             var no = doc && doc.no ? doc.no : '';
-            var noCell = no
+            /* 결재완료로 회신된 문서는 온나라가 준 생산등록번호·결재일을 싣는다 — «임시 채번»은 결재 전 연계 번호에만 붙인다(2026-11-13) */
+            var prod = doc && doc.status === '결재완료' ? (doc.prodNo || doc.regNo || '') : '';
+            var noCell = prod
+                ? esc(prod) + '(' + esc(doc.apprDate || doc.doneAt || (doc.at ? String(doc.at).slice(0, 10) : today())) + ')'
+                : no
                 ? esc(no) + '(' + esc(doc.at ? String(doc.at).slice(0, 10) : today()) + ')' +
                   ' <span class="pdf-note">임시 채번 — 실제 번호는 온나라가 부여</span>'
                 : '<span class="pdf-dash">(온나라 상신 시 부여)</span>';
@@ -655,6 +687,7 @@
                     '</span></div>' +
                     '<div class="pdf-gm-row"><span class="k">제목</span><span class="v"><b>' +
                         (esc(src.title || '') || '<span class="pdf-dash">(제목 미입력)</span>') + '</b></span></div>' +
+                    basisRowHtml(t, src) +
                 '</div>' +
                 bodyDocHtml(src.body) +
                 attachDocHtml(attachNames(t, doc)) +

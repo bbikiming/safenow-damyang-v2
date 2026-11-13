@@ -400,24 +400,44 @@
     /* basis — 이 업무를 왜 하는지 알려주는 근거 조문(법령 근거 매핑의 조문 키).
        담당자가 알림을 받은 그 자리에서 이유를 알 수 있어야 한다. 근거가 없으면 비운다. */
     const NTF_ITEMS = [
-        { id: 'n1', cat: 'approval',   catLabel: '결재',       time: '14:23',
-          title: '안전·보건 목표와 경영방침 결재 요청 (온나라)', href: 'menu.html?m=policy',
-          work: 'my-work.html?cat=approval', basis: 'cse-4-1' },
-        { id: 'n2', cat: 'assignment', catLabel: '지정',       time: '09:15',
+        /* 시각은 업무가 만든 알림(ntfPush)과 같은 «MM-DD HH:MM» 형식이다 — «어제»·«오늘» 처럼
+           상대 표기를 박으면 기준일이 바뀔 때 거짓이 된다(§11). 예시 시점은 2026-11 운영 중. */
+        /* 받는 부서(toDept)가 정해진 예시다 — 부서 업무 알림은 그 부서 사람에게만 보인다(ntfForMe).
+           시각은 어제까지만 둔다 — 오늘 시각을 박으면 그 시각 전에 열 때 «미래에 온 알림»이 된다. */
+        { id: 'n2', cat: 'assignment', catLabel: '지정',       time: '11-12 09:15', toDept: 'safety',
           /* 2026-09-03 — 책임자 «지정» 을 확인하는 자리는 조직(책임체계 지정 현황)이다.
              base-targets 가 메뉴로 돌아왔어도 되돌리지 않는다 — 그 화면은 원료·제조물
              대장이지 책임자 지정 축이 아니다. */
           title: '군청 청사 관리책임자로 자동 지정', href: 'menu.html?m=org',
           work: 'my-work.html', basis: 'osh-15' },
+        /* n1 «경영방침 결재 요청 (온나라)»은 2026-11-13 에 걷었다 — v2.0 은 이미 결재완료이고
+           이 시스템에는 결재함이 없다(결재는 온나라 몫, CLAUDE.md §7-1). */
         /* n3 «의무이행 점검표 반기 마감 기한 초과»는 2026-11-12 에 걷었다 — 이행점검은 배포 흐름이 알림을 만든다
            (배포·기한 변경·검토 요청·반려·독촉 5종, DYLayout.ntfPush). 고정 예시는 그 흐름과 다른 말을 했다. */
         /* n4 «업무문서 안전점검 계열 16건 분류 확인 요청»은 2026-10-12 에 걷었다 —
            분류는 업무목록 엑셀이 정하고 이 시스템에서 하지 않는다. */
-        { id: 'n5', cat: 'risk',       catLabel: '위험성평가', time: '어제 14:30',
-          title: '물순환사업소 개선조치 기한초과 재촉', href: 'my-work.html?dept=water&cat=improve',
+        { id: 'n5', cat: 'risk',       catLabel: '위험성평가', time: '11-12 14:30', toDept: 'water',
+          title: '개선조치 기한 초과 재촉 — 반응조 상부 점검발판 추락 (기한 11-10)', href: 'my-work.html?dept=water&cat=improve',
           work: 'my-work.html?dept=water&cat=improve', basis: 'cse-4-3' },
+        /* 11월 정기교육 등록부 — 아직 올리지 않은 부서에만(교육 데이터의 미등록 부서와 같다) */
+        { id: 'n7w', cat: 'compliance', catLabel: '이행', time: '11-11 17:30', toDept: 'water',
+          title: '11월 정기교육 참석자 등록부 등록 요청 — 기한 11-18', href: 'edu-reg-detail.html?id=C-M11', work: 'my-work.html', basis: 'osh-29' },
+        { id: 'n7f', cat: 'compliance', catLabel: '이행', time: '11-11 17:30', toDept: 'facility',
+          title: '11월 정기교육 참석자 등록부 등록 요청 — 기한 11-18', href: 'edu-reg-detail.html?id=C-M11', work: 'my-work.html', basis: 'osh-29' },
+        { id: 'n7t', cat: 'compliance', catLabel: '이행', time: '11-11 17:30', toDept: 'town_damyang',
+          title: '11월 정기교육 참석자 등록부 등록 요청 — 기한 11-18', href: 'edu-reg-detail.html?id=C-M11', work: 'my-work.html', basis: 'osh-29' },
+        { id: 'n7c', cat: 'compliance', catLabel: '이행', time: '11-11 17:30', toDept: 'culture',
+          title: '11월 정기교육 참석자 등록부 등록 요청 — 기한 11-18', href: 'edu-reg-detail.html?id=C-M11', work: 'my-work.html', basis: 'osh-29' },
+        { id: 'n7h', cat: 'compliance', catLabel: '이행', time: '11-11 17:30', toDept: 'health',
+          title: '11월 정기교육 참석자 등록부 등록 요청 — 기한 11-18', href: 'edu-reg-detail.html?id=C-M11', work: 'my-work.html', basis: 'osh-29' },
+        { id: 'n6', cat: 'risk',       catLabel: '위험성평가', time: '11-11 11:00', toDept: 'facility',
+          title: '담양종합체육관 고소작업대 수시평가 — 개선조치 담당자를 지정하세요', href: 'rsk-occ.html',
+          work: 'my-work.html?cat=improve', basis: 'cse-4-3' },
+        { id: 'n8', cat: 'risk',       catLabel: '위험성평가', time: '11-06 14:30', toDept: 'env',
+          title: '개선조치 담당자로 지정되었습니다 — 야간 수집작업 차량 접촉 외 (수시평가)', href: 'my-work.html?cat=improve',
+          work: 'my-work.html?cat=improve', basis: 'osh-36' },
     ];
-    const NTF_DEFAULT_UNREAD = ['n1', 'n2'];
+    const NTF_DEFAULT_UNREAD = ['n2', 'n5', 'n7w', 'n7f', 'n7t', 'n7c', 'n7h', 'n6', 'n8'];
     /* ── 업무가 만든 알림 (2026-11-12) ──────────────────────────────────────
      * 위 NTF_ITEMS 는 고정 예시다. 이행점검 제출·반려처럼 **업무 화면에서 실제로 일어난 일**은
      * 여기 쌓고(ntfPush) 받는 사람(부서 · 등급)에게만 보인다. 새로 쌓인 알림은 안 읽음으로 시작한다.
@@ -439,7 +459,8 @@
     function ntfTitle(n) {
         return n.dyn ? String(n.title).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]) : n.title;
     }
-    function ntfItems() { return ntfDynAll().filter(ntfForMe).concat(NTF_ITEMS); }
+    /* 고정 예시도 받는 부서를 본다 — 부서 업무 알림이 다른 부서 사람에게 보이면 조회 범위 위반이다(§12) */
+    function ntfItems() { return ntfDynAll().filter(ntfForMe).concat(NTF_ITEMS.filter(ntfForMe)); }
     function ntfPush(o) {
         const all = ntfDynAll();
         const t = new Date();
@@ -559,7 +580,6 @@
                 <div class="dy-ntf-dropdown-list" id="dy-ntf-list"></div>
                 <div class="dy-ntf-dropdown-foot2">
                     <a href="my-work.html">내 할일 열기</a>
-                    <a href="admin-notify.html">알림 전체 보기 (42건)</a>
                 </div>
             </div>
         `;
