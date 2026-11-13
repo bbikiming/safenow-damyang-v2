@@ -201,7 +201,8 @@
                             atype: 'menu', action: '작성하러 가기', destLabel: '정기 위험성평가',
                             doneDate: dp.inputDone ? dp.inputDone.at : '', doneBy: dp.inputDone ? (dp.inputDone.by || '') : '',
                             doneText: dp.inputDone ? '입력 완료 · ' + (dp.inputDone.count ? dp.inputDone.count + '건' : '조치 대상 없음') : '',
-                            remind: false
+                            /* 입력 미완료 재촉(2026-11-13 결정 D-2)을 받았으면 재촉 표시 */
+                            remind: !dp.inputDone && (dp.inputReminds || []).length > 0
                         });
                     }
                     /* 설문조사표 제출은 요청 공문을 받은 뒤에 할 일이 된다(반영안 ③) — 공문 전에는 부서가 받은 것이 없다 */
@@ -405,6 +406,26 @@
                         remind: false
                     });
                 });
+                /* 근로자 공유(2026-11-13 결정 D-6, 시행규칙 §37의3 2호) — 평가가 확인까지 끝난 뒤 결과를 근로자에게
+                   알린 기록을 남기는 것이 재난안전과의 마지막 할 일이다. 기록하면 완료한 업무로 내려간다. */
+                (D().assessments() || []).forEach(function (a) {
+                    if (!D().shareOpen || !D().shareOpen(a).ok) return;
+                    var s = a.workerShare;
+                    out.push({
+                        id: 'RSK-SHARE-' + a.id,
+                        cat: 'risk',
+                        title: a.title + ' — 결과 근로자 공유',
+                        sub: s ? '근로자 공유 ' + s.at + ' · ' + s.method
+                               : '유해·위험요인 · 위험성 수준 결정 결과 · 개선대책과 이행 결과를 근로자에게 알리고 공유일·방법·증빙을 남깁니다',
+                        due: '',
+                        status: s ? 'DONE' : 'IN_PROGRESS',
+                        dept: own, dept_label: D().deptName(own),
+                        href: 'rsk-list.html?year=' + a.year,
+                        atype: 'menu', action: '기록하러 가기', destLabel: '정기 위험성평가',
+                        doneDate: s ? s.at : '', doneBy: s ? (s.by || '') : '', doneText: s ? '근로자 공유 · ' + s.method : '',
+                        remind: false
+                    });
+                });
             }
         } catch (e) {}
 
@@ -526,6 +547,30 @@
             return (b.updated || '').localeCompare(a.updated || '');
         });
         return arr;
+    }
+
+    /* ===== 예정 교육 (알림 · 할 일 아님) — 2026-11-13 X-1 =====
+     * 교육 전인 집합교육을 대상 부서에 일시·장소로 미리 보인다. collectItems 에 넣지 않는다 —
+     * 지연·이번주·전체 칩, «마감 할일» 탭 수, 대시보드 부서 할 일 수(itemsFor)는 할 일만 센다.
+     * 대상 부서·«교육 전» 판정은 DYEDU.deptUpcoming 한 곳. 교육이 끝나는 날 사라지고
+     * 그날부터 «참석자 등록부 등록» 할 일 카드가 생긴다. */
+    function noticeItems() {
+        var Edu = global.DYEDU;
+        if (!Edu || !Edu.deptUpcoming) return [];
+        try {
+            return Edu.deptUpcoming(state.deptId).map(function (c) {
+                return {
+                    id: 'EDU-UPCOMING-' + c.id, cat: 'edu', notice: true,
+                    title: Edu.upcomingTitle(c),
+                    sub: '참석 안내는 공문으로 따로 옵니다 · 교육이 끝나면(' + String(Edu.lastSessionDate(c)).slice(5) +
+                         ') 참석자 등록부 등록 할 일이 생깁니다',
+                    due: c.date, status: 'NOTICE',
+                    dept: state.deptId, dept_label: Edu.deptName(state.deptId),
+                    href: 'edu-reg-detail.html?id=' + encodeURIComponent(c.id),
+                    atype: 'menu', action: '교육 보기', remind: false
+                };
+            });
+        } catch (e) { return []; }
     }
 
     /* ================= KPI ================= */
@@ -732,6 +777,17 @@
                 ((state.fStatus || state.fCat) ? ' <button type="button" class="btn btn-sm btn-outline" onclick="MYWORK.kpiFilter(\'\')">필터 해제</button>' : '') +
                 '</div>';
         }
+        /* 예정 교육 — 할 일 묶음 뒤에 따로(알림). 기한 칩 필터를 걸면 숨긴다(할 일이 아니다) */
+        var notices = (!state.fStatus && (!state.fCat || state.fCat === 'edu')) ? noticeItems() : [];
+        if (notices.length) {
+            groupHtml += '<div class="mw-group mw-g-neutral">' +
+                '<div class="mw-group-head">' + groupDot('neutral') +
+                    '<span class="mw-group-label">예정 교육 — 알림 (할 일 아님)</span>' +
+                    '<span class="mw-group-count">' + notices.length + '건</span>' +
+                '</div>' +
+                '<div class="mw-group-body">' + notices.map(itemHtml).join('') + '</div>' +
+            '</div>';
+        }
         return filters + groupHtml;
     }
 
@@ -771,6 +827,7 @@
     function itemHtml(it) {
         var meta = CATS[it.cat] || { label: it.cat, color: 'var(--text-gray)', bg: 'var(--gray-200)' };
         var dTxt = dDayText(it.due, it.status);
+        if (it.notice) dTxt = '교육 ' + dTxt;             /* 예정 교육 — 기한이 아니라 교육일까지 */
         var dCls = 'mw-dday';
         var dNum = daysBetween(it.due);
         if (it.status === 'DONE') dCls += ' done';

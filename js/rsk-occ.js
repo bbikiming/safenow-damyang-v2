@@ -1,6 +1,6 @@
 /* =====================================================================
    rsk-occ.js · 수시 위험성평가 (RSK03-L)  — 2026-07-30 회의 반영
-   · 연도 셀렉트 + 실시 사유 필터 (고시 §15② 법정 6종)
+   · 연도 셀렉트 + 실시 사유 필터 (고시 §15② 1~5호 + ③ 법정 6종)
    · [＋등록] → **실시 사유 선택**을 먼저 거친 뒤 등록 폼으로 (빈 폼 직행 금지)
    · 작성 양식(HWPX) 다운로드 → 작성본 첨부 → 상태 REGISTERED
    · 안전관리자 **검토파일 등록 = 검토 완료**(REVIEWED). 외부 용역이라 전자결재 불가.
@@ -327,7 +327,7 @@
             deptId: prefillDeptId || (mine && depts.some(function (d) { return d.id === mine; }) ? mine : '') ||
                     (depts[0] && depts[0].id) || '',
             reason: reason || 'ACCIDENT', date: D().today(), desc: '', files: [],
-            accident: '', resumeDate: '',   /* 재해 사유 전용 (고시 §15② 5호 단서) */
+            accident: '', resumeDate: '',   /* 재해 사유 전용 (고시 §15③ · 실시 시점은 ① «관련 작업을 시작하기 전까지») */
             /* 실시 결과 — 유해위험요인과 감소대책. 여기 적은 행이 개선조치가 된다. */
             hazards: [newHazard()],
             due: ''
@@ -344,18 +344,18 @@
      * 명시적으로 금지한 실패 모드다(부서 이행 체크의 '해당 없음' 사유 강제와 같은 근거). */
     function newHazard() { return { name: '', cause: '', action: '', owner: '', facilNo: '', facilNm: '', facilNa: false, beforePhotos: [] }; }
 
-    /* 재해 발생(고시 §15② 5호)만 추가 필수 항목을 둔다 (docs/planning/확정-미결사항… §2)
-       5호에는 다른 사유에 없는 단서가 붙어 있다 —
-         "재해발생 작업을 대상으로 **작업을 재개하기 전에** 실시하여야 한다"
-       작업 재개 시점이 법정 기한이므로 그 날짜를 남기지 않으면 기한을 셀 수 없고,
-       무엇 때문에 멈춘 작업인지도 함께 있어야 재개 판단을 소명할 수 있다.
-       다른 사유에는 붙이지 않는다 — 없는 요건을 만들면 등록이 무거워질 뿐이다. */
+    /* 재해 발생(고시 §15③)만 추가 필수 항목을 둔다 (docs/planning/확정-미결사항… §2)
+       2026-11-04 전부개정으로 종전 ② 5호의 «작업을 재개하기 전에» 단서는 없어졌고, 실시 시점은
+       모든 수시평가에 공통인 ① «관련 작업을 시작하기 전까지»가 됐다. 재해로 멈춘 작업은 다시
+       시작하는 날이 곧 «관련 작업을 시작하기 전»의 끝이므로 재개 예정일을 남겨야 기한을 셀 수 있고,
+       무엇 때문에 멈춘 작업인지(재해 개요)도 함께 있어야 재개 판단을 소명할 수 있다.
+       다른 사유는 작업 시작일이 등록 내용(발생일)에 이미 드러나 따로 받지 않는다. */
     function isAccident() { return F && F.reason === 'ACCIDENT'; }
     function accidentRowsHtml() {
         if (!isAccident()) return '';
         return '<div class="roc-modal-row roc-acc-note">' +
-                '<b>재해 발생 건은 작업을 재개하기 전에 평가를 마쳐야 합니다.</b> ' +
-                '<span>위험성평가 고시 §15② 단서 — 다른 사유에는 없는 요건입니다.</span></div>' +
+                '<b>재해 발생 건은 멈춘 작업을 다시 시작하기 전에 평가를 마쳐야 합니다.</b> ' +
+                '<span>수시평가는 관련 작업을 시작하기 전까지 실시합니다.</span></div>' +
             '<div class="roc-modal-row"><label class="form-label" for="roc-r-acc">재해 개요 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 '<textarea class="form-textarea" id="roc-r-acc" rows="2"' +
                     ' placeholder="언제·어디서·누가·어떻게 다쳤는지와 멈춘 작업">' + esc(F.accident || '') + '</textarea></div>' +

@@ -393,14 +393,18 @@
             V().closeModal();
             toast(E().deptName(F.deptId) + ' 자체교육 완료 · ' + S.hours + 'h · ' + ids.length + '명 카운트');
         } else {
-            E().addCourse({
+            var gc = E().addCourse({
                 kind: F.kind, date: S.date, time: S.time, endTime: S.endTime,
                 sessions: S.sessions, hours: S.hours,
                 instructor: F.instructor, place: F.place, desc: F.desc, files: F.files, photos: F.photos,
                 status: 'OPEN', createdBy: '재난안전과', enrollDays: +F.enrollDays
             });
+            /* 교육 전이면 대상 부서에 «집합교육 예정 안내»(X-1) — 할 일이 아니라 일시·장소 알림이다 */
+            var noticed = E().notifyUpcoming ? E().notifyUpcoming(gc.id) : 0;
             V().closeModal();
-            toast((SUP_MODE ? '관리감독자 집합교육 등록' : '집합교육 등록') + ' — 교육이 끝나면 부서가 참석자 등록부를 올립니다');
+            toast((SUP_MODE ? '관리감독자 집합교육 등록' : '집합교육 등록') +
+                (noticed ? ' · 대상 부서 ' + noticed + '곳에 예정 안내' : '') +
+                ' — 교육이 끝나면 부서가 참석자 등록부를 올립니다');
             tourEvt('created');
         }
         render();

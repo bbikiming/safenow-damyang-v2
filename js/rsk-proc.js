@@ -336,7 +336,7 @@
             '<div style="margin-top:10px;padding:10px 12px;background:var(--page-bg);border-radius:var(--radius-button);font-size:13px;">' +
                 '<div>대상 공정: <b>' + esc(p.name) + '</b></div>' +
                 '<div style="margin-top:4px;">변경 사유: <b>' + esc(reasonText) + '</b></div></div>' +
-            '<p class="rp-hint" style="margin-top:8px;">근거: 「사업장 위험성평가에 관한 지침」제15조 — 설비·작업방법 변경, 점검 발견은 수시평가 사유입니다.</p>',
+            '<p class="rp-hint" style="margin-top:8px;">근거: 「사업장 위험성평가에 관한 지침」제15조② — 설비 등의 신규 도입·변경(2호), 작업방법·절차의 신규 도입·변경(4호), 그 밖에 필요하다고 판단한 경우(5호)는 수시평가 사유입니다.</p>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="RSKPROC.createOccasional(\'' + pid + '\',\'' + esc(reasonText) + '\')">수시평가 생성</button>');
     }

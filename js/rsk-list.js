@@ -44,7 +44,9 @@
         reviewOpen: {}, /* 검수 화면 부서별 접힘 상태 { deptId: true } */
         fromFacil: null, /* 시설물 위험도에서 넘어온 시설물 {no, name} — 부서 입력 첫 항목에 한 번 쓴다 */
         reqSel: null,    /* 조치 요청 부서 선택 {aid, sel:{deptId:true}} — 요청 공문을 보내면 비운다 */
-        inDoneFor: ''    /* 입력 완료 확인 칸을 펼친 부서 */
+        inDoneFor: '',   /* 입력 완료 확인 칸을 펼친 부서 */
+        inDoneWk: null,  /* 입력 완료 칸의 참여 근로자 선택 {deptId, sel:{uid:true}} — 다시 그려도 남게 */
+        more: null       /* 추가 조치 요청 부서 선택 {aid, sel:{deptId:true}, dues:{deptId:date}} (D-3) */
     };
     var W = null; /* 생성 마법사 상태 */
 
@@ -129,7 +131,8 @@
         return '<div class="rl-doc-bar">' +
             '<span class="rl-doc-lead"><b>온나라 이관</b> <span class="chip-status neutral chip-sm">미상신</span></span>' +
             '<span class="rl-doc-meta">' + (ready
-                ? '전 부서 확인 완료 — 공문을 작성해 온나라로 넘길 수 있습니다.'
+                ? (c.total ? '전 부서 확인 완료 — 공문을 작성해 온나라로 넘길 수 있습니다.'
+                    : '조치 대상 없음으로 끝난 평가입니다 — 결과 공문을 «조치 대상 없음» 보고로 기안할 수 있습니다.')
                 : (c.total
                     ? '전 건 확인 완료 후 기안할 수 있습니다 (확인 대기 ' + c.wait + '건 · 반려 ' + c.returned + '건)'
                     : '아직 조치를 요청한 개선조치가 없습니다.')) + '</span>' +
@@ -438,11 +441,17 @@
                     }
                     return T('[data-tour="rsk-report"]', '용역 보고서와 부서별 조치기한을 올립니다');
                 }
-                if (st === 'REVIEW') return T('[data-tour="rsk-deliver"]', '개선이 필요한 부서를 골라 조치 요청 공문을 보냅니다');
+                if (st === 'REVIEW') return selIds(a).length
+                    ? T('[data-tour="rsk-deliver"]', '개선이 필요한 부서를 골라 조치 요청 공문을 보냅니다')
+                    /* 고른 부서가 없으면 조치 요청 공문을 보낼 수 없다 — 조치 대상이 없는 평가는 종결한다(D-1) */
+                    : T('[data-now="rsk-noaction"]', '조치가 필요한 부서가 없으면 사유를 적고 평가를 종결합니다(조치 대상 없음)');
                 var c = D().confirmCount(a.id);
                 if (c.wait) return T('.rl-cfm-bar [data-tour="rsk-confirm"]', '부서가 완료한 개선조치 ' + c.wait + '건을 확인합니다');
             }
-            if (D().docReady(a.id) && !D().latestDoc('A|' + a.id)) return T('.rl-doc-bar .btn-primary[data-tour="rsk-doc"]', '전 건 확인이 끝났습니다 — 결과 공문을 기안합니다');
+            if (D().docReady(a.id) && !D().latestDoc('A|' + a.id)) return T('.rl-doc-bar .btn-primary[data-tour="rsk-doc"]',
+                D().confirmCount(a.id).total ? '전 건 확인이 끝났습니다 — 결과 공문을 기안합니다' : '조치 대상 없음으로 끝났습니다 — 결과 공문(«조치 대상 없음» 보고)을 기안합니다');
+            /* 마지막 단계 — 결과 공문을 보낸 뒤 평가 결과를 근로자에게 알린 기록(D-6, 시행규칙 §37의3 2호) */
+            if (shownClosed(a) && D().latestDoc('A|' + a.id) && !a.workerShare) return T('[data-now="rsk-share"]', '평가 결과를 근로자에게 알리고 근로자 공유 기록을 남깁니다 (공유일 · 방법 · 증빙)');
         }
         if (!a) return null;
         var mine = p.deptId, dp = (a.depts || []).filter(function (x) { return x.deptId === mine; })[0];
@@ -461,7 +470,9 @@
         if (canManage()) {
             var writing = (a.depts || []).filter(function (x) { return x.request; });
             var doneIn = writing.filter(function (x) { return x.inputDone; }).length;
-            if (doneIn < writing.length) return W('부서 작성 차례입니다 — 입력 완료 ' + doneIn + ' / ' + writing.length + '곳');
+            if (doneIn < writing.length) return W('부서 작성 차례입니다 — 입력 완료 ' + doneIn + ' / ' + writing.length + '곳 · 아직 ' +
+                writing.filter(function (x) { return !x.inputDone; }).map(function (x) { return D().deptName(x.deptId); }).join(', ') +
+                ' — 부서별 조치 표의 [입력 재촉]으로 재촉할 수 있습니다');
             var cc = D().confirmCount(a.id);
             if (cc.returned) return W('반려한 ' + cc.returned + '건의 재제출을 기다립니다');
             if (cc.done < cc.total) return W('부서 조치 차례입니다 — 완료 ' + cc.done + ' / ' + cc.total + '건');
@@ -594,7 +605,12 @@
                 ? '<button type="button" class="btn btn-primary" data-tour="rsk-create" onclick="RSKLIST.openWizard()">＋ 정기평가 생성</button>'
                 : '<span style="font-size:var(--fs-12);color:var(--text-gray);">재난안전과 담당자가 생성하면 여기에 표시됩니다</span>';
         } else if (!shownClosed(a)) {
-            right = '<span style="font-size:var(--fs-12);color:var(--text-gray);">정기평가는 연 1회 등록 원칙</span>';
+            right = '<span style="font-size:var(--fs-12);color:var(--text-gray);">정기평가는 연 1회 등록 원칙</span>' +
+                /* 설문조사표 요청 공문 전에는 부서에 간 것이 없어 고치고 지울 수 있다(D-4). 보낸 뒤에는 버튼이 없다 */
+                ((canManage() && D().infoEditable(a))
+                    ? ' <button type="button" class="btn btn-outline btn-sm" onclick="RSKLIST.openEdit()">평가 정보 수정</button>' +
+                      ' <button type="button" class="btn btn-outline btn-sm" onclick="RSKLIST.openDelete()">평가 삭제</button>'
+                    : '');
         } else {
             right = '<span class="chip-mini st-done">' + esc(a.year) + '년 평가 완료 (' + esc(a.completed_at || '') + ')</span>';
         }
@@ -672,6 +688,8 @@
                     surveySummaryCell(a) +
                     '<span>보고서 <b>' + (a.files && a.files.report ? esc(a.files.report) : '미첨부') + '</b></span>' +
                     (shownClosed(a) ? '<span>완료일 <b>' + esc(a.completed_at) + '</b></span>' : '') +
+                    (a.noAction ? '<span>평가 종결 <b>조치 대상 없음</b> (' + esc(a.noAction.at) + ')</span>' : '') +
+                    (a.workerShare ? '<span>근로자 공유 <b>' + esc(a.workerShare.at) + ' · ' + esc(a.workerShare.method) + '</b></span>' : '') +
                 '</div>' +
             '</div>' +
             '<div class="rl-progress">' +
@@ -908,7 +926,9 @@
         var a = current(); if (!a) return;
         var f = a.files && a.files.report;
         if (!f) { toast('첨부된 통합 보고서가 없습니다.'); return; }
-        V().notReady('문서 뷰어', '전자문서 연계');
+        /* 조치 요청 공문에 보고서를 붙이지 않으므로(Q-1) 부서는 여기서 내려받는다 — 이 세션에 올린 파일이면 실제로 받는다 */
+        if (D().downloadFile && D().downloadFile(f)) return;
+        V().notReady('«' + f + '» 내려받기', '첨부 저장 연계');
     }
     /* 제출본 열기 — 프로토타입이라 실제 파일이 없다. 없는 동작을 약속하지 않고 그 사실을 알린다. */
     function openDeptReportFile(deptId) {
@@ -1060,7 +1080,7 @@
                 '<td><span class="chip-status ' + V().toneOf(lbl) + ' chip-sm">' + lbl + '</span></td>' +
                 '<td style="text-align:center;">' + (c.total
                     ? '<button type="button" class="btn btn-outline btn-sm" onclick="RSKLIST.openDept(\'' + esc(dp.deptId) + '\')">상세</button>'
-                    : '') + '</td>' +
+                    : '') + inputRemindBtn(a, dp) + '</td>' +
             '</tr>';
         }).join('');
         if (!rows) {
@@ -1082,8 +1102,50 @@
             '<th style="min-width:120px;">부서</th><th style="width:110px;">점검일</th>' +
             '<th style="min-width:180px;">설문조사표 제출</th><th style="width:96px;">개선조치</th>' +
             '<th style="width:110px;">조치기한</th><th style="width:88px;">상태</th>' +
-            '<th style="width:72px;"></th>' +
+            '<th style="width:96px;"></th>' +
         '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+    }
+    /* ===== 입력 미완료 재촉 (2026-11-13 결정 D-2) =====
+     * 작성 기한은 따로 두지 않는다 — 조치 요청을 받고 [입력 완료]를 누르지 않은 부서를 재촉한다.
+     * 판정은 DYROLE.canRemind(주관부서 전 계층 · 그 부서 관리 계층, 총괄 책임자 제외)에 «자기 자신 제외»를
+     * 더한 것이다 — 그 부서 담당자는 자기 부서를 재촉하지 않는다(받는 사람이 자기다, CLAUDE.md §12). */
+    function canRemindInput(deptId) {
+        if (!canRemindDept(deptId) || !inScopeDept(deptId)) return false;
+        var p = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
+        return !(p && p.tier === 'staff' && p.deptId === deptId);
+    }
+    function inputRemindBtn(a, dp) {
+        if (!dp.request || dp.inputDone || a.status === 'COMPLETED' || !canRemindInput(dp.deptId)) return '';
+        return ' <button type="button" class="btn btn-outline btn-sm" style="border-color:var(--status-warning-border);color:var(--status-warning-fg);"' +
+            ' onclick="RSKLIST.openRemindInput(\'' + esc(dp.deptId) + '\')">입력 재촉</button>';
+    }
+    function openRemindInput(deptId) {
+        var a = current(); if (!a) return;
+        var dp = (a.depts || []).filter(function (x) { return x.deptId === deptId; })[0];
+        if (!dp || !D().inputOpen(a.id, deptId)) { toast('입력 중인 부서가 아닙니다 — 입력 완료 전 부서만 재촉합니다.'); return; }
+        if (!canRemindInput(deptId)) { toast(inScopeDept(deptId) && canRemindDept(deptId) ? '자기 부서는 재촉하지 않습니다 — 작성표에서 바로 입력하세요.' : REMIND_DENY); return; }
+        var n = (dp.inputReminds || []).length;
+        V().openModal(esc(D().deptName(deptId)) + ' — 조치 입력 재촉',
+            '<p style="font-size:var(--fs-13);line-height:1.6;">조치 요청을 받고 아직 <b>[입력 완료]</b>를 누르지 않은 부서에 작성표 입력을 재촉합니다.</p>' +
+            '<table class="rl-dates-table" style="margin-top:8px;"><tbody>' +
+                '<tr><th>받는 사람</th><td>' + esc(D().inputRemindTo(deptId).text) + '</td></tr>' +
+                '<tr><th>조치기한</th><td>' + esc(dp.dueDate || '-') + '</td></tr>' +
+                '<tr><th>조치 요청</th><td>' + esc((dp.request && dp.request.at) || '-') + '</td></tr>' +
+                '<tr><th>지난 재촉</th><td>' + (n ? n + '회 · 마지막 ' + esc(dp.inputReminds[n - 1].at) : '없음') + '</td></tr>' +
+            '</tbody></table>',
+            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+            '<button type="button" class="btn btn-primary" onclick="RSKLIST.doRemindInput(\'' + esc(deptId) + '\')">재촉 보내기</button>');
+    }
+    function doRemindInput(deptId) {
+        var a = current(); if (!a) return;
+        if (!canRemindInput(deptId)) { V().closeModal(); toast(REMIND_DENY); return; }
+        var r = D().remindInput(a.id, deptId, remindBy());
+        V().closeModal();
+        if (r && r.error) { toast(r.error); return; }
+        toast(r.none
+            ? D().deptName(deptId) + ' 입력 재촉을 기록했습니다 — 받는 사람이 없어 알림은 가지 않았습니다(담당자·부서장 미등록)'
+            : D().deptName(deptId) + ' 입력 재촉 · 받는 사람 ' + r.to);
+        render();
     }
 
     /* =============== 부서별 조치 탭 =============== */
@@ -1107,11 +1169,15 @@
         if (!rows) rows = '<tr><td colspan="' + (asking ? 7 : 8) + '" style="text-align:center;color:var(--text-gray);padding:24px;">' +
             (allDepts.length ? '조치 대상 부서가 없습니다. 지적사항이 있는 부서가 발견되지 않았습니다.' : '선정된 부서가 없습니다.') + '</td></tr>';
 
+        /* 추가 조치 요청(D-3) — 조치 요청 공문 뒤 «지적사항 없음»으로 닫힌 부서에 평가당 한 번 */
+        var mo = D().moreOpen(a);
         var excludedNote = excluded > 0
             ? '<div class="rl-dept-excluded">지적사항 없는 부서 <b>' + excluded + '개</b> 제외 · ' +
                 allDepts.filter(noFind)
                     .map(function (dp) { return D().deptName(dp.deptId); }).join(', ') +
-              '</div>'
+                ((mo.ok && canManage() && !(state.more && state.more.aid === a.id))
+                    ? ' <button type="button" class="rl-file-btn" onclick="RSKLIST.moreOpenPanel()">추가 조치 요청 →</button>' : '') +
+              '</div>' + morePanel(a)
             : '';
 
         var deptTable =
@@ -1125,15 +1191,175 @@
                 excludedNote +
             '</div>';
 
-        return reportBlock + facilNote + writing + deptTable;
+        return reportBlock + facilNote + writing + deptTable + shareCard(a);
+    }
+    /* ===== 추가 조치 요청 패널 (D-3) — 부서 표 아래 인라인으로 펼친다(모달을 겹치지 않는다) ===== */
+    function morePanel(a) {
+        if (!state.more || state.more.aid !== a.id || !canManage() || !D().moreOpen(a).ok) return '';
+        var m = state.more;
+        var rows = D().moreCandidates(a).map(function (dp) {
+            var id = dp.deptId, nm = D().deptName(id);
+            return '<tr><td style="text-align:center;"><input type="checkbox"' + (m.sel[id] ? ' checked' : '') +
+                    ' aria-label="' + esc(nm) + ' 추가 요청" onchange="RSKLIST.moreToggle(\'' + id + '\', this.checked)"></td>' +
+                '<td>' + esc(nm) + '</td>' +
+                '<td><input type="date" class="form-input" style="max-width:160px;" min="' + todayIso() + '" value="' + esc(m.dues[id] || '') + '"' +
+                    ' aria-label="' + esc(nm) + ' 조치기한" onchange="RSKLIST.moreDue(\'' + id + '\', this.value)"></td></tr>';
+        }).join('');
+        var n = Object.keys(m.sel).filter(function (k) { return m.sel[k]; }).length;
+        return '<div class="stack-inline" style="margin-top:8px;">' +
+            '<p style="margin:0 0 6px;font-size:var(--fs-13);"><b>추가 조치 요청</b> — «지적사항 없음»으로 닫힌 부서에 <b>한 번 더</b> 조치를 요청합니다(평가당 한 번). ' +
+                '공문을 보내는 순간 그 부서에 할 일과 알림이 갑니다.</p>' +
+            '<table class="rl-dates-table"><thead><tr><th style="width:56px;">요청</th><th>부서</th><th>조치기한</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+            '<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:6px;">' +
+                '<button type="button" class="btn btn-secondary btn-sm" onclick="RSKLIST.moreClose()">닫기</button>' +
+                '<button type="button" class="btn btn-primary btn-sm"' + (n ? '' : ' disabled') + ' onclick="RSKLIST.openMoreReq()">추가 조치 요청 공문 (' + n + '곳) →</button>' +
+            '</div></div>';
+    }
+    function moreOpenPanel() {
+        var a = current(); if (!a) return;
+        if (!canManage()) { denyToast(); return; }
+        /* 평가가 끝난 상태(저장 COMPLETED)여도 결과 공문 전이면 연다 — 판정은 DYRSK.moreOpen 한 곳 */
+        var g = D().moreOpen(a); if (!g.ok) { toast(g.why); return; }
+        state.more = { aid: a.id, sel: {}, dues: {} };
+        render();
+    }
+    function moreClose() { state.more = null; render(); }
+    function moreToggle(id, on) {
+        if (!state.more || !canManage()) return;
+        if (on) state.more.sel[id] = true; else delete state.more.sel[id];
+        render();
+    }
+    function moreDue(id, v) {
+        if (!state.more || !canManage()) return;
+        if (pastDate(v)) { toast(PAST_DUE('조치기한')); render(); return; }
+        state.more.dues[id] = v;
+    }
+    function moreIds() {
+        return state.more ? Object.keys(state.more.sel).filter(function (k) { return state.more.sel[k]; }) : [];
+    }
+    function openMoreReq() {
+        var a = current();
+        if (!canManage()) { denyToast(); return; }
+        var g = D().moreOpen(a); if (!g.ok) { toast(g.why); return; }
+        if (!state.more || state.more.aid !== a.id) return;
+        var ids = moreIds();
+        if (!ids.length) { toast('추가로 요청할 부서를 1곳 이상 고르세요.'); return; }
+        var bad = ids.filter(function (id) { return !state.more.dues[id] || pastDate(state.more.dues[id]); });
+        if (bad.length) { toast('조치기한이 없거나 지난 부서가 있습니다 (' + bad.length + '곳) — 오늘(' + todayIso() + ') 이후로 정합니다.'); return; }
+        if (!global.RSKREQ) { toast('공문 기안 모듈을 불러오지 못했습니다.'); return; }
+        RSKREQ.open('X|' + a.id);
+    }
+
+    /* ===== 근로자 공유 (D-6, 시행규칙 §37의3 2호) — 평가가 끝난 뒤 재난안전과의 마지막 단계 ===== */
+    var SHARE = null;   /* 기록 창의 고른 증빙 파일 */
+    function lawChip(key) {
+        return (global.DYLAW && global.DYLAW.basisChip && global.DYLAW.ARTICLES && global.DYLAW.ARTICLES[key])
+            ? global.DYLAW.basisChip(key, { lead: '근거', withTitle: true }) : '';
+    }
+    function shareCard(a) {
+        if (!shownClosed(a)) return '';
+        var s = a.workerShare;
+        var mine = canManage();
+        var body = s
+            ? '<span><b>근로자 공유 ' + esc(s.at) + ' · ' + esc(s.method) + '</b>' +
+                (s.memo ? ' — ' + esc(s.memo) : '') + '</span>' +
+              '<button type="button" class="rl-file-btn" onclick="RSKLIST.openShareFile()">📄 ' + esc(s.file) + '</button>' +
+              '<span style="font-size:var(--fs-12);color:var(--text-gray);">' + esc(s.by || '') + (s.recordedAt ? ' · ' + esc(s.recordedAt) + ' 기록' : '') + '</span>' +
+              (mine ? '<button type="button" class="rl-file-btn" style="margin-left:auto;" onclick="RSKLIST.openShare()">고치기</button>' : '')
+            : '<span style="font-size:var(--fs-12);color:var(--text-gray);">평가 결과(유해·위험요인 · 위험성 수준 결정 결과 · 개선대책과 이행 결과)를 근로자에게 알린 날 · 방법 · 증빙을 남깁니다.</span>' +
+              (mine ? '<button type="button" class="btn btn-primary btn-sm" style="margin-left:auto;" data-now="rsk-share" onclick="RSKLIST.openShare()">근로자 공유 기록</button>'
+                    : '<span class="chip-mini wt" style="margin-left:auto;">기록 전</span>');
+        return '<div class="rl-card"><div class="rl-card-title">근로자 공유 ' + lawChip('oshr-37-3') + '</div>' +
+            '<div class="rl-report-row">' + body + '</div></div>';
+    }
+    function openShare() {
+        var a = current();
+        if (!canManage()) { denyToast(); return; }
+        var g = D().shareOpen(a); if (!g.ok) { toast(g.why); return; }
+        var s = a.workerShare || {};
+        SHARE = s.file ? { name: s.file, keep: true } : null;
+        V().openModal('근로자 공유 기록 — ' + esc(a.title),
+            '<p style="font-size:var(--fs-13);line-height:1.6;">평가 결과(유해·위험요인 · 위험성 수준 결정 결과 · 개선대책 수립 내용과 이행 결과)를 근로자에게 알린 기록입니다. ' +
+                '알리는 일(게시·교육·회의)은 이 시스템 밖에서 하고, 여기에는 그 날짜·방법·증빙을 남깁니다.</p>' +
+            '<div class="rl-modal-row"><label class="form-label" for="rl-sh-date">공유일 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                '<input type="date" class="form-input" id="rl-sh-date" style="max-width:200px;" max="' + todayIso() + '" value="' + esc(s.at || '') + '"></div>' +
+            '<div class="rl-modal-row"><label class="form-label" for="rl-sh-method">방법 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                '<select class="form-select" id="rl-sh-method" style="max-width:240px;"><option value="">선택</option>' +
+                    D().SHARE_METHODS.map(function (m) { return '<option value="' + esc(m) + '"' + (s.method === m ? ' selected' : '') + '>' + esc(m) + '</option>'; }).join('') +
+                '</select></div>' +
+            '<div class="rl-modal-row"><label class="form-label" for="rl-sh-memo">내용 <span style="font-weight:400;color:var(--text-gray);">(«그 밖에 입증 가능한 명시적인 방법»이면 필수)</span></label>' +
+                '<textarea class="form-textarea" id="rl-sh-memo" rows="2" placeholder="예: 청사·사업소 게시판에 결과 요약 게시">' + esc(s.memo || '') + '</textarea></div>' +
+            '<div class="rl-modal-row"><label class="form-label">증빙 파일 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                V().uploadDrop('<b>게시 사진 · 교육일지 · 회의록 등</b> <span style="font-size:var(--fs-12);color:var(--text-gray);">클릭 또는 끌어놓기</span>',
+                    null, { pick: 'RSKLIST.onPickShare', hint: true, style: 'padding:12px;' }) +
+                '<div id="rl-sh-picked" class="rl-picked" aria-live="polite">' + (SHARE ? '<span class="chip-status chip-sm success">' + (SHARE.keep ? '올린 파일' : '선택됨') + '</span> <b>' + esc(SHARE.name) + '</b>' : '') + '</div></div>',
+            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+            '<button type="button" class="btn btn-primary" onclick="RSKLIST.doShare()">저장</button>');
+    }
+    function onPickShare(files) {
+        var f = files && files[0]; if (!f) return;
+        SHARE = { name: f.name, f: f._f || f.file || null };
+        var slot = document.getElementById('rl-sh-picked');
+        if (slot) slot.innerHTML = '<span class="chip-status chip-sm success">선택됨</span> <b>' + esc(f.name) + '</b>';
+    }
+    function doShare() {
+        var a = current();
+        if (!canManage()) { V().closeModal(); denyToast(); return; }
+        var val = function (id) { return ((document.getElementById(id) || {}).value || '').trim(); };
+        var r = D().shareWorkers(a.id, { date: val('rl-sh-date'), method: val('rl-sh-method'), memo: val('rl-sh-memo'),
+            file: SHARE ? SHARE.name : '', by: remindBy() });
+        if (r && r.error) { toast(r.error); return; }
+        if (SHARE && SHARE.f) D().stashFile(SHARE.name, SHARE.f);
+        SHARE = null;
+        V().closeModal();
+        toast('근로자 공유를 기록했습니다');
+        render();
+    }
+    function openShareFile() {
+        var a = current(); var f = a && a.workerShare && a.workerShare.file;
+        if (!f) return;
+        if (D().downloadFile && D().downloadFile(f)) return;
+        V().notReady('«' + f + '» 내려받기', '첨부 저장 연계');
     }
     /* 부서 표 제목 줄의 요청 버튼 — 보고서·기한 등록 뒤 · 요청 전에만 */
     function reqActions(a) {
         if (!canManage()) return '';
         var n = selIds(a).length;
-        return '<span style="display:flex;gap:6px;">' +
+        return '<span style="display:flex;gap:6px;flex-wrap:wrap;">' +
+            /* 조치가 필요한 부서가 한 곳도 없으면 공문 대신 평가를 종결한다(2026-11-13 결정 D-1) */
+            '<button type="button" class="btn btn-outline btn-sm" data-now="rsk-noaction" onclick="RSKLIST.openNoAction()">평가 종결 — 조치 대상 없음</button>' +
             '<button type="button" class="btn btn-primary btn-sm" data-tour="rsk-deliver"' + (n ? '' : ' disabled') +
                 ' onclick="RSKLIST.openActionReq()">조치 요청 공문 (' + n + '곳) →</button></span>';
+    }
+    /* ===== 평가 종결 — 조치 대상 없음 (D-1) ===== */
+    function openNoAction() {
+        var a = current();
+        if (!manageGate(a, stageOf(a) === 'REVIEW', '평가 종결은 보고서를 등록한 뒤 · 조치 요청 공문을 보내기 전에 합니다.')) return;
+        var n = (a.depts || []).length, sel = selIds(a).length;
+        V().openModal('평가 종결 — 조치 대상 없음',
+            '<p style="font-size:var(--fs-13);line-height:1.6;">용역 보고서상 개선이 필요한 부서가 없으면 조치 요청 공문을 보내지 않고 평가를 끝냅니다.</p>' +
+            '<ul style="font-size:var(--fs-13);line-height:1.7;margin:6px 0 0 18px;list-style:disc;">' +
+                '<li>대상 부서 <b>' + n + '곳</b>이 모두 «지적사항 없음»으로 완료됩니다.' + (sel ? ' «요청»에 체크한 ' + sel + '곳에도 조치를 요청하지 않습니다.' : '') + '</li>' +
+                '<li>부서에는 할 일·알림이 가지 않습니다.</li>' +
+                '<li>결과 공문은 «조치 대상 없음» 보고로 기안합니다.</li>' +
+            '</ul>' +
+            '<div class="rl-modal-row" style="margin-top:10px;"><label class="form-label" for="rl-na-why">종결 사유 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                '<textarea class="form-textarea" id="rl-na-why" rows="3" placeholder="예: 용역 보고서상 개선이 필요한 유해·위험요인이 없음(위험성 수준 모두 허용 가능)"></textarea></div>' +
+            '<div class="check-notice" style="margin-top:10px;">종결하면 되돌릴 수 없습니다.</div>',
+            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+            '<button type="button" class="btn btn-primary" onclick="RSKLIST.doNoAction()">평가 종결</button>');
+    }
+    function doNoAction() {
+        var a = current();
+        if (!manageGate(a, stageOf(a) === 'REVIEW', '평가 종결은 보고서를 등록한 뒤 · 조치 요청 공문을 보내기 전에 합니다.')) return;
+        var why = ((document.getElementById('rl-na-why') || {}).value || '').trim();
+        if (!why) { toast('종결 사유를 적으세요.'); return; }
+        var r = D().closeNoAction(a.id, why, remindBy());
+        if (r && r.error) { toast(r.error); return; }
+        state.reqSel = null;
+        V().closeModal();
+        toast('평가를 종결했습니다 — 조치 대상 없음 · 결과 공문을 기안할 수 있습니다');
+        render();
     }
 
     function deptRow(a, dp, asking) {
@@ -1207,9 +1433,10 @@
             (asking ? '' : '<td>' + impCell + '</td>') +
             '<td>' + dueCell + '</td>' +
             '<td><span class="chip-mini ' + stCls + '">' + stLbl + '</span>' +
-                (dp.deliveredAt ? '<div style="font-size:var(--fs-12);color:var(--text-gray);margin-top:3px;">' + (dp.request ? '요청' : '전달') + ' ' + esc(dp.deliveredAt) +
-                    (dp.request ? (dp.inputDone ? ' · 입력 완료' : ' · 입력 중') : '') + '</div>' : '') + '</td>' +
-            (asking ? '' : '<td>' + mngBtn + remindBtn + '</td>') +
+                (dp.deliveredAt ? '<div style="font-size:var(--fs-12);color:var(--text-gray);margin-top:3px;">' + (dp.request ? (dp.request.more ? '추가 요청' : '요청') : '전달') + ' ' + esc(dp.request ? dp.request.at : dp.deliveredAt) +
+                    (dp.request ? (dp.inputDone ? ' · 입력 완료' : ' · 입력 중') : '') +
+                    ((dp.inputReminds || []).length && !dp.inputDone ? ' · 재촉 ' + dp.inputReminds.length + '회' : '') + '</div>' : '') + '</td>' +
+            (asking ? '' : '<td>' + mngBtn + remindBtn + inputRemindBtn(a, dp) + '</td>') +
         '</tr>';
     }
 
@@ -1244,7 +1471,7 @@
             body = (a.files && a.files.report
                     ? '<span class="rl-report-file">📄 ' + esc(a.files.report) + '</span>'
                     : '<span style="font-size:12px;color:var(--status-warning-fg);">보고서 미첨부</span>') +
-                '<span class="chip-mini st-done" style="margin-left:6px;">조치 요청 완료</span>' +
+                '<span class="chip-mini st-done" style="margin-left:6px;">' + (a.noAction ? '평가 종결 — 조치 대상 없음' : '조치 요청 완료') + '</span>' +
                 '<span style="font-size:12px;color:var(--text-gray);margin-left:auto;">' + esc((a.actionReq && a.actionReq.at) || review.extractedAt || '') + ' 요청</span>' +
                 '<button type="button" class="rl-file-btn" onclick="RSKLIST.openReportAttach()">' +
                     (a.files && a.files.report ? '보고서 교체' : '＋ 보고서 첨부') + '</button>';
@@ -1500,6 +1727,33 @@
     }
 
     /* 입력 완료 확인 칸 — 블록 안에 펼친다(모달을 겹치지 않는다) */
+    /* 참여 근로자(D-6, 시행규칙 §37의4①2호) — 그 부서 조직도 구성원에서 고른다. 다시 그려도 고른 것이 남게
+       선택은 state.inDoneWk 에 두고, 체크는 화면을 다시 그리지 않는다(입력 중인 사유 칸이 지워지지 않게). */
+    function wkSel(deptId) {
+        if (!state.inDoneWk || state.inDoneWk.deptId !== deptId) state.inDoneWk = { deptId: deptId, sel: {}, note: '' };
+        return state.inDoneWk.sel;
+    }
+    function inDoneWk(deptId, uid, on) {
+        var sel = wkSel(deptId);
+        if (on) sel[uid] = true; else delete sel[uid];
+        var el = document.getElementById('rl-wk-cnt');
+        if (el) el.textContent = String(Object.keys(sel).length);
+    }
+    function workersHtml(deptId) {
+        var sel = wkSel(deptId);
+        var ms = (V().orgMembers ? V().orgMembers(deptId) : []);
+        var list = ms.map(function (m) {
+            return '<label class="rskdoc-ck" style="display:inline-flex;margin:0 12px 4px 0;"><input type="checkbox"' + (sel[m.uid] ? ' checked' : '') +
+                ' onchange="RSKLIST.inDoneWk(\'' + deptId + '\',\'' + esc(m.uid) + '\',this.checked)"><span>' + esc(m.name) +
+                ' <span class="file-hint">' + esc(m.role || '') + '</span></span></label>';
+        }).join('');
+        return '<div style="margin-top:8px;"><label class="form-label">참여 근로자 <span style="color:var(--status-danger-fg)">*</span> ' +
+                '<span style="font-weight:400;color:var(--text-gray);">순회점검·설문 등 위험성평가에 참여한 사람 · 선택 <b id="rl-wk-cnt">' + Object.keys(sel).length + '</b>명</span> ' + lawChip('oshr-37-4') + '</label>' +
+            (list ? '<div>' + list + '</div>' : '<p class="file-hint">조직도에 이 부서 구성원이 없습니다 — 아래 칸에 적으세요.</p>') +
+            '<input type="text" class="form-input" id="rl-wk-note" style="margin-top:4px;" value="' + esc(state.inDoneWk.note || '') + '"' +
+                ' placeholder="조직도에 없는 참여자 · 근로자대표 (선택)" oninput="RSKLIST.inDoneWkNote(this.value)"></div>';
+    }
+    function inDoneWkNote(v) { if (state.inDoneWk) state.inDoneWk.note = v; }
     function inDoneBox(a, deptId) {
         var n = D().validDeptRows(a, deptId).length;
         var all = (((a.review || {}).parsedDepts || {})[deptId] || []).filter(function (r) { return !r.deleted; }).length;
@@ -1508,6 +1762,7 @@
             (n ? '<p style="margin:0 0 6px;font-size:var(--fs-13);">유해위험요인과 개선조치를 모두 적은 <b>' + n + '건</b>이 개선조치가 됩니다' + (skip ? ' (하나라도 비어 있는 ' + skip + '건은 빠집니다)' : '') + '. 이후 작성표는 닫히고 완료 처리는 [관리]·내 할일에서 합니다.</p>'
                : '<label class="form-label" for="rl-in-why">조치할 것이 없는 사유 <span style="color:var(--status-danger-fg)">*</span></label>' +
                  '<textarea class="form-textarea" id="rl-in-why" rows="2" placeholder="예: 보고서 지적 항목이 우리 부서 소관이 아님(재난안전과와 협의)"></textarea>') +
+            workersHtml(deptId) +
             '<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:6px;">' +
                 '<button type="button" class="btn btn-secondary btn-sm" onclick="RSKLIST.inDoneOpen(\'\')">취소</button>' +
                 '<button type="button" class="btn btn-primary btn-sm" onclick="RSKLIST.inDone(\'' + deptId + '\')">입력 완료</button>' +
@@ -1531,7 +1786,7 @@
         items.sort(function (x, y) { return (x.at || '').localeCompare(y.at || '') || (ord(x) - ord(y)); });
         if (!items.length) return '<div class="rl-card"><div class="v2-empty">이력이 없습니다.</div></div>';
 
-        var LABELS = { CONFIRM:'확인', RETURN:'반려', REOPEN:'확인취소', DRAFT:'공문기안', DISPATCH:'온나라상신', RECEIVE:'결재회신', CREATE:'생성', NOTIFY:'알림', DELIVER:'조치 요청', AMEND:'변경', REMIND:'재촉', REASON:'사유', DUE_CHANGE:'기한변경', STATUS:'상태변경', COMPLETE:'완료', REVIEW:'검토', REGISTER:'등록', FILE:'첨부' };
+        var LABELS = { CONFIRM:'확인', RETURN:'반려', REOPEN:'확인취소', DRAFT:'공문기안', DISPATCH:'온나라상신', RECEIVE:'결재회신', CREATE:'생성', NOTIFY:'알림', DELIVER:'조치 요청', AMEND:'변경', REMIND:'재촉', REASON:'사유', DUE_CHANGE:'기한변경', STATUS:'상태변경', COMPLETE:'완료', REVIEW:'검토', REGISTER:'등록', FILE:'첨부', SHARE:'근로자 공유' };
         var rows = items.map(function (h) {
             return '<div class="rl-hist-row">' +
                 '<span class="rl-hist-at">' + esc(h.at || '') + '</span>' +
@@ -1596,6 +1851,7 @@
         var r = D().uploadReport(a.id, name, { bulkDue: bulk, deptDues: deptDues });
         if (!r) return;
         if (r.error) { toast(r.error); return; }
+        if (PICKED && (PICKED._f || PICKED.file)) D().stashFile(name, PICKED._f || PICKED.file);
         state.reqSel = null;
         V().closeModal();
         toast('보고서·조치기한 등록 · 이제 조치를 요청할 부서를 고르세요');
@@ -1678,8 +1934,17 @@
         var a = D().assessmentOf(p[1]); if (!a) return null;
         return { kind: p[0], a: a, id: id };
     }
+    /* 공문 세 종 — S 설문조사표 요청(③) · A 조치 요청(⑥) · X 추가 조치 요청(D-3, ⑥ 과 같은 모양) */
     function reqDeptIds(t) {
-        return t.kind === 'S' ? (t.a.depts || []).map(function (dp) { return dp.deptId; }) : selIds(t.a);
+        if (t.kind === 'S') return (t.a.depts || []).map(function (dp) { return dp.deptId; });
+        if (t.kind === 'X') return (t.a.actionReq && t.a.actionReq.more) ? t.a.actionReq.more.depts.slice() : moreIds();
+        return selIds(t.a);
+    }
+    /* 별지의 조치기한 — 추가 요청은 보내기 전엔 패널에서 고른 값, 보낸 뒤엔 부서 줄의 값 */
+    function reqDueOf(t, id) {
+        var dp = (t.a.depts || []).filter(function (x) { return x.deptId === id; })[0] || {};
+        if (t.kind === 'X' && state.more && state.more.aid === t.a.id && state.more.dues[id]) return state.more.dues[id];
+        return dp.dueDate || '';
     }
     function reqTbl(head, rows) {
         return '<table class="table-doc"><thead><tr>' + head.map(function (h) { return '<th>' + esc(h) + '</th>'; }).join('') + '</tr></thead><tbody>' +
@@ -1691,9 +1956,10 @@
         DYDOC.define({
             ns: 'RSKREQ', lkey: 'dy-rskreq-apprline-v1', simple: true,
             targetOf: reqTarget,
-            subjectOf: function (t) { return t.kind === 'S' ? '설문조사표 제출 요청' : '개선조치 요청'; },
+            subjectOf: function (t) { return t.kind === 'S' ? '설문조사표 제출 요청' : (t.kind === 'X' ? '추가 개선조치 요청' : '개선조치 요청'); },
             titleOf: function (t) {
-                return t.a.year + '년 정기 위험성평가 ' + (t.kind === 'S' ? '유해위험요인 설문조사표 제출 요청' : '결과 개선조치 이행 요청');
+                return t.a.year + '년 정기 위험성평가 ' + (t.kind === 'S' ? '유해위험요인 설문조사표 제출 요청'
+                    : (t.kind === 'X' ? '결과 개선조치 이행 요청(추가)' : '결과 개선조치 이행 요청'));
             },
             initOf: function () { return { docType: '외부발송', to: '수신자 참조' }; },
             recipientsOf: function (t, doc) {
@@ -1705,6 +1971,14 @@
                     if (D().surveyRequested(t.a)) return { ok: false, why: '설문조사표 요청 공문은 이미 보냈습니다.' };
                     var p = D().surveyProgress(t.a.id);
                     return p.total && p.done === p.total ? { ok: true } : { ok: false, why: '설문조사표 양식이 없는 부서가 있습니다.' };
+                }
+                if (t.kind === 'X') {
+                    var mo = D().moreOpen(t.a);
+                    if (!mo.ok) return { ok: false, why: mo.why };
+                    var xi = reqDeptIds(t);
+                    if (!xi.length) return { ok: false, why: '추가로 요청할 부서를 1곳 이상 고르세요.' };
+                    return xi.every(function (id) { var v = reqDueOf(t, id); return v && !pastDate(v); })
+                        ? { ok: true } : { ok: false, why: '조치기한이 없거나 지난 부서가 있습니다.' };
                 }
                 if (stageOf(t.a) !== 'REVIEW') return { ok: false, why: '조치 요청 공문은 보고서 등록 뒤 한 번 보냅니다.' };
                 return reqDeptIds(t).length ? { ok: true } : { ok: false, why: '조치를 요청할 부서가 없습니다.' };
@@ -1718,7 +1992,8 @@
                     { label: '점검 일정', text: '  라. 용역 점검(방문) 일정: 붙임 별지의 부서별 점검일' }
                 ];
                 return [
-                    { label: '요청 안내', text: '1. ' + y + '년 정기 위험성평가 용역 결과 개선이 필요한 유해위험요인이 확인되어, 붙임 보고서를 확인하시고 부서별 개선조치를 이행하여 주시기 바랍니다.' },
+                    { label: '요청 안내', text: '1. ' + y + '년 정기 위험성평가 용역 결과 개선이 필요한 유해위험요인이 확인되어, 용역 보고서를 확인하시고 부서별 개선조치를 이행하여 주시기 바랍니다' +
+                        (t.kind === 'X' ? '(앞서 «지적사항 없음»으로 안내한 부서에 대한 추가 요청입니다)' : '') + '.' },
                     { label: '이행 방법', text: '  가. 대상: 붙임 별지의 ' + n + '개 부서(부서별 조치기한은 별지 참고)' +
                         '\n  나. 입력: 중대재해 통합관리시스템 › 위험성평가 › 정기 위험성평가에서 보고서를 내려받아 우리 부서 유해위험요인과 조치 내용을 직접 입력' +
                         '\n  다. 완료: 조치를 마친 뒤 개선 후 사진을 올려 완료 처리 — 기한 안에 마치지 못하면 사유를 적어 기한 연장' }
@@ -1734,7 +2009,9 @@
                     });
                     return out;
                 }
-                return t.a.files && t.a.files.report ? [{ label: t.a.files.report, meta: '용역 통합 보고서', on: true }] : [];
+                /* 조치 요청 공문에는 용역 보고서 파일을 붙이지 않는다(2026-11-13 확인 Q-1) — 보고서(최대 30MB)가
+                   온나라 붙임 한도(파일당 10MB · 합계 30MB)를 넘는다. 별지에 «시스템에서 내려받습니다»를 적는다. */
+                return [];
             },
             annexes: function (t, doc) {
                 var ids = (doc && doc.deptIds) || reqDeptIds(t);
@@ -1742,7 +2019,8 @@
                 if (t.kind === 'S') return [{ title: '설문조사표 제출 대상 부서', html: reqTbl(['연번', '부서', '점검일', '받는 사람'],
                     ids.map(function (id, i) { return [String(i + 1), esc(D().deptName(id)), esc(dpOf(id).inspectDate || '-'), esc(contact(id))]; })) }];
                 return [{ title: '조치 요청 부서와 조치기한', html: reqTbl(['연번', '부서', '조치기한', '받는 사람'],
-                    ids.map(function (id, i) { return [String(i + 1), esc(D().deptName(id)), esc(dpOf(id).dueDate || '-'), esc(contact(id))]; })) }];
+                    ids.map(function (id, i) { return [String(i + 1), esc(D().deptName(id)), esc(reqDueOf(t, id) || '-'), esc(contact(id))]; })) +
+                    '<p class="pdf-gm-annex-note">용역 보고서는 중대재해 통합관리시스템 › 위험성평가 › 정기 위험성평가 화면에서 내려받습니다.</p>' }];
             },
             lockNote: '보내는 순간 대상 부서에 할 일과 알림이 갑니다. 보낸 뒤에는 되돌릴 수 없습니다.',
             sentNote: '공문을 온나라 연계기안함에 보냈고, 대상 부서에 요청이 갔습니다.',
@@ -1752,7 +2030,7 @@
                 return '재난안전과-' + n;
             },
             docsFor: function (t) {
-                var r = t.kind === 'S' ? t.a.surveyReq : t.a.actionReq;
+                var r = t.kind === 'S' ? t.a.surveyReq : (t.kind === 'X' ? (t.a.actionReq && t.a.actionReq.more) : t.a.actionReq);
                 return (r && r.docs) || [];
             },
             save: function (t, doc) {
@@ -1768,6 +2046,18 @@
                             href: 'rsk-list.html?year=' + y, work: 'my-work.html?cat=risk'
                         });
                     });
+                } else if (t.kind === 'X') {
+                    var dues = {}; ids.forEach(function (id) { dues[id] = reqDueOf(t, id); });
+                    var rx = D().requestMore(t.a.id, ids, dues, doc, by);
+                    if (rx && rx.error) { toast(rx.error); return; }
+                    ids.forEach(function (id) {
+                        if (global.DYLayout && DYLayout.ntfPush) DYLayout.ntfPush({
+                            cat: 'risk', catLabel: '위험성평가', toDept: id, toTier: ['staff', 'super'], basis: 'osh-36',
+                            title: y + '년 정기 위험성평가 — 개선조치 요청(추가): 보고서를 보고 유해위험요인·조치 내용을 입력하세요(기한 ' + (dues[id] || '-') + ')',
+                            href: 'rsk-list.html?year=' + y + '&dept=' + id, work: 'my-work.html?cat=risk'
+                        });
+                    });
+                    state.more = null;
                 } else {
                     D().requestAction(t.a.id, ids, doc, by);
                     ids.forEach(function (id) {
@@ -2068,15 +2358,22 @@
         var a = current(); if (!a) return;
         if (!canWriteReview(deptId)) { denyToast(deptId); return; }
         var why = document.getElementById('rl-in-why');
-        var r = D().setInputDone(a.id, deptId, remindBy(), why ? why.value : '');
+        /* 참여 근로자 — 조직도 구성원 중 고른 사람(필수 1명 이상, setInputDone 이 다시 본다) */
+        var sel = wkSel(deptId);
+        var ws = (V().orgMembers ? V().orgMembers(deptId) : []).filter(function (m) { return sel[m.uid]; })
+            .map(function (m) { return { uid: m.uid, name: m.name, role: m.role }; });
+        var note = (state.inDoneWk && state.inDoneWk.note) || '';
+        /* 조직도에 없는 참여자만 적은 경우도 1명으로 받는다(이름 칸) */
+        if (!ws.length && note.trim()) ws = [{ uid: '', name: note.trim(), role: '' }];
+        var r = D().setInputDone(a.id, deptId, remindBy(), why ? why.value : '', ws, note);
         if (r && r.error) { toast(r.error); return; }
-        state.inDoneFor = '';
+        state.inDoneFor = ''; state.inDoneWk = null;
         if (global.DYLayout && DYLayout.ntfPush) DYLayout.ntfPush({
             cat: 'risk', catLabel: '위험성평가', toDept: OWNER_DEPT, toTier: ['staff'], basis: 'osh-36',
             title: a.year + '년 정기 위험성평가 — ' + D().deptName(deptId) + ' 조치 입력 완료(' + (r.inputDone.count ? r.inputDone.count + '건' : '조치 대상 없음') + ')',
             href: 'rsk-list.html?year=' + a.year + '&dept=' + deptId, work: 'my-work.html'
         });
-        toast('입력 완료 · ' + (r.inputDone.count ? '개선조치 ' + r.inputDone.count + '건이 만들어졌습니다' : '조치 대상 없음') + ' · 재난안전과에 알렸습니다');
+        toast('입력 완료 · ' + (r.inputDone.count ? '개선조치 ' + r.inputDone.count + '건이 만들어졌습니다' : '조치 대상 없음') + ' · 참여 근로자 ' + r.inputDone.workers.length + '명 · 재난안전과에 알렸습니다');
         render();
     }
     function inUndo(deptId) {
@@ -2113,6 +2410,8 @@
                 (dp.reportFile ? '<span>부서 제출본 <b>' + esc(dp.reportFile) + '</b></span>' : '') +
                 (dp.deliveredAt ? '<span>' + (dp.request ? '조치 요청' : '전달') + '일 <b>' + esc(dp.deliveredAt) + '</b></span>' : '') +
                 (dp.dueDate ? '<span>조치기한 <b>' + esc(dp.dueDate) + '</b></span>' : '') +
+                (dp.inputDone && (dp.inputDone.workers || []).length ? '<span>참여 근로자 <b>' + esc(dp.inputDone.workers.map(function (w) { return w.name; }).join(', ')) + '</b>' +
+                    (dp.inputDone.workersNote ? ' · ' + esc(dp.inputDone.workersNote) : '') + '</span>' : '') +
                 (dp.inputDone ? '<span>입력 완료 <b>' + esc(dp.inputDone.at) + '</b>' + (canUndoInput(a, dp) ? ' <button type="button" class="rl-file-btn" onclick="RSKLIST.inUndo(\'' + deptId + '\')">입력 완료 취소</button>' : '') + '</span>' : ''),
             noteHtml: '부서 담당자는 <b>이 카드에서 바로</b> 완료 처리·재촉 응답을 합니다 — ' +
                 '같은 건을 <b>내 할일</b>에서 올려도 같은 곳에 쌓입니다.',
@@ -2212,8 +2511,54 @@
         };
         renderWizard();
     }
+    /* ===== 생성 뒤 고치기·지우기 (2026-11-13 결정 D-4) =====
+     * 설문조사표 요청 공문을 보내기 전에는 부서에 간 것이 없으므로 같은 마법사로 대상 부서·점검일·설문 기한을
+     * 고치고, 평가를 지울 수 있다. 판정은 DYRSK.infoEditable 한 곳(저장 함수도 다시 본다). 보낸 뒤에는 버튼이 없다. */
+    var INFO_LOCKED = '설문조사표 요청 공문을 보낸 뒤에는 평가 정보를 고치거나 지울 수 없습니다.';
+    function openEdit() {
+        if (!canManage()) { denyToast(); return; }
+        var a = current(); if (!a) return;
+        if (!D().infoEditable(a)) { toast(INFO_LOCKED); return; }
+        var sel = {}, dates = {};
+        (a.depts || []).forEach(function (dp) { sel[dp.deptId] = true; dates[dp.deptId] = dp.inspectDate || ''; });
+        W = { step: 1, year: a.year, editId: a.id, deptSel: sel, deptDates: dates, bulkDate: '',
+              surveyDue: a.surveyDue || '', origDue: a.surveyDue || '', candidates: D().deptCandidates() };
+        renderWizard();
+    }
+    function doEdit() {
+        if (!W || !W.editId || !canManage()) { V().closeModal(); denyToast(); return; }
+        var a = D().assessmentOf(W.editId);
+        if (!D().infoEditable(a)) { V().closeModal(); toast(INFO_LOCKED); render(); return; }
+        var ids = Object.keys(W.deptSel).filter(function (k) { return W.deptSel[k]; });
+        var r = D().updateRegular(W.editId, { depts: ids.map(function (id) { return { deptId: id, inspectDate: W.deptDates[id] || '' }; }),
+            surveyDue: W.surveyDue, by: remindBy() });
+        if (r && r.error) { toast(r.error); return; }
+        V().closeModal();
+        W = null;
+        toast('평가 정보를 고쳤습니다 — 대상 부서 ' + ids.length + '개');
+        render();
+    }
+    function openDelete() {
+        if (!canManage()) { denyToast(); return; }
+        var a = current(); if (!a) return;
+        if (!D().infoEditable(a)) { toast(INFO_LOCKED); return; }
+        V().openModal('평가 삭제',
+            '<p style="font-size:var(--fs-13);line-height:1.6;"><b>' + esc(a.title) + '</b>' + josa(a.title, '을', '를') + ' 지웁니다. 대상 부서 ' + (a.depts || []).length + '개 · 점검일 · 설문 제출 기한 · 붙인 양식이 함께 사라지고 <b>되돌릴 수 없습니다</b>.</p>' +
+            '<div class="check-notice" style="margin-top:10px;">아직 설문조사표 요청 공문을 보내지 않아 부서에 간 것은 없습니다. 지운 뒤 같은 해 평가를 다시 생성할 수 있습니다.</div>',
+            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+            '<button type="button" class="btn btn-primary" onclick="RSKLIST.doDelete(\'' + esc(a.id) + '\')">삭제</button>');
+    }
+    function doDelete(aid) {
+        if (!canManage()) { V().closeModal(); denyToast(); return; }
+        var r = D().removeRegular(aid);
+        V().closeModal();
+        if (r && r.error) { toast(r.error); render(); return; }
+        state.reqSel = null; state.more = null; state.tab = 'depts';
+        toast(r.year + '년 정기 위험성평가를 지웠습니다 — 다시 생성할 수 있습니다');
+        render();
+    }
     function renderWizard() {
-        V().openModal(W.year + '년 정기평가 생성 마법사', wizardBody(), wizardFoot());
+        V().openModal(W.year + '년 정기평가 ' + (W.editId ? '정보 수정' : '생성 마법사'), wizardBody(), wizardFoot());
     }
     function wizardBody() {
         var stepBar =
@@ -2231,7 +2576,7 @@
         var back = W.step > 1
             ? '<button type="button" class="btn btn-secondary" onclick="RSKLIST.wizBack()">← 이전</button>'
             : '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>';
-        var nextLabel = W.step < 2 ? '다음 →' : '생성';
+        var nextLabel = W.step < 2 ? '다음 →' : (W.editId ? '저장' : '생성');
         var next = '<button type="button" class="btn btn-primary" onclick="RSKLIST.wizNext()">' + nextLabel + '</button>';
         return back + next;
     }
@@ -2297,8 +2642,9 @@
             '<table class="rl-dates-table"><thead><tr><th>부서</th><th>점검일자</th></tr></thead>' +
                 '<tbody>' + rows + '</tbody></table>' +
             '<p id="rl-w-datewarn" role="status" style="font-size:var(--fs-12);color:var(--status-warning-fg);margin-top:8px;">' + wizDateWarn() + '</p>' +
-            '<p style="font-size:12px;color:var(--text-gray);margin-top:10px;">' +
-                '생성한 뒤 설문조사표 양식을 붙이고 <b>[설문조사표 요청 공문]</b>을 보내면 대상 부서에 제출 요청이 갑니다. 생성만으로는 부서에 아무것도 가지 않습니다.</p>' +
+            '<p style="font-size:12px;color:var(--text-gray);margin-top:10px;">' + (W.editId
+                ? '아직 설문조사표 요청 공문을 보내지 않아 부서에 간 것은 없습니다. 고친 점검일·기한은 요청 공문 별지에 실립니다. 새로 넣은 부서는 양식 적용 상태를 다시 확인하세요.'
+                : '생성한 뒤 설문조사표 양식을 붙이고 <b>[설문조사표 요청 공문]</b>을 보내면 대상 부서에 제출 요청이 갑니다. 생성만으로는 부서에 아무것도 가지 않습니다.') + '</p>' +
         '</div>';
     }
     function wizApplyBulkDate() {
@@ -2335,9 +2681,11 @@
         if (W.step === 2) {
             var sd = document.getElementById('rl-w-survdue'); if (sd) W.surveyDue = sd.value;
             if (!W.surveyDue) { toast('설문조사표 제출 기한을 정하세요.'); return; }
-            if (pastDate(W.surveyDue)) { toast(PAST_DUE('설문조사표 제출 기한')); return; }
+            /* 고칠 때는 바꾼 값만 검사한다 — 생성 뒤 날짜가 지나 옛 기한이 지난 날짜가 돼도 다른 수정을 막지 않는다 */
+            if (pastDate(W.surveyDue) && !(W.editId && W.surveyDue === W.origDue)) { toast(PAST_DUE('설문조사표 제출 기한')); return; }
             var missing = selIds.filter(function (id) { return !W.deptDates[id]; });
             if (missing.length) { toast('점검일자가 비어있는 부서가 있습니다 (' + missing.length + '개).'); return; }
+            if (W.editId) { doEdit(); return; }
             doCreate();
             return;
         }
@@ -2412,6 +2760,13 @@
     global.RSKLIST = {
         init: init, setYear: setYear, setTab: setTab,
         resetDemo: resetDemo, doResetDemo: doResetDemo,
+        /* 2026-11-13 결정 — D-4 생성 뒤 고치기·지우기 · D-1 종결 · D-2 입력 재촉 · D-3 추가 요청 · D-6 근로자 공유·참여 근로자 */
+        openEdit: openEdit, openDelete: openDelete, doDelete: doDelete,
+        openNoAction: openNoAction, doNoAction: doNoAction,
+        openRemindInput: openRemindInput, doRemindInput: doRemindInput,
+        moreOpenPanel: moreOpenPanel, moreClose: moreClose, moreToggle: moreToggle, moreDue: moreDue, openMoreReq: openMoreReq,
+        openShare: openShare, onPickShare: onPickShare, doShare: doShare, openShareFile: openShareFile,
+        inDoneWk: inDoneWk, inDoneWkNote: inDoneWkNote,
         /* 보고서 + 조치기한 (반영안 ⑤) */
         uploadReport: uploadReport, doUploadReport: doUploadReport, repApplyBulk: repApplyBulk,
         clearReport: clearReport, doClearReport: doClearReport,

@@ -271,7 +271,7 @@
             '<p style="font-size:var(--fs-13);margin-bottom:10px;"><b>' + esc(w.name) + '</b> · ' + esc(E().deptName(w.deptId)) + '</p>' +
             '<label class="form-label" for="ew-designation-date">지정일 <span style="color:var(--status-danger-fg)">*</span></label>' +
             '<input type="date" class="form-input" id="ew-designation-date" value="' + esc(w.designatedAt || '') + '">' +
-            '<p style="font-size:var(--fs-12);color:var(--text-gray);margin-top:6px;">인사 기본정보는 바꾸지 않고 재난안전과 확인값만 저장합니다. 이 날짜부터 연간 16시간 사이클을 계산합니다.</p>',
+            '<p style="font-size:var(--fs-12);color:var(--text-gray);margin-top:6px;">인사 기본정보는 바꾸지 않고 재난안전과 확인값만 저장합니다. 지정일이 들어가면 그해(1~12월) 정기교육 16시간 이수 여부를 판정합니다.</p>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="EDUW.saveDesignation(\'' + id + '\')">저장</button>');
     }

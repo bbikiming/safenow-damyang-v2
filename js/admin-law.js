@@ -394,10 +394,10 @@
                 '<div class="lawinfo-meta">' +
                     '<span title="이 날짜부터 효력이 있는 본문입니다">시행 ' + esc(Lw.efYd || '-') + '</span> · ' +
                     '<span title="법제처가 부여한 법령 식별번호 — 배치가 재조회할 때 쓰는 키입니다">법령ID ' + esc(Lw.lawId || '-') + '</span> · ' +
-                    '<span title="법제처에서 이 본문을 받아온 날짜입니다">조회 ' + esc(L().SNAPSHOT.fetchedAt) + '</span></div>' +
+                    '<span title="법제처에서 이 본문을 받아온 날짜입니다">조회 ' + esc(L().fetchedAtOf ? L().fetchedAtOf(a.law) : L().SNAPSHOT.fetchedAt) + '</span></div>' +
             '</div>' +
             '<div class="adml-notice">' +
-                '이 본문은 <b>' + esc(L().SNAPSHOT.fetchedAt) + ' 기준 스냅샷</b>이며, 법적 효력은 국가법령정보센터 정본에 있습니다.<br>' +
+                '이 본문은 <b>' + esc(L().fetchedAtOf ? L().fetchedAtOf(a.law) : L().SNAPSHOT.fetchedAt) + ' 기준 스냅샷</b>이며, 법적 효력은 국가법령정보센터 정본에 있습니다.<br>' +
                 '내용이 틀렸다면 여기서 고치지 않고 <b>재수집</b>으로 바로잡습니다 — 요약·의역이 섞이면 "원문"이라는 약속이 깨집니다.' +
             '</div>' +
 

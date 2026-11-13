@@ -52,6 +52,8 @@
             lead: '연 1회 정기 위험성평가를 주관부서가 열고 요청 공문으로 부서에 설문·조치를 요청합니다. 요청받은 부서가 개선조치를 적고 마치면 주관부서가 확인해 결과 공문으로 마무리합니다.',
             tasks: [
                 { t: '올해 평가 생성하기', go: "RSKLIST && RSKLIST.openWizard && RSKLIST.openWizard()" },
+                { t: '평가 정보 고치기(요청 공문 전)', go: "RSKLIST && RSKLIST.openEdit && RSKLIST.openEdit()" },
+                { t: '근로자 공유 기록하기(평가 완료 뒤)', go: "RSKLIST && RSKLIST.openShare && RSKLIST.openShare()" },
                 { t: '부서별 제출 현황 보기', go: 'rsk-list.html' }
             ],
             tour: 'RSKTOUR', reset: 'RSKLIST'
@@ -74,7 +76,7 @@
             tour: 'EDUTOUR', reset: 'EDUTOUR'
         },
         'edu-status': {
-            lead: '부서별·개인별 이수 상태를 봅니다. 완료율이 낮은 부서를 눌러 미이수자 명단으로 바로 들어갑니다.',
+            lead: '부서별·개인별 이수 상태를 봅니다. 정기교육은 상반기(1~6월)·하반기(7~12월), 관리감독자는 1~12월 단위로 셉니다. 완료율이 낮은 부서를 눌러 미이수자 명단으로 바로 들어갑니다.',
             tasks: [{ t: '미달 부서만 보기', go: 'edu-status.html?short=1' }],
             tour: 'EDUTOUR', reset: 'EDUTOUR'
         },

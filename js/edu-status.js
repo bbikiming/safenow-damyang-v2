@@ -3,7 +3,7 @@
    ---------------------------------------------------------------------
    docs/planning/기획-안전보건교육-재설계-v1.md §8.
    · 뷰 전환: 부서별 요약 ↔ 대상자별 상세 (기본 = 부서별 요약, v1.1 §8.5)
-   · 대상자별: 사이클(기간·D-day) · 필요 · 인정 · 미달 · 완료
+   · 대상자별: 주기(달력 반기·연도 — 기간·D-day) · 필요 · 인정 · 미달 · 완료
    · 미이수자 개별/일괄 독촉 → 부서 담당자 알림 목업 + reminders 기록
    · 독촉 이력 열람 · 딥링크 ?dept={deptId}&short=1
    표준: 탭 .sub-tab · 배지 chip-status · 표 .table-figma · 게이지 .progress
@@ -219,7 +219,7 @@
             var empLabel = E().empLabel(w.empType) + (w.contractMonths ? '[' + w.contractMonths + '개월]' : '');
             var certEl = r.complete
                 ? '<a class="btn btn-outline btn-sm" href="reports.html?kind=' + encodeURIComponent('개인 안전보건교육 이수 확인서') + '&person=' + encodeURIComponent(w.id) + '">발급</a>'
-                : '<button type="button" class="btn btn-outline btn-sm" disabled title="현재 사이클 이수 완료 후 발급할 수 있습니다.">발급</button>';
+                : '<button type="button" class="btn btn-outline btn-sm" disabled title="현재 주기 이수 완료 후 발급할 수 있습니다.">발급</button>';
             return '<tr' + (r.complete ? '' : ' class="row-short"') + '>' +
                 '<td style="text-align:center;">' + ckEl + '</td>' +
                 '<td class="edu-name">' + esc(w.name) + '</td>' +
@@ -227,7 +227,7 @@
                 '<td>' + esc(E().catLabel(w.category)) + '</td>' +
                 '<td>' + esc(empLabel) + '</td>' +
                 '<td>' + esc(w.hireDate) + '</td>' +
-                '<td>' + (r.assessable ? esc(cyc.start) + '<br><span style="font-size:var(--fs-12);color:var(--text-gray);">~ ' + esc(cyc.end) + '</span>' : '<span class="edu-short">' + esc(cyc.reason) + '</span>') + '</td>' +
+                '<td>' + (r.assessable ? esc(cyc.label || cyc.start) + '<br><span style="font-size:var(--fs-12);color:var(--text-gray);">' + esc(cyc.start) + ' ~ ' + esc(cyc.end) + '</span>' : '<span class="edu-short">' + esc(cyc.reason) + '</span>') + '</td>' +
                 '<td><span class="chip-status chip-sm ' + dTone + '">' + dTxt + '</span></td>' +
                 '<td>' + (r.assessable ? r.need + 'h' : '-') + '</td>' +
                 '<td>' + (r.assessable ? r.done + 'h' : '-') + '</td>' +
@@ -272,7 +272,7 @@
             '<div class="edu-scroll">' +
             '<table class="table-figma table-compact table-nowrap"><thead><tr>' +
                 '<th style="width:44px;"></th><th>이름</th><th>부서</th><th>구분</th><th>고용형태</th>' +
-                '<th>채용일</th><th>현재 사이클</th><th>종료 D-day</th>' +
+                '<th>채용일</th><th>현재 주기</th><th>종료 D-day</th>' +
                 '<th>필요</th><th>인정</th><th>미달</th><th>정기</th><th>확인서</th>' +
             '</tr></thead><tbody>' + rows + '</tbody></table>' +
             '</div>' +
@@ -322,7 +322,7 @@
                     '</div>';
             }).join('') + '</div>' +
             '<div class="edu-modal-row" style="margin-top:8px;"><label class="form-label" for="edus-memo">추가 메모 (선택)</label>' +
-            '<textarea class="form-textarea" id="edus-memo" rows="2" placeholder="예: 사이클 종료 전 이수 필수"></textarea></div>';
+            '<textarea class="form-textarea" id="edus-memo" rows="2" placeholder="예: 반기 종료 전 이수 필수"></textarea></div>';
         V().openModal('미이수자 일괄 독촉',
             body,
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
