@@ -498,6 +498,49 @@
                 });
             }
         } catch (e) {}
+        /* 작업환경측정 — 무엇이 할 일인지는 DYSH.weTodos 한 곳이 정한다(2026-11-16)
+         *   부서: 결과 안내 공문으로 알려진 «개선 필요» 사업장의 개선조치
+         *   재난안전과: 결과 안내 공문 기안 대기 · 노출기준 초과 건 노동관서 제출 기한(시행규칙 §188③) */
+        try {
+            var Sh = global.DYSH;
+            if (Sh && Sh.weTodos) {
+                var shDept = '';
+                try { shDept = D().deptName(state.deptId) || ''; } catch (e) {}
+                Sh.weTodos(state.deptId).forEach(function (t) {
+                    if (t.kind === 'improve') {
+                        var r = t.row;
+                        out.push({
+                            id: 'WE-IMP-' + r.id, cat: 'improve',
+                            title: r.site + ' — 작업환경측정 개선조치',
+                            sub: (r.exceed ? '노출기준 초과 · ' : '') + (r.improveReq || ''),
+                            due: r.improveDue, status: 'IN_PROGRESS',
+                            dept: state.deptId, dept_label: shDept,
+                            href: 'work-env-detail.html?id=' + encodeURIComponent(r.id),
+                            atype: 'menu', action: '개선조치 하러 가기', destLabel: '작업환경측정 상세', remind: false
+                        });
+                    } else if (t.kind === 'notice') {
+                        var hl = t.half === 'H2' ? '하반기' : '상반기';
+                        out.push({
+                            id: 'WE-NOTICE-' + t.year + t.half, cat: 'inspection',
+                            title: t.year + '년 ' + hl + ' 작업환경측정 결과 안내 공문 기안',
+                            sub: '결과가 들어온 ' + t.rows.length + '곳 — ' + t.rows.map(function (r) { return r.site; }).join(' · '),
+                            due: t.rows.map(function (r) { return r.done; }).sort()[0] || '', status: 'IN_PROGRESS',
+                            dept: state.deptId, dept_label: shDept,
+                            href: 'work-env.html?year=' + t.year, atype: 'menu', action: '공문 기안하러 가기', destLabel: '작업환경측정', remind: false
+                        });
+                    } else if (t.kind === 'labor') {
+                        out.push({
+                            id: 'WE-LABOR-' + t.row.id, cat: 'inspection',
+                            title: t.row.site + ' — 노출기준 초과 노동관서 제출',
+                            sub: '시료채취 ' + t.row.done + ' · 60일 안에 개선 증명 서류 또는 개선 계획 제출',
+                            due: t.due, status: 'IN_PROGRESS',
+                            dept: state.deptId, dept_label: shDept,
+                            href: 'work-env-detail.html?id=' + encodeURIComponent(t.row.id), atype: 'menu', action: '제출일 기록하러 가기', destLabel: '작업환경측정 상세', remind: false
+                        });
+                    }
+                });
+            }
+        } catch (e) {}
         /* 타 도메인 목업 시드 — 첨부 완료한 시드는 DONE 으로 표시 */
         otherSeeds().forEach(function (s) {
             if (s.dept !== state.deptId) return;

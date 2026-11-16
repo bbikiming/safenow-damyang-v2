@@ -35,6 +35,9 @@
             (fixed ? '<p class="file-hint">소속 부서 계획으로 등록합니다 — 다른 부서 계획은 그 부서 담당자가 등록합니다.</p>' : '') +
         '</div>';
     }
+    /* 주관부서 담당자 — 결과 안내 공문(재난안전과 위탁 측정) */
+    function canOwner() { return !R() || R().canAct(R().OWNER_DEPT); }
+    function halfName(h) { return h === 'H2' ? '하반기' : '상반기'; }
     function roNote() { return R() ? R().readOnlyNote('측정 계획 등록·결과 첨부') : ''; }
     /* 조작 차단 문구 — 조사는 DYV2.josa() 가 붙인다(라벨마다 받침이 갈려 고정 표기를 쓸 수 없다) */
     function denyNote(what) { return what + V().josa(what, '은', '는') + ' 해당 부서 담당자가 수행합니다.'; }
@@ -132,18 +135,46 @@
         var rows = list.length ? list.map(rowHtml).join('') :
             '<tr><td colspan="9" class="sh-empty">조건에 맞는 작업환경측정 건이 없습니다.</td></tr>';
 
-        state.mount.innerHTML = linkbar + tiles(sum) + toolbar + roNote() +
+        state.mount.innerHTML = linkbar + tiles(sum) + noticeLines() + toolbar + roNote() +
             '<div class="sh-wrap"><table class="sh-table"><thead><tr>' +
                 '<th>대상 부서 / 사업장</th><th>측정 대상</th><th>위탁업체</th><th>측정 예정일 · 실시일</th>' +
                 '<th>결과보고서</th><th>측정 결과</th><th>개선조치 기한</th><th>완료 여부</th><th>담당자</th>' +
             '</tr></thead><tbody>' + rows + '</tbody></table></div>';
     }
 
+    /* 반기별 결과 안내 공문 줄 — 재난안전과 담당자에게만. 결과가 들어온 사업장부터 보낸다
+       (반기 전체를 기다리면 노출기준 초과 건의 60일 법정 기한 안에 부서가 알지 못한다).
+       무엇이 남았는지는 사업장 이름으로 밝힌다. */
+    function noticeLines() {
+        if (!canOwner()) return '';
+        var halves = state.half ? [state.half] : ['H1', 'H2'];
+        var html = halves.map(function (h) {
+            var st = S().halfStat(state.year, h);
+            if (!st.total && !st.docs.length) return '';
+            var key = state.year + '|' + h;
+            var docs = st.docs.map(function (d, i) {
+                return '<button type="button" class="btn btn-sm btn-outline" onclick="WENVDOC.openDoc(\'' + key + '\',\'' + d.sid + '\')">' +
+                    (st.docs.length > 1 ? (i + 1) + '차 ' : '') + '공문 보기 · ' + esc(d.status) + '</button>';
+            }).join('');
+            var pend = st.pending.map(function (r) { return esc(r.site) + '(' + esc(String(r.planned || '').slice(5)) + ')'; }).join(' · ');
+            return '<div class="sh-card" style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2) var(--sp-3);margin-bottom:var(--stack-tight);">' +
+                '<b>' + esc(state.year) + ' ' + halfName(h) + ' 결과 안내</b>' +
+                '<span style="color:var(--text-gray);">측정 ' + st.done + ' / ' + st.total + '곳 · 공문 보냄 ' + st.sent + '곳</span>' +
+                (st.notice.length
+                    ? '<button type="button" class="btn btn-sm btn-primary" onclick="WENVDOC.open(\'' + key + '\')">결과 안내 공문 (' + st.notice.length + '곳)</button>'
+                    : '') +
+                docs +
+                (pend ? '<span class="file-hint" style="flex-basis:100%;">측정 전: ' + pend + ' — 결과가 들어오면 다음 공문으로 보냅니다.</span>' : '') +
+            '</div>';
+        }).join('');
+        return html;
+    }
+
     function rowHtml(r) {
         // 목록에서 바로 증빙 첨부 → 상세 왕복 제거(고빈도 액션). 첨부 완료 시 상태 표시.
         var report = r.report
             ? '<span class="sh-attached">' + S().icon('file') + '첨부됨</span>'
-            : (canAct(r.dept)
+            : (attachable(r)
                 ? '<button type="button" class="sh-pill-link" onclick="event.stopPropagation();WENV.attach(\'' + r.id + '\')">＋ 첨부</button>'
                 : '<span class="sh-pill-none">미첨부</span>');
         var doneTxt = r.done ? esc(r.done) : '<span style="color:var(--text-gray)">미실시</span>';
@@ -169,17 +200,53 @@
     function detail(id) { location.href = 'work-env-detail.html?id=' + id; }
 
     /* 목록 인라인 증빙 첨부 — 상세 진입 없이 결과보고서 등록 */
+    /* 측정기관 보고서 한 부가 여러 사업장을 덮는다 — 같은 반기·같은 위탁업체·보고서 없는 행을 함께 고른다 */
+    var AT = { id: null, file: null, with: {} };
+    function attachable(r) { return r && !r.report && !r.done && canAct(r.dept) && !S().weLockOf(r.id); }
+    function siblings(r) {
+        return S().workEnv().filter(function (x) {
+            return x.id !== r.id && String(x.year) === String(r.year) && x.half === r.half && x.vendor === r.vendor && attachable(x);
+        });
+    }
     function attach(id) {
-        if (!canAct()) { V().toast(denyNote('결과 첨부')); return; }
         var r = S().workEnvOf(id); if (!r) return;
+        if (!canAct(r.dept)) { V().toast(denyNote('결과 첨부')); return; }
+        if (!attachable(r)) { V().toast('이 건에는 결과보고서를 올릴 수 없습니다.'); return; }
+        AT = { id: id, file: null, with: {} };
+        renderAttach();
+    }
+    function renderAttach() {
+        var r = S().workEnvOf(AT.id); if (!r) return;
+        var sib = siblings(r);
         V().openModal('결과보고서 등록',
             '<p style="font-size:13px;margin-bottom:10px;color:var(--text-gray);"><b>' + esc(r.dept) + ' · ' + esc(r.site) + '</b> 작업환경측정 결과보고서를 첨부합니다.</p>' +
-            V().uploadDrop('파일을 끌어다 놓거나 클릭하여 업로드<br><span style="font-size:12px;">업로드 시 이력이 자동 기록됩니다</span>', null, { hint: true }),
+            (AT.file ? '<p style="margin-bottom:8px;">' + S().icon('file') + ' <b>' + esc(AT.file.name) + '</b></p>' : '') +
+            V().uploadDrop('파일을 끌어다 놓거나 클릭하여 업로드', null, { hint: true, pick: 'WENV.onPick' }) +
+            (sib.length
+                ? '<div style="margin-top:12px;"><label class="form-label">같은 보고서로 함께 등록 <span class="file-hint">' + esc(r.vendor) + ' · ' + halfName(r.half) + '</span></label>' +
+                    sib.map(function (x) {
+                        return '<label style="display:block;margin:4px 0;"><input type="checkbox"' + (AT.with[x.id] ? ' checked' : '') +
+                            ' onchange="WENV.setWith(\'' + x.id + '\', this.checked)"> ' + esc(x.dept) + ' · ' + esc(x.site) + '</label>';
+                    }).join('') + '</div>'
+                : ''),
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-            '<button type="button" class="btn btn-primary" onclick="WENV.saveAttach(\'' + id + '\')">등록</button>');
+            '<button type="button" class="btn btn-primary" onclick="WENV.saveAttach()">등록</button>');
     }
-    function saveAttach(id) {
-        if (!canAct()) { V().toast(denyNote('결과 첨부')); return; } S().attachEvidence('we', id, '결과보고서'); V().closeModal(); render(); V().toast('결과보고서가 등록되었습니다.'); }
+    function onPick(items) { AT.file = items && items[0] ? { name: items[0].name, size: items[0].size } : null; renderAttach(); }
+    function setWith(id, on) { if (on) AT.with[id] = true; else delete AT.with[id]; }
+    function saveAttach() {
+        var r = S().workEnvOf(AT.id); if (!r) return;
+        if (!canAct(r.dept)) { V().toast(denyNote('결과 첨부')); return; }
+        if (!AT.file) { V().toast('파일을 고르세요.'); return; }
+        var ids = [AT.id].concat(Object.keys(AT.with));
+        /* 저장에도 같은 판정 — 고른 뒤 상태가 바뀌었거나 전역 호출로 남의 부서 행이 들어와도 거른다 */
+        var done = ids.filter(function (id) {
+            var x = S().workEnvOf(id);
+            return attachable(x) && !!S().attachEvidence('we', id, '결과보고서', AT.file.name);
+        });
+        V().closeModal(); render();
+        V().toast(done.length ? '결과보고서를 ' + done.length + '곳에 등록했습니다.' : '등록하지 못했습니다.');
+    }
 
     function openNew() {
         if (!canAct()) { V().toast(denyNote('측정 계획 등록')); return; }
@@ -263,7 +330,104 @@
         V().closeModal(); render(); V().toast('측정 계획이 등록되었습니다.');
     }
 
+    /* ===== 결과 안내 공문 — DYDOC 단순 기안(결재선 없음 · 온나라 기안함까지, 2026-11-06 운영 결정) =====
+     * 대상은 «연도|반기» 키. 실리는 행은 DYSH.noticeRows 한 곳이 정한다(재난안전과 위탁 · 결과 입력 · 아직 공문 전).
+     * 보낸 공문을 열 때는 그 공문에 실린 행(doc.rowIds)으로 별지를 다시 그린다 — 뒤에 결과가 바뀌어도
+     * 이미 보낸 공문의 별지가 따라 바뀌지 않게 하려고 잠금을 함께 건다(DYSH.weLockOf). */
+    function rowsOf(t, doc) {
+        if (doc && doc.rowIds) return doc.rowIds.map(function (id) { return S().workEnvOf(id); }).filter(Boolean);
+        return t ? t.rows : [];
+    }
+    function deptIdOf(name) { return V().deptIdOf ? V().deptIdOf(name) : name; }
+    function deptNameOf(id) { var n = V().orgNode ? V().orgNode(id) : null; return n ? n.name : id; }
+    function setupNoticeDoc() {
+        if (!global.DYDOC || global.WENVDOC) return;
+        var cfg = {
+            ns: 'WENVDOC', lkey: 'dy-wenvdoc-apprline-v1', simple: true, simplePick: true,
+            targetOf: function (key) {
+                var p = String(key || '').split('|');
+                if (p.length !== 2 || (p[1] !== 'H1' && p[1] !== 'H2')) return null;
+                return { key: key, year: Number(p[0]), half: p[1], rows: S().noticeRows(p[0], p[1]) };
+            },
+            subjectOf: function (t) { return t.year + '년 ' + halfName(t.half) + ' 작업환경측정 결과 안내'; },
+            titleOf: function (t) {
+                var n = S().halfStat(t.year, t.half).docs.filter(function (d) { return d.status !== '반려' && d.status !== '반송'; }).length;
+                return t.year + '년 ' + halfName(t.half) + ' 작업환경측정 결과 안내' + (n ? '(' + (n + 1) + '차)' : '');
+            },
+            initOf: function () { return { docType: '외부발송', to: '수신자 참조' }; },
+            recipientsDefault: function (t) {
+                var seen = {}, out = [];
+                (t ? t.rows : []).forEach(function (r) { var id = deptIdOf(r.dept); if (id && !seen[id]) { seen[id] = 1; out.push(id); } });
+                return out;
+            },
+            recipientsDefaultLabel: '결과가 들어온 사업장의 부서',
+            recipientName: function (id) { return deptNameOf(id) + '장'; },
+            recipientWarn: function (t, ids) {
+                var miss = (t ? t.rows : []).filter(function (r) { return ids.indexOf(deptIdOf(r.dept)) < 0; })
+                    .map(function (r) { return r.dept; });
+                miss = miss.filter(function (x, i) { return miss.indexOf(x) === i; });
+                return miss.length ? '별지에 ' + esc(miss.join(', ')) + ' 사업장이 있는데 수신처에서 빠졌습니다.' : '';
+            },
+            canDraft: function () { return canOwner() ? { ok: true } : { ok: false, why: '결과 안내 공문은 재난안전과 담당자가 보냅니다.' }; },
+            ready: function (t) {
+                if (!t.rows.length) return { ok: false, why: '공문에 실을 측정 결과가 없습니다 — 측정 완료 처리한 사업장이 있어야 합니다.' };
+                var noRep = t.rows.filter(function (r) { return !S().reportFiles(r).length; });
+                if (noRep.length) return { ok: false, why: '결과보고서가 없는 사업장: ' + noRep.map(function (r) { return r.site; }).join(', ') };
+                var past = t.rows.filter(function (r) { return r.result === '개선 필요' && (!r.improveDue || r.improveDue < S().TODAY); });
+                if (past.length) return { ok: false, why: '개선조치 기한이 지났거나 없는 사업장: ' + past.map(function (r) { return r.site; }).join(', ') + ' — [결과 수정]으로 기한을 고친 뒤 보냅니다.' };
+                return { ok: true };
+            },
+            chips: function (t) {
+                var rows = t.rows, imp = rows.filter(function (r) { return r.result === '개선 필요'; });
+                var ex = imp.filter(function (r) { return r.exceed; });
+                return [
+                    { label: '결과 안내', text: '1. ' + t.year + '년 ' + halfName(t.half) + ' 작업환경측정 결과를 붙임과 같이 알려 드립니다.\n  가. 대상: 붙임 별지의 ' + rows.length + '개 사업장\n  나. 결과: 적정 ' + (rows.length - imp.length) + '곳 · 개선 필요 ' + imp.length + '곳' + (ex.length ? '(노출기준 초과 ' + ex.length + '곳)' : '') },
+                    { label: '개선 요청', text: '2. 개선이 필요한 사업장은 붙임 별지의 조치기한 안에 개선조치를 하시고, 중대재해 통합관리시스템 › 작업환경·건강 › 작업환경측정에서 조치 증빙을 올려 완료 처리하여 주시기 바랍니다.' },
+                    { label: '근로자 알림', text: '3. 측정 결과를 해당 작업장 근로자에게 알려 주시기 바랍니다.' }
+                ];
+            },
+            attachOf: function (t) {
+                var seen = {}, out = [];
+                (t ? t.rows : []).forEach(function (r) {
+                    S().reportFiles(r).forEach(function (f) {
+                        if (seen[f.name]) return; seen[f.name] = 1;
+                        out.push({ label: f.name, meta: '결과보고서', on: true, size: f.size || null });
+                    });
+                });
+                return out;
+            },
+            annexes: function (t, doc) {
+                var rows = rowsOf(t, doc);
+                if (!rows.length) return [];
+                return [{
+                    title: '사업장별 작업환경측정 결과 (' + rows.length + '곳)',
+                    html: '<table class="table-figma table-doc"><thead><tr>' +
+                            '<th>연번</th><th>부서</th><th>사업장</th><th>측정 대상(유해인자)</th><th>측정일</th><th>결과</th><th>개선 요구</th><th>조치기한</th>' +
+                          '</tr></thead><tbody>' +
+                        rows.map(function (r, i) {
+                            return '<tr><td>' + (i + 1) + '</td><td>' + esc(r.dept) + '</td><td>' + esc(r.site) + '</td><td>' + esc(r.subject) + '</td>' +
+                                '<td>' + esc(r.done) + '</td><td>' + esc(r.result) + (r.exceed ? '(노출기준 초과)' : '') + '</td>' +
+                                '<td>' + esc(r.result === '개선 필요' ? r.improveReq : '-') + '</td><td>' + esc(r.result === '개선 필요' ? r.improveDue : '-') + '</td></tr>';
+                        }).join('') + '</tbody></table>'
+                }];
+            },
+            basisOf: function () {
+                var L = global.DYLAW;
+                if (!L || !L.basisTitle) return [];
+                var t = L.basisTitle('osh-125');
+                return t ? [{ key: 'osh-125', label: t }] : [];
+            },
+            save: function (t, doc) { S().saveNotice(t.year, t.half, doc, t.rows.map(function (r) { return r.id; })); },
+            docsFor: function (t) { return t ? S().halfStat(t.year, t.half).docs : []; },
+            nextNo: function () { return S().nextNoticeNo(); },
+            lockNote: '보낸 뒤에는 이 공문에 실린 사업장의 측정 결과와 결과보고서를 고칠 수 없습니다. 개선조치는 계속 진행합니다.',
+            sentNote: '결과 안내 공문을 온나라 연계기안함에 보냈습니다. 개선이 필요한 사업장이 있으면 그 부서 내 할일에 개선조치가 생깁니다.'
+        };
+        global.DYDOC.define(cfg).registerRefresh(render);
+    }
+
     function init(mountId) {
+        setupNoticeDoc();
         state.mount = document.getElementById(mountId);
         if (!state.mount) return;
         var q = new URLSearchParams(location.search);
@@ -273,6 +437,6 @@
     }
 
     global.WENV = { init: init, setYear: setYear, setHalf: setHalf, setDept: setDept, setTile: setTile,
-        detail: detail, attach: attach, saveAttach: saveAttach, openNew: openNew, saveNew: saveNew,
+        detail: detail, attach: attach, saveAttach: saveAttach, onPick: onPick, setWith: setWith, openNew: openNew, saveNew: saveNew,
         pickDept: pickDept, onSiteChange: onSiteChange };
 })(window);

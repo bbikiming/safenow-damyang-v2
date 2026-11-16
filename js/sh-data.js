@@ -20,7 +20,9 @@
             개인별 결과(persons)·절차 진행 상태(proc)·열람권한(privacy) 시드를 걷어냈다.
        시드 스키마·값이 바뀌면 키를 올린다 — 안 올리면 옛 브라우저의 스토어가 살아남아
        화면과 시드가 조용히 갈린다. */
-    var SKEY = 'damyangShV5';
+    /* v6 — 결과 안내 공문(weDocs)·노출기준 초과(exceed)·노동관서 제출일·결과보고서 파일 이름(reportFiles)·
+            등록 주체(regBy)를 더했다(기획-작업환경측정-첨부·공문흐름-20261116-v2). */
+    var SKEY = 'damyangShV6';
     /* 기준일·기준연도 — DYV2.today() 단일 출처 (시연일 변경은 common.js DEMO_TODAY 한 줄) */
     var TODAY = (global.DYV2 && global.DYV2.today) ? global.DYV2.today() : '2026-11-13';
     var CURYEAR = Number(TODAY.slice(0, 4));
@@ -137,7 +139,7 @@
               subject: '염소가스·습도·소음 등 5종', vendor: '(주)한국산업보건환경연구원',
               planned: '2026-06-10', done: '2026-06-12', report: true,
               result: '개선 필요', improveReq: '염소가스 농도 노출기준 초과 — 자동염소주입기 밀폐 및 배기 개선 필요',
-              improveDue: '2026-08-10', improveDone: true,
+              improveDue: '2026-08-10', improveDone: true, exceed: true, laborSubmittedAt: '2026-08-05',
               improveDoneAt: '2026-07-29', improveResult: '기계실 자동염소주입기 밀폐커버 설치·배기팬 증설 후 재측정 — 노출기준 이내',
               beforePhoto: true, afterPhoto: true, owner: '공공시설사업소 · 한담당',
               reason: '', expectedDone: '',
@@ -180,7 +182,7 @@
               subject: '분진·악취·중금속 등 8종', vendor: '(주)한국산업보건환경연구원',
               planned: '2026-10-13', done: '2026-10-14', report: true,
               result: '개선 필요', improveReq: '선별라인 투입구 분진(결정질 실리카) 노출기준 초과 — 집진기 필터 교체 및 투입구 국소배기 보강 필요',
-              improveDue: '2026-12-11', improveDone: false,
+              improveDue: '2026-12-11', improveDone: false, exceed: true,
               beforePhoto: true, afterPhoto: false, owner: '환경과 · 정환경',
               reason: '', expectedDone: '',
               carcinogen: true, targetBasis: '현업 종사자 · 발암성 유해인자(결정질 실리카 분진) 노출',
@@ -410,7 +412,30 @@
               ] }
         ];
 
-        return { workenv: workenv, health: health, seqWE: 13, seqHC: 13 };
+        /* 결과 안내 공문 — 재난안전과가 온나라로 보낸 기록(예시 자료). 2026 하반기는 1차(측정 끝난 3곳)만
+           보냈고, 11월 측정 2곳은 결과가 들어오면 2차로 보낸다(실습 자리). 원장 제목과 같은 이름을 쓴다. */
+        function deptIds(names) {
+            var V = global.DYV2, seen = {}, out = [];
+            names.forEach(function (n) { var id = V && V.deptIdOf ? V.deptIdOf(n) : n; if (id && !seen[id]) { seen[id] = 1; out.push(id); } });
+            return out;
+        }
+        function sdoc(sid, year, half, at, rowIds, status) {
+            var rows = workenv.filter(function (r) { return rowIds.indexOf(r.id) >= 0; });
+            var hl = half === 'H2' ? '하반기' : '상반기';
+            return { sid: sid, no: '재난안전과-' + sid.slice(-4), at: at, status: status, year: year, half: half, rowIds: rowIds,
+                docType: '외부발송', title: year + '년 ' + hl + ' 작업환경측정 결과 안내', to: '수신자 참조',
+                body: '1. ' + year + '년 ' + hl + ' 작업환경측정 결과를 붙임과 같이 알려 드립니다.\n2. 해당 작업장 근로자에게 측정 결과를 알려 주시기 바랍니다.',
+                attach: [], annex: true, basis: [], recipients: deptIds(rows.map(function (r) { return r.dept; })),
+                by: '박안전', byUid: 'u_jjt2', dept: '재난안전과', sample: true };
+        }
+        var weDocs = [
+            sdoc('WEN-2025-0001', 2025, 'H1', '2025-06-12', ['WE-2025-03'], '결재완료'),
+            sdoc('WEN-2025-0002', 2025, 'H2', '2025-11-28', ['WE-2025-01', 'WE-2025-02'], '결재완료'),
+            sdoc('WEN-2026-0001', 2026, 'H1', '2026-07-14', ['WE-2026-01', 'WE-2026-02', 'WE-2026-03', 'WE-2026-04', 'WE-2026-05'], '결재완료'),
+            sdoc('WEN-2026-0002', 2026, 'H2', '2026-10-30', ['WE-2026-06', 'WE-2026-07', 'WE-2026-08'], '결재완료')
+        ];
+
+        return { workenv: workenv, health: health, weDocs: weDocs, seqWE: 13, seqHC: 13, seqWEN: 2 };
     }
 
     function load() {
@@ -458,8 +483,11 @@
     function legalSubmitDue(kind, rec) {
         if (!rec) return null;
         if (kind === 'we') {
-            if (rec.result === '개선 필요' && !rec.improveDone && rec.done) {
-                return { label: '개선증빙 제출기한', date: addDays(rec.done, 60) };
+            /* 시행규칙 §188③ — **노출기준 초과** 공정만 시료채취를 마친 날부터 60일 이내에 개선 증명 서류
+               또는 개선 계획을 관할 지방고용노동관서에 낸다. 종전에는 «개선 필요» 전부에 걸어 초과가 아닌
+               개선(후드 풍속 미달 등)에도 법정 기한을 붙였고, 정작 제출 여부는 기록하지 않았다. */
+            if (rec.exceed && rec.done && !rec.laborSubmittedAt) {
+                return { label: '노동관서 제출기한', date: addDays(rec.done, 60) };
             }
             return null;
         }
@@ -482,6 +510,10 @@
             planned: o.planned || '', done: '', report: false, result: null, improveReq: '', improveDue: '',
             improveDone: false, beforePhoto: false, afterPhoto: false, owner: (o.dept || '') + ' · 담당자',
             reason: '', expectedDone: '', carcinogen: !!o.carcinogen,
+            /* 등록 주체 — 재난안전과 담당자가 등록하면 'owner'(위탁 측정 → 결과 안내 공문 대상),
+               부서 담당자가 등록하면 'dept'(자체 측정 → 공문 없이 결과 첨부로 끝). 화면이 정하지 않고 접속자로 판정한다. */
+            regBy: (global.DYROLE && global.DYROLE.canAct && global.DYROLE.canAct(global.DYROLE.OWNER_DEPT)) ? 'owner' : 'dept',
+            reportFiles: [],
             targetBasis: o.targetBasis || '현업 종사자 · 유해인자 노출(' + (o.dept || '해당 부서') + ')',
             history: [{ at: TODAY, actor: actorNow(), event: '측정 계획 등록 (예정일 ' + (o.planned || '-') + ')' }] };
         d.workenv.push(rec); save(); return rec;
@@ -522,6 +554,115 @@
         rows.forEach(function (r) { if (effWorkEnv(r).key === 'DONE') s.done++; });
         s.completeRate = s.total ? Math.round(s.done / s.total * 100) : null;
         return s;
+    }
+
+    /* ================= 결과 안내 공문 · 잠금 (2026-11-16 v2) =================
+     * 결과 안내 공문은 «재난안전과가 위탁한 측정»(regBy 'owner')의 **결과가 들어온 행**을 싣는다.
+     * 반기 전체를 기다리지 않는다 — 노출기준 초과 건은 60일 법정 기한이 있어 늦게 알릴 수 없다.
+     * 같은 반기에 측정이 나뉘면 2차·3차 공문이 된다. 부서가 직접 등록한 측정(regBy 'dept')은 자체 측정이라
+     * 공문에 싣지 않는다(온나라 원장: 농업기술센터는 내부결재로 끝낸다). */
+    var LOCKED = { '기안함 전송': 1, '결재중': 1, '결재완료': 1 };
+    function regByOf(r) { return (r && r.regBy) || 'owner'; }
+    function weDocs() { var d = load(); return d.weDocs || (d.weDocs = []); }
+    /* 그 행을 실은 공문 중 효력이 있는 것(반려·반송 제외) — 잠금 판정은 이 함수 한 곳에서만 한다 */
+    function weLockOf(rowId) {
+        var list = weDocs();
+        for (var i = list.length - 1; i >= 0; i--) {
+            var d = list[i];
+            if ((d.rowIds || []).indexOf(rowId) >= 0 && LOCKED[d.status]) return d;
+        }
+        return null;
+    }
+    function halfRows(year, half) {
+        return workEnv().filter(function (r) { return String(r.year) === String(year) && r.half === half; });
+    }
+    /* 이번 공문에 실을 행 — 재난안전과 위탁 · 결과 입력 · 아직 효력 있는 공문에 없음 */
+    function noticeRows(year, half) {
+        return halfRows(year, half).filter(function (r) { return regByOf(r) === 'owner' && !!r.done && !weLockOf(r.id); });
+    }
+    function halfStat(year, half) {
+        var own = halfRows(year, half).filter(function (r) { return regByOf(r) === 'owner'; });
+        return {
+            total: own.length,
+            done: own.filter(function (r) { return !!r.done; }).length,
+            pending: own.filter(function (r) { return !r.done; }),
+            notice: noticeRows(year, half),
+            sent: own.filter(function (r) { return !!weLockOf(r.id); }).length,
+            docs: weDocs().filter(function (d) { return String(d.year) === String(year) && d.half === half; })
+        };
+    }
+    /* 결과보고서 파일 — 이름이 있어야 공문 붙임 후보가 된다. 이름 없이 «첨부됨»만 남은 옛 예시 행은
+       위탁업체·반기로 이름을 지어 보인다(같은 업체·반기는 같은 이름 → 공문 붙임에서 한 번만 나온다). */
+    function reportFiles(r) {
+        if (!r) return [];
+        if (r.reportFiles && r.reportFiles.length) return r.reportFiles;
+        return r.report ? [{ name: r.vendor + ' 작업환경측정 결과보고서(' + r.year + ' ' + (r.half === 'H2' ? '하반기' : '상반기') + ').pdf', sample: true }] : [];
+    }
+    function saveNotice(year, half, doc, rowIds) {
+        var d = load(); d.seqWEN = (d.seqWEN || 0) + 1;
+        doc.year = Number(year); doc.half = half; doc.rowIds = rowIds.slice();
+        weDocs().push(doc);
+        rowIds.forEach(function (id) { var r = workEnvOf(id); if (r) pushHist(r, '결과 안내 공문 온나라 전송 · ' + (doc.title || '')); });
+        save(); return doc;
+    }
+    function nextNoticeNo() { var d = load(); return '재난안전과-' + String(9000 + (d.seqWEN || 0) + 1); }
+    /* 시행규칙 §190① 단서 — 노출기준 초과 시 그 측정일부터 3개월에 1회 이상(화학적 인자 · 고시 물질 기준) */
+    function addMonths(dateStr, n) {
+        if (!dateStr) return '';
+        var d = new Date(dateStr); if (isNaN(d.getTime())) return '';
+        d.setUTCMonth(d.getUTCMonth() + n);
+        return d.toISOString().slice(0, 10);
+    }
+    function remeasureDue(r) { return r && r.exceed && r.done ? addMonths(r.done, 3) : ''; }
+    /* 노출기준 초과 건 노동관서 제출일(재난안전과) */
+    function setLaborSubmit(id, date) {
+        var r = workEnvOf(id); if (!r || !r.exceed || !r.done || !date) return null;
+        r.laborSubmittedAt = date;
+        pushHist(r, '노동관서 제출 기록 · ' + date + ' (개선 증명 서류 또는 개선 계획)');
+        save(); return r;
+    }
+    /* 결과 수정 — 결과 안내 공문을 보내기 전까지만 */
+    function editWorkEnvResult(id, opts) {
+        var r = workEnvOf(id); if (!r || !r.done || weLockOf(id)) return null;
+        opts = opts || {};
+        var before = r.result;
+        r.done = opts.doneDate || r.done;
+        r.result = opts.result || r.result;
+        if (r.result === '개선 필요') {
+            r.improveReq = opts.improveReq || ''; r.improveDue = opts.improveDue || '';
+            r.exceed = !!opts.exceed;
+        } else {
+            r.improveReq = ''; r.improveDue = ''; r.exceed = false; r.laborSubmittedAt = '';
+        }
+        pushHist(r, '결과 수정 · 「' + before + '」 → 「' + r.result + '」' + (r.exceed ? ' · 노출기준 초과' : ''));
+        save(); return r;
+    }
+    /* 할 일 — 내 할일이 이 함수 한 곳에서 센다.
+     *   improve — 개선 필요 · 미완료이고 부서에 알려진 것(결과 안내 공문을 보냈거나, 부서가 직접 맡긴 측정)
+     *   notice  — (주관부서) 결과가 들어왔는데 아직 공문에 싣지 않은 행이 있는 반기
+     *   labor   — (주관부서) 노출기준 초과 건의 노동관서 제출 기한 */
+    function weTodos(deptId) {
+        var V = global.DYV2, R = global.DYROLE, out = [];
+        var owner = R && R.OWNER_DEPT ? R.OWNER_DEPT : 'safety';
+        workEnv().forEach(function (r) {
+            var did = V && V.deptIdOf ? V.deptIdOf(r.dept) : r.dept;
+            if (did === deptId && weNeedsImprove(r) && (weLockOf(r.id) || regByOf(r) === 'dept')) {
+                out.push({ kind: 'improve', row: r, due: r.improveDue });
+            }
+        });
+        if (deptId === owner) {
+            var halves = {};
+            workEnv().forEach(function (r) { halves[r.year + '|' + r.half] = { year: r.year, half: r.half }; });
+            Object.keys(halves).sort().forEach(function (k) {
+                var h = halves[k], rows = noticeRows(h.year, h.half);
+                if (rows.length) out.push({ kind: 'notice', year: h.year, half: h.half, rows: rows });
+            });
+            workEnv().forEach(function (r) {
+                var due = legalSubmitDue('we', r);
+                if (due) out.push({ kind: 'labor', row: r, due: due.date });
+            });
+        }
+        return out;
     }
 
     /* ================= 건강검진 ================= */
@@ -592,17 +733,23 @@
      *                 (측정 결과 서류 보존 — 산안법 시행규칙 §241① 5년, 고시 물질 30년)
      *   '개선 증빙'  — 개선 완료 판정의 근거(조치 후 증빙)
      * 종전에는 어느 버튼으로 올려도 결과보고서로 저장돼, 개선 증빙을 올리면 «보고서가 있다»가 됐다. */
-    function attachEvidence(kind, id, label) {
+    function attachEvidence(kind, id, label, fileName) {
         var r = (kind === 'we') ? workEnvOf(id) : healthOf(id);
         if (!r) return null;
         if (kind === 'we') {
-            if (label === '개선 증빙') {
+            if (label === '개선 전 사진') {
+                r.beforePhoto = true;
+                pushHist(r, '개선 전 사진 등록' + (fileName ? ' · ' + fileName : ''));
+            } else if (label === '개선 증빙') {
                 r.afterPhoto = true;
-                pushHist(r, '개선 증빙 등록');
+                pushHist(r, '개선 증빙 등록' + (fileName ? ' · ' + fileName : ''));
             } else {
+                /* 결과 안내 공문을 보낸 뒤에는 결과보고서를 바꾸지 않는다 — 공문 붙임과 시스템 기록이 갈린다 */
+                if (weLockOf(r.id)) return null;
                 r.reportVersions = (r.reportVersions || (r.report ? 1 : 0)) + 1;
                 r.report = true;
-                pushHist(r, '결과보고서 등록' + (r.reportVersions > 1 ? ' · 제' + r.reportVersions + '판(이전 판 보존)' : ''));
+                if (fileName) (r.reportFiles = r.reportFiles || []).push({ name: fileName, at: TODAY, by: actorNow() });
+                pushHist(r, '결과보고서 등록' + (fileName ? ' · ' + fileName : '') + (r.reportVersions > 1 ? ' · 제' + r.reportVersions + '판(이전 판 보존)' : ''));
             }
         } else {
             /* 결과보고서(실시 증빙)는 실시일이 있어야 붙는다(운영 E04, 2026-11-04) —
@@ -647,8 +794,14 @@
         if (!r.done) {
             r.done = opts.doneDate || TODAY;
             r.result = opts.result || '적정';
-            if (r.result === '개선 필요') { r.improveReq = opts.improveReq || r.improveReq; r.improveDue = opts.improveDue || r.improveDue; }
-            pushHist(r, '측정 실시 완료 · 결과 「' + r.result + '」');
+            if (r.result === '개선 필요') {
+                r.improveReq = opts.improveReq || r.improveReq; r.improveDue = opts.improveDue || r.improveDue;
+                r.exceed = !!opts.exceed;
+            }
+            pushHist(r, '측정 실시 완료 · 결과 「' + r.result + '」' + (r.exceed ? ' · 노출기준 초과' : ''));
+        } else if (opts.doneDate) {
+            /* 이미 완료한 건에 측정 완료를 다시 저장하지 않는다 — 고치려면 [결과 수정](공문 전까지) */
+            return null;
         } else if (weNeedsImprove(r)) {
             r.improveDone = true; r.afterPhoto = true;
             r.improveDoneAt = opts.improveDoneAt || TODAY;
@@ -700,6 +853,9 @@
         workEnv: workEnv, workEnvOf: workEnvOf, addWorkEnv: addWorkEnv, effWorkEnv: effWorkEnv,
         weMeasured: weMeasured, weNeedsImprove: weNeedsImprove,
         workEnvSummary: workEnvSummary, workEnvLink: workEnvLink,
+        regByOf: regByOf, weDocs: weDocs, weLockOf: weLockOf, halfRows: halfRows, noticeRows: noticeRows,
+        halfStat: halfStat, reportFiles: reportFiles, saveNotice: saveNotice, nextNoticeNo: nextNoticeNo,
+        remeasureDue: remeasureDue, setLaborSubmit: setLaborSubmit, editWorkEnvResult: editWorkEnvResult, weTodos: weTodos,
         /* 건강검진 */
         health: health, healthOf: healthOf, addHealth: addHealth, effHealth: effHealth, hcRate: hcRate,
         hcUnexamined: hcUnexamined, hcFollowup: hcFollowup,

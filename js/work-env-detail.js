@@ -46,12 +46,22 @@
     }
 
 
+    /* 주관부서 담당자 — 노동관서 제출일 기록(시행규칙 §188③ 제출은 사업주 = 재난안전과 몫) */
+    function canOwner() { return !R() || R().canAct(R().OWNER_DEPT); }
+    /* 결과 안내 공문을 보낸 행 — 결과·결과보고서를 잠근다(판정은 DYSH.weLockOf 한 곳) */
+    function lockOf(r) { return r ? S().weLockOf(r.id) : null; }
+    function lockDeny(r, what) {
+        var d = lockOf(r); if (!d) return false;
+        toast('결과 안내 공문(' + d.at + ')을 보낸 건이라 ' + what + V().josa(what, '을', '를') + ' 할 수 없습니다.');
+        return true;
+    }
+
     function render() {
         var r = S().workEnvOf(state.id);
         if (!r) { state.mount.innerHTML = '<div class="sh-empty">해당 작업환경측정 건을 찾을 수 없습니다.</div>'; return; }
         if (!inScope(r)) { state.mount.innerHTML = outOfScope(); return; }
         var measured = S().weMeasured(r), needImp = S().weNeedsImprove(r);
-        var may = canAct(r);
+        var may = canAct(r), lk = lockOf(r);
 
         /* 상단 액션 바 — 상태별 컨텍스트 액션(점진적 공개). 현 상태에 무의미한 버튼은 렌더하지 않음 */
         var acts = '';
@@ -64,6 +74,8 @@
                끝난 건(측정 완료·적정 / 개선 완료)에는 올리지 않는다(3차 회신 A-1 연번 4). */
             if (!measured) acts += '<button type="button" class="btn btn-outline" onclick="WENVD.evidence(\'결과보고서\')">결과보고서 등록</button>';
             else if (needImp) acts += '<button type="button" class="btn btn-outline" onclick="WENVD.evidence(\'개선 증빙\')">개선 증빙 등록</button>';
+            /* 결과 수정 — 결과 안내 공문을 보내기 전까지만(오타가 영구 보존되던 구멍) */
+            if (measured && !lk) acts += '<button type="button" class="btn btn-outline" onclick="WENVD.editResult()">결과 수정</button>';
             if (!measured || needImp) acts += '<button type="button" class="btn btn-outline" onclick="WENVD.resetDue()">기한 재설정</button>';
             if (!measured) acts += '<button type="button" class="btn btn-outline" onclick="WENVD.reason()">미완료 사유 입력</button>';
             acts += '<button type="button" class="btn btn-outline" onclick="WENVD.notify()">알림 발송</button>';
@@ -84,7 +96,12 @@
                 '<dt>위탁업체</dt><dd>' + esc(r.vendor) + '</dd>' +
                 '<dt>기준연도 · 반기</dt><dd>' + esc(r.year) + '년 · ' + (r.half === 'H2' ? '하반기' : '상반기') + '</dd>' +
                 '<dt>측정 예정일</dt><dd>' + esc(r.planned || '-') + '</dd>' +
-                '<dt>측정 실시일</dt><dd>' + (r.done ? esc(r.done) : '<span style="color:var(--text-gray)">미실시</span>') + '</dd>' +
+                '<dt>측정(시료채취) 완료일</dt><dd>' + (r.done ? esc(r.done) : '<span style="color:var(--text-gray)">미실시</span>') + '</dd>' +
+                /* 결과 안내 공문 — 재난안전과 위탁 측정만 싣는다. 부서가 직접 맡긴 측정은 결과 첨부로 끝난다 */
+                '<dt>결과 안내 공문</dt><dd>' + (lk
+                    ? '<span class="chip-status ' + V().toneOf(lk.status) + ' chip-sm">' + esc(lk.status) + '</span> ' + esc(lk.at) + ' · ' + esc(lk.title)
+                    : (S().regByOf(r) === 'dept' ? '<span style="color:var(--text-gray)">부서 자체 측정 — 공문 없음</span>'
+                        : '<span style="color:var(--text-gray)">보내기 전</span>')) + '</dd>' +
                 '<dt>담당자</dt><dd>' + esc(r.owner) + '</dd>' +
                 '<dt>대상 근거</dt><dd>' + esc(r.targetBasis || '현업 종사자 · 유해인자 노출') + '</dd>' +
                 '<dt>결과 보존연한</dt><dd><b>' + S().retentionOf(r) + '년</b>' +
@@ -95,9 +112,12 @@
         var report =
             '<div class="sh-card"><div class="sh-card-h">용역 결과보고서 <span class="sub">위탁업체 제출 · 증빙</span></div>' +
             (r.report
-                ? '<div class="sh-photos"><div class="sh-photo has">' + S().icon('file', 26) + '<span>결과보고서.pdf' +
-                    (r.reportVersions > 1 ? ' · 제' + r.reportVersions + '판' : '') + '</span></div>' +
-                  '<div style="align-self:center;font-size:13px;color:var(--text-gray);">위탁업체 결과보고서가 등록되어 있습니다.</div></div>'
+                ? '<div class="sh-photos">' + S().reportFiles(r).map(function (f) {
+                        return '<div class="sh-photo has">' + S().icon('file', 26) + '<span>' + esc(f.name) + '</span></div>';
+                    }).join('') +
+                  (r.reportVersions > 1 ? '<div style="align-self:center;font-size:13px;color:var(--text-gray);">제' + r.reportVersions + '판 · 이전 판은 보존됩니다.</div>' : '') +
+                  (S().reportFiles(r).some(function (f) { return f.sample; }) ? '<div style="align-self:center;">' + V().sampleChip('파일 이름은 예시 자료입니다.') + '</div>' : '') +
+                  '</div>'
                 : '<div class="sh-req">아직 결과보고서가 등록되지 않았습니다. 위탁업체 제출 후 <b>[결과보고서 등록]</b>으로 첨부하세요.</div>') +
             '</div>';
 
@@ -118,7 +138,13 @@
                 '<dl class="sh-kv">' +
                     '<dt>측정 결과</dt><dd>' + esc(r.result) + '</dd>' +
                     (r.result === '개선 필요' ? '<dt>개선조치 기한</dt><dd><b>' + esc(r.improveDue || '-') + '</b>' + (r.improveDone ? ' · <span style="color:var(--status-success-fg);font-weight:700;">개선 완료</span>' : '') + '</dd>' : '') +
+                    (r.result === '개선 필요' ? '<dt>노출기준 초과</dt><dd>' + (r.exceed ? '<b style="color:var(--status-danger-fg)">초과</b>' : '아니오') + '</dd>' : '') +
                     dueRow +
+                    (r.exceed ? '<dt>노동관서 제출</dt><dd>' + (r.laborSubmittedAt
+                        ? esc(r.laborSubmittedAt) + ' 제출'
+                        : (canOwner() ? '<button type="button" class="btn btn-sm btn-outline" onclick="WENVD.laborSubmit()">제출일 기록</button>'
+                            : '<span style="color:var(--text-gray)">미제출 — 재난안전과가 제출합니다</span>')) + '</dd>' +
+                      '<dt>다음 측정 기한</dt><dd><b>' + esc(S().remeasureDue(r)) + '</b> <span style="color:var(--text-gray);font-size:var(--fs-12);">노출기준 초과 — 측정일부터 3개월 이내</span></dd>' : '') +
                 '</dl>' +
                 (r.result === '개선 필요'
                     ? '<div style="margin-top:12px;"><div class="sh-card-h" style="margin-bottom:8px;">개선 요구사항</div>' +
@@ -128,7 +154,7 @@
                         '<div class="sh-photo' + (r.beforePhoto ? ' has' : '') + '">' + (r.beforePhoto ? S().icon('image', 26) + '<span>개선 전</span>' : '개선 전<br>사진 없음') + '</div>' +
                         '<div class="sh-photo' + (r.afterPhoto ? ' has' : '') + '">' + (r.afterPhoto ? S().icon('image', 26) + '<span>개선 후</span>' : '개선 후<br>미등록') + '</div>' +
                       '</div>' +
-                      (due ? '<div style="margin-top:10px;font-size:12px;color:var(--text-gray);">※ 노출기준 초과 시 시료채취일부터 60일 이내 지방고용노동관서 제출</div>' : '') +
+                      (r.exceed ? '<div style="margin-top:10px;font-size:12px;color:var(--text-gray);">노출기준 초과 — 시료채취를 마친 날부터 60일 이내에 개선 증명 서류 또는 개선 계획을 관할 지방고용노동관서에 제출합니다.</div>' : '') +
                       '</div>'
                     : '<div style="margin-top:8px;font-size:13px;color:var(--text-gray);">노출기준 이내로 <b style="color:var(--status-success-fg)">적정</b> 판정되어 별도 개선조치가 필요하지 않습니다.</div>') +
                 '</div>';
@@ -164,7 +190,7 @@
     /* ── 증빙 등록 — 용도별(결과보고서 / 개선 증빙) ──
      * 어느 용도를 받을지는 상태가 정한다: 측정 전 = 결과보고서, 개선 필요 = 개선 증빙, 끝난 건 = 받지 않음
      * (3차 회신 A-1 연번 4 · 기획확인 4차 3-1). 여는 쪽과 저장 쪽이 같은 판정을 쓴다. */
-    var EV_PURPOSE = '결과보고서';
+    var EV_PURPOSE = '결과보고서', EV_FILE = null, EV_WHICH = '개선 증빙';
     function evidenceAllowed(r, purpose) {
         if (!r) return false;
         var measured = S().weMeasured(r), needImp = S().weNeedsImprove(r);
@@ -175,22 +201,37 @@
         var r = S().workEnvOf(state.id);
         if (deny(r, purpose + ' 등록')) return;
         if (!evidenceAllowed(r, purpose)) { toast('끝난 건에는 증빙을 올리지 않습니다 — 최초 결과와 증빙을 그대로 보존합니다.'); return; }
-        EV_PURPOSE = purpose;
-        V().openModal(purpose + ' 등록',
+        if (purpose === '결과보고서' && lockDeny(r, '결과보고서 등록')) return;
+        EV_PURPOSE = purpose; EV_FILE = null; EV_WHICH = '개선 증빙';
+        renderEvidence();
+    }
+    function renderEvidence() {
+        var imp = EV_PURPOSE === '개선 증빙';
+        V().openModal(EV_PURPOSE + ' 등록',
             '<p style="font-size:13px;margin-bottom:10px;color:var(--text-gray);">' +
-                (purpose === '개선 증빙'
-                    ? '개선조치를 마친 뒤의 증빙(조치 후 사진·확인서 등)을 첨부합니다. 개선 완료 판정의 근거가 됩니다.'
-                    : '위탁업체가 제출한 작업환경측정 결과보고서를 첨부합니다. 다시 올리면 이전 판은 지우지 않고 남습니다.') + '</p>' +
-            V().uploadDrop('파일을 끌어다 놓거나 클릭하여 업로드<br><span style="font-size:12px;">업로드 시 이력이 자동 기록됩니다</span>', null, { hint: true }),
+                (imp ? '개선조치 전·후의 사진이나 확인서를 첨부합니다.'
+                     : '측정기관이 보낸 작업환경측정 결과보고서를 첨부합니다. 다시 올리면 이전 판은 지우지 않고 남습니다.') + '</p>' +
+            (imp ? '<div class="ri-modal-row" style="margin-bottom:10px;display:flex;gap:16px;">' +
+                    ['개선 전 사진', '개선 증빙'].map(function (k) {
+                        return '<label><input type="radio" name="wd-ev-which" value="' + k + '"' + (EV_WHICH === k ? ' checked' : '') +
+                            ' onchange="WENVD.setWhich(this.value)"> ' + (k === '개선 증빙' ? '개선 후 · 조치 증빙' : '개선 전 사진') + '</label>';
+                    }).join('') + '</div>' : '') +
+            (EV_FILE ? '<p style="margin-bottom:8px;">' + S().icon('file') + ' <b>' + esc(EV_FILE.name) + '</b></p>' : '') +
+            V().uploadDrop('파일을 끌어다 놓거나 클릭하여 업로드', null, { hint: true, pick: 'WENVD.onPick' }),
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="WENVD.saveEvidence()">등록</button>');
     }
+    function onPick(items) { EV_FILE = items && items[0] ? { name: items[0].name, size: items[0].size } : null; renderEvidence(); }
+    function setWhich(v) { EV_WHICH = v === '개선 전 사진' ? '개선 전 사진' : '개선 증빙'; }
     function saveEvidence() {
         var r = S().workEnvOf(state.id);
         if (deny(r, EV_PURPOSE + ' 등록')) return;
         if (!evidenceAllowed(r, EV_PURPOSE)) { V().closeModal(); toast('끝난 건에는 증빙을 올리지 않습니다.'); return; }
-        S().attachEvidence('we', state.id, EV_PURPOSE); V().closeModal(); render();
-        toast(EV_PURPOSE + (EV_PURPOSE === '개선 증빙' ? '이' : '가') + ' 등록되었습니다.');
+        if (!EV_FILE) { toast('파일을 고르세요.'); return; }
+        var label = EV_PURPOSE === '개선 증빙' ? EV_WHICH : '결과보고서';
+        if (!S().attachEvidence('we', state.id, label, EV_FILE.name)) { V().closeModal(); lockDeny(r, '결과보고서 등록'); return; }
+        V().closeModal(); render();
+        toast(label + (label === '결과보고서' ? '가' : '이') + ' 등록되었습니다.');
     }
 
     /* ── 미완료 사유 ── */
@@ -256,29 +297,46 @@
         if (deny(S().workEnvOf(state.id), '알림 발송')) return;
         var to = (document.getElementById('wd-nt-to').value || '').trim();
         S().notify('we', state.id, to);
-        V().closeModal(); render(); toast('새올 포틀릿으로 알림을 발송했습니다.');
+        V().closeModal(); render(); toast('알림을 기록했습니다 — 수신자 전송은 새올 연계 후 이루어집니다.');
     }
 
     /* ── 완료 처리 ── */
     /* 측정 미실시 → 결과 입력 모달(실시일=오늘·결과=적정 기본으로 최소 입력) */
+    var EDIT = false;
     function complete() {
         if (deny(S().workEnvOf(state.id), '측정 완료 처리')) return;
         var r = S().workEnvOf(state.id);
+        if (r.done) { toast('이미 측정 완료 처리한 건입니다 — 고치려면 [결과 수정]을 누르세요.'); return; }
         if (!r.report) { toast('결과보고서를 먼저 등록하세요.'); return; }
-        V().openModal('측정 완료 처리',
-            '<div style="margin-bottom:12px;"><label class="form-label" for="wd-c-date">측정 실시일</label>' +
-                '<input type="date" class="form-input" id="wd-c-date" value="' + esc(S().TODAY) + '"></div>' +
+        EDIT = false; resultModal(r);
+    }
+    function editResult() {
+        var r = S().workEnvOf(state.id);
+        if (deny(r, '결과 수정')) return;
+        if (!r.done) { toast('측정 완료 처리 전입니다.'); return; }
+        if (lockDeny(r, '결과 수정')) return;
+        EDIT = true; resultModal(r);
+    }
+    function resultModal(r) {
+        var imp = EDIT && r.result === '개선 필요';
+        V().openModal(EDIT ? '결과 수정' : '측정 완료 처리',
+            (EDIT ? '<p class="file-hint" style="margin-bottom:10px;">결과 안내 공문을 보내기 전까지 고칠 수 있습니다. 고친 내용은 이력에 남습니다.</p>' : '') +
+            '<div style="margin-bottom:12px;"><label class="form-label" for="wd-c-date">측정(시료채취) 완료일</label>' +
+                '<input type="date" class="form-input" id="wd-c-date" value="' + esc(EDIT ? r.done : S().TODAY) + '"></div>' +
             '<div style="margin-bottom:12px;"><label class="form-label" for="wd-c-result">측정 결과</label>' +
                 '<select class="form-select" id="wd-c-result" onchange="WENVD.toggleImprove()">' +
-                    '<option value="적정">적정</option><option value="개선 필요">개선 필요</option></select></div>' +
-            '<div id="wd-c-imp" style="display:none;">' +
+                    '<option value="적정"' + (imp ? '' : ' selected') + '>적정</option><option value="개선 필요"' + (imp ? ' selected' : '') + '>개선 필요</option></select></div>' +
+            '<div id="wd-c-imp" style="display:' + (imp ? '' : 'none') + ';">' +
                 '<div style="margin-bottom:12px;"><label class="form-label" for="wd-c-req">개선 요구사항</label>' +
-                    '<textarea class="form-textarea" id="wd-c-req" rows="2" placeholder="노출기준 초과 항목·개선 방향"></textarea></div>' +
+                    '<textarea class="form-textarea" id="wd-c-req" rows="2" placeholder="개선이 필요한 항목·개선 방향">' + esc(imp ? r.improveReq : '') + '</textarea></div>' +
+                /* 시행규칙 §188③·§190① 단서 — 노출기준 초과만 60일 제출 기한과 3개월 재측정이 걸린다 */
+                '<div style="margin-bottom:12px;"><label><input type="checkbox" id="wd-c-exceed"' + (imp && r.exceed ? ' checked' : '') + '> 노출기준 초과</label>' +
+                    '<p class="file-hint">초과면 시료채취를 마친 날부터 60일 안에 개선 서류·계획을 노동관서에 내고, 3개월 안에 다시 측정합니다.</p></div>' +
                 '<div><label class="form-label" for="wd-c-due">개선조치 기한</label>' +
-                    '<input type="date" class="form-input" id="wd-c-due" value="' + S().addDays(S().TODAY, 60) + '"></div>' +
+                    '<input type="date" class="form-input" id="wd-c-due" value="' + esc(imp && r.improveDue ? r.improveDue : S().addDays(S().TODAY, 60)) + '"></div>' +
             '</div>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-            '<button type="button" class="btn btn-primary" onclick="WENVD.saveComplete()">완료 처리</button>');
+            '<button type="button" class="btn btn-primary" onclick="WENVD.saveComplete()">' + (EDIT ? '저장' : '완료 처리') + '</button>');
     }
     function toggleImprove() {
         var sel = document.getElementById('wd-c-result').value;
@@ -289,17 +347,25 @@
         var result = document.getElementById('wd-c-result').value;
         var doneDate = document.getElementById('wd-c-date').value;
         if (!doneDate) { toast('측정 실시일을 선택하세요.'); return; }
-        if (doneDate > S().TODAY) { toast('측정 실시일은 오늘 이후일 수 없습니다.'); return; }
+        if (doneDate > S().TODAY) { toast('측정(시료채취) 완료일은 오늘 이후일 수 없습니다.'); return; }
         var opts = { doneDate: doneDate, result: result };
         if (result === '개선 필요') {
             opts.improveReq = (document.getElementById('wd-c-req').value || '').trim();
             opts.improveDue = document.getElementById('wd-c-due').value;
+            opts.exceed = !!(document.getElementById('wd-c-exceed') || {}).checked;
             if (!opts.improveReq) { toast('개선 요구사항을 입력하세요.'); return; }
-            if (!opts.improveDue || opts.improveDue <= doneDate) { toast('개선조치 기한은 측정 실시일 이후로 선택하세요.'); return; }
+            if (!opts.improveDue || opts.improveDue <= doneDate) { toast('개선조치 기한은 측정(시료채취) 완료일 이후로 선택하세요.'); return; }
+            if (opts.improveDue < S().TODAY) { toast('개선조치 기한은 오늘 이후로 선택하세요.'); return; }
+            /* 60일 검사는 노출기준 초과 건만 — 법정 기한은 초과 공정에만 걸린다(시행규칙 §188③) */
             var legalDue = S().addDays(doneDate, 60);
-            if (opts.improveDue > legalDue) { toast('개선조치 기한은 법정 제출기한(' + legalDue + ') 이내로 선택하세요.'); return; }
+            if (opts.exceed && opts.improveDue > legalDue) { toast('노출기준 초과 건의 개선조치 기한은 법정 제출기한(' + legalDue + ') 이내로 선택하세요.'); return; }
         }
-        S().completeWorkEnv(state.id, opts);
+        if (EDIT) {
+            if (lockDeny(S().workEnvOf(state.id), '결과 수정')) { V().closeModal(); return; }
+            if (!S().editWorkEnvResult(state.id, opts)) { toast('결과를 고치지 못했습니다.'); return; }
+            V().closeModal(); render(); toast('결과를 고쳤습니다.'); return;
+        }
+        if (!S().completeWorkEnv(state.id, opts)) { V().closeModal(); toast('이미 측정 완료 처리한 건입니다 — 고치려면 [결과 수정]을 누르세요.'); return; }
         V().closeModal(); render();
         toast(result === '적정' ? '측정 완료 · 결과 「적정」' : '측정 완료 · 「개선 필요」 등록');
     }
@@ -325,6 +391,26 @@
         V().closeModal(); render(); toast('개선조치 완료와 조치 후 증빙이 기록되었습니다.');
     }
 
+    /* 노출기준 초과 건 노동관서 제출일 — 재난안전과 담당자(시행규칙 §188③) */
+    function laborSubmit() {
+        var r = S().workEnvOf(state.id);
+        if (!canOwner()) { toast('노동관서 제출은 재난안전과 담당자가 기록합니다.'); return; }
+        if (!r || !r.exceed) return;
+        V().openModal('노동관서 제출일 기록',
+            '<p class="file-hint" style="margin-bottom:10px;">개선 증명 서류 또는 개선 계획을 관할 지방고용노동관서에 낸 날을 적습니다. 기한: ' + esc(S().addDays(r.done, 60)) + '</p>' +
+            '<label class="form-label" for="wd-l-date">제출일</label><input type="date" class="form-input" id="wd-l-date" value="' + esc(S().TODAY) + '">',
+            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+            '<button type="button" class="btn btn-primary" onclick="WENVD.saveLabor()">저장</button>');
+    }
+    function saveLabor() {
+        if (!canOwner()) { toast('노동관서 제출은 재난안전과 담당자가 기록합니다.'); return; }
+        var r = S().workEnvOf(state.id), v = (document.getElementById('wd-l-date') || {}).value;
+        if (!v || v > S().TODAY) { toast('제출일을 확인하세요.'); return; }
+        if (r && v < r.done) { toast('제출일은 측정(시료채취) 완료일 이후입니다.'); return; }
+        if (!S().setLaborSubmit(state.id, v)) { toast('노출기준 초과 건만 기록합니다.'); return; }
+        V().closeModal(); render(); toast('노동관서 제출일을 기록했습니다.');
+    }
+
     function init(mountId) {
         state.mount = document.getElementById(mountId);
         if (!state.mount) return;
@@ -335,5 +421,6 @@
     global.WENVD = { init: init, evidence: evidence, saveEvidence: saveEvidence, reason: reason, saveReason: saveReason,
         resetDue: resetDue, saveDue: saveDue, notify: notify, pickRecipient: pickRecipient, sendNotify: sendNotify,
         complete: complete, toggleImprove: toggleImprove, saveComplete: saveComplete,
-        improveDone: improveDone, saveImproveDone: saveImproveDone };
+        improveDone: improveDone, saveImproveDone: saveImproveDone,
+        editResult: editResult, onPick: onPick, setWhich: setWhich, laborSubmit: laborSubmit, saveLabor: saveLabor };
 })(window);
