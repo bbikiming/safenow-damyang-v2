@@ -215,7 +215,6 @@
 
     /* 알림 메시지 이력 — 받은 부서가 정해진 예시 자료. 재난안전과(조회 범위 전체)는 군 전체를 본다 */
     const MSG_LOG = [
-        { at: '11-12 17:00', ch: '문자', text: '등록 기한 안내 — 11월 정기교육 참석자 등록부 (기한 11-18)', depts: ['culture', 'health', 'facility', 'water', 'town_damyang'] },
         { at: '11-12 14:30', ch: '문자', text: '개선조치 기한 초과 재촉 — 반응조 상부 점검발판 추락', depts: ['water'] },
         { at: '11-09 17:00', ch: '메일', text: '시기도래 주간 요약 (부서장)', depts: '*' },
         { at: '11-06 14:30', ch: '문자', text: '수시평가 개선조치 담당자 지정 통보 (2명)', depts: ['env'] },
@@ -502,12 +501,14 @@
             '</div>';
 
         /* 관리감독자 본인 정기교육 — 이수현황과 같은 원본(DYEDU.statusRow) */
-        let supNote = '', supSt = '진행';
+        let supNote = '', supSt = '진행', supDue = '';
         try {
             const ED = global.DYEDU, w = ED && ED.workerOf ? ED.workerOf('w_' + p.uid) : null;
             if (w && ED.statusRow) {
                 const r = ED.statusRow(w, DYV2.today());
-                supNote = r.done + '/' + r.need + 'h 인정'; supSt = r.complete ? '완료' : '진행';
+                /* 지정일이 없으면 판정하지 않는다(이수현황과 같은 판정 — r.assessable) */
+                if (!r.assessable) { supNote = '지정일 미등록 — 판정 불가'; supSt = '판정 불가'; }
+                else { supNote = r.done + '/' + r.need + 'h 인정'; supSt = r.complete ? '완료' : '진행'; supDue = (r.cycle && r.cycle.end) || ''; }
             }
         } catch (e) {}
         const lawSupCard =
@@ -523,7 +524,7 @@
                 lawRow({ name: '작업장 정리정돈·통로 확보 확인·감독',        basis: '시행령 §15 4호', cycle: '수시', st: '진행', href: 'fac-list.html' }) +
                 lawRow({ name: '부서 위험성평가 참여 — 유해·위험요인 파악·개선', basis: '산안법 §36 · 시행령 §15', cycle: '정기 연 1회 + 수시',
                          st: ri.thisYear ? '진행' : '예정', href: 'rsk-occ.html', note: rskNote(ri) }) +
-                lawRow({ name: '관리감독자 본인 정기교육 이수 (연 16h)',      basis: '산안법 §29 · 시행규칙 별표4', cycle: '연간', st: supSt, href: 'edu-sup.html', due: '2026-12-31', note: supNote }) +
+                lawRow({ name: '관리감독자 본인 정기교육 이수 (16h)',      basis: '산안법 §29 · 시행규칙 별표4', cycle: '지정일부터 12개월(2027년부터 해마다)', st: supSt, href: 'edu-sup.html', due: supDue, note: supNote }) +
               '</div>' +
             '</div>';
 
@@ -611,7 +612,7 @@
         try {
             const ED = global.DYEDU;
             const ws = ED && ED.workers ? ED.workers().filter(w => w.deptId === p.deptId) : [];
-            const rows = ws.map(w => ({ w: w, r: ED.statusRow(w, DYV2.today()) })).filter(x => x.r && x.r.need);
+            const rows = ws.map(w => ({ w: w, r: ED.statusRow(w, DYV2.today()) })).filter(x => x.r && x.r.need && x.r.assessable);
             rows.forEach(x => { needSum += x.r.need; });
             eduRows = rows.slice(0, 5).map(x => {
                 const pct = Math.min(100, Math.round(x.r.done / x.r.need * 100));

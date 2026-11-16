@@ -62,7 +62,19 @@
     }
     /* 독촉 받는 사람 — 부서 안전보건 담당자 → 없으면 부서장 대체(DYADM.contactText 단일 출처) */
     function contactOf(deptId) {
-        return (global.DYADM && global.DYADM.contactText) ? global.DYADM.contactText(deptId) : '부서 담당자';
+        var D = global.DYADM;
+        if (!D || !D.deptContacts) return '부서 담당자';
+        var c = D.deptContacts(deptId), ppl = recipientsOf(deptId);
+        /* 보내는 사람 자신은 받는 사람에서 뺀다(자기 자신에게는 보내지 않는다) */
+        if (ppl.length === c.people.length) return D.contactText(deptId);
+        if (!ppl.length) return '받는 사람 없음(보내는 사람 본인만 지정됨)';
+        return ppl.map(function (x) { return x.name; }).join('·') + '(' + c.label + ')';
+    }
+    function recipientsOf(deptId) {
+        var D = global.DYADM, R = global.DYROLE;
+        if (!D || !D.deptContacts) return [];
+        var me = R && R.current ? (R.current() || {}).uid : '';
+        return D.deptContacts(deptId).people.filter(function (x) { return x && x.uid && x.uid !== me; });
     }
     /* 모집단 판정 — 요약·상세가 반드시 같은 사람 집합을 본다 (단일 출처) */
     function inPopulation(w) {
@@ -343,9 +355,18 @@
         });
         Object.keys(byDept).forEach(function (dId) {
             E().addReminder({ by: actorLabel(), deptId: dId, workerIds: byDept[dId], memo: memo || '미이수 안전보건교육 이수 요청' });
+            /* 헤더 알림 — 그 부서 담당자(없으면 부서장)에게(확정본 §2-1 ⑦ · ES-14) */
+            var to = recipientsOf(dId).map(function (x) { return x.uid; });
+            if (to.length && global.DYLayout && global.DYLayout.ntfPush) {
+                try {
+                    global.DYLayout.ntfPush({ cat: 'compliance', catLabel: '이행', toUids: to,
+                        title: '안전보건교육 미이수 독촉 — ' + E().deptName(dId) + ' ' + byDept[dId].length + '명 · ' + (memo || '미이수 안전보건교육 이수 요청'),
+                        href: 'edu-status.html?dept=' + encodeURIComponent(dId), work: 'my-work.html', basis: 'osh-29' });
+                } catch (e) {}
+            }
         });
         V().closeModal();
-        toast(Object.keys(byDept).length + '개 부서, ' + ids.length + '명 독촉 알림 기록 완료 (실제 문자·메일 미발송)');
+        toast(Object.keys(byDept).length + '개 부서, ' + ids.length + '명 독촉 — 받는 사람 알림함에 남겼습니다 (문자·메일은 외부 채널 연계 후)');
         state.checked = {};
         render();
     }

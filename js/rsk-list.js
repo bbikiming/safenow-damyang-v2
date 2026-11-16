@@ -1000,8 +1000,9 @@
             '<div class="mw-rpt-step"><span class="mw-rpt-no">2</span>' +
                 '<div style="flex:1;min-width:0;"><b>작성본 제출</b>' +
                     (picked ? '<ul class="mw-rpt-list">' + picked + '</ul>' : '') +
-                    V().uploadDrop('<b>작성한 설문조사표</b> <span style="font-size:var(--fs-12);color:var(--text-gray);">클릭 또는 끌어놓기</span>',
-                        null, { pick: 'RSKLIST.onPickMySubmit', hint: true, style: 'padding:12px;' }) +
+                    /* 제출본은 한 개만 받는다 — 같은 칸, 안내만 «1개»(CLAUDE.md §2) */
+                    String(V().uploadDrop('<b>작성한 설문조사표</b> <span style="font-size:var(--fs-12);color:var(--text-gray);">클릭 또는 끌어놓기</span>',
+                        null, { pick: 'RSKLIST.onPickMySubmit', hint: true, style: 'padding:12px;' })).replace(/(<b>최대<\/b> )\d+개/, function (m, p) { return p + '1개'; }) +
                     (dp.reportFile ? '<p class="file-hint">현재 제출본 <b>' + esc(dp.reportFile) + '</b>' +
                         (dp.reportAt ? ' (' + esc(dp.reportAt) + (dp.reportBy ? ' · ' + esc(dp.reportBy) : '') + ')' : '') +
                         ' — 새 파일을 올리면 교체됩니다.</p>' : '') +
@@ -1083,7 +1084,9 @@
                     : '<span class="rl-ro-none">미제출</span>' + surveyLateChip(a, dp)) + '</td>' +
                 '<td>' + (c.total ? c.done + ' / ' + c.total : '-') + '</td>' +
                 '<td>' + esc(dp.dueDate || '-') + '</td>' +
-                '<td><span class="chip-status ' + V().toneOf(lbl) + ' chip-sm">' + lbl + '</span></td>' +
+                '<td><span class="chip-status ' + V().toneOf(lbl) + ' chip-sm">' + lbl + '</span>' +
+                    /* 재촉한 쪽(과장·팀장)이 보는 조회 표에도 횟수를 단다(확정본 §9-1 D-2) */
+                    ((dp.inputReminds || []).length && !dp.inputDone ? '<div style="font-size:var(--fs-12);color:var(--text-gray);">재촉 ' + dp.inputReminds.length + '회</div>' : '') + '</td>' +
                 '<td style="text-align:center;">' + (c.total
                     ? '<button type="button" class="btn btn-outline btn-sm" onclick="RSKLIST.openDept(\'' + esc(dp.deptId) + '\')">상세</button>'
                     : '') + inputRemindBtn(a, dp) + '</td>' +
@@ -1129,7 +1132,7 @@
         var a = current(); if (!a) return;
         var dp = (a.depts || []).filter(function (x) { return x.deptId === deptId; })[0];
         if (!dp || !D().inputOpen(a.id, deptId)) { toast('입력 중인 부서가 아닙니다 — 입력 완료 전 부서만 재촉합니다.'); return; }
-        if (!canRemindInput(deptId)) { toast(inScopeDept(deptId) && canRemindDept(deptId) ? '자기 부서는 재촉하지 않습니다 — 작성표에서 바로 입력하세요.' : REMIND_DENY); return; }
+        if (!canRemindInput(deptId)) { toast(remindDenyFor(deptId)); return; }
         var n = (dp.inputReminds || []).length;
         V().openModal(esc(D().deptName(deptId)) + ' — 조치 입력 재촉',
             '<p style="font-size:var(--fs-13);line-height:1.6;">조치 요청을 받고 아직 <b>[입력 완료]</b>를 누르지 않은 부서에 작성표 입력을 재촉합니다.</p>' +
@@ -1796,7 +1799,7 @@
         var rows = items.map(function (h) {
             return '<div class="rl-hist-row">' +
                 '<span class="rl-hist-at">' + esc(h.at || '') + '</span>' +
-                '<span class="rl-hist-type ' + (h.type || '') + '">' + esc(LABELS[h.type] || h.type || '기타') + '</span>' +
+                '<span class="rl-hist-type ' + (h.type || '') + '">' + esc(h.type === 'REOPEN' && /입력 완료 취소/.test(h.memo || '') ? '입력 완료 취소' : (LABELS[h.type] || h.type || '기타')) + '</span>' +
                 '<span class="rl-hist-body">' + esc(h.memo || '') +
                     (h.by ? '<span class="rl-hist-by">— ' + esc(h.by) + '</span>' : '') +
                 '</span>' +
@@ -1918,6 +1921,9 @@
         if (!ids.length) { toast('조치를 요청할 부서를 1곳 이상 고르세요.'); return; }
         var noDue = ids.filter(function (id) { var dp = (a.depts || []).filter(function (x) { return x.deptId === id; })[0]; return !dp || !dp.dueDate; });
         if (noDue.length) { toast('조치기한이 비어 있는 부서가 있습니다 (' + noDue.length + '개).'); return; }
+        /* 보고서 등록 뒤 날짜가 지나 기한이 지난 부서에는 요청을 보내지 않는다(확정본 §1-2 ⑥ «오늘 이후») */
+        var pastDue = ids.filter(function (id) { var dp = (a.depts || []).filter(function (x) { return x.deptId === id; })[0]; return dp && pastDate(dp.dueDate); });
+        if (pastDue.length) { toast('조치기한이 지난 부서가 있습니다 (' + pastDue.length + '개) — 기한을 오늘 이후로 고친 뒤 보냅니다.'); return; }
         if (!global.RSKREQ) { toast('공문 기안 모듈을 불러오지 못했습니다.'); return; }
         RSKREQ.open('A|' + a.id);
     }
@@ -1987,7 +1993,10 @@
                         ? { ok: true } : { ok: false, why: '조치기한이 없거나 지난 부서가 있습니다.' };
                 }
                 if (stageOf(t.a) !== 'REVIEW') return { ok: false, why: '조치 요청 공문은 보고서 등록 뒤 한 번 보냅니다.' };
-                return reqDeptIds(t).length ? { ok: true } : { ok: false, why: '조치를 요청할 부서가 없습니다.' };
+                var ai = reqDeptIds(t);
+                if (!ai.length) return { ok: false, why: '조치를 요청할 부서가 없습니다.' };
+                return ai.every(function (id) { var dp = (t.a.depts || []).filter(function (x) { return x.deptId === id; })[0]; return dp && dp.dueDate && !pastDate(dp.dueDate); })
+                    ? { ok: true } : { ok: false, why: '조치기한이 없거나 지난 부서가 있습니다 — 기한을 오늘 이후로 고친 뒤 보냅니다.' };
             },
             chips: function (t) {
                 var n = reqDeptIds(t).length, y = t.a.year;
@@ -2047,7 +2056,7 @@
                     D().sendSurveyRequest(t.a.id, doc, by);
                     ids.forEach(function (id) {
                         if (global.DYLayout && DYLayout.ntfPush) DYLayout.ntfPush({
-                            cat: 'risk', catLabel: '위험성평가', toDept: id, toTier: ['staff', 'super'], basis: 'osh-36',
+                            cat: 'risk', catLabel: '위험성평가', toUids: contactUids(id), basis: 'osh-36',
                             title: y + '년 정기 위험성평가 — 유해위험요인 설문조사표 제출 요청(기한 ' + (t.a.surveyDue || '-') + ')',
                             href: 'rsk-list.html?year=' + y, work: 'my-work.html?cat=risk'
                         });
@@ -2058,18 +2067,18 @@
                     if (rx && rx.error) { toast(rx.error); return; }
                     ids.forEach(function (id) {
                         if (global.DYLayout && DYLayout.ntfPush) DYLayout.ntfPush({
-                            cat: 'risk', catLabel: '위험성평가', toDept: id, toTier: ['staff', 'super'], basis: 'osh-36',
+                            cat: 'risk', catLabel: '위험성평가', toUids: contactUids(id), basis: 'osh-36',
                             title: y + '년 정기 위험성평가 — 개선조치 요청(추가): 보고서를 보고 유해위험요인·조치 내용을 입력하세요(기한 ' + (dues[id] || '-') + ')',
                             href: 'rsk-list.html?year=' + y + '&dept=' + id, work: 'my-work.html?cat=risk'
                         });
                     });
                     state.more = null;
                 } else {
-                    D().requestAction(t.a.id, ids, doc, by);
+                    if (!D().requestAction(t.a.id, ids, doc, by)) { toast('조치기한이 없거나 지난 부서가 있어 보내지 않았습니다.'); return; }
                     ids.forEach(function (id) {
                         var dp = (t.a.depts || []).filter(function (x) { return x.deptId === id; })[0] || {};
                         if (global.DYLayout && DYLayout.ntfPush) DYLayout.ntfPush({
-                            cat: 'risk', catLabel: '위험성평가', toDept: id, toTier: ['staff', 'super'], basis: 'osh-36',
+                            cat: 'risk', catLabel: '위험성평가', toUids: contactUids(id), basis: 'osh-36',
                             title: y + '년 정기 위험성평가 — 개선조치 요청: 보고서를 보고 유해위험요인·조치 내용을 입력하세요(기한 ' + (dp.dueDate || '-') + ')',
                             href: 'rsk-list.html?year=' + y + '&dept=' + id, work: 'my-work.html?cat=risk'
                         });
@@ -2135,7 +2144,7 @@
                주관부서에게만 맞는 말이라 부서 담당자에게는 내지 않는다. */
             (canManage()
                 ? '<p class="file-hint"><b>담당자는 원칙적으로 해당 부서가 정합니다.</b> ' +
-                    '비워 두면 전달 후 그 부서가 지정합니다 — 이미 아는 경우에만 여기서 미리 적어 주세요.</p>'
+                    '비워 두면 입력 완료 뒤 그 부서가 개선조치 카드에서 지정합니다 — 이미 아는 경우에만 여기서 미리 적어 주세요.</p>'
                 : '<p class="file-hint">우리 부서 구성원 중에서 담당자를 고릅니다. 알림은 [입력 완료]를 누를 때 담당자에게 갑니다.</p>') +
             '<div class="rl-modal-row" style="margin-top:10px;">' +
                 '<label class="form-label" for="rl-owner-name">담당자</label>' +
@@ -2448,8 +2457,21 @@
     }
     /* 재촉 권한 — DYROLE.canRemind 단일 출처(총괄 책임자 불가 · 주관부서는 전 부서 · 그 밖은 자기 부서).
        화면(부서 상세 [재촉])과 저장(remindDept·remindOne)이 같은 함수를 본다. */
+    /* 자기 부서 담당자에게 내는 거절 문구 — «그 부서가 합니다»로 뭉뚱그리면 받는 쪽에게 거짓말이 된다 */
+    function remindDenyFor(deptId) {
+        var p = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
+        return (p && p.tier === 'staff' && p.deptId === deptId)
+            ? '우리 부서 건은 재촉하지 않습니다 — 재촉은 재난안전과와 부서 과장·팀장이 보냅니다.' : REMIND_DENY;
+    }
     function canRemindDept(deptId) {
         return !global.DYROLE || !global.DYROLE.canRemind || global.DYROLE.canRemind(deptId);
+    }
+    /* 조치기한 재촉은 사람 단위다 — 받는 사람이 조치 담당자 한 사람이라 누른 사람 본인 건만 뺀다
+       (SCR-ADMIN-002 §6 · 2026-11-10 개발 회신). 입력 재촉(canRemindInput)은 부서 단위 그대로다. */
+    function isMyImp(m) {
+        var p = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
+        if (!p || !m || !m.assigned_to) return false;
+        return String(m.assigned_to).split('/').pop().trim() === p.name && m.dept_id === p.deptId;
     }
     /* 거절 문구는 DYROLE 단일 출처 — 독촉 경로(이행점검·경영방침·교육·위험성평가)가 같은 말을 한다 */
     var REMIND_DENY = (global.DYROLE && global.DYROLE.remindDenyNote) ? global.DYROLE.remindDenyNote('재촉')
@@ -2457,6 +2479,13 @@
     /* 재촉 받는 사람 — 조치 담당자가 정해진 건은 그 담당자, 담당자 미정 건은 부서 단위 수신자
        (부서 안전보건 담당자 → 부서장 대체 — DYADM.contactText 단일 출처, 기획확인 4차 C-32).
        담당자를 비운 채 전달되는 것이 정상이라(SCR-RISK-001 §4-5) 미정 건이 0명으로 사라지면 안 된다. */
+    /* 부서 단위 알림의 받는 사람 — 부서 안전보건 담당자 → 없으면 부서장(DYADM.deptContacts 단일 출처,
+       개발 확인 답신 1-1·1-2). 요청 공문 3종(설문·조치·추가)이 같은 순서를 쓴다. */
+    function contactUids(deptId) {
+        var A = global.DYADM;
+        if (!A || !A.deptContacts) return [];
+        return A.deptContacts(deptId).people.map(function (x) { return x && x.uid; }).filter(Boolean);
+    }
     function remindWho(ms, deptId) {
         var unassigned = ms.filter(function (m) { return !String(m.assigned_to || '').trim(); }).length;
         var dept = global.DYADM && global.DYADM.contactText ? global.DYADM.contactText(deptId) : '부서 담당자';
@@ -2481,6 +2510,7 @@
         var m = D().improvementOf(impId); if (!m) return;
         if (!inScopeDept(m.dept_id)) { toast('소속 부서 소관이 아닙니다.'); return; }
         if (!canRemindDept(m.dept_id)) { toast(REMIND_DENY); return; }
+        if (isMyImp(m)) { toast('본인이 담당자인 건은 재촉하지 않습니다.'); return; }
         /* 카드가 [재촉]을 내는 조건과 같다 — 기한초과 건만 */
         if (!D().isOverdue(m)) { toast('기한초과 건이 아닙니다.'); return; }
         D().pushImpHistory(m.id, { type: 'REMIND', by: remindBy(), memo: '기한초과 재촉 (기한 ' + (m.due || m.due_date) + ')' });

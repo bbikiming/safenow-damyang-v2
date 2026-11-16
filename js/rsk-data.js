@@ -2296,6 +2296,8 @@
     function requestAction(aid, deptIds, doc, by) {
         var a = assessmentOf(aid); if (!a || !a.review || a.review.stage !== 'REVIEW') return null;
         var sel = {}; (deptIds || []).forEach(function (id) { sel[id] = true; });
+        /* 고른 부서의 조치기한은 오늘 이후여야 한다 — 화면과 같은 판정을 저장에서도 본다 */
+        if ((a.depts || []).some(function (dp) { return sel[dp.deptId] && (!dp.dueDate || dp.dueDate < today()); })) return null;
         var asked = 0, none = 0;
         (a.depts || []).forEach(function (dp) {
             dp.deliveredAt = today();
@@ -2386,15 +2388,27 @@
        사람을 찾지 못하면(동명이인 등) 보내지 않는다 — 이름으로 엉뚱한 사람에게 보내지 않는다(ownerUid).
        입력 완료를 취소했다가 다시 완료하면 개선조치가 새로 생기므로 그때 다시 보낸다. */
     function notifyRowOwners(a, deptId) {
+        var ms = improvementsFor(a.id, deptId);
+        ms.forEach(function (m) { if (m.status !== 'DONE') notifyOwner(m); });
+        /* 완료 체크된 행은 완료 상태로 생긴다 — 그 건도 «완료 확인 요청» 대상이다(확정본 §1-6) */
+        var done = ms.filter(function (m) { return m.status === 'DONE'; });
+        if (done.length) notify({ toDept: OWNER, toTier: ['staff'], basis: 'osh-36',
+            title: a.year + '년 정기 위험성평가 — ' + deptName(deptId) + ' 개선조치 완료 확인 요청 — ' +
+                ((done[0].hazard && done[0].hazard.name) || '') + (done.length > 1 ? ' 외 ' + (done.length - 1) + '건' : ''),
+            href: 'rsk-list.html?year=' + a.year + '&confirm=1', work: 'my-work.html' });
+    }
+    /* «개선조치 담당자 지정» 알림 — 지정·변경 즉시 그 사람에게(본인 지정 제외, SCR-ADMIN-002 §4-1).
+       작성표 행(입력 완료 순간) · 조치 카드 [담당자 지정] · 수시 등록이 같은 함수를 부른다. */
+    function notifyOwner(m) {
+        if (!m) return;
         var me = global.DYROLE && global.DYROLE.current ? (global.DYROLE.current() || {}).uid : '';
-        improvementsFor(a.id, deptId).forEach(function (m) {
-            var uid = ownerUid(m);
-            if (!uid || uid === me) return;
-            notify({ toUids: [uid], basis: 'osh-36',
-                title: a.year + '년 정기 위험성평가 — 개선조치 담당자 지정: ' + ((m.hazard && m.hazard.name) || '') +
-                    ' (조치기한 ' + (m.due || m.due_date || '-') + ')',
-                href: 'rsk-list.html?year=' + a.year + '&dept=' + deptId, work: 'my-work.html?cat=improve' });
-        });
+        var uid = ownerUid(m);
+        if (!uid || uid === me) return;
+        var a = m.assessment_id ? assessmentOf(m.assessment_id) : null;
+        notify({ toUids: [uid], basis: 'osh-36',
+            title: (a ? a.year + '년 정기 위험성평가' : '수시 위험성평가') + ' — 개선조치 담당자 지정: ' + ((m.hazard && m.hazard.name) || '') +
+                ' (조치기한 ' + (m.due || m.due_date || '-') + ')',
+            href: a ? 'rsk-list.html?year=' + a.year + '&dept=' + m.dept_id : 'rsk-occ.html', work: 'my-work.html?cat=improve' });
     }
     function undoInputDone(aid, deptId, by) {
         var a = assessmentOf(aid), dp = deptOf(a, deptId);
@@ -2949,7 +2963,9 @@
         /* 반려는 그 조치 담당자에게 사유와 함께 — 담당자를 찾지 못하면(미지정·동명이인) 그 부서 담당자에게 */
         var ra = assessmentOf(m.assessment_id) || {};
         var uid = ownerUid(m);
-        notify(Object.assign(uid ? { toUids: [uid] } : { toDept: m.dept_id, toTier: ['staff'] }, {
+        /* 담당자를 못 찾으면 부서 안전보건 담당자 → 부서장(재촉과 같은 순서, 답신 1-2) */
+        var fb = (global.DYADM && global.DYADM.deptContacts) ? global.DYADM.deptContacts(m.dept_id).people.map(function (x) { return x && x.uid; }).filter(Boolean) : null;
+        notify(Object.assign(uid ? { toUids: [uid] } : (fb ? { toUids: fb } : { toDept: m.dept_id, toTier: ['staff'] }), {
             basis: 'osh-36',
             title: (ra.year ? ra.year + '년 정기 위험성평가 — ' : '') + '개선조치 확인 반려 — ' +
                 ((m.hazard && m.hazard.name) || '') + ' (사유: ' + r + ')',
@@ -3188,6 +3204,8 @@
                 memo: '위험성 감소대책 ' + hz.length + '건 등록 — 개선조치로 전환' });
         }
         save();
+        /* 등록 때 정한 담당자에게 «개선조치 담당자 지정» 알림(본인 지정 제외) */
+        occImprovements(it.id).forEach(notifyOwner);
         return it;
     }
     /* 이 수시평가에서 나온 개선조치 (진행률 표시·링크용) */
@@ -3323,7 +3341,7 @@
            선택)는 그대로 남는다 — 증빙 요건을 낮추는 것이 아니라 시연 수단이다. */
         demoShot: function (kind) { return T[(kind === 'before' ? 'b' : 'a') + '2']; },
         /* 이 세션에 올린 파일 내려받기 (양식 받기 실습) */
-        stashFile: stashFile, hasFile: hasFile, downloadFile: downloadFile, remindNotify: remindNotify,
+        stashFile: stashFile, hasFile: hasFile, downloadFile: downloadFile, remindNotify: remindNotify, notifyOwner: notifyOwner,
         assessments: assessments, assessmentOf: assessmentOf, assessmentYears: assessmentYears,
         addRegular: addRegular, addAssessment: addAssessment, saveAssessment: saveAssessment,
         assessmentProgress: assessmentProgress, deptImpCount: deptImpCount,

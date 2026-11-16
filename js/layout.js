@@ -419,17 +419,9 @@
         { id: 'n5', cat: 'risk',       catLabel: '위험성평가', time: '11-12 14:30', toDept: 'water',
           title: '개선조치 기한 초과 재촉 — 반응조 상부 점검발판 추락 (기한 11-10)', href: 'my-work.html?dept=water&cat=improve',
           work: 'my-work.html?dept=water&cat=improve', basis: 'cse-4-3' },
-        /* 11월 정기교육 등록부 — 아직 올리지 않은 부서에만(교육 데이터의 미등록 부서와 같다) */
-        { id: 'n7w', cat: 'compliance', catLabel: '이행', time: '11-11 17:30', toDept: 'water',
-          title: '11월 정기교육 참석자 등록부 등록 요청 — 기한 11-18', href: 'edu-reg-detail.html?id=C-M11', work: 'my-work.html', basis: 'osh-29' },
-        { id: 'n7f', cat: 'compliance', catLabel: '이행', time: '11-11 17:30', toDept: 'facility',
-          title: '11월 정기교육 참석자 등록부 등록 요청 — 기한 11-18', href: 'edu-reg-detail.html?id=C-M11', work: 'my-work.html', basis: 'osh-29' },
-        { id: 'n7t', cat: 'compliance', catLabel: '이행', time: '11-11 17:30', toDept: 'town_damyang',
-          title: '11월 정기교육 참석자 등록부 등록 요청 — 기한 11-18', href: 'edu-reg-detail.html?id=C-M11', work: 'my-work.html', basis: 'osh-29' },
-        { id: 'n7c', cat: 'compliance', catLabel: '이행', time: '11-11 17:30', toDept: 'culture',
-          title: '11월 정기교육 참석자 등록부 등록 요청 — 기한 11-18', href: 'edu-reg-detail.html?id=C-M11', work: 'my-work.html', basis: 'osh-29' },
-        { id: 'n7h', cat: 'compliance', catLabel: '이행', time: '11-11 17:30', toDept: 'health',
-          title: '11월 정기교육 참석자 등록부 등록 요청 — 기한 11-18', href: 'edu-reg-detail.html?id=C-M11', work: 'my-work.html', basis: 'osh-29' },
+        /* n7* «11월 정기교육 참석자 등록부 등록 요청» 고정 예시는 2026-11-16 에 걷었다 — 확정본의 교육 알림은
+           예정 안내·독촉뿐이고 등록부는 내 할일 카드가 알린다(답신 3-1 «알림을 새로 만들지 않는다»).
+           예시로 두면 개발이 없는 알림을 만든다. */
         { id: 'n6', cat: 'risk',       catLabel: '위험성평가', time: '11-11 11:00', toDept: 'facility',
           title: '담양종합체육관 고소작업대 수시평가 — 개선조치 담당자를 지정하세요', href: 'rsk-occ.html',
           work: 'my-work.html?cat=improve', basis: 'cse-4-3' },
@@ -437,7 +429,7 @@
           title: '개선조치 담당자로 지정되었습니다 — 야간 수집작업 차량 접촉 외 (수시평가)', href: 'my-work.html?cat=improve',
           work: 'my-work.html?cat=improve', basis: 'osh-36' },
     ];
-    const NTF_DEFAULT_UNREAD = ['n2', 'n5', 'n7w', 'n7f', 'n7t', 'n7c', 'n7h', 'n6', 'n8'];
+    const NTF_DEFAULT_UNREAD = ['n2', 'n5', 'n6', 'n8'];
     /* ── 업무가 만든 알림 (2026-11-12) ──────────────────────────────────────
      * 위 NTF_ITEMS 는 고정 예시다. 이행점검 제출·반려처럼 **업무 화면에서 실제로 일어난 일**은
      * 여기 쌓고(ntfPush) 받는 사람(부서 · 등급)에게만 보인다. 새로 쌓인 알림은 안 읽음으로 시작한다.

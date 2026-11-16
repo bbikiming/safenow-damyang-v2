@@ -451,6 +451,8 @@
         var r = D().amendImprovement(AMEND, patch, why, by);
         AMEND = null;
         if (!r) { V().toast('변경하지 못했습니다.'); return; }
+        /* 담당자를 정하거나 바꾸면 그 사람에게 알린다(본인 지정 제외 — notifyOwner 가 거른다) */
+        if (owner && owner !== String(mm.assigned_to || '').trim() && D().notifyOwner) D().notifyOwner(r);
         if (extended && global.DYLayout && global.DYLayout.ntfPush) {
             var aa = D().assessmentOf(r.assessment_id) || {};
             global.DYLayout.ntfPush({

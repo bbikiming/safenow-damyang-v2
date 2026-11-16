@@ -154,7 +154,8 @@
         pubType: '', pubStatus: 'open', /* 발행 업무 필터 (open=미시행+진행) */
         /* 개선조치 완료 모달 입력 보존 — cmplPhotos 는 썸네일을 가진 파일 객체 배열 */
         cmplId: null, cmplDesc: '', cmplPhoto: '', cmplPhotos: [], cmplSign: '', cmplDate: '',
-        syncedAt: '2026-11-13 09:15'
+        /* 기준일(DYV2.today)에서 파생 — 박아 두면 날짜가 지나면 «며칠 전 동기화»가 된다(CLAUDE.md §11) */
+        syncedAt: ((global.DYV2 && global.DYV2.today) ? global.DYV2.today() : '') + ' 09:00'
     };
 
     /* 개선조치가 생긴 평가로 가는 주소 — 연도·부서를 함께 싣는다(운영 E08·E13, 2026-11-04).
@@ -948,7 +949,8 @@
             /* **담당자는 그 부서가 정한다**(발주처 2026-08-06) — 재난안전과는 부서까지만
                정해 내려보내고, 누가 할지는 부서가 안다. 미지정이면 지정부터 권한다. */
             var m0 = D().improvementOf(it.impId);
-            var ownerBtn = (m0 && global.IMPCARD && IMPCARD.amendOpen)
+            /* 완료 처리한 건(반려돼 재제출 대기 중인 건 포함)은 담당자·기한을 바꾸지 않는다 — 누르면 거절하는 버튼을 내지 않는다 */
+            var ownerBtn = (m0 && m0.status !== 'DONE' && global.IMPCARD && IMPCARD.amendOpen)
                 ? '<button type="button" class="btn btn-outline btn-sm" onclick="IMPCARD.amendOpen(\'' + it.impId + '\')">' +
                   (IMPCARD.amendLabel ? IMPCARD.amendLabel(m0) : (m0.assigned_to ? '담당자 변경' : '담당자 지정')) + '</button> '
                 : '';

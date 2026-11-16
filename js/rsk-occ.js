@@ -206,6 +206,9 @@
             return;
         }
         if (!D().isOverdue(m)) { toast('기한초과 건이 아닙니다.'); return; }
+        /* 사람 단위 — 누른 사람이 그 건의 담당자면 자기에게 보내는 재촉이다(SCR-ADMIN-002 §6) */
+        var me = R() && R().current ? R().current() : null;
+        if (me && m.assigned_to && m.dept_id === me.deptId && String(m.assigned_to).split('/').pop().trim() === me.name) { toast('본인이 담당자인 건은 재촉하지 않습니다.'); return; }
         var by = remindBy();
         D().pushImpHistory(m.id, { type: 'REMIND', by: by, memo: '기한초과 재촉 (기한 ' + (m.due || m.due_date) + ')' });
         D().remindNotify(m, by);

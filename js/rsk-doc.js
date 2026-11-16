@@ -212,8 +212,10 @@
      * 개선조치가 1건이라도 있는 평가(정상 갈래)는 한 글자도 바꾸지 않았다. 결재 회신 수동 기록도 그대로다(답신 1-3). */
     function noAct(a) { return !!(a && D().noActionClosed && D().noActionClosed(a)); }
     function noActSentence(a) {
-        var r = (a && a.noAction && a.noAction.reason) || '요청받은 부서 모두 조치할 것 없음';
-        return '용역 보고서 검토 결과 개선이 필요한 부서가 없어 조치 요청 없이 평가를 마칩니다(종결 사유: ' + r + ').';
+        /* 평가 종결(조치 요청 전) — 답신 2-7 의 문장 그대로 */
+        if (a && a.noAction) return '용역 보고서 검토 결과 개선이 필요한 부서가 없어 조치 요청 없이 평가를 마칩니다(종결 사유: ' + (a.noAction.reason || '') + ').';
+        /* 조치 요청을 보냈고 요청받은 부서가 모두 0건으로 입력 완료한 경우 — «조치 요청 없이»는 사실과 다르다 */
+        return '조치 요청 공문을 받은 부서가 모두 조치할 것이 없다고 입력해 개선조치 없이 평가를 마칩니다.';
     }
     function noActBasisHtml(src) {
         var keys = (src && src.basis) || [];

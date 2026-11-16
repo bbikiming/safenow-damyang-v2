@@ -181,6 +181,8 @@
         if (!E().canRegister()) { deny(E().defaultDeptId()); return; }
         /* 완료 교육의 정정 등록부는 언제든, 접수 중 교육은 끝난 뒤에만 받는다 */
         if (c && c.status === 'OPEN' && !E().enrollOpen(c)) { toast('교육이 끝난 뒤(' + E().lastSessionDate(c) + '부터) 참석자 등록부를 올립니다.'); return; }
+        /* 실시 결과 공문을 온나라로 보낸 뒤에는 등록부를 받지 않는다 — 버튼만 숨기면 직접 호출로 뚫린다 */
+        if (lockOf(state.courseId)) { toast(lockNote()); return; }
         /* 기본 부서는 로그인한 사람의 소속 — 목록 첫 부서를 기본으로 두면 남의 부서 명의로 저장된다 */
         G = { deptId: E().defaultDeptId(), workerIds: {}, signFile: '', actualHours: c ? c.hours : '', hoursBy: {}, hoursOpen: false };
         renderApply();
@@ -252,6 +254,7 @@
         if (!G.signFile) { toast('서명부 스캔을 올려 주세요 (필수).'); return; }
         var c = E().courseOf(state.courseId);
         if (c && c.status === 'OPEN' && !E().enrollOpen(c)) { toast('교육이 끝난 뒤 참석자 등록부를 올립니다.'); return; }
+        if (lockOf(state.courseId)) { V().closeModal(); toast(lockNote()); return; }
         captureApply();
         var hp = FORM().hoursPayload(G, ids, c.hours);
         if (!hp.ok) { toast(hp.why); return; }
@@ -388,6 +391,9 @@
     function lockOf(courseId) {
         return global.EDUDOC && global.EDUDOC.lockOf ? global.EDUDOC.lockOf(courseId) : null;
     }
+    function lockNote() {
+        return '공문이 ' + lockOf(state.courseId) + ' 상태라 등록부를 더 받지 않습니다 — 온나라에서 반려·반송되면 다시 열립니다.';
+    }
     /* 등록 취소·정정 주체 — 그 부서 담당자(주관부서 담당자는 전 부서). 다만 일괄 등록 줄은
        올린 쪽(재난안전과)만 고친다 — 부서가 지우면 재난안전과가 받은 서명부와 기록이 갈린다 */
     function canCancel(e) {
@@ -451,8 +457,8 @@
         var totalCnt = enrolls.reduce(function (n, e) { return n + (e.workerIds || []).length; }, 0);
         V().openModal('교육 종료 처리',
             '<p style="font-size:var(--fs-13);"><b>' + esc(c.desc) + '</b><br>등록 <b>' + enrolls.length + '개 부서 · ' + totalCnt + '명</b>에게 등록부별 실제 참석시간을 카운트합니다.</p>' +
-            (early ? '<div class="check-notice" style="margin-top:8px;">아직 등록 기한(' + esc(due) + ') 전입니다. 지금 종료하면 그 뒤에 올리려던 부서는 이 교육 이수가 0 이 됩니다.</div>' : '') +
-            '<p style="font-size:var(--fs-12);color:var(--text-gray);margin-top:6px;">종료하면 등록부를 더 받지 않습니다. 종료한 뒤 등록부가 잘못된 것을 알면 그 부서 줄의 [이수 기록 정정]으로 이수시간을 빼고 [＋ 등록부 추가]로 다시 올립니다 — 실시 결과 공문을 온나라로 보내기 전까지만 됩니다.</p>',
+            (early ? '<div class="check-notice" style="margin-top:8px;">아직 등록 기한(' + esc(due) + ') 전입니다. 종료한 뒤에 내는 부서의 등록부는 [＋ 등록부 추가]로 받습니다(실시 결과 공문을 보내기 전까지).</div>' : '') +
+            '<p style="font-size:var(--fs-12);color:var(--text-gray);margin-top:6px;">종료한 뒤에 늦게 내는 등록부는 [＋ 등록부 추가]로 받습니다. 등록부가 잘못된 것을 알면 그 부서 줄의 [이수 기록 정정]으로 이수시간을 빼고 [＋ 등록부 추가]로 다시 올립니다 — 실시 결과 공문을 온나라로 보내기 전까지만 됩니다.</p>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="EDURD.doClose()">종료 처리</button>');
     }
@@ -460,6 +466,8 @@
         var c = E().courseOf(state.courseId); if (!c) return;
         if (!E().canActCourse(c)) { V().closeModal(); deny(E().courseDeptOf(c)); return; }
         if (c.status === 'DONE') { V().closeModal(); toast('이미 종료 처리된 교육입니다.'); return; }
+        /* 교육 전에는 종료하지 않는다 — 진입(closeCourse)과 같은 판정을 저장에서도 본다 */
+        if (!E().enrollOpen(c)) { V().closeModal(); toast('교육이 끝난 뒤 종료 처리합니다.'); return; }
         var enrolls = E().enrolls(state.courseId);
         var total = 0;
         /* 사람마다 그 사람의 실제 참석시간으로 — 공통값 + 사람별 예외(DYEDU.enrollHours) */

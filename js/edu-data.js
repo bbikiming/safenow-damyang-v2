@@ -1033,7 +1033,14 @@
         if (hi) return hi;
         if (hasEnroll(o.courseId, o.deptId)) return deptName(o.deptId) + (global.DYV2 && global.DYV2.josa ? global.DYV2.josa(deptName(o.deptId), '은', '는') : '은(는)') + ' 이미 등록된 부서입니다 — 등록 취소 후 다시 등록하세요.';
         if (c && c.status === 'OPEN' && isGroupCourse(c) && !enrollOpen(c)) return '교육이 끝난 뒤(' + lastSessionDate(c) + '부터) 참석자 등록부를 올립니다.';
+        var lk = docLock(o.courseId);
+        if (lk) return '공문이 ' + lk + ' 상태라 등록부를 더 받지 않습니다 — 온나라에서 반려·반송되면 다시 열립니다.';
         return '';
+    }
+    /* 실시 결과 공문을 온나라로 보낸 교육 — 등록부를 더 받지 않는다(별지 명단이 열 때마다 이수기록에서
+       다시 파생되므로, 보낸 뒤에 늘면 이미 보낸 공문의 명단이 바뀐다). 판정은 EDUDOC.lockOf 한 곳. */
+    function docLock(courseId) {
+        return global.EDUDOC && global.EDUDOC.lockOf ? global.EDUDOC.lockOf(courseId) : null;
     }
     function addEnroll(o) {
         var d = load();
@@ -1045,6 +1052,7 @@
         if (oc && oc.status === 'OPEN' && isGroupCourse(oc) && !enrollOpen(oc)) return false;
         /* 실제 참석시간 — 0 < h ≤ 교육 합계(공통값·사람별 모두). 화면이 검사를 빠뜨려도 여기서 막는다 */
         if (enrollHoursIssue(o)) return false;
+        if (docLock(o.courseId)) return false;
         var wids = (o.workerIds || []).slice();
         var hoursBy = null;
         Object.keys(o.hoursBy || {}).forEach(function (k) {
@@ -1208,6 +1216,9 @@
             if (c.kind !== 'REG_GROUP' && c.kind !== 'SUP_REG') return;
             /* 교육이 끝나기 전에는 할 일이 아니다 — 끝난 날 생기고 등록 기한을 단다 */
             if (!enrollOpen(c)) return;
+            /* 그 교육의 모집단이 없는 부서에는 할 일을 내지 않는다 — 등록 창이 «대상자가 없습니다»라
+               끝낼 수 없는 할 일이 된다(예정 안내 deptUpcoming 과 같은 판정) */
+            if (courseTargetDepts(c).indexOf(deptId) === -1) return;
             if (en.some(function (e) { return e.courseId === c.id && e.deptId === deptId; })) return;
             out.push({ kind: 'apply', course: c, due: enrollDue(c) });
         });
