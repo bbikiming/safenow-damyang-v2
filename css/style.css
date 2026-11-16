@@ -5154,3 +5154,5 @@ select.form-select { height: var(--ctl-lg); }
 @media (max-width: 1023px) {
   .dy-sidebar-others { display: block; margin-top: var(--sp-4); padding-top: var(--sp-2); border-top: 1px solid var(--card-line); }
 }
+/* 교육 알림 분류(2026-11-16) — 종전에는 «이행»으로 나갔다 */
+.dy-ntf-item-cat.edu { background: var(--status-success-bg); color: var(--status-success-fg); }

@@ -62,9 +62,29 @@
         if (SUP_MODE) list = list.filter(function (c) { return tabKey === 'group' ? !c.deptId : !!c.deptId; });
         return list;
     }
+    /* 집합교육 화면 상태 — 칩·필터가 같은 판정을 쓴다 */
+    function groupState(c) {
+        if (c.status === 'CANCELLED') return 'CANCELLED';
+        if (c.status === 'DONE') return 'DONE';
+        if (!E().noticeSent(c)) return 'NOTICE';
+        return E().enrollOpen(c) ? 'ENROLL' : 'UPCOMING';
+    }
+    function isOwnerViewer() {
+        var p = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
+        return !p || p.deptId === ((global.DYROLE && global.DYROLE.OWNER_DEPT) || 'safety') || p.tier === 'head';
+    }
     function applyFilter(list, tabKey) {
         return list.filter(function (c) {
-            if (state.st && c.status !== state.st) return false;
+            /* «안내 공문 전» 교육은 재난안전과에만 보인다(DYEDU.visibleCourse 한 곳) */
+            if (!E().visibleCourse(c)) return false;
+            if (state.st) {
+                if (tabKey === 'group' && groupState(c) !== state.st) return false;
+                if (tabKey === 'self') {
+                    var sent = !!E().reportedKeyOf(c.id);
+                    if (state.st === 'Q_PENDING' && (sent || !E().isFlow2(c))) return false;
+                    if (state.st === 'Q_SENT' && !sent) return false;
+                }
+            }
             if (state.year && String(c.date || '').slice(0, 4) !== state.year) return false;
             if (state.month && String(c.date || '').slice(5, 7) !== state.month) return false;
             if (tabKey === 'self' && state.dept && c.deptId !== state.dept) return false;
@@ -72,10 +92,15 @@
         });
     }
     function filterFields(all, tabKey) {
+        /* 상태는 화면에 보이는 칩과 같은 말로 거른다 — 저장값(진행 중·완료) 둘로는 «안내 공문 전»·«등록부 받는 중»을 못 거른다 */
+        var stOpts = tabKey === 'group'
+            ? [['', '상태 전체']].concat(E().isOwnerStaff() || isOwnerViewer() ? [['NOTICE', '안내 공문 전']] : [])
+                .concat([['UPCOMING', '교육 전'], ['ENROLL', '등록부 받는 중'], ['DONE', '완료'], ['CANCELLED', '취소']])
+            : [['', '상태 전체'], ['Q_PENDING', '분기 보고 전'], ['Q_SENT', '분기 보고 보냄']];
         var fields = [
-            { type: 'search', id: 'er-q', value: state.q, placeholder: '교육명·강사·장소 검색', on: "EDUR.setF('q', this.value)" },
-            { type: 'select', id: 'er-st', value: state.st, label: '진행 상태',
-              options: [['', '상태 전체'], ['OPEN', '진행 중'], ['DONE', '완료']], on: "EDUR.setF('st', this.value)" },
+            { type: 'search', id: 'er-q', value: state.q, placeholder: '제목·강사·장소 검색', on: "EDUR.setF('q', this.value)" },
+            { type: 'select', id: 'er-st', value: state.st, label: '상태',
+              options: stOpts, on: "EDUR.setF('st', this.value)" },
             { type: 'select', id: 'er-year', value: state.year, label: '연도',
               options: EDUFILTER.yearOptions(all.map(function (c) { return c.date; })), on: "EDUR.setF('year', this.value)" },
             { type: 'select', id: 'er-month', value: state.month, label: '월',
@@ -114,9 +139,11 @@
             EDUFILTER.bar(filterFields(all, 'self'), {
                 count: list.length, unit: '건', reset: 'EDUR.resetF()',
                 actions: E().canRegister()
-                    ? '<button type="button" class="btn btn-primary" onclick="EDUR.openCreate(\'self\')">＋ 자체교육 등록·진행</button>'
+                    ? '<button type="button" class="btn btn-primary" onclick="EDUR.openCreate(\'self\')">＋ 자체교육 등록</button>'
                     : '<span class="file-hint">자체교육은 각 부서 담당자가 등록합니다</span>'
             });
+        /* 분기 실시 결과 보고 띠 — 자체·기타·채용시 여섯 화면 공용(EDUDOC.quarterBar) */
+        if (global.EDUDOC && global.EDUDOC.quarterBar) head = global.EDUDOC.quarterBar() + head;
         var cards = list.length ? list.map(function (c) { return courseCard(c, 'self'); }).join('')
             : '<div class="edu-card"><div class="v2-empty">' +
                 (all.length ? '조건에 맞는 자체교육이 없습니다.' : '등록된 자체교육이 없습니다.') + '</div></div>';
@@ -124,9 +151,15 @@
     }
 
     function courseCard(c, tabKey) {
-        /* 집합교육은 «교육 전 / 등록부 받는 중 / 완료» — 등록부는 교육이 끝난 뒤 받는다(2026-11-12) */
+        /* 집합교육은 «안내 공문 전 / 교육 전 / 등록부 받는 중 / 완료 / 취소» — 안내 공문(①)을 보내야 부서에 알려진다(2026-11-16) */
         var grpOpen = tabKey === 'group' && c.status === 'OPEN';
-        var stChip = c.status === 'DONE' ? chip('완료') : grpOpen ? (E().enrollOpen(c) ? chip('등록부 받는 중', tone('진행중')) : chip('교육 전', tone('예정'))) : chip('진행중');
+        var gs = tabKey === 'group' ? groupState(c) : '';
+        var stChip = tabKey !== 'group' ? (c.status === 'DONE' ? chip('완료') : chip('진행중'))
+            : gs === 'CANCELLED' ? chip('취소', tone('반려'))
+            : gs === 'DONE' ? chip('완료')
+            : gs === 'NOTICE' ? chip('안내 공문 전', tone('대기'))
+            : gs === 'ENROLL' ? chip('등록부 받는 중', tone('진행중')) : chip('교육 전', tone('예정'));
+        if (tabKey === 'self' && global.EDUDOC && global.EDUDOC.reportChip) stChip += ' ' + global.EDUDOC.reportChip(c);
         var sessCnt = E().courseSessions(c).length;
         var enrolls = E().enrolls(c.id);
         var enrolledCnt = enrolls.reduce(function (n, e) { return n + (e.workerIds || []).length; }, 0);
@@ -136,11 +169,7 @@
         var detailHref = tabKey === 'group' ? 'edu-reg-detail.html?id=' + encodeURIComponent(c.id) : null;
         var actions = '';
         if (detailHref) {
-            /* 신청 접수 중(OPEN)인 집합교육은 목록에서도 바로 [참석자 등록부 등록] 가능 (v1.1 후속).
-               신청은 각 부서 담당자가 자기 부서 몫을 올린다 — 관리·감독 계층에는 내지 않는다 */
-            if (c.status === 'OPEN' && E().canRegister() && E().enrollOpen(c)) {
-                actions += '<button type="button" class="btn btn-outline btn-sm" data-tour="apply" onclick="EDUR.openApply(\'' + c.id + '\')">＋ 참석자 등록부 등록</button> ';
-            }
+            actions += groupActions(c, gs);
             actions += '<a class="btn btn-primary btn-sm" href="' + detailHref + '">상세 →</a> ';
         } else {
             actions = '<button type="button" class="btn btn-outline btn-sm" onclick="EDUR.viewDetail(\'' + c.id + '\')">상세</button> ';
@@ -150,7 +179,7 @@
         /* 공문 기안 — 종료 처리된 교육에만 나타난다(EDUDOC 이 판정).
            상신은 이 자리가 아니라 문서 미리보기에만 있다. */
         var docCtl = global.EDUDOC ? '<span class="edu-doc-slot">' + global.EDUDOC.control(c.id) + '</span>' : '';
-        return '<div class="edu-course-card" data-course-id="' + esc(c.id) + '">' +
+        return '<div class="edu-course-card' + (gs === 'CANCELLED' ? ' is-muted' : '') + '" data-course-id="' + esc(c.id) + '">' +
             '<div class="edu-course-head">' +
                 '<div class="edu-course-title">' + deptChip + esc(c.desc) + ' ' + stChip + '</div>' +
                 '<div class="edu-course-actions">' + docCtl + actions + '</div>' +
@@ -183,8 +212,41 @@
     }
     /* 카드 공통 [수정]·[삭제] — 등록만 있고 회수 수단이 없으면 시연을 반복할수록 데이터가 쌓인다.
        그 건을 처리할 수 있는 사람에게만 낸다(자체교육은 등록 부서, 집합교육은 재난안전과) */
+    /* 집합교육 카드 버튼 — 역할 × 상태(기획 v2 §4-7).
+     *   재난안전과 담당자: 안내 공문 전 [안내 공문 작성] · 등록부 받는 중 [출장 결과 보고서 작성] (종전 [＋ 참석자 등록부 등록] 자리 — 03:37)
+     *   부서 담당자: 등록부 받는 중 — 미등록 [＋ 참석자 등록부 등록] / 저장만 [등록부 공문 보내기] / 보냄 ② 칩
+     * 등록부 창은 교육 상세 한 곳이다(?apply=1) — 목록과 상세에 같은 창을 두 벌 두지 않는다. */
+    function groupActions(c, gs) {
+        var D = global.EDUDOC; if (!D) return '';
+        var p = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
+        var href = 'edu-reg-detail.html?id=' + encodeURIComponent(c.id);
+        var out = '';
+        if (gs === 'NOTICE') return D.ctl(E().keyNotice(c.id), '안내 공문 작성', { primary: true, quiet: true }) + ' ';
+        if (E().isFlow2(c) && c.noticeDirty && gs !== 'DONE') out += D.ctl(E().keyNotice(c.id), '', { quiet: true }) + ' ';
+        if (gs !== 'ENROLL' && gs !== 'DONE') return out;
+        if (E().isOwnerStaff() && E().isFlow2(c)) {
+            out += c.trip ? D.ctl(E().keyTrip(c.id), '출장 결과 보고 공문 보내기', { quiet: true, short: '출장 결과' }) + ' '
+                : (gs === 'ENROLL' || gs === 'DONE') ? '<a class="btn btn-outline btn-sm" data-tour="edu-trip" href="' + href + '&trip=1">출장 결과 보고서 작성</a> ' : '';
+            return out;
+        }
+        if (!p || p.tier !== 'staff' && !E().canActOwnDept(p.deptId)) return out;
+        if (gs !== 'ENROLL' || E().courseTargetDepts(c).indexOf(p.deptId) === -1) return out;
+        var en = E().enrolls(c.id).filter(function (e) { return e.deptId === p.deptId; })[0];
+        if (E().noAttendOf(c.id, p.deptId)) return out + chip('참석자 없음', 'neutral') + ' ';
+        if (!en) return out + '<a class="btn btn-outline btn-sm" data-tour="apply" href="' + href + '&apply=1">＋ 참석자 등록부 등록</a> ';
+        if (en.flow === 2) return out + D.ctl(E().keyEnroll(c.id, p.deptId), '등록부 공문 보내기', { primary: true, quiet: true, short: '등록부 공문' }) + ' ';
+        return out;
+    }
     function editDeleteBtns(c) {
         var id = c.id;
+        /* 집합교육 새 흐름 — 안내 공문 전에는 [수정][삭제], 보낸 뒤에는 [수정][교육 취소](교육 전만). 삭제는 하지 않는다 */
+        if (E().isGroupCourse(c) && E().isFlow2(c)) {
+            if (!E().canActCourse(c) || c.status === 'CANCELLED') return '';
+            var btns = c.status !== 'DONE' ? '<button type="button" class="btn btn-outline btn-sm" onclick="EDUR.openEdit(\'' + id + '\')">수정</button> ' : '';
+            if (!E().everSent(E().keyNotice(id))) return btns + '<button type="button" class="btn btn-outline btn-sm" style="border-color:var(--status-danger-border);color:var(--status-danger-fg);" onclick="EDUR.confirmRemove(\'' + id + '\')">삭제</button>';
+            if (c.status === 'OPEN' && !E().enrollOpen(c)) btns += '<button type="button" class="btn btn-outline btn-sm" style="border-color:var(--status-danger-border);color:var(--status-danger-fg);" onclick="EDUR.openCancel(\'' + id + '\')">교육 취소</button>';
+            return btns;
+        }
         var lock = lockOf(id);
         if (lock) return lockBtn(lock);
         if (!E().canActCourse(c)) return '';
@@ -196,12 +258,13 @@
        전 부서 건을 처리하는 주관부서 담당자만 고른다. 그 밖의 담당자는 소속 부서로 고정하고
        [조직도]를 내지 않는다 — 선택지가 하나인 선택 수단은 «더 있는데 안 나온다»로 읽힌다 */
     function deptField(fieldId, deptId, onpickPath) {
-        var pick = E().canPickDept();
+        /* 자체교육은 누구든 소속 부서로 고정한다 — 남의 부서 분기 실시 결과 보고에 섞이지 않게(기획 v2 §10 N, 2026-11-16) */
+        var pick = false;
         return '<div class="orgpick-field" id="' + fieldId + '"><div style="display:flex;gap:8px;align-items:center;">' +
             '<input type="text" class="form-input" value="' + esc(E().deptName(deptId)) + '" readonly aria-label="부서" style="flex:1;background:var(--gray-50);">' +
             (pick ? '<button type="button" class="btn btn-sm btn-outline" onclick="ORGPICK.toggle(\'' + fieldId + '\',\'deptId\',\'' + onpickPath + '\')">조직도</button>' : '') +
         '</div>' +
-        (pick ? '' : '<p class="file-hint">소속 부서로 등록합니다 — 다른 부서 건은 그 부서 담당자가 등록합니다.</p>') +
+        (pick ? '' : '<p class="file-hint">소속 부서로 등록합니다 — 다른 부서 교육은 그 부서 담당자가 등록하고 분기 실시 결과 보고에 싣습니다.</p>') +
         '</div>';
     }
 
@@ -254,8 +317,9 @@
                 '<input type="text" class="form-input" id="er-inst" value="' + esc(F.instructor) + '"></div>' +
             '<div class="edu-modal-row"><label class="form-label" for="er-place">장소</label>' +
                 '<input type="text" class="form-input" id="er-place" value="' + esc(F.place) + '"></div>' +
-            '<div class="edu-modal-row"><label class="form-label" for="er-desc">내용 <span style="color:var(--status-danger-fg)">*</span></label>' +
-                '<textarea class="form-textarea" id="er-desc" rows="2">' + esc(F.desc) + '</textarea></div>' +
+            /* «내용» → «제목»(2026-11-16 주무관 «이 내용을 제목으로 바꿔주세요») — 이 값이 카드·상세·공문의 교육 제목이다 */
+            '<div class="edu-modal-row"><label class="form-label" for="er-desc">제목 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                '<input type="text" class="form-input" id="er-desc" value="' + esc(F.desc) + '"></div>' +
             /* 집합교육 — 부서는 교육이 끝난 뒤 참석자 등록부를 올린다. 언제까지인지를 등록할 때 정한다(2026-11-12) */
             (F.mode === 'group'
                 ? '<div class="edu-modal-row"><label class="form-label" for="er-enrolldays">참석자 등록부 기한 <span style="color:var(--status-danger-fg)">*</span></label>' +
@@ -275,10 +339,10 @@
             ? (F.mode === 'group' ? '집합교육 수정' : '자체교육 수정')
             : (F.mode === 'group'
                 ? (SUP_MODE ? '관리감독자 집합교육 등록' : '집합교육 등록')
-                : (SUP_MODE ? '관리감독자 자체교육 등록·진행' : '자체교육 등록·진행'));
+                : (SUP_MODE ? '관리감독자 자체교육 등록' : '자체교육 등록'));
         var foot = '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="EDUR.doCreate()">' +
-                (F.edit ? '저장' : (F.mode === 'group' ? '등록' : '진행 처리')) + '</button>';
+                (F.edit ? '저장' : (F.mode === 'group' ? '저장하고 안내 공문 작성 →' : '등록')) + '</button>';
         V().openModal(title, body, foot);
     }
     /* 회차 탭 위임 래퍼 — 변경 전 captureCreate 로 입력 보존, 변경 후 재렌더 */
@@ -336,7 +400,7 @@
             deny(orig && !E().canActCourse(orig) ? E().courseDeptOf(orig) : target);
             return;
         }
-        if (!F.desc) { toast('교육 내용을 입력하세요.'); return; }
+        if (!F.desc) { toast('교육 제목을 입력하세요.'); return; }
         if (F.mode === 'group' && !(+F.enrollDays >= 1 && +F.enrollDays <= 30)) { toast('참석자 등록부 기한을 1~30일로 정하세요.'); return; }
         var pr = EDUFORM.sessionPayload(F);
         if (!pr.ok) { F.sIdx = pr.badIdx; renderCreate(); toast(pr.msg); return; }
@@ -345,6 +409,14 @@
         if (F.edit) {
             var before = E().courseOf(F.edit) || {};
             var prevHours = before.hours, prevDate = before.date;
+            /* 회차(일시·시간)는 부서가 등록부 공문(②)을 한 곳이라도 보낸 뒤 잠근다 — 실제 참석시간이 실려 나갔다 */
+            var sessKey = function (ss) { return JSON.stringify((ss || []).map(function (x) { return [x.date, x.start || x.time || '', x.end || '']; })); };
+            var sessChanged = sessKey(E().courseSessions(before)) !== sessKey(S.sessions) || prevHours !== S.hours;
+            var sl = E().sessionLock ? E().sessionLock(F.edit) : null;
+            if (sl && sessChanged) { toast('부서가 등록부 공문을 보낸 교육이라 일시·시간을 바꿀 수 없습니다 — 강사·장소·제목은 고칠 수 있습니다.'); return; }
+            /* 안내 공문(①)을 보낸 교육의 일시·장소를 바꾸면 변경 안내 공문을 다시 보낸다 */
+            var needChange = E().isGroupCourse(before) && E().isFlow2(before) && E().everSent(E().keyNotice(F.edit)) &&
+                (sessChanged || (before.place || '') !== F.place);
             /* 집합교육 합계를 등록부 참석시간보다 작게 줄이지 않는다 — 그 등록부를 먼저 정정한다 */
             var cf = E().groupHoursConflicts ? E().groupHoursConflicts(F.edit, S.hours) : [];
             if (cf.length) {
@@ -367,7 +439,14 @@
             /* 처리자는 실제 접속자다 — 자체교육은 등록 부서가 고치므로 '재난안전과'로 박으면 이력이 거짓이 된다 */
             E().pushCourseHistory(F.edit, { type: 'STATUS', by: actor(),
                 memo: '교육 정보 수정 · ' + F.sessions.length + '일 · ' + S.hours + 'h' +
-                    (synced ? ' (이수기록 ' + synced + '건 시간 재반영)' : '') });
+                    (synced ? ' (이수기록 ' + synced + '건 시간 재반영)' : '') + (needChange ? ' · 일시·장소 변경 — 변경 안내 공문 필요' : '') });
+            if (needChange) {
+                E().updateCourse(F.edit, { noticeDirty: '변경' });
+                toast('일시·장소를 바꿨습니다 — 변경 안내 공문을 보냅니다.');
+                render();
+                if (global.EDUDOC) global.EDUDOC.open(E().keyNotice(F.edit));
+                return;
+            }
             V().closeModal();
             toast('교육 정보를 저장했습니다 · 교육시간 ' + S.hours + 'h' + (synced ? ' · 이수기록 ' + synced + '건 갱신' : ''));
             render();
@@ -384,14 +463,17 @@
                 kind: F.kind, deptId: F.deptId, date: S.date, time: S.time, endTime: S.endTime,
                 sessions: S.sessions, hours: S.hours,
                 instructor: F.instructor, place: F.place, desc: F.desc, files: F.files, photos: F.photos,
-                status: 'DONE', createdBy: E().deptName(F.deptId)
+                status: 'DONE', createdBy: E().deptName(F.deptId), byDept: F.deptId
             });
             E().addEnroll({ courseId: c.id, deptId: F.deptId, workerIds: ids, at: S.date });
             E().recordCourseCompletion(c.id, ids, S.hours, S.date);
             E().pushCourseHistory(c.id, { type: 'STATUS', by: E().deptName(F.deptId),
                 memo: '자체교육 즉시 완료 · ' + F.sessions.length + '일 ' + S.hours + 'h · 대상자 ' + ids.length + '명 카운트' });
-            V().closeModal();
-            toast(E().deptName(F.deptId) + ' 자체교육 완료 · ' + S.hours + 'h · ' + ids.length + '명 카운트');
+            /* 교육 건마다 공문을 쓰지 않는다 — 어느 분기 실시 결과 보고에 들어가는지를 저장 순간 보인다 */
+            V().openModal('자체교육을 등록했습니다',
+                '<p style="font-size:var(--fs-13);margin:0 0 8px;"><b>' + esc(c.desc) + '</b> · ' + S.hours + 'h · ' + ids.length + '명 이수</p>' +
+                '<div class="check-notice">' + esc(global.EDUDOC && global.EDUDOC.reportLine ? global.EDUDOC.reportLine(c) : '') + '</div>',
+                '<button type="button" class="btn btn-primary" onclick="DYV2.closeModal()">닫기</button>');
         } else {
             var gc = E().addCourse({
                 kind: F.kind, date: S.date, time: S.time, endTime: S.endTime,
@@ -399,19 +481,22 @@
                 instructor: F.instructor, place: F.place, desc: F.desc, files: F.files, photos: F.photos,
                 status: 'OPEN', createdBy: '재난안전과', enrollDays: +F.enrollDays
             });
-            /* 교육 전이면 대상 부서에 «집합교육 예정 안내»(X-1) — 할 일이 아니라 일시·장소 알림이다 */
-            var noticed = E().notifyUpcoming ? E().notifyUpcoming(gc.id) : 0;
-            V().closeModal();
-            toast((SUP_MODE ? '관리감독자 집합교육 등록' : '집합교육 등록') +
-                (noticed ? ' · 대상 부서 ' + noticed + '곳에 예정 안내' : '') +
-                ' — 교육이 끝나면 부서가 참석자 등록부를 올립니다');
+            /* 저장하고 바로 교육 안내 공문(①) — 00:59 «등록하고 바로 온나라 기안 타는 걸로요» → «예».
+               예정 안내 알림은 공문을 보내는 순간 나간다(EDUDOC 저장) — 등록만으로는 부서에 알리지 않는다 */
             tourEvt('created');
+            render();
+            if (global.EDUDOC) { global.EDUDOC.open(E().keyNotice(gc.id)); return; }
+            V().closeModal();
         }
         render();
     }
 
     /* =============== 참석자 등록부 등록 =============== */
+    /* 등록부 창은 교육 상세 한 곳이다 — 목록에서는 상세로 보낸다(같은 창을 두 벌 두지 않는다, 2026-11-16) */
     function openApply(courseId) {
+        location.href = 'edu-reg-detail.html?id=' + encodeURIComponent(courseId) + '&apply=1';
+    }
+    function openApplyLegacy(courseId) {
         var c = E().courseOf(courseId); if (!c) return;
         /* 신청은 부서 담당자가 자기 부서 몫을 올린다(주관부서 담당자는 전 부서) */
         if (!E().canRegister()) { deny(E().defaultDeptId()); return; }
@@ -512,6 +597,7 @@
         if (!E().canActCourse(c)) { deny(E().courseDeptOf(c)); return; }
         var lock = lockOf(courseId);
         if (lock) { toast('공문이 ' + lock + ' 상태라 삭제할 수 없습니다 — 온나라에서 반려·반송되면 다시 열립니다.'); return; }
+        if (E().isGroupCourse(c) && E().isFlow2(c) && E().everSent(E().keyNotice(courseId))) { toast('안내 공문을 보낸 교육은 지우지 않고 [교육 취소]로 취소 안내를 보냅니다.'); return; }
         var enrolls = E().enrolls(courseId);
         var cnt = enrolls.reduce(function (n, e) { return n + (e.workerIds || []).length; }, 0);
         var counted = c.status === 'DONE' && cnt;
@@ -536,6 +622,31 @@
         V().closeModal();
         toast(r ? '교육을 삭제했습니다 · 등록부 ' + r.enrolls + '건 · 이수기록 ' + r.records + '건 회수' : '교육을 찾을 수 없습니다.');
         render();
+    }
+
+    /* =============== 교육 취소 — 안내 공문을 보낸 집합교육, 교육 전에만 · 사유 필수 =============== */
+    function openCancel(courseId) {
+        var c = E().courseOf(courseId); if (!c) return;
+        if (!E().canActCourse(c)) { deny(E().courseDeptOf(c)); return; }
+        if (c.status !== 'OPEN' || E().enrollOpen(c)) { toast('교육 취소는 교육 전에만 합니다.'); return; }
+        V().openModal('교육 취소',
+            '<p style="font-size:var(--fs-13);margin:0 0 8px;"><b>' + esc(c.desc) + '</b><br>' + esc(E().courseDateTime(c)) + '</p>' +
+            '<div class="edu-modal-row"><label class="form-label" for="er-cancel">취소 사유 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                '<input type="text" class="form-input" id="er-cancel" placeholder="예: 강사 사정으로 연기"></div>' +
+            '<p class="file-hint">취소하면 이미 안내를 받은 부서에 취소 안내 공문을 보냅니다. 교육은 «취소»로 남고 할 일·이수 집계에서 빠집니다.</p>',
+            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
+            '<button type="button" class="btn btn-primary" onclick="EDUR.doCancel(\'' + courseId + '\')">취소하고 취소 안내 공문 작성 →</button>');
+    }
+    function doCancel(courseId) {
+        var el = document.getElementById('er-cancel');
+        var reason = el ? el.value.trim() : '';
+        if (!reason) { toast('취소 사유를 입력하세요.'); return; }
+        var c = E().courseOf(courseId);
+        if (!c || !E().canActCourse(c)) { V().closeModal(); deny(E().courseDeptOf(c)); return; }
+        if (!E().cancelCourse(courseId, reason, actor())) { toast('교육 취소는 교육 전에만 합니다.'); return; }
+        render();
+        if (global.EDUDOC && E().everSent(E().keyNotice(courseId))) { global.EDUDOC.open(E().keyNotice(courseId)); return; }
+        V().closeModal(); toast('교육을 취소했습니다.');
     }
 
     /* =============== 상세 (자체교육 인라인 모달) =============== */
@@ -596,7 +707,7 @@
         /* 회차(일자 탭) — 최대 5일, 교육시간 자동 합산 · 첨부/사진 (공용 EDUFORM) */
         sessTab: sessTab, sessAdd: sessAdd, sessDel: sessDel, sessSync: sessSync,
         addFile: addFile, delFile: delFile,
-        confirmRemove: confirmRemove, doRemove: doRemove,
+        confirmRemove: confirmRemove, doRemove: doRemove, openCancel: openCancel, doCancel: doCancel,
         openApply: openApply, applyPickDept: applyPickDept, applyToggle: applyToggle,
         applyAttachSign: applyAttachSign, applyClearSign: applyClearSign, doApply: doApply, hoursOpen: hoursOpen,
         viewDetail: viewDetail

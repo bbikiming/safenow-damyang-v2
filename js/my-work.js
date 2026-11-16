@@ -260,6 +260,9 @@
                     var cdist = null;
                     /* 이행점검은 아래 «배포» 블록이 카드를 낸다 — 날짜 자동발행 카드는 내지 않는다(중복 방지) */
                     if (cax) return;
+                    /* 교육 자동발행 카드(W-EDU-*)도 내지 않는다 — 교육 할 일은 DYEDU.deptTodos 가 낸다(같은 집합교육·같은 분기에
+                       카드가 둘 셋 뜨던 중복, 2026-11-16). 완료 판정(업무 관리 › 이행 관리)은 같은 기준(② · ④ 보냄)을 쓴다 */
+                    if (t.tpl && /^W-EDU-/.test(t.tpl.id)) return;
                     var mine = me && t.assign.to === me.uid;
                     var unassigned = t.unassigned && !t.done;
                     /* 남이 배정받은 건은 내 할일이 아니다 — 부서 관점(대시보드 itemsFor)은 부서 전체를 센다 */
@@ -463,6 +466,40 @@
             var Edu = global.DYEDU;
             if (Edu && Edu.deptTodos) {
                 Edu.deptTodos(state.deptId).forEach(function (t) {
+                    var cc = t.course;
+                    var det = cc ? 'edu-reg-detail.html?id=' + encodeURIComponent(cc.id) : '';
+                    var base = { cat: 'edu', status: 'IN_PROGRESS', dept: state.deptId, dept_label: Edu.deptName(state.deptId), atype: 'menu', remind: false };
+                    var push = function (o) { var x = {}; Object.keys(base).forEach(function (k) { x[k] = base[k]; }); Object.keys(o).forEach(function (k) { x[k] = o[k]; }); out.push(x); };
+                    /* 과정별 공문 흐름(2026-11-16) — 공문을 보내야 끝나는 할 일. 주 버튼이 그 창을 곧바로 연다 */
+                    if (t.kind === 'enrollDoc' || t.kind === 'enrollResend') {
+                        push({ id: 'EDU-EDOC-' + cc.id, title: cc.desc + ' — ' + (t.kind === 'enrollResend' ? '등록부 공문 다시 보내기' : '등록부 공문 보내기'),
+                            sub: t.kind === 'enrollResend' ? '온나라에서 돌아왔습니다 — 사유를 보고 고쳐 다시 보냅니다' : '참석자 등록부는 저장했습니다 — 제출 공문을 온나라로 보내야 등록이 끝납니다',
+                            due: t.due || cc.date, href: det, action: t.kind === 'enrollResend' ? '다시 보내러 가기' : '공문 보내러 가기', destLabel: '교육 상세' });
+                        return;
+                    }
+                    if (t.kind === 'quarter' || t.kind === 'quarterResend') {
+                        push({ id: 'EDU-QTR-' + t.q, title: Edu.quarterLabel(t.q) + ' 안전보건교육 실시 결과 보고 (' + t.list.length + '건)',
+                            sub: t.kind === 'quarterResend' ? '온나라에서 돌아왔습니다 — 고쳐 다시 보냅니다' : '이 분기 우리 부서가 실시한 자체·기타·채용시교육을 한 장으로 재난안전과에 보냅니다',
+                            due: t.due, href: 'edu-reg.html?tab=self', action: '분기 보고 작성하러 가기', destLabel: '정기교육 › 자체교육' });
+                        return;
+                    }
+                    if (t.kind === 'notice') {
+                        push({ id: 'EDU-NOTICE-' + cc.id, title: cc.desc + ' — ' + (t.sub ? t.sub + ' 안내 공문 보내기' : '교육 안내 공문 보내기'),
+                            sub: t.sub ? '이미 안내를 받은 부서에 ' + t.sub + ' 사실을 공문으로 알립니다' : '안내 공문을 보내야 대상 부서에 교육이 알려집니다' + (t.status === 'returned' ? ' — 온나라에서 돌아왔습니다' : ''),
+                            due: t.due, href: det, action: '공문 보내러 가기', destLabel: '교육 상세' });
+                        return;
+                    }
+                    if (t.kind === 'sign') {
+                        push({ id: 'EDU-SIGN-' + cc.id, title: cc.desc + ' — 서명부 올리기',
+                            sub: '한 장 서명부를 올리면 부서가 등록부에서 골라 씁니다', due: t.due, href: det, action: '서명부 올리러 가기', destLabel: '교육 상세' });
+                        return;
+                    }
+                    if (t.kind === 'trip') {
+                        push({ id: 'EDU-TRIP-' + cc.id, title: cc.desc + ' — 출장 결과 보고서 ' + (cc.trip ? '공문 보내기' : '작성'),
+                            sub: '교육 자료 · 교육 사진 · 참석 인원을 적고 출장 결과 보고 공문을 보냅니다', due: t.due,
+                            href: det + (cc.trip ? '' : '&trip=1'), action: cc.trip ? '공문 보내러 가기' : '보고서 쓰러 가기', destLabel: '교육 상세' });
+                        return;
+                    }
                     if (t.kind === 'apply') {
                         var c = t.course;
                         out.push({
@@ -476,7 +513,7 @@
                             /* 참석자 등록부는 교육 상세에서 등록한다 — 종전에는 목록(edu-reg)으로 보내
                                담당자가 그 교육을 다시 찾아야 했고, 관리감독자 교육(SUP_REG)은 현업근로자
                                목록으로 떨어져 아예 보이지 않았다. */
-                            href: 'edu-reg-detail.html?id=' + encodeURIComponent(c.id),
+                            href: 'edu-reg-detail.html?id=' + encodeURIComponent(c.id) + '&apply=1',
                             atype: 'menu', action: '등록부 올리러 가기', destLabel: '교육 상세', remind: false
                         });
                         return;

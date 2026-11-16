@@ -45,7 +45,7 @@
         });
 
         var head = EDUFILTER.bar([
-            { type: 'search', id: 'ee-q', value: state.q, placeholder: '내용·강사·장소 검색', on: "EDUE.setF('q', this.value)" },
+            { type: 'search', id: 'ee-q', value: state.q, placeholder: '제목·강사·장소 검색', on: "EDUE.setF('q', this.value)" },
             { type: 'select', id: 'ee-f-type', value: state.fType, label: '교육 분류',
               options: [['', '분류 전체']].concat(E().etcTypes(SUP_MODE).map(function (t) { return [t, t]; })), on: "EDUE.setF('fType', this.value)" },
             { type: 'select', id: 'ee-f-dept', value: state.dept, label: '부서',
@@ -55,9 +55,11 @@
         ], {
             count: list.length, unit: '건', reset: 'EDUE.resetF()',
             actions: E().canRegister()
-                ? '<button type="button" class="btn btn-primary" onclick="EDUE.openCreate()">＋ 기타 교육 등록·진행</button>'
+                ? '<button type="button" class="btn btn-primary" onclick="EDUE.openCreate()">＋ 기타 교육 등록</button>'
                 : '<span class="file-hint">기타 교육은 각 부서 담당자가 등록합니다</span>'
         });
+        /* 분기 실시 결과 보고 띠 — 자체·기타·채용시 여섯 화면 공용(EDUDOC.quarterBar) */
+        if (global.EDUDOC && global.EDUDOC.quarterBar) head = global.EDUDOC.quarterBar() + head;
 
         var cards = list.length ? list.map(cardHtml).join('') :
             '<div class="edu-card"><div class="v2-empty">' +
@@ -109,7 +111,7 @@
                 '<th style="min-width:150px;">교육 유형</th><th style="min-width:230px;">이럴 때 실시합니다</th>' +
                 '<th style="min-width:200px;">법정 최소 교육시간</th>' +
             '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
-            '<p class="file-hint">기준에 해당하면 <b>[＋ 기타 교육 등록·진행]</b>으로 각 과가 직접 등록합니다. ' +
+            '<p class="file-hint">기준에 해당하면 <b>[＋ 기타 교육 등록]</b>으로 각 과가 직접 등록합니다. ' +
             '교육시간은 산업안전보건법 시행규칙 별표4 기준입니다.</p>' +
         '</details>';
     }
@@ -143,7 +145,8 @@
             ? '<span class="chip-status chip-sm info" style="margin-left:6px;">대상 작업 ' + workCount + '건</span>' : '';
         return '<div class="edu-course-card">' +
             '<div class="edu-course-head">' +
-                '<div class="edu-course-title">' + typeBadge + deptChip + esc(c.desc) + ' ' + stChip + shortChip + workChip + '</div>' +
+                '<div class="edu-course-title">' + typeBadge + deptChip + esc(c.desc) + ' ' + stChip + shortChip + workChip +
+                    (global.EDUDOC && global.EDUDOC.reportChip ? ' ' + global.EDUDOC.reportChip(c) : '') + '</div>' +
                 '<div class="edu-course-actions">' + docCtl +
                     '<button type="button" class="btn btn-outline btn-sm" onclick="EDUE.viewDetail(\'' + c.id + '\')">상세</button>' +
                     (lock
@@ -272,9 +275,9 @@
                     '<div class="orgpick-field" id="ee-deptfield"><div style="display:flex;gap:8px;align-items:center;">' +
                         '<input type="text" class="form-input" value="' + esc(E().deptName(F.deptId)) + '" readonly aria-label="부서" style="flex:1;background:var(--gray-50);">' +
                         /* 부서는 주관부서 담당자만 고른다 — 그 밖의 담당자는 소속 부서로 고정 */
-                        (E().canPickDept() ? '<button type="button" class="btn btn-sm btn-outline" onclick="ORGPICK.toggle(\'ee-deptfield\',\'deptId\',\'EDUE.pickDept\')">조직도</button>' : '') +
+                        /* 누구든 소속 부서로 고정 — 남의 부서 분기 실시 결과 보고에 섞이지 않게(2026-11-16) */
                     '</div>' +
-                    (E().canPickDept() ? '' : '<p class="file-hint">소속 부서로 등록합니다.</p>') +
+                    '<p class="file-hint">소속 부서로 등록합니다 — 분기 실시 결과 보고에 실립니다.</p>' +
                     '</div></div>' +
             '</div>' +
             typeGuideHtml(F.etcType) + specialWorksPickerHtml() +
@@ -290,8 +293,8 @@
                 '<input type="text" class="form-input" id="ee-inst" value="' + esc(F.instructor) + '"></div>' +
             '<div class="edu-modal-row"><label class="form-label" for="ee-place">장소</label>' +
                 '<input type="text" class="form-input" id="ee-place" value="' + esc(F.place) + '"></div>' +
-            '<div class="edu-modal-row"><label class="form-label" for="ee-desc">내용 <span style="color:var(--status-danger-fg)">*</span></label>' +
-                '<textarea class="form-textarea" id="ee-desc" rows="2">' + esc(F.desc) + '</textarea></div>' +
+            '<div class="edu-modal-row"><label class="form-label" for="ee-desc">제목 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                '<input type="text" class="form-input" id="ee-desc" value="' + esc(F.desc) + '"></div>' +
             (F.edit
                 ? '<div class="check-notice">대상자는 이 화면에서 바꾸지 않습니다 — 이미 반영된 이수시간과 어긋나므로 <b>삭제 후 재등록</b>으로 처리합니다.</div>'
                 : '<div class="edu-modal-row"><label class="form-label">대상자 <span style="color:var(--status-danger-fg)">*</span> ' +
@@ -303,7 +306,7 @@
             EDUFORM.renderAttach(F, 'EDUE', 'done');
         V().openModal((SUP_MODE ? '관리감독자 ' : '') + (F.edit ? '기타 교육 수정' : '기타 교육 등록·진행'), body,
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-            '<button type="button" class="btn btn-primary" onclick="EDUE.doCreate()">' + (F.edit ? '저장' : '진행 처리') + '</button>');
+            '<button type="button" class="btn btn-primary" onclick="EDUE.doCreate()">' + (F.edit ? '저장' : '등록') + '</button>');
     }
     /* 재렌더 전 입력값 보존 — 원본은 체크·부서 변경 시 타이핑 값이 유실됐다(이식 시 보완) */
     function captureCreate() {
@@ -389,10 +392,12 @@
         if (short.length) {
             E().pushCourseHistory(c.id, { type: 'STATUS', by: E().deptName(F.deptId),
                 memo: '법정 최소 교육시간 미달 ' + short.length + '명 (실시 ' + F.hours + 'h · 최소 ' + short[0].need + 'h)' });
-            toast(F.etcType + ' 진행 완료 · ' + ids.length + '명 · 법정 최소 미달 ' + short.length + '명');
-        } else {
-            toast(F.etcType + ' 진행 완료 · ' + ids.length + '명 카운트');
         }
+        /* 교육 건마다 공문을 쓰지 않는다 — 어느 분기 실시 결과 보고에 들어가는지를 저장 순간 보인다 */
+        V().openModal(esc(F.etcType) + ' 등록했습니다',
+            '<p style="font-size:var(--fs-13);margin:0 0 8px;"><b>' + esc(c.desc) + '</b> · ' + ids.length + '명' + (short.length ? ' · <span style="color:var(--status-danger-fg);">법정 최소 미달 ' + short.length + '명</span>' : '') + '</p>' +
+            '<div class="check-notice">' + esc(global.EDUDOC && global.EDUDOC.reportLine ? global.EDUDOC.reportLine(c) : '') + '</div>',
+            '<button type="button" class="btn btn-primary" onclick="DYV2.closeModal()">닫기</button>');
         render();
     }
 

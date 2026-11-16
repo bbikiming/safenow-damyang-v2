@@ -17,7 +17,7 @@
     var V = function () { return global.DYV2; };
     function esc(s) { return V().esc(String(s == null ? '' : s)); }
 
-    var state = { mount: null, fQ: '', fStatus: '', fYear: '' };
+    var state = { mount: null, fQ: '', fStatus: '', fYear: '', fKind: '' };
 
     /* 상신은 EDUDOC(공문)이 한다 — 이력도 거기서 읽는다. 상신 경로가 바뀌면
        이력 출처도 함께 옮긴다. 옛 경로만 읽으면 공문을 올려도 0건으로 남는다. */
@@ -26,6 +26,7 @@
         return list.filter(function (s) {
             if (state.fStatus && s.status !== state.fStatus) return false;
             if (state.fYear && String(s.at || '').slice(0, 4) !== state.fYear) return false;
+            if (state.fKind && s.docKind !== state.fKind) return false;
             return EDUFILTER.match(state.fQ, [s.no, s.label, s.scope, s.line]);
         });
     }
@@ -73,13 +74,19 @@
                   ['기안함 전송', '결재중', '결재완료', '반려', '반송'].filter(function (st) { return cnt(st) > 0; })
                       .map(function (st) { return [st, st]; })),
               on: "EDUAPVLOG.setF('Status', this.value)" },
+            /* 공문 종류 — 과정마다 공문이 나간다(2026-11-16): 교육 안내 · 등록부 제출 · 출장 결과 보고 · 분기 실시 결과 보고 · 이전 방식 */
+            { type: 'select', id: 'eal-kind', value: state.fKind, label: '공문 종류',
+              options: [['', '공문 종류 전체']].concat(['NOTICE', 'ENROLL', 'TRIP', 'QUARTER', 'RESULT']
+                  .filter(function (k) { return list.some(function (s) { return s.docKind === k; }); })
+                  .map(function (k) { return [k, (global.EDUDOC.KIND_LABEL || {})[k] || k]; })),
+              on: "EDUAPVLOG.setF('Kind', this.value)" },
             { type: 'select', id: 'eal-year', value: state.fYear, label: '보낸 연도',
               options: EDUFILTER.yearOptions(list.map(function (s) { return s.at; }), '보낸 연도 전체'),
               on: "EDUAPVLOG.setF('Year', this.value)" }
         ], { count: rows.length, unit: '건', reset: 'EDUAPVLOG.resetF()' });
 
         var body = rows.length ? rows.map(rowHtml).join('')
-            : '<tr><td colspan="7"><div class="v2-empty">' +
+            : '<tr><td colspan="8"><div class="v2-empty">' +
                 /* 빈 상태는 **도달 가능한 행동만** 약속한다 — 실제로 갈 수 있는 곳은
                    종료 처리된 교육의 [공문 기안] 하나다. */
                 (list.length ? '조건에 맞는 공문이 없습니다.'
@@ -89,7 +96,7 @@
         state.mount.innerHTML = stats + bar +
             '<div class="edu-card"><div class="edu-scroll">' +
             '<table class="table-figma table-compact table-nowrap"><thead><tr>' +
-                '<th>연계 번호</th><th>보낸 날</th><th>교육 구분</th><th>문서명</th>' +
+                '<th>연계 번호</th><th>보낸 날</th><th>공문 종류</th><th>보낸 부서</th><th>문서명</th>' +
                 '<th>대상</th><th>상태</th><th>관리</th>' +
             '</tr></thead><tbody>' + body + '</tbody></table>' +
             '</div></div>';
@@ -99,7 +106,8 @@
         return '<tr>' +
             '<td class="edu-name">' + esc(s.no) + '</td>' +
             '<td>' + esc(s.at) + '</td>' +
-            '<td><span class="chip-status chip-sm neutral">' + esc(s.kindLabel) + '</span></td>' +
+            '<td><span class="chip-status chip-sm neutral">' + esc(s.docKindLabel || s.kindLabel) + '</span></td>' +
+            '<td>' + esc(s.fromDept || '-') + '</td>' +
             '<td style="white-space:normal;min-width:220px;">' + esc(s.label) + '</td>' +
             '<td>' + esc(s.scope) + '</td>' +
             '<td><span class="chip-status chip-sm ' + V().toneOf(s.status) + '">' + esc(s.status) + '</span>' +
@@ -111,7 +119,7 @@
     }
 
     function setF(k, v) { state['f' + k] = v; EDUFILTER.rerender(render); }
-    function resetF() { state.fQ = ''; state.fStatus = ''; state.fYear = ''; render(); }
+    function resetF() { state.fQ = ''; state.fStatus = ''; state.fYear = ''; state.fKind = ''; render(); }
     function openDoc(sid) { if (global.EDUDOC) global.EDUDOC.openDocSid(sid); }
     /* 결재 상태 회신(완료·반려)은 온나라 연동 몫이라 이 화면에서 만들지 않는다.
        연동 전에는 상신된 사실과 문서만 보여 준다 — 없는 기능을 버튼으로 약속하지 않는다. */

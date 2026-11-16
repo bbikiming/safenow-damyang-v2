@@ -36,7 +36,9 @@
      * 이수 기록의 등록·수정·회수는 그 사람이 속한 부서의 담당자(주관부서 담당자는 전 부서)가
      * 한다. 관리·감독 계층은 조회만 한다. 진입·저장 양쪽에 같은 판정을 건다. */
     function deny(deptId) { toast(E().denyMsg(deptId)); }
-    function canActWorker(workerId) { var w = E().workerOf(workerId); return !!w && E().canActDept(w.deptId); }
+    /* 채용시교육 기록은 그 사람 **소속 부서 담당자**가 올리고 고친다 — 재난안전과도 남의 부서 기록은 올리지 않는다.
+       기록은 그 부서의 분기 실시 결과 보고에 실리기 때문이다(2026-11-16 · 기획 v2 §10 N) */
+    function canActWorker(workerId) { var w = E().workerOf(workerId); return !!w && E().canActOwnDept(w.deptId); }
     /* 기록의 등록 주체 표기 — '재난안전과'로 박으면 부서 담당자가 올린 기록도 재난안전과가 올린 것이 된다 */
     function actorDept() {
         var p = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
@@ -122,6 +124,8 @@
                     : '')
             : '<span class="file-hint">채용시교육 기록은 각 부서 담당자가 등록합니다</span>';
         var filters = EDUFILTER.bar(fields, { count: list.length, unit: '명', reset: 'EDUH.resetF()', actions: actions });
+        /* 분기 실시 결과 보고 띠 — 자체·기타·채용시 여섯 화면 공용(EDUDOC.quarterBar) */
+        if (global.EDUDOC && global.EDUDOC.quarterBar) filters = global.EDUDOC.quarterBar() + filters;
 
         /* 묶어보기 — 부서별 / 채용일별 / 안 묶기 */
         var groupBar =
@@ -296,6 +300,9 @@
         if (!global.EDUDOC) return '';
         var cid = docCourseOf(w.id);
         if (!cid) return '';
+        /* 새 흐름 — 그 교육 건이 실릴(실린) 분기 실시 결과 보고 */
+        var c = E().courseOf(cid);
+        if (c && E().isFlow2(c) && global.EDUDOC.reportChip) return global.EDUDOC.reportChip(c);
         return '<span class="edu-doc-slot">' + global.EDUDOC.control(cid) + '</span>';
     }
     function editBtnHtml(w) {
@@ -305,7 +312,7 @@
                 ' — 공문 기록이 남아 수정할 수 없습니다">🔒 ' + esc(lock) + '</button>';
         }
         /* 그 사람이 속한 부서의 담당자(주관부서 담당자는 전 부서)에게만 낸다 */
-        if (!E().canActDept(w.deptId)) return '';
+        if (!E().canActOwnDept(w.deptId)) return '';
         return '<button type="button" class="btn btn-outline btn-sm" onclick="EDUH.openEditDone(\'' + w.id + '\')">이수 수정</button>';
     }
 
@@ -491,8 +498,8 @@
             '</div>' +
             '<div class="edu-modal-row"><label class="form-label" for="eh-b-inst">강사·주관</label>' +
                 '<input type="text" class="form-input" id="eh-b-inst" value="' + esc(B.instructor) + '"></div>' +
-            '<div class="edu-modal-row"><label class="form-label" for="eh-b-desc">내용</label>' +
-                '<textarea class="form-textarea" id="eh-b-desc" rows="2">' + esc(B.desc) + '</textarea></div>' +
+            '<div class="edu-modal-row"><label class="form-label" for="eh-b-desc">제목</label>' +
+                '<input type="text" class="form-input" id="eh-b-desc" value="' + esc(B.desc) + '"></div>' +
             /* 업로드 칸은 전 화면 공용 모양 하나(uploadDrop) — 종전의 브라우저 기본 파일 입력은 형식·용량
                검사(FILE_LIMITS)를 지나지 않았다(기획확인 4차 D-1, 2026-10-06). */
             '<div class="edu-modal-row"><label class="form-label">교육일지·서명부 증빙 <span style="color:var(--status-danger-fg)">*</span></label>' +
@@ -519,7 +526,7 @@
         if (!B.evidenceName) { toast('교육일지·서명부 증빙을 선택하세요.'); return; }
         B.instructor = document.getElementById('eh-b-inst').value.trim();
         B.desc = document.getElementById('eh-b-desc').value.trim() || '채용시 안전보건교육';
-        var count = 0, made = 0, completed = 0;
+        var count = 0, made = 0, completed = 0, lastMade = null;
 
         if (B.merge) {
             /* 한 건으로 묶기 — 필요시간이 같은 인원끼리 교육 건 1개.
@@ -530,7 +537,7 @@
                 var gDepts = {};
                 g.ids.forEach(function (id) { var w = E().workerOf(id); if (w) gDepts[w.deptId] = true; });
                 var gKeys = Object.keys(gDepts);
-                var c = E().addCourse({
+                var c = lastMade = E().addCourse({
                     kind: 'HIRE', deptId: gKeys.length === 1 ? gKeys[0] : '', date: B.date, time: B.time, endTime: B.end, hours: actualHours,
                     sessions: [{ date: B.date, start: B.time, end: B.end }], files: [{ name: B.evidenceName, slot: 'evidence' }],
                     instructor: B.instructor, place: '',
@@ -560,7 +567,7 @@
                 var date = B.date;
                 var time = B.time;
                 /* 근로자별 개별 course (묶기를 끄면 종전 동작) */
-                var c = E().addCourse({
+                var c = lastMade = E().addCourse({
                     kind: 'HIRE', deptId: w.deptId, date: date, time: time, endTime: B.end, hours: actualHours,
                     sessions: [{ date: date, start: time, end: B.end }], files: [{ name: B.evidenceName, slot: 'evidence' }],
                     instructor: B.instructor, place: '', desc: B.desc + ' · ' + w.name,
@@ -573,10 +580,9 @@
                 count++; made++;
             });
         }
-        V().closeModal();
-        toast(count + '명 소급 교육기록 등록 · 이수 완료 ' + completed + '명 · 교육 건 ' + made + '건 생성');
         state.checked = {};
         render();
+        reportDone(count + '명 교육기록 등록 · 이수 완료 ' + completed + '명', lastMade);
     }
 
     /* =============== 채용시 교육 추가 (자체교육과 동일 구성 · EDUFORM) ===============
@@ -584,7 +590,7 @@
      * 이수 시간은 대상자 고용형태별 '필요시간'으로 인정한다(일용 1h · 1주~1개월 4h · 그 밖 8h). */
     function addPool() {
         /* 추가 대상은 내가 기록을 올릴 수 있는 부서 사람만 — 주관부서 담당자는 전 부서 */
-        return pool().filter(function (w) { return E().hireStatus(w.id).status === 'NONE' && E().canActDept(w.deptId); });
+        return pool().filter(function (w) { return E().hireStatus(w.id).status === 'NONE' && E().canActOwnDept(w.deptId); });
     }
     function openAdd() {
         if (!E().canRegister()) { deny(''); return; }
@@ -653,8 +659,8 @@
                 '<input type="text" class="form-input" id="eh-a-inst" value="' + esc(A.instructor) + '"></div>' +
             '<div class="edu-modal-row"><label class="form-label" for="eh-a-place">장소</label>' +
                 '<input type="text" class="form-input" id="eh-a-place" value="' + esc(A.place) + '"></div>' +
-            '<div class="edu-modal-row"><label class="form-label" for="eh-a-desc">내용 <span style="color:var(--status-danger-fg)">*</span></label>' +
-                '<textarea class="form-textarea" id="eh-a-desc" rows="2">' + esc(A.desc) + '</textarea></div>' +
+            '<div class="edu-modal-row"><label class="form-label" for="eh-a-desc">제목 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                '<input type="text" class="form-input" id="eh-a-desc" value="' + esc(A.desc) + '"></div>' +
             renderAddTargets() +
             EDUFORM.renderAttach(A, 'EDUH', 'done');
         V().openModal('채용시 교육 추가', body,
@@ -682,7 +688,7 @@
     function aDept(v) { captureAdd(); A.deptFilter = v; renderAdd(); }
     function doAdd() {
         captureAdd();
-        if (!A.desc) { toast('교육 내용을 입력하세요.'); return; }
+        if (!A.desc) { toast('교육 제목을 입력하세요.'); return; }
         var pr = EDUFORM.sessionPayload(A);
         if (!pr.ok) { A.sIdx = pr.badIdx; renderAdd(); toast(pr.msg); return; }
         var S = pr.payload;
@@ -691,14 +697,14 @@
         var ids = Object.keys(A.workerIds).filter(function (k) { return A.workerIds[k] && canActWorker(k); });
         if (!ids.length) { toast('교육 대상자를 1명 이상 선택하세요.'); return; }
         if (!A.files.length) { toast('교육일지 및 교육사진 등 증빙을 첨부하세요.'); return; }
-        var count = 0, completed = 0, late = 0;
+        var count = 0, completed = 0, late = 0, lastMade = null;
         ids.forEach(function (id) {
             var w = E().workerOf(id); if (!w) return;
             var need = E().hireHours(w);
             var hours = Math.min(need, S.hours);     /* 인정 = 실제 실시시간과 법정 필요시간 중 작은 값 */
             var eventDate = S.date;
             /* 근로자별 개별 course — 이수 취소(removeCourse)가 다른 대상자를 건드리지 않도록 (bulk 패턴과 동일) */
-            var c = E().addCourse({
+            var c = lastMade = E().addCourse({
                 kind: 'HIRE', deptId: w.deptId, date: eventDate, time: S.time, endTime: S.endTime,
                 sessions: S.sessions, hours: S.hours,
                 instructor: A.instructor, place: A.place, desc: A.desc + ' · ' + w.name,
@@ -710,11 +716,17 @@
             if (eventDate > w.hireDate) late++;
             count++;
         });
-        V().closeModal();
-        toast(count + '명 교육기록 등록 · 이수 완료 ' + completed + '명' + (late ? ' · 지연 ' + late + '명' : ''));
         state.tab = completed === count ? 'done' : 'all'; state.checked = {}; render();
+        reportDone(count + '명 교육기록 등록 · 이수 완료 ' + completed + '명' + (late ? ' · 지연 ' + late + '명' : ''), lastMade);
     }
 
+    /* 등록 뒤 한 줄 — 교육 건마다 공문을 쓰지 않고 어느 분기 실시 결과 보고에 들어가는지를 보인다 */
+    function reportDone(msg, c) {
+        V().openModal('교육기록을 등록했습니다',
+            '<p style="font-size:var(--fs-13);margin:0 0 8px;">' + esc(msg) + '</p>' +
+            (c && global.EDUDOC && global.EDUDOC.reportLine ? '<div class="check-notice">' + esc(global.EDUDOC.reportLine(c)) + '</div>' : ''),
+            '<button type="button" class="btn btn-primary" onclick="DYV2.closeModal()">닫기</button>');
+    }
     function init(mountId, opts) {
         SUP_MODE = !!(opts && opts.supMode);
         state.mount = document.getElementById(mountId);
