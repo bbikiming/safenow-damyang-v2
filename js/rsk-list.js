@@ -45,7 +45,6 @@
         fromFacil: null, /* 시설물 위험도에서 넘어온 시설물 {no, name} — 부서 입력 첫 항목에 한 번 쓴다 */
         reqSel: null,    /* 조치 요청 부서 선택 {aid, sel:{deptId:true}} — 요청 공문을 보내면 비운다 */
         inDoneFor: '',   /* 입력 완료 확인 칸을 펼친 부서 */
-        inDoneWk: null,  /* 입력 완료 칸의 참여 근로자 선택 {deptId, sel:{uid:true}} — 다시 그려도 남게 */
         more: null       /* 추가 조치 요청 부서 선택 {aid, sel:{deptId:true}, dues:{deptId:date}} (D-3) */
     };
     var W = null; /* 생성 마법사 상태 */
@@ -1736,33 +1735,6 @@
     }
 
     /* 입력 완료 확인 칸 — 블록 안에 펼친다(모달을 겹치지 않는다) */
-    /* 참여 근로자(D-6, 시행규칙 §37의4①2호) — 그 부서 조직도 구성원에서 고른다. 다시 그려도 고른 것이 남게
-       선택은 state.inDoneWk 에 두고, 체크는 화면을 다시 그리지 않는다(입력 중인 사유 칸이 지워지지 않게). */
-    function wkSel(deptId) {
-        if (!state.inDoneWk || state.inDoneWk.deptId !== deptId) state.inDoneWk = { deptId: deptId, sel: {}, note: '' };
-        return state.inDoneWk.sel;
-    }
-    function inDoneWk(deptId, uid, on) {
-        var sel = wkSel(deptId);
-        if (on) sel[uid] = true; else delete sel[uid];
-        var el = document.getElementById('rl-wk-cnt');
-        if (el) el.textContent = String(Object.keys(sel).length);
-    }
-    function workersHtml(deptId) {
-        var sel = wkSel(deptId);
-        var ms = (V().orgMembers ? V().orgMembers(deptId) : []);
-        var list = ms.map(function (m) {
-            return '<label class="rskdoc-ck" style="display:inline-flex;margin:0 12px 4px 0;"><input type="checkbox"' + (sel[m.uid] ? ' checked' : '') +
-                ' onchange="RSKLIST.inDoneWk(\'' + deptId + '\',\'' + esc(m.uid) + '\',this.checked)"><span>' + esc(m.name) +
-                ' <span class="file-hint">' + esc(m.role || '') + '</span></span></label>';
-        }).join('');
-        return '<div style="margin-top:8px;"><label class="form-label">참여 근로자 <span style="color:var(--status-danger-fg)">*</span> ' +
-                '<span style="font-weight:400;color:var(--text-gray);">순회점검·설문 등 위험성평가에 참여한 사람 · 선택 <b id="rl-wk-cnt">' + Object.keys(sel).length + '</b>명</span> ' + lawChip('oshr-37-4') + '</label>' +
-            (list ? '<div>' + list + '</div>' : '<p class="file-hint">조직도에 이 부서 구성원이 없습니다 — 아래 칸에 적으세요.</p>') +
-            '<input type="text" class="form-input" id="rl-wk-note" style="margin-top:4px;" value="' + esc(state.inDoneWk.note || '') + '"' +
-                ' placeholder="조직도에 없는 참여자 · 근로자대표 (선택)" oninput="RSKLIST.inDoneWkNote(this.value)"></div>';
-    }
-    function inDoneWkNote(v) { if (state.inDoneWk) state.inDoneWk.note = v; }
     function inDoneBox(a, deptId) {
         var n = D().validDeptRows(a, deptId).length;
         var all = (((a.review || {}).parsedDepts || {})[deptId] || []).filter(function (r) { return !r.deleted; }).length;
@@ -1771,7 +1743,6 @@
             (n ? '<p style="margin:0 0 6px;font-size:var(--fs-13);">유해위험요인과 개선조치를 모두 적은 <b>' + n + '건</b>이 개선조치가 됩니다' + (skip ? ' (하나라도 비어 있는 ' + skip + '건은 빠집니다)' : '') + '. 이후 작성표는 닫히고 완료 처리는 [관리]·내 할일에서 합니다.</p>'
                : '<label class="form-label" for="rl-in-why">조치할 것이 없는 사유 <span style="color:var(--status-danger-fg)">*</span></label>' +
                  '<textarea class="form-textarea" id="rl-in-why" rows="2" placeholder="예: 보고서 지적 항목이 우리 부서 소관이 아님(재난안전과와 협의)"></textarea>') +
-            workersHtml(deptId) +
             '<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:6px;">' +
                 '<button type="button" class="btn btn-secondary btn-sm" onclick="RSKLIST.inDoneOpen(\'\')">취소</button>' +
                 '<button type="button" class="btn btn-primary btn-sm" onclick="RSKLIST.inDone(\'' + deptId + '\')">입력 완료</button>' +
@@ -2373,22 +2344,16 @@
         var a = current(); if (!a) return;
         if (!canWriteReview(deptId)) { denyToast(deptId); return; }
         var why = document.getElementById('rl-in-why');
-        /* 참여 근로자 — 조직도 구성원 중 고른 사람(필수 1명 이상, setInputDone 이 다시 본다) */
-        var sel = wkSel(deptId);
-        var ws = (V().orgMembers ? V().orgMembers(deptId) : []).filter(function (m) { return sel[m.uid]; })
-            .map(function (m) { return { uid: m.uid, name: m.name, role: m.role }; });
-        var note = (state.inDoneWk && state.inDoneWk.note) || '';
-        /* 조직도에 없는 참여자만 적은 경우도 1명으로 받는다(이름 칸) */
-        if (!ws.length && note.trim()) ws = [{ uid: '', name: note.trim(), role: '' }];
-        var r = D().setInputDone(a.id, deptId, remindBy(), why ? why.value : '', ws, note);
+        /* 참여 근로자 입력은 두지 않는다(2026-11-16 — 결정 D-6 거둠). 참여 기록은 설문조사표 제출 · 용역 보고서가 맡는다 */
+        var r = D().setInputDone(a.id, deptId, remindBy(), why ? why.value : '');
         if (r && r.error) { toast(r.error); return; }
-        state.inDoneFor = ''; state.inDoneWk = null;
+        state.inDoneFor = '';
         if (global.DYLayout && DYLayout.ntfPush) DYLayout.ntfPush({
             cat: 'risk', catLabel: '위험성평가', toDept: OWNER_DEPT, toTier: ['staff'], basis: 'osh-36',
             title: a.year + '년 정기 위험성평가 — ' + D().deptName(deptId) + ' 조치 입력 완료(' + (r.inputDone.count ? r.inputDone.count + '건' : '조치 대상 없음') + ')',
             href: 'rsk-list.html?year=' + a.year + '&dept=' + deptId, work: 'my-work.html'
         });
-        toast('입력 완료 · ' + (r.inputDone.count ? '개선조치 ' + r.inputDone.count + '건이 만들어졌습니다' : '조치 대상 없음') + ' · 참여 근로자 ' + r.inputDone.workers.length + '명 · 재난안전과에 알렸습니다');
+        toast('입력 완료 · ' + (r.inputDone.count ? '개선조치 ' + r.inputDone.count + '건이 만들어졌습니다' : '조치 대상 없음') + ' · 재난안전과에 알렸습니다');
         render();
     }
     function inUndo(deptId) {
@@ -2425,8 +2390,6 @@
                 (dp.reportFile ? '<span>부서 제출본 <b>' + esc(dp.reportFile) + '</b></span>' : '') +
                 (dp.deliveredAt ? '<span>' + (dp.request ? '조치 요청' : '전달') + '일 <b>' + esc(dp.deliveredAt) + '</b></span>' : '') +
                 (dp.dueDate ? '<span>조치기한 <b>' + esc(dp.dueDate) + '</b></span>' : '') +
-                (dp.inputDone && (dp.inputDone.workers || []).length ? '<span>참여 근로자 <b>' + esc(dp.inputDone.workers.map(function (w) { return w.name; }).join(', ')) + '</b>' +
-                    (dp.inputDone.workersNote ? ' · ' + esc(dp.inputDone.workersNote) : '') + '</span>' : '') +
                 (dp.inputDone ? '<span>입력 완료 <b>' + esc(dp.inputDone.at) + '</b>' + (canUndoInput(a, dp) ? ' <button type="button" class="rl-file-btn" onclick="RSKLIST.inUndo(\'' + deptId + '\')">입력 완료 취소</button>' : '') + '</span>' : ''),
             /* «재촉 응답»은 이 카드에 없고 내 할일에만 있다 — 카드에서 한다고 쓰면 없는 버튼을 약속한다(2026-11-13 답신 2-3) */
             noteHtml: '부서 담당자는 <b>이 카드에서 바로</b> 완료 처리를 합니다 — ' +
@@ -2797,13 +2760,12 @@
     global.RSKLIST = {
         init: init, setYear: setYear, setTab: setTab,
         resetDemo: resetDemo, doResetDemo: doResetDemo,
-        /* 2026-11-13 결정 — D-4 생성 뒤 고치기·지우기 · D-1 종결 · D-2 입력 재촉 · D-3 추가 요청 · D-6 근로자 공유·참여 근로자 */
+        /* 2026-11-13 결정 — D-4 생성 뒤 고치기·지우기 · D-1 종결 · D-2 입력 재촉 · D-3 추가 요청 · D-6 근로자 공유(참여 근로자 입력은 2026-11-16 거둠) */
         openEdit: openEdit, openDelete: openDelete, doDelete: doDelete,
         openNoAction: openNoAction, doNoAction: doNoAction,
         openRemindInput: openRemindInput, doRemindInput: doRemindInput,
         moreOpenPanel: moreOpenPanel, moreClose: moreClose, moreToggle: moreToggle, moreDue: moreDue, openMoreReq: openMoreReq,
         openShare: openShare, onPickShare: onPickShare, doShare: doShare, openShareFile: openShareFile,
-        inDoneWk: inDoneWk, inDoneWkNote: inDoneWkNote,
         /* 보고서 + 조치기한 (반영안 ⑤) */
         uploadReport: uploadReport, doUploadReport: doUploadReport, repApplyBulk: repApplyBulk,
         clearReport: clearReport, doClearReport: doClearReport,

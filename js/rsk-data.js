@@ -29,7 +29,7 @@
      *       안전관리자 검토파일(occ.reviewFile) · 개선조치 완료일·전자서명 추가. 시드 변경 시 버전 범프. */
     /* r13 (2026-11-13) — 운영 기록형 예시 자료: 2024·2025 정기평가 8단계 완료 기록 · 수시 2025 4건/2026 10건 ·
      *       개선조치 34건(진행 7 · 기한 경과 2). 2026 정기평가는 등록하지 않는다. r12 — 시설물 3상태 연결. */
-    var SKEY = 'damyangRskV2r16';   /* r15 (2026-11-13) — D-1·D-3·D-4·D-6: 종결·추가 요청·생성 뒤 고치기·근로자 공유 · 예시 데이터에 참여 근로자·근로자 공유 */
+    var SKEY = 'damyangRskV2r17';   /* r17 (2026-11-16) — 입력 완료 기록·예시 이력에서 참여 근로자를 뺐다(결정 D-6 거둠) · r15 (2026-11-13) — D-1·D-3·D-4·D-6: 종결·추가 요청·생성 뒤 고치기·근로자 공유 */
 
     /* ================= 스토어 ================= */
     var db = null;
@@ -152,10 +152,10 @@
                         ]
                     },
                     depts: [
-                        { deptId: "safety", inspectDate: "2025-04-14", surveyFile: "", reportFile: "재난안전과_2025_설문조사표_작성본.hwpx", reportAt: "2025-04-11", reportBy: "재난안전과 · 박안전", status: "DONE", deliveredAt: "2025-05-20", dueDate: "2025-07-31", hazards: [{ name: "옥상 점검통로 안전난간 미설치", category: "물리적", cause: "난간 미설치 구간 30m", basis: "oshs-43", action: "점검통로 전 구간 안전난간(H=1.2m) 설치 및 추락주의 표지 부착", facilNo: "AR1968-0000226", facilNm: "담양군청(본관동)", facilNa: false }, { name: "비상발전기실 소화기 미비치", category: "화학적", cause: "소화기 노후·수량 부족", basis: "", action: "ABC분말소화기 4대 교체 비치 및 점검표 부착", facilNo: "AR1968-0000226", facilNm: "담양군청(본관동)", facilNa: false }], request: { at: "2025-05-20", by: "재난안전과 박안전", no: "재난안전과-2025-176" }, noFindings: false, inputDone: { at: "2025-05-22", by: "박안전", reason: "", count: 2, workers: [{ uid: "u_jjt2", name: "박안전", role: "안전관리 주무관" }, { uid: "u_jjt3", name: "김안전", role: "안전관리자" }], workersNote: "" } },
-                        { deptId: "env", inspectDate: "2025-04-16", surveyFile: "", reportFile: "환경과_2025_설문조사표_작성본.hwpx", reportAt: "2025-04-15", reportBy: "환경과 · 정환경", status: "DONE", deliveredAt: "2025-05-20", dueDate: "2025-08-14", hazards: [{ name: "폐기물 적치장 붕괴 위험", category: "물리적", cause: "적치 높이 기준 초과", basis: "", action: "적치 높이 제한선 도색 및 방호벽 설치, 주 1회 점검 지정", facilNo: "", facilNm: "", facilNa: false }, { name: "자원순환팀 파쇄기 방호덮개 파손", category: "기계적", cause: "덮개 균열·고정볼트 이완", basis: "oshs-87", action: "방호덮개 교체 및 비상정지 스위치 동작 점검", facilNo: "", facilNm: "", facilNa: true }], request: { at: "2025-05-20", by: "재난안전과 박안전", no: "재난안전과-2025-176" }, noFindings: false, inputDone: { at: "2025-05-23", by: "정환경", reason: "", count: 2, workers: [{ uid: "u_env2", name: "정환경", role: "유해·위험요인 담당 주무관" }, { uid: "u_env4", name: "김지도", role: "주무관" }, { uid: "u_env5", name: "정수빈", role: "주무관" }], workersNote: "" } },
-                        { deptId: "water", inspectDate: "2025-04-21", surveyFile: "", reportFile: "물순환사업소_2025_설문조사표_작성본.hwpx", reportAt: "2025-04-18", reportBy: "물순환사업소 · 하정수", status: "DONE", deliveredAt: "2025-05-20", dueDate: "2025-09-30", hazards: [{ name: "정수장 약품투입실 환기 불량", category: "화학적", cause: "국소배기장치 용량 부족", basis: "oshs-607", action: "국소배기장치 2대 증설 및 MSDS 게시, 보호구 비치", facilNo: "WS1996-0000011", facilNm: "신계정수장", facilNa: false }, { name: "침전지 개구부 추락 위험", category: "물리적", cause: "개구부 덮개·난간 미설치", basis: "oshs-43", action: "개구부 안전덮개 6개소 설치 및 추락주의 표지 부착", facilNo: "WS1996-0000011", facilNm: "신계정수장", facilNa: false }, { name: "전기 분전반 시건장치 미설치", category: "전기적", cause: "분전반 개방 상태 방치", basis: "", action: "분전반 6면 시건장치 설치 및 활선 경고표지 부착", facilNo: "ST1999-0000017", facilNm: "담양하수종말처리장", facilNa: false }, { name: "슬러지 이송 컨베이어 비상정지 미작동", category: "기계적", cause: "비상정지 스위치 접점 불량", basis: "", action: "비상정지 스위치 전량 교체 및 월 1회 작동 점검 지정", facilNo: "", facilNm: "", facilNa: false }], request: { at: "2025-05-20", by: "재난안전과 박안전", no: "재난안전과-2025-176" }, noFindings: false, inputDone: { at: "2025-05-26", by: "하정수", reason: "", count: 4, workers: [{ uid: "u_wat3", name: "하정수", role: "주무관" }, { uid: "u_wat6", name: "서한별", role: "주무관" }, { uid: "u_wat4", name: "오수질", role: "주무관" }], workersNote: "" } },
-                        { deptId: "facility", inspectDate: "2025-04-23", surveyFile: "", reportFile: "공공시설사업소_2025_설문조사표_작성본.hwpx", reportAt: "2025-04-22", reportBy: "공공시설사업소 · 한담당", status: "DONE", deliveredAt: "2025-05-20", dueDate: "2025-08-29", hazards: [{ name: "체육관 천장 조명 교체 작업 중 추락", category: "고소작업", cause: "이동식 비계 안전난간 미설치", basis: "", action: "이동식 비계 안전난간·아웃트리거 설치 후 작업, 2인 1조 작업 지정", facilNo: "AR2008-0003610", facilNm: "담양종합체육관", facilNa: false }, { name: "환경시설팀 펌프실 회전체 노출", category: "기계적", cause: "커플링 방호덮개 탈락", basis: "oshs-87", action: "펌프 커플링 방호덮개 재설치 및 점검표에 덮개 상태 항목 추가", facilNo: "", facilNm: "", facilNa: true }], request: { at: "2025-05-20", by: "재난안전과 박안전", no: "재난안전과-2025-176" }, noFindings: false, inputDone: { at: "2025-05-27", by: "한담당", reason: "", count: 2, workers: [{ uid: "u_fac2", name: "한담당", role: "시설안전 담당" }, { uid: "u_fac3", name: "한운영", role: "주무관" }, { uid: "u_fac4", name: "민설비", role: "주무관" }], workersNote: "" } },
+                        { deptId: "safety", inspectDate: "2025-04-14", surveyFile: "", reportFile: "재난안전과_2025_설문조사표_작성본.hwpx", reportAt: "2025-04-11", reportBy: "재난안전과 · 박안전", status: "DONE", deliveredAt: "2025-05-20", dueDate: "2025-07-31", hazards: [{ name: "옥상 점검통로 안전난간 미설치", category: "물리적", cause: "난간 미설치 구간 30m", basis: "oshs-43", action: "점검통로 전 구간 안전난간(H=1.2m) 설치 및 추락주의 표지 부착", facilNo: "AR1968-0000226", facilNm: "담양군청(본관동)", facilNa: false }, { name: "비상발전기실 소화기 미비치", category: "화학적", cause: "소화기 노후·수량 부족", basis: "", action: "ABC분말소화기 4대 교체 비치 및 점검표 부착", facilNo: "AR1968-0000226", facilNm: "담양군청(본관동)", facilNa: false }], request: { at: "2025-05-20", by: "재난안전과 박안전", no: "재난안전과-2025-176" }, noFindings: false, inputDone: { at: "2025-05-22", by: "박안전", reason: "", count: 2 } },
+                        { deptId: "env", inspectDate: "2025-04-16", surveyFile: "", reportFile: "환경과_2025_설문조사표_작성본.hwpx", reportAt: "2025-04-15", reportBy: "환경과 · 정환경", status: "DONE", deliveredAt: "2025-05-20", dueDate: "2025-08-14", hazards: [{ name: "폐기물 적치장 붕괴 위험", category: "물리적", cause: "적치 높이 기준 초과", basis: "", action: "적치 높이 제한선 도색 및 방호벽 설치, 주 1회 점검 지정", facilNo: "", facilNm: "", facilNa: false }, { name: "자원순환팀 파쇄기 방호덮개 파손", category: "기계적", cause: "덮개 균열·고정볼트 이완", basis: "oshs-87", action: "방호덮개 교체 및 비상정지 스위치 동작 점검", facilNo: "", facilNm: "", facilNa: true }], request: { at: "2025-05-20", by: "재난안전과 박안전", no: "재난안전과-2025-176" }, noFindings: false, inputDone: { at: "2025-05-23", by: "정환경", reason: "", count: 2 } },
+                        { deptId: "water", inspectDate: "2025-04-21", surveyFile: "", reportFile: "물순환사업소_2025_설문조사표_작성본.hwpx", reportAt: "2025-04-18", reportBy: "물순환사업소 · 하정수", status: "DONE", deliveredAt: "2025-05-20", dueDate: "2025-09-30", hazards: [{ name: "정수장 약품투입실 환기 불량", category: "화학적", cause: "국소배기장치 용량 부족", basis: "oshs-607", action: "국소배기장치 2대 증설 및 MSDS 게시, 보호구 비치", facilNo: "WS1996-0000011", facilNm: "신계정수장", facilNa: false }, { name: "침전지 개구부 추락 위험", category: "물리적", cause: "개구부 덮개·난간 미설치", basis: "oshs-43", action: "개구부 안전덮개 6개소 설치 및 추락주의 표지 부착", facilNo: "WS1996-0000011", facilNm: "신계정수장", facilNa: false }, { name: "전기 분전반 시건장치 미설치", category: "전기적", cause: "분전반 개방 상태 방치", basis: "", action: "분전반 6면 시건장치 설치 및 활선 경고표지 부착", facilNo: "ST1999-0000017", facilNm: "담양하수종말처리장", facilNa: false }, { name: "슬러지 이송 컨베이어 비상정지 미작동", category: "기계적", cause: "비상정지 스위치 접점 불량", basis: "", action: "비상정지 스위치 전량 교체 및 월 1회 작동 점검 지정", facilNo: "", facilNm: "", facilNa: false }], request: { at: "2025-05-20", by: "재난안전과 박안전", no: "재난안전과-2025-176" }, noFindings: false, inputDone: { at: "2025-05-26", by: "하정수", reason: "", count: 4 } },
+                        { deptId: "facility", inspectDate: "2025-04-23", surveyFile: "", reportFile: "공공시설사업소_2025_설문조사표_작성본.hwpx", reportAt: "2025-04-22", reportBy: "공공시설사업소 · 한담당", status: "DONE", deliveredAt: "2025-05-20", dueDate: "2025-08-29", hazards: [{ name: "체육관 천장 조명 교체 작업 중 추락", category: "고소작업", cause: "이동식 비계 안전난간 미설치", basis: "", action: "이동식 비계 안전난간·아웃트리거 설치 후 작업, 2인 1조 작업 지정", facilNo: "AR2008-0003610", facilNm: "담양종합체육관", facilNa: false }, { name: "환경시설팀 펌프실 회전체 노출", category: "기계적", cause: "커플링 방호덮개 탈락", basis: "oshs-87", action: "펌프 커플링 방호덮개 재설치 및 점검표에 덮개 상태 항목 추가", facilNo: "", facilNm: "", facilNa: true }], request: { at: "2025-05-20", by: "재난안전과 박안전", no: "재난안전과-2025-176" }, noFindings: false, inputDone: { at: "2025-05-27", by: "한담당", reason: "", count: 2 } },
                         { deptId: "construct", inspectDate: "2025-04-24", surveyFile: "", reportFile: "건설과_2025_설문조사표_작성본.hwpx", reportAt: "2025-04-24", reportBy: "건설과 · 박현장", status: "DONE", deliveredAt: "2025-05-20", dueDate: "", hazards: [], request: null, noFindings: true, inputDone: null }
                     ],
                     history: [
@@ -165,10 +165,10 @@
                         { type: "STATUS", at: "2025-05-15 15:30", by: "박안전", memo: "보고서 첨부 · 조치기한 설정 (부서별)" },
                         { type: "REVIEW", at: "2025-05-20 10:00", by: "재난안전과 박안전", memo: "건설과 — 지적사항 없음(조치 요청 대상 아님)" },
                         { type: "DELIVER", at: "2025-05-20 10:05", by: "재난안전과 박안전", memo: "4개 부서에 조치 요청 공문 발송 · 지적사항 없는 1개 부서 완료 · 연계 번호 재난안전과-2025-176" },
-                        { type: "STATUS", at: "2025-05-22 14:20", by: "박안전", memo: "재난안전과 조치 입력 완료 · 2건 · 참여 근로자 2명" },
-                        { type: "STATUS", at: "2025-05-23 10:30", by: "정환경", memo: "환경과 조치 입력 완료 · 2건 · 참여 근로자 3명" },
-                        { type: "STATUS", at: "2025-05-26 16:00", by: "하정수", memo: "물순환사업소 조치 입력 완료 · 4건 · 참여 근로자 3명" },
-                        { type: "STATUS", at: "2025-05-27 11:15", by: "한담당", memo: "공공시설사업소 조치 입력 완료 · 2건 · 참여 근로자 3명" },
+                        { type: "STATUS", at: "2025-05-22 14:20", by: "박안전", memo: "재난안전과 조치 입력 완료 · 2건" },
+                        { type: "STATUS", at: "2025-05-23 10:30", by: "정환경", memo: "환경과 조치 입력 완료 · 2건" },
+                        { type: "STATUS", at: "2025-05-26 16:00", by: "하정수", memo: "물순환사업소 조치 입력 완료 · 4건" },
+                        { type: "STATUS", at: "2025-05-27 11:15", by: "한담당", memo: "공공시설사업소 조치 입력 완료 · 2건" },
                         { type: "COMPLETE", at: "2025-09-29 15:30", by: "시스템", memo: "전 부서 조치 완료 — 완료 확인을 마치면 평가 완료" },
                         { type: "CONFIRM", at: "2025-10-02 10:30", by: "박안전", memo: "전 부서 조치 완료 확인 (10건)" },
                         { type: "DISPATCH", at: "2025-11-10 14:20", by: "박안전", memo: "공문 온나라 상신 — 2025년 정기 위험성평가 개선조치 완료 확인 결과 통보 (연계 번호 재난안전과-2025-412)" },
@@ -213,10 +213,10 @@
                         ]
                     },
                     depts: [
-                        { deptId: "env", inspectDate: "2024-04-08", surveyFile: "", reportFile: "환경과_2024_설문조사표_작성본.hwpx", reportAt: "2024-04-05", reportBy: "환경과 · 정환경", status: "DONE", deliveredAt: "2024-05-17", dueDate: "2024-07-31", hazards: [{ name: "재활용선별장 컨베이어 하부 청소 중 끼임", category: "기계적", cause: "하부 방호울 미설치", basis: "oshs-87", action: "컨베이어 하부 방호울 설치 및 청소 시 전원 차단·표지 부착 절차 게시", facilNo: "", facilNm: "", facilNa: true }, { name: "수집차량 적재함 승하차 시 추락", category: "물리적", cause: "발판·손잡이 미설치", basis: "", action: "수집차량 6대 적재함 발판·손잡이 설치", facilNo: "", facilNm: "", facilNa: false }], request: { at: "2024-05-17", by: "재난안전과 박안전", no: "재난안전과-2024-163" }, noFindings: false, inputDone: { at: "2024-05-21", by: "정환경", reason: "", count: 2, workers: [{ uid: "u_env2", name: "정환경", role: "유해·위험요인 담당 주무관" }, { uid: "u_env4", name: "김지도", role: "주무관" }, { uid: "u_env5", name: "정수빈", role: "주무관" }], workersNote: "" } },
-                        { deptId: "water", inspectDate: "2024-04-10", surveyFile: "", reportFile: "물순환사업소_2024_설문조사표_작성본.hwpx", reportAt: "2024-04-09", reportBy: "물순환사업소 · 하정수", status: "DONE", deliveredAt: "2024-05-17", dueDate: "2024-08-30", hazards: [{ name: "여과지 점검 개구부 추락", category: "물리적", cause: "개구부 덮개 미고정", basis: "oshs-43", action: "여과지 점검 개구부 4개소 잠금형 덮개 교체 및 추락주의 표지 부착", facilNo: "WS1996-0000011", facilNm: "신계정수장", facilNa: false }, { name: "수질분석실 시약 증기 흡입", category: "화학적", cause: "시약장 배기 미흡", basis: "oshs-607", action: "시약장 국소배기장치 설치 및 MSDS 비치·교육", facilNo: "ST1999-0000017", facilNm: "담양하수종말처리장", facilNa: false }], request: { at: "2024-05-17", by: "재난안전과 박안전", no: "재난안전과-2024-163" }, noFindings: false, inputDone: { at: "2024-05-22", by: "하정수", reason: "", count: 2, workers: [{ uid: "u_wat3", name: "하정수", role: "주무관" }, { uid: "u_wat6", name: "서한별", role: "주무관" }, { uid: "u_wat4", name: "오수질", role: "주무관" }], workersNote: "" } },
+                        { deptId: "env", inspectDate: "2024-04-08", surveyFile: "", reportFile: "환경과_2024_설문조사표_작성본.hwpx", reportAt: "2024-04-05", reportBy: "환경과 · 정환경", status: "DONE", deliveredAt: "2024-05-17", dueDate: "2024-07-31", hazards: [{ name: "재활용선별장 컨베이어 하부 청소 중 끼임", category: "기계적", cause: "하부 방호울 미설치", basis: "oshs-87", action: "컨베이어 하부 방호울 설치 및 청소 시 전원 차단·표지 부착 절차 게시", facilNo: "", facilNm: "", facilNa: true }, { name: "수집차량 적재함 승하차 시 추락", category: "물리적", cause: "발판·손잡이 미설치", basis: "", action: "수집차량 6대 적재함 발판·손잡이 설치", facilNo: "", facilNm: "", facilNa: false }], request: { at: "2024-05-17", by: "재난안전과 박안전", no: "재난안전과-2024-163" }, noFindings: false, inputDone: { at: "2024-05-21", by: "정환경", reason: "", count: 2 } },
+                        { deptId: "water", inspectDate: "2024-04-10", surveyFile: "", reportFile: "물순환사업소_2024_설문조사표_작성본.hwpx", reportAt: "2024-04-09", reportBy: "물순환사업소 · 하정수", status: "DONE", deliveredAt: "2024-05-17", dueDate: "2024-08-30", hazards: [{ name: "여과지 점검 개구부 추락", category: "물리적", cause: "개구부 덮개 미고정", basis: "oshs-43", action: "여과지 점검 개구부 4개소 잠금형 덮개 교체 및 추락주의 표지 부착", facilNo: "WS1996-0000011", facilNm: "신계정수장", facilNa: false }, { name: "수질분석실 시약 증기 흡입", category: "화학적", cause: "시약장 배기 미흡", basis: "oshs-607", action: "시약장 국소배기장치 설치 및 MSDS 비치·교육", facilNo: "ST1999-0000017", facilNm: "담양하수종말처리장", facilNa: false }], request: { at: "2024-05-17", by: "재난안전과 박안전", no: "재난안전과-2024-163" }, noFindings: false, inputDone: { at: "2024-05-22", by: "하정수", reason: "", count: 2 } },
                         { deptId: "safety", inspectDate: "2024-04-15", surveyFile: "", reportFile: "재난안전과_2024_설문조사표_작성본.hwpx", reportAt: "2024-04-12", reportBy: "재난안전과 · 박안전", status: "DONE", deliveredAt: "2024-05-17", dueDate: "", hazards: [], request: null, noFindings: true, inputDone: null },
-                        { deptId: "construct", inspectDate: "2024-04-18", surveyFile: "", reportFile: "건설과_2024_설문조사표_작성본.hwpx", reportAt: "2024-04-17", reportBy: "건설과 · 박현장", status: "DONE", deliveredAt: "2024-05-17", dueDate: "2024-07-31", hazards: [{ name: "도로 보수 현장 차량 충돌", category: "작업특성", cause: "신호수 미배치", basis: "", action: "도로 보수 작업 시 신호수 배치 및 교통통제 계획서 작성 의무화", facilNo: "", facilNm: "", facilNa: false }, { name: "예초 작업 중 비산물 상해", category: "기계적", cause: "보호구 착용 미흡", basis: "oshs-32", action: "예초 작업자 보안면·각반 지급 및 착용 점검", facilNo: "", facilNm: "", facilNa: false }], request: { at: "2024-05-17", by: "재난안전과 박안전", no: "재난안전과-2024-163" }, noFindings: false, inputDone: { at: "2024-05-24", by: "박현장", reason: "", count: 2, workers: [{ uid: "u_con2", name: "박현장", role: "현장안전 담당 주무관" }, { uid: "u_con3", name: "김도현", role: "주무관" }, { uid: "u_con5", name: "이준호", role: "주무관" }], workersNote: "" } }
+                        { deptId: "construct", inspectDate: "2024-04-18", surveyFile: "", reportFile: "건설과_2024_설문조사표_작성본.hwpx", reportAt: "2024-04-17", reportBy: "건설과 · 박현장", status: "DONE", deliveredAt: "2024-05-17", dueDate: "2024-07-31", hazards: [{ name: "도로 보수 현장 차량 충돌", category: "작업특성", cause: "신호수 미배치", basis: "", action: "도로 보수 작업 시 신호수 배치 및 교통통제 계획서 작성 의무화", facilNo: "", facilNm: "", facilNa: false }, { name: "예초 작업 중 비산물 상해", category: "기계적", cause: "보호구 착용 미흡", basis: "oshs-32", action: "예초 작업자 보안면·각반 지급 및 착용 점검", facilNo: "", facilNm: "", facilNa: false }], request: { at: "2024-05-17", by: "재난안전과 박안전", no: "재난안전과-2024-163" }, noFindings: false, inputDone: { at: "2024-05-24", by: "박현장", reason: "", count: 2 } }
                     ],
                     history: [
                         { type: "CREATE", at: "2024-03-20 09:30", by: "박안전", memo: "정기평가 생성 · 4개 부서 선정 · 설문 제출 기한 2024-04-19" },
@@ -225,9 +225,9 @@
                         { type: "STATUS", at: "2024-05-13 15:30", by: "박안전", memo: "보고서 첨부 · 조치기한 설정 (부서별)" },
                         { type: "REVIEW", at: "2024-05-17 10:00", by: "재난안전과 박안전", memo: "재난안전과 — 지적사항 없음(조치 요청 대상 아님)" },
                         { type: "DELIVER", at: "2024-05-17 10:05", by: "재난안전과 박안전", memo: "3개 부서에 조치 요청 공문 발송 · 지적사항 없는 1개 부서 완료 · 연계 번호 재난안전과-2024-163" },
-                        { type: "STATUS", at: "2024-05-21 15:10", by: "정환경", memo: "환경과 조치 입력 완료 · 2건 · 참여 근로자 3명" },
-                        { type: "STATUS", at: "2024-05-22 11:40", by: "하정수", memo: "물순환사업소 조치 입력 완료 · 2건 · 참여 근로자 3명" },
-                        { type: "STATUS", at: "2024-05-24 10:05", by: "박현장", memo: "건설과 조치 입력 완료 · 2건 · 참여 근로자 3명" },
+                        { type: "STATUS", at: "2024-05-21 15:10", by: "정환경", memo: "환경과 조치 입력 완료 · 2건" },
+                        { type: "STATUS", at: "2024-05-22 11:40", by: "하정수", memo: "물순환사업소 조치 입력 완료 · 2건" },
+                        { type: "STATUS", at: "2024-05-24 10:05", by: "박현장", memo: "건설과 조치 입력 완료 · 2건" },
                         { type: "COMPLETE", at: "2024-08-20 17:20", by: "시스템", memo: "전 부서 조치 완료 — 완료 확인을 마치면 평가 완료" },
                         { type: "CONFIRM", at: "2024-08-27 10:30", by: "박안전", memo: "전 부서 조치 완료 확인 (6건)" },
                         { type: "DISPATCH", at: "2024-10-14 15:00", by: "박안전", memo: "공문 온나라 상신 — 2024년 정기 위험성평가 개선조치 완료 확인 결과 통보 (연계 번호 재난안전과-2024-371)" },
@@ -2360,25 +2360,21 @@
     }
     /* 입력 완료 — 행이 0건이면 «아직 안 씀»과 «쓸 게 없음»을 가를 수 없어 부서가 알린다.
        0건으로 끝내려면 사유가 필요하다(이행점검 «해당없음은 사유 없이 저장하지 않는다»와 같은 근거). */
-    /* workers — 그 부서에서 위험성평가에 참여한 근로자 [{uid, name, role}] (2026-11-13 결정 D-6).
-       시행규칙 §37의4①2호가 기록에 «참여한 근로자 및 근로자대표»를 넣으라고 한다. 순회점검·설문에
-       참여한 사람이 늘 있으므로 0건 입력 완료에도 1명 이상 받는다. workersNote — 조직도에 없는
-       참여자(근로자대표·공무직 등)를 적는 칸(선택). */
-    function setInputDone(aid, deptId, by, reason, workers, workersNote) {
+    /* 참여 근로자는 여기서 받지 않는다 (2026-11-16 — 결정 D-6 거둠, 지금 운영 그대로 원칙).
+       시행규칙 §37의4①2호의 «참여한 근로자» 기록은 부서 설문조사표 제출(§37의2 설문조사)과
+       용역 통합 보고서가 맡는다. 입력 완료 단계에 칸을 다시 두지 말 것. */
+    function setInputDone(aid, deptId, by, reason) {
         var a = assessmentOf(aid), dp = deptOf(a, deptId);
         if (!inputOpen(aid, deptId)) return { error: '입력 중인 부서가 아닙니다.' };
         var n = validDeptRows(a, deptId).length;
         var r = String(reason || '').trim();
         if (!n && !r) return { error: '작성한 유해위험요인이 없습니다 — 조치할 것이 없으면 사유를 적으세요.' };
-        var ws = (workers || []).filter(function (w) { return w && (w.uid || w.name); })
-            .map(function (w) { return { uid: w.uid || '', name: w.name || '', role: w.role || '' }; });
-        if (!ws.length) return { error: '위험성평가에 참여한 근로자를 1명 이상 고르세요.' };
         commitDeptRows(aid, deptId, by);
         notifyRowOwners(a, deptId);
-        dp.inputDone = { at: today(), by: by || '', reason: n ? '' : r, count: n, workers: ws, workersNote: String(workersNote || '').trim() };
+        dp.inputDone = { at: today(), by: by || '', reason: n ? '' : r, count: n };
         if (!n) dp.noFindings = true;
         pushHistory(aid, { type: 'STATUS', by: by || deptName(deptId),
-            memo: deptName(deptId) + ' 조치 입력 완료 · ' + (n ? n + '건' : '조치 대상 없음 — ' + r) + ' · 참여 근로자 ' + ws.length + '명' });
+            memo: deptName(deptId) + ' 조치 입력 완료 · ' + (n ? n + '건' : '조치 대상 없음 — ' + r) });
         refreshAssessmentStatus(aid);
         return dp;
     }
