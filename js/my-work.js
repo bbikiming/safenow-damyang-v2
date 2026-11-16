@@ -541,6 +541,39 @@
                 });
             }
         } catch (e) {}
+        /* 건강검진 — 무엇이 할 일인지는 DYSH.hcTodos 한 곳(작업환경측정 weTodos 와 같은 구조, 2026-11-16)
+         *   부서: 결과 안내 공문으로 알려진 검진의 미검진자 추가검진 · 사후관리
+         *   재난안전과: 결과 안내 공문 기안 대기 */
+        try {
+            var Sh2 = global.DYSH;
+            if (Sh2 && Sh2.hcTodos) {
+                var hcDept = '';
+                try { hcDept = D().deptName(state.deptId) || ''; } catch (e) {}
+                Sh2.hcTodos(state.deptId).forEach(function (t) {
+                    if (t.kind === 'notice') {
+                        out.push({
+                            id: 'HC-NOTICE-' + t.year, cat: 'inspection',
+                            title: t.year + '년 건강검진 결과 안내 공문 기안',
+                            sub: '결과가 들어온 ' + t.rows.length + '건 — ' + t.rows.map(function (r) { return r.dept + ' ' + r.type; }).join(' · '),
+                            due: t.rows.map(function (r) { return r.done; }).sort()[0] || '', status: 'IN_PROGRESS',
+                            dept: state.deptId, dept_label: hcDept,
+                            href: 'health-exam.html?year=' + t.year, atype: 'menu', action: '공문 기안하러 가기', destLabel: '건강검진', remind: false
+                        });
+                        return;
+                    }
+                    var r = t.row;
+                    out.push({
+                        id: 'HC-' + t.kind.toUpperCase() + '-' + r.id, cat: 'improve',
+                        title: r.dept + ' ' + r.type + ' — ' + (t.kind === 'extra' ? '미검진자 추가검진' : '사후관리'),
+                        sub: t.kind === 'extra' ? '미검진 ' + Sh2.hcUnexamined(r) + '명' : '사후관리 대상 조치 — 실시일부터 30일 안에',
+                        due: t.due, status: 'IN_PROGRESS',
+                        dept: state.deptId, dept_label: hcDept,
+                        href: 'health-exam-detail.html?id=' + encodeURIComponent(r.id),
+                        atype: 'menu', action: t.kind === 'extra' ? '추가검진 반영하러 가기' : '사후관리 완료하러 가기', destLabel: '건강검진 상세', remind: false
+                    });
+                });
+            }
+        } catch (e) {}
         /* 타 도메인 목업 시드 — 첨부 완료한 시드는 DONE 으로 표시 */
         otherSeeds().forEach(function (s) {
             if (s.dept !== state.deptId) return;

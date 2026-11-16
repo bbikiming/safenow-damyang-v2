@@ -52,36 +52,44 @@
         var rate = S().hcRate(r);
         var barTone = rate == null ? '' : rate >= 100 ? '' : (rate >= 80 ? 'warn' : 'danger');
 
-        /* ===== 진행 순서 · «지금 할 일» (2026-11-16) — 작업환경측정 상세와 같은 DYSH.flowHtml =====
-         * 건강검진은 부서가 검진기관과 진행하고 결과 통보서를 올리는 단순 첨부형이다(2026-09-09 확정).
-         * 재난안전과 확인 단계는 없다 — 확인을 받는 단계를 지어내지 않는다. */
+        /* ===== 진행 순서 · «지금 할 일» — 작업환경측정 상세와 같은 구조 (2026-11-16) =====
+         * ① 결과 등록 → ② 결과 안내 공문(재난안전과 · 부서 자체 검진이면 없음) → (필요할 때만) 추가검진 · 사후관리.
+         * 강조는 그 단계를 하는 사람에게만 — 권한이 있는 버튼은 그대로 남는다. */
         var p = R() && R().current ? R().current() : null;
-        var mine = may && (!p || p.tier === 'staff');
+        var staff = !p || p.tier === 'staff';
+        var meOwner = staff && (!R() || R().canAct(R().OWNER_DEPT));
+        var meDept = staff && !!p && !!p.deptId && p.deptId === did(r);
+        var own = S().regByOf(r) === 'owner';
+        var lk = S().hcLockOf(r.id);
+        var doer = own ? '재난안전과' : r.dept;
+        var mineDoer = own ? meOwner : meDept;
         var fuNeed = !!r.followupNeeded;
-        /* 해당하는 단계만 보인다 — 보통은 [검진 완료 처리] 한 번으로 끝난다(2026-11-16 «2단계로»).
-           추가검진·사후관리는 실시 결과에 미검진자·사후관리 대상이 있을 때만 생긴다. */
         var hadExtra = (r.history || []).some(function (h) { return /추가검진/.test(h.event); });
         var steps = [
-            { key: 'complete', lab: '검진 완료 처리', who: r.dept, mine: mine, done: done,
-              note: done ? '실시 ' + r.done + ' · 수검 ' + r.examinedCount + ' / ' + r.targetCount + '명'
+            { key: 'complete', lab: '결과 등록', who: doer, mine: mineDoer, done: done,
+              note: done ? '실시 ' + r.done + ' · 수검 ' + r.examinedCount + ' / ' + r.targetCount + '명' + (fuNeed ? ' · 사후관리 대상 있음' : '')
                   : '결과 통보서 파일 · 실시일 · 수검자 수 · 사후관리 대상 유무를 한 창에서' },
-            { key: 'extra', lab: '미검진자 추가검진 반영', who: r.dept, mine: mine, done: done && unex === 0, skip: !done || (unex === 0 && !hadExtra),
+            { key: 'notice', lab: '결과 안내 공문 보내기', who: '재난안전과', mine: meOwner, done: !!lk, skip: !own,
+              note: lk ? lk.status + ' ' + lk.at + ' — 검토·결재는 온나라에서 합니다' : '부서장에게 결과(인원 집계)를 알립니다 · 검토·결재는 온나라에서' },
+            { key: 'extra', lab: '미검진자 추가검진 반영', who: r.dept, mine: meDept, done: done && unex === 0, skip: !done || (unex === 0 && !hadExtra),
               note: unex > 0 ? '미검진 ' + unex + '명' + (r.extraExamDate ? ' · 추가검진 예정 ' + r.extraExamDate : '') : '전원 수검' },
-            { key: 'followup', lab: '사후관리 완료', who: r.dept, mine: mine, done: !!r.followupDone, skip: !done || !fuNeed,
+            { key: 'followup', lab: '사후관리 완료', who: r.dept, mine: meDept, done: !!r.followupDone, skip: !done || !fuNeed,
               note: r.followupDone ? (r.followupResult || '완료') : '유소견자 조치 — 실시일부터 30일 안에' }
         ];
         var cur = S().flowCur(steps), cs = cur >= 0 ? steps[cur] : null;
-        var nowKey = cs && cs.mine ? cs.key : '';
+        var nowKey = cs && cs.mine && may ? cs.key : '';
 
-        /* 버튼은 단계 순서대로 — 보조 처리(증빙 추가·기한·사유·알림)는 뒤에 */
+        /* 버튼은 단계 순서대로 — 보조 처리(결과 수정·증빙 추가·기한·사유·알림)는 뒤에 */
         var B = function (key, label, fn) { return '<button type="button" class="btn btn-outline" data-step="' + key + '" onclick="' + fn + '">' + label + '</button>'; };
         var acts = '';
         if (may) {
-            if (!done) acts += B('complete', '검진 완료 처리', 'HEXD.complete()');
-            else if (unex > 0) acts += B('extra', '추가검진 반영', 'HEXD.complete()');
+            if (!done) acts += B('complete', '결과 등록', 'HEXD.complete()');
+            if (own && done && !lk && meOwner) acts += '<a class="btn btn-outline" data-step="notice" href="health-exam.html?year=' + r.year + '">결과 안내 공문 보내러 가기</a>';
+            if (done && unex > 0) acts += B('extra', '추가검진 반영', 'HEXD.complete()');
             else if (S().hcFollowup(r)) acts += B('followup', '사후관리 완료', 'HEXD.complete()');
-            /* 결과보고서는 실시일이 있어야 붙는다(운영 E04 ①) — 미실시면 [검진 완료 처리]가 함께 받는다 */
-            if (done) acts += '<button type="button" class="btn btn-outline" onclick="HEXD.evidence()">증빙 추가 등록</button>';
+            /* 결과 수정·증빙 추가 — 결과 안내 공문을 보내기 전까지만(보낸 뒤 고치면 공문 별지와 기록이 갈린다) */
+            if (done && !lk) acts += '<button type="button" class="btn btn-outline" onclick="HEXD.editResult()">결과 수정</button>';
+            if (done && !lk) acts += '<button type="button" class="btn btn-outline" onclick="HEXD.evidence()">증빙 추가 등록</button>';
             if (!done || unex > 0) acts += '<button type="button" class="btn btn-outline" onclick="HEXD.resetDue()">기한 재설정</button>';
             if (!done || unex > 0) acts += '<button type="button" class="btn btn-outline" onclick="HEXD.reason()">미검진 사유 입력</button>';
             acts += '<button type="button" class="btn btn-outline" onclick="HEXD.notify()">알림 발송</button>';
@@ -126,7 +134,7 @@
                   '<div style="align-self:center;font-size:13px;color:var(--text-gray);">실시 증빙이 등록되어 있습니다.</div></div>'
                 : (done
                     ? '<div class="sh-req">아직 실시 증빙이 등록되지 않았습니다. 검진기관 실시확인서를 <b>[증빙 등록]</b>으로 첨부하세요.</div>'
-                    : '<div class="sh-req">검진을 실시한 뒤 <b>[검진 완료 처리]</b>에서 실시일·수검자 수와 함께 결과보고서를 올립니다.</div>')) +
+                    : '<div class="sh-req">검진을 실시한 뒤 <b>[결과 등록]</b>에서 실시일·수검자 수와 함께 결과 통보서를 올립니다.</div>')) +
             '</div>';
 
         /* 사후관리 — 상세형: 계획/실적 / 단순형: 이행 여부만 */
@@ -181,7 +189,8 @@
     /* ── 증빙 등록 ── */
     function evidence() {
         if (deny(S().healthOf(state.id), '실시 증빙 등록')) return;
-        if (!S().healthOf(state.id).done) { toast('검진 실시일을 먼저 등록하세요 — [검진 완료 처리]에서 결과보고서를 함께 올립니다.'); return; }
+        if (!S().healthOf(state.id).done) { toast('검진 실시일을 먼저 등록하세요 — [결과 등록]에서 결과 통보서를 함께 올립니다.'); return; }
+        if (S().hcLockOf(state.id)) { toast('결과 안내 공문을 보낸 건이라 증빙을 더할 수 없습니다.'); return; }
         V().openModal('실시 증빙 등록',
             '<p style="font-size:13px;margin-bottom:10px;color:var(--text-gray);">검진기관 실시확인서·집계 결과 통보서를 첨부합니다. 개인별 결과지는 첨부하지 않습니다.</p>' +
             V().uploadDrop('파일을 끌어다 놓거나 클릭하여 업로드<br><span style="font-size:12px;">업로드 시 이력이 자동 기록됩니다</span>', null, { hint: true }),
@@ -190,7 +199,7 @@
     }
     function saveEvidence() {
         if (deny(S().healthOf(state.id), '실시 증빙 등록')) return;
-        if (!S().attachEvidence('hc', state.id, '실시 증빙')) { toast('검진 실시일을 먼저 등록하세요.'); return; }
+        if (!S().attachEvidence('hc', state.id, '실시 증빙')) { toast(S().hcLockOf(state.id) ? '결과 안내 공문을 보낸 건이라 증빙을 더할 수 없습니다.' : '검진 실시일을 먼저 등록하세요.'); return; }
         V().closeModal(); render(); toast('증빙이 등록되었습니다.'); }
 
     /* ── 미검진 사유 ── */
@@ -275,20 +284,45 @@
 
 
     /* ── 완료 처리 ── */
-    var HF = null;   /* 검진 완료 처리 창에서 고른 결과보고서 */
+    var HF = null;   /* 결과 등록 창에서 고른 결과 통보서 */
+    /* 결과 수정 — 결과 안내 공문을 보내기 전까지만(작업환경측정 [결과 수정]과 같다) */
+    function editResult() {
+        var r = S().healthOf(state.id);
+        if (deny(r, '결과 수정')) return;
+        if (!r.done) { toast('아직 결과를 등록하지 않았습니다.'); return; }
+        if (S().hcLockOf(r.id)) { toast('결과 안내 공문을 보낸 건이라 결과를 고칠 수 없습니다.'); return; }
+        V().openModal('결과 수정',
+            '<p class="file-hint" style="margin-bottom:10px;">결과 안내 공문을 보내기 전까지 고칠 수 있습니다. 고친 내용은 이력에 남습니다.</p>' +
+            '<div style="margin-bottom:12px;"><label class="form-label" for="hd-e-date">검진 실시일</label><input type="date" class="form-input" id="hd-e-date" value="' + esc(r.done) + '"></div>' +
+            '<div style="margin-bottom:12px;"><label class="form-label" for="hd-e-ex">수검자 수 (대상 ' + r.targetCount + '명)</label><input type="number" class="form-input" id="hd-e-ex" min="0" max="' + r.targetCount + '" value="' + r.examinedCount + '"></div>' +
+            '<label><input type="checkbox" id="hd-e-fu"' + (r.followupNeeded ? ' checked' : '') + '> 사후관리 대상 있음</label>',
+            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+            '<button type="button" class="btn btn-primary" onclick="HEXD.saveEdit()">저장</button>');
+    }
+    function saveEdit() {
+        var r = S().healthOf(state.id);
+        if (deny(r, '결과 수정')) return;
+        var d = document.getElementById('hd-e-date').value, ex = Number(document.getElementById('hd-e-ex').value);
+        if (!d || d > S().TODAY) { toast('검진 실시일을 확인하세요.'); return; }
+        if (!Number.isInteger(ex) || ex < 0 || ex > r.targetCount) { toast('수검자 수는 0명 이상 대상자 수 이하로 입력하세요.'); return; }
+        if (!S().editHealthResult(state.id, { doneDate: d, examinedCount: ex, followupNeeded: document.getElementById('hd-e-fu').checked })) {
+            V().closeModal(); toast('결과 안내 공문을 보낸 건이라 결과를 고칠 수 없습니다.'); return;
+        }
+        V().closeModal(); render(); toast('결과를 고쳤습니다.');
+    }
     function onPick(items) {
         HF = items && items[0] ? { name: items[0].name, size: items[0].size } : null;
         var box = document.getElementById('hd-c-file');
         if (box) box.innerHTML = HF ? '<p style="margin-bottom:8px;">' + S().icon('file') + ' <b>' + esc(HF.name) + '</b></p>' : '';
     }
     function complete() {
-        if (deny(S().healthOf(state.id), '검진 완료 처리')) return;
+        if (deny(S().healthOf(state.id), '결과 등록')) return;
         HF = null;
         var r = S().healthOf(state.id);
         if (!r.done) {
             /* 실시일·수검자 수·결과보고서를 한 번에 받는다(운영 E04 ①) — 결과보고서와 수검 인원은
                실시일이 있어야 들어간다. 종전에는 증빙을 먼저 올리게 해 «미실시인데 첨부됨»이 생겼다. */
-            V().openModal('검진 완료 처리',
+            V().openModal('결과 등록',
                 '<div style="margin-bottom:12px;"><label class="form-label">검진 실시일 <span style="color:var(--status-danger-fg)">*</span></label>' +
                     '<input type="date" class="form-input" id="hd-c-date" value="' + esc(S().TODAY) + '"></div>' +
                 '<div style="margin-bottom:12px;"><label class="form-label">수검자 수 (대상 ' + r.targetCount + '명)</label>' +
@@ -321,7 +355,7 @@
         }
     }
     function saveComplete() {
-        if (deny(S().healthOf(state.id), '검진 완료 처리')) return;
+        if (deny(S().healthOf(state.id), '결과 등록')) return;
         var ex = Number(document.getElementById('hd-c-ex').value);
         var dateEl = document.getElementById('hd-c-date');
         var r = S().healthOf(state.id);
@@ -354,5 +388,5 @@
     global.HEXD = { init: init, evidence: evidence, saveEvidence: saveEvidence,
         reason: reason, saveReason: saveReason, resetDue: resetDue, saveDue: saveDue,
         notify: notify, pickRecipient: pickRecipient, sendNotify: sendNotify, complete: complete, saveComplete: saveComplete,
-        saveFollowup: saveFollowup, onPick: onPick };
+        saveFollowup: saveFollowup, onPick: onPick, editResult: editResult, saveEdit: saveEdit };
 })(window);

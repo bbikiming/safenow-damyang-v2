@@ -22,7 +22,9 @@
        화면과 시드가 조용히 갈린다. */
     /* v6 — 결과 안내 공문(weDocs)·노출기준 초과(exceed)·노동관서 제출일·결과보고서 파일 이름(reportFiles)·
             등록 주체(regBy)를 더했다(기획-작업환경측정-첨부·공문흐름-20261116-v2). */
-    var SKEY = 'damyangShV6';
+    /* v7 — 건강검진도 결과 안내 공문(hcDocs)·결과보고서 파일 이름(reportFiles)·등록 주체(regBy)를 더했다
+            (작업환경측정과 같은 «결과 등록 → 결과 안내 공문» 2단계, 2026-11-16). */
+    var SKEY = 'damyangShV7';
     /* 기준일·기준연도 — DYV2.today() 단일 출처 (시연일 변경은 common.js DEMO_TODAY 한 줄) */
     var TODAY = (global.DYV2 && global.DYV2.today) ? global.DYV2.today() : '2026-11-13';
     var CURYEAR = Number(TODAY.slice(0, 4));
@@ -435,7 +437,24 @@
             sdoc('WEN-2026-0002', 2026, 'H2', '2026-10-30', ['WE-2026-06', 'WE-2026-07', 'WE-2026-08'], '결재완료')
         ];
 
-        return { workenv: workenv, health: health, weDocs: weDocs, seqWE: 13, seqHC: 13, seqWEN: 2 };
+        /* 건강검진 결과 안내 공문 — 재난안전과가 부서장에게 보낸 기록(예시 자료). 별지는 부서별 집계만 싣는다
+           (대상·수검·미검진·사후관리 대상 유무) — 개인별 결과는 싣지 않는다(산안법 §132②·③). */
+        function hdoc(sid, year, at, rowIds, n) {
+            var rows = health.filter(function (r) { return rowIds.indexOf(r.id) >= 0; });
+            return { sid: sid, no: '재난안전과-' + sid.slice(-4), at: at, status: '결재완료', year: year, rowIds: rowIds,
+                docType: '외부발송', title: year + '년 건강검진 결과 안내' + (n > 1 ? '(' + n + '차)' : ''), to: '수신자 참조',
+                body: '1. ' + year + '년 건강검진 실시 결과를 붙임과 같이 알려 드립니다.\n2. 개인별 결과는 검진기관이 본인에게 통보합니다. 사후관리 대상이 있는 부서는 조치하여 주시기 바랍니다.',
+                attach: [], annex: true, basis: [], recipients: deptIds(rows.map(function (r) { return r.dept; })),
+                by: '박안전', byUid: 'u_jjt2', dept: '재난안전과', sample: true };
+        }
+        var hcDocs = [
+            hdoc('HCN-2025-0001', 2025, '2025-12-10', ['HC-2025-01', 'HC-2025-02', 'HC-2025-03'], 1),
+            hdoc('HCN-2026-0001', 2026, '2026-07-03', ['HC-2026-01', 'HC-2026-02', 'HC-2026-03', 'HC-2026-06'], 1),
+            hdoc('HCN-2026-0002', 2026, '2026-08-07', ['HC-2026-04', 'HC-2026-05'], 2),
+            hdoc('HCN-2026-0003', 2026, '2026-11-05', ['HC-2026-07', 'HC-2026-08', 'HC-2026-09'], 3)
+        ];
+
+        return { workenv: workenv, health: health, weDocs: weDocs, hcDocs: hcDocs, seqWE: 13, seqHC: 13, seqWEN: 2, seqHCN: 3 };
     }
 
     function load() {
@@ -719,6 +738,8 @@
             dept: o.dept || '', agency: o.agency || '미지정', planned: o.planned || '', done: '',
             targetCount: o.targetCount || 0, examinedCount: 0, evidence: false, followupNeeded: false, followupDone: false,
             followupResult: '', owner: (o.dept || '') + ' · 담당자', reason: '', extraExamDate: '',
+            regBy: (global.DYROLE && global.DYROLE.canAct && global.DYROLE.canAct(global.DYROLE.OWNER_DEPT)) ? 'owner' : 'dept',
+            reportFiles: [],
             carcinogen: !!o.carcinogen,
             targetBasis: o.targetBasis || ((o.type || '일반건강검진') === '특수건강진단' ? '특수건강진단 대상(유해인자 노출자)' : '일반건강검진(상시근로자 대상)'),
             history: [{ at: TODAY, actor: actorNow(), event: (o.type || '일반건강검진') + ' 계획 등록 (예정일 ' + (o.planned || '-') + ')' }] };
@@ -772,6 +793,79 @@
         return s;
     }
 
+    /* ================= 건강검진 결과 안내 공문 · 잠금 (2026-11-16 — 작업환경측정과 같은 구조) =================
+     * 단위는 연도다(검진은 연 1회 · 부서·유형별로 나뉘어 실시된다). 결과가 들어온 건부터 보내고, 나뉘면 2차·3차다.
+     * 부서가 직접 등록한 검진(regBy 'dept')은 공문에 싣지 않는다. 별지는 부서별 집계뿐이다(개인 결과 없음). */
+    function hcDocs() { var d = load(); return d.hcDocs || (d.hcDocs = []); }
+    function hcLockOf(rowId) {
+        var list = hcDocs();
+        for (var i = list.length - 1; i >= 0; i--) {
+            var d = list[i];
+            if ((d.rowIds || []).indexOf(rowId) >= 0 && LOCKED[d.status]) return d;
+        }
+        return null;
+    }
+    function hcYearRows(year) { return health().filter(function (r) { return String(r.year) === String(year); }); }
+    function hcNoticeRows(year) {
+        return hcYearRows(year).filter(function (r) { return regByOf(r) === 'owner' && !!r.done && !hcLockOf(r.id); });
+    }
+    function hcYearStat(year) {
+        var own = hcYearRows(year).filter(function (r) { return regByOf(r) === 'owner'; });
+        return {
+            total: own.length,
+            done: own.filter(function (r) { return !!r.done; }).length,
+            pending: own.filter(function (r) { return !r.done; }),
+            notice: hcNoticeRows(year),
+            sent: own.filter(function (r) { return !!hcLockOf(r.id); }).length,
+            docs: hcDocs().filter(function (d) { return String(d.year) === String(year); })
+        };
+    }
+    function hcReportFiles(r) {
+        if (!r) return [];
+        if (r.reportFiles && r.reportFiles.length) return r.reportFiles;
+        return r.evidence ? [{ name: (r.agency || '검진기관') + ' ' + r.type + ' 결과 통보서(' + r.year + ').pdf', sample: true }] : [];
+    }
+    function saveHcNotice(year, doc, rowIds) {
+        var d = load(); d.seqHCN = (d.seqHCN || 0) + 1;
+        doc.year = Number(year); doc.rowIds = rowIds.slice();
+        hcDocs().push(doc);
+        rowIds.forEach(function (id) { var r = healthOf(id); if (r) pushHist(r, '결과 안내 공문 온나라 전송 · ' + (doc.title || '')); });
+        save(); return doc;
+    }
+    function nextHcNoticeNo() { var d = load(); return '재난안전과-' + String(9500 + (d.seqHCN || 0) + 1); }
+    /* 결과 수정 — 결과 안내 공문을 보내기 전까지만 */
+    function editHealthResult(id, opts) {
+        var r = healthOf(id); if (!r || !r.done || hcLockOf(id)) return null;
+        opts = opts || {};
+        var before = r.examinedCount + '/' + r.targetCount + (r.followupNeeded ? ' · 사후관리 대상' : '');
+        if (opts.doneDate) r.done = opts.doneDate;
+        if (opts.examinedCount != null) r.examinedCount = Math.min(r.targetCount || 0, opts.examinedCount);
+        if (opts.followupNeeded != null) { r.followupNeeded = !!opts.followupNeeded; if (!r.followupNeeded) { r.followupDone = false; r.followupResult = ''; } }
+        pushHist(r, '결과 수정 · ' + before + ' → ' + r.examinedCount + '/' + r.targetCount + (r.followupNeeded ? ' · 사후관리 대상' : ''));
+        save(); return r;
+    }
+    /* 할 일 — 부서: 결과 안내 공문으로 알려진(또는 부서 자체 검진) 건의 미검진자 추가검진 · 사후관리
+     *          재난안전과: 결과가 들어왔는데 공문에 싣지 않은 연도 */
+    function hcTodos(deptId) {
+        var V = global.DYV2, R = global.DYROLE, out = [];
+        var owner = R && R.OWNER_DEPT ? R.OWNER_DEPT : 'safety';
+        health().forEach(function (r) {
+            var did = V && V.deptIdOf ? V.deptIdOf(r.dept) : r.dept;
+            if (did !== deptId || !r.done || !(hcLockOf(r.id) || regByOf(r) === 'dept')) return;
+            if (hcUnexamined(r) > 0) out.push({ kind: 'extra', row: r, due: r.extraExamDate || '' });
+            else if (hcFollowup(r)) out.push({ kind: 'followup', row: r, due: addDays(r.done, 30) });
+        });
+        if (deptId === owner) {
+            var years = {};
+            health().forEach(function (r) { years[r.year] = 1; });
+            Object.keys(years).sort().forEach(function (y) {
+                var rows = hcNoticeRows(y);
+                if (rows.length) out.push({ kind: 'notice', year: Number(y), rows: rows });
+            });
+        }
+        return out;
+    }
+
     /* ================= 공용 처리 액션(양 모듈 공유) ================= */
     /* 증빙/결과보고서 등록
      * 작업환경측정 첨부는 **용도가 둘**이다(기획확인 4차 3-1, 2026-10-06):
@@ -802,8 +896,11 @@
                «미실시인데 결과보고서 첨부됨»이 생기면 상태(기한 초과)와 증빙이 서로 다른 말을 한다.
                화면 두 곳(목록·상세)이 같은 판정을 보도록 저장 계층에서 막는다. */
             if (!r.done) return null;
+            /* 결과 안내 공문을 보낸 뒤에는 결과보고서를 바꾸지 않는다 — 작업환경측정과 같은 잠금 */
+            if (hcLockOf(r.id)) return null;
             r.evidence = true;
-            pushHist(r, (label || '증빙파일') + ' 등록');
+            if (fileName) (r.reportFiles = r.reportFiles || []).push({ name: fileName, at: TODAY, by: actorNow() });
+            pushHist(r, (label || '증빙파일') + ' 등록' + (fileName ? ' · ' + fileName : ''));
         }
         save(); return r;
     }
@@ -906,6 +1003,9 @@
         /* 건강검진 */
         health: health, healthOf: healthOf, addHealth: addHealth, effHealth: effHealth, hcRate: hcRate,
         hcUnexamined: hcUnexamined, hcFollowup: hcFollowup,
+        hcDocs: hcDocs, hcLockOf: hcLockOf, hcYearRows: hcYearRows, hcNoticeRows: hcNoticeRows, hcYearStat: hcYearStat,
+        hcReportFiles: hcReportFiles, saveHcNotice: saveHcNotice, nextHcNoticeNo: nextHcNoticeNo,
+        editHealthResult: editHealthResult, hcTodos: hcTodos,
         healthSummary: healthSummary, healthLink: healthLink,
         /* 공용 처리 */
         attachEvidence: attachEvidence, setReason: setReason, resetDue: resetDue,

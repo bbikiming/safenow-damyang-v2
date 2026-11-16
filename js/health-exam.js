@@ -41,6 +41,7 @@
         '</div>';
     }
     /* 조작 차단 문구 — 조사는 DYV2.josa() 가 붙인다('증빙 첨부은(는)' 같은 표기를 내지 않는다) */
+    function canOwner() { return !R() || R().canAct(R().OWNER_DEPT); }
     function denyNote(what) { return what + V().josa(what, '은', '는') + ' 해당 부서 담당자가 수행합니다.'; }
 
     var state = { mount: null, year: '2026', type: '', dept: '', tile: 'all' };
@@ -113,7 +114,9 @@
             '<span class="sh-fl">부서</span>' +
             '<select class="form-select" aria-label="부서" onchange="HEX.setDept(this.value)">' + deptOpts + '</select>' +
             '</div>' +
-            (canAct() ? '<button type="button" class="btn btn-primary" onclick="HEX.openNew()">＋ 검진 계획 등록</button>' : '') + '</div>';
+            (canAct() ? '<div style="display:flex;gap:var(--sp-2);flex-wrap:wrap;">' +
+                '<button type="button" class="btn btn-outline" onclick="HEX.openNew()">검진 계획 등록</button>' +
+                '<button type="button" class="btn btn-primary" onclick="HEX.openResult()">＋ 결과 등록</button></div>' : '') + '</div>';
     }
 
     function render() {
@@ -133,19 +136,20 @@
         var rows = list.length ? list.map(rowSimple).join('') :
             '<tr><td colspan="10" class="sh-empty">조건에 맞는 건강검진 건이 없습니다.</td></tr>';
 
-        state.mount.innerHTML = linkbar + tiles(sum) + toolbarHtml() + roNote() +
+        state.mount.innerHTML = linkbar + tiles(sum) + noticeLine() + toolbarHtml() + roNote() +
             '<div class="sh-wrap"><table class="sh-table"><thead><tr>' + thead + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+        /* «지금 할 일» — 재난안전과 담당자에게 보낼 결과 안내 공문이 있으면 그 버튼을 강조한다 */
+        if (canOwner() && S().hcNoticeRows(state.year).length) S().markNow(state.mount, 'hc-notice');
     }
 
     /* 공통 셀 조각 */
     function eviCell(r) {
         /* 결과보고서는 실시일이 있어야 붙는다(운영 E04 ①) — 미실시 건에는 첨부 수단을 내지 않는다 */
-        if (!r.evidence && !r.done) return '<span class="sh-pill-none">실시 후 첨부</span>';
-        return r.evidence
-            ? '<span class="sh-attached">' + S().icon('file') + '첨부됨</span>'
-            : (canAct(r.dept)
-                ? '<button type="button" class="sh-pill-link" onclick="event.stopPropagation();HEX.attach(\'' + r.id + '\')">＋ 첨부</button>'
-                : '<span class="sh-pill-none">미첨부</span>');
+        if (r.evidence) return '<span class="sh-attached">' + S().icon('file') + '첨부됨</span>';
+        /* 결과는 [결과 등록] 한 창에서 파일·실시일·수검 인원을 함께 받는다(작업환경측정과 같다) */
+        return resultable(r)
+            ? '<button type="button" class="sh-pill-link" onclick="event.stopPropagation();HEX.openResult(\'' + r.id + '\')">＋ 결과 등록</button>'
+            : '<span class="sh-pill-none">미첨부</span>';
     }
     function followupCell(r) {
         return r.followupNeeded
@@ -182,21 +186,239 @@
     function setTile(v) { state.tile = (state.tile === v ? 'all' : v); render(); }
     function detail(id) { location.href = 'health-exam-detail.html?id=' + id; }
 
-    /* 목록 인라인 증빙 첨부 — 상세 진입 없이 실시확인서·집계 결과표 등록 */
-    function attach(id) {
-        if (!canAct()) { V().toast(denyNote('증빙 첨부')); return; }
-        var r = S().healthOf(id); if (!r) return;
-        if (!r.done) { V().toast('검진 실시일을 먼저 등록하세요 — 결과보고서는 실시 후 첨부합니다.'); return; }
-        V().openModal('실시 증빙 등록',
-            '<p style="font-size:13px;margin-bottom:10px;color:var(--text-gray);"><b>' + esc(r.dept) + ' · ' + esc(r.type) + '</b> 검진기관 실시확인서·집계 결과표를 첨부합니다. 개인별 결과지는 첨부하지 않습니다.</p>' +
-            V().uploadDrop('파일을 끌어다 놓거나 클릭하여 업로드<br><span style="font-size:12px;">업로드 시 이력이 자동 기록됩니다</span>', null, { hint: true }),
-            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-            '<button type="button" class="btn btn-primary" onclick="HEX.saveAttach(\'' + id + '\')">등록</button>');
+    /* ===== 연도별 결과 안내 공문 줄 — 재난안전과 담당자에게만 (작업환경측정 반기 줄과 같은 모양) ===== */
+    function noticeLine() {
+        if (!canOwner()) return '';
+        var st = S().hcYearStat(state.year);
+        if (!st.total && !st.docs.length) return '';
+        var key = String(state.year);
+        var docs = st.docs.map(function (d, i) {
+            return '<button type="button" class="btn btn-sm btn-outline" onclick="HEXDOC.openDoc(\'' + key + '\',\'' + d.sid + '\')">' +
+                (st.docs.length > 1 ? (i + 1) + '차 ' : '') + '공문 보기 · ' + esc(d.status) + '</button>';
+        }).join('');
+        var pend = st.pending.map(function (r) { return esc(r.dept) + ' ' + esc(r.type) + '(' + esc(String(r.planned || '').slice(5)) + ')'; }).join(' · ');
+        return '<div class="sh-card" style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2) var(--sp-3);margin-bottom:var(--stack-tight);">' +
+            '<b>' + esc(state.year) + ' 결과 안내</b>' +
+            '<span style="color:var(--text-gray);">검진 ' + st.done + ' / ' + st.total + '건 · 공문 보냄 ' + st.sent + '건</span>' +
+            (st.notice.length ? '<button type="button" class="btn btn-sm btn-outline" data-step="hc-notice" onclick="HEXDOC.open(\'' + key + '\')">결과 안내 공문 (' + st.notice.length + '건)</button>' : '') +
+            docs +
+            (pend ? '<span class="file-hint" style="flex-basis:100%;">검진 전: ' + pend + ' — 결과가 들어오면 다음 공문으로 보냅니다.</span>' : '') +
+        '</div>';
     }
-    function saveAttach(id) {
-        if (!canAct()) { V().toast(denyNote('증빙 첨부')); return; }
-        if (!S().attachEvidence('hc', id, '실시 증빙')) { V().toast('검진 실시일을 먼저 등록하세요 — 결과보고서는 실시 후 첨부합니다.'); return; }
-        V().closeModal(); render(); V().toast('증빙이 등록되었습니다.'); }
+
+    /* ===== 결과 등록 — 한 창에서 끝낸다 (작업환경측정 [＋ 결과 등록]과 같다, 2026-11-16) =====
+     * 검진기관 결과 통보서 한 부 + 실시일 + 건별 수검 인원·사후관리 대상 유무를 한 번에 받는다.
+     * 계획이 없으면 같은 창에서 부서·유형·대상 인원을 적어 그 자리에서 건을 만든다.
+     * 개인별 결과는 받지 않는다 — 인원 집계와 사후관리 대상 «유무»뿐이다. */
+    var RG = null;
+    function resultable(r) { return r && !r.done && canAct(r.dept) && !S().hcLockOf(r.id); }
+    function openResult(rowId) {
+        if (!canAct()) { V().toast(denyNote('결과 등록')); return; }
+        var r = rowId ? S().healthOf(rowId) : null;
+        if (rowId && !resultable(r)) { V().toast('이 건에는 결과를 등록할 수 없습니다.'); return; }
+        RG = { date: S().TODAY, file: null, agency: r ? (r.agency === '미지정' ? '' : r.agency) : '', sel: {}, extra: [] };
+        if (r) RG.sel[r.id] = { ex: r.targetCount, fu: false };
+        renderResult();
+    }
+    function rgCands() {
+        return S().hcYearRows(String(RG.date).slice(0, 4)).filter(resultable);
+    }
+    function rgCapture() {
+        if (!RG) return;
+        var g = function (id) { return document.getElementById(id); };
+        if (g('hr-date')) RG.date = g('hr-date').value || RG.date;
+        if (g('hr-agency')) RG.agency = g('hr-agency').value;
+        Object.keys(RG.sel).forEach(function (k) {
+            var o = RG.sel[k];
+            if (g('hr-ex-' + k)) o.ex = Number(g('hr-ex-' + k).value);
+            if (g('hr-fu-' + k)) o.fu = g('hr-fu-' + k).checked;
+        });
+        RG.extra.forEach(function (o, i) {
+            if (g('hr-xt-type-' + i)) o.type = g('hr-xt-type-' + i).value;
+            if (g('hr-xt-tg-' + i)) o.target = Number(g('hr-xt-tg-' + i).value);
+            if (g('hr-xt-ex-' + i)) o.ex = Number(g('hr-xt-ex-' + i).value);
+            if (g('hr-xt-fu-' + i)) o.fu = g('hr-xt-fu-' + i).checked;
+        });
+    }
+    function lineFields(idEx, idFu, o, target) {
+        return '<div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);margin-top:var(--sp-2);align-items:center;">' +
+            '<label class="file-hint" for="' + idEx + '">수검자 수</label><input type="number" class="form-input" id="' + idEx + '" style="width:90px;" min="0"' +
+                (target != null ? ' max="' + target + '"' : '') + ' value="' + esc(o.ex != null ? o.ex : (target || 0)) + '">' +
+            (target != null ? '<span class="file-hint">/ 대상 ' + target + '명</span>' : '') +
+            '<label><input type="checkbox" id="' + idFu + '"' + (o.fu ? ' checked' : '') + '> 사후관리 대상 있음</label></div>';
+    }
+    function renderResult() {
+        var cand = rgCands();
+        Object.keys(RG.sel).forEach(function (k) { if (!cand.some(function (r) { return r.id === k; })) delete RG.sel[k]; });
+        var rows = cand.map(function (r) {
+            var o = RG.sel[r.id];
+            return '<div style="border:1px solid var(--card-line);border-radius:var(--radius-sm);padding:var(--sp-2) var(--sp-3);margin-bottom:var(--sp-1-5, 6px);">' +
+                '<label style="display:flex;gap:var(--sp-2);align-items:center;"><input type="checkbox"' + (o ? ' checked' : '') +
+                    ' onchange="HEX.rgToggle(\'' + r.id + '\', this.checked)"> <b>' + esc(r.dept) + '</b> <span class="file-hint">' + esc(r.type) + ' · 계획 ' + esc(String(r.planned || '').slice(5)) + '</span></label>' +
+                (o ? lineFields('hr-ex-' + r.id, 'hr-fu-' + r.id, o, r.targetCount) : '') +
+            '</div>';
+        }).join('');
+        var extra = RG.extra.map(function (o, i) {
+            return '<div style="border:1px dashed var(--card-line);border-radius:var(--radius-sm);padding:var(--sp-2) var(--sp-3);margin-bottom:var(--sp-1-5, 6px);">' +
+                '<div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center;"><b>' + esc(o.dept) + '</b>' +
+                    '<select class="form-select" id="hr-xt-type-' + i + '" style="width:auto;" aria-label="검진 유형">' +
+                        ['일반건강검진', '특수건강진단'].map(function (t) { return '<option' + (o.type === t ? ' selected' : '') + '>' + t + '</option>'; }).join('') + '</select>' +
+                    '<label class="file-hint" for="hr-xt-tg-' + i + '">대상자 수</label><input type="number" class="form-input" id="hr-xt-tg-' + i + '" style="width:90px;" min="1" value="' + esc(o.target || '') + '">' +
+                    '<button type="button" class="btn btn-sm btn-outline" onclick="HEX.rgDropExtra(' + i + ')">빼기</button></div>' +
+                lineFields('hr-xt-ex-' + i, 'hr-xt-fu-' + i, o, null) +
+            '</div>';
+        }).join('');
+        var fixed = !canPickDept();
+        V().openModal('건강검진 결과 등록',
+            '<p class="file-hint" style="margin-bottom:var(--sp-3);">검진기관이 보낸 결과 통보서를 올리고 건마다 수검 인원과 사후관리 대상 유무를 적습니다. 개인별 결과는 올리지 않습니다.</p>' +
+            '<label class="form-label">결과 통보서 <span style="color:var(--status-danger-fg)">*</span></label>' +
+            (RG.file ? '<p style="margin-bottom:var(--sp-2);">' + S().icon('file') + ' <b>' + esc(RG.file.name) + '</b></p>' : '') +
+            V().uploadDrop('파일을 끌어다 놓거나 클릭하여 업로드', null, { hint: true, pick: 'HEX.rgPick' }) +
+            '<div style="display:flex;flex-wrap:wrap;gap:var(--sp-3);margin:var(--sp-3) 0;">' +
+                '<div><label class="form-label" for="hr-date">검진 실시일 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                    '<input type="date" class="form-input" id="hr-date" value="' + esc(RG.date) + '" onchange="HEX.rgRedraw()"></div>' +
+                '<div style="flex:1 1 200px;"><label class="form-label" for="hr-agency">검진기관</label>' +
+                    '<input type="text" class="form-input" id="hr-agency" value="' + esc(RG.agency || '') + '" placeholder="예: (주)녹십자헬스케어"></div>' +
+            '</div>' +
+            '<label class="form-label">검진 건 <span style="color:var(--status-danger-fg)">*</span> <span class="file-hint">' + esc(String(RG.date).slice(0, 4)) + '년 · 결과가 아직 없는 계획</span></label>' +
+            (rows || '<p class="file-hint">결과를 기다리는 계획이 없습니다.</p>') + extra +
+            '<div class="orgpick-field" id="hr-xt-field" style="margin-top:var(--sp-2);">' +
+                (fixed ? '<button type="button" class="btn btn-sm btn-outline" onclick="HEX.rgAddExtra(\'' + esc(myDeptName()) + '\')">＋ 계획에 없는 검진 추가</button>'
+                       : '<button type="button" class="btn btn-sm btn-outline" onclick="HEX.rgCapture();ORGPICK.toggle(\'hr-xt-field\',\'dept\',\'HEX.rgAddExtra\')">＋ 계획에 없는 검진 추가 (부서 고르기)</button>') +
+            '</div>',
+            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+            '<button type="button" class="btn btn-primary" onclick="HEX.saveResult()">등록</button>');
+    }
+    function rgRedraw() { rgCapture(); renderResult(); }
+    function rgToggle(id, on) { rgCapture(); if (on) { var r = S().healthOf(id); RG.sel[id] = { ex: r ? r.targetCount : 0, fu: false }; } else delete RG.sel[id]; renderResult(); }
+    function rgPick(items) { rgCapture(); RG.file = items && items[0] ? { name: items[0].name, size: items[0].size } : null; renderResult(); }
+    function rgAddExtra(name) {
+        rgCapture();
+        if (!name) return;
+        if (!canAct(name)) { V().toast(denyNote('다른 부서 검진 결과 등록')); return; }
+        RG.extra.push({ dept: name, type: '일반건강검진', target: '', ex: '', fu: false });
+        renderResult();
+    }
+    function rgDropExtra(i) { rgCapture(); RG.extra.splice(i, 1); renderResult(); }
+    function saveResult() {
+        if (!RG) return;
+        rgCapture();
+        if (!canAct()) { V().toast(denyNote('결과 등록')); return; }
+        if (!RG.file) { V().toast('결과 통보서 파일을 올리세요.'); return; }
+        if (!RG.date || RG.date > S().TODAY) { V().toast('검진 실시일을 확인하세요 — 오늘 이후일 수 없습니다.'); return; }
+        var picked = rgCands().filter(function (r) { return RG.sel[r.id]; });
+        if (!picked.length && !RG.extra.length) { V().toast('결과를 등록할 검진을 1건 이상 고르세요.'); return; }
+        for (var i = 0; i < picked.length; i++) {
+            var ex = RG.sel[picked[i].id].ex;
+            if (!Number.isInteger(ex) || ex < 0 || ex > picked[i].targetCount) { V().toast(picked[i].dept + ' — 수검자 수는 0명 이상 대상자 수 이하입니다.'); return; }
+        }
+        for (var j = 0; j < RG.extra.length; j++) {
+            var o = RG.extra[j];
+            if (!Number.isInteger(o.target) || o.target < 1) { V().toast(o.dept + ' — 대상자 수를 1명 이상 입력하세요.'); return; }
+            if (!Number.isInteger(o.ex) || o.ex < 0 || o.ex > o.target) { V().toast(o.dept + ' — 수검자 수는 0명 이상 대상자 수 이하입니다.'); return; }
+        }
+        var n = 0, agency = (RG.agency || '').trim();
+        var finish = function (r, o) {
+            if (!resultable(r)) return;
+            if (agency && (!r.agency || r.agency === '미지정')) r.agency = agency;
+            S().completeHealth(r.id, { doneDate: RG.date, examinedCount: o.ex, followupNeeded: !!o.fu });
+            if (S().attachEvidence('hc', r.id, '결과보고서', RG.file.name)) n++;
+        };
+        picked.forEach(function (r) { finish(r, RG.sel[r.id]); });
+        RG.extra.forEach(function (o) {
+            if (!canAct(o.dept)) return;
+            var r = S().addHealth({ dept: o.dept, type: o.type, agency: agency || '미지정', targetCount: o.target, planned: RG.date });
+            finish(r, o);
+        });
+        RG = null; V().closeModal(); render();
+        V().toast(n ? '결과를 ' + n + '건 등록했습니다.' + (canOwner() ? ' 이제 결과 안내 공문을 보냅니다.' : '') : '등록하지 못했습니다.');
+    }
+
+    /* ===== 결과 안내 공문 — DYDOC 단순 기안(작업환경측정 WENVDOC 과 같은 골격) =====
+     * 별지는 부서별 집계(대상·수검·미검진·사후관리 대상 유무)뿐이다 — 개인별 결과를 싣지 않는다(산안법 §132②·③). */
+    function rowsOf(t, doc) {
+        if (doc && doc.rowIds) return doc.rowIds.map(function (id) { return S().healthOf(id); }).filter(Boolean);
+        return t ? t.rows : [];
+    }
+    function setupNoticeDoc() {
+        if (!global.DYDOC || global.HEXDOC) return;
+        global.DYDOC.define({
+            ns: 'HEXDOC', lkey: 'dy-hexdoc-apprline-v1', simple: true, simplePick: true,
+            targetOf: function (key) {
+                if (!/^\d{4}$/.test(String(key || ''))) return null;
+                return { key: String(key), year: Number(key), rows: S().hcNoticeRows(key) };
+            },
+            subjectOf: function (t) { return t.year + '년 건강검진 결과 안내'; },
+            titleOf: function (t) {
+                var n = S().hcYearStat(t.year).docs.filter(function (d) { return d.status !== '반려' && d.status !== '반송'; }).length;
+                return t.year + '년 건강검진 결과 안내' + (n ? '(' + (n + 1) + '차)' : '');
+            },
+            initOf: function () { return { docType: '외부발송', to: '수신자 참조' }; },
+            recipientsDefault: function (t) {
+                var seen = {}, out = [];
+                (t ? t.rows : []).forEach(function (r) { var id = V().deptIdOf(r.dept); if (id && !seen[id]) { seen[id] = 1; out.push(id); } });
+                return out;
+            },
+            recipientsDefaultLabel: '결과가 들어온 검진의 부서',
+            recipientName: function (id) { var n = V().orgNode ? V().orgNode(id) : null; return (n ? n.name : id) + '장'; },
+            recipientWarn: function (t, ids) {
+                var miss = (t ? t.rows : []).filter(function (r) { return ids.indexOf(V().deptIdOf(r.dept)) < 0; }).map(function (r) { return r.dept; });
+                miss = miss.filter(function (x, i) { return miss.indexOf(x) === i; });
+                return miss.length ? '별지에 ' + esc(miss.join(', ')) + ' 검진이 있는데 수신처에서 빠졌습니다.' : '';
+            },
+            canDraft: function () { return canOwner() ? { ok: true } : { ok: false, why: '결과 안내 공문은 재난안전과 담당자가 보냅니다.' }; },
+            ready: function (t) {
+                if (!t.rows.length) return { ok: false, why: '공문에 실을 검진 결과가 없습니다 — [결과 등록]을 먼저 합니다.' };
+                var noRep = t.rows.filter(function (r) { return !S().hcReportFiles(r).length; });
+                if (noRep.length) return { ok: false, why: '결과 통보서가 없는 검진: ' + noRep.map(function (r) { return r.dept + ' ' + r.type; }).join(', ') };
+                return { ok: true };
+            },
+            chips: function (t) {
+                var rows = t.rows, tg = 0, ex = 0, fu = 0;
+                rows.forEach(function (r) { tg += r.targetCount || 0; ex += r.examinedCount || 0; if (r.followupNeeded) fu++; });
+                return [
+                    { label: '결과 안내', text: '1. ' + t.year + '년 건강검진 실시 결과를 붙임과 같이 알려 드립니다.\n  가. 대상: 붙임 별지의 ' + rows.length + '건(대상 ' + tg + '명 · 수검 ' + ex + '명 · 미검진 ' + (tg - ex) + '명)\n  나. 사후관리 대상이 있는 검진: ' + fu + '건' },
+                    { label: '후속 요청', text: '2. 미검진자는 추가검진을, 사후관리 대상이 있는 부서는 실시일부터 30일 안에 조치하시고 중대재해 통합관리시스템 › 작업환경·건강 › 건강검진에서 완료 처리하여 주시기 바랍니다.' },
+                    { label: '개인 결과', text: '3. 개인별 검진 결과는 검진기관이 본인에게 통보하며, 본인 동의 없이 공개하거나 다른 목적으로 사용할 수 없습니다.' }
+                ];
+            },
+            attachOf: function (t) {
+                var seen = {}, out = [];
+                (t ? t.rows : []).forEach(function (r) {
+                    S().hcReportFiles(r).forEach(function (f) {
+                        if (seen[f.name]) return; seen[f.name] = 1;
+                        out.push({ label: f.name, meta: '결과 통보서', on: true, size: f.size || null });
+                    });
+                });
+                return out;
+            },
+            annexes: function (t, doc) {
+                var rows = rowsOf(t, doc);
+                if (!rows.length) return [];
+                return [{
+                    title: '부서별 건강검진 결과 (' + rows.length + '건)',
+                    html: '<table class="table-figma table-doc"><thead><tr>' +
+                            '<th>연번</th><th>부서</th><th>검진 유형</th><th>검진기관</th><th>실시일</th><th>대상</th><th>수검</th><th>미검진</th><th>사후관리 대상</th>' +
+                          '</tr></thead><tbody>' +
+                        rows.map(function (r, i) {
+                            return '<tr><td>' + (i + 1) + '</td><td>' + esc(r.dept) + '</td><td>' + esc(r.type) + '</td><td>' + esc(r.agency) + '</td>' +
+                                '<td>' + esc(r.done) + '</td><td>' + (r.targetCount || 0) + '명</td><td>' + (r.examinedCount || 0) + '명</td>' +
+                                '<td>' + S().hcUnexamined(r) + '명</td><td>' + (r.followupNeeded ? '있음' : '없음') + '</td></tr>';
+                        }).join('') + '</tbody></table>'
+                }];
+            },
+            basisOf: function () {
+                var L = global.DYLAW;
+                if (!L || !L.basisTitle) return [];
+                return ['osh-129'].map(function (k) { var tt = L.basisTitle(k); return tt ? { key: k, label: tt } : null; }).filter(Boolean);
+            },
+            save: function (t, doc) { S().saveHcNotice(t.year, doc, t.rows.map(function (r) { return r.id; })); },
+            docsFor: function (t) { return t ? S().hcYearStat(t.year).docs : []; },
+            nextNo: function () { return S().nextHcNoticeNo(); },
+            lockNote: '보낸 뒤에는 이 공문에 실린 검진의 결과(실시일·수검 인원·사후관리 대상 유무)와 결과 통보서를 고칠 수 없습니다. 추가검진·사후관리는 계속 진행합니다.',
+            sentNote: '결과 안내 공문을 온나라 연계기안함에 보냈습니다. 미검진자·사후관리 대상이 있는 부서는 내 할일에 그 일이 생깁니다.'
+        }).registerRefresh(render);
+    }
 
     function openNew() {
         if (!canAct()) { V().toast(denyNote('검진 계획 등록')); return; }
@@ -264,6 +486,7 @@
     }
 
     function init(mountId) {
+        setupNoticeDoc();
         state.mount = document.getElementById(mountId);
         if (!state.mount) return;
         var q = new URLSearchParams(location.search);
@@ -274,6 +497,7 @@
 
     global.HEX = { init: init,
         setYear: setYear, setType: setType, setDept: setDept, setTile: setTile,
-        detail: detail, attach: attach, saveAttach: saveAttach,
+        detail: detail, openResult: openResult, saveResult: saveResult, rgRedraw: rgRedraw, rgToggle: rgToggle, rgPick: rgPick,
+        rgAddExtra: rgAddExtra, rgDropExtra: rgDropExtra, rgCapture: rgCapture,
         openNew: openNew, saveNew: saveNew, onTypeChange: onTypeChange, pickDept: pickDept };
 })(window);
