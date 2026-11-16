@@ -325,8 +325,8 @@
             var w = E().workerOf(wid); if (!w) return;
             (byDept[w.deptId] = byDept[w.deptId] || []).push(wid);
         });
-        var body = '<div class="check-notice" style="margin-bottom:10px;"><b>내부 알림 기록</b> — 문자·메일 발송은 외부 채널 연계 후 적용됩니다.</div>' +
-            '<p style="font-size:var(--fs-13);">선택한 <b>' + ids.length + '명</b>의 미이수 상태를 부서 담당자 알림 이력으로 남깁니다.</p>' +
+        var body = '<div class="check-notice" style="margin-bottom:10px;">받는 사람의 <b>내 할일</b>에 독촉 알림이 들어갑니다. 새올 포틀릿에는 내 할일 대기 건수가 보입니다.</div>' +
+            '<p style="font-size:var(--fs-13);">선택한 <b>' + ids.length + '명</b>의 미이수를 부서 담당자 내 할일로 알립니다.</p>' +
             '<div style="max-height:200px;overflow-y:auto;margin-top:8px;">' +
             Object.keys(byDept).map(function (dId) {
                 var names = byDept[dId].map(function (wid) { return E().workerOf(wid).name; }).join(', ');
@@ -366,7 +366,7 @@
             }
         });
         V().closeModal();
-        toast(Object.keys(byDept).length + '개 부서, ' + ids.length + '명 독촉 — 받는 사람 알림함에 남겼습니다 (문자·메일은 외부 채널 연계 후)');
+        toast(Object.keys(byDept).length + '개 부서, ' + ids.length + '명 독촉 — 받는 사람 내 할일에 알림을 보냈습니다');
         state.checked = {};
         render();
     }

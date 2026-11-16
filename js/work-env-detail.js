@@ -303,28 +303,43 @@
     }
 
     /* ── 알림 발송 ── */
+    /* 알림 — 받는 사람의 «내 할일 알림»(헤더 알림함 · DYLayout.ntfPush)이다. 문자·메일은 없고,
+       새올 포틀릿에는 내 할일 대기 건수가 보인다(2026-11-16). 받는 사람은 조직도에서 한 사람을 고르거나
+       고르지 않으면 그 부서 전체다. */
+    var NT = null;
     function notify() {
         if (deny(S().workEnvOf(state.id), '알림 발송')) return;
         var r = S().workEnvOf(state.id);
+        NT = null;
         V().openModal('알림 발송',
-            '<div style="margin-bottom:12px;"><label class="form-label" for="wd-nt-to">수신자 <span style="font-weight:400;color:var(--text-gray)">(조직도에서 선택)</span></label>' +
+            '<div style="margin-bottom:12px;"><label class="form-label" for="wd-nt-to">받는 사람 <span style="font-weight:400;color:var(--text-gray)">(고르지 않으면 ' + esc(r.dept) + ' 전체)</span></label>' +
                 '<div class="orgpick-field" id="wd-nt-tofield"><div style="display:flex;gap:8px;">' +
-                    '<input type="text" class="form-input" id="wd-nt-to" style="flex:1;" value="' + esc(r.owner) + '">' +
-                    '<button type="button" class="btn btn-outline" onclick="ORGPICK.toggle(\'wd-nt-tofield\',\'member\',\'WENVD.pickRecipient\')">조직도</button>' +
+                    '<input type="text" class="form-input" id="wd-nt-to" style="flex:1;" readonly value="' + esc(r.dept) + ' 전체">' +
+                    '<button type="button" class="btn btn-outline" onclick="ORGPICK.toggle(\'wd-nt-tofield\',\'memberUid\',\'WENVD.pickRecipient\')">조직도</button>' +
                 '</div></div></div>' +
             '<div style="margin-bottom:12px;"><label class="form-label" for="wd-nt-msg">알림 내용</label>' +
-                '<textarea class="form-textarea" id="wd-nt-msg" rows="2">[작업환경측정] ' + esc(r.dept) + ' ' + esc(r.site) + ' 측정/개선 진행 요청</textarea></div>' +
-            '<div class="sh-req" style="font-size:12px;line-height:1.5;">본 알림은 수신자의 <b>새올행정시스템 포틀릿(알림)</b>으로 발송됩니다. <span style="color:var(--text-gray)">(연계 적용 후 실제 전송)</span></div>',
+                '<textarea class="form-textarea" id="wd-nt-msg" rows="2">' + esc('[작업환경측정] ' + r.dept + ' ' + r.site + ' 측정·개선 진행 요청') + '</textarea></div>' +
+            '<div class="sh-req" style="font-size:12px;line-height:1.5;">받는 사람의 <b>내 할일</b>에 알림으로 들어갑니다. 새올 포틀릿에는 내 할일에 남은 대기 건수가 보입니다.</div>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-            '<button type="button" class="btn btn-primary" onclick="WENVD.sendNotify()">발송</button>');
+            '<button type="button" class="btn btn-primary" onclick="WENVD.sendNotify()">보내기</button>');
     }
-    function pickRecipient(val) { var inp = document.getElementById('wd-nt-to'); if (inp) inp.value = val; }
+    function pickRecipient(uid, name, role) {
+        NT = uid ? { uid: uid, label: (name || '') + (role ? ' ' + role : '') } : null;
+        var inp = document.getElementById('wd-nt-to'); if (inp && NT) inp.value = NT.label;
+    }
     function sendNotify() {
-        if (deny(S().workEnvOf(state.id), '알림 발송')) return;
-        var to = (document.getElementById('wd-nt-to').value || '').trim();
-        S().notify('we', state.id, to);
-        V().closeModal(); render(); toast('알림을 기록했습니다 — 수신자 전송은 새올 연계 후 이루어집니다.');
+        var r = S().workEnvOf(state.id);
+        if (deny(r, '알림 발송')) return;
+        var msg = ((document.getElementById('wd-nt-msg') || {}).value || '').trim();
+        if (!msg) { toast('알림 내용을 입력하세요.'); return; }
+        var L = global.DYLayout;
+        if (L && L.ntfPush) L.ntfPush(Object.assign({ cat: 'workenv', catLabel: '작업환경측정', title: msg,
+            href: 'work-env-detail.html?id=' + encodeURIComponent(r.id), work: 'my-work.html' },
+            NT ? { toUids: [NT.uid] } : { toDept: did(r) }));
+        S().notify('we', state.id, NT ? NT.label : r.dept + ' 전체');
+        V().closeModal(); render(); toast('받는 사람 내 할일에 알림을 보냈습니다.');
     }
+
 
     /* ── 완료 처리 ── */
     /* 측정 미실시 → 결과 입력 모달(실시일=오늘·결과=적정 기본으로 최소 입력) */

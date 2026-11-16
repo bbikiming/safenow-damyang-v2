@@ -651,11 +651,11 @@
         W().returnTask(rc.id, rc.deptId, rc.reason.trim());
         var id = rc.id; toast('반려했습니다'); detail(id);
     }
-    function remindOne(id, deptId) { W().remind(id, deptId); toast(W().deptName(deptId) + ' 담당자·부서장에게 재촉 알림을 발송했습니다'); detail(id); }
+    function remindOne(id, deptId) { W().remind(id, deptId); toast(W().deptName(deptId) + ' 담당자·부서장 내 할일에 재촉 알림을 보냈습니다'); detail(id); }
     function remindAll(id) {
         var n = 0;
         W().tasksOf(id).forEach(function (t) { if (!W().deptDone(t)) { W().remind(id, t.deptId); n++; } });
-        toast('미제출 ' + n + '개 부서에 재촉 알림을 발송했습니다');
+        toast('미제출 ' + n + '개 부서 내 할일에 재촉 알림을 보냈습니다');
         render();
     }
     function remindDept(deptId) {

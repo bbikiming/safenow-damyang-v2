@@ -1227,7 +1227,7 @@
         var what = flow ? (progressOf(key, deptId, flow) === 'RETURNED' ? '반려 재제출 독촉' : '결과 제출 독촉') : '독촉';
         if (flow) {
             /* 배포 흐름은 독촉 기록을 회차별로 남긴다 — 줄에 «독촉 N회 · 최근»이 보이고 마감 보고에도 쓴다.
-               발신자는 실제 접속자다(재난안전과 고정 문자열 금지). 알림 발송 자체는 알림 연계 몫이다. */
+               발신자는 실제 접속자다(재난안전과 고정 문자열 금지). 알림은 받는 사람의 내 할일로 간다. */
             var log = fload().reminds = fload().reminds || {};
             var lk = key + '|' + deptId;
             (log[lk] = log[lk] || []).push({ at: nowTs(), by: actor(), what: what, to: who });
@@ -1238,7 +1238,12 @@
             if (opts && opts.onChange) opts.onChange();
             return true;
         }
-        toast((d ? d.name : deptId) + ' ' + what + ' · 받는 사람 ' + who + ' — 발송 기록은 알림 연계 후 남습니다');
+        /* 배포 흐름이 없는 독촉(경영방침 게시) — 같은 받는 사람의 내 할일로 알린다 */
+        var L = global.DYLayout;
+        if (L && L.ntfPush) L.ntfPush({ cat: 'compliance', catLabel: '이행', toUids: remindUids(deptId),
+            title: (/^policy-post/.test(key) ? '경영방침 게시 독촉 — 게시하고 게시 현황을 등록해 주세요' : what + ' — 확인해 주세요'),
+            href: /^policy-post/.test(key) ? 'menu.html?m=policy' : 'my-work.html', work: 'my-work.html?cat=comply' });
+        toast((d ? d.name : deptId) + ' ' + what + ' · 받는 사람 ' + who + ' — 내 할일에 알림을 보냈습니다');
     }
 
     /* 일괄 독촉 — 미제출(NONE)만 센다(반려는 사유가 달라 줄에서 따로). 받는 사람을 누르기 전에 밝힌다. */
@@ -1281,7 +1286,8 @@
      *   제출 → 재난안전과 담당자·팀장 «검토 요청»(과장 제외)
      *   반려 → 제출한 사람 · 고친 사람 + 지정 담당자 «반려 — 사유»
      *   독촉 → 지정 담당자(없으면 부서장)
-     * 헤더 알림은 DYLayout.ntfPush 한 곳으로 쌓는다(실제 문자·메일 발송은 알림 연계 몫). */
+     * 알림은 DYLayout.ntfPush 한 곳으로 쌓는다 — 시스템 안 «내 할일» 알림이 전부다(문자·메일 없음, 2026-11-16).
+     * 새올 포틀릿에는 내 할일 대기 건수가 보인다. */
     function notify(o) {
         var L = global.DYLayout;
         if (!L || !L.ntfPush) return;

@@ -236,28 +236,43 @@
     }
 
     /* ── 알림 발송 ── */
+    /* 알림 — 받는 사람의 «내 할일 알림»(헤더 알림함 · DYLayout.ntfPush)이다. 문자·메일은 없고,
+       새올 포틀릿에는 내 할일 대기 건수가 보인다(2026-11-16). 받는 사람은 조직도에서 한 사람을 고르거나
+       고르지 않으면 그 부서 전체다. */
+    var NT = null;
     function notify() {
         if (deny(S().healthOf(state.id), '알림 발송')) return;
         var r = S().healthOf(state.id);
+        NT = null;
         V().openModal('알림 발송',
-            '<div style="margin-bottom:12px;"><label class="form-label" for="hd-nt-to">수신자 <span style="font-weight:400;color:var(--text-gray)">(조직도에서 선택)</span></label>' +
+            '<div style="margin-bottom:12px;"><label class="form-label" for="hd-nt-to">받는 사람 <span style="font-weight:400;color:var(--text-gray)">(고르지 않으면 ' + esc(r.dept) + ' 전체)</span></label>' +
                 '<div class="orgpick-field" id="hd-nt-tofield"><div style="display:flex;gap:8px;">' +
-                    '<input type="text" class="form-input" id="hd-nt-to" style="flex:1;" value="' + esc(r.owner) + '">' +
-                    '<button type="button" class="btn btn-outline" onclick="ORGPICK.toggle(\'hd-nt-tofield\',\'member\',\'HEXD.pickRecipient\')">조직도</button>' +
+                    '<input type="text" class="form-input" id="hd-nt-to" style="flex:1;" readonly value="' + esc(r.dept) + ' 전체">' +
+                    '<button type="button" class="btn btn-outline" onclick="ORGPICK.toggle(\'hd-nt-tofield\',\'memberUid\',\'HEXD.pickRecipient\')">조직도</button>' +
                 '</div></div></div>' +
             '<div style="margin-bottom:12px;"><label class="form-label" for="hd-nt-msg">알림 내용</label>' +
-                '<textarea class="form-textarea" id="hd-nt-msg" rows="2">[건강검진] ' + esc(r.dept) + ' ' + esc(r.type) + ' 미검진자 수검/사후관리 요청</textarea></div>' +
-            '<div class="sh-req" style="font-size:12px;line-height:1.5;">본 알림은 수신자의 <b>새올행정시스템 포틀릿(알림)</b>으로 발송됩니다. <span style="color:var(--text-gray)">(연계 적용 후 실제 전송)</span></div>',
+                '<textarea class="form-textarea" id="hd-nt-msg" rows="2">' + esc('[건강검진] ' + r.dept + ' ' + (r.type || '') + ' 진행 요청') + '</textarea></div>' +
+            '<div class="sh-req" style="font-size:12px;line-height:1.5;">받는 사람의 <b>내 할일</b>에 알림으로 들어갑니다. 새올 포틀릿에는 내 할일에 남은 대기 건수가 보입니다.</div>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-            '<button type="button" class="btn btn-primary" onclick="HEXD.sendNotify()">발송</button>');
+            '<button type="button" class="btn btn-primary" onclick="HEXD.sendNotify()">보내기</button>');
     }
-    function pickRecipient(val) { var inp = document.getElementById('hd-nt-to'); if (inp) inp.value = val; }
+    function pickRecipient(uid, name, role) {
+        NT = uid ? { uid: uid, label: (name || '') + (role ? ' ' + role : '') } : null;
+        var inp = document.getElementById('hd-nt-to'); if (inp && NT) inp.value = NT.label;
+    }
     function sendNotify() {
-        if (deny(S().healthOf(state.id), '알림 발송')) return;
-        var to = (document.getElementById('hd-nt-to').value || '').trim();
-        S().notify('hc', state.id, to);
-        V().closeModal(); render(); toast('새올 포틀릿으로 알림을 발송했습니다.');
+        var r = S().healthOf(state.id);
+        if (deny(r, '알림 발송')) return;
+        var msg = ((document.getElementById('hd-nt-msg') || {}).value || '').trim();
+        if (!msg) { toast('알림 내용을 입력하세요.'); return; }
+        var L = global.DYLayout;
+        if (L && L.ntfPush) L.ntfPush(Object.assign({ cat: 'workenv', catLabel: '건강검진', title: msg,
+            href: 'health-exam-detail.html?id=' + encodeURIComponent(r.id), work: 'my-work.html' },
+            NT ? { toUids: [NT.uid] } : { toDept: did(r) }));
+        S().notify('hc', state.id, NT ? NT.label : r.dept + ' 전체');
+        V().closeModal(); render(); toast('받는 사람 내 할일에 알림을 보냈습니다.');
     }
+
 
     /* ── 완료 처리 ── */
     var HF = null;   /* 검진 완료 처리 창에서 고른 결과보고서 */

@@ -1197,7 +1197,7 @@
                 if (slot) Object.assign(slot, rec);
                 else appoint.push(Object.assign({ kind: kind }, rec));
                 V.closeModal();
-                E.notify('선임 등록 완료 — 고용노동부 선임 신고 안내', '메일');
+                E.notify('선임 등록 완료 — 고용노동부 선임 신고 안내');
                 render();
             };
             /* [수행평가 작성]은 **인력 평가 화면으로 넘어간다** — 평가를 두 화면에서 만들면 같은 사람의
@@ -1679,7 +1679,7 @@
                 pushHist(rec, '접수', '의견 접수 — ' + via + ' 경로');
                 S.VOICES.unshift(rec);
                 S.page = 1; PG.opnGo('voice', 'list', null);
-                E.notify('의견 접수 알림 — "' + title + '" (' + via + ' 접수, 의견청취 담당)', '문자');
+                E.notify('의견 접수 알림 — "' + title + '" (' + via + ' 접수, 의견청취 담당)');
                 V.toast('의견이 등록되었습니다' + (via === '오프라인' ? ' (담당자 대리 등록)' : ''));
             };
 
@@ -1750,7 +1750,7 @@
                     o.status = '완료'; o.completedAt = nowStamp(); o.completedBy = '박안전';
                     pushHist(o, '완료', o.result || '조치 완료');
                     V.closeModal(); render();
-                    E.notify('의견 처리 결과 회신 — "' + o.title + '" 조치 완료', '문자');
+                    E.notify('의견 처리 결과 회신 — "' + o.title + '" 조치 완료');
                     V.toast('완료 처리되었습니다 — 작성자에게 결과 회신');
                 });
             };
@@ -2889,7 +2889,7 @@
                         '<button class="btn btn-primary" onclick="DYV2.closeModal(); EDOC.advanceImprovement(\'' + id + '\'); PG._r(); DYV2.toast(\'완료 보고 — 확인자 검토 대기\')">완료 보고</button>');
                 } else {
                     E.advanceImprovement(id); render();
-                    if (E.improvements().find(x => x.id === id).status === '종결') E.notify('개선조치 종결 — ' + imp.title + ' (확인자 검토 완료)', '시스템');
+                    if (E.improvements().find(x => x.id === id).status === '종결') E.notify('개선조치 종결 — ' + imp.title + ' (확인자 검토 완료)');
                 }
             };
             PG._r = render;

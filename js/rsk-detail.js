@@ -307,13 +307,13 @@
             D().pushImpHistory(m.id, { type: 'REMIND', by: '재난안전과', memo: '기한초과 재촉 (기한 ' + (m.due || m.due_date) + ')' });
         });
         D().pushHistory(a.id, { type: 'REMIND', by: '재난안전과', memo: D().deptName(deptId) + ' 기한초과 ' + ms.length + '건 재촉' });
-        toast(D().deptName(deptId) + ' 재촉 알림 발송 (' + ms.length + '건)'); render();
+        toast(D().deptName(deptId) + ' 내 할일에 재촉 알림 (' + ms.length + '건)'); render();
     }
     function remindOne(impId) {
         var m = D().improvementOf(impId); if (!m) return;
         D().pushImpHistory(m.id, { type: 'REMIND', by: '재난안전과', memo: '기한초과 재촉 (기한 ' + (m.due || m.due_date) + ')' });
         D().pushHistory(m.assessment_id, { type: 'REMIND', by: '재난안전과', memo: D().deptName(m.dept_id) + ' · ' + (m.hazard && m.hazard.name || '') + ' 재촉' });
-        toast('재촉 알림을 발송했습니다'); renderDeptModal();
+        toast('내 할일에 재촉 알림을 보냈습니다'); renderDeptModal();
     }
 
     /* =============== init =============== */

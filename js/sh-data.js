@@ -826,11 +826,11 @@
         pushHist(r, '기한 재설정 (' + field + ') ' + old + ' → ' + value);
         save(); return r;
     }
-    /* 알림 발송 (이력 기록) */
+    /* 알림 — 시스템 안 «내 할일» 알림이다(문자·메일 없음). 새올 포틀릿에는 내 할일 대기 건수가 보인다 */
     function notify(kind, id, to) {
         var r = (kind === 'we') ? workEnvOf(id) : healthOf(id);
         if (!r) return null;
-        pushHist(r, '알림 발송 → ' + (to || r.owner), '시스템');
+        pushHist(r, '내 할일 알림 → ' + (to || r.owner), actorNow());
         save(); return r;
     }
     /* 완료 처리 — 작업환경: 측정 실시 확정 or 개선조치 완료 / 건강: 검진 완료 or 사후관리 완료 */

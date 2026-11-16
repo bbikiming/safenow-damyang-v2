@@ -160,10 +160,11 @@
         if (changed) save('dy-edoc-v2', all);
     }
 
-    /* ── 알림 발송 시뮬레이션 (COM-008) ── */
-    function notify(msg, channel) {
-        S.pushNtf({ at: now(), channel: channel || '문자', msg });
-        V().toast((channel || '문자') + ' 알림 발송 — ' + msg);
+    /* ── 알림 (COM-008) — 시스템 안 «내 할일» 알림 하나다(문자·메일 없음, 2026-11-16).
+     *    새올 포틀릿은 내 할일 대기 건수를 보인다. 종전 channel 인자(문자·메일)는 받지 않는다. */
+    function notify(msg) {
+        S.pushNtf({ at: now(), channel: '내 할일', msg });
+        V().toast('내 할일 알림 — ' + msg);
     }
 
     /* ── 개선조치 스토어 (전 메뉴 → 개선조치 자동 유입) ── */
