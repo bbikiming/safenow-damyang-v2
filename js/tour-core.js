@@ -579,9 +579,10 @@
         function scopeSuffix() {
             var order = stepOrder(), n = order.filter(function (i) { return safeDone(STEPS[i]); }).length;
             var vm = viewMode();
-            if (vm === 'mine') return ' · 내 역할 ' + order.length + '단계 (현재 ' + n + '/' + order.length + ')';
-            if (vm === 'read') return ' · 조회 (현재 ' + n + '/' + order.length + ')';
-            return ' (현재 ' + n + '/' + order.length + ')';
+            /* «현재 0/2»는 «지금 몇 번째»로도 읽혀 헷갈렸다 — 끝난 단계 수임을 밝힌다(2026-11-16 사용성 검증) */
+            if (vm === 'mine') return ' · 내 역할 ' + order.length + '단계 (완료 ' + n + '/' + order.length + ')';
+            if (vm === 'read') return ' · 조회 (완료 ' + n + '/' + order.length + ')';
+            return ' (완료 ' + n + '/' + order.length + ')';
         }
         /* 화면 이름 — 사용자에게 'my-work.html' 같은 파일명을 보여주지 않는다 */
         function pageLabel(file) {

@@ -53,7 +53,6 @@
             tasks: [
                 { t: '올해 평가 생성하기', go: "RSKLIST && RSKLIST.openWizard && RSKLIST.openWizard()" },
                 { t: '평가 정보 고치기(요청 공문 전)', go: "RSKLIST && RSKLIST.openEdit && RSKLIST.openEdit()" },
-                { t: '근로자 공유 기록하기(평가 완료 뒤)', go: "RSKLIST && RSKLIST.openShare && RSKLIST.openShare()" },
                 { t: '부서별 제출 현황 보기', go: 'rsk-list.html' }
             ],
             tour: 'RSKTOUR', reset: 'RSKLIST'

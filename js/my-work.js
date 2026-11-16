@@ -203,7 +203,9 @@
                             doneDate: dp.inputDone ? dp.inputDone.at : '', doneBy: dp.inputDone ? (dp.inputDone.by || '') : '',
                             doneText: dp.inputDone ? '입력 완료 · ' + (dp.inputDone.count ? dp.inputDone.count + '건' : '조치 대상 없음') : '',
                             /* 입력 미완료 재촉(2026-11-13 결정 D-2)을 받았으면 재촉 표시 */
-                            remind: !dp.inputDone && (dp.inputReminds || []).length > 0
+                            remind: !dp.inputDone && (dp.inputReminds || []).length > 0,
+                            /* 이번 주에 받은 요청 — 기한이 멀어 «예정» 묶음 아래에 묻히므로 «새 요청»을 단다(2026-11-16 사용성 검증) */
+                            fresh: !dp.inputDone && !!dp.request.at && daysBetween(dp.request.at) != null && daysBetween(dp.request.at) >= -7
                         });
                     }
                     /* 설문조사표 제출은 요청 공문을 받은 뒤에 할 일이 된다(반영안 ③) — 공문 전에는 부서가 받은 것이 없다 */
@@ -266,7 +268,9 @@
                     if (!mine && !unassigned && !deptWide) return;
                     state.wkMap['WK-' + t.id] = { issueId: t.issueId, deptId: t.deptId,
                         slots: (t.tpl && t.tpl.slots) || [] };
-                    if (t.done && !mine) return;
+                    /* 끝난 건은 맡았던 사람의 기록이다 — 다만 부서 전체를 보는 관점(과장 · 소장 · 군수)은 부서가 끝낸 것을 다 본다.
+                       종전에는 진행 중인 건은 부서 전체를 보이면서 끝난 건만 본인 것으로 걸러 «완료한 업무»가 담당자보다 적었다(2026-11-16) */
+                    if (t.done && !mine && !deptWide) return;
                     var tpl = t.tpl || {};
                     var returned = t.confirm && t.confirm.state === 'RETURNED';
                     out.push({
@@ -409,26 +413,6 @@
                         remind: false
                     });
                 });
-                /* 근로자 공유(2026-11-13 결정 D-6, 시행규칙 §37의3 2호) — 평가가 확인까지 끝난 뒤 결과를 근로자에게
-                   알린 기록을 남기는 것이 재난안전과의 마지막 할 일이다. 기록하면 완료한 업무로 내려간다. */
-                (D().assessments() || []).forEach(function (a) {
-                    if (!D().shareOpen || !D().shareOpen(a).ok) return;
-                    var s = a.workerShare;
-                    out.push({
-                        id: 'RSK-SHARE-' + a.id,
-                        cat: 'risk',
-                        title: a.title + ' — 결과 근로자 공유',
-                        sub: s ? '근로자 공유 ' + s.at + ' · ' + s.method
-                               : '유해·위험요인 · 위험성 수준 결정 결과 · 개선대책과 이행 결과를 근로자에게 알리고 공유일·방법·증빙을 남깁니다',
-                        due: '',
-                        status: s ? 'DONE' : 'IN_PROGRESS',
-                        dept: own, dept_label: D().deptName(own),
-                        href: 'rsk-list.html?year=' + a.year,
-                        atype: 'menu', action: '기록하러 가기', destLabel: '정기 위험성평가',
-                        doneDate: s ? s.at : '', doneBy: s ? (s.by || '') : '', doneText: s ? '근로자 공유 · ' + s.method : '',
-                        remind: false
-                    });
-                });
             }
         } catch (e) {}
 
@@ -456,6 +440,8 @@
                        담당자 화면에서 가장 먼저 필요한 정보다. 세 상태 중 **미지정만**
                        빈 값이고 '해당 없음'은 그대로 온다(판정은 D().facilLabel() 한 곳). */
                     facil: D().facilLabel ? D().facilLabel(m) : '',
+                    /* 담당자 — 누가 맡았는지 카드에서 보인다(2026-11-16 사용성 검증). 라벨은 «부서 · 역할 / 이름» */
+                    owner: String(m.assigned_to || '').split('/').pop().trim(),
                     dept: m.dept_id, dept_label: D().deptName(m.dept_id),
                     href: impHref(m),
                     atype: 'inline',
@@ -728,6 +714,24 @@
                  : renderDue(items);
 
         state.mount.innerHTML = head + readOnlyNote() + kpi + tabs + body;
+        markNow();
+    }
+    /* «지금 할 일» — 마감 할일 목록 맨 위(가장 급한) 건의 주 버튼 하나를 강조한다(정기 위험성평가 화면과 같은 모양 ·
+       .dy-now · 2회 맥동 · 꼬리표). 처리할 수 있는 담당자에게만 낸다 — 조회 계층에게 강조하면 누를 수 없는 버튼을 가리킨다.
+       예정 교육 알림(할 일 아님) 묶음은 건너뛴다. (2026-11-16 — 입력 완료 뒤 «다음에 어디서 하나»를 바로 보이게) */
+    var lastNowMw = '';
+    function markNow() {
+        if (state.view !== 'due' || !canAct()) { lastNowMw = ''; return; }
+        var groups = state.mount.querySelectorAll('.mw-group:not(.mw-g-neutral):not(.mw-g-done) .mw-group-body');
+        var btn = null;
+        for (var gi = 0; gi < groups.length && !btn; gi++) btn = groups[gi].querySelector('.btn-primary');
+        if (!btn) { lastNowMw = ''; return; }
+        btn.classList.add('dy-now');
+        var key = btn.getAttribute('onclick') || '';
+        if (key !== lastNowMw) btn.classList.add('dy-now-pulse');
+        lastNowMw = key;
+        btn.insertAdjacentHTML('afterend', '<span class="dy-now-tag" id="mw-now-tag">지금 할 일</span>');
+        btn.setAttribute('aria-describedby', 'mw-now-tag');
     }
 
     /* ---- 마감 할일 뷰 (미완료만 — 완료는 '완료한 업무' 탭) ---- */
@@ -849,7 +853,8 @@
                 DYLAW.basisChip(it.basis, { withTitle: true }) +
             '</div>';
         }
-        var remindTag = it.remind ? '<span class="mw-remind-tag">' + ICO.bell + ' 재촉</span> ' : '';
+        var remindTag = (it.remind ? '<span class="mw-remind-tag">' + ICO.bell + ' 재촉</span> ' : '') +
+            (it.fresh && it.status !== 'DONE' ? '<span class="chip-status info chip-sm">새 요청</span> ' : '');
         var catBadge = '<span class="mw-cat" style="color:' + meta.color + ';background:' + meta.bg + ';">' + esc(meta.label) + '</span>' +
             (it.origin ? ' <span class="chip-status info chip-sm">' + esc(it.origin) + '</span>' : '');
         var destChip = (it.atype === 'menu' && it.destLabel)
@@ -868,6 +873,8 @@
                         (it.dept_label ? '<span class="mw-item-dept">' + esc(it.dept_label) + '</span>' : '') +
                         /* 시설물 — 조치하러 갈 곳. 부서·기한 옆에 둔다(미지정이면 표시 안 함) */
                         (it.facil ? '<span class="mw-item-dept">시설물 ' + esc(it.facil) + '</span>' : '') +
+                        (it.cat === 'improve' && it.status !== 'DONE'
+                            ? '<span class="mw-item-dept">' + (it.owner ? '담당 ' + esc(it.owner) : '담당자 미지정') + '</span>' : '') +
                         destChip +
                     '</div>' +
                 '</div>' +
@@ -1570,13 +1577,13 @@
                 '<label style="font-size:var(--fs-12);font-weight:700;color:var(--text-gray);display:block;margin:14px 0 5px;">개선 전 사진 <span style="font-weight:400;">(선택)</span></label>' +
                 beforeShotsHtml() +
                 V().uploadDrop('<b>개선 전 사진</b> <span style="font-size:var(--fs-12);color:var(--text-gray);">클릭 또는 끌어놓기</span>',
-                    null, { pick: 'MYWORK.onPickBefore', multiple: true, style: 'padding:12px;' }) +
+                    null, { pick: 'MYWORK.onPickBefore', multiple: true, profile: 'image', style: 'padding:12px;' }) +
                 '<p class="file-hint">조치 전 상태를 남기면 확인 단계에서 <b>전·후 대조</b>로 보입니다. 사후에 발견한 건이면 비워 두세요.</p>' +
                 '<label style="font-size:var(--fs-12);font-weight:700;color:var(--text-gray);display:block;margin:14px 0 5px;">개선 후 사진 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 afterShotsHtml() +
                 V().uploadDrop('<b>개선 후 사진</b> <span style="font-size:var(--fs-12);color:var(--text-gray);">클릭 또는 끌어놓기</span>',
-                    null, { pick: 'MYWORK.onPickAfter', multiple: true, style: 'padding:12px;' }) +
-                '<p class="file-hint">개선 후 사진은 조치 완료의 증빙입니다. 없으면 완료 처리되지 않습니다.</p>' +
+                    null, { pick: 'MYWORK.onPickAfter', multiple: true, profile: 'image', style: 'padding:12px;' }) +
+                '<p class="file-hint">개선 후 사진은 조치 완료의 증빙입니다. 없으면 완료 처리되지 않습니다.</p>' + V().fileHint('image') +
                 '<label for="mw-cmpl-sign" style="font-size:var(--fs-12);font-weight:700;color:var(--text-gray);display:block;margin:14px 0 5px;">완료 확인 (전자서명) <span style="color:var(--status-danger-fg)">*</span></label>' +
                 '<input type="text" class="form-input" id="mw-cmpl-sign" value="' + esc(state.cmplSign || signerDefault()) + '" placeholder="확인자 이름" style="max-width:220px;">' +
             '</div>',

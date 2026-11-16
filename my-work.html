@@ -175,8 +175,13 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             var n = document.getElementById('mw-notice');
+            /* 안내 첫 줄은 보는 사람에 맞춘다 — 과장·소장·군수에게 «처리할 업무»라고 하면 아래 «조회 전용»과 어긋난다 */
+            var who = (window.DYROLE && DYROLE.current) ? DYROLE.current() : null;
+            var lead = who && who.tier !== 'staff'
+                ? '우리 부서가 <b>처리할 업무와 진행 상황</b>을 한곳에서 봅니다 — 처리는 부서 담당자가 합니다'
+                : '부서 담당자 관점에서 <b>처리할 전 업무</b>를 통합해서 보여줍니다';
             if (n) n.outerHTML = DYV2.notice('my-work',
-                '부서 담당자 관점에서 <b>처리할 전 업무</b>를 통합해서 보여줍니다',
+                lead,
                 '정해진 날짜에 자동으로 도착한 업무는 <b>[마감 할일]</b> 맨 위 도착 칸에 뜹니다 — 담당자가 정해져야 진행됩니다. ' +
                 '카드를 눌러 바로 처리할 수 있고(첨부형은 팝업, 메뉴형은 처리 화면), 기한이 없는 담당 문서는 <b>[담당 문서]</b> 탭에 있습니다.');
             window.MYWORK.init('mw-root');

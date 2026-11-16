@@ -87,7 +87,11 @@
     /* 전·후 둘 다 없으면 빈 상자 두 개로 200px 를 낭비하지 않는다 — 한 줄로 사실만 말한다 */
     function pairHtml(m) {
         var b = photoItems(m, 'before').length, a = photoItems(m, 'after').length;
-        if (!b && !a) return '<p class="rl-imp-nopair">증빙 사진 없음 — 개선 전·후 모두 미제출</p>';
+        /* 완료 전 건은 «사진이 없다»가 결함이 아니다 — 사진은 [완료 처리]에서 받는다(2026-11-16 작성표 사진 열 걷음).
+           오류처럼 읽히지 않게 다음에 할 일을 말한다. 완료됐는데 사진이 없는 옛 기록만 «없음»으로 드러낸다. */
+        if (!b && !a) return m.status === 'DONE'
+            ? '<p class="rl-imp-nopair">증빙 사진 없음 — 개선 전·후 모두 미제출</p>'
+            : '<p class="file-hint" style="margin:6px 0;">개선 후 사진은 완료 처리 때 올립니다</p>';
         return '<div class="rl-imp-pair">' + sideHtml(m, 'before') + sideHtml(m, 'after') + '</div>';
     }
     function impCard(m, no) {
@@ -136,7 +140,7 @@
                       (m.action_content ? '<span class="rl-imp-donetxt">' + esc(m.action_content) + '</span>' : '')
                     : '<span class="rl-imp-todo">' + (photoItems(m, 'after').length
                           ? '개선 후 사진 제출됨 — 완료 확인 대기'
-                          : '개선 후 사진 미제출 — 완료 소명 불가') + '</span>') +
+                          : '완료 처리 전 — 기한 ' + esc(m.due || m.due_date || '-')) + '</span>') +
                 (overdue && CTX.canRemind && CTX.onRemind
                     ? '<button type="button" class="btn btn-outline btn-sm rl-imp-remind" onclick="' +
                           esc(CTX.onRemind) + '(\'' + m.id + '\')">재촉</button>'
@@ -165,7 +169,7 @@
                 return '<div class="rl-imp-doact">' +
                     '<button type="button" class="btn btn-primary btn-sm"' +
                     ' onclick="MYWORK.completeFrom(\'' + esc(m.id) + '\')">완료 처리</button>' +
-                    '<span class="rl-imp-doact-note">이 부서 담당자가 조치 결과를 등록합니다.</span>' +
+                    '<span class="rl-imp-doact-note">조치를 마쳤으면 개선 후 사진 · 완료일 · 서명을 올립니다.</span>' +
                 '</div>';
             }
             return '';
@@ -388,7 +392,7 @@
                     ? '바꾼 내용과 사유가 이력에 남습니다.'
                     /* 부서 계정 안내는 할 일만 — 우리 부서 사람 중에서 고른다(운영 T29, 2026-11-04) */
                     : '우리 부서 구성원 중에서 담당자를 고릅니다. 바꾼 내용과 사유가 이력에 남습니다.') +
-                ' <b>사유 없이는 저장되지 않습니다.</b></p>' +
+                (m.assigned_to ? ' <b>사유 없이는 저장되지 않습니다.</b>' : ' 처음 지정할 때는 사유를 비워 두어도 됩니다 — 바꾸거나 기한을 늦출 때만 적습니다.') + '</p>' +
             '<div class="rl-modal-row" style="margin-top:10px;">' +
                 '<label class="form-label" for="imp-am-owner">담당자</label>' +
                 '<div class="orgpick-field" id="imp-am-field"><div style="display:flex;gap:8px;align-items:center;">' +
@@ -406,8 +410,8 @@
                 : '<div class="rl-modal-row"><label class="form-label">기한</label>' +
                     '<div><b>' + esc(m.due || m.due_date || '-') + '</b>' +
                     '<p class="file-hint">기한 변경은 주관부서(재난안전과)에 요청하세요.</p></div></div>') +
-            '<div class="rl-modal-row"><label class="form-label" for="imp-am-why">변경 사유 <span style="color:var(--status-danger-fg)">*</span></label>' +
-                '<textarea class="form-textarea" id="imp-am-why" rows="2" placeholder="예: 담당자 인사이동 · 자재 수급 지연으로 2주 연장"></textarea></div>',
+            '<div class="rl-modal-row"><label class="form-label" for="imp-am-why">' + (m.assigned_to ? '변경 사유 <span style="color:var(--status-danger-fg)">*</span>' : '사유 <span style="font-weight:400;color:var(--text-gray);">(기한을 늦출 때만 필수)</span>') + '</label>' +
+                '<textarea class="form-textarea" id="imp-am-why" rows="2" placeholder="' + (m.assigned_to ? '예: 담당자 인사이동 · 자재 수급 지연으로 2주 연장' : '예: 자재 수급 지연으로 2주 연장') + '"></textarea></div>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="IMPCARD.amendSave()">저장</button>');
     }
@@ -416,6 +420,11 @@
         if (!AMEND) return;
         var g = function (id) { var e = document.getElementById(id); return e ? e.value : ''; };
         var why = String(g('imp-am-why') || '').trim();
+        /* 처음 담당자를 정하는 것은 «변경»이 아니다 — 사유를 받지 않는다(2026-11-16 사용성 검증: 처음 지정인데
+           «변경 사유를 입력하세요»로 거절됐다). 담당자를 바꾸거나 기한을 늦출 때만 사유가 필요하다. */
+        var mm0 = D().improvementOf(AMEND);
+        var firstAssign = mm0 && !String(mm0.assigned_to || '').trim() && !(g('imp-am-due') && g('imp-am-due') !== (mm0.due || mm0.due_date || ''));
+        if (!why && firstAssign && String(g('imp-am-owner') || '').trim()) why = '담당자 지정';
         if (!why) { V().toast('변경 사유를 입력하세요.'); var w = document.getElementById('imp-am-why'); if (w) w.focus(); return; }
         var by = (global.DYROLE && global.DYROLE.current && global.DYROLE.current().name) || '';
         var mm = D().improvementOf(AMEND);
@@ -631,7 +640,7 @@
             : '';
         var cards = list.length
             ? (CTX.groupByDept ? groupedCards(list)
-                : '<div class="rl-imp-cards">' + list.map(function (m, i) { return impCard(m, i + 1); }).join('') + '</div>')
+                : '<div class="rl-imp-cards">' + list.map(function (m) { return impCard(m, all.indexOf(m) + 1); }).join('')   /* 번호는 작성 순서 그대로 — 완료하면 정렬은 바뀌어도 «1번»이 «2번»이 되지 않게(2026-11-16 사용성 검증) */ + '</div>')
             : '<div class="v2-empty">' + (cnt.all ? '이 조건에 해당하는 개선조치가 없습니다.' : CTX.emptyHtml) + '</div>';
 
         /* modal-wide 의 본문은 `display:flex; justify-content:center` 라 자식이 여럿이면

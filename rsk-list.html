@@ -71,7 +71,7 @@
         /* 컬럼이 8개(요인·분류·원인·조치·담당자·증빙·완료·삭제)라 좁은 폭에서 셀이 세로로
            찌그러진다. 스크롤 래퍼 + 최소폭으로 각 칸이 읽히는 너비를 보장한다(CLAUDE.md §9-5). */
         .rl-rv-scroll { overflow-x: auto; margin-bottom: 8px; }
-        .rl-rv-table { width: 100%; min-width: 930px; border-collapse: collapse; }
+        .rl-rv-table { width: 100%; min-width: 760px; border-collapse: collapse; }   /* 사진·완료 열을 걷어 930→760 (2026-11-16) — 1280px 화면에서 옆으로 밀지 않는다 */
         .rl-rv-table th, .rl-rv-table td { padding: 6px 8px; font-size: var(--fs-12); border: 1px solid var(--card-line); text-align: left; vertical-align: top; }
         .rl-rv-table th { background: var(--gray-50); color: var(--text-gray); font-weight: 700; }
         .rl-rv-table input[type=text], .rl-rv-table select, .rl-rv-table textarea { width: 100%; padding: 5px 7px; font-size: var(--fs-12); border: 1px solid var(--card-line); border-radius: var(--radius-xs); box-sizing: border-box; font-family: inherit; }

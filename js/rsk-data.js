@@ -29,7 +29,7 @@
      *       안전관리자 검토파일(occ.reviewFile) · 개선조치 완료일·전자서명 추가. 시드 변경 시 버전 범프. */
     /* r13 (2026-11-13) — 운영 기록형 예시 자료: 2024·2025 정기평가 8단계 완료 기록 · 수시 2025 4건/2026 10건 ·
      *       개선조치 34건(진행 7 · 기한 경과 2). 2026 정기평가는 등록하지 않는다. r12 — 시설물 3상태 연결. */
-    var SKEY = 'damyangRskV2r17';   /* r17 (2026-11-16) — 입력 완료 기록·예시 이력에서 참여 근로자를 뺐다(결정 D-6 거둠) · r15 (2026-11-13) — D-1·D-3·D-4·D-6: 종결·추가 요청·생성 뒤 고치기·근로자 공유 */
+    var SKEY = 'damyangRskV2r18';   /* r18 (2026-11-16) — 근로자 공유 기록을 거뒀다(예시 이력 포함) · r17 — 입력 완료 기록·예시 이력에서 참여 근로자를 뺐다(결정 D-6 거둠) · r15 (2026-11-13) — D-1·D-3·D-4·D-6: 종결·추가 요청·생성 뒤 고치기·근로자 공유 */
 
     /* ================= 스토어 ================= */
     var db = null;
@@ -173,10 +173,7 @@
                         { type: "CONFIRM", at: "2025-10-02 10:30", by: "박안전", memo: "전 부서 조치 완료 확인 (10건)" },
                         { type: "DISPATCH", at: "2025-11-10 14:20", by: "박안전", memo: "공문 온나라 상신 — 2025년 정기 위험성평가 개선조치 완료 확인 결과 통보 (연계 번호 재난안전과-2025-412)" },
                         { type: "RECEIVE", at: "2025-11-18 10:05", by: "온나라", memo: "결재 회신 — 결재완료 (생산등록번호 재난안전과-4127 · 결재일 2025-11-18)" },
-                        { type: "SHARE", at: "2025-11-24 16:10", by: "재난안전과 박안전", memo: "근로자 공유 · 2025-11-24 · 사업장 게시 · 증빙 2025_정기위험성평가_결과공유_게시사진.pdf" }
-                    ],
-                    /* 근로자 공유(시행규칙 §37의3 2호, 2026-11-13 결정 D-6) — 예시 자료 */
-                    workerShare: { at: "2025-11-24", method: "사업장 게시", memo: "청사·사업소 게시판에 결과 요약(유해·위험요인 · 위험성 수준 · 개선대책과 이행 결과) 게시", file: "2025_정기위험성평가_결과공유_게시사진.pdf", by: "재난안전과 박안전", recordedAt: "2025-11-24 16:10" }
+                    ]
                 },
                 {
                     id: "RA-2024-01",
@@ -232,9 +229,7 @@
                         { type: "CONFIRM", at: "2024-08-27 10:30", by: "박안전", memo: "전 부서 조치 완료 확인 (6건)" },
                         { type: "DISPATCH", at: "2024-10-14 15:00", by: "박안전", memo: "공문 온나라 상신 — 2024년 정기 위험성평가 개선조치 완료 확인 결과 통보 (연계 번호 재난안전과-2024-371)" },
                         { type: "RECEIVE", at: "2024-10-21 11:20", by: "온나라", memo: "결재 회신 — 결재완료 (생산등록번호 재난안전과-3561 · 결재일 2024-10-21)" },
-                        { type: "SHARE", at: "2024-10-28 15:00", by: "재난안전과 박안전", memo: "근로자 공유 · 2024-10-25 · 안전보건교육 · 증빙 2024_정기위험성평가_결과공유_교육일지.pdf" }
-                    ],
-                    workerShare: { at: "2024-10-25", method: "안전보건교육", memo: "하반기 정기교육 시간에 부서별 결과와 개선 이행 결과 안내", file: "2024_정기위험성평가_결과공유_교육일지.pdf", by: "재난안전과 박안전", recordedAt: "2024-10-28 15:00" }
+                    ]
                 }
             ],
 
@@ -2579,36 +2574,9 @@
         return { ok: true, year: a.year };
     }
 
-    /* ===== D-6 근로자 공유 (시행규칙 §37의3 2호) =====
-     * 평가가 끝나면(완료 확인까지) 재난안전과가 결과(유해·위험요인 · 위험성 수준 결정 결과 · 개선대책
-     * 수립 내용과 이행 결과)를 근로자에게 알린 기록을 남긴다 — 공유일(오늘 이전) · 방법 · 증빙 파일.
-     * 공유 자체(게시·교육·회의)는 이 시스템 밖에서 한다. 이 기록이 §37의4①3호 기록 항목이 된다. */
-    /* 공유 방법은 「사업장 위험성평가에 관한 지침」 §17①(rae-17) 1~7호 그대로다 — 화면 목록을 따로 짓지 않는다(2026-11-13).
-     * «그 밖에 입증 가능한 명시적인 방법»은 어떻게 알렸는지 내용을 함께 받는다. */
-    var SHARE_OTHER = '그 밖에 입증 가능한 명시적인 방법';
-    var SHARE_METHODS = ['안전보건교육', '설명회 개최', '사업장 게시', '문서 전달', '작업 전 안전점검회의 등 정기적인 회의', '전자적인 방법을 통한 전달', SHARE_OTHER];
-    function shareOpen(a) {
-        if (!a || a.status !== 'COMPLETED') return { ok: false, why: '평가가 끝난 뒤에 근로자 공유를 기록합니다.' };
-        var c = confirmCount(a.id);
-        if (c.wait || c.returned) return { ok: false, why: '완료 확인이 끝난 뒤에 근로자 공유를 기록합니다.' };
-        return { ok: true };
-    }
-    function shareWorkers(aid, o) {
-        var a = assessmentOf(aid);
-        var g = shareOpen(a); if (!g.ok) return { error: g.why };
-        o = o || {};
-        if (!o.date) return { error: '공유일을 정하세요.' };
-        if (o.date > today()) return { error: '공유일은 오늘(' + today() + ') 이전이어야 합니다 — 이미 알린 날을 적습니다.' };
-        if (!o.method || SHARE_METHODS.indexOf(o.method) < 0) return { error: '공유 방법을 고르세요.' };
-        if (o.method === SHARE_OTHER && !String(o.memo || '').trim()) return { error: '그 밖의 방법이면 어떻게 알렸는지 적으세요.' };
-        if (!o.file) return { error: '증빙 파일(게시 사진·교육일지·회의록 등)을 올리세요.' };
-        var by = o.by || actorNow(), prev = a.workerShare;
-        a.workerShare = { at: o.date, method: o.method, memo: String(o.memo || '').trim(), file: o.file, by: by, recordedAt: nowTs() };
-        pushHistory(aid, { type: 'SHARE', by: by,
-            memo: (prev ? '근로자 공유 기록 고침 · ' : '근로자 공유 · ') + o.date + ' · ' + o.method + ' · 증빙 ' + o.file });
-        save();
-        return a;
-    }
+    /* D-6 근로자 공유 기록(공유일 · 방법 · 증빙)은 2026-11-16 에 거뒀다 — 지금 운영에 없는 단계이고
+       흐름 전환에 필요하지 않다(답신 원칙). 결과를 근로자에게 알리는 일은 이 시스템 밖(게시 · 교육 · 회의)에서 한다.
+       평가 끝에 기록 단계를 다시 두지 말 것. */
     function clearReport(aid) {
         var a = assessmentOf(aid); if (!a) return;
         if (a.files) a.files.report = '';
@@ -3355,12 +3323,11 @@
         requestAction: requestAction, inputOpen: inputOpen, validDeptRows: validDeptRows,
         setInputDone: setInputDone, undoInputDone: undoInputDone,
         deptStage: deptStage,
-        /* 2026-11-13 결정 — D-1 종결 · D-2 입력 재촉 · D-3 추가 요청 · D-4 생성 뒤 고치기 · D-6 근로자 공유 */
+        /* 2026-11-13 결정 — D-1 종결 · D-2 입력 재촉 · D-3 추가 요청 · D-4 생성 뒤 고치기 (D-6 근로자 공유는 2026-11-16 거둠) */
         closeNoAction: closeNoAction, noActionClosed: noActionClosed,
         remindInput: remindInput, inputRemindTo: inputRemindTo,
         moreCandidates: moreCandidates, moreOpen: moreOpen, requestMore: requestMore,
         infoEditable: infoEditable, updateRegular: updateRegular, removeRegular: removeRegular,
-        SHARE_METHODS: SHARE_METHODS, shareOpen: shareOpen, shareWorkers: shareWorkers,
         /* 개선조치 */
         improvements: improvements, improvementOf: improvementOf, improvementsFor: improvementsFor,
         facilLabel: facilLabel,

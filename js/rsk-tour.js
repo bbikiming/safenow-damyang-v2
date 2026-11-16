@@ -140,12 +140,18 @@
                 if (!global.RSKLIST || !global.RSKLIST.openMySubmit) { location.href = this.href(); return; }
                 global.RSKLIST.openMySubmit();
             },
-            done: function () { var d = dp(); return !!(d && d.reportFile); },
+            /* 보고서가 등록되면 설문 제출은 마감된다 — 못 낸 부서도 이 단계는 더 할 수 없으므로 끝난 것으로 센다.
+               종전에는 «제출 파일 있음»만 봐서 마감된 부서의 진행이 영영 0 으로 남았다(2026-11-16 사용성 검증). */
+            done: function () {
+                var d = dp(); if (d && d.reportFile) return true;
+                var a = A(); return !!(a && a.review && a.review.stage && a.review.stage !== 'NONE');
+            },
             note: function () {
                 var a = A(); if (!a) return '평가 생성 후';
                 if (!deptListed()) return deptNm() + jo(deptNm(), '은 ', '는 ') + a.year + '년 평가 대상 부서가 아닙니다';
                 var p = D().deptReportProgress(a);
                 var d = dp();
+                if (!(d && d.reportFile) && a.review && a.review.stage && a.review.stage !== 'NONE') return deptNm() + ' 미제출 · 마감(보고서 등록)';
                 return '제출 ' + p.done + ' / ' + p.total + (d && d.reportFile ? ' · ' + deptNm() + ' 제출 완료' : '');
             }
         },
@@ -203,7 +209,9 @@
             href: function () { return 'rsk-list.html'; },
             selector: '[data-tour="rsk-complete"]',
             title: '부서가 작성표를 쓰고 → 완료',
-            where: '우리 부서 작성표 블록의 <b>[＋ 행 추가]</b>',
+            /* 앵커가 둘이다 — 작성 중에는 작성표의 [＋ 행 추가], 입력 완료 뒤에는 «내 부서 진행 상황»의 [개선조치 완료 처리]
+               (둘은 동시에 화면에 없다). 종전에는 [＋ 행 추가]만 가리켜 입력 완료 뒤 «화면에 없는 요소»가 됐다. */
+            where: '작성 중에는 우리 부서 작성표의 <b>[＋ 행 추가]</b> · 입력 완료 뒤에는 «내 부서 진행 상황»의 <b>[개선조치 완료 처리]</b>',
             clickPath: [
                 '블록 위 통합 보고서를 열어 우리 부서 해당 내용을 확인합니다',
                 '[＋ 행 추가]로 유해위험요인·개선조치를 적고, 다 적으면 [입력 완료] — 둘 다 적은 줄이 개선조치가 됩니다',
