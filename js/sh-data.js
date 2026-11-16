@@ -665,6 +665,52 @@
         return out;
     }
 
+    /* ================= 진행 순서 · «지금 할 일» (2026-11-16) =================
+     * 작업환경측정·건강검진 상세가 함께 쓰는 순서 목록. 위험성평가 «내 부서 진행 상황»(.rl-my-steps)과
+     * «지금 할 일» 강조(.dy-now)를 그대로 쓴다 — 새 계열을 만들지 않는다(CLAUDE.md §7).
+     *   steps[] = { key, lab, who, done, skip, note, mine }
+     *     mine — 지금 접속한 사람이 이 단계를 하는 사람인가(화면이 판정해 넘긴다)
+     *   지금 단계 = 끝나지 않았고 건너뛰지 않는 첫 단계. 그 단계가 내 것이면 그 버튼(data-step=key)에
+     *   강조를 걸고, 아니면 «기다리는 중 — 누가 무엇을»을 말한다. 단계는 저장하지 않고 매번 파생한다. */
+    function flowCur(steps) {
+        for (var i = 0; i < steps.length; i++) if (!steps[i].done && !steps[i].skip) return i;
+        return -1;
+    }
+    function flowHtml(title, steps, nowKey) {
+        var esc = (global.DYV2 && global.DYV2.esc) ? global.DYV2.esc : function (x) { return String(x == null ? '' : x); };
+        var cur = flowCur(steps), c = cur >= 0 ? steps[cur] : null;
+        var n = 0;
+        var items = steps.filter(function (s) { return !s.skip; }).map(function (s) {
+            n++;
+            var now = c && s.key === c.key;
+            return '<li class="rl-my-step' + (s.done ? ' is-done' : (now ? ' is-now' : '')) + (s.mine ? ' is-mine' : '') + '">' +
+                '<span class="rl-my-no">' + (s.done ? '✓' : n) + '</span>' +
+                '<span class="rl-my-body"><b>' + esc(s.lab) + '</b>' +
+                    '<span class="rl-my-who">' + esc(s.who) + '</span>' +
+                    (s.note ? '<span class="rl-my-note">' + esc(s.note) + '</span>' : '') +
+                '</span></li>';
+        }).join('');
+        var bar;
+        if (!c) bar = '<div class="dy-now-bar is-wait" role="status"><span class="dy-now-bar-k">완료</span><span class="dy-now-bar-t">모든 단계가 끝났습니다.</span></div>';
+        else if (nowKey) bar = '<div class="dy-now-bar" role="status"><span class="dy-now-bar-k">지금 할 일</span><span class="dy-now-bar-t">' +
+            esc((steps.filter(function (s) { return s.key === nowKey; })[0] || c).lab) + ' — 아래 강조된 버튼을 누릅니다.</span></div>';
+        else bar = '<div class="dy-now-bar is-wait" role="status"><span class="dy-now-bar-k">기다리는 중</span><span class="dy-now-bar-t">' +
+            esc(c.who) + V_josa(c.who) + ' ' + esc(c.lab) + V_eul(c.lab) + ' 합니다.</span></div>';
+        return '<section class="rl-my card" aria-label="' + esc(title) + '">' +
+            '<div class="rl-my-head"><b>' + esc(title) + '</b></div>' +
+            '<ol class="rl-my-steps">' + items + '</ol></section>' + bar;
+    }
+    function V_josa(w) { return (global.DYV2 && global.DYV2.josa) ? global.DYV2.josa(w, '이', '가') : '이(가)'; }
+    function V_eul(w) { return (global.DYV2 && global.DYV2.josa) ? global.DYV2.josa(w, '을', '를') : '을(를)'; }
+    /* 지금 할 일 버튼에 강조 — 화면이 innerHTML 을 그린 뒤 부른다(DOM 참조를 들고 있지 않는다) */
+    function markNow(root, key) {
+        if (!root || !key) return;
+        var el = root.querySelector('[data-step="' + key + '"]'); if (!el) return;
+        el.classList.add('dy-now', 'dy-now-pulse');
+        el.setAttribute('aria-describedby', 'dy-now-tag');
+        el.insertAdjacentHTML('afterend', '<span class="dy-now-tag" id="dy-now-tag">지금 할 일</span>');
+    }
+
     /* ================= 건강검진 ================= */
     function health() { return load().health; }
     function addHealth(o) {
@@ -855,6 +901,7 @@
         workEnvSummary: workEnvSummary, workEnvLink: workEnvLink,
         regByOf: regByOf, weDocs: weDocs, weLockOf: weLockOf, halfRows: halfRows, noticeRows: noticeRows,
         halfStat: halfStat, reportFiles: reportFiles, saveNotice: saveNotice, nextNoticeNo: nextNoticeNo,
+        flowCur: flowCur, flowHtml: flowHtml, markNow: markNow,
         remeasureDue: remeasureDue, setLaborSubmit: setLaborSubmit, editWorkEnvResult: editWorkEnvResult, weTodos: weTodos,
         /* 건강검진 */
         health: health, healthOf: healthOf, addHealth: addHealth, effHealth: effHealth, hcRate: hcRate,

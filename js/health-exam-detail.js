@@ -52,20 +52,42 @@
         var rate = S().hcRate(r);
         var barTone = rate == null ? '' : rate >= 100 ? '' : (rate >= 80 ? 'warn' : 'danger');
 
-        /* 상단 액션 — 상태별 컨텍스트 액션(점진적 공개) */
+        /* ===== 진행 순서 · «지금 할 일» (2026-11-16) — 작업환경측정 상세와 같은 DYSH.flowHtml =====
+         * 건강검진은 부서가 검진기관과 진행하고 결과 통보서를 올리는 단순 첨부형이다(2026-09-09 확정).
+         * 재난안전과 확인 단계는 없다 — 확인을 받는 단계를 지어내지 않는다. */
+        var p = R() && R().current ? R().current() : null;
+        var mine = may && (!p || p.tier === 'staff');
+        var fuNeed = !!r.followupNeeded;
+        /* 해당하는 단계만 보인다 — 보통은 [검진 완료 처리] 한 번으로 끝난다(2026-11-16 «2단계로»).
+           추가검진·사후관리는 실시 결과에 미검진자·사후관리 대상이 있을 때만 생긴다. */
+        var hadExtra = (r.history || []).some(function (h) { return /추가검진/.test(h.event); });
+        var steps = [
+            { key: 'complete', lab: '검진 완료 처리', who: r.dept, mine: mine, done: done,
+              note: done ? '실시 ' + r.done + ' · 수검 ' + r.examinedCount + ' / ' + r.targetCount + '명'
+                  : '결과 통보서 파일 · 실시일 · 수검자 수 · 사후관리 대상 유무를 한 창에서' },
+            { key: 'extra', lab: '미검진자 추가검진 반영', who: r.dept, mine: mine, done: done && unex === 0, skip: !done || (unex === 0 && !hadExtra),
+              note: unex > 0 ? '미검진 ' + unex + '명' + (r.extraExamDate ? ' · 추가검진 예정 ' + r.extraExamDate : '') : '전원 수검' },
+            { key: 'followup', lab: '사후관리 완료', who: r.dept, mine: mine, done: !!r.followupDone, skip: !done || !fuNeed,
+              note: r.followupDone ? (r.followupResult || '완료') : '유소견자 조치 — 실시일부터 30일 안에' }
+        ];
+        var cur = S().flowCur(steps), cs = cur >= 0 ? steps[cur] : null;
+        var nowKey = cs && cs.mine ? cs.key : '';
+
+        /* 버튼은 단계 순서대로 — 보조 처리(증빙 추가·기한·사유·알림)는 뒤에 */
+        var B = function (key, label, fn) { return '<button type="button" class="btn btn-outline" data-step="' + key + '" onclick="' + fn + '">' + label + '</button>'; };
         var acts = '';
         if (may) {
-            if (!done) acts += '<button type="button" class="btn btn-primary" onclick="HEXD.complete()">검진 완료 처리</button>';
-            else if (unex > 0) acts += '<button type="button" class="btn btn-primary" onclick="HEXD.complete()">추가검진 반영</button>';
-            else if (S().hcFollowup(r)) acts += '<button type="button" class="btn btn-primary" onclick="HEXD.complete()">사후관리 완료</button>';
-            else acts += '<span class="sh-st success" style="align-self:center;">완료 처리됨</span>';
+            if (!done) acts += B('complete', '검진 완료 처리', 'HEXD.complete()');
+            else if (unex > 0) acts += B('extra', '추가검진 반영', 'HEXD.complete()');
+            else if (S().hcFollowup(r)) acts += B('followup', '사후관리 완료', 'HEXD.complete()');
             /* 결과보고서는 실시일이 있어야 붙는다(운영 E04 ①) — 미실시면 [검진 완료 처리]가 함께 받는다 */
-            if (done) acts += '<button type="button" class="btn btn-outline" onclick="HEXD.evidence()">증빙 등록</button>';
+            if (done) acts += '<button type="button" class="btn btn-outline" onclick="HEXD.evidence()">증빙 추가 등록</button>';
             if (!done || unex > 0) acts += '<button type="button" class="btn btn-outline" onclick="HEXD.resetDue()">기한 재설정</button>';
             if (!done || unex > 0) acts += '<button type="button" class="btn btn-outline" onclick="HEXD.reason()">미검진 사유 입력</button>';
             acts += '<button type="button" class="btn btn-outline" onclick="HEXD.notify()">알림 발송</button>';
         }
-        var actions = acts ? '<div class="sh-actions" style="margin-bottom:14px;">' + acts + '</div>' : roNote(r);
+        var actions = S().flowHtml('진행 순서', steps, nowKey) +
+            (acts ? '<div class="sh-actions" style="margin-bottom:14px;">' + acts + '</div>' : roNote(r));
 
         /* 연계 설명 안내(인력 평가 반영)는 걷었다(운영 T14, 2026-11-04) */
         var linknote = '';
@@ -153,6 +175,7 @@
 
         state.mount.innerHTML = actions + linknote +
             '<div class="sh-detail">' + overview + status + evidence + followup + reasonCard + histCard + '</div>';
+        S().markNow(state.mount, nowKey);
     }
 
     /* ── 증빙 등록 ── */
@@ -237,8 +260,15 @@
     }
 
     /* ── 완료 처리 ── */
+    var HF = null;   /* 검진 완료 처리 창에서 고른 결과보고서 */
+    function onPick(items) {
+        HF = items && items[0] ? { name: items[0].name, size: items[0].size } : null;
+        var box = document.getElementById('hd-c-file');
+        if (box) box.innerHTML = HF ? '<p style="margin-bottom:8px;">' + S().icon('file') + ' <b>' + esc(HF.name) + '</b></p>' : '';
+    }
     function complete() {
         if (deny(S().healthOf(state.id), '검진 완료 처리')) return;
+        HF = null;
         var r = S().healthOf(state.id);
         if (!r.done) {
             /* 실시일·수검자 수·결과보고서를 한 번에 받는다(운영 E04 ①) — 결과보고서와 수검 인원은
@@ -249,7 +279,8 @@
                 '<div style="margin-bottom:12px;"><label class="form-label">수검자 수 (대상 ' + r.targetCount + '명)</label>' +
                     '<input type="number" class="form-input" id="hd-c-ex" value="' + r.targetCount + '" min="0" max="' + r.targetCount + '"></div>' +
                 '<div style="margin-bottom:12px;"><label class="form-label">결과보고서 <span style="color:var(--status-danger-fg)">*</span></label>' +
-                    V().uploadDrop('검진기관 실시확인서·집계 결과 통보서를 끌어다 놓거나 클릭하여 업로드', null, { hint: true }) + '</div>' +
+                    '<div id="hd-c-file"></div>' +
+                    V().uploadDrop('검진기관 실시확인서·집계 결과 통보서를 끌어다 놓거나 클릭하여 업로드', null, { hint: true, pick: 'HEXD.onPick' }) + '</div>' +
                 /* 사후관리 대상 여부는 결과 통보서를 받는 이 시점에만 정해진다 —
                    여기서 받지 않으면 사후관리 축이 신규 건에서 영영 열리지 않는다. */
                 '<div><label><input type="checkbox" id="hd-c-fu-need"' + (r.followupNeeded ? ' checked' : '') + '> ' +
@@ -283,6 +314,7 @@
         if (dateEl && (!dateEl.value || dateEl.value > S().TODAY)) { toast('검진 실시일을 확인하세요.'); return; }
         var fuEl = document.getElementById('hd-c-fu-need');
         var first = !r.done;
+        if (first && !r.evidence && !HF) { toast('결과보고서 파일을 올리세요.'); return; }
         S().completeHealth(state.id, { doneDate: dateEl ? dateEl.value : undefined, examinedCount: isNaN(ex) ? undefined : ex,
             followupNeeded: fuEl ? !!fuEl.checked : undefined });
         /* 실시 확정과 함께 결과보고서를 붙인다 — 실시일이 생긴 뒤라 저장 계층 가드를 통과한다 */
@@ -307,5 +339,5 @@
     global.HEXD = { init: init, evidence: evidence, saveEvidence: saveEvidence,
         reason: reason, saveReason: saveReason, resetDue: resetDue, saveDue: saveDue,
         notify: notify, pickRecipient: pickRecipient, sendNotify: sendNotify, complete: complete, saveComplete: saveComplete,
-        saveFollowup: saveFollowup };
+        saveFollowup: saveFollowup, onPick: onPick };
 })(window);

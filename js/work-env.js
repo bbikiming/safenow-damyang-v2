@@ -130,7 +130,9 @@
                 '<span class="sh-fl">부서</span>' +
                 '<select class="form-select" aria-label="부서" onchange="WENV.setDept(this.value)">' + deptOpts + '</select>' +
             '</div>' +
-            (canAct() ? '<button type="button" class="btn btn-primary" onclick="WENV.openNew()">＋ 측정 계획 등록</button>' : '') + '</div>';
+            (canAct() ? '<div style="display:flex;gap:var(--sp-2);flex-wrap:wrap;">' +
+                '<button type="button" class="btn btn-outline" onclick="WENV.openNew()">측정 계획 등록</button>' +
+                '<button type="button" class="btn btn-primary" onclick="WENV.openResult()">＋ 결과 등록</button></div>' : '') + '</div>';
 
         var rows = list.length ? list.map(rowHtml).join('') :
             '<tr><td colspan="9" class="sh-empty">조건에 맞는 작업환경측정 건이 없습니다.</td></tr>';
@@ -140,6 +142,11 @@
                 '<th>대상 부서 / 사업장</th><th>측정 대상</th><th>위탁업체</th><th>측정 예정일 · 실시일</th>' +
                 '<th>결과보고서</th><th>측정 결과</th><th>개선조치 기한</th><th>완료 여부</th><th>담당자</th>' +
             '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+        /* «지금 할 일» — 재난안전과 담당자에게 보낼 결과 안내 공문이 있으면 그 버튼(가장 이른 반기)을 강조한다 */
+        if (canOwner() && !(R() && R().current && R().current() && R().current().tier !== 'staff')) {
+            var nh = (state.half ? [state.half] : ['H1', 'H2']).filter(function (h) { return S().noticeRows(state.year, h).length; })[0];
+            if (nh) S().markNow(state.mount, 'notice-' + nh);
+        }
     }
 
     /* 반기별 결과 안내 공문 줄 — 재난안전과 담당자에게만. 결과가 들어온 사업장부터 보낸다
@@ -161,7 +168,7 @@
                 '<b>' + esc(state.year) + ' ' + halfName(h) + ' 결과 안내</b>' +
                 '<span style="color:var(--text-gray);">측정 ' + st.done + ' / ' + st.total + '곳 · 공문 보냄 ' + st.sent + '곳</span>' +
                 (st.notice.length
-                    ? '<button type="button" class="btn btn-sm btn-primary" onclick="WENVDOC.open(\'' + key + '\')">결과 안내 공문 (' + st.notice.length + '곳)</button>'
+                    ? '<button type="button" class="btn btn-sm btn-outline" data-step="notice-' + h + '" onclick="WENVDOC.open(\'' + key + '\')">결과 안내 공문 (' + st.notice.length + '곳)</button>'
                     : '') +
                 docs +
                 (pend ? '<span class="file-hint" style="flex-basis:100%;">측정 전: ' + pend + ' — 결과가 들어오면 다음 공문으로 보냅니다.</span>' : '') +
@@ -175,7 +182,7 @@
         var report = r.report
             ? '<span class="sh-attached">' + S().icon('file') + '첨부됨</span>'
             : (attachable(r)
-                ? '<button type="button" class="sh-pill-link" onclick="event.stopPropagation();WENV.attach(\'' + r.id + '\')">＋ 첨부</button>'
+                ? '<button type="button" class="sh-pill-link" onclick="event.stopPropagation();WENV.openResult(\'' + r.id + '\')">＋ 결과 등록</button>'
                 : '<span class="sh-pill-none">미첨부</span>');
         var doneTxt = r.done ? esc(r.done) : '<span style="color:var(--text-gray)">미실시</span>';
         return '<tr onclick="WENV.detail(\'' + r.id + '\')">' +
@@ -200,52 +207,120 @@
     function detail(id) { location.href = 'work-env-detail.html?id=' + id; }
 
     /* 목록 인라인 증빙 첨부 — 상세 진입 없이 결과보고서 등록 */
-    /* 측정기관 보고서 한 부가 여러 사업장을 덮는다 — 같은 반기·같은 위탁업체·보고서 없는 행을 함께 고른다 */
-    var AT = { id: null, file: null, with: {} };
-    function attachable(r) { return r && !r.report && !r.done && canAct(r.dept) && !S().weLockOf(r.id); }
-    function siblings(r) {
-        return S().workEnv().filter(function (x) {
-            return x.id !== r.id && String(x.year) === String(r.year) && x.half === r.half && x.vendor === r.vendor && attachable(x);
+    /* ===== 결과 등록 — 한 창에서 끝낸다 (2026-11-16 «2단계로») =====
+     * 측정기관이 보낸 결과보고서 한 부 + 측정(시료채취) 완료일 + 사업장별 결과(적정/개선 필요)를 한 번에 받는다.
+     * 계획을 미리 등록하지 않았어도 사업장 관리의 사업장을 골라 그 자리에서 건을 만든다 — 실제 업무는
+     * «보고서를 받아 결과를 알린다»이고, 계획 등록·보고서 첨부·결과 입력을 세 번 나눌 이유가 없다.
+     * 저장은 건마다 attachEvidence(결과보고서) → completeWorkEnv 로 기존 판정·잠금 경로를 그대로 지난다. */
+    var RG = null;
+    function attachable(r) { return r && !r.done && canAct(r.dept) && !S().weLockOf(r.id); }
+    function halfOfDate(d) { return Number(String(d).slice(5, 7)) >= 7 ? 'H2' : 'H1'; }
+    /* 고를 수 있는 사업장 — 그 반기에 결과가 아직 없는 곳(계획이 있으면 그 건, 없으면 사업장 관리에서) */
+    function rgCandidates() {
+        var y = Number(String(RG.date).slice(0, 4)), h = halfOfDate(RG.date);
+        var rows = S().halfRows(y, h), out = [], seen = {};
+        rows.forEach(function (r) {
+            if (r.done || !attachable(r)) { if (r.siteId) seen[r.siteId] = 1; return; }
+            seen[r.siteId || r.id] = 1;
+            out.push({ k: r.id, rowId: r.id, dept: r.dept, name: r.site, siteId: r.siteId, planned: r.planned, vendor: r.vendor });
+        });
+        (global.DYSITE ? DYSITE.sites() : []).forEach(function (st) {
+            if (seen[st.id] || st.active === false || st.targetState === '비대상' || !canAct(st.dept)) return;
+            out.push({ k: 'S:' + st.id, siteId: st.id, dept: st.dept, name: st.name, site: st });
+        });
+        return out;
+    }
+    function openResult(rowId) {
+        if (!canAct()) { V().toast(denyNote('결과 등록')); return; }
+        var r = rowId ? S().workEnvOf(rowId) : null;
+        if (rowId && !attachable(r)) { V().toast('이 건에는 결과를 등록할 수 없습니다.'); return; }
+        RG = { date: S().TODAY, file: null, vendor: r ? (r.vendor === '미지정' ? '' : r.vendor) : '', sel: {} };
+        if (r) RG.sel[r.id] = { result: '적정' };
+        renderResult();
+    }
+    function rgCapture() {
+        if (!RG) return;
+        var g = function (id) { return document.getElementById(id); };
+        if (g('rg-date')) RG.date = g('rg-date').value || RG.date;
+        if (g('rg-vendor')) RG.vendor = g('rg-vendor').value;
+        Object.keys(RG.sel).forEach(function (k) {
+            var o = RG.sel[k], sk = k.replace(/[^A-Za-z0-9_-]/g, '_');
+            if (g('rg-res-' + sk)) o.result = g('rg-res-' + sk).value;
+            if (g('rg-req-' + sk)) o.req = g('rg-req-' + sk).value;
+            if (g('rg-due-' + sk)) o.due = g('rg-due-' + sk).value;
+            if (g('rg-ex-' + sk)) o.exceed = g('rg-ex-' + sk).checked;
         });
     }
-    function attach(id) {
-        var r = S().workEnvOf(id); if (!r) return;
-        if (!canAct(r.dept)) { V().toast(denyNote('결과 첨부')); return; }
-        if (!attachable(r)) { V().toast('이 건에는 결과보고서를 올릴 수 없습니다.'); return; }
-        AT = { id: id, file: null, with: {} };
-        renderAttach();
-    }
-    function renderAttach() {
-        var r = S().workEnvOf(AT.id); if (!r) return;
-        var sib = siblings(r);
-        V().openModal('결과보고서 등록',
-            '<p style="font-size:13px;margin-bottom:10px;color:var(--text-gray);"><b>' + esc(r.dept) + ' · ' + esc(r.site) + '</b> 작업환경측정 결과보고서를 첨부합니다.</p>' +
-            (AT.file ? '<p style="margin-bottom:8px;">' + S().icon('file') + ' <b>' + esc(AT.file.name) + '</b></p>' : '') +
-            V().uploadDrop('파일을 끌어다 놓거나 클릭하여 업로드', null, { hint: true, pick: 'WENV.onPick' }) +
-            (sib.length
-                ? '<div style="margin-top:12px;"><label class="form-label">같은 보고서로 함께 등록 <span class="file-hint">' + esc(r.vendor) + ' · ' + halfName(r.half) + '</span></label>' +
-                    sib.map(function (x) {
-                        return '<label style="display:block;margin:4px 0;"><input type="checkbox"' + (AT.with[x.id] ? ' checked' : '') +
-                            ' onchange="WENV.setWith(\'' + x.id + '\', this.checked)"> ' + esc(x.dept) + ' · ' + esc(x.site) + '</label>';
-                    }).join('') + '</div>'
-                : ''),
+    function renderResult() {
+        var cand = rgCandidates();
+        /* 날짜를 바꿔 반기가 달라지면 그 반기에 없는 선택은 버린다 */
+        Object.keys(RG.sel).forEach(function (k) { if (!cand.some(function (c) { return c.k === k; })) delete RG.sel[k]; });
+        var rows = cand.map(function (c) {
+            var o = RG.sel[c.k], sk = c.k.replace(/[^A-Za-z0-9_-]/g, '_');
+            var imp = o && o.result === '개선 필요';
+            return '<div style="border:1px solid var(--card-line);border-radius:var(--radius-sm);padding:var(--sp-2) var(--sp-3);margin-bottom:var(--sp-1-5, 6px);">' +
+                '<label style="display:flex;gap:var(--sp-2);align-items:center;"><input type="checkbox"' + (o ? ' checked' : '') +
+                    ' onchange="WENV.rgToggle(\'' + c.k + '\', this.checked)"> <b>' + esc(c.name) + '</b> <span class="file-hint">' + esc(c.dept) +
+                    (c.rowId ? ' · 계획 ' + esc(String(c.planned || '').slice(5)) : '') + '</span></label>' +
+                (o ? '<div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);margin-top:var(--sp-2);align-items:center;">' +
+                        '<select class="form-select" id="rg-res-' + sk + '" aria-label="' + esc(c.name) + ' 측정 결과" onchange="WENV.rgRedraw()" style="width:auto;">' +
+                            '<option value="적정"' + (imp ? '' : ' selected') + '>적정</option><option value="개선 필요"' + (imp ? ' selected' : '') + '>개선 필요</option></select>' +
+                        (imp ? '<input type="text" class="form-input" id="rg-req-' + sk + '" placeholder="개선 요구사항" style="flex:1 1 220px;" value="' + esc(o.req || '') + '">' +
+                            '<label class="file-hint" for="rg-due-' + sk + '">조치기한</label><input type="date" class="form-input" id="rg-due-' + sk + '" style="width:auto;" value="' + esc(o.due || S().addDays(S().TODAY, 30)) + '">' +
+                            '<label><input type="checkbox" id="rg-ex-' + sk + '"' + (o.exceed ? ' checked' : '') + '> 노출기준 초과</label>' : '') +
+                    '</div>' : '') +
+            '</div>';
+        }).join('');
+        var y = String(RG.date).slice(0, 4), h = halfOfDate(RG.date);
+        V().openModal('작업환경측정 결과 등록',
+            '<p class="file-hint" style="margin-bottom:var(--sp-3);">측정기관이 보낸 결과보고서를 올리고 사업장마다 결과를 고릅니다. 저장하면 끝이고, 재난안전과가 결과 안내 공문을 보냅니다.</p>' +
+            '<label class="form-label">결과보고서 <span style="color:var(--status-danger-fg)">*</span></label>' +
+            (RG.file ? '<p style="margin-bottom:var(--sp-2);">' + S().icon('file') + ' <b>' + esc(RG.file.name) + '</b></p>' : '') +
+            V().uploadDrop('파일을 끌어다 놓거나 클릭하여 업로드', null, { hint: true, pick: 'WENV.rgPick' }) +
+            '<div style="display:flex;flex-wrap:wrap;gap:var(--sp-3);margin:var(--sp-3) 0;">' +
+                '<div><label class="form-label" for="rg-date">측정(시료채취) 완료일 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                    '<input type="date" class="form-input" id="rg-date" value="' + esc(RG.date) + '" onchange="WENV.rgRedraw()"></div>' +
+                '<div style="flex:1 1 200px;"><label class="form-label" for="rg-vendor">측정기관</label>' +
+                    '<input type="text" class="form-input" id="rg-vendor" value="' + esc(RG.vendor || '') + '" placeholder="예: (주)한국산업보건환경연구원"></div>' +
+            '</div>' +
+            '<label class="form-label">사업장 <span style="color:var(--status-danger-fg)">*</span> <span class="file-hint">' + esc(y) + ' ' + halfName(h) + ' · 결과가 아직 없는 곳</span></label>' +
+            (rows || '<p class="file-hint">이 반기에 결과를 등록할 사업장이 없습니다.</p>'),
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-            '<button type="button" class="btn btn-primary" onclick="WENV.saveAttach()">등록</button>');
+            '<button type="button" class="btn btn-primary" onclick="WENV.saveResult()">등록</button>');
     }
-    function onPick(items) { AT.file = items && items[0] ? { name: items[0].name, size: items[0].size } : null; renderAttach(); }
-    function setWith(id, on) { if (on) AT.with[id] = true; else delete AT.with[id]; }
-    function saveAttach() {
-        var r = S().workEnvOf(AT.id); if (!r) return;
-        if (!canAct(r.dept)) { V().toast(denyNote('결과 첨부')); return; }
-        if (!AT.file) { V().toast('파일을 고르세요.'); return; }
-        var ids = [AT.id].concat(Object.keys(AT.with));
-        /* 저장에도 같은 판정 — 고른 뒤 상태가 바뀌었거나 전역 호출로 남의 부서 행이 들어와도 거른다 */
-        var done = ids.filter(function (id) {
-            var x = S().workEnvOf(id);
-            return attachable(x) && !!S().attachEvidence('we', id, '결과보고서', AT.file.name);
+    function rgRedraw() { rgCapture(); renderResult(); }
+    function rgToggle(k, on) { rgCapture(); if (on) RG.sel[k] = { result: '적정' }; else delete RG.sel[k]; renderResult(); }
+    function rgPick(items) { rgCapture(); RG.file = items && items[0] ? { name: items[0].name, size: items[0].size } : null; renderResult(); }
+    function saveResult() {
+        if (!RG) return;
+        rgCapture();
+        if (!canAct()) { V().toast(denyNote('결과 등록')); return; }
+        if (!RG.file) { V().toast('결과보고서 파일을 올리세요.'); return; }
+        if (!RG.date || RG.date > S().TODAY) { V().toast('측정(시료채취) 완료일을 확인하세요 — 오늘 이후일 수 없습니다.'); return; }
+        var cand = rgCandidates(), picked = cand.filter(function (c) { return RG.sel[c.k]; });
+        if (!picked.length) { V().toast('결과를 등록할 사업장을 1곳 이상 고르세요.'); return; }
+        var legal = S().addDays(RG.date, 60);
+        for (var i = 0; i < picked.length; i++) {
+            var o = RG.sel[picked[i].k], nm = picked[i].name;
+            if (o.result !== '개선 필요') continue;
+            if (!String(o.req || '').trim()) { V().toast(nm + ' — 개선 요구사항을 입력하세요.'); return; }
+            if (!o.due || o.due <= RG.date || o.due < S().TODAY) { V().toast(nm + ' — 조치기한은 측정일·오늘 이후로 고르세요.'); return; }
+            if (o.exceed && o.due > legal) { V().toast(nm + ' — 노출기준 초과는 조치기한이 ' + legal + ' 이내여야 합니다(법정 제출기한).'); return; }
+        }
+        var n = 0;
+        picked.forEach(function (c) {
+            var o = RG.sel[c.k], r = c.rowId ? S().workEnvOf(c.rowId) : null;
+            if (!r) {
+                if (!canAct(c.dept)) return;
+                r = S().addWorkEnv({ dept: c.dept, siteId: c.siteId, site: c.name, siteTargetState: c.site.targetState || '검토 중',
+                    subject: c.site.hazards || '', vendor: (RG.vendor || '').trim(), planned: RG.date });
+            } else if (RG.vendor && (!r.vendor || r.vendor === '미지정')) r.vendor = RG.vendor.trim();
+            if (!attachable(r)) return;
+            if (!S().attachEvidence('we', r.id, '결과보고서', RG.file.name)) return;
+            if (S().completeWorkEnv(r.id, { doneDate: RG.date, result: o.result, improveReq: (o.req || '').trim(), improveDue: o.due, exceed: !!o.exceed })) n++;
         });
-        V().closeModal(); render();
-        V().toast(done.length ? '결과보고서를 ' + done.length + '곳에 등록했습니다.' : '등록하지 못했습니다.');
+        RG = null; V().closeModal(); render();
+        V().toast(n ? '결과를 ' + n + '곳에 등록했습니다.' + (canOwner() ? ' 이제 결과 안내 공문을 보냅니다.' : '') : '등록하지 못했습니다.');
     }
 
     function openNew() {
@@ -370,7 +445,7 @@
             },
             canDraft: function () { return canOwner() ? { ok: true } : { ok: false, why: '결과 안내 공문은 재난안전과 담당자가 보냅니다.' }; },
             ready: function (t) {
-                if (!t.rows.length) return { ok: false, why: '공문에 실을 측정 결과가 없습니다 — 측정 완료 처리한 사업장이 있어야 합니다.' };
+                if (!t.rows.length) return { ok: false, why: '공문에 실을 측정 결과가 없습니다 — [결과 등록]을 먼저 합니다.' };
                 var noRep = t.rows.filter(function (r) { return !S().reportFiles(r).length; });
                 if (noRep.length) return { ok: false, why: '결과보고서가 없는 사업장: ' + noRep.map(function (r) { return r.site; }).join(', ') };
                 var past = t.rows.filter(function (r) { return r.result === '개선 필요' && (!r.improveDue || r.improveDue < S().TODAY); });
@@ -433,10 +508,12 @@
         var q = new URLSearchParams(location.search);
         if (q.get('dept')) state.dept = q.get('dept');
         if (q.get('year')) state.year = q.get('year');
+        if (q.get('half') === 'H1' || q.get('half') === 'H2') state.half = q.get('half');
         render();
     }
 
     global.WENV = { init: init, setYear: setYear, setHalf: setHalf, setDept: setDept, setTile: setTile,
-        detail: detail, attach: attach, saveAttach: saveAttach, onPick: onPick, setWith: setWith, openNew: openNew, saveNew: saveNew,
+        detail: detail, openResult: openResult, saveResult: saveResult, rgRedraw: rgRedraw, rgToggle: rgToggle, rgPick: rgPick,
+        openNew: openNew, saveNew: saveNew,
         pickDept: pickDept, onSiteChange: onSiteChange };
 })(window);
