@@ -15,7 +15,7 @@
 
     /* r5 — 2026-07-30 회의: 기타교육 분류를 법정 3유형으로 재정의(구 5종 폐지) ·
      * 첨부 슬롯(file.slot) 도입. 구 etcType 이 남으면 필터·표시가 어긋나므로 버전 범프. */
-    var SKEY = 'damyangEduV1r17';  /* r17 — 2차 통화 검토 반영(11-17): 작업내용 변경 미이수 예시를 물순환사업소로 · 등록일(regAt) */
+    var SKEY = 'damyangEduV1r18';  /* r18 — 엑셀 업로드 걷음(예시 출처 엑셀 → 직접등록, 11-17) ·  r17 — 2차 통화 검토 반영(11-17): 작업내용 변경 미이수 예시를 물순환사업소로 · 등록일(regAt) */
     /* r16 — 2차 통화(11-16 17:24): 부서 실시 교육 등록 묶음(batchId) · 현업업무(duties) · 작업내용 변경 이력(dutyLog) · 분기 보고 걷음 */
      /* r15 — 공문 저장을 이 스토어로 옮김(docs) · 과정별 공문 흐름(flow 2) · 12월 집합교육 «안내 공문 전» · 4분기 부서 실시 교육 분기 보고 대상 (2026-11-16 임영준 주무관 통화) */
      /* r14 — 주기 전환을 2027-01-01 로 미룸(답신 3-2): 2026 은 개인별 주기 · 독촉 이력(사람·메모)·재난안전과 현업 시드를 그 기준으로 맞춤 (2026-11-13) */
@@ -268,23 +268,23 @@
         mk('w_env_c2', '이수영', 'env', 'FIELD', 'CONTRACT', '2025-09-01', 12, 'HR');
         mk('w_env_c3', '조민서', 'env', 'FIELD', 'CONTRACT', '2026-02-01', 12, 'MANUAL');
         mk('w_env_c4', '한도영', 'env', 'FIELD', 'DAILY',    '2026-07-10', 0.1, 'MANUAL'); /* 채용시교육 지연 이수 */
-        mk('w_env_c5', '차이수', 'env', 'FIELD', 'CONTRACT', '2026-06-15', 6, 'EXCEL');
+        mk('w_env_c5', '차이수', 'env', 'FIELD', 'CONTRACT', '2026-06-15', 6, 'MANUAL');
         /* 물순환사업소 — 정수·수질 현업 */
         mk('w_wat_c1', '한지훈', 'water', 'FIELD', 'CONTRACT', '2025-03-01', 12, 'HR');
         mk('w_wat_c2', '오태섭', 'water', 'FIELD', 'CONTRACT', '2025-11-01', 12, 'HR');
         mk('w_wat_c3', '박정민', 'water', 'FIELD', 'CONTRACT', '2026-01-15', 12, 'MANUAL');
-        mk('w_wat_c4', '김수빈', 'water', 'FIELD', 'CONTRACT', '2026-05-10', 6, 'EXCEL');
+        mk('w_wat_c4', '김수빈', 'water', 'FIELD', 'CONTRACT', '2026-05-10', 6, 'MANUAL');
         mk('w_wat_c5', '이서준', 'water', 'FIELD', 'DAILY',    '2026-11-10', 0.1, 'MANUAL'); /* 최근 채용 — 채용시교육 전 */
         /* 공공시설사업소 — 시설운영·환경시설 */
         mk('w_fac_c1', '정민수', 'facility', 'FIELD', 'CONTRACT', '2024-08-01', 24, 'HR');
         mk('w_fac_c2', '박현우', 'facility', 'FIELD', 'CONTRACT', '2025-08-01', 12, 'HR');
         mk('w_fac_c3', '이도현', 'facility', 'FIELD', 'CONTRACT', '2026-02-20', 12, 'MANUAL');
-        mk('w_fac_c4', '오세훈', 'facility', 'FIELD', 'DAILY',    '2026-10-27', 0.2, 'EXCEL');
+        mk('w_fac_c4', '오세훈', 'facility', 'FIELD', 'DAILY',    '2026-10-27', 0.2, 'MANUAL');
         /* 건설과 — 도로·안전관리 현업 */
         mk('w_con_c1', '최준영', 'construct', 'FIELD', 'CONTRACT', '2025-03-15', 12, 'HR');
         mk('w_con_c2', '강태우', 'construct', 'FIELD', 'CONTRACT', '2025-10-01', 12, 'HR');
         mk('w_con_c3', '한지원', 'construct', 'FIELD', 'CONTRACT', '2026-03-01', 12, 'MANUAL');
-        mk('w_con_c4', '박서연', 'construct', 'FIELD', 'CONTRACT', '2026-09-14', 6, 'EXCEL');
+        mk('w_con_c4', '박서연', 'construct', 'FIELD', 'CONTRACT', '2026-09-14', 6, 'MANUAL');
         /* 재난안전과 */
         mk('w_safety_c1', '조안나', 'safety', 'OFFICE', 'CONTRACT', '2025-04-01', 12, 'HR');
         /* 재난안전과 현업 — 새 주기(채용일 기준 11-12~)가 막 시작해 미이수다. 실습으로 집합교육 한 건(3h)을 이수해도 12h 에 못 미쳐
@@ -771,9 +771,8 @@
     function personLabels(ids) { return (ids || []).map(personLabel).join(', '); }
     /* 계약기간 필수 판정 — **데이터 계층에 둔다** (2026-09-01)
      * 종전 가드는 근로자 명단 화면의 저장 함수에만 있었다. 그런데 쓰기 경로가 넷이고
-     * (등록·수정·지정일·엑셀) 그중 엑셀은 화면 가드를 지나지 않는다. 지금은 그 경로가
-     * 계약기간을 12 로 박아 두어 드러나지 않을 뿐, 실제 엑셀 값을 읽도록 바꾸는 순간
-     * 같은 결함이 조용히 돌아온다.
+     * (등록·수정·지정일·엑셀 — 엑셀은 2026-11-17 걷었다) 화면 가드를 지나지 않는 경로가
+     * 생기는 순간 같은 결함이 조용히 돌아온다.
      * 값이 0 이면 hireHours 의 `<= 0.25`(1주 이하) 갈래에 걸려 **채용시교육 필요시간이
      * 8h 가 아니라 1h** 가 되고, 그 값이 이수 판정의 분모라 부서별 완료율까지 부푼다.
      * 「화면에서 검사하지 말고 데이터 계층에서 막는다」(CLAUDE.md §4 addEnroll 선례).
@@ -784,7 +783,7 @@
     }
 
     /* ── 현업업무 — 「공공행정 등에서 현업업무에 종사하는 사람의 기준」(고용노동부고시 제2020-62호) 별표 1 ──
-     * 목록을 화면에 복사하지 않는다 — 등록 창·목록 칩·필터·엑셀·변경 이력·기타교육 대상자가 이 배열 하나를 읽는다.
+     * 목록을 화면에 복사하지 않는다 — 등록 창·목록 칩·필터·변경 이력·기타교육 대상자가 이 배열 하나를 읽는다.
      * 이 고시는 법령 스냅샷(DYLAW)에 없어 근거 칩을 붙이지 않고 출처를 글자로만 적는다(CLAUDE.md §10). */
     var DUTY_SOURCE = '고용노동부고시 제2020-62호 별표 1';
     var DUTY_TYPES = [
@@ -873,10 +872,6 @@
             duties: cleanDuties(o.duties), dutyLog: []
         };
         d.workers.push(w); save(); return w;
-    }
-    /* 거절된 건은 배열에서 빠진다 — 호출부가 «몇 건이 들어갔나»를 셀 수 있어야 한다 */
-    function bulkAddWorkers(list) {
-        return (list || []).map(addWorker).filter(Boolean);
     }
     function updateWorker(id, patch) {
         var w = workerOf(id); if (!w) return null;
@@ -1543,7 +1538,7 @@
     function catLabel(c) { return CAT_LABEL[c] || c; }
     var EMP_LABEL = { CIVIL: '공무원', PUBLIC: '공무직', CONTRACT: '기간제', DAILY: '일용' };
     function empLabel(e) { return EMP_LABEL[e] || e; }
-    var SRC_LABEL = { HR: '인사연동', MANUAL: '직접등록', EXCEL: '엑셀업로드' };
+    var SRC_LABEL = { HR: '인사연동', MANUAL: '직접등록' };  /* 엑셀 업로드는 2026-11-17 걷었다 */
     function srcLabel(s) { return SRC_LABEL[s] || s; }
     /* ===== 기타교육 유형 — 2026-07-30 회의 확정 3종 =====
      * 발주처: "작업 내용 변경 시 교육 특별 교육 건설 기초 안전 보건 교육 이 세 가지죠."
@@ -1931,7 +1926,7 @@
         /* 스토어 */
         reset: reset, load: load, save: save, today: today, nowTs: nowTs, TODAY: today(),
         /* 근로자 */
-        workers: workers, workerOf: workerOf, addWorker: addWorker, bulkAddWorkers: bulkAddWorkers,
+        workers: workers, workerOf: workerOf, addWorker: addWorker,
         updateWorker: updateWorker, removeWorker: removeWorker,
         fieldWorkers: fieldWorkers, supervisorWorkers: supervisorWorkers,
         /* 교육 */

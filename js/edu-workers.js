@@ -3,7 +3,7 @@
    ---------------------------------------------------------------------
    docs/planning/기획-안전보건교육-재설계-v1.md §3.
    · 인사연동분(source='HR'): 읽기 전용 · 이름 옆 [인사연동] 출처 칩 (v1.1 §8.5)
-   · 계약직: 부서 담당자 직접 등록 · 엑셀 업로드(목업)
+   · 계약직: 부서 담당자 직접 등록(엑셀 업로드는 2026-11-17 걷었다 — 요구사항 밖이고 양식이 없었다)
    · 필터: 부서 · 구분 · 고용형태 · 출처 (조회 조건이므로 select 유지, 퇴직자는 숨김)
    표준: 배지 chip-status+DYV2.toneOf · 표 .table-figma · 등록 폼 부서는 ORGPICK('deptId')
    ===================================================================== */
@@ -18,7 +18,6 @@
 
     var state = { mount: null, fDept: '', fCat: '', fEmp: '', fSrc: '', fQ: '', fYear: '', fDuty: '' };
     var F = null;
-    var X = null; /* 엑셀 업로드 폼 */
 
     /* 조회 범위 — 이 화면은 근로자 **개인 정보**(이름·채용일·고용형태·계약기간)를 다룬다.
        종전에는 누구로 접속해도 전 부서 명단이 보였다. 판정은 DYROLE.inScope 한 곳이고
@@ -79,8 +78,7 @@
         ], {
             count: list.length + ' / ' + all.length, unit: '명', reset: 'EDUW.resetF()',
             actions: E().canRegister()
-                ? '<button type="button" class="btn btn-outline btn-sm" onclick="EDUW.openExcel()">📥 엑셀 업로드</button>' +
-                    '<button type="button" class="btn btn-primary" onclick="EDUW.openAdd()">＋ 직접 등록</button>'
+                ? '<button type="button" class="btn btn-primary" onclick="EDUW.openAdd()">＋ 직접 등록</button>'
                 : '<span class="file-hint">명단 등록은 각 부서 담당자가 합니다</span>'
         });
 
@@ -320,7 +318,7 @@
             toast('계약기간을 0보다 크게 입력하세요 — 채용시교육 필요시간(1·4·8h)이 이 값으로 갈립니다.');
             return;
         }
-        /* 현업업무 — 판정은 DYEDU.dutyIssue 한 곳(직접 등록·수정·엑셀이 같은 검사) */
+        /* 현업업무 — 판정은 DYEDU.dutyIssue 한 곳(직접 등록·수정이 같은 검사) */
         if (F.mode === 'edit' && dutyChanged() && !E().canActOwnDept(F.origDeptId)) { dutyDeny(F.origDeptId); return; }
         var dWhy = E().dutyIssue(F.category, dutyList(F.duties), 'MANUAL');
         if (dWhy) { toast(dWhy); return; }
@@ -380,59 +378,6 @@
         V().closeModal(); toast('관리감독자 지정일을 저장했습니다.'); render();
     }
 
-    /* =============== 엑셀 업로드 (목업) =============== */
-    function openExcel() {
-        if (!E().canRegister()) { deny(E().defaultDeptId()); return; }
-        X = { deptId: E().defaultDeptId() };
-        renderExcel();
-    }
-    function renderExcel() {
-        /* §15 — 화면에 «목업»을 쓰지 않는다. 대신 무엇이 들어가는지 사실대로 밝힌다. */
-        V().openModal('엑셀 업로드',
-            '<div style="font-size:var(--fs-13);">엑셀 파일 읽기는 파일관리 연계 후 제공됩니다. 지금은 해당 부서에 <b>예시 계약직 근로자 4명</b>을 추가합니다.</div>' +
-            '<div class="edu-modal-row" style="margin-top:12px;"><label class="form-label">대상 부서</label>' +
-                '<div class="orgpick-field" id="ew-xls-deptfield"><div style="display:flex;gap:8px;align-items:center;">' +
-                    '<input type="text" class="form-input" value="' + esc(E().deptName(X.deptId)) + '" readonly aria-label="대상 부서" style="flex:1;background:var(--gray-50);">' +
-                    (E().canPickDept() ? '<button type="button" class="btn btn-sm btn-outline" onclick="ORGPICK.toggle(\'ew-xls-deptfield\',\'deptId\',\'EDUW.pickExcelDept\')">조직도</button>' : '') +
-                '</div>' +
-                (E().canPickDept() ? '' : '<p class="file-hint">소속 부서 명단에 추가합니다.</p>') +
-                '</div></div>' +
-            /* 업로드 칸은 전 화면 공용 모양 하나(uploadDrop) — 한 개만 받는 자리도 같은 칸이고
-               안내만 일괄등록 프로필(xlsx 1개 · 20MB)로 바뀐다(기획확인 4차 D-1, 2026-10-06). */
-            '<div class="edu-modal-row"><label class="form-label">파일</label><div>' +
-                V().uploadDrop('<b>엑셀 파일을 끌어다 놓거나 눌러서 선택</b>',
-                    "DYV2.notReady('엑셀 파일 읽기', '파일관리 연계')", { hint: true, profile: 'bulk' }) +
-            '</div></div>' +
-            /* 서식에는 부서 열이 없다 — 부서는 위에서 한 번 고른다(기획확인 4차 C-4 · SCR-EDU-006 §5).
-               행마다 부서를 적게 하면 조직도와 표기가 어긋난 행이 생기고, 부서 담당자가 남의 부서
-               명단을 넣는 경로가 된다. */
-            '<p class="file-hint"><b>서식 열</b> 이름 · 구분 · 고용형태 · 채용일 · 계약기간(기간제·일용) · <b>현업업무</b>(1~6 번호, 쉼표로 · 비사무직은 필수) · 관리감독자 지정일(관리감독자) — ' +
-                '부서 열은 없습니다. 형식이 맞지 않는 행은 행 번호와 사유를 보여 주고 나머지 행만 반영합니다.</p>',
-            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-            '<button type="button" class="btn btn-primary" onclick="EDUW.doExcel()">업로드</button>');
-    }
-    function pickExcelDept(id, name) {
-        if (!E().canActDept(id)) { deny(id); return; }
-        X.deptId = id; renderExcel();
-    }
-    function doExcel() {
-        var deptId = X.deptId;
-        if (!E().canActDept(deptId)) { V().closeModal(); deny(deptId); return; }
-        var sample = ['김대현', '이수정', '박준서', '최은지'].map(function (nm) {
-            return {
-                name: nm, deptId: deptId, category: 'FIELD', empType: 'CONTRACT',
-                hireDate: E().today(), contractMonths: 12, source: 'EXCEL', duties: [1]
-            };
-        });
-        /* 거절된 건은 배열에서 빠지므로 «몇 건이 들어갔나»를 세어 말한다 —
-           4건이라고 적어 두면 데이터 계층이 거절해도 4건이라고 말하게 된다 */
-        var added = E().bulkAddWorkers(sample);
-        var skipped = sample.length - added.length;
-        V().closeModal();
-        toast(E().deptName(deptId) + ' 부서에 ' + added.length + '명 엑셀 업로드 완료' +
-            (skipped ? ' · 제외 ' + skipped + '명(형식 오류)' : ''));
-        render();
-    }
 
     function init(mountId) {
         state.mount = document.getElementById(mountId);
@@ -447,7 +392,6 @@
         init: init, setF: setF, resetF: resetF,
         openAdd: openAdd, openEdit: openEdit, pickDept: pickDept, doSave: doSave, remove: remove, doRemove: doRemove,
         openDesignation: openDesignation, saveDesignation: saveDesignation,
-        toggleDuty: toggleDuty, openDuty: openDuty, saveDuty: saveDuty,
-        openExcel: openExcel, pickExcelDept: pickExcelDept, doExcel: doExcel
+        toggleDuty: toggleDuty, openDuty: openDuty, saveDuty: saveDuty
     };
 })(window);
