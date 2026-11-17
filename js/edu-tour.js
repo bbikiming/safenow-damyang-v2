@@ -89,7 +89,6 @@
        진행 판정은 지금처럼 데이터 파생(공문 기록 존재)이다 — 손으로 처리해도 단계가 넘어간다. */
     function sent(key) { return E().docState && E().docState(key) === 'sent'; }
     function myDept() { var p = curP(); return p ? p.deptId : ''; }
-    function qKey() { var d = myDeptOnly() ? myDept() : ((global.DYROLE && global.DYROLE.OWNER_DEPT) || 'safety'); var r = E().reportQuarterFor(d); return E().keyQuarter(d, r.q); }
     var STEPS = [
         {
             key: 'create', label: '등록', page: 'edu-reg.html',
@@ -196,18 +195,21 @@
             note: function () { var n = recCount(); return n ? '이수기록 ' + n + '건 반영됨' : '종료 처리 후'; }
         },
         {
-            key: 'report', label: '분기 보고', page: 'edu-reg.html',
+            key: 'report', label: '부서 교육', page: 'edu-reg.html',
             persona: deptP, href: function () { return 'edu-reg.html?tab=self'; },
-            selector: '[data-tour="edu-report"]',
-            title: '④ 부서 실시 교육 — 분기 실시 결과 보고 한 장',
-            where: '자체교육 탭 위 <b>분기 실시 결과 보고</b> 띠',
-            clickPath: ['자체·기타·채용시교육은 등록할 때 공문을 쓰지 않습니다 — 어느 분기 보고에 들어가는지만 보입니다', '[분기 결과 보고 작성] → 실적표·이수자 명단은 별지로 → [온나라로 보내기]'],
-            desc: '부서가 분기에 한 장으로 재난안전과에 보냅니다(담양군이 하던 분기 실시 결과 제출과 같다).',
-            script: '교육 건마다 공문을 쓰지 않고 분기에 한 장으로 모읍니다.',
-            actionLabel: '분기 보고 화면으로',
+            selector: '[data-tour="self-create"]',
+            title: '④ 부서 교육 등록 → 실시 결과 보고 공문',
+            where: '자체교육 탭의 <b>[＋ 자체교육 등록]</b>(채용시·기타교육도 같다)',
+            clickPath: ['교육을 입력하고 [저장하고 공문 작성 →] — 같은 창이 실시 결과 보고 공문으로 바뀝니다', '미리보기 → [온나라로 보내기] — 재난안전과는 결재 상태와 [공문 보기]로 검토만 합니다'],
+            desc: '자체·채용시·기타교육은 부서가 등록하면서 바로 공문을 보냅니다(등록 한 번 = 공문 한 번).',
+            script: '«추가 버튼 누를 때 무조건 연계를 타야» — 등록과 공문이 한 흐름입니다.',
+            actionLabel: '자체교육 화면으로',
             action: function () { location.href = 'edu-reg.html?tab=self'; },
-            done: function () { return sent(qKey()); },
-            note: function () { return sent(qKey()) ? '분기 보고 보냄' : '보내기 전'; }
+            done: function () {
+                var d = myDeptOnly() ? myDept() : ((global.DYROLE && global.DYROLE.OWNER_DEPT) || 'safety');
+                return E().load().courses.some(function (c) { return E().isFlow2(c) && E().isDeptRun(c) && E().reportDeptOf(c) === d && sent(E().keyRun(E().batchOf(c))); });
+            },
+            note: function () { return '부서 실시 교육 공문'; }
         }
     ];
 
@@ -220,11 +222,11 @@
         flowNote: function () {
             return '추적 중인 교육: <b>' + V().esc(courseLabel()) + '</b>' +
                 ' — 새로 등록하면 그 교육을 따라갑니다.<br>' +
-                '재난안전과 담당자(안내 공문 · 출장 결과 보고 · 종료)와 부서 담당자(참석자 등록부 · 제출 공문 · 분기 보고)가 나눠 합니다 — 공문을 보내야 그 일이 끝납니다.';
+                '재난안전과 담당자(안내 공문 · 출장 결과 보고 · 종료)와 부서 담당자(참석자 등록부 · 제출 공문 · 부서 교육 실시 결과 보고)가 나눠 합니다 — 공문을 보내야 그 일이 끝납니다.';
         },
         barTitle: function () { return '안전보건교육 사용법 — ' + STEPS.length + '걸음'; },
         barDesc: function () {
-            return '집합교육 등록·안내 공문 → 부서 등록부·제출 공문 → 출장 결과 보고 → 종료 처리 → 이수현황 → 분기 실시 결과 보고까지 ' +
+            return '집합교육 등록·안내 공문 → 부서 등록부·제출 공문 → 출장 결과 보고 → 종료 처리 → 이수현황 → 부서 교육 실시 결과 보고까지 ' +
                 '실제 화면 흐름 그대로 안내합니다. <b>어디를 누를지</b> 짚어 드립니다.';
         }
     });

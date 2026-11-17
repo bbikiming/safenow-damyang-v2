@@ -43,6 +43,12 @@
         var R = global.DYROLE;
         return !R || !R.inScope || R.inScope(deptId);
     }
+    /* 현업업무 미지정 갭(2차 통화 · 1단계) — 새 안내 줄을 만들지 않고 집계 대상 배지 끝에 붙인다. 누르면 현업근로자 명단 «업무 미지정» */
+    function dutyGap() {
+        if (!E().dutyStats) return '';
+        var n = E().dutyStats(E().workers().filter(function (w) { return canSeePerson(w.deptId); })).missing;
+        return n ? ' · <a href="edu-workers.html?duty=none">현업업무 미지정 ' + n + '명</a>' : '';
+    }
     /* 독촉 권한 — 독촉 경로(이행점검·경영방침·교육·위험성평가)가 같은 판정을 쓴다(DYROLE.canRemind,
        기획확인 4차 C-32 · 2026-10-06). 종전에는 이 화면만 검사가 없어 총괄 책임자(군수)에게도
        [일괄 독촉]이 떴다. 선택칸도 같은 판정으로 낸다 — 처리 버튼이 없는 계정에 선택칸만 남기지 않는다. */
@@ -109,7 +115,7 @@
     }
 
     /* 개인별 결재 열은 **없다** — 한 사람 이수 확인서는 결재가 아니라 증명서라
-       보고서·제증명이 발급한다(SCR-EDU-005 §6). 공문은 교육 1건 단위뿐이다. */
+       보고서·제증명이 발급한다(SCR-EDU-005 §6). 공문은 과정마다 각 교육 화면이 보낸다(2026-11-16). */
 
     function render() {
         if (!state.mount) return;
@@ -177,7 +183,7 @@
         return bar +
             '<div class="edu-card" data-tour="status-summary"><div class="edu-card-title">부서별 이수 현황 ' +
                 '<span style="font-size:var(--fs-12);color:var(--text-gray);font-weight:var(--fw-regular);">(기준일 ' + E().TODAY + ')</span>' +
-                '<span class="edu-pop-note">집계 대상 <b>' + esc(populationLabel()) + '</b> · ' + popTotal + '명 중 완료 ' + popDone + '명' + (popUnknown ? ' · 기준일 미등록 ' + popUnknown + '명' : '') + '</span>' +
+                '<span class="edu-pop-note">집계 대상 <b>' + esc(populationLabel()) + '</b> · ' + popTotal + '명 중 완료 ' + popDone + '명' + (popUnknown ? ' · 기준일 미등록 ' + popUnknown + '명' : '') + dutyGap() + '</span>' +
             '</div>' +
             '<div class="edu-scroll"><table class="table-figma table-compact"><thead><tr>' +
                 '<th>부서</th><th>대상 인원</th><th>완료 인원</th><th>완료율</th><th></th>' +

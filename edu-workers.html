@@ -3,19 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>근로자 명단 관리 — 담양군 중대재해예방통합관리시스템</title>
+    <title>현업근로자 명단 — 담양군 중대재해예방통합관리시스템</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="./js/tailwind-config.js"></script>
     <link rel="stylesheet" href="./css/style.css">
     <link rel="stylesheet" href="./css/v2.css">
 </head>
 <body data-dy-page="edu-workers"
-      data-page-title="근로자 명단 관리"
-      data-page-subtitle="교육 대상 근로자 명단을 관리합니다.">
+      data-page-title="현업근로자 명단"
+      data-page-subtitle="현업근로자와 하는 업무(현업업무)를 관리합니다 — 안전보건교육 대상의 기준입니다.">
     <main>
         <div class="check-notice">
-            안전보건교육 대상 근로자 명단입니다. 연동된 명단(공무원·공무직)은 <b>읽기 전용</b>이며,
-            부서 계약직·일용 근로자는 <b>직접 등록 · 엑셀 업로드</b>로 관리합니다.
+            안전보건교육 대상 근로자 명단입니다. 연동된 명단(공무원·공무직)은 인사정보가 <b>읽기 전용</b>이고 현업업무만 고릅니다.
+            부서 계약직·일용 근로자는 <b>직접 등록 · 엑셀 업로드</b>로 관리합니다. 현업업무를 바꾸면 <b>작업내용 변경 이력</b>에 남습니다.
         </div>
         <div id="ew-root"></div>
     </main>
@@ -33,12 +33,10 @@
     <script src="./js/edu-doc.js"></script><!-- 교육 공문 (EDUDOC) -->
     <script src="./js/edu-filter.js"></script>
     <script src="./js/edu-workers.js"></script>
-    <script src="./js/tour-core.js"></script><!-- 단계별 안내 공용 엔진 (DYTOUR) -->
-    <script src="./js/edu-tour.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             window.EDUW.init('ew-root');
-            window.EDUTOUR.boot();
+            /* 안전보건교육 단계별 안내(EDUTOUR)는 싣지 않는다 — 이 화면은 «현업근로자 관리» 대메뉴다(2차 통화 검토 C-5) */
         });
     </script>
 </body>

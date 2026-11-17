@@ -66,6 +66,8 @@
        상태에서 [필터 초기화] 가 비활성이 되어 끌 수단이 사라진다. */
     function bar(fields, opts) {
         opts = opts || {};
+        /* 조건부 항목(null)은 건너뛴다 — 고를 값이 하나뿐인 조건을 화면이 빼고 넘길 수 있게 */
+        fields = (fields || []).filter(Boolean);
         var n = activeCount(fields) + (+opts.extraActive || 0);
         return '<div class="edu-toolbar edu-filterbar">' +
             '<div class="edu-filterbar-fields">' + (fields || []).map(fieldHtml).join('') + '</div>' +

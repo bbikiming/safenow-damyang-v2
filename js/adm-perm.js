@@ -174,7 +174,8 @@
         'edu-approval':  'ownerView',
         /* 개인정보 */
         'sbm-health':    'personal',   /* 부서 인원이 적으면 대상·수검 집계가 개인을 가리킨다 */
-        'edu-workers':   'personal',   /* 근로자 명단(이름·채용일·고용형태) */
+        'edu-workers':   'personal',   /* 현업근로자 명단(이름·채용일·고용형태·현업업무) */
+        'worker-change': 'personal',   /* 작업내용 변경 이력(이름·업무) — 2026-11-16 */
         /* 전 직원 등록 */
         'opn-voice':     'openWrite',
         'sbm-comply':    'openWrite',  /* 이행점검 결과 제출은 그 부서 실무자 누구나(2026-11-12 개발 회신 B안) —

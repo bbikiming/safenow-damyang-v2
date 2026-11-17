@@ -356,7 +356,7 @@
         dueAnchor: 'RELATIVE', dueDays: 6,
         dueBasis: { metric: 'p75', n: 4, years: '2026', note: '표본 4건 — 근거 얇다' },
         scopeAttr: ['fieldWorker'],
-        href: 'edu-workers.html', destLabel: '근로자 명단 관리',
+        href: 'edu-workers.html', destLabel: '현업근로자 명단',
         slots: [{ key: '종사자 현황표', required: true }],
         setRef: ['A3', 'E2'],
         setNote: "'종사자' ⊃ '현업근로자' — 명단 화면 갱신으로 갈음하면 공무원 축이 빠진다",

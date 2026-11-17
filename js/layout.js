@@ -687,6 +687,15 @@
          *   3뎁스 구조는 재설계 v1 §8.5 그대로. 종전에 직속으로 흩어져 있던 뒤쪽 3개
          *   (이수현황·근로자 명단·결재 이력)에 2뎁스 이름을 줬다 — 앞 6개가 섹션을
          *   갖는데 뒤 3개만 구분선 아래 떠 있으면 같은 깊이인지 아닌지 읽히지 않는다. */
+        /* ⑤-1 현업근로자 관리 — 2026-11-16 임영준 주무관 2차 통화 · 사용자 지시로 **대메뉴**(§16 예외 한 건).
+         *   «현업근로자 안에 안전보건교육이 들어있지, 교육 안에 현업근로자가 들어갈 수 없다» — 공공행정에서
+         *   안전보건교육 의무가 걸리는 사람이 고시 제2020-62호의 현업업무 종사자다(산안법 시행령 별표1 제4호).
+         *   항목 1개짜리 그룹이 되지 않게 작업내용 변경 이력(기타교육 «작업내용 변경 시 교육» 대상의 근거)을 함께 둔다.
+         *   edu-workers id 는 그대로다(DYLAW.MAP · 도움말 · 메뉴 권한 키) — 그룹 소속과 라벨만 바꿨다. */
+        { id: 'worker', label: '현업근로자 관리', icon: 'users', items: [
+            { id: 'edu-workers',   label: '현업근로자 명단',    icon: 'users', href: 'edu-workers.html',   screen: 'EDU-WORKERS / SFR-008' },
+            { id: 'worker-change', label: '작업내용 변경 이력', icon: 'file',  href: 'worker-change.html', screen: 'WORKER-CHANGE / SFR-008' },
+        ]},
         { id: 'edu', label: '안전보건교육', icon: 'user', items: [
             { id: 'edu-reg',      section: '현업근로자',    label: '정기교육',        icon: 'user',  href: 'edu-reg.html',      screen: 'EDU-REG / SFR-008·004' },
             { id: 'edu-hire',     section: '현업근로자',    label: '채용시교육',      icon: 'user',  href: 'edu-hire.html',     screen: 'EDU-HIRE / SFR-008·004' },
@@ -695,7 +704,6 @@
             { id: 'edu-sup-hire', section: '관리감독자',    label: '채용시교육',      icon: 'user',  href: 'edu-sup-hire.html', screen: 'EDU-SUP-HIRE / SFR-008·004' },
             { id: 'edu-sup-etc',  section: '관리감독자',    label: '기타 교육',       icon: 'user',  href: 'edu-sup-etc.html',  screen: 'EDU-SUP-ETC / SFR-008·004' },
             { id: 'edu-status',   section: '교육 현황·관리', label: '이수현황',        icon: 'chart', href: 'edu-status.html',   screen: 'EDU-STATUS / SFR-008·004' },
-            { id: 'edu-workers',  section: '교육 현황·관리', label: '근로자 명단 관리', icon: 'users', href: 'edu-workers.html',  screen: 'EDU-WORKERS / SFR-008' },
             { id: 'edu-approval', section: '교육 현황·관리', label: '결재 이력',       icon: 'file',  href: 'edu-approval.html', screen: 'EDU-APV-LOG' },
         ]},
 

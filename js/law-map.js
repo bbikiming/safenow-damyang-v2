@@ -2031,6 +2031,7 @@
         'edu-sup-etc':       ['osh-29', 'oshr-t4', 'oshr-t5', 'oshe-t1'],
         'edu-status':        ['osh-29', 'oshr-t4', 'oshe-t1', 'cse-5'],
         'edu-workers':       ['osh-29', 'oshe-t1'],
+        'worker-change':     ['oshr-t4', 'osh-29'],   /* 작업내용 변경 시 교육(별표4) — 2026-11-16 현업근로자 관리 */
         /* 결재 이력은 조회 전용 시스템 기능이다. — 감사 2026-07-27 */
         'edu-approval':      [],
 
@@ -2531,7 +2532,7 @@
         'sbm-contract': ['menu.html?m=contract'], 'sbm-comply': ['menu.html?m=comply'],
         'edu-reg': ['edu-reg.html', 'edu-reg-detail.html'], 'edu-hire': ['edu-hire.html'],
         'edu-etc': ['edu-etc.html'], 'edu-sup': ['edu-sup.html'], 'edu-sup-etc': ['edu-sup-etc.html'],
-        'edu-status': ['edu-status.html'], 'edu-workers': ['edu-workers.html'],
+        'edu-status': ['edu-status.html'], 'edu-workers': ['edu-workers.html'], 'worker-change': ['worker-change.html'],
         'edu-approval': ['edu-approval.html'],
         'opn-voice': ['menu.html?m=opinion&sub=voice'],
         'opn-committee': ['menu.html?m=opinion&sub=committee'],

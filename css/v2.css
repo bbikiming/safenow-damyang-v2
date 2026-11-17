@@ -1666,6 +1666,9 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
     font-size: var(--fs-12); font-weight: var(--fw-regular); color: var(--text-gray); }
 .edu-pop-note b { color: var(--main-dark2); font-weight: var(--fw-bold); }
 @media (max-width: 767px) { .edu-pop-note { margin-left: 0; } }
+/* 현업근로자 명단·작업내용 변경 이력 — 표 위 한 줄 요약(숫자는 눌러 거른다) */
+.edu-duty-sum { margin: 0 0 var(--stack-tight); }
+.edu-duty-sum b { color: var(--gray-900); }
 
 /* 상태 배지 소형 변형 — 표에 붙는 밀도용 (chip-status modifier) */
 .chip-status.chip-sm { padding: 2px 10px; font-size: var(--fs-12); }
@@ -4930,10 +4933,10 @@ p > .dx-note-gap { display: inline; }
 .dy-now-bar.is-wait { background: var(--surface); border-left-color: var(--gray-300, var(--card-line)); color: var(--text-gray); }
 .dy-now-bar.is-wait .dy-now-bar-k { color: var(--text-gray); }
 
-/* ===== 안전보건교육 과정별 공문 흐름 (2026-11-16) =====
-   분기 실시 결과 보고 띠(자체·기타·채용시 여섯 화면 공용 — EDUDOC.quarterBar) · 상세 공문 요약 · 취소된 교육 */
-.edu-qbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-bottom: var(--stack-tight); }
-.edu-qbar .btn { margin-left: var(--sp-1); }
+/* ===== 안전보건교육 과정별 공문 흐름 (2026-11-16) — 상세 공문 요약 · 취소된 교육 ===== */
 .edu-docsum { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1-5); color: var(--text-gray); }
 .edu-course-card.is-muted { opacity: .72; }
 .edu-course-card.is-muted .edu-course-title { text-decoration: line-through; text-decoration-color: var(--text-gray); }
+/* 부서 실시 교육 «등록 취소» — 주 버튼([공문 보내기]·[다시 보내기]) 옆 보조 링크(2차 통화 검수 L-6: 같은 무게로 나란히 두지 않는다) */
+.edu-cancel-link { background: none; border: 0; padding: 0 var(--sp-1); color: var(--text-gray); font-size: var(--fs-12); text-decoration: underline; cursor: pointer; min-height: var(--ctl-sm); }
+.edu-cancel-link:hover, .edu-cancel-link:focus-visible { color: var(--status-danger-fg); }

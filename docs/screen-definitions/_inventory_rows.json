@@ -260,6 +260,32 @@
   "unresolvedCount": 0
  },
  {
+  "scrId": "SCR-EDU-006",
+  "daemenu": "현업근로자 관리",
+  "jungmenu": "현업근로자 명단",
+  "name": "현업근로자 명단",
+  "type": "목록",
+  "route": "edu-workers.html",
+  "components": "layout.js, edu-workers.js, edu-data.js, doc-flow.js, edu-doc.js, edu-filter.js, org-pick.js",
+  "existingSfr": "SFR-008",
+  "defFile": "SCR-EDU-006_근로자명단관리.md",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/edu-workers.html",
+  "unresolvedCount": 0
+ },
+ {
+  "scrId": "SCR-EDU-011",
+  "daemenu": "현업근로자 관리",
+  "jungmenu": "작업내용 변경 이력",
+  "name": "작업내용 변경 이력",
+  "type": "목록",
+  "route": "worker-change.html",
+  "components": "layout.js, common.js, org-pick.js, edu-data.js, edu-filter.js, worker-change.js",
+  "existingSfr": "SFR-008",
+  "defFile": "SCR-EDU-011_작업내용변경이력.md",
+  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/worker-change.html",
+  "unresolvedCount": 0
+ },
+ {
   "scrId": "SCR-EDU-001",
   "daemenu": "안전보건교육",
   "jungmenu": "현업근로자 > 정기교육",
@@ -322,19 +348,6 @@
   "existingSfr": "SFR-008·004",
   "defFile": "SCR-EDU-005_이수현황.md",
   "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/edu-status.html",
-  "unresolvedCount": 0
- },
- {
-  "scrId": "SCR-EDU-006",
-  "daemenu": "안전보건교육",
-  "jungmenu": "교육 현황·관리 > 근로자 명단 관리",
-  "name": "근로자 명단 관리",
-  "type": "목록",
-  "route": "edu-workers.html",
-  "components": "layout.js, edu-workers.js, edu-data.js, doc-flow.js, edu-doc.js, edu-filter.js, edu-tour.js, org-pick.js",
-  "existingSfr": "SFR-008",
-  "defFile": "SCR-EDU-006_근로자명단관리.md",
-  "file": "/Users/daonplace/Documents/문서 - 다온의 Mac mini/업무/담양 중대재해/프로토타입-v2/edu-workers.html",
   "unresolvedCount": 0
  },
  {

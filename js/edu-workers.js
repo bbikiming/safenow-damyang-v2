@@ -16,7 +16,7 @@
     function esc(s) { return V().esc(String(s == null ? '' : s)); }
     function toast(m) { V().toast(m); }
 
-    var state = { mount: null, fDept: '', fCat: '', fEmp: '', fSrc: '', fQ: '', fYear: '' };
+    var state = { mount: null, fDept: '', fCat: '', fEmp: '', fSrc: '', fQ: '', fYear: '', fDuty: '' };
     var F = null;
     var X = null; /* 엑셀 업로드 폼 */
 
@@ -45,16 +45,25 @@
             if (state.fEmp && w.empType !== state.fEmp) return false;
             if (state.fSrc && w.source !== state.fSrc) return false;
             if (state.fYear && String(w.hireDate || '').slice(0, 4) !== state.fYear) return false;
+            if (state.fDuty === 'any' && !E().isDutyWorker(w)) return false;
+            if (state.fDuty === 'none' && !E().dutyMissing(w)) return false;
+            if (state.fDuty === 'other' && (E().isDutyWorker(w) || E().dutyMissing(w))) return false;
+            if (/^[1-6]$/.test(state.fDuty || '') && (w.duties || []).indexOf(+state.fDuty) === -1) return false;
             return EDUFILTER.match(state.fQ, [w.name, E().deptName(w.deptId)]);
         });
 
+        /* 부서 조건도 조회 범위를 따르고, 고를 부서가 하나뿐이면 두지 않는다(§12 — 2차 통화 검토 C-4) */
+        var scopedDepts = E().deptCandidates().filter(function (d) { return inScope(d.id); });
         var head = EDUFILTER.bar([
             { type: 'search', id: 'ew-q', value: state.fQ, placeholder: '이름·부서 검색', on: "EDUW.setF('q', this.value)" },
-            { type: 'select', id: 'ew-f-dept', value: state.fDept, label: '부서',
-              options: [['', '부서 전체']].concat(E().deptCandidates()
-                  .filter(function (d) { return inScope(d.id); })
-                  .map(function (d) { return [d.id, d.name]; })),
-              on: "EDUW.setF('dept', this.value)" },
+            scopedDepts.length > 1 ? { type: 'select', id: 'ew-f-dept', value: state.fDept, label: '부서',
+              options: [['', '부서 전체']].concat(scopedDepts.map(function (d) { return [d.id, d.name]; })),
+              on: "EDUW.setF('dept', this.value)" } : null,
+            /* 현업업무(고시 제2020-62호 별표 1) — 업무별 · 종사자만 · 업무 미지정 */
+            { type: 'select', id: 'ew-f-duty', value: state.fDuty, label: '현업업무',
+              options: [['', '현업업무 전체'], ['any', '현업업무 종사자만'], ['none', '업무 미지정(비사무직)']]
+                  .concat(E().DUTY_TYPES.map(function (d) { return [String(d.no), d.short]; })),
+              on: "EDUW.setF('duty', this.value)" },
             { type: 'select', id: 'ew-f-cat', value: state.fCat, label: '구분',
               options: [['', '구분 전체']].concat(Object.keys(E().CAT_LABEL).map(function (k) { return [k, E().CAT_LABEL[k]]; })),
               on: "EDUW.setF('cat', this.value)" },
@@ -76,47 +85,124 @@
         });
 
         var rows = list.length ? list.map(rowHtml).join('')
-            : '<tr><td colspan="7"><div class="v2-empty">조건에 맞는 근로자가 없습니다.</div></td></tr>';
+            : '<tr><td colspan="8"><div class="v2-empty">조건에 맞는 근로자가 없습니다.</div></td></tr>';
+        /* 명단 이름은 «현업근로자»인데 인사 연동 사무직 공무원도 함께 있다 — 맨 위 한 줄로 나눠 밝힌다(각 수를 누르면 그 필터) */
+        var st = E().dutyStats(all);
+        var sum = '<p class="file-hint edu-duty-sum">' +
+            '<button type="button" class="edu-cancel-link" onclick="EDUW.setF(\'duty\', \'any\')">현업업무 종사자 <b>' + st.duty + '</b>명</button> · ' +
+            '<button type="button" class="edu-cancel-link" onclick="EDUW.setF(\'duty\', \'none\')">업무 미지정(비사무직) <b>' + st.missing + '</b>명</button> · ' +
+            '<button type="button" class="edu-cancel-link" onclick="EDUW.setF(\'duty\', \'other\')">사무직 등 <b>' + st.other + '</b>명</button>' +
+            ' <span>— 현업업무 기준: ' + esc(E().DUTY_SOURCE) + '</span></p>';
         var table =
             '<div class="edu-card"><div class="edu-scroll"><table class="table-figma table-compact"><thead><tr>' +
-                '<th>이름</th><th>부서</th><th>구분</th><th>고용형태</th><th>채용일</th><th>관리감독자 지정일</th><th></th>' +
+                '<th>이름</th><th>부서</th><th>구분</th><th>현업업무</th><th>고용형태</th><th>채용일</th><th>관리감독자 지정일</th><th></th>' +
             '</tr></thead><tbody>' + rows + '</tbody></table></div></div>';
         /* 관리·감독 계층에는 등록·수정 수단 대신 누가 하는지를 밝힌다(담당자에게는 '') */
-        var ro = global.DYROLE && global.DYROLE.readOnlyNote ? global.DYROLE.readOnlyNote('근로자 명단 등록·수정') : '';
-        state.mount.innerHTML = ro + head + table;
+        var ro = global.DYROLE && global.DYROLE.readOnlyNote ? global.DYROLE.readOnlyNote('현업근로자 명단 등록·수정') : '';
+        state.mount.innerHTML = ro + head + sum + table;
     }
     function rowHtml(w) {
         /* v1.1 §8.5: 자물쇠 제거 · 이름 옆 출처 칩 · 고용형태에 계약기간 병합 */
         var srcLabel = E().srcLabel(w.source);
-        var srcChip = '<span class="chip-status chip-sm ' + V().toneOf(srcLabel) + '" style="margin-right:5px;">' + esc(srcLabel) + '</span>';
+        var srcChip = '<span class="chip-status chip-sm ' + V().toneOf(srcLabel) + '" style="margin-right:5px;"' +
+            (w.source === 'HR' ? ' title="인사정보는 읽기 전용 — 현업업무만 고릅니다"' : '') + '>' + esc(srcLabel) + '</span>';
         var empLabel = E().empLabel(w.empType) + (w.contractMonths ? '[' + w.contractMonths + '개월]' : '');
         var designation = w.category === 'SUPERVISOR'
-            ? (w.designatedAt ? esc(w.designatedAt) : '<span class="chip-status chip-sm warning">미등록</span>')
+            ? (w.designatedAt ? esc(w.designatedAt) : '<span class="chip-status chip-sm warning" title="지정일은 재난안전과가 확인해 등록합니다">미등록</span>')
             : '<span style="color:var(--text-gray);font-size:var(--fs-12);">해당 없음</span>';
         /* 지정일 등록은 재난안전과 확인값이라 주관부서 담당자에게만 낸다. 다른 사람에게는 버튼
            대신 누가 등록하는지를 밝힌다(미등록일 때만 — 등록돼 있으면 밝힐 일이 없다) */
         var desig = w.category !== 'SUPERVISOR' ? ''
             : canDesignate()
                 ? '<button type="button" class="btn btn-outline btn-sm" onclick="EDUW.openDesignation(\'' + w.id + '\')">지정일 등록</button> '
-                : (w.designatedAt ? '' : '<span class="file-hint">지정일은 재난안전과가 등록</span> ');
+                : '';   /* 누가 등록하는지는 «미등록» 칩의 title 이 말한다 — 줄마다 같은 문구를 쓰지 않는다 */
+        /* 인사 연동분은 인사정보가 읽기 전용이지만 현업업무는 인사 자료에 없어 부서 담당자가 고른다(2차 통화 · 검수 M-4) */
+        /* 현업업무는 **그 부서 담당자**가 고른다 — 재난안전과도 남의 부서 사람 업무는 바꾸지 않는다(2차 통화 · 기획 §4) */
+        var dutyBtn = E().canActOwnDept(w.deptId)
+            ? '<button type="button" class="btn btn-outline btn-sm" onclick="EDUW.openDuty(\'' + w.id + '\')">현업업무</button> ' : '';
         var act = w.source === 'HR'
-            ? desig + '<span style="color:var(--text-gray);font-size:var(--fs-12);">인사정보 읽기 전용</span>'
+            /* «인사정보 읽기 전용»을 줄마다 쓰지 않는다 — 이름 옆 출처 칩이 말한다(줄마다 반복된 문구가 1280px 에서 이름·부서를 꺾었다, C-6) */
+            ? desig + dutyBtn
             : !E().canActDept(w.deptId) ? ''
             : '<button type="button" class="btn btn-outline btn-sm" onclick="EDUW.openEdit(\'' + w.id + '\')">수정</button>' +
               ' <button type="button" class="btn btn-outline btn-sm" style="border-color:var(--status-danger-border);color:var(--status-danger-fg);" onclick="EDUW.remove(\'' + w.id + '\')">삭제</button>';
         return '<tr>' +
-            '<td class="edu-name">' + srcChip + esc(w.name) + '</td>' +
-            '<td>' + esc(E().deptName(w.deptId)) + '</td>' +
+            /* 이름·부서·채용일은 짧은 값이라 꺾지 않는다 — 1280px 에서 2~3줄로 꺾여 표가 길어졌다(C-6) */
+            '<td class="edu-name" style="white-space:nowrap;">' + srcChip + esc(w.name) + '</td>' +
+            '<td style="white-space:nowrap;">' + esc(E().deptName(w.deptId)) + '</td>' +
             '<td>' + esc(E().catLabel(w.category)) + '</td>' +
+            '<td>' + dutyChips(w) + '</td>' +
             '<td>' + esc(empLabel) + '</td>' +
-            '<td>' + esc(w.hireDate) + '</td>' +
+            '<td style="white-space:nowrap;">' + esc(w.hireDate) + '</td>' +
             '<td>' + designation + '</td>' +
             '<td class="col-action">' + act + '</td>' +
         '</tr>';
     }
+    /* 현업업무 칩 — 번호만 쓰지 않고 짧은 이름, 고시 문구 전문은 마우스를 올리면(검수 U-1) */
+    function dutyChips(w) {
+        var ds = w.duties || [];
+        if (!ds.length) return w.category === 'FIELD' ? '<span class="chip-status chip-sm warning">업무 미지정</span>' : '<span style="color:var(--text-gray);font-size:var(--fs-12);">—</span>';
+        return ds.map(function (n) { var d = E().dutyOf(n); return d ? '<span class="chip-status chip-sm info" title="' + esc(d.no + '. ' + d.text) + '">' + esc(d.short) + '</span>' : ''; }).join(' ');
+    }
+    /* 등록 창의 현업업무 — 짧은 이름 굵게 + 고시 문구 작게 */
+    function dutyFieldHtml(duties, changeAt, needChange, readOnly) {
+        return '<div class="edu-modal-row"><label class="form-label">현업업무 ' +
+                '<span style="color:var(--text-gray);font-weight:var(--fw-regular);">— ' + esc(E().DUTY_SOURCE) + ' · 구분이 비사무직(현업)이면 1개 이상</span></label>' +
+            (readOnly ? '<p class="file-hint" style="margin:0 0 4px;">현업업무는 그 부서 담당자가 고릅니다.</p>' : '') +
+            E().DUTY_TYPES.map(function (d) {
+                return '<label class="edu-tg-member"><input type="checkbox"' + (duties[d.no] ? ' checked' : '') + (readOnly ? ' disabled' : '') +
+                    ' onchange="EDUW.toggleDuty(' + d.no + ', this.checked)"><span><b>' + esc(d.short) + '</b> ' +
+                    '<span style="color:var(--text-gray);font-size:var(--fs-12);">' + esc(d.text) + '</span></span></label>';
+            }).join('') + '</div>' +
+            (needChange
+                ? '<div class="edu-modal-row"><label class="form-label" for="ew-dutyat">작업내용 변경일 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                    '<input type="date" class="form-input" id="ew-dutyat" value="' + esc(changeAt || '') + '">' +
+                    '<p class="file-hint">현업업무를 바꾸면 «변경 전 → 변경 후»가 작업내용 변경 이력에 남고, 기타교육 «작업내용 변경 시 교육» 대상자로 올라옵니다.</p></div>'
+                : '');
+    }
+    function dutyList(map) { return Object.keys(map || {}).filter(function (k) { return map[k]; }).map(Number).sort(); }
+    function dutyChanged() { return F && F.origDuties && F.origDuties.length && JSON.stringify(F.origDuties) !== JSON.stringify(dutyList(F.duties)); }
+    function toggleDuty(no, on) {
+        if (F && F.dutyOnly) { captureDuty(); } else { captureForm(); }
+        F.duties[no] = !!on;
+        if (F.dutyOnly) renderDuty(); else renderForm();
+    }
+    function captureDuty() { var el = document.getElementById('ew-dutyat'); if (el) F.dutyChangedAt = el.value; }
+    /* 저장이 거절된 이유 — 화면이 아는 이유를 차례로 말한다(«저장하지 못했습니다»로만 끝내지 않는다) */
+    function dutyMsg(w, list) {
+        if (dutyChanged() && !F.dutyChangedAt) return '현업업무를 바꿨습니다 — 작업내용 변경일을 입력하세요.';
+        var why = E().dutyIssue(w.category, list, 'MANUAL');
+        if (why) return why;
+        return '저장하지 못했습니다 — 계약기간을 확인하세요.';
+    }
+    function dutyDeny(deptId) { toast('현업업무는 ' + E().deptName(deptId) + ' 담당자가 고릅니다.'); }
+    /* 인사 연동 근로자 — 현업업무만 고른다(인사정보는 읽기 전용) */
+    function openDuty(id) {
+        var w = E().workerOf(id); if (!w) return;
+        if (!E().canActOwnDept(w.deptId)) { dutyDeny(w.deptId); return; }
+        var map = {}; (w.duties || []).forEach(function (n) { map[n] = true; });
+        F = { dutyOnly: true, id: id, name: w.name, deptId: w.deptId, duties: map, origDuties: (w.duties || []).slice(), dutyChangedAt: E().today() };
+        renderDuty();
+    }
+    function renderDuty() {
+        V().openModal('현업업무 — ' + esc(F.name),
+            '<p class="file-hint" style="margin:0 0 8px;">' + esc(E().deptName(F.deptId)) + ' · 인사정보는 읽기 전용이고 현업업무만 여기서 고릅니다.</p>' +
+            dutyFieldHtml(F.duties, F.dutyChangedAt, dutyChanged()),
+            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+            '<button type="button" class="btn btn-primary" onclick="EDUW.saveDuty()">저장</button>');
+    }
+    function saveDuty() {
+        captureDuty();
+        var w = E().workerOf(F.id); if (!w) { V().closeModal(); return; }
+        if (!E().canActOwnDept(w.deptId)) { V().closeModal(); dutyDeny(w.deptId); return; }
+        if (dutyChanged() && !F.dutyChangedAt) { toast('작업내용 변경일을 입력하세요.'); return; }
+        var pr = global.DYROLE && global.DYROLE.actorLabel ? global.DYROLE.actorLabel() : '';
+        if (!E().updateWorker(F.id, { duties: dutyList(F.duties), dutyChangedAt: F.dutyChangedAt, dutyBy: pr })) { toast(dutyMsg(w, dutyList(F.duties))); return; }
+        V().closeModal(); toast('현업업무를 저장했습니다.'); render();
+    }
     function setF(k, v) { state['f' + k[0].toUpperCase() + k.slice(1)] = v; EDUFILTER.rerender(render); }
     function resetF() {
-        state.fDept = ''; state.fCat = ''; state.fEmp = ''; state.fSrc = ''; state.fQ = ''; state.fYear = '';
+        state.fDept = ''; state.fCat = ''; state.fEmp = ''; state.fSrc = ''; state.fQ = ''; state.fYear = ''; state.fDuty = '';
         render();
     }
 
@@ -125,13 +211,14 @@
         if (!E().canRegister()) { deny(E().defaultDeptId()); return; }
         /* 기본 부서는 로그인한 사람의 소속 — 목록 첫 부서를 기본으로 두면 남의 부서 명단에 들어가고,
            조회 범위 밖이라 등록한 본인 목록에서도 사라진다 */
-        F = { mode: 'add', name: '', deptId: E().defaultDeptId(), category: 'FIELD', empType: 'CONTRACT', hireDate: E().today(), designatedAt: '', origDesignatedAt: '', contractMonths: 12 };
+        F = { mode: 'add', name: '', deptId: E().defaultDeptId(), category: 'FIELD', empType: 'CONTRACT', hireDate: E().today(), designatedAt: '', origDesignatedAt: '', contractMonths: 12, duties: {}, origDuties: [], dutyChangedAt: '' };
         renderForm();
     }
     function openEdit(id) {
         var w = E().workerOf(id); if (!w || w.source === 'HR') { toast('인사연동 근로자는 수정할 수 없습니다.'); return; }
         if (!E().canActDept(w.deptId)) { deny(w.deptId); return; }
-        F = { mode: 'edit', id: id, origDeptId: w.deptId, name: w.name, deptId: w.deptId, category: w.category, empType: w.empType, hireDate: w.hireDate, designatedAt: w.designatedAt || '', origDesignatedAt: w.designatedAt || '', contractMonths: w.contractMonths || 0 };
+        var dmap = {}; (w.duties || []).forEach(function (n) { dmap[n] = true; });
+        F = { mode: 'edit', id: id, origDeptId: w.deptId, name: w.name, deptId: w.deptId, category: w.category, empType: w.empType, hireDate: w.hireDate, designatedAt: w.designatedAt || '', origDesignatedAt: w.designatedAt || '', contractMonths: w.contractMonths || 0, duties: dmap, origDuties: (w.duties || []).slice(), dutyChangedAt: E().today() };
         renderForm();
     }
     function renderForm() {
@@ -150,6 +237,7 @@
                 '</div></div>' +
             '<div class="edu-modal-row"><label class="form-label" for="ew-cat">구분</label>' +
                 '<select class="form-select" id="ew-cat">' + catOpts + '</select></div>' +
+            dutyFieldHtml(F.duties, F.dutyChangedAt, dutyChanged(), F.mode === 'edit' && !E().canActOwnDept(F.origDeptId)) +
             '<div class="edu-modal-row"><label class="form-label" for="ew-emp">고용형태</label>' +
                 '<select class="form-select" id="ew-emp" onchange="EDUW.setEmp(this.value)">' + empOpts + '</select></div>' +
             '<div class="edu-modal-row"><label class="form-label" for="ew-hire">채용일 <span style="color:var(--status-danger-fg)">*</span></label>' +
@@ -170,7 +258,7 @@
                     '<input type="number" step="0.1" min="0" class="form-input" id="ew-cm" value="' + esc(F.contractMonths) + '">' +
                     '<div style="font-size:var(--fs-12);color:var(--text-gray);margin-top:4px;">채용시교육 필요시간이 갈립니다 — 1주 이하 1h · 1개월 이하 4h · 그 밖 8h</div></div>'
                 : '');
-        V().openModal(F.mode === 'add' ? '근로자 직접 등록' : '근로자 정보 수정', body,
+        V().openModal(F.mode === 'add' ? '현업근로자 직접 등록' : '현업근로자 정보 수정', body,
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="EDUW.doSave()">' + (F.mode === 'add' ? '등록' : '저장') + '</button>');
     }
@@ -183,6 +271,7 @@
         if (el('ew-hire')) F.hireDate = el('ew-hire').value;
         if (el('ew-designated') && !el('ew-designated').disabled) F.designatedAt = el('ew-designated').value;
         if (el('ew-cm')) F.contractMonths = parseFloat(el('ew-cm').value) || 0;
+        if (el('ew-dutyat')) F.dutyChangedAt = el('ew-dutyat').value;
     }
     function pickDept(id, name) {
         if (!E().canActDept(id)) { deny(id); return; }
@@ -231,16 +320,22 @@
             toast('계약기간을 0보다 크게 입력하세요 — 채용시교육 필요시간(1·4·8h)이 이 값으로 갈립니다.');
             return;
         }
+        /* 현업업무 — 판정은 DYEDU.dutyIssue 한 곳(직접 등록·수정·엑셀이 같은 검사) */
+        if (F.mode === 'edit' && dutyChanged() && !E().canActOwnDept(F.origDeptId)) { dutyDeny(F.origDeptId); return; }
+        var dWhy = E().dutyIssue(F.category, dutyList(F.duties), 'MANUAL');
+        if (dWhy) { toast(dWhy); return; }
+        if (dutyChanged() && !F.dutyChangedAt) { toast('현업업무를 바꿨습니다 — 작업내용 변경일을 입력하세요.'); return; }
+        var actorNm = global.DYROLE && global.DYROLE.actorLabel ? global.DYROLE.actorLabel() : '';
         if (F.mode === 'add') {
             /* 데이터 계층이 거절하면 저장되지 않는다 — 반환값을 보지 않으면
                «완료» 토스트만 뜨고 명단에는 없는 상태가 된다(화면이 거짓말을 한다). */
-            if (!E().addWorker({ name: F.name, deptId: F.deptId, category: F.category, empType: F.empType, hireDate: F.hireDate, designatedAt: F.designatedAt, contractMonths: F.contractMonths, source: 'MANUAL' })) {
-                toast('저장하지 못했습니다 — 계약기간을 0보다 크게 입력하세요.'); return;
+            if (!E().addWorker({ name: F.name, deptId: F.deptId, category: F.category, empType: F.empType, hireDate: F.hireDate, designatedAt: F.designatedAt, contractMonths: F.contractMonths, source: 'MANUAL', duties: dutyList(F.duties) })) {
+                toast('저장하지 못했습니다 — 계약기간·현업업무를 확인하세요.'); return;
             }
             toast(F.name + ' 근로자 등록 완료');
         } else {
-            if (!E().updateWorker(F.id, { name: F.name, deptId: F.deptId, category: F.category, empType: F.empType, hireDate: F.hireDate, designatedAt: F.designatedAt, contractMonths: F.contractMonths })) {
-                toast('저장하지 못했습니다 — 계약기간을 0보다 크게 입력하세요.'); return;
+            if (!E().updateWorker(F.id, { name: F.name, deptId: F.deptId, category: F.category, empType: F.empType, hireDate: F.hireDate, designatedAt: F.designatedAt, contractMonths: F.contractMonths, duties: dutyList(F.duties), dutyChangedAt: F.dutyChangedAt, dutyBy: actorNm })) {
+                toast('저장하지 못했습니다 — 계약기간·현업업무·변경일을 확인하세요.'); return;
             }
             toast('근로자 정보 저장');
         }
@@ -311,7 +406,7 @@
             /* 서식에는 부서 열이 없다 — 부서는 위에서 한 번 고른다(기획확인 4차 C-4 · SCR-EDU-006 §5).
                행마다 부서를 적게 하면 조직도와 표기가 어긋난 행이 생기고, 부서 담당자가 남의 부서
                명단을 넣는 경로가 된다. */
-            '<p class="file-hint"><b>서식 열</b> 이름 · 구분 · 고용형태 · 채용일 · 계약기간(기간제·일용) · 관리감독자 지정일(관리감독자) — ' +
+            '<p class="file-hint"><b>서식 열</b> 이름 · 구분 · 고용형태 · 채용일 · 계약기간(기간제·일용) · <b>현업업무</b>(1~6 번호, 쉼표로 · 비사무직은 필수) · 관리감독자 지정일(관리감독자) — ' +
                 '부서 열은 없습니다. 형식이 맞지 않는 행은 행 번호와 사유를 보여 주고 나머지 행만 반영합니다.</p>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="EDUW.doExcel()">업로드</button>');
@@ -326,7 +421,7 @@
         var sample = ['김대현', '이수정', '박준서', '최은지'].map(function (nm) {
             return {
                 name: nm, deptId: deptId, category: 'FIELD', empType: 'CONTRACT',
-                hireDate: E().today(), contractMonths: 12, source: 'EXCEL'
+                hireDate: E().today(), contractMonths: 12, source: 'EXCEL', duties: [1]
             };
         });
         /* 거절된 건은 배열에서 빠지므로 «몇 건이 들어갔나»를 세어 말한다 —
@@ -342,6 +437,9 @@
     function init(mountId) {
         state.mount = document.getElementById(mountId);
         if (!state.mount) return;
+        /* ?duty=none — 이수현황 «현업업무 미지정 n명»에서 바로 그 사람들로 */
+        var qd = new URLSearchParams(location.search).get('duty');
+        if (qd) state.fDuty = qd;
         render();
     }
     global.EDUW = {
@@ -349,6 +447,7 @@
         init: init, setF: setF, resetF: resetF,
         openAdd: openAdd, openEdit: openEdit, pickDept: pickDept, doSave: doSave, remove: remove, doRemove: doRemove,
         openDesignation: openDesignation, saveDesignation: saveDesignation,
+        toggleDuty: toggleDuty, openDuty: openDuty, saveDuty: saveDuty,
         openExcel: openExcel, pickExcelDept: pickExcelDept, doExcel: doExcel
     };
 })(window);

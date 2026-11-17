@@ -15,7 +15,9 @@
 
     /* r5 — 2026-07-30 회의: 기타교육 분류를 법정 3유형으로 재정의(구 5종 폐지) ·
      * 첨부 슬롯(file.slot) 도입. 구 etcType 이 남으면 필터·표시가 어긋나므로 버전 범프. */
-    var SKEY = 'damyangEduV1r15';  /* r15 — 공문 저장을 이 스토어로 옮김(docs) · 과정별 공문 흐름(flow 2) · 12월 집합교육 «안내 공문 전» · 4분기 부서 실시 교육 분기 보고 대상 (2026-11-16 임영준 주무관 통화) */
+    var SKEY = 'damyangEduV1r17';  /* r17 — 2차 통화 검토 반영(11-17): 작업내용 변경 미이수 예시를 물순환사업소로 · 등록일(regAt) */
+    /* r16 — 2차 통화(11-16 17:24): 부서 실시 교육 등록 묶음(batchId) · 현업업무(duties) · 작업내용 변경 이력(dutyLog) · 분기 보고 걷음 */
+     /* r15 — 공문 저장을 이 스토어로 옮김(docs) · 과정별 공문 흐름(flow 2) · 12월 집합교육 «안내 공문 전» · 4분기 부서 실시 교육 분기 보고 대상 (2026-11-16 임영준 주무관 통화) */
      /* r14 — 주기 전환을 2027-01-01 로 미룸(답신 3-2): 2026 은 개인별 주기 · 독촉 이력(사람·메모)·재난안전과 현업 시드를 그 기준으로 맞춤 (2026-11-13) */
     /* r13 — 정기교육 주기를 달력 반기(관리감독자 달력 연도)로 · 독촉 이력을 그 기준에 맞춤 · 예정 교육 안내 (2026-11-13 X-1·X-2) */
     /* r12 — 등록부 사람별 참석시간(hoursBy) · 공문 붙임 5개 이내 · 재난안전과 현업 미이수 1명 · 이력 시각 정리 (2026-11-13) */
@@ -679,7 +681,19 @@
         /* ───────── 8. 과정별 공문 흐름(2026-11-16) — 전환 뒤 만든 기록에만 flow: 2 ─────────
          * 그 전 기록은 «이전 방식»(공문 할 일 없음)이다. 실습 자리를 남긴다:
          *   · 12월 집합교육 — 등록만 하고 교육 안내 공문(①)을 아직 안 보냈다
-         *   · 4분기 부서 실시 교육 중 실시 결과 공문이 없는 건 — 4분기 실시 결과 보고(④)에 실린다 */
+         *   · 4분기 부서 실시 교육 중 실시 결과 공문이 없는 건 — 부서 «실시 결과 보고 공문 보내기» 할 일(실습 자리) */
+        /* 현업업무(고시 제2020-62호 별표 1) — 예시 근로자에 부서에 맞는 업무를 넣는다(예시 자료).
+           보건소 방역 인원은 6가지 어디에도 딱 맞지 않아 비워 둔다 — «업무 미지정» 갭의 예시다 */
+        var DUTY_BY_DEPT = { env: [3], water: [1], facility: [1], construct: [2], safety: [1], culture: [1], town_damyang: [3] };
+        workers.forEach(function (w) {
+            w.duties = (w.category === 'FIELD' && DUTY_BY_DEPT[w.deptId]) ? DUTY_BY_DEPT[w.deptId].slice() : [];
+            w.dutyLog = [];
+        });
+        /* 작업내용 변경 이력 2건 — 하나는 변경 뒤 작업내용 변경 시 교육(C-E2 · 10-29)을 받았지만 시간이 모자라고(1.5h / 2h),
+           하나는 아직(실습 자리 — 시연 계정이 있는 물순환사업소 하정수가 [기타 교육 등록]으로 이어 간다) */
+        var wFac = wById.w_fac_c1, wWat = wById.w_wat_c2;
+        if (wFac) { wFac.duties = [1, 4]; wFac.dutyLog.push({ at: '2026-10-27', from: [1], to: [1, 4], by: '공공시설사업소 한담당', savedAt: '2026-10-27 09:40' }); }
+        if (wWat) { wWat.duties = [1, 4]; wWat.dutyLog.push({ at: '2026-11-10', from: [1], to: [1, 4], by: '물순환사업소 하정수', savedAt: '2026-11-10 14:05' }); }
         var hasDoc = {}; docSeed.forEach(function (d) { hasDoc[d.courseId] = 1; });
         courses.forEach(function (c) {
             if (c.id === 'C-M12') { c.flow = 2; return; }
@@ -687,7 +701,7 @@
             if (c.id === 'C-M11' || c.id === 'C-SR3') { c.flow = 2; return; }
             if (!c.deptId || hasDoc[c.id]) return;
             if (c.kind === 'REG_GROUP' || c.kind === 'SUP_REG') return;
-            if ((c.date || '') >= '2026-10-01') { c.flow = 2; c.byDept = c.deptId; }
+            if ((c.date || '') >= '2026-10-01') { c.flow = 2; c.byDept = c.deptId; c.batchId = c.id; }
         });
         var docs = {};
         [['C-M11', '2026-10-21', '결재완료'], ['C-SR3', '2026-11-07', '결재중']].forEach(function (n, i) {
@@ -769,9 +783,83 @@
         return !needsContractMonths(empType) || (+months > 0);
     }
 
+    /* ── 현업업무 — 「공공행정 등에서 현업업무에 종사하는 사람의 기준」(고용노동부고시 제2020-62호) 별표 1 ──
+     * 목록을 화면에 복사하지 않는다 — 등록 창·목록 칩·필터·엑셀·변경 이력·기타교육 대상자가 이 배열 하나를 읽는다.
+     * 이 고시는 법령 스냅샷(DYLAW)에 없어 근거 칩을 붙이지 않고 출처를 글자로만 적는다(CLAUDE.md §10). */
+    var DUTY_SOURCE = '고용노동부고시 제2020-62호 별표 1';
+    var DUTY_TYPES = [
+        { no: 1, short: '시설·설비 유지관리', text: '청사 등 시설물의 경비, 유지관리 업무 및 설비·장비 등의 유지관리 업무' },
+        { no: 2, short: '도로 유지보수', text: '도로의 유지·보수 등의 업무' },
+        { no: 3, short: '환경미화', text: '도로·가로 등의 청소, 쓰레기·폐기물의 수거·처리 등 환경미화 업무' },
+        { no: 4, short: '공원·녹지', text: '공원·녹지 등의 유지관리 업무' },
+        { no: 5, short: '산림', text: '산림조사 및 산림보호 업무' },
+        { no: 6, short: '조리·급식', text: '조리 실무 및 급식실 운영 등 조리시설 관련 업무' }
+    ];
+    function dutyOf(no) { for (var i = 0; i < DUTY_TYPES.length; i++) if (DUTY_TYPES[i].no === +no) return DUTY_TYPES[i]; return null; }
+    function cleanDuties(list) {
+        var seen = {}, out = [];
+        (list || []).forEach(function (n) { n = +n; if (dutyOf(n) && !seen[n]) { seen[n] = 1; out.push(n); } });
+        return out.sort();
+    }
+    /* «비사무직(현업)»은 현업업무를 1개 이상 골라야 한다. 사무직·판매·관리감독자는 선택. 인사 연동분은 검사에서 뺀다 —
+       인사 자료에 현업업무가 없어 막으면 연동이 통째로 실패한다(«미지정»으로 들어와 갭으로 보인다) */
+    function dutyIssue(category, duties, source) {
+        if ((duties || []).some(function (n) { return !dutyOf(n); })) return '현업업무는 1~6 중에서 고릅니다.';
+        if (category === 'FIELD' && source !== 'HR' && !cleanDuties(duties).length) return '비사무직(현업)은 현업업무를 1개 이상 고르세요.';
+        return '';
+    }
+    function isDutyWorker(w) { return !!w && (w.duties || []).length > 0; }
+    function dutyMissing(w) { return !!w && w.category === 'FIELD' && !(w.duties || []).length; }
+    /* 명단 요약 — 현업업무 종사자 · 업무 미지정(비사무직) · 사무직 등 */
+    function dutyStats(list) {
+        var r = { duty: 0, missing: 0, other: 0 };
+        (list || workers()).forEach(function (w) { if (isDutyWorker(w)) r.duty++; else if (dutyMissing(w)) r.missing++; else r.other++; });
+        return r;
+    }
+    var CHANGE_EDU = '작업내용 변경 시 교육';
+    /* 작업내용 변경 시 교육 이수 — 변경일 이후(같은 날 포함)에 그 사람 «작업내용 변경 시 교육» 기록이 있고
+       **법정 최소 시간을 채웠으면**(별표4 — 기타교육 카드의 «법정 최소 미달»과 같은 판정 etcMinHours).
+       기록은 있는데 시간이 모자라면 ok:false 로 돌려준다 — 두 화면이 같은 사람을 이수·미달로 달리 말하지 않게.
+       돌려주는 값: null(기록 없음) | { date, courseId, got, need, ok } — 다 채운 기록이 있으면 그것, 없으면 가장 많이 들은 기록 */
+    function changeEduRecord(workerId, atIso) {
+        var w = workerOf(workerId), best = null;
+        load().records.forEach(function (r) {
+            if (r.workerId !== workerId || r.status === 'CANCELLED' || (r.date || '') < atIso) return;
+            var c = courseOf(r.courseId);
+            if (!c || c.etcType !== CHANGE_EDU) return;
+            var need = etcMinHours(CHANGE_EDU, w, c.kind === 'SUP_ETC');
+            var got = +(r.hours != null ? r.hours : c.hours) || 0;
+            var x = { date: r.date, courseId: c.id, got: got, need: need, ok: got >= need };
+            if (!best || (x.ok && !best.ok) || (x.ok === best.ok && (x.ok ? x.date < best.date : x.got > best.got))) best = x;
+        });
+        return best;
+    }
+    function dutyChanges() {
+        var out = [];
+        workers().forEach(function (w) {
+            (w.dutyLog || []).forEach(function (l) { out.push({ worker: w, log: l, edu: changeEduRecord(w.id, l.at) }); });
+        });
+        return out.sort(function (a, b) { return String(b.log.at).localeCompare(String(a.log.at)); });
+    }
+    /* 기타교육 «작업내용 변경 시 교육» 대상자 맨 위 묶음 — 가장 최근 변경 뒤 아직 법정 시간을 채우지 못한 사람.
+       supMode 를 주면 그 모집단만(true = 관리감독자 · false = 관리감독자 아닌 사람) — 관리감독자 기타교육 창에
+       보이지 않는 현업근로자가 미리 골라져 저장이 «관리감독자만»으로 거절되던 결함(2차 통화 검토 A-1) */
+    function changePending(deptId, supMode) {
+        return workers().filter(function (w) {
+            if (deptId && w.deptId !== deptId) return false;
+            if (supMode === true && w.category !== 'SUPERVISOR') return false;
+            if (supMode === false && w.category === 'SUPERVISOR') return false;
+            var log = (w.dutyLog || [])[w.dutyLog ? w.dutyLog.length - 1 : -1];
+            if (!log) return false;
+            var hit = changeEduRecord(w.id, log.at);
+            return !hit || !hit.ok;
+        });
+    }
+
     function addWorker(o) {
         /* 저장하지 않고 null 을 돌려준다 — addEnroll 이 중복에서 false 를 주는 것과 같은 형태다 */
         if (!contractOk(o.empType || 'CONTRACT', o.contractMonths)) return null;
+        if (dutyIssue(o.category || 'FIELD', o.duties, o.source)) return null;
         var d = load(); d.seqW++;
         var w = {
             id: 'w_m_' + d.seqW,
@@ -781,7 +869,8 @@
             hireDate: o.hireDate,
             designatedAt: o.designatedAt || '',
             contractMonths: o.contractMonths || 0,
-            active: true, source: o.source || 'MANUAL', role: o.role || ''
+            active: true, source: o.source || 'MANUAL', role: o.role || '',
+            duties: cleanDuties(o.duties), dutyLog: []
         };
         d.workers.push(w); save(); return w;
     }
@@ -796,7 +885,19 @@
         var emp = ('empType' in (patch || {})) ? patch.empType : w.empType;
         var mon = ('contractMonths' in (patch || {})) ? patch.contractMonths : w.contractMonths;
         if (!contractOk(emp, mon)) return null;
-        Object.keys(patch || {}).forEach(function (k) { w[k] = patch[k]; });
+        /* 현업업무 — 바꾸지 않은 값은 기존 값. 바꾸면 변경일(dutyChangedAt)이 있어야 하고 «변경 전 → 변경 후»를 이력으로 남긴다 */
+        var cat = ('category' in (patch || {})) ? patch.category : w.category;
+        var newDuties = ('duties' in (patch || {})) ? cleanDuties(patch.duties) : (w.duties || []);
+        if (dutyIssue(cat, newDuties, w.source === 'HR' && !('duties' in (patch || {})) ? 'HR' : 'MANUAL')) return null;
+        var oldDuties = (w.duties || []).slice();
+        var changed = JSON.stringify(oldDuties) !== JSON.stringify(newDuties);
+        if (changed && oldDuties.length && !patch.dutyChangedAt) return null;
+        Object.keys(patch || {}).forEach(function (k) { if (k !== 'dutyChangedAt' && k !== 'dutyBy') w[k] = patch[k]; });
+        w.duties = newDuties;
+        if (changed && oldDuties.length) {
+            w.dutyLog = w.dutyLog || [];
+            w.dutyLog.push({ at: patch.dutyChangedAt, from: oldDuties, to: newDuties, by: patch.dutyBy || '', savedAt: nowTs() });
+        }
         save(); return w;
     }
     function removeWorker(id) {
@@ -827,8 +928,13 @@
             createdBy: o.createdBy || '', history: o.history || [],
             /* 과정별 공문 흐름(2026-11-16) — 이 시스템에서 새로 만든 교육은 전부 새 흐름이다.
                byDept = 등록한 부서(id). createdBy 는 부서 이름 글자라 판정에 쓰지 않는다 */
-            flow: 2, byDept: o.byDept || o.deptId || ownerDept()
+            flow: 2, byDept: o.byDept || o.deptId || ownerDept(),
+            /* 시스템에 등록한 날 — 실시 결과 보고 공문 할 일의 기한은 교육일이 아니라 이날 + 7일이다(지난 교육을 올리면 바로 «지연»이 되던 결함) */
+            regAt: o.regAt || today(),
+            /* 등록 묶음 — 한 번 저장으로 생긴 부서 실시 교육 건은 공문(실시 결과 보고) 하나로 보낸다(2차 통화 R-1) */
+            batchId: o.batchId || undefined, batchTitle: o.batchTitle || undefined
         };
+        if (!c.batchId) c.batchId = c.id;
         /* 집합교육 등록 기한 — 마지막 회차 뒤 N일(기본 7) */
         if (o.enrollDays != null && o.enrollDays !== '') c.enrollDays = +o.enrollDays;
         d.courses.push(c);
@@ -1113,7 +1219,7 @@
             /* 재난안전과가 올린 한 장 서명부를 골라 쓴 등록부(signFrom: 'course') — 파일은 교육(signSheet)에 하나 */
             signFrom: o.signFrom || undefined,
             /* 전환(2026-11-16) 뒤 저장한 집합교육 등록부는 «참석자 등록부 제출» 공문(②)을 보내야 끝난다 */
-            flow: isGroupCourse(oc) ? 2 : undefined
+            flow: isGroupFlow(oc) ? 2 : undefined
         });
         /* 참석자 없음으로 해 둔 부서가 등록부를 올리면 그 표시는 걷는다 */
         if (d.noAttend && d.noAttend[o.courseId]) delete d.noAttend[o.courseId][o.deptId];
@@ -1178,6 +1284,9 @@
      * 반환 = 갱신된 기록 건수 */
     /* 집합교육인가 — 인정시간이 교육 합계가 아니라 **등록부 실제 참석시간**인 교육 */
     function isGroupCourse(c) { return !!c && (c.kind === 'REG_GROUP' || c.kind === 'SUP_REG'); }
+    /* 재난안전과가 여는 집합교육만 — 관리감독자 자체교육도 kind 가 SUP_REG 라(부서 있음) isGroupCourse 로는 갈리지 않는다.
+       과정별 공문 흐름(①②③)은 이것으로만 판정한다. 부서 자체교육은 실시 결과 보고(④, 등록 묶음 공문) 쪽이다(2026-11-16 코드 리뷰) */
+    function isGroupFlow(c) { return !!c && (c.kind === 'REG_GROUP' || (c.kind === 'SUP_REG' && !c.deptId)); }
     /* 그 근로자가 속한 (취소되지 않은) 등록부 */
     function enrollOfWorker(courseId, workerId) {
         return enrolls(courseId).filter(function (e) { return (e.workerIds || []).indexOf(workerId) !== -1; })[0] || null;
@@ -1258,7 +1367,7 @@
         if (!deptId) return out;
         var en = enrolls();
         courses({ status: 'OPEN' }).forEach(function (c) {
-            if (c.kind !== 'REG_GROUP' && c.kind !== 'SUP_REG') return;
+            if (!isGroupFlow(c)) return;
             /* 교육이 끝나기 전에는 할 일이 아니다 — 끝난 날 생기고 등록 기한을 단다 */
             if (!enrollOpen(c)) return;
             /* 교육 안내 공문(①)을 보내지 않은 교육은 부서가 모른다 — 등록부 할 일도 없다 */
@@ -1278,9 +1387,12 @@
             if (st === 'sent') return;
             out.push({ kind: st === 'returned' ? 'enrollResend' : 'enrollDoc', course: c, due: enrollDue(c), status: st });
         });
-        /* 분기 실시 결과 보고(④) — 그 분기 실시 교육이 1건 이상이면 */
-        var qr = quarterTodo(deptId);
-        if (qr) out.push(qr);
+        /* 부서 실시 교육(자체·채용시·기타) — 등록 묶음마다 실시 결과 보고 공문(2차 통화 · 등록 한 번 = 공문 한 번) */
+        runBatches(deptId).forEach(function (b) {
+            var st = docState(keyRun(b.batchId));
+            if (st === 'sent') return;
+            out.push({ kind: st === 'returned' ? 'runResend' : 'runDoc', batchId: b.batchId, course: b.list[0], list: b.list, due: runDue(b.list[0]), status: st });
+        });
         /* 재난안전과 담당자 몫 — 교육 안내 · 변경·취소 안내 · 서명부 · 출장 결과 보고 */
         if (deptId === ownerDept()) ownerTodos().forEach(function (t) { out.push(t); });
         reminders().forEach(function (r) {
@@ -1396,7 +1508,9 @@
     }
     function canActCourse(c) { return canActDept(courseDeptOf(c)); }
     /* 등록 수단을 낼지 — 자기 부서 건이라도 등록할 수 있는 사람인가(관리·감독 계층은 조회만) */
-    function canRegister() { return canActDept(myDept() || ownerDept()); }
+    /* 실무자 계정이 없는 부서는 부서장이 등록한다 — 공문(canActOwnDept)과 같은 규칙. 등록 버튼만 담당자로 좁히면
+       그 부서장은 공문은 보낼 수 있는데 등록할 길이 없다(2026-11-17 정의서 대조) */
+    function canRegister() { return canActDept(myDept() || ownerDept()) || (!!myDept() && canActOwnDept(myDept())); }
     /* 부서를 고를 수 있는가 — 전 부서 건을 처리하는 주관부서 담당자만. 그 밖의 담당자는
        소속 부서로 고정한다(남의 부서 명의로 저장되면 조회 범위 밖이라 본인 목록에서도 사라진다) */
     function canPickDept() { return canActDept(ownerDept()); }
@@ -1586,7 +1700,8 @@
      *   ① 교육 안내(NOTICE) — 재난안전과 → 대상 부서 · 집합교육 등록 직후
      *   ② 참석자 등록부 제출(ENROLL) — 부서 → 재난안전과 · 등록부 저장 직후
      *   ③ 출장 결과 보고(TRIP) — 재난안전과 내부결재 · 교육이 끝난 날부터
-     *   ④ 분기 실시 결과 보고(QUARTER) — 부서 → 재난안전과 · 부서 × 분기 한 장(자체·기타·채용시)
+     *   ④ 실시 결과 보고(RUN) — 부서 → 재난안전과 · 등록 한 번 = 공문 한 번(자체·채용시·기타, 2차 통화)
+     *   (이전 방식) 분기 실시 결과 보고(QUARTER) — 걷었다. 이미 보낸 것만 열람·잠금
      * 공문 저장은 이 스토어(docs) 한 곳이다 — 내 할일·대시보드처럼 공문 모듈(EDUDOC)을 싣지 않는
      * 화면도 같은 판정을 쓰게. 키: 교육 id(이전 방식 실시 결과) · 'N|교육' · 'E|교육|부서' · 'T|교육' · 'Q|부서|YYYY-Qn'.
      * 상태 판정: 기안함 전송·결재중·결재완료 = 보냄(잠금) / 반려·반송 = 돌아옴(잠금 풀림) / 없음 = 미기안.
@@ -1637,12 +1752,12 @@
     /* 부서에 알린 교육인가 — 이전 방식 교육은 안내가 이미 나간 것으로 본다. 한 번이라도 보낸 교육은
        반려·반송돼도 부서에 계속 보인다(이미 알림을 받은 부서에서 갑자기 사라지면 더 헷갈린다) */
     function noticeSent(c) {
-        if (!c || !isGroupCourse(c)) return true;
+        if (!c || !isGroupFlow(c)) return true;
         if (!isFlow2(c)) return true;
         return everSent(keyNotice(c.id));
     }
     function noticeState(c) {
-        if (!c || !isGroupCourse(c) || !isFlow2(c)) return 'legacy';
+        if (!c || !isGroupFlow(c) || !isFlow2(c)) return 'legacy';
         if (c.noticeDirty) return 'dirty';
         return docState(keyNotice(c.id));
     }
@@ -1684,7 +1799,7 @@
         return hit;
     }
 
-    /* ---- ④ 분기 실시 결과 보고 ---- */
+    /* ---- 분기 판정 도우미(업무 자동발행 «분기 실시 결과 제출» 판정이 쓴다) ---- */
     function quarterOf(iso) {
         var y = String(iso || '').slice(0, 4), m = +String(iso || '').slice(5, 7) || 1;
         return y + '-Q' + (Math.floor((m - 1) / 3) + 1);
@@ -1702,7 +1817,7 @@
     var DEPT_RUN = { REG_SELF: 1, ETC: 1, SUP_ETC: 1, HIRE: 1, SUP_HIRE: 1 };
     function isDeptRun(c) { return !!c && (DEPT_RUN[c.kind] || (c.kind === 'SUP_REG' && !!c.deptId)); }
     function reportDeptOf(c) { return (c && (c.byDept || c.deptId)) || ownerDept(); }
-    /* 보낸(또는 결재 중인) 분기 보고에 실린 교육 — 잠금과 «추가분» 판정이 이것을 본다 */
+    /* 이전 방식(이번 주 v2) 분기 보고에 실려 나간 교육 — 그 보고로 잠기고 그 보고를 연다. 새로 만들지 않는다 */
     function reportedKeyOf(courseId) {
         var d = docStore(), hit = null;
         Object.keys(d.docs).forEach(function (k) {
@@ -1713,46 +1828,61 @@
         });
         return hit;
     }
-    function reportLock(courseId) { var h = reportedKeyOf(courseId); return h ? h.doc.status : null; }
-    /* 다음 분기 보고에 실릴 교육 — 그 부서 새 흐름 부서 실시 교육 중 아직 보고에 안 실린 것 */
-    function pendingReportCourses(deptId, q) {
-        var end = q ? quarterEnd(q) : '9999-12-31';
-        return load().courses.filter(function (c) {
-            return isFlow2(c) && isDeptRun(c) && c.status !== 'CANCELLED' && reportDeptOf(c) === deptId &&
-                (c.date || '') <= end && !reportedKeyOf(c.id);
-        }).sort(function (a, b) { return (a.date || '').localeCompare(b.date || ''); });
+    /* ---- 부서 실시 교육 실시 결과 보고 — 등록 묶음 = 공문 하나 (2차 통화 R-1) ---- */
+    function keyRun(batchId) { return 'R|' + batchId; }
+    function batchOf(c) { return (c && (c.batchId || c.id)) || ''; }
+    function batchCourses(batchId) {
+        return load().courses.filter(function (c) { return batchOf(c) === batchId && c.status !== 'CANCELLED'; })
+            .sort(function (a, b) { return String(a.id).localeCompare(String(b.id)); });
     }
-    /* 분기 보고의 대상 분기 — 오늘이 속한 분기. 지난 분기에 남은 건이 있으면 그 분기(기한이 지난 보고를 먼저) */
-    function reportQuarterFor(deptId) {
-        var cur = quarterOf(today());
-        var all = pendingReportCourses(deptId);
-        if (!all.length) return { q: cur, list: [] };
-        var oldest = quarterOf(all[0].date);
-        var q = oldest < cur ? oldest : cur;
-        /* 그 분기 보고를 이미 보냈으면(추가분) 오늘 분기로 */
-        if (q !== cur && docState(keyQuarter(deptId, q)) === 'sent') q = cur;
-        return { q: q, list: pendingReportCourses(deptId, q).length ? pendingReportCourses(deptId, q) : all };
+    /* 이 교육 건의 공문 — 새 흐름은 등록 묶음 공문, 이번 주 분기 보고에 실린 건은 그 보고, 옛 기록은 실시 결과 공문(교육 id) */
+    function runDocKey(c) {
+        if (!c) return '';
+        if (isFlow2(c) && isDeptRun(c)) { var h = reportedKeyOf(c.id); return h ? h.key : keyRun(batchOf(c)); }
+        return c.id;
     }
-    function quarterTodo(deptId) {
-        var r = reportQuarterFor(deptId);
-        if (!r.list.length) return null;
-        var st = docState(keyQuarter(deptId, r.q));
-        var open = today() >= quarterOpen(r.q);
-        if (st === 'sent') return null;
-        if (st !== 'returned' && !open) return null;
-        return { kind: st === 'returned' ? 'quarterResend' : 'quarter', deptId: deptId, q: r.q, list: r.list, due: quarterEnd(r.q) };
+    function reportLock(courseId) {
+        var c = courseOf(courseId); if (!c) return null;
+        var h = reportedKeyOf(courseId); if (h) return h.doc.status;
+        return lockAt(keyRun(batchOf(c)));
     }
-    /* 업무 자동발행 판정 — 그 분기 ④ 보냄 · 실시 교육 0건이면 null(대상 아님, §14-2) */
+    /* 실시 결과 보고 공문 기한 — 등록한 날 + 7일(참석자 등록부 제출 기한 기본값 7일과 같다). 등록일이 없는 예시 기록은 교육일 */
+    var RUN_DUE_DAYS = 7;
+    function runDue(c) { return addDays((c && (c.regAt || c.date)) || today(), RUN_DUE_DAYS); }
+    /* 그 부서의 새 흐름 부서 실시 교육 묶음(분기 보고에 이미 실린 것 제외) */
+    function runBatches(deptId) {
+        var by = {}, order = [];
+        load().courses.forEach(function (c) {
+            if (!isFlow2(c) || !isDeptRun(c) || c.status === 'CANCELLED' || reportDeptOf(c) !== deptId || reportedKeyOf(c.id)) return;
+            var b = batchOf(c);
+            if (!by[b]) { by[b] = []; order.push(b); }
+            by[b].push(c);
+        });
+        return order.map(function (b) { return { batchId: b, list: by[b] }; });
+    }
+    /* 등록 취소 — 공문을 보내기 전이거나 반려·반송일 때만, 묶음 전체(공문이 묶음 단위다) */
+    function cancelRun(batchId) {
+        var list = batchCourses(batchId);
+        if (!list.length || lockAt(keyRun(batchId))) return null;
+        var r = { courses: 0, records: 0 };
+        /* 반려·반송된 공문은 지우지 않는다(온나라에 남아 있다) — «등록 취소»로 표시해 결재 이력의 반려 수에서 뺀다.
+           등록이 사라지면 그 공문을 다시 그릴 대상도 없으므로, 보낸 내용(제목·대상)을 공문에 남겨 둔다 */
+        var docsAt = (load().docs || {})['R|' + batchId] || [];
+        docsAt.forEach(function (d) { if (!d.withdrawn) { d.withdrawn = nowTs(); d.withdrawnScope = list.map(function (c) { return c.desc; }).join(' · '); } });
+        list.forEach(function (c) { var x = removeCourse(c.id); if (x) { r.courses++; r.records += x.records; } });
+        if (docsAt.length) save();
+        return r;
+    }
+    /* 업무 자동발행 «분기 실시 결과 제출» — 그 분기 부서 실시 교육 공문을 모두 보냈는가 · 0건이면 null(대상 아님, §14-2) */
     function quarterDone(deptId, q) {
-        var any = load().courses.some(function (c) { return isFlow2(c) && isDeptRun(c) && reportDeptOf(c) === deptId && quarterOf(c.date) === q; });
-        var sent = docsAt(keyQuarter(deptId, q)).some(function (x) { return SENT_ST[x.status]; });
-        if (sent) return true;
-        return any ? false : null;
+        var list = load().courses.filter(function (c) { return isFlow2(c) && isDeptRun(c) && c.status !== 'CANCELLED' && reportDeptOf(c) === deptId && quarterOf(c.date) === q; });
+        if (!list.length) return null;
+        return list.every(function (c) { return !!reportedKeyOf(c.id) || docState(keyRun(batchOf(c))) === 'sent'; });
     }
     /* 그 달 집합교육 ② 보냄(또는 참석자 없음) — 이전 방식 등록부는 등록부 자체로 */
     function monthDone(deptId, mm) {
         return load().courses.some(function (c) {
-            if (!isGroupCourse(c) || String(c.date || '').slice(0, 7) !== mm) return false;
+            if (!isGroupFlow(c) || String(c.date || '').slice(0, 7) !== mm) return false;
             if (noAttendOf(c.id, deptId)) return true;
             return enrolls(c.id).some(function (e) {
                 if (e.deptId !== deptId) return false;
@@ -1760,12 +1890,11 @@
             });
         });
     }
-
     /* ---- 재난안전과 담당자 할 일 ---- */
     function ownerTodos() {
         var out = [];
         load().courses.forEach(function (c) {
-            if (!isGroupCourse(c) || !isFlow2(c) || c.status === 'DONE') return;
+            if (!isGroupFlow(c) || !isFlow2(c) || c.status === 'DONE') return;
             if (c.status === 'CANCELLED') {
                 if (c.noticeDirty === '취소' && everSent(keyNotice(c.id))) out.push({ kind: 'notice', sub: '취소', course: c, due: c.date });
                 return;
@@ -1777,7 +1906,7 @@
             if (!c.signSheet) out.push({ kind: 'sign', course: c, due: enrollDue(c) });
         });
         load().courses.forEach(function (c) {
-            if (!isGroupCourse(c) || !isFlow2(c) || c.status === 'CANCELLED') return;
+            if (!isGroupFlow(c) || !isFlow2(c) || c.status === 'CANCELLED') return;
             if (c.status === 'OPEN' && !enrollOpen(c)) return;
             if (!noticeSent(c)) return;
             var ts = tripState(c);
@@ -1848,13 +1977,15 @@
         DOC_SWITCH: DOC_SWITCH, docsAt: docsAt, latestAt: latestAt, pushDocAt: pushDocAt, nextDocSeq: nextDocSeq,
         docState: docState, lockAt: lockAt, everSent: everSent,
         keyNotice: keyNotice, keyEnroll: keyEnroll, keyTrip: keyTrip, keyQuarter: keyQuarter,
-        isOwnerStaff: isOwnerStaff, canActOwnDept: canActOwnDept, isFlow2: isFlow2, isGroupCourse: isGroupCourse,
+        isOwnerStaff: isOwnerStaff, canActOwnDept: canActOwnDept, isFlow2: isFlow2, isGroupCourse: isGroupFlow,
         noticeSent: noticeSent, noticeState: noticeState, noticeRecipients: noticeRecipients, visibleCourse: visibleCourse,
         tripOf: tripOf, tripState: tripState, setTrip: setTrip, setSignSheet: setSignSheet,
         noAttendOf: noAttendOf, setNoAttend: setNoAttend, enrollLock: enrollLock, sessionLock: sessionLock,
         quarterOf: quarterOf, quarterLabel: quarterLabel, quarterEnd: quarterEnd, quarterOpen: quarterOpen,
         isDeptRun: isDeptRun, reportDeptOf: reportDeptOf, reportedKeyOf: reportedKeyOf, reportLock: reportLock,
-        pendingReportCourses: pendingReportCourses, reportQuarterFor: reportQuarterFor,
+        keyRun: keyRun, batchOf: batchOf, batchCourses: batchCourses, runDocKey: runDocKey, runBatches: runBatches, runDue: runDue, cancelRun: cancelRun,
+        DUTY_TYPES: DUTY_TYPES, DUTY_SOURCE: DUTY_SOURCE, dutyOf: dutyOf, dutyIssue: dutyIssue, isDutyWorker: isDutyWorker, dutyMissing: dutyMissing,
+        dutyStats: dutyStats, dutyChanges: dutyChanges, changePending: changePending, changeEduRecord: changeEduRecord, CHANGE_EDU: CHANGE_EDU,
         quarterDone: quarterDone, monthDone: monthDone, ownerTodos: ownerTodos, cancelCourse: cancelCourse
     };
 })(window);

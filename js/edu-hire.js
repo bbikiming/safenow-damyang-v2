@@ -2,7 +2,7 @@
    edu-hire.js · 채용시교육 (EDU-HIRE, v1.1 §8.5)
    ---------------------------------------------------------------------
    · 근로자 신규 등록/엑셀 시 채용시교육 항목이 자동으로 '미이수' 상태로 표시(별도 DB 스키마 없이 hireStatus 파생).
-   · 탭: 미이수 / 이수 (.sub-tabs + .count)
+   · 탭: 전체 / 미이수 / 이수 (.sub-tabs + .count) — 2026-07-30 회의
    · 필터: 부서 · 고용형태 (가로 배치 — 조회 조건이므로 select 유지)
    · 미이수 탭: 필터 결과 헤더 체크박스로 전체선택 + [선택 교육기록 등록] → 실제 교육일·시간·증빙 등록
    표준: 배지 chip-status+DYV2.toneOf · 표 .table-figma(.table-compact) · 빈상태 .v2-empty
@@ -37,7 +37,7 @@
      * 한다. 관리·감독 계층은 조회만 한다. 진입·저장 양쪽에 같은 판정을 건다. */
     function deny(deptId) { toast(E().denyMsg(deptId)); }
     /* 채용시교육 기록은 그 사람 **소속 부서 담당자**가 올리고 고친다 — 재난안전과도 남의 부서 기록은 올리지 않는다.
-       기록은 그 부서의 분기 실시 결과 보고에 실리기 때문이다(2026-11-16 · 기획 v2 §10 N) */
+       기록은 그 부서가 실시 결과 보고 공문으로 보내기 때문이다(2026-11-16 · 기획 v2 §10 N) */
     function canActWorker(workerId) { var w = E().workerOf(workerId); return !!w && E().canActOwnDept(w.deptId); }
     /* 기록의 등록 주체 표기 — '재난안전과'로 박으면 부서 담당자가 올린 기록도 재난안전과가 올린 것이 된다 */
     function actorDept() {
@@ -97,14 +97,14 @@
         var all = tabRows();
         var list = rowsForTab();
 
+        var scopedDepts = E().deptCandidates().filter(function (d) { return inScope(d.id); });
         var fields = [
             { type: 'search', id: 'eh-q', value: state.fQ, placeholder: '이름·부서 검색', on: "EDUH.setF('Q', this.value)" },
-            { type: 'select', id: 'eh-dept', value: state.fDept, label: '부서',
-              /* 필터도 조회 범위를 따른다 — 목록에서 지워 놓고 드롭다운에 남기면 "있는데 안 보여준다"로 읽힌다 */
-              options: [['', '부서 전체']].concat(E().deptCandidates()
-                  .filter(function (d) { return inScope(d.id); })
-                  .map(function (d) { return [d.id, d.name]; })),
-              on: "EDUH.setF('Dept', this.value)" },
+            /* 필터도 조회 범위를 따른다 — 목록에서 지워 놓고 드롭다운에 남기면 "있는데 안 보여준다"로 읽힌다.
+               고를 부서가 하나뿐이면 드롭다운을 두지 않는다(§12) */
+            scopedDepts.length > 1 ? { type: 'select', id: 'eh-dept', value: state.fDept, label: '부서',
+              options: [['', '부서 전체']].concat(scopedDepts.map(function (d) { return [d.id, d.name]; })),
+              on: "EDUH.setF('Dept', this.value)" } : null,
             { type: 'select', id: 'eh-emp', value: state.fEmp, label: '고용형태',
               options: [['', '고용형태 전체']].concat(Object.keys(E().EMP_LABEL).map(function (k) { return [k, E().EMP_LABEL[k]]; })),
               on: "EDUH.setF('Emp', this.value)" },
@@ -117,22 +117,28 @@
                 options: [['', '이수 구분 전체'], ['BEFORE', '정상 이수'], ['LATE_DONE', '지연 이수']],
                 on: "EDUH.setF('Done', this.value)" });
         }
-        var actions = E().canRegister()
-            ? '<button type="button" class="btn btn-primary" onclick="EDUH.openAdd()">＋ 채용시 교육 추가</button>' +
-                (state.tab === 'undone'
+        /* 재난안전과 담당자 화면에는 [채용시 교육 추가]가 없다 — «재난안전과 담당자는 결과만 볼 수 있게»(2차 통화 00:24).
+           재난안전과 소속 직원 몫만 «우리 부서»로 올린다(D-4) — 그런 사람이 없으면 버튼 자체가 없다 */
+        var owner = E().isOwnerStaff();
+        var canAdd = E().canRegister() && (!owner || addPool().length > 0);
+        var actions = (canAdd
+            ? '<button type="button" class="btn btn-primary" onclick="EDUH.openAdd()">＋ ' + (owner ? '우리 부서 채용시 교육 추가' : '채용시 교육 추가') + '</button>' +
+                (state.tab === 'undone' && selectablePool() > 0
                     ? ' <button type="button" class="btn btn-outline" onclick="EDUH.openBulk()">선택 교육기록 등록 (' + selectedCount() + ')</button>'
                     : '')
-            : '<span class="file-hint">채용시교육 기록은 각 부서 담당자가 등록합니다</span>';
+            : '');
+        /* 재난안전과에는 한 줄만 — 필터 줄 안에 두면 필터가 세 줄로 밀리고, 조회 계층에는 readOnlyNote 가 같은 말을 한다(2차 통화 검토 C-2) */
+        var ownerNote = owner ? '<p class="file-hint" style="margin:0 0 10px;">채용시교육은 각 부서 담당자가 등록하고 실시 결과 보고 공문을 보냅니다. 재난안전과는 결과를 봅니다.</p>' : '';
         var filters = EDUFILTER.bar(fields, { count: list.length, unit: '명', reset: 'EDUH.resetF()', actions: actions });
-        /* 분기 실시 결과 보고 띠 — 자체·기타·채용시 여섯 화면 공용(EDUDOC.quarterBar) */
-        if (global.EDUDOC && global.EDUDOC.quarterBar) filters = global.EDUDOC.quarterBar() + filters;
 
-        /* 묶어보기 — 부서별 / 채용일별 / 안 묶기 */
+        /* 묶어보기 — 부서별 / 채용일별 / 안 묶기. 보이는 부서가 하나면 «부서별»은 묶음이 하나뿐이라 뺀다 */
+        var oneDept = scopedDepts.length <= 1;
+        if (oneDept && state.groupBy === 'dept') state.groupBy = 'hire';
         var groupBar =
             '<div class="edu-toolbar" style="margin-bottom:10px;">' +
                 '<span style="font-size:var(--fs-12);color:var(--text-gray);font-weight:var(--fw-bold);">묶어보기</span>' +
                 '<div class="edu-groupby" role="group" aria-label="목록 묶음 기준">' +
-                    ['dept:부서별', 'hire:채용일별', 'none:안 묶기'].map(function (o) {
+                    (oneDept ? ['hire:채용일별', 'none:안 묶기'] : ['dept:부서별', 'hire:채용일별', 'none:안 묶기']).map(function (o) {
                         var k = o.split(':')[0], lb = o.split(':')[1];
                         return '<button type="button" class="' + (state.groupBy === k ? 'active' : '') + '"' +
                             ' aria-pressed="' + (state.groupBy === k ? 'true' : 'false') + '"' +
@@ -141,7 +147,7 @@
                 '</div>' +
             '</div>';
 
-        var allIds = list.map(function (r) { return r.w.id; });
+        var allIds = list.filter(function (r) { return canPick(r.w); }).map(function (r) { return r.w.id; });
         var allChecked = allIds.length && allIds.every(function (id) { return state.checked[id]; });
         var headerCk = selectable()
             ? '<th style="width:44px;text-align:center;"><input type="checkbox"' + (allChecked ? ' checked' : '') +
@@ -164,22 +170,13 @@
         var unkNote = unk
             ? '<p class="file-hint" style="margin:0 0 10px;">' +
                 (SUP_MODE ? '관리감독자 지정일' : '채용일') + '이 없는 <b>' + unk + '명</b>은 「판정 불가」로 표시됩니다. ' +
-                (SUP_MODE ? '지정일' : '채용일') + '은 <b>근로자 명단 관리</b>에서 등록합니다.</p>'
+                (SUP_MODE ? '지정일' : '채용일') + '은 <b>현업근로자 관리 › 현업근로자 명단</b>에서 등록합니다.</p>'
             : '';
-        state.mount.innerHTML = ro + tabs + unkNote + filters + groupBar +
+        state.mount.innerHTML = ro + tabs + unkNote + ownerNote + filters + groupBar +
             '<div class="edu-card"><div class="edu-scroll"><table class="table-figma table-compact"><thead><tr>' +
                 headerCk +
                 '<th>이름</th><th>부서</th><th>고용형태</th><th>채용일</th><th>필요시간</th><th>이수일</th><th>상태</th><th></th>' +
             '</tr></thead><tbody>' + body + '</tbody></table></div></div>';
-    }
-
-    /* courseWorkers — 이수 수정·회수 시 "그 교육 건에 다른 대상자가 남아 있는지" 판정에 쓴다.
-     * (구 '교육 건' 탭과 그 필터·카드 렌더러는 2026-07-30 회의 지시로 제거됨 — 부활 금지) */
-    function courseWorkers(c) {
-        var ids = {};
-        E().enrolls(c.id).forEach(function (e) { (e.workerIds || []).forEach(function (w) { ids[w] = true; }); });
-        E().records().forEach(function (r) { if (r.courseId === c.id) ids[r.workerId] = true; });
-        return Object.keys(ids).map(function (id) { return E().workerOf(id); }).filter(Boolean);
     }
 
     /* ===== 묶어보기(그룹) ===== */
@@ -198,11 +195,13 @@
             return { key: k, label: state.groupBy === 'dept' ? E().deptName(k) : ymLabel(k), rows: map[k] };
         });
     }
-    /* 선택 체크는 [선택 교육기록 등록]을 위한 것이라 등록할 수 있는 사람에게만 낸다 */
-    function selectable() { return state.tab === 'undone' && E().canRegister(); }
+    /* 선택 체크는 [선택 교육기록 등록]을 위한 것이라 **내 부서 사람 줄에만** 낸다 — 재난안전과 화면의 다른 부서 줄에
+       체크를 두면 누를 버튼이 없는 선택이 된다(2차 통화 검토 · 재난안전과는 검토만) */
+    function selectable() { return state.tab === 'undone' && selectablePool() > 0; }
+    function canPick(w) { return selectable() && canActWorker(w.id); }
     function groupHeadRow(g) {
-        var ids = g.rows.map(function (r) { return r.w.id; });
-        var allck = selectable()
+        var ids = g.rows.filter(function (r) { return canPick(r.w); }).map(function (r) { return r.w.id; });
+        var allck = ids.length
             ? '<label class="edu-group-allck"><input type="checkbox"' +
                 (ids.length && ids.every(function (id) { return state.checked[id]; }) ? ' checked' : '') +
                 ' onchange="EDUH.toggleGroup(\'' + esc(g.key) + '\', this.checked)" aria-label="' + esc(g.label) + ' 그룹 전체선택"> 이 그룹 선택</label>'
@@ -215,7 +214,7 @@
     function setGroupBy(g) { state.groupBy = g; render(); }
     function toggleGroup(key, on) {
         rowsForTab().forEach(function (r) {
-            if (groupKeyOf(r) !== key) return;
+            if (groupKeyOf(r) !== key || !canPick(r.w)) return;
             if (on) state.checked[r.w.id] = true; else delete state.checked[r.w.id];
         });
         render();
@@ -248,7 +247,7 @@
             : hs.status === 'UNKNOWN' ? '판정 불가 — ' + hs.anchorKind + ' 미등록'
             : '미이수';
         var empLabel = E().empLabel(w.empType) + (w.contractMonths ? '[' + w.contractMonths + '개월]' : '');
-        var ck = selectable()
+        var ck = canPick(w)
             ? '<input type="checkbox"' + (state.checked[w.id] ? ' checked' : '') +
                 ' onchange="EDUH.toggle(\'' + w.id + '\', this.checked)" aria-label="' + esc(w.name) + ' 선택">'
             : '';
@@ -272,140 +271,32 @@
                     : '') + '</td>' +
             /* 갈음 건에는 채용시 이수기록이 없다 — 고칠 기록도, 이 화면에서 올릴 공문도 없다
                (특별교육의 수정·공문은 기타교육 화면 소관이다) */
-            '<td class="col-action">' + (hs.lastDate && hs.hireRecords ? editBtnHtml(w) + ' ' + docBtnHtml(w) : '') + '</td>' +
+            /* [결재 상태 칩] [공문 보기] 둘만(2차 통화) — [이수 수정]·행의 [공문 기안]·자물쇠 버튼은 걷었다.
+               특별교육으로 갈음한 줄은 그 특별교육(기타교육) 공문을 보인다 — 채용시교육 공문은 없다 */
+            '<td class="col-action">' + (hs.via === '특별교육' && hs.viaCourseId
+                    ? (global.EDUDOC ? global.EDUDOC.runCtl(E().courseOf(hs.viaCourseId), { dash: true }) : '') + ' <span class="file-hint">기타교육으로 등록</span>'
+                    : (hs.lastDate && hs.hireRecords ? docBtnHtml(w) : '')) + '</td>' +
         '</tr>';
-    }
-    /* 이수 기록 손보기 — '취소'가 아니라 '수정'이다.
-     * 발주처: "왜 취소는 왜 할 필요가 왜 있는지 모르겠네. 수정을 차라리 수정 버튼을 누르는 게 낫지"
-     * 결재가 올라간 뒤에는 잠긴다(EDUDOC.lockOf 단일 판정). */
-    function lockOf(workerId) {
-        /* 잠금은 그 사람이 이수한 **교육 건**의 공문이 건다 — 개인 단위 결재는 없다.
-           판정은 EDUDOC.lockOf 한 곳이고 여기서는 결과만 쓴다. */
-        if (!global.EDUDOC || !global.EDUDOC.lockOf) return null;
-        var recs = E().records().filter(function (r) { return r.workerId === workerId && r.kind === 'HIRE'; });
-        for (var i = 0; i < recs.length; i++) {
-            var lk = global.EDUDOC.lockOf(recs[i].courseId);
-            if (lk) return lk;
-        }
-        return null;
     }
     /* 공문 — 채용시교육은 사람 행 화면이라 교육 카드가 없다. 그 사람이 이수한
        **교육 건**의 공문으로 연결한다(단위는 교육 1건, SCR-EDU-002 §6).
        한 건에 여러 명이 묶인 경우 같은 공문을 공유한다 — 건이 하나이기 때문이다. */
     function docCourseOf(workerId) {
-        var recs = E().records().filter(function (r) { return r.workerId === workerId && r.kind === 'HIRE'; });
+        /* 가장 최근 교육일의 기록 — 배열 순서가 아니라 날짜로 고른다(여러 묶음에 걸친 사람에게 엉뚱한 공문이 보이지 않게) */
+        var recs = E().records().filter(function (r) { return r.workerId === workerId && r.kind === 'HIRE'; })
+            .sort(function (a, b) { return String(a.date || '').localeCompare(String(b.date || '')); });
         return recs.length ? recs[recs.length - 1].courseId : '';
     }
     function docBtnHtml(w) {
         if (!global.EDUDOC) return '';
         var cid = docCourseOf(w.id);
         if (!cid) return '';
-        /* 새 흐름 — 그 교육 건이 실릴(실린) 분기 실시 결과 보고 */
-        var c = E().courseOf(cid);
-        if (c && E().isFlow2(c) && global.EDUDOC.reportChip) return global.EDUDOC.reportChip(c);
-        return '<span class="edu-doc-slot">' + global.EDUDOC.control(cid) + '</span>';
+        /* 그 교육 건(등록 묶음)의 실시 결과 보고 공문 — 옛 기록은 실시 결과 공문 또는 «이전 방식» */
+        return global.EDUDOC.runCtl(E().courseOf(cid), { dash: true });
     }
-    function editBtnHtml(w) {
-        var lock = lockOf(w.id);
-        if (lock) {
-            return '<button type="button" class="btn btn-outline btn-sm" disabled title="공문 ' + esc(lock) +
-                ' — 공문 기록이 남아 수정할 수 없습니다">🔒 ' + esc(lock) + '</button>';
-        }
-        /* 그 사람이 속한 부서의 담당자(주관부서 담당자는 전 부서)에게만 낸다 */
-        if (!E().canActOwnDept(w.deptId)) return '';
-        return '<button type="button" class="btn btn-outline btn-sm" onclick="EDUH.openEditDone(\'' + w.id + '\')">이수 수정</button>';
-    }
-
-    /* =============== 이수 수정 =============== */
-    /* 이수일을 고치는 것이 기본 경로이고, 기록 자체를 물릴 때만 아래 회수 경로로 내려간다.
-     * (회수 경로 자체는 CLAUDE.md §4 'CRUD 는 회수 경로까지 갖춘다' 때문에 남긴다 —
-     *  시연을 반복하면 데이터가 쌓여 발표가 망가지므로 지울 수단이 반드시 있어야 한다.
-     *  다만 전면에 노출하는 라벨은 발주처 지시대로 '수정'이다.) */
-    function openEditDone(workerId) {
-        var w = E().workerOf(workerId); if (!w) return;
-        if (!E().canActDept(w.deptId)) { deny(w.deptId); return; }
-        var lock = lockOf(workerId);
-        if (lock) { toast('공문이 ' + lock + ' 상태라 수정할 수 없습니다 — 온나라에서 반려·반송되면 다시 열립니다.'); return; }
-        var hs = E().hireStatus(workerId);
-        var recs = E().records().filter(function (r) { return r.workerId === workerId && r.kind === 'HIRE'; });
-        V().openModal('채용시교육 이수 수정',
-            '<p style="font-size:var(--fs-13);"><b>' + esc(w.name) + '</b> (' + esc(E().deptName(w.deptId)) + ') · 채용일 ' + esc(w.hireDate || '-') + '</p>' +
-            '<div class="edu-modal-row"><label class="form-label" for="eh-ed-date">이수일</label>' +
-                '<input type="date" class="form-input" id="eh-ed-date" value="' + esc(hs.lastDate || '') + '"></div>' +
-            '<div class="edu-modal-row"><label class="form-label">인정 시간</label>' +
-                '<p style="font-size:var(--fs-13);margin:0;"><b>' + hs.done + 'h</b> / 필요 ' + hs.need + 'h ' +
-                '<span style="color:var(--text-gray);">(이수기록 ' + recs.length + '건 · 시간은 교육 건의 회차에서 파생됩니다)</span></p></div>' +
-            '<div class="check-notice" style="margin-top:10px;">공문을 온나라로 보낸 뒤에는 기록이 남아 <b>수정할 수 없습니다</b>. 보내기 전에 확정하세요.</div>',
-            '<button type="button" class="btn btn-outline" style="border-color:var(--status-danger-border);color:var(--status-danger-fg);margin-right:auto;" onclick="EDUH.confirmUndo(\'' + workerId + '\')">이수 기록 삭제</button>' +
-            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-            '<button type="button" class="btn btn-primary" onclick="EDUH.saveEditDone(\'' + workerId + '\')">저장</button>');
-    }
-    function saveEditDone(workerId) {
-        var w = E().workerOf(workerId);
-        if (!w || !E().canActDept(w.deptId)) { V().closeModal(); deny(w && w.deptId); return; }
-        var lk = lockOf(workerId);
-        if (lk) { V().closeModal(); toast('공문이 ' + lk + ' 상태라 수정할 수 없습니다 — 온나라에서 반려·반송되면 다시 열립니다.'); return; }
-        var el = document.getElementById('eh-ed-date');
-        var d = el ? el.value : '';
-        if (!d) { toast('이수일을 입력하세요.'); if (el) el.focus(); return; }
-        E().records().forEach(function (r) {
-            if (r.workerId === workerId && r.kind === 'HIRE') r.date = d;
-        });
-        E().save();
-        V().closeModal();
-        toast('이수일을 수정했습니다 — ' + d);
-        render();
-    }
-
-    /* --- 회수(삭제) 경로 — '이수 수정' 모달 안에서만 들어온다 --- */
-    /* 그 근로자의 채용시교육 이수기록만 회수해 '미이수'로 되돌린다.
-     * 묶인 교육 건(일괄 이수처리 '한 건으로 묶기')은 통째로 지우면 다른 대상자의 이수까지
-     * 사라지므로, DYEDU.removeWorkerFromCourse 로 본인 몫만 빼고 남은 대상자가 없을 때만 건을 회수한다. */
-    function coursesOfWorker(workerId) {
-        return E().courses({ kind: ['HIRE'] }).filter(function (c) {
-            var inEnroll = E().enrolls(c.id).some(function (e) { return (e.workerIds || []).indexOf(workerId) !== -1; });
-            var inRecord = E().records().some(function (r) { return r.courseId === c.id && r.workerId === workerId; });
-            return inEnroll || inRecord;
-        });
-    }
-    function confirmUndo(workerId) {
-        var w = E().workerOf(workerId); if (!w) return;
-        if (!E().canActDept(w.deptId)) { deny(w.deptId); return; }
-        var lk = lockOf(workerId);
-        if (lk) { toast('공문이 ' + lk + ' 상태라 되돌릴 수 없습니다 — 온나라에서 반려·반송되면 다시 열립니다.'); return; }
-        var mine = coursesOfWorker(workerId);
-        if (!mine.length) { toast('되돌릴 채용시교육 이수 건이 없습니다.'); return; }
-        /* 본인 외 대상자가 남는 교육 건(묶인 건)은 삭제되지 않고 유지됨을 명시한다 */
-        var shared = mine.filter(function (c) {
-            return courseWorkers(c).filter(function (x) { return x.id !== workerId; }).length > 0;
-        }).length;
-        var hours = E().records().filter(function (r) {
-            return r.workerId === workerId && r.kind === 'HIRE';
-        }).reduce(function (n, r) { return n + (r.hours || 0); }, 0);
-        V().openModal('채용시교육 이수 취소',
-            '<p style="font-size:var(--fs-13);"><b>' + esc(w.name) + '</b> (' + esc(E().deptName(w.deptId)) + ')</p>' +
-            '<div class="check-notice" style="margin-top:10px;">교육 <b>' + mine.length + '건</b>에서 이 대상자의 이수기록(<b>' + hours + 'h</b>)만 회수되어 <b>미이수</b> 상태로 돌아갑니다.' +
-                (shared ? ' 다른 대상자가 함께 묶인 <b>' + shared + '건</b>은 삭제되지 않고 유지됩니다.' : ' 대상자가 본인뿐인 교육 건은 함께 삭제됩니다.') +
-            '</div>',
-            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-            '<button type="button" class="btn btn-primary" onclick="EDUH.doUndo(\'' + workerId + '\')">이수 취소</button>');
-    }
-    function doUndo(workerId) {
-        var w = E().workerOf(workerId);
-        if (!w || !E().canActDept(w.deptId)) { V().closeModal(); deny(w && w.deptId); return; }
-        var lk = lockOf(workerId);
-        if (lk) { V().closeModal(); toast('공문이 ' + lk + ' 상태라 되돌릴 수 없습니다 — 온나라에서 반려·반송되면 다시 열립니다.'); return; }
-        var mine = coursesOfWorker(workerId);
-        var recs = 0, removed = 0;
-        mine.forEach(function (c) {
-            var res = E().removeWorkerFromCourse(c.id, workerId);
-            recs += res.records;
-            if (res.courseRemoved) removed++;
-        });
-        V().closeModal();
-        toast('이수기록 ' + recs + '건 회수 · 미이수로 되돌렸습니다' + (removed ? ' (빈 교육 건 ' + removed + '건 삭제)' : ''));
-        render();
-    }
+    /* [이수 수정]·이수 기록 삭제는 걷었다(2차 통화 «공문으로 남는데 수정은 어차피 불가능 — 필요 없다»).
+       고치는 길은 공문 전·반려 때 [공문 보기] 창의 «등록 취소»(묶음 전체) 하나다 — 한 사람만 빼면
+       아직 보내지 않은 묶음 공문의 대상이 조용히 줄어든다. 되살리지 말 것. */
 
     function setTab(t) { state.tab = t; state.checked = {}; state.fDone = ''; render(); }
     function setF(k, v) { state['f' + k] = v; state.checked = {}; EDUFILTER.rerender(render); }
@@ -416,7 +307,7 @@
     function toggle(id, on) { if (on) state.checked[id] = true; else delete state.checked[id]; render(); }
     function toggleAll(on) {
         state.checked = {};
-        if (on) rowsForTab().forEach(function (r) { state.checked[r.w.id] = true; });
+        if (on) rowsForTab().forEach(function (r) { if (canPick(r.w)) state.checked[r.w.id] = true; });
         render();
     }
 
@@ -507,7 +398,7 @@
                 (B.evidenceName ? '<p style="font-size:var(--fs-12);color:var(--text-gray);margin:4px 0 0;">선택됨: ' + esc(B.evidenceName) + '</p>' : '') + '</div>';
         V().openModal('선택 교육기록 등록 · ' + B.ids.length + '명', body,
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-            '<button type="button" class="btn btn-primary" onclick="EDUH.doBulk()">교육기록 등록</button>');
+            '<button type="button" class="btn btn-primary" onclick="EDUH.doBulk()">저장하고 공문 작성 →</button>');
     }
     /* 각자 채용일로 되돌리면 이수일이 사람마다 달라지므로 묶기는 자동 해제된다 */
     function setBulkMode(useHire) { captureBulk(); B.useHireDate = useHire; if (useHire) B.merge = false; renderBulk(); }
@@ -527,6 +418,8 @@
         B.instructor = document.getElementById('eh-b-inst').value.trim();
         B.desc = document.getElementById('eh-b-desc').value.trim() || '채용시 안전보건교육';
         var count = 0, made = 0, completed = 0, lastMade = null;
+        /* 등록 묶음 — 이번 저장으로 생기는 교육 건 전부가 공문 하나(2차 통화 R-1) */
+        var batch = 'B' + Date.now().toString(36);
 
         if (B.merge) {
             /* 한 건으로 묶기 — 필요시간이 같은 인원끼리 교육 건 1개.
@@ -542,7 +435,7 @@
                     sessions: [{ date: B.date, start: B.time, end: B.end }], files: [{ name: B.evidenceName, slot: 'evidence' }],
                     instructor: B.instructor, place: '',
                     desc: B.desc + ' (' + g.hours + 'h · ' + g.ids.length + '명)',
-                    status: 'DONE', createdBy: actorDept() + ' (일괄)'
+                    status: 'DONE', createdBy: actorDept() + ' (일괄)', batchId: batch, batchTitle: B.desc
                 });
                 var byDept = {};
                 g.ids.forEach(function (id) {
@@ -571,7 +464,7 @@
                     kind: 'HIRE', deptId: w.deptId, date: date, time: time, endTime: B.end, hours: actualHours,
                     sessions: [{ date: date, start: time, end: B.end }], files: [{ name: B.evidenceName, slot: 'evidence' }],
                     instructor: B.instructor, place: '', desc: B.desc + ' · ' + w.name,
-                    status: 'DONE', createdBy: actorDept() + ' (일괄)'
+                    status: 'DONE', createdBy: actorDept() + ' (일괄)', batchId: batch, batchTitle: B.desc
                 });
                 E().addEnroll({ courseId: c.id, deptId: w.deptId, workerIds: [id], at: date });
                 var recognized = Math.min(hours, actualHours);
@@ -582,7 +475,7 @@
         }
         state.checked = {};
         render();
-        reportDone(count + '명 교육기록 등록 · 이수 완료 ' + completed + '명', lastMade);
+        reportDone(count + '명 교육기록 등록 · 이수 완료 ' + completed + '명', lastMade, batch);
     }
 
     /* =============== 채용시 교육 추가 (자체교육과 동일 구성 · EDUFORM) ===============
@@ -646,7 +539,8 @@
 
         return '<div class="edu-modal-row"><label class="form-label">교육 대상자 (미이수) <span style="color:var(--status-danger-fg)">*</span> ' +
                 '<span style="color:var(--text-gray);font-weight:var(--fw-regular);">(' + selCnt + '명 선택)</span></label>' +
-            '<select class="form-select" style="margin-bottom:8px;" aria-label="대상자 부서 필터" onchange="EDUH.aDept(this.value)">' + deptOpts + '</select>' +
+            /* 부서가 하나면 고를 것이 없다 — 아래 부서 묶음 머리가 전체 선택을 맡는다 */
+            (Object.keys(deptIds).length > 1 ? '<select class="form-select" style="margin-bottom:8px;" aria-label="대상자 부서 필터" onchange="EDUH.aDept(this.value)">' + deptOpts + '</select>' : '') +
             '<div class="edu-tg-body" style="max-height:220px;">' + listHtml + '</div>' +
         '</div>';
     }
@@ -665,7 +559,7 @@
             EDUFORM.renderAttach(A, 'EDUH', 'done');
         V().openModal('채용시 교육 추가', body,
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-            '<button type="button" class="btn btn-primary" onclick="EDUH.doAdd()">교육기록 등록</button>');
+            '<button type="button" class="btn btn-primary" onclick="EDUH.doAdd()">저장하고 공문 작성 →</button>');
     }
     /* 회차·첨부 위임 래퍼 (EDUFORM 공용) */
     function sessTab(i) { captureAdd(); A.sIdx = i; renderAdd(); }
@@ -698,6 +592,7 @@
         if (!ids.length) { toast('교육 대상자를 1명 이상 선택하세요.'); return; }
         if (!A.files.length) { toast('교육일지 및 교육사진 등 증빙을 첨부하세요.'); return; }
         var count = 0, completed = 0, late = 0, lastMade = null;
+        var batch = 'B' + Date.now().toString(36);
         ids.forEach(function (id) {
             var w = E().workerOf(id); if (!w) return;
             var need = E().hireHours(w);
@@ -708,7 +603,7 @@
                 kind: 'HIRE', deptId: w.deptId, date: eventDate, time: S.time, endTime: S.endTime,
                 sessions: S.sessions, hours: S.hours,
                 instructor: A.instructor, place: A.place, desc: A.desc + ' · ' + w.name,
-                files: A.files, photos: A.photos, status: 'DONE', createdBy: actorDept()
+                files: A.files, photos: A.photos, status: 'DONE', createdBy: actorDept(), batchId: batch, batchTitle: A.desc
             });
             E().addEnroll({ courseId: c.id, deptId: w.deptId, workerIds: [id], at: eventDate });
             E().addRecord({ workerId: id, courseId: c.id, kind: 'HIRE', hours: hours, date: eventDate });
@@ -717,31 +612,32 @@
             count++;
         });
         state.tab = completed === count ? 'done' : 'all'; state.checked = {}; render();
-        reportDone(count + '명 교육기록 등록 · 이수 완료 ' + completed + '명' + (late ? ' · 지연 ' + late + '명' : ''), lastMade);
+        reportDone(count + '명 교육기록 등록 · 이수 완료 ' + completed + '명' + (late ? ' · 지연 ' + late + '명' : ''), lastMade, batch);
     }
 
-    /* 등록 뒤 한 줄 — 교육 건마다 공문을 쓰지 않고 어느 분기 실시 결과 보고에 들어가는지를 보인다 */
-    function reportDone(msg, c) {
-        V().openModal('교육기록을 등록했습니다',
-            '<p style="font-size:var(--fs-13);margin:0 0 8px;">' + esc(msg) + '</p>' +
-            (c && global.EDUDOC && global.EDUDOC.reportLine ? '<div class="check-notice">' + esc(global.EDUDOC.reportLine(c)) + '</div>' : ''),
-            '<button type="button" class="btn btn-primary" onclick="DYV2.closeModal()">닫기</button>');
+        /* 저장하고 바로 실시 결과 보고 공문(등록 한 번 = 공문 한 번 — 2차 통화 «추가 버튼 누를 때 무조건 연계»).
+       닫아도 기록·이수는 남고 공문만 «미기안» */
+    function reportDone(msg, c, batch) {
+        toast(msg);
+        if (c && global.EDUDOC) { global.EDUDOC.open(E().keyRun(batch || E().batchOf(c))); return; }
+        V().closeModal();
     }
+    /* 미이수 탭에서 고를 수 있는 사람 — 내 부서 사람만(재난안전과도 자기 부서 몫만) */
+    function selectablePool() { return pool().filter(function (w) { return canActWorker(w.id); }).length; }
     function init(mountId, opts) {
         SUP_MODE = !!(opts && opts.supMode);
         state.mount = document.getElementById(mountId);
         if (!state.mount) return;
         if (global.EDUDOC) global.EDUDOC.registerRefresh(render);
         render();
+        /* ?doc=R|묶음 — 내 할일 «공문 보내기» 카드에서 그 공문 창을 바로 연다 */
+        if (global.EDUDOC && global.EDUDOC.openFromQuery) global.EDUDOC.openFromQuery();
     }
     global.EDUH = {
         init: init, setTab: setTab, setF: setF, resetF: resetF,
         toggle: toggle, toggleAll: toggleAll,
         setGroupBy: setGroupBy, toggleGroup: toggleGroup,
         openBulk: openBulk, setBulkMode: setBulkMode, setBulkMerge: setBulkMerge, doBulk: doBulk, pickEvidence: pickEvidence,
-        /* 이수 수정(기본) → 그 안에서만 회수(삭제)로 내려간다 */
-        openEditDone: openEditDone, saveEditDone: saveEditDone,
-        confirmUndo: confirmUndo, doUndo: doUndo,
         /* 채용시 교육 추가 (EDUFORM 공용 구성) */
         openAdd: openAdd, doAdd: doAdd, aToggle: aToggle, aToggleDept: aToggleDept, aDept: aDept,
         sessTab: sessTab, sessAdd: sessAdd, sessDel: sessDel, sessSync: sessSync,

@@ -122,9 +122,8 @@
             /* 이행 */
             /* C-01 «의무이행 점검표 반기 마감 — 점검표 작성»은 2026-11-12 에 걷었다 — 이행점검 화면의 점검표 작성(F5)을
                걷었고, 반기 마감은 배포 기록에서 만드는 카드 10(«반기 마감 · 군수 보고»)이 맡는다. */
-            { id: 'C-02', cat: 'comply',     title: '안전보건교육 3분기 실시 결과 정리',
-              due: '2026-11-14', dept: 'safety', dept_label: '재난안전과',
-              atype: 'menu', href: 'edu-status.html', action: '보러 가기', destLabel: '이수현황' },
+            /* C-02 «안전보건교육 3분기 실시 결과 정리»는 2026-11-17 에 걷었다 — 분기 실시 결과 보고를 2차 통화(11-16)로
+               걷었고, 교육 할 일은 DYEDU.deptTodos 만 낸다(§4). 예시 카드가 없는 일을 «지연»으로 세고 있었다. */
             /* 도급 — 파일 첨부형 (점검표 첨부로 완료) */
             { id: 'K-01', cat: 'contract',   title: '도급사업 안전보건 점검표 제출 (군도 5호선)',
               sub: '현장 점검표(서명본)를 첨부하면 완료됩니다',
@@ -477,10 +476,22 @@
                             due: t.due || cc.date, href: det, action: t.kind === 'enrollResend' ? '다시 보내러 가기' : '공문 보내러 가기', destLabel: '교육 상세' });
                         return;
                     }
-                    if (t.kind === 'quarter' || t.kind === 'quarterResend') {
-                        push({ id: 'EDU-QTR-' + t.q, title: Edu.quarterLabel(t.q) + ' 안전보건교육 실시 결과 보고 (' + t.list.length + '건)',
-                            sub: t.kind === 'quarterResend' ? '온나라에서 돌아왔습니다 — 고쳐 다시 보냅니다' : '이 분기 우리 부서가 실시한 자체·기타·채용시교육을 한 장으로 재난안전과에 보냅니다',
-                            due: t.due, href: 'edu-reg.html?tab=self', action: '분기 보고 작성하러 가기', destLabel: '정기교육 › 자체교육' });
+                    /* 부서 실시 교육(자체·채용시·기타) 실시 결과 보고 공문 — 등록 한 번 = 공문 한 번(2차 통화).
+                       주 버튼은 그 화면에서 그 공문 창을 바로 연다(?doc=R|묶음 — 검수 L-5) */
+                    if (t.kind === 'runDoc' || t.kind === 'runResend') {
+                        var rc = t.course, sup = rc.kind === 'SUP_REG' || rc.kind === 'SUP_ETC';
+                        var hireSup = rc.kind === 'HIRE' && (t.list || []).some(function (c) {
+                            return Edu.enrolls(c.id).some(function (e) { return (e.workerIds || []).some(function (wid) { var w = Edu.workerOf(wid); return w && w.category === 'SUPERVISOR'; }); });
+                        });
+                        var page = rc.kind === 'HIRE' ? (hireSup ? 'edu-sup-hire.html' : 'edu-hire.html')
+                            : (rc.kind === 'ETC' || rc.kind === 'SUP_ETC') ? (sup ? 'edu-sup-etc.html' : 'edu-etc.html')
+                            : (sup ? 'edu-sup.html?tab=self' : 'edu-reg.html?tab=self');
+                        var label = rc.kind === 'HIRE' ? '채용시교육' : (rc.kind === 'ETC' || rc.kind === 'SUP_ETC') ? '기타교육' : '자체교육';
+                        var nm = (rc.batchTitle || String(rc.desc || '').replace(/\s·\s[^·]+$/, '')) + ((t.list || []).length > 1 ? ' (' + t.list.length + '건)' : '');
+                        push({ id: 'EDU-RUN-' + t.batchId, title: nm + ' — ' + label + ' 실시 결과 보고 ' + (t.kind === 'runResend' ? '다시 보내기' : '공문 보내기'),
+                            sub: t.kind === 'runResend' ? '온나라에서 돌아왔습니다 — 사유를 보고 고쳐 다시 보냅니다' : '교육 기록과 이수는 저장됐습니다 — 실시 결과 보고 공문을 온나라로 보내야 끝납니다',
+                            due: t.due, href: page + (page.indexOf('?') === -1 ? '?' : '&') + 'doc=' + encodeURIComponent('R|' + t.batchId),
+                            action: t.kind === 'runResend' ? '다시 보내러 가기' : '공문 보내러 가기', destLabel: label });
                         return;
                     }
                     if (t.kind === 'notice') {

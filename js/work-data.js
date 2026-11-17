@@ -498,7 +498,7 @@
                  * 38~56% 인 부서는 **영원히 미완료**로 남아 회수율이 늘 0이 된다.
                  * 반대로 '미이수 조치'(W-EDU-CHK)는 미이수자가 0이 되어야 끝난다.
                  * 그래서 두 판정을 나눈다. */
-                /* 분기 실시 결과 제출 = 그 분기 ④ 분기 실시 결과 보고 공문을 보냈는가. 실시 교육 0건이면 대상 아님(null) */
+                /* 분기 실시 결과 제출 = 그 분기 부서 실시 교육(자체·채용시·기타)의 실시 결과 보고 공문을 모두 보냈는가. 실시 교육 0건이면 대상 아님(null) */
                 if (arg === 'quarter' && E.quarterDone && periodKey >= '2026-Q4') return E.quarterDone(deptId, periodKey);
                 if (arg === 'quarter' || arg === 'half') {
                     var s0 = periodStartOf(tpl, periodKey), e0 = periodEndOf(tpl, periodKey);
