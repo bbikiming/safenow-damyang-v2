@@ -461,10 +461,14 @@
         var t = targetOf('R|' + batchId);
         if (!t || !canDraft(t).ok) { toast(t ? canDraft(t).why : '대상을 찾지 못했습니다.'); return; }
         if (E().lockAt('R|' + batchId)) { toast('공문을 보낸 기록은 등록 취소할 수 없습니다 — 온나라에서 정정한 뒤 재난안전과에 알려 주세요.'); return; }
-        var recs = E().records().filter(function (r) { return list.some(function (c) { return c.id === r.courseId; }); }).length;
+        var recList = E().records().filter(function (r) { return list.some(function (c) { return c.id === r.courseId; }); });
+        var recs = recList.length;
+        /* 회수되는 이수시간·인원을 수로 밝힌다(CLAUDE.md §4 «CRUD 는 회수 경로까지» · 2026-11-17 검수) */
+        var people = {}; recList.forEach(function (r) { people[r.workerId] = 1; });
+        var hrs = Math.round(recList.reduce(function (n, r) { return n + (+r.hours || 0); }, 0) * 10) / 10;
         V().openModal('등록 취소',
             '<p style="font-size:var(--fs-13);margin:0 0 8px;"><b>' + esc(runTitle(t)) + '</b></p>' +
-            '<div class="check-notice">이 등록' + (list.length > 1 ? '(교육 ' + list.length + '건 — 한 번에 등록한 묶음)' : '') + '과 이수기록 <b>' + recs + '건</b>을 지웁니다. 바른 내용으로 다시 등록하세요. 되돌릴 수 없습니다.</div>',
+            '<div class="check-notice">이 등록' + (list.length > 1 ? '(교육 ' + list.length + '건 — 한 번에 등록한 묶음)' : '') + '과 이수기록 <b>' + recs + '건</b>(' + Object.keys(people).length + '명 · 이수시간 합계 <b>' + hrs + 'h</b>)을 지웁니다. 그 사람들은 다시 미이수로 보입니다. 바른 내용으로 다시 등록하세요. 되돌릴 수 없습니다.</div>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
             '<button type="button" class="btn btn-primary" onclick="EDUDOC.doCancelRun(\'' + q(batchId) + '\')">등록 취소</button>');
     }

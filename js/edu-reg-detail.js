@@ -132,7 +132,9 @@
             if (ownerView) {
                 var nd = E().latestAt(E().keyNotice(c.id));
                 lines.push('① 교육 안내 ' + D.chipHtml(nd ? nd.status : ''));
-                if (noticeOk) lines.push('② 등록부 제출 공문 <b>' + sentE + '</b> / ' + en2.length + '건' + (en2.length ? '' : ' <span class="file-hint">(이전 방식 등록부는 공문이 필요 없습니다)</span>'));
+                /* 분모는 대상 부서 수(기획 §2-8 «② n / 대상 m개 부서») — 이전 방식 등록부가 섞여 있을 때만 그 안내를 단다 */
+                var legacyE = E().enrolls(c.id).filter(function (e) { return e.flow !== 2; }).length;
+                if (noticeOk) lines.push('② 등록부 제출 공문 <b>' + sentE + '</b> / 대상 ' + E().courseTargetDepts(c).length + '개 부서' + (legacyE ? ' <span class="file-hint">(이전 방식 등록부 ' + legacyE + '건은 공문이 필요 없습니다)</span>' : ''));
                 var td = E().latestAt(E().keyTrip(c.id));
                 if (noticeOk) lines.push('③ 출장 결과 보고 ' + (td ? D.chipHtml(td.status) : c.trip ? '<span class="file-hint">보고서 작성함</span> ' + D.chipHtml('') : '<span class="file-hint">교육 뒤 작성</span>'));
             } else if (myEnroll && myEnroll.flow === 2) {
@@ -239,7 +241,16 @@
         /* 이력 */
         /* 이력 유형은 저장 코드(CREATE·STATUS)를 화면에 내지 않고 담당자 말로 바꾼다(CLAUDE.md §15) */
         var HIST_LABEL = { CREATE: '등록', STATUS: '처리' };
-        var hist = (c.history || []).length ? (c.history || []).map(function (h) {
+        /* 부서 화면의 이력은 재난안전과 공용 기록과 우리 부서 기록만 — 출장 결과 보고는 재난안전과 내부 보고이고,
+           다른 부서 등록부 줄은 등록 현황 표처럼 감춘다(2026-11-17 검수) */
+        var ownerName = E().deptName(ownerDeptId), myName = E().deptName(myDept);
+        var histList = (c.history || []).filter(function (h) {
+            if (ownerView) return true;
+            if (/^출장 결과 보고/.test(h.memo || '')) return false;
+            var by = String(h.by || '');
+            return !by || by.indexOf(ownerName) === 0 || (myName && by.indexOf(myName) === 0);
+        });
+        var hist = histList.length ? histList.map(function (h) {
             return '<div class="edu-hist-row">' +
                 '<span class="edu-hist-at">' + esc(h.at || '') + '</span>' +
                 '<span class="edu-hist-type">' + esc(HIST_LABEL[h.type] || '기록') + '</span>' +
@@ -598,14 +609,17 @@
             var miss = E().courseTargetDepts(c).filter(function (d) { return !hasE[d] && !E().noAttendOf(c.id, d); }).length;
             var undoc = enrolls.filter(function (e) { return e.flow === 2 && E().docState(E().keyEnroll(c.id, e.deptId)) !== 'sent'; }).length;
             var tripLeft = E().tripState(c) !== 'sent';
-            if (miss || undoc || tripLeft) left = '<div class="check-notice" style="margin-top:8px;">남은 것 — ' +
-                [miss ? '등록부 미등록 <b>' + miss + '</b>개 부서' : '', undoc ? '등록부 공문 미기안 <b>' + undoc + '</b>개 부서' : '', tripLeft ? '출장 결과 보고서 ' + (c.trip ? '공문 보내기 전' : '미작성') : ''].filter(Boolean).join(' · ') +
-                '. 종료한 뒤에도 할 일로 남습니다.</div>';
+            /* 할 일로 남는 것(등록부 공문 · 출장 보고)과 사라지는 것(미등록 부서의 등록 할 일)을 갈라 말한다 —
+               deptTodos 는 종료된 교육에 «등록부 등록» 할 일을 내지 않는다(2026-11-17 검수) */
+            var stay = [undoc ? '등록부 공문 미기안 <b>' + undoc + '</b>개 부서' : '', tripLeft ? '출장 결과 보고서 ' + (c.trip ? '공문 보내기 전' : '미작성') : ''].filter(Boolean);
+            if (miss || stay.length) left = '<div class="check-notice" style="margin-top:8px;">남은 것 — ' +
+                (stay.length ? stay.join(' · ') + ' (종료한 뒤에도 할 일로 남습니다)' : '') +
+                (miss ? (stay.length ? ' · ' : '') + '등록부 미등록 <b>' + miss + '</b>개 부서 (종료하면 그 부서의 등록 할 일이 사라집니다)' : '') + '.</div>';
         }
         V().openModal('교육 종료 처리',
             '<p style="font-size:var(--fs-13);"><b>' + esc(c.desc) + '</b><br>등록 <b>' + enrolls.length + '개 부서 · ' + totalCnt + '명</b>에게 등록부별 실제 참석시간을 카운트합니다.</p>' + left +
             (early ? '<div class="check-notice" style="margin-top:8px;">아직 등록 기한(' + esc(due) + ') 전입니다. 종료한 뒤에 내는 부서의 등록부는 [＋ 등록부 추가]로 받습니다.</div>' : '') +
-            '<p style="font-size:var(--fs-12);color:var(--text-gray);margin-top:6px;">종료한 뒤에 늦게 내는 등록부는 [＋ 등록부 추가]로 받습니다. 등록부가 잘못된 것을 알면 그 부서 줄의 [이수 기록 정정]으로 이수시간을 빼고 [＋ 등록부 추가]로 다시 올립니다 — 그 부서 등록부 제출 공문을 보내기 전까지만 됩니다.</p>',
+            '<p style="font-size:var(--fs-12);color:var(--text-gray);margin-top:6px;">' + (early ? '' : '종료한 뒤에 늦게 내는 등록부는 [＋ 등록부 추가]로 받습니다. ') + '등록부가 잘못된 것을 알면 그 부서 줄의 [이수 기록 정정]으로 이수시간을 빼고 [＋ 등록부 추가]로 다시 올립니다 — 그 부서 등록부 제출 공문을 보내기 전까지만 됩니다.</p>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="EDURD.doClose()">종료 처리</button>');
     }
