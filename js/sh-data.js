@@ -24,7 +24,7 @@
             등록 주체(regBy)를 더했다(기획-작업환경측정-첨부·공문흐름-20261116-v2). */
     /* v7 — 건강검진도 결과 안내 공문(hcDocs)·결과보고서 파일 이름(reportFiles)·등록 주체(regBy)를 더했다
             (작업환경측정과 같은 «결과 등록 → 결과 안내 공문» 2단계, 2026-11-16). */
-    var SKEY = 'damyangShV8';
+    var SKEY = 'damyangShV9';
     /* 기준일·기준연도 — DYV2.today() 단일 출처 (시연일 변경은 common.js DEMO_TODAY 한 줄) */
     var TODAY = (global.DYV2 && global.DYV2.today) ? global.DYV2.today() : '2026-11-13';
     var CURYEAR = Number(TODAY.slice(0, 4));
@@ -293,12 +293,12 @@
               followupNeeded: true, followupDone: true,
               followupResult: '소음성 난청 요관찰 2명 — 청력보호구 지급·청력 재검(8월) 결과 변화 없음, 관찰 유지',
               owner: '물순환사업소 · 서담당', reason: '교대근무자 3명 일정 미조정',
-              extraExamDate: '2026-06-03',
+              extraExamDate: '2026-06-12',
               carcinogen: false, targetBasis: '특수건강진단 대상(염소·소음 노출자)',
               history: [
                 { at: '2026-08-20', actor: '서담당', event: '사후관리 완료 · 요관찰 2명 청력 재검 결과 변화 없음(관찰 유지)' },
-                { at: '2026-06-03', actor: '서담당', event: '추가검진 반영 (수검 12/12)' },
-                { at: '2026-05-28', actor: '서담당', event: '미수검 3명 추가검진 2026-06-03 예정 등록 · 실시 증빙 등록' },
+                { at: '2026-06-12', actor: '서담당', event: '추가검진 반영 (수검 12/12)' },
+                { at: '2026-05-28', actor: '서담당', event: '미수검 3명 추가검진 2026-06-12 예정 등록 · 실시 증빙 등록' },
                 { at: '2026-05-14', actor: '(주)녹십자헬스케어', event: '특수검진 실시(수검 9/12)' },
                 { at: '2026-04-15', actor: '서담당', event: '특수검진 대상자 선정(염소·소음 노출 12명)' }
               ] },
