@@ -531,7 +531,7 @@
                 return '<label class="edu-tg-member"><input type="checkbox"' + ck +
                     ' onchange="EDUH.aToggle(\'' + w.id + '\', this.checked)">' +
                     '<span>' + esc(w.name) + '</span>' +
-                    '<span style="color:var(--text-gray);font-size:var(--fs-12);">' + esc(empLabel) + ' · 채용 ' + esc(w.hireDate) + ' · 필요 ' + E().hireHours(w) + 'h</span>' +
+                    '<span style="color:var(--text-gray);font-size:var(--fs-12);">' + esc(empLabel) + (SUP_MODE && w.designatedAt ? ' · 지정 ' + esc(w.designatedAt) : ' · 채용 ' + esc(w.hireDate)) + ' · 필요 ' + E().hireHours(w) + 'h</span>' +
                 '</label>';
             }).join('');
             return head + members;
@@ -548,7 +548,7 @@
         var body =
             EDUFORM.renderSessions(A, 'EDUH', { totalCaption: '행사 진행 시간' }) +
             '<div class="check-notice" style="margin-bottom:12px;">실제 회차 합계시간과 대상자별 법정 필요시간 중 <b>작은 값만 인정</b>합니다 ' +
-                '(일용 필요 <b>1h</b> · 1주 초과~1개월 <b>4h</b> · 그 밖 <b>8h</b>). 필요시간에 못 미치면 교육기록은 남지만 미이수 상태를 유지합니다.</div>' +
+                (SUP_MODE ? '(관리감독자 <b>8h</b>). ' : '(일용 필요 <b>1h</b> · 1주 초과~1개월 <b>4h</b> · 그 밖 <b>8h</b>). ') + '필요시간에 못 미치면 교육기록은 남지만 미이수 상태를 유지합니다.</div>' +
             '<div class="edu-modal-row"><label class="form-label" for="eh-a-inst">강사·주관</label>' +
                 '<input type="text" class="form-input" id="eh-a-inst" value="' + esc(A.instructor) + '"></div>' +
             '<div class="edu-modal-row"><label class="form-label" for="eh-a-place">장소</label>' +
@@ -557,7 +557,7 @@
                 '<input type="text" class="form-input" id="eh-a-desc" value="' + esc(A.desc) + '"></div>' +
             renderAddTargets() +
             EDUFORM.renderAttach(A, 'EDUH', 'done');
-        V().openModal('채용시 교육 추가', body,
+        V().openModal((SUP_MODE ? '관리감독자 ' : '') + '채용시 교육 추가', body,
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="EDUH.doAdd()">저장하고 공문 작성 →</button>');
     }

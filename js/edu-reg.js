@@ -434,6 +434,9 @@
             var prevHours = before.hours, prevDate = before.date;
             /* 회차(일시·시간)는 부서가 등록부 공문(②)을 한 곳이라도 보낸 뒤 잠근다 — 실제 참석시간이 실려 나갔다 */
             var sessKey = function (ss) { return JSON.stringify((ss || []).map(function (x) { return [x.date, x.start || x.time || '', x.end || '']; })); };
+            /* 회차를 그대로 두면 시간도 그대로 둔다 — 점심시간 등으로 회차 폭과 인정 시간이 다른 기록(예: 09:30~18:30 · 8h)을
+               장소만 고쳐도 9h 로 다시 계산해 이수기록을 바꾸고, 등록부 공문 뒤에는 장소 수정까지 막던 결함(2026-11-17 검수) */
+            if (sessKey(E().courseSessions(before)) === sessKey(S.sessions) && prevHours != null) S.hours = prevHours;
             var sessChanged = sessKey(E().courseSessions(before)) !== sessKey(S.sessions) || prevHours !== S.hours;
             var sl = E().sessionLock ? E().sessionLock(F.edit) : null;
             if (sl && sessChanged) { toast('부서가 등록부 공문을 보낸 교육이라 일시·시간을 바꿀 수 없습니다 — 강사·장소·제목은 고칠 수 있습니다.'); return; }

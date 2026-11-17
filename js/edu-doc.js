@@ -374,10 +374,20 @@
         nextNo: nextNo
     };
     Object.defineProperty(cfg, 'lockNote', { get: function () { return LOCK_NOTE[(CUR && CUR.kind) || 'RESULT']; } });
-    Object.defineProperty(cfg, 'sentNote', { get: function () { return SENT_NOTE[(CUR && CUR.kind) || 'RESULT']; } });
+    /* 변경·취소 안내는 «예정 교육이 보입니다»가 아니다 — 대상의 sub 로 문구를 가른다(2026-11-17 검수) */
+    var NOTICE_SUB_NOTE = {
+        '변경': '변경 안내 공문을 온나라 연계기안함에 보냈습니다. 대상 부서 내 할일의 예정 교육에 바뀐 일시·장소가 보입니다.',
+        '취소': '취소 안내 공문을 온나라 연계기안함에 보냈습니다. 대상 부서 내 할일에서 이 교육이 빠집니다.'
+    };
+    Object.defineProperty(cfg, 'sentNote', { get: function () {
+        var k = (CUR && CUR.kind) || 'RESULT';
+        if (k === 'NOTICE' && CUR && CUR.sub && NOTICE_SUB_NOTE[CUR.sub]) return NOTICE_SUB_NOTE[CUR.sub];
+        return SENT_NOTE[k];
+    } });
     var T = global.DYDOC.define(cfg);
     var baseOpen = T.open, baseOpenDoc = T.openDoc;
-    T.open = function (key) { CUR = parse(key); baseOpen(key); };
+    /* 변경·취소 안내 여부는 열 때 기억한다 — 보내는 순간 noticeDirty 가 지워져 결과 문구에서는 알 수 없다 */
+    T.open = function (key) { CUR = parse(key); var tt = targetOf(key); if (tt && tt.sub) CUR.sub = tt.sub; baseOpen(key); };
     T.openDoc = function (key, sid) { CUR = parse(key); baseOpenDoc(key, sid); };
 
     /* ===================== 화면이 쓰는 표시 조각 ===================== */

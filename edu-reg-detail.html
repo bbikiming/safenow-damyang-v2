@@ -36,6 +36,18 @@
     <script src="./js/tour-core.js"></script><!-- 단계별 안내 공용 엔진 (DYTOUR) -->
     <script src="./js/edu-tour.js"></script>
     <script>
+        /* 관리감독자 교육이면 메뉴 위치·백 링크를 관리감독자 정기교육으로 — layout 이 그리기 전에(동기) 바꾼다(2026-11-17 검수) */
+        (function () {
+            try {
+                var id = new URLSearchParams(location.search).get('id');
+                var c = id && window.DYEDU && window.DYEDU.courseOf(id);
+                if (c && /^SUP_/.test(c.kind || '')) {
+                    document.body.setAttribute('data-dy-page', 'edu-sup');
+                    document.body.setAttribute('data-back-href', 'edu-sup.html');
+                    document.body.setAttribute('data-back-label', '관리감독자 정기교육 목록');
+                }
+            } catch (e) {}
+        })();
         document.addEventListener('DOMContentLoaded', function () {
             window.EDURD.init('erd-root');
             window.EDUTOUR.boot();

@@ -15,7 +15,7 @@
 
     /* r5 — 2026-07-30 회의: 기타교육 분류를 법정 3유형으로 재정의(구 5종 폐지) ·
      * 첨부 슬롯(file.slot) 도입. 구 etcType 이 남으면 필터·표시가 어긋나므로 버전 범프. */
-    var SKEY = 'damyangEduV1r18';  /* r18 — 엑셀 업로드 걷음(예시 출처 엑셀 → 직접등록, 11-17) ·  r17 — 2차 통화 검토 반영(11-17): 작업내용 변경 미이수 예시를 물순환사업소로 · 등록일(regAt) */
+    var SKEY = 'damyangEduV1r19';  /* r19 — 관리감독자 정기교육 예시 회차 09:30~17:30(8h, 11-17) · r18 — r18 — 엑셀 업로드 걷음(예시 출처 엑셀 → 직접등록, 11-17) ·  r17 — 2차 통화 검토 반영(11-17): 작업내용 변경 미이수 예시를 물순환사업소로 · 등록일(regAt) */
     /* r16 — 2차 통화(11-16 17:24): 부서 실시 교육 등록 묶음(batchId) · 현업업무(duties) · 작업내용 변경 이력(dutyLog) · 분기 보고 걷음 */
      /* r15 — 공문 저장을 이 스토어로 옮김(docs) · 과정별 공문 흐름(flow 2) · 12월 집합교육 «안내 공문 전» · 4분기 부서 실시 교육 분기 보고 대상 (2026-11-16 임영준 주무관 통화) */
      /* r14 — 주기 전환을 2027-01-01 로 미룸(답신 3-2): 2026 은 개인별 주기 · 독촉 이력(사람·메모)·재난안전과 현업 시드를 그 기준으로 맞춤 (2026-11-13) */
@@ -481,7 +481,8 @@
 
         /* ───────── 3. 관리감독자 정기교육 — 상·하반기 각 8h(외부 위탁) ───────── */
         function supCourse(id, date, desc, created, regs, closeAt, status) {
-            var c = { id: id, kind: 'SUP_REG', date: date, time: '09:30', endTime: '18:30', hours: 8, enrollDays: 7,
+            /* 09:30~17:30 = 8h — 종전 18:30 은 회차로는 9h 라 [수정]만 눌러도 시간이 9h 로 바뀌었다(2026-11-17 검수) */
+            var c = { id: id, kind: 'SUP_REG', date: date, time: '09:30', endTime: '17:30', hours: 8, enrollDays: 7,
                       instructor: '대한산업안전협회 전남지회 (위탁)', place: '담양문화회관 세미나실', desc: desc,
                       files: [{ name: date.replace(/-/g, '') + '_관리감독자_참석자명단.hwpx', slot: 'roster' }, { name: date.replace(/-/g, '') + '_관리감독자교육_교재.pdf', slot: 'material' }],
                       status: status, createdBy: '재난안전과', history: [] };
@@ -1361,10 +1362,12 @@
         var out = [];
         if (!deptId) return out;
         var en = enrolls();
-        courses({ status: 'OPEN' }).forEach(function (c) {
+        /* 종료한 교육도 — 등록부를 안 낸 부서의 할 일은 종료 뒤에도 남는다(11-17 개발 확인 요청 3-2 «권장대로»).
+           [＋ 등록부 추가] 또는 [참석자 없음]으로 끝난다 */
+        load().courses.filter(function (c) { return c.status === 'OPEN' || (c.status === 'DONE' && isFlow2(c)); }).forEach(function (c) {
             if (!isGroupFlow(c)) return;
             /* 교육이 끝나기 전에는 할 일이 아니다 — 끝난 날 생기고 등록 기한을 단다 */
-            if (!enrollOpen(c)) return;
+            if (c.status === 'OPEN' && !enrollOpen(c)) return;
             /* 교육 안내 공문(①)을 보내지 않은 교육은 부서가 모른다 — 등록부 할 일도 없다 */
             if (!noticeSent(c)) return;
             /* 그 교육의 모집단이 없는 부서에는 할 일을 내지 않는다 — 등록 창이 «대상자가 없습니다»라

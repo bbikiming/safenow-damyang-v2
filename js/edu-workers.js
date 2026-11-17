@@ -32,7 +32,13 @@
      * 조회만 한다. **관리감독자 지정일은 재난안전과 확인값**이라(SCR-EDU-006 §6) 주관부서
      * 담당자만 넣거나 바꾼다 — 그 날짜가 법정 교육 의무의 기산점이다.
      * 버튼만 감추면 전역 호출로 뚫리므로 진입·저장 함수에도 같은 판정을 건다. */
-    function deny(deptId) { toast(E().denyMsg(deptId)); }
+    /* 명단 등록·수정·삭제는 그 부서 담당자만 — 재난안전과도 자기 부서만(11-17 개발 확인 요청 5-2).
+       공용 denyMsg 는 «또는 재난안전과 담당자»라고 말하므로 이 화면은 따로 말한다 */
+    function deny(deptId) {
+        var R = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
+        if (R && R.tier !== 'staff') { toast(E().denyMsg(deptId)); return; }
+        toast((deptId ? E().deptName(deptId) + ' 명단은 ' : '현업근로자 명단은 ') + '그 부서 담당자가 등록·수정합니다.');
+    }
     function canDesignate() { return E().canActDept(''); }   /* 빈 부서 = 주관부서 소관 */
     var DESIGNATE_DENY = '관리감독자 지정일은 재난안전과가 지정 사실을 확인해 등록합니다.';
     function render() {
@@ -77,7 +83,7 @@
               on: "EDUW.setF('year', this.value)" }
         ], {
             count: list.length + ' / ' + all.length, unit: '명', reset: 'EDUW.resetF()',
-            actions: E().canRegister()
+            actions: E().canRegister() && E().canActOwnDept(E().defaultDeptId())
                 ? '<button type="button" class="btn btn-primary" onclick="EDUW.openAdd()">＋ 직접 등록</button>'
                 : '<span class="file-hint">명단 등록은 각 부서 담당자가 합니다</span>'
         });
@@ -121,8 +127,10 @@
         var act = w.source === 'HR'
             /* «인사정보 읽기 전용»을 줄마다 쓰지 않는다 — 이름 옆 출처 칩이 말한다(줄마다 반복된 문구가 1280px 에서 이름·부서를 꺾었다, C-6) */
             ? desig + dutyBtn
-            : !E().canActDept(w.deptId) ? ''
-            : '<button type="button" class="btn btn-outline btn-sm" onclick="EDUW.openEdit(\'' + w.id + '\')">수정</button>' +
+            /* 명단 등록·수정·삭제도 그 부서 담당자만 — 재난안전과도 자기 부서만(11-17 개발 확인 요청 5-2 «권장대로»).
+               관리감독자 지정일 등록만 재난안전과가 전 부서에 한다 */
+            : !E().canActOwnDept(w.deptId) ? desig
+            : desig + '<button type="button" class="btn btn-outline btn-sm" onclick="EDUW.openEdit(\'' + w.id + '\')">수정</button>' +
               ' <button type="button" class="btn btn-outline btn-sm" style="border-color:var(--status-danger-border);color:var(--status-danger-fg);" onclick="EDUW.remove(\'' + w.id + '\')">삭제</button>';
         return '<tr>' +
             /* 이름·부서·채용일은 짧은 값이라 꺾지 않는다 — 1280px 에서 2~3줄로 꺾여 표가 길어졌다(C-6) */
@@ -206,7 +214,7 @@
 
     /* =============== 등록/수정 모달 =============== */
     function openAdd() {
-        if (!E().canRegister()) { deny(E().defaultDeptId()); return; }
+        if (!E().canRegister() || !E().canActOwnDept(E().defaultDeptId())) { deny(E().defaultDeptId()); return; }
         /* 기본 부서는 로그인한 사람의 소속 — 목록 첫 부서를 기본으로 두면 남의 부서 명단에 들어가고,
            조회 범위 밖이라 등록한 본인 목록에서도 사라진다 */
         F = { mode: 'add', name: '', deptId: E().defaultDeptId(), category: 'FIELD', empType: 'CONTRACT', hireDate: E().today(), designatedAt: '', origDesignatedAt: '', contractMonths: 12, duties: {}, origDuties: [], dutyChangedAt: '' };
@@ -214,7 +222,7 @@
     }
     function openEdit(id) {
         var w = E().workerOf(id); if (!w || w.source === 'HR') { toast('인사연동 근로자는 수정할 수 없습니다.'); return; }
-        if (!E().canActDept(w.deptId)) { deny(w.deptId); return; }
+        if (!E().canActOwnDept(w.deptId)) { deny(w.deptId); return; }
         var dmap = {}; (w.duties || []).forEach(function (n) { dmap[n] = true; });
         F = { mode: 'edit', id: id, origDeptId: w.deptId, name: w.name, deptId: w.deptId, category: w.category, empType: w.empType, hireDate: w.hireDate, designatedAt: w.designatedAt || '', origDesignatedAt: w.designatedAt || '', contractMonths: w.contractMonths || 0, duties: dmap, origDuties: (w.duties || []).slice(), dutyChangedAt: E().today() };
         renderForm();
@@ -229,9 +237,9 @@
                 '<div class="orgpick-field" id="ew-deptfield"><div style="display:flex;gap:8px;align-items:center;">' +
                     '<input type="text" class="form-input" value="' + esc(E().deptName(F.deptId)) + '" readonly aria-label="부서" style="flex:1;background:var(--gray-50);">' +
                     /* 부서는 주관부서 담당자만 고른다 — 그 밖의 담당자는 소속 부서로 고정 */
-                    (E().canPickDept() ? '<button type="button" class="btn btn-sm btn-outline" onclick="ORGPICK.toggle(\'ew-deptfield\',\'deptId\',\'EDUW.pickDept\')">조직도</button>' : '') +
+                    '' + /* 부서는 소속 부서로 고정 — 조직도 없음(11-17 개발 확인 요청 5-2) */
                 '</div>' +
-                (E().canPickDept() ? '' : '<p class="file-hint">소속 부서 명단에 등록합니다.</p>') +
+                '<p class="file-hint">소속 부서 명단에 등록합니다.</p>' +
                 '</div></div>' +
             '<div class="edu-modal-row"><label class="form-label" for="ew-cat">구분</label>' +
                 '<select class="form-select" id="ew-cat">' + catOpts + '</select></div>' +
@@ -272,7 +280,7 @@
         if (el('ew-dutyat')) F.dutyChangedAt = el('ew-dutyat').value;
     }
     function pickDept(id, name) {
-        if (!E().canActDept(id)) { deny(id); return; }
+        if (!E().canActOwnDept(id)) { deny(id); return; }
         captureForm(); F.deptId = id; renderForm();
     }
     /* 고용형태를 바꾸면 입력칸 구성이 달라지므로 다시 그린다. 다른 칸의 입력값은
@@ -288,8 +296,8 @@
     function doSave() {
         captureForm();
         /* 저장 경로에도 같은 판정 — 수정이면 원래 부서와 바꾼 부서 둘 다 내 소관이어야 한다 */
-        if (F.mode === 'edit' && !E().canActDept(F.origDeptId)) { deny(F.origDeptId); return; }
-        if (!E().canActDept(F.deptId)) { deny(F.deptId); return; }
+        if (F.mode === 'edit' && !E().canActOwnDept(F.origDeptId)) { deny(F.origDeptId); return; }
+        if (!E().canActOwnDept(F.deptId)) { deny(F.deptId); return; }
         if (!F.name) { toast('이름을 입력하세요.'); return; }
         if (!F.hireDate) { toast('채용일을 입력하세요.'); return; }
         /* 지정일을 새로 넣거나 바꾸는 것은 재난안전과 담당자만 — 바꾸지 않은 값은 기존 값으로 본다
@@ -341,7 +349,7 @@
     }
     function remove(id) {
         var w = E().workerOf(id); if (!w) return;
-        if (!E().canActDept(w.deptId)) { deny(w.deptId); return; }
+        if (!E().canActOwnDept(w.deptId)) { deny(w.deptId); return; }
         V().openModal('근로자 삭제',
             '<p style="font-size:var(--fs-13);"><b>' + esc(w.name) + '</b> 근로자를 명단에서 제외합니다. 이력은 보존됩니다.</p>',
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
@@ -349,7 +357,7 @@
     }
     function doRemove(id) {
         var w = E().workerOf(id);
-        if (w && !E().canActDept(w.deptId)) { V().closeModal(); deny(w.deptId); return; }
+        if (w && !E().canActOwnDept(w.deptId)) { V().closeModal(); deny(w.deptId); return; }
         E().removeWorker(id);
         V().closeModal();
         toast('근로자를 명단에서 제외했습니다.');

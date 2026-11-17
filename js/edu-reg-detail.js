@@ -111,6 +111,8 @@
         } else if (c.status === 'DONE' && !lockOf(c.id) && E().canActOwnDept(myDept) && !owner && myTarget && !myEnroll && !E().noAttendOf(c.id, myDept)) {
             /* 종료 뒤 늦게 내는 부서 — 등록부를 올리고 제출 공문을 보낸다 */
             actions = '<button type="button" class="btn btn-outline" onclick="EDURD.openApply()" title="종료 뒤 늦게 내는 부서나 정정한 부서의 등록부를 올립니다">＋ 등록부 추가</button>';
+        } else if (c.status === 'DONE' && !owner && myTarget && E().noAttendOf(c.id, myDept)) {
+            actions = '<span class="chip-status chip-sm neutral">참석자 없음</span>' + (E().canActOwnDept(myDept) ? ' <button type="button" class="btn btn-outline btn-sm" onclick="EDURD.undoNoAttend()">되돌리기</button>' : '');
         } else if (c.status === 'DONE' && myEnroll && myEnroll.flow === 2 && D && !owner) {
             actions = D.ctl(E().keyEnroll(c.id, myDept), '등록부 공문 보내기', { primary: true, short: '등록부 공문' });
         }
@@ -329,7 +331,7 @@
                     : FORM().oneFile(V().uploadDrop('<b>서명부 스캔을 끌어다 놓거나 눌러서 선택</b>', 'EDURD.applyAttachSign()', { hint: true })))) +
             '</div>' +
             /* 대상자는 있는데 아무도 참석하지 않았다 — 공문 없이 할 일을 끝낸다(이수 기록은 생기지 않는다) */
-            (c.status === 'OPEN' ? '<p class="file-hint" style="margin-top:10px;">우리 부서에서 아무도 참석하지 않았으면 <button type="button" class="btn btn-outline btn-sm" onclick="EDURD.setNoAttend()">참석자 없음</button> — 공문 없이 할 일이 끝납니다.</p>' : '') +
+            (c.status !== 'CANCELLED' ? '<p class="file-hint" style="margin-top:10px;">우리 부서에서 아무도 참석하지 않았으면 <button type="button" class="btn btn-outline btn-sm" onclick="EDURD.setNoAttend()">참석자 없음</button> — 공문 없이 할 일이 끝납니다.</p>' : '') +
             (G.why ? '<div class="check-notice" role="alert" style="margin-top:8px;">' + esc(G.why) + '</div>' : '');
         var isFlow2Enroll = E().isGroupCourse(c);
         V().openModal('참석자 등록부 등록 · ' + esc(E().deptName(G.deptId)), body,
@@ -488,7 +490,8 @@
     function setNoAttend() {
         var c = E().courseOf(state.courseId); if (!c || !G) return;
         if (!E().canActOwnDept(G.deptId)) { deny(G.deptId); return; }
-        if (c.status !== 'OPEN') { toast('종료된 교육입니다.'); return; }
+        /* 종료 뒤에도 — 등록부 할 일이 남으므로 끝낼 수단도 남긴다(11-17 개발 확인 요청 3-2) */
+        if (c.status === 'CANCELLED') { toast('취소된 교육입니다.'); return; }
         E().setNoAttend(c.id, G.deptId, true, actor());
         E().pushCourseHistory(c.id, { type: 'STATUS', by: actor(), memo: '참석자 없음 — ' + E().deptName(G.deptId) });
         V().closeModal(); toast(E().deptName(G.deptId) + ' — 참석자 없음으로 처리했습니다.'); render();
@@ -496,7 +499,7 @@
     function undoNoAttend() {
         var c = E().courseOf(state.courseId); if (!c) return;
         var d = global.DYROLE && global.DYROLE.deptId ? global.DYROLE.deptId() : '';
-        if (!E().canActOwnDept(d) || c.status !== 'OPEN') { deny(d); return; }
+        if (!E().canActOwnDept(d) || c.status === 'CANCELLED') { deny(d); return; }
         E().setNoAttend(c.id, d, false); E().pushCourseHistory(c.id, { type: 'STATUS', by: actor(), memo: '참석자 없음 되돌림 — ' + E().deptName(d) });
         render();
     }
@@ -609,12 +612,11 @@
             var miss = E().courseTargetDepts(c).filter(function (d) { return !hasE[d] && !E().noAttendOf(c.id, d); }).length;
             var undoc = enrolls.filter(function (e) { return e.flow === 2 && E().docState(E().keyEnroll(c.id, e.deptId)) !== 'sent'; }).length;
             var tripLeft = E().tripState(c) !== 'sent';
-            /* 할 일로 남는 것(등록부 공문 · 출장 보고)과 사라지는 것(미등록 부서의 등록 할 일)을 갈라 말한다 —
-               deptTodos 는 종료된 교육에 «등록부 등록» 할 일을 내지 않는다(2026-11-17 검수) */
+            /* 셋 다 종료 뒤에도 할 일로 남는다(11-17 개발 확인 요청 3-2) — 미등록 부서는 끝내는 길을 함께 말한다 */
             var stay = [undoc ? '등록부 공문 미기안 <b>' + undoc + '</b>개 부서' : '', tripLeft ? '출장 결과 보고서 ' + (c.trip ? '공문 보내기 전' : '미작성') : ''].filter(Boolean);
             if (miss || stay.length) left = '<div class="check-notice" style="margin-top:8px;">남은 것 — ' +
                 (stay.length ? stay.join(' · ') + ' (종료한 뒤에도 할 일로 남습니다)' : '') +
-                (miss ? (stay.length ? ' · ' : '') + '등록부 미등록 <b>' + miss + '</b>개 부서 (종료하면 그 부서의 등록 할 일이 사라집니다)' : '') + '.</div>';
+                (miss ? (stay.length ? ' · ' : '') + '등록부 미등록 <b>' + miss + '</b>개 부서 (종료한 뒤에도 할 일로 남습니다 — [＋ 등록부 추가] 또는 [참석자 없음]으로 끝납니다)' : '') + '.</div>';
         }
         V().openModal('교육 종료 처리',
             '<p style="font-size:var(--fs-13);"><b>' + esc(c.desc) + '</b><br>등록 <b>' + enrolls.length + '개 부서 · ' + totalCnt + '명</b>에게 등록부별 실제 참석시간을 카운트합니다.</p>' + left +
