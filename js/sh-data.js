@@ -920,6 +920,11 @@
         return out;
     }
 
+    /* 알림(재촉)을 낼 수 있는가 — 부서에 남은 일이 있을 때만(측정·검진 전 · 개선조치 · 추가검진 · 사후관리).
+       상세 화면의 버튼과 보내기 함수가 이 한 곳을 본다. */
+    function weNotifyOpen(r) { return !!r && (!r.done || weNeedsImprove(r)); }
+    function hcNotifyOpen(r) { return !!r && (!r.done || hcUnexamined(r) > 0 || hcFollowup(r)); }
+
     /* ================= 공용 처리 액션(양 모듈 공유) ================= */
     /* 증빙/결과보고서 등록
      * 작업환경측정 첨부는 **용도가 둘**이다(기획확인 4차 3-1, 2026-10-06):
@@ -1055,6 +1060,7 @@
         workEnv: workEnv, workEnvOf: workEnvOf, addWorkEnv: addWorkEnv, effWorkEnv: effWorkEnv,
         weMeasured: weMeasured, weNeedsImprove: weNeedsImprove,
         workEnvSummary: workEnvSummary, workEnvLink: workEnvLink,
+        weNotifyOpen: weNotifyOpen, hcNotifyOpen: hcNotifyOpen,
         regByOf: regByOf, weDocs: weDocs, weLockOf: weLockOf, halfRows: halfRows, noticeRows: noticeRows,
         halfStat: halfStat, reportFiles: reportFiles, saveNotice: saveNotice, nextNoticeNo: nextNoticeNo,
         flowCur: flowCur, flowHtml: flowHtml, markNow: markNow,

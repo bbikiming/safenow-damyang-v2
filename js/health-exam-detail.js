@@ -100,7 +100,8 @@
             if (done && !lk) acts += '<button type="button" class="btn btn-outline" onclick="HEXD.evidence()">증빙 추가 등록</button>';
             if (!done || unex > 0) acts += '<button type="button" class="btn btn-outline" onclick="HEXD.resetDue()">기한 재설정</button>';
             if (!done || unex > 0) acts += '<button type="button" class="btn btn-outline" onclick="HEXD.reason()">미검진 사유 입력</button>';
-            acts += '<button type="button" class="btn btn-outline" onclick="HEXD.notify()">알림 발송</button>';
+            /* 알림(재촉)은 부서에 남은 일이 있을 때만 — 끝난 건에 재촉할 것이 없다 */
+            if (S().hcNotifyOpen(r)) acts += '<button type="button" class="btn btn-outline" onclick="HEXD.notify()">알림 발송</button>';
         }
         var actions = S().flowHtml('진행 순서', steps, nowKey) +
             (acts ? '<div class="sh-actions" style="margin-bottom:14px;">' + acts + '</div>' : roNote(r));
@@ -267,6 +268,7 @@
     function notify() {
         if (deny(S().healthOf(state.id), '알림 발송')) return;
         var r = S().healthOf(state.id);
+        if (!S().hcNotifyOpen(r)) { toast('부서에 남은 일이 없는 건입니다.'); return; }
         NT = null;
         V().openModal('알림 발송',
             '<div style="margin-bottom:12px;"><label class="form-label" for="hd-nt-to">받는 사람 <span style="font-weight:400;color:var(--text-gray)">(고르지 않으면 ' + esc(r.dept) + ' 전체)</span></label>' +
@@ -287,6 +289,7 @@
     function sendNotify() {
         var r = S().healthOf(state.id);
         if (deny(r, '알림 발송')) return;
+        if (!S().hcNotifyOpen(r)) { toast('부서에 남은 일이 없는 건입니다.'); return; }
         var msg = ((document.getElementById('hd-nt-msg') || {}).value || '').trim();
         if (!msg) { toast('알림 내용을 입력하세요.'); return; }
         var L = global.DYLayout;

@@ -102,7 +102,8 @@
             if (measured && !lk) acts += '<button type="button" class="btn btn-outline" onclick="WENVD.editResult()">결과 수정</button>';
             if (!measured || needImp) acts += '<button type="button" class="btn btn-outline" onclick="WENVD.resetDue()">기한 재설정</button>';
             if (!measured) acts += '<button type="button" class="btn btn-outline" onclick="WENVD.reason()">미완료 사유 입력</button>';
-            acts += '<button type="button" class="btn btn-outline" onclick="WENVD.notify()">알림 발송</button>';
+            /* 알림(재촉)은 부서에 남은 일이 있을 때만 — 끝난 건에 재촉할 것이 없다 */
+            if (S().weNotifyOpen(r)) acts += '<button type="button" class="btn btn-outline" onclick="WENVD.notify()">알림 발송</button>';
         }
         var actions = S().flowHtml('진행 순서', steps, nowKey) +
             (acts ? '<div class="sh-actions" style="margin-bottom:14px;">' + acts + '</div>' : roNote(r));
@@ -167,8 +168,7 @@
                     dueRow +
                     (r.exceed ? '<dt>노동관서 제출</dt><dd>' + (r.laborSubmittedAt
                         ? esc(r.laborSubmittedAt) + ' 제출'
-                        : (canOwner() ? '<button type="button" class="btn btn-sm btn-outline" onclick="WENVD.laborSubmit()">제출일 기록</button>'
-                            : '<span style="color:var(--text-gray)">미제출 — 재난안전과가 제출합니다</span>')) + '</dd>' +
+                        : '<span style="color:var(--text-gray)">미제출 — 재난안전과가 제출합니다</span>') + '</dd>' +
                       '<dt>다음 측정 기한</dt><dd><b>' + esc(S().remeasureDue(r)) + '</b> <span style="color:var(--text-gray);font-size:var(--fs-12);">노출기준 초과 — 측정일부터 3개월 이내</span></dd>' : '') +
                 '</dl>' +
                 (r.result === '개선 필요'
@@ -310,6 +310,7 @@
     function notify() {
         if (deny(S().workEnvOf(state.id), '알림 발송')) return;
         var r = S().workEnvOf(state.id);
+        if (!S().weNotifyOpen(r)) { toast('부서에 남은 일이 없는 건입니다.'); return; }
         NT = null;
         V().openModal('알림 발송',
             '<div style="margin-bottom:12px;"><label class="form-label" for="wd-nt-to">받는 사람 <span style="font-weight:400;color:var(--text-gray)">(고르지 않으면 ' + esc(r.dept) + ' 전체)</span></label>' +
@@ -330,6 +331,7 @@
     function sendNotify() {
         var r = S().workEnvOf(state.id);
         if (deny(r, '알림 발송')) return;
+        if (!S().weNotifyOpen(r)) { toast('부서에 남은 일이 없는 건입니다.'); return; }
         var msg = ((document.getElementById('wd-nt-msg') || {}).value || '').trim();
         if (!msg) { toast('알림 내용을 입력하세요.'); return; }
         var L = global.DYLayout;
