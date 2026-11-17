@@ -34,6 +34,7 @@
             '<div style="margin-top:10px;"><a class="btn btn-outline" href="health-exam.html">‹ 건강검진 목록</a></div></div>';
     }
     /* 조작 차단 — 버튼을 숨기는 것만으로는 전역 호출로 뚫린다 */
+    function canOwner() { return !R() || R().canAct(R().OWNER_DEPT); }
     function deny(r, what) {
         if (canAct(r)) return false;
         toast(what + V().josa(what, '은', '는') + ' 해당 부서 담당자가 수행합니다.');
@@ -64,20 +65,26 @@
         var doer = own ? '재난안전과' : r.dept;
         var mineDoer = own ? meOwner : meDept;
         var fuNeed = !!r.followupNeeded;
+        var labRep = S().hcLaborReport(r), labDue = labRep ? S().hcLaborDue(r) : '';
         var hadExtra = (r.history || []).some(function (h) { return /추가검진/.test(h.event); });
         var steps = [
             { key: 'complete', lab: '결과 등록', who: doer, mine: mineDoer, done: done,
-              note: done ? '실시 ' + r.done + ' · 수검 ' + r.examinedCount + ' / ' + r.targetCount + '명' + (fuNeed ? ' · 사후관리 대상 있음' : '')
-                  : '결과 통보서 파일 · 실시일 · 수검자 수 · 사후관리 대상 유무를 한 창에서' },
+              note: done ? '실시 ' + r.done + ' · 결과표 받은 날 ' + S().hcReceived(r) + ' · 수검 ' + r.examinedCount + ' / ' + r.targetCount + '명' + (fuNeed ? ' · 사후관리 대상 있음' : '')
+                  : '결과 통보서 파일 · 실시일 · 받은 날 · 수검자 수 · 사후관리 대상 유무를 한 창에서' },
             { key: 'notice', lab: '결과 안내 공문 보내기', who: '재난안전과', mine: meOwner, done: !!lk, skip: !own,
-              note: lk ? lk.status + ' ' + lk.at + ' — 검토·결재는 온나라에서 합니다' : '부서장에게 결과(인원 집계)를 알립니다 · 검토·결재는 온나라에서' },
+              note: lk ? lk.status + ' ' + lk.at + ' — 검토·결재는 온나라에서 합니다'
+                  : '부서장에게 결과(인원 집계)를 알립니다 · 검토·결재는 온나라에서' + (labRep ? ' · ' + labDue + '까지 — 부서가 조치할 시간을 남겨 바로 보냅니다' : '') },
             { key: 'extra', lab: '미검진자 추가검진 반영', who: r.dept, mine: meDept, done: done && unex === 0, skip: !done || (unex === 0 && !hadExtra),
               note: unex > 0 ? '미검진 ' + unex + '명' + (r.extraExamDate ? ' · 추가검진 예정 ' + r.extraExamDate : '') : '전원 수검' },
             { key: 'followup', lab: '사후관리 완료', who: r.dept, mine: meDept, done: !!r.followupDone, skip: !done || !fuNeed,
-              note: r.followupDone ? (r.followupResult || '완료') : '유소견자 조치 — 실시일부터 30일 안에' }
+              note: r.followupDone ? (r.followupResult || '완료') : (labRep ? '조치 기한 ' + labDue + ' — 노동관서 보고 대상' : '유소견자 조치') },
+            { key: 'labor', lab: '노동관서 제출 기록', who: '재난안전과', mine: meOwner, done: !!r.laborSubmittedAt, skip: !labRep,
+              note: r.laborSubmittedAt ? r.laborSubmittedAt + ' 제출 (사후관리 조치결과 보고서)' : '결과표 받은 날부터 30일 — ' + labDue + '까지 (조치 증명 서류 또는 실시 계획)' }
         ];
         var cur = S().flowCur(steps), cs = cur >= 0 ? steps[cur] : null;
         var nowKey = cs && cs.mine && may ? cs.key : '';
+        /* 노동관서 제출은 부서 사후관리와 같은 시기에 재난안전과가 한다(작업환경측정과 같다) — 부서 차례여도 강조 */
+        if (!nowKey && meOwner && may && labRep && !r.laborSubmittedAt && (lk || !own)) nowKey = 'labor';
 
         /* 버튼은 단계 순서대로 — 보조 처리(결과 수정·증빙 추가·기한·사유·알림)는 뒤에 */
         var B = function (key, label, fn) { return '<button type="button" class="btn btn-outline" data-step="' + key + '" onclick="' + fn + '">' + label + '</button>'; };
@@ -87,6 +94,7 @@
             if (own && done && !lk && meOwner) acts += '<a class="btn btn-outline" data-step="notice" href="health-exam.html?year=' + r.year + '">결과 안내 공문 보내러 가기</a>';
             if (done && unex > 0) acts += B('extra', '추가검진 반영', 'HEXD.complete()');
             else if (S().hcFollowup(r)) acts += B('followup', '사후관리 완료', 'HEXD.complete()');
+            if (labRep && !r.laborSubmittedAt && meOwner) acts += B('labor', '노동관서 제출일 기록', 'HEXD.laborSubmit()');
             /* 결과 수정·증빙 추가 — 결과 안내 공문을 보내기 전까지만(보낸 뒤 고치면 공문 별지와 기록이 갈린다) */
             if (done && !lk) acts += '<button type="button" class="btn btn-outline" onclick="HEXD.editResult()">결과 수정</button>';
             if (done && !lk) acts += '<button type="button" class="btn btn-outline" onclick="HEXD.evidence()">증빙 추가 등록</button>';
@@ -130,8 +138,10 @@
         var evidence =
             '<div class="sh-card"><div class="sh-card-h">실시 증빙 <span class="sub">검진 실시확인서 · 집계 결과</span></div>' +
             (r.evidence
-                ? '<div class="sh-photos"><div class="sh-photo has">' + S().icon('file', 26) + '<span>실시확인서.pdf</span></div>' +
-                  '<div style="align-self:center;font-size:13px;color:var(--text-gray);">실시 증빙이 등록되어 있습니다.</div></div>'
+                ? '<div class="sh-photos">' + S().hcReportFiles(r).map(function (f) {
+                      return '<div class="sh-photo has">' + S().icon('file', 26) + '<span>' + esc(f.name) + '</span></div>';
+                  }).join('') +
+                  (S().hcReportFiles(r).some(function (f) { return f.sample; }) ? '<div style="align-self:center;">' + V().sampleChip('파일 이름은 예시 자료입니다.') + '</div>' : '') + '</div>'
                 : (done
                     ? '<div class="sh-req">아직 실시 증빙이 등록되지 않았습니다. 검진기관 실시확인서를 <b>[증빙 등록]</b>으로 첨부하세요.</div>'
                     : '<div class="sh-req">검진을 실시한 뒤 <b>[결과 등록]</b>에서 실시일·수검자 수와 함께 결과 통보서를 올립니다.</div>')) +
@@ -156,7 +166,9 @@
                     '<dt>조치 실적</dt><dd>' + (r.followupResult ? '<div class="sh-reasonbox">' + esc(r.followupResult) + '</div>' : '<span style="color:var(--text-gray)">미입력 — [사후관리 완료]에서 기록</span>') + '</dd>' +
                     fuDueHtml +
                   '</dl>' +
-                  (fuDue ? '<div style="margin-top:10px;font-size:12px;color:var(--text-gray);">※ 유소견자 조치결과 30일 이내 제출</div>' : '') +
+                  (labRep ? '<dl class="sh-kv"><dt>노동관서 제출</dt><dd>' + (r.laborSubmittedAt ? esc(r.laborSubmittedAt) + ' 제출' : '<span style="color:var(--text-gray)">미제출</span>') + '</dd></dl>' +
+                      '<div style="margin-top:10px;font-size:12px;color:var(--text-gray);">근로 금지·제한, 작업전환 등 소견이 있어 결과표를 받은 날부터 30일 안에 사후관리 조치결과 보고서를 관할 지방고용노동관서에 냅니다.</div>'
+                    : '<div style="margin-top:10px;font-size:12px;color:var(--text-gray);">노동관서 보고 대상 소견이 없어 법정 제출기한이 없습니다.</div>') +
                   '<div style="margin-top:10px;font-size:12px;color:var(--text-gray);">개인별 유소견 내역은 검진기관·보건담당이 관리하며 이 시스템에 등록하지 않습니다. 여기에는 <b>부서 단위 조치 실적</b>만 기록합니다.</div>'
                 : '<div style="font-size:13px;color:var(--text-gray);">유소견·업무제한 등 사후관리 대상이 없습니다.</div>') +
             '</div>';
@@ -191,15 +203,18 @@
         if (deny(S().healthOf(state.id), '실시 증빙 등록')) return;
         if (!S().healthOf(state.id).done) { toast('검진 실시일을 먼저 등록하세요 — [결과 등록]에서 결과 통보서를 함께 올립니다.'); return; }
         if (S().hcLockOf(state.id)) { toast('결과 안내 공문을 보낸 건이라 증빙을 더할 수 없습니다.'); return; }
+        HF = null;
         V().openModal('실시 증빙 등록',
             '<p style="font-size:13px;margin-bottom:10px;color:var(--text-gray);">검진기관 실시확인서·집계 결과 통보서를 첨부합니다. 개인별 결과지는 첨부하지 않습니다.</p>' +
-            V().uploadDrop('파일을 끌어다 놓거나 클릭하여 업로드<br><span style="font-size:12px;">업로드 시 이력이 자동 기록됩니다</span>', null, { hint: true }),
+            '<div id="hd-c-file"></div>' +
+            V().uploadDrop('파일을 끌어다 놓거나 클릭하여 업로드<br><span style="font-size:12px;">업로드 시 이력이 자동 기록됩니다</span>', null, { hint: true, pick: 'HEXD.onPick' }),
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="HEXD.saveEvidence()">등록</button>');
     }
     function saveEvidence() {
         if (deny(S().healthOf(state.id), '실시 증빙 등록')) return;
-        if (!S().attachEvidence('hc', state.id, '실시 증빙')) { toast(S().hcLockOf(state.id) ? '결과 안내 공문을 보낸 건이라 증빙을 더할 수 없습니다.' : '검진 실시일을 먼저 등록하세요.'); return; }
+        if (!HF) { toast('증빙 파일을 올리세요.'); return; }
+        if (!S().attachEvidence('hc', state.id, '실시 증빙', HF.name)) { toast(S().hcLockOf(state.id) ? '결과 안내 공문을 보낸 건이라 증빙을 더할 수 없습니다.' : '검진 실시일을 먼저 등록하세요.'); return; }
         V().closeModal(); render(); toast('증빙이 등록되었습니다.'); }
 
     /* ── 미검진 사유 ── */
@@ -295,7 +310,8 @@
             '<p class="file-hint" style="margin-bottom:10px;">결과 안내 공문을 보내기 전까지 고칠 수 있습니다. 고친 내용은 이력에 남습니다.</p>' +
             '<div style="margin-bottom:12px;"><label class="form-label" for="hd-e-date">검진 실시일</label><input type="date" class="form-input" id="hd-e-date" value="' + esc(r.done) + '"></div>' +
             '<div style="margin-bottom:12px;"><label class="form-label" for="hd-e-ex">수검자 수 (대상 ' + r.targetCount + '명)</label><input type="number" class="form-input" id="hd-e-ex" min="0" max="' + r.targetCount + '" value="' + r.examinedCount + '"></div>' +
-            '<label><input type="checkbox" id="hd-e-fu"' + (r.followupNeeded ? ' checked' : '') + '> 사후관리 대상 있음</label>',
+            '<div style="margin-bottom:12px;"><label class="form-label" for="hd-e-recv">결과 통보서 받은 날</label><input type="date" class="form-input" id="hd-e-recv" value="' + esc(S().hcReceived(r)) + '"></div>' +
+            '<label><input type="checkbox" id="hd-e-fu"' + (r.followupNeeded ? ' checked' : '') + '> 사후관리 대상 있음</label>' + laborCk('hd-e-lb', r),
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
             '<button type="button" class="btn btn-primary" onclick="HEXD.saveEdit()">저장</button>');
     }
@@ -305,7 +321,10 @@
         var d = document.getElementById('hd-e-date').value, ex = Number(document.getElementById('hd-e-ex').value);
         if (!d || d > S().TODAY) { toast('검진 실시일을 확인하세요.'); return; }
         if (!Number.isInteger(ex) || ex < 0 || ex > r.targetCount) { toast('수검자 수는 0명 이상 대상자 수 이하로 입력하세요.'); return; }
-        if (!S().editHealthResult(state.id, { doneDate: d, examinedCount: ex, followupNeeded: document.getElementById('hd-e-fu').checked })) {
+        var rv = document.getElementById('hd-e-recv').value, lbE = document.getElementById('hd-e-lb'), lb = !!(lbE && lbE.checked);
+        if (!rv || rv < d || rv > S().TODAY) { toast('결과 통보서 받은 날을 확인하세요 — 실시일과 오늘 사이입니다.'); return; }
+        if (!S().editHealthResult(state.id, { doneDate: d, examinedCount: ex, received: rv,
+                followupNeeded: document.getElementById('hd-e-fu').checked || lb, laborReport: lb })) {
             V().closeModal(); toast('결과 안내 공문을 보낸 건이라 결과를 고칠 수 없습니다.'); return;
         }
         V().closeModal(); render(); toast('결과를 고쳤습니다.');
@@ -325,6 +344,8 @@
             V().openModal('결과 등록',
                 '<div style="margin-bottom:12px;"><label class="form-label">검진 실시일 <span style="color:var(--status-danger-fg)">*</span></label>' +
                     '<input type="date" class="form-input" id="hd-c-date" value="' + esc(S().TODAY) + '"></div>' +
+                '<div style="margin-bottom:12px;"><label class="form-label">결과 통보서 받은 날 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                    '<input type="date" class="form-input" id="hd-c-recv" value="' + esc(S().TODAY) + '"></div>' +
                 '<div style="margin-bottom:12px;"><label class="form-label">수검자 수 (대상 ' + r.targetCount + '명)</label>' +
                     '<input type="number" class="form-input" id="hd-c-ex" value="' + r.targetCount + '" min="0" max="' + r.targetCount + '"></div>' +
                 '<div style="margin-bottom:12px;"><label class="form-label">결과보고서 <span style="color:var(--status-danger-fg)">*</span></label>' +
@@ -334,6 +355,7 @@
                    여기서 받지 않으면 사후관리 축이 신규 건에서 영영 열리지 않는다. */
                 '<div><label><input type="checkbox" id="hd-c-fu-need"' + (r.followupNeeded ? ' checked' : '') + '> ' +
                     '사후관리 대상 있음 <span style="color:var(--text-gray);font-size:var(--fs-12);">— 유소견·업무제한 등 조치가 필요한 사람이 있는 경우</span></label>' +
+                    laborCk('hd-c-lb', r) +
                     '<div class="sh-req" style="margin-top:8px;font-size:12px;">개인별 소견은 등록하지 않습니다. 대상 유무만 기록하고 조치 실적은 부서 단위로 적습니다.</div></div>',
                 '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
                 '<button type="button" class="btn btn-primary" onclick="HEXD.saveComplete()">완료 처리</button>');
@@ -362,12 +384,17 @@
         if (!Number.isInteger(ex) || ex < 0 || ex > r.targetCount) { toast('수검자 수는 0명 이상 대상자 수 이하로 입력하세요.'); return; }
         if (dateEl && (!dateEl.value || dateEl.value > S().TODAY)) { toast('검진 실시일을 확인하세요.'); return; }
         var fuEl = document.getElementById('hd-c-fu-need');
+        var recvEl = document.getElementById('hd-c-recv'), lbEl = document.getElementById('hd-c-lb');
         var first = !r.done;
+        if (recvEl && (!recvEl.value || recvEl.value > S().TODAY || (dateEl && recvEl.value < dateEl.value))) { toast('결과 통보서 받은 날을 확인하세요 — 실시일과 오늘 사이입니다.'); return; }
         if (first && !r.evidence && !HF) { toast('결과보고서 파일을 올리세요.'); return; }
+        if (!first && ex < (r.examinedCount || 0)) { toast('누적 수검자 수는 지금(' + r.examinedCount + '명)보다 적을 수 없습니다.'); return; }
+        var lb = !!(lbEl && lbEl.checked);
         S().completeHealth(state.id, { doneDate: dateEl ? dateEl.value : undefined, examinedCount: isNaN(ex) ? undefined : ex,
-            followupNeeded: fuEl ? !!fuEl.checked : undefined });
+            received: recvEl ? recvEl.value : undefined,
+            followupNeeded: fuEl ? (!!fuEl.checked || lb) : undefined, laborReport: lb });
         /* 실시 확정과 함께 결과보고서를 붙인다 — 실시일이 생긴 뒤라 저장 계층 가드를 통과한다 */
-        if (first && !r.evidence) S().attachEvidence('hc', state.id, '결과보고서');
+        if (first && !r.evidence) S().attachEvidence('hc', state.id, '결과보고서', HF ? HF.name : '');
         V().closeModal(); render(); toast('검진 실시가 반영되었습니다.');
     }
     function saveFollowup() {
@@ -376,6 +403,32 @@
         if (!v) { toast('사후관리 실적을 입력하세요.'); return; }
         S().completeHealth(state.id, { followupResult: v });
         V().closeModal(); render(); toast('사후관리 완료 처리되었습니다.');
+    }
+
+    /* 법정 보고 소견(시행규칙 §210③) — 특수·수시·임시검진에만 묻는다 */
+    function laborCk(id, r) {
+        if (!S().hcLegalType(r)) return '';
+        return '<div style="margin-top:8px;"><label><input type="checkbox" id="' + id + '"' + (r.laborReport ? ' checked' : '') + '> ' +
+            '근로 금지·제한, 작업전환, 근로시간 단축, 직업병 확진 의뢰 소견 있음 <span style="color:var(--text-gray);font-size:var(--fs-12);">— 노동관서 보고 대상(결과표 받은 날부터 30일)</span></label></div>';
+    }
+    /* 사후관리 조치결과 보고서 노동관서 제출일 — 재난안전과 담당자(시행규칙 §210④) */
+    function laborSubmit() {
+        var r = S().healthOf(state.id);
+        if (!canOwner()) { toast('노동관서 제출은 재난안전과 담당자가 기록합니다.'); return; }
+        if (!r || !S().hcLaborReport(r)) return;
+        V().openModal('노동관서 제출일 기록',
+            '<p class="file-hint" style="margin-bottom:10px;">사후관리 조치결과 보고서(조치 증명 서류 또는 실시 계획 첨부)를 관할 지방고용노동관서에 낸 날을 적습니다. 기한: ' + esc(S().hcLaborDue(r)) + '</p>' +
+            '<label class="form-label" for="hd-l-date">제출일</label><input type="date" class="form-input" id="hd-l-date" value="' + esc(S().TODAY) + '">',
+            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
+            '<button type="button" class="btn btn-primary" onclick="HEXD.saveLabor()">저장</button>');
+    }
+    function saveLabor() {
+        if (!canOwner()) { toast('노동관서 제출은 재난안전과 담당자가 기록합니다.'); return; }
+        var r = S().healthOf(state.id), v = (document.getElementById('hd-l-date') || {}).value;
+        if (!v || v > S().TODAY) { toast('제출일을 확인하세요.'); return; }
+        if (r && v < S().hcReceived(r)) { toast('제출일은 결과표를 받은 날 이후입니다.'); return; }
+        if (!S().setHcLaborSubmit(state.id, v)) { toast('노동관서 보고 대상 건만 기록합니다.'); return; }
+        V().closeModal(); render(); toast('노동관서 제출일을 기록했습니다.');
     }
 
     function init(mountId) {
@@ -388,5 +441,5 @@
     global.HEXD = { init: init, evidence: evidence, saveEvidence: saveEvidence,
         reason: reason, saveReason: saveReason, resetDue: resetDue, saveDue: saveDue,
         notify: notify, pickRecipient: pickRecipient, sendNotify: sendNotify, complete: complete, saveComplete: saveComplete,
-        saveFollowup: saveFollowup, onPick: onPick, editResult: editResult, saveEdit: saveEdit };
+        saveFollowup: saveFollowup, onPick: onPick, editResult: editResult, saveEdit: saveEdit, laborSubmit: laborSubmit, saveLabor: saveLabor };
 })(window);

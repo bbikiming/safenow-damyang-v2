@@ -186,12 +186,15 @@
     function setTile(v) { state.tile = (state.tile === v ? 'all' : v); render(); }
     function detail(id) { location.href = 'health-exam-detail.html?id=' + id; }
 
-    /* ===== 연도별 결과 안내 공문 줄 — 재난안전과 담당자에게만 (작업환경측정 반기 줄과 같은 모양) ===== */
+    /* ===== 연도별 결과 안내 공문 줄 — 보내기는 재난안전과 담당자만, 보낸 공문 보기는 전 부서를 보는 사람도
+       (작업환경측정 반기 줄과 같은 모양) ===== */
     function noticeLine() {
-        if (!canOwner()) return '';
+        var own = canOwner();
+        if (!own && !(R() && R().scope && R().scope() === 'all')) return '';
         var st = S().hcYearStat(state.year);
         if (!st.total && !st.docs.length) return '';
         var key = String(state.year);
+        var nd = S().noticeDue('hc', st.notice);
         var docs = st.docs.map(function (d, i) {
             return '<button type="button" class="btn btn-sm btn-outline" onclick="HEXDOC.openDoc(\'' + key + '\',\'' + d.sid + '\')">' +
                 (st.docs.length > 1 ? (i + 1) + '차 ' : '') + '공문 보기 · ' + esc(d.status) + '</button>';
@@ -200,7 +203,8 @@
         return '<div class="sh-card" style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2) var(--sp-3);margin-bottom:var(--stack-tight);">' +
             '<b>' + esc(state.year) + ' 결과 안내</b>' +
             '<span style="color:var(--text-gray);">검진 ' + st.done + ' / ' + st.total + '건 · 공문 보냄 ' + st.sent + '건</span>' +
-            (st.notice.length ? '<button type="button" class="btn btn-sm btn-outline" data-step="hc-notice" onclick="HEXDOC.open(\'' + key + '\')">결과 안내 공문 (' + st.notice.length + '건)</button>' : '') +
+            (st.notice.length && own ? '<button type="button" class="btn btn-sm btn-outline" data-step="hc-notice" onclick="HEXDOC.open(\'' + key + '\')">결과 안내 공문 (' + st.notice.length + '건)</button>' : '') +
+            (nd && own ? '<span class="sh-st ' + (V().daysTo(nd) < 0 ? 'danger' : 'warning') + '">공문 기한 ' + esc(nd) + ' — 노동관서 보고 대상 포함</span>' : '') +
             docs +
             (pend ? '<span class="file-hint" style="flex-basis:100%;">검진 전: ' + pend + ' — 결과가 들어오면 다음 공문으로 보냅니다.</span>' : '') +
         '</div>';
@@ -216,7 +220,7 @@
         if (!canAct()) { V().toast(denyNote('결과 등록')); return; }
         var r = rowId ? S().healthOf(rowId) : null;
         if (rowId && !resultable(r)) { V().toast('이 건에는 결과를 등록할 수 없습니다.'); return; }
-        RG = { date: S().TODAY, file: null, agency: r ? (r.agency === '미지정' ? '' : r.agency) : '', sel: {}, extra: [] };
+        RG = { date: S().TODAY, received: S().TODAY, file: null, agency: r ? (r.agency === '미지정' ? '' : r.agency) : '', sel: {}, extra: [] };
         if (r) RG.sel[r.id] = { ex: r.targetCount, fu: false };
         renderResult();
     }
@@ -228,24 +232,35 @@
         var g = function (id) { return document.getElementById(id); };
         if (g('hr-date')) RG.date = g('hr-date').value || RG.date;
         if (g('hr-agency')) RG.agency = g('hr-agency').value;
+        if (g('hr-recv')) RG.received = g('hr-recv').value || RG.received;
         Object.keys(RG.sel).forEach(function (k) {
             var o = RG.sel[k];
             if (g('hr-ex-' + k)) o.ex = Number(g('hr-ex-' + k).value);
             if (g('hr-fu-' + k)) o.fu = g('hr-fu-' + k).checked;
+            o.lb = g('hr-lb-' + k) ? g('hr-lb-' + k).checked : false;
         });
         RG.extra.forEach(function (o, i) {
             if (g('hr-xt-type-' + i)) o.type = g('hr-xt-type-' + i).value;
             if (g('hr-xt-tg-' + i)) o.target = Number(g('hr-xt-tg-' + i).value);
             if (g('hr-xt-ex-' + i)) o.ex = Number(g('hr-xt-ex-' + i).value);
             if (g('hr-xt-fu-' + i)) o.fu = g('hr-xt-fu-' + i).checked;
+            o.lb = g('hr-xt-lb-' + i) ? g('hr-xt-lb-' + i).checked : false;
         });
     }
-    function lineFields(idEx, idFu, o, target) {
+    /* 법정 보고 소견(시행규칙 §210③) — 특수·수시·임시검진에만 묻는다. 고르면 결과표를 받은 날부터 30일 안에
+       재난안전과가 사후관리 조치결과 보고서를 노동관서에 낸다. 일반검진·요관찰 소견은 법정 보고 대상이 아니다. */
+    function laborField(idLb, o, type) {
+        if (!S().hcLegalType({ type: type })) return '';
+        return '<label style="flex-basis:100%;"><input type="checkbox" id="' + idLb + '"' + (o.lb ? ' checked' : '') + '> ' +
+            '근로 금지·제한, 작업전환, 근로시간 단축, 직업병 확진 의뢰 소견 있음 <span class="file-hint">노동관서 보고 대상 — 결과표 받은 날부터 30일</span></label>';
+    }
+    function lineFields(idEx, idFu, o, target, type, idLb) {
         return '<div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);margin-top:var(--sp-2);align-items:center;">' +
             '<label class="file-hint" for="' + idEx + '">수검자 수</label><input type="number" class="form-input" id="' + idEx + '" style="width:90px;" min="0"' +
                 (target != null ? ' max="' + target + '"' : '') + ' value="' + esc(o.ex != null ? o.ex : (target || 0)) + '">' +
             (target != null ? '<span class="file-hint">/ 대상 ' + target + '명</span>' : '') +
-            '<label><input type="checkbox" id="' + idFu + '"' + (o.fu ? ' checked' : '') + '> 사후관리 대상 있음</label></div>';
+            '<label><input type="checkbox" id="' + idFu + '"' + (o.fu ? ' checked' : '') + '> 사후관리 대상 있음</label>' +
+            laborField(idLb, o, type) + '</div>';
     }
     function renderResult() {
         var cand = rgCands();
@@ -255,17 +270,17 @@
             return '<div style="border:1px solid var(--card-line);border-radius:var(--radius-sm);padding:var(--sp-2) var(--sp-3);margin-bottom:var(--sp-1-5, 6px);">' +
                 '<label style="display:flex;gap:var(--sp-2);align-items:center;"><input type="checkbox"' + (o ? ' checked' : '') +
                     ' onchange="HEX.rgToggle(\'' + r.id + '\', this.checked)"> <b>' + esc(r.dept) + '</b> <span class="file-hint">' + esc(r.type) + ' · 계획 ' + esc(String(r.planned || '').slice(5)) + '</span></label>' +
-                (o ? lineFields('hr-ex-' + r.id, 'hr-fu-' + r.id, o, r.targetCount) : '') +
+                (o ? lineFields('hr-ex-' + r.id, 'hr-fu-' + r.id, o, r.targetCount, r.type, 'hr-lb-' + r.id) : '') +
             '</div>';
         }).join('');
         var extra = RG.extra.map(function (o, i) {
             return '<div style="border:1px dashed var(--card-line);border-radius:var(--radius-sm);padding:var(--sp-2) var(--sp-3);margin-bottom:var(--sp-1-5, 6px);">' +
                 '<div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center;"><b>' + esc(o.dept) + '</b>' +
-                    '<select class="form-select" id="hr-xt-type-' + i + '" style="width:auto;" aria-label="검진 유형">' +
+                    '<select class="form-select" id="hr-xt-type-' + i + '" style="width:auto;" aria-label="검진 유형" onchange="HEX.rgRedraw()">' +
                         ['일반건강검진', '특수건강진단'].map(function (t) { return '<option' + (o.type === t ? ' selected' : '') + '>' + t + '</option>'; }).join('') + '</select>' +
                     '<label class="file-hint" for="hr-xt-tg-' + i + '">대상자 수</label><input type="number" class="form-input" id="hr-xt-tg-' + i + '" style="width:90px;" min="1" value="' + esc(o.target || '') + '">' +
                     '<button type="button" class="btn btn-sm btn-outline" onclick="HEX.rgDropExtra(' + i + ')">빼기</button></div>' +
-                lineFields('hr-xt-ex-' + i, 'hr-xt-fu-' + i, o, null) +
+                lineFields('hr-xt-ex-' + i, 'hr-xt-fu-' + i, o, null, o.type, 'hr-xt-lb-' + i) +
             '</div>';
         }).join('');
         var fixed = !canPickDept();
@@ -277,6 +292,8 @@
             '<div style="display:flex;flex-wrap:wrap;gap:var(--sp-3);margin:var(--sp-3) 0;">' +
                 '<div><label class="form-label" for="hr-date">검진 실시일 <span style="color:var(--status-danger-fg)">*</span></label>' +
                     '<input type="date" class="form-input" id="hr-date" value="' + esc(RG.date) + '" onchange="HEX.rgRedraw()"></div>' +
+                '<div><label class="form-label" for="hr-recv">결과 통보서 받은 날 <span style="color:var(--status-danger-fg)">*</span></label>' +
+                    '<input type="date" class="form-input" id="hr-recv" value="' + esc(RG.received) + '"></div>' +
                 '<div style="flex:1 1 200px;"><label class="form-label" for="hr-agency">검진기관</label>' +
                     '<input type="text" class="form-input" id="hr-agency" value="' + esc(RG.agency || '') + '" placeholder="예: (주)녹십자헬스케어"></div>' +
             '</div>' +
@@ -306,6 +323,7 @@
         if (!canAct()) { V().toast(denyNote('결과 등록')); return; }
         if (!RG.file) { V().toast('결과 통보서 파일을 올리세요.'); return; }
         if (!RG.date || RG.date > S().TODAY) { V().toast('검진 실시일을 확인하세요 — 오늘 이후일 수 없습니다.'); return; }
+        if (!RG.received || RG.received < RG.date || RG.received > S().TODAY) { V().toast('결과 통보서 받은 날을 확인하세요 — 실시일과 오늘 사이입니다.'); return; }
         var picked = rgCands().filter(function (r) { return RG.sel[r.id]; });
         if (!picked.length && !RG.extra.length) { V().toast('결과를 등록할 검진을 1건 이상 고르세요.'); return; }
         for (var i = 0; i < picked.length; i++) {
@@ -321,7 +339,8 @@
         var finish = function (r, o) {
             if (!resultable(r)) return;
             if (agency && (!r.agency || r.agency === '미지정')) r.agency = agency;
-            S().completeHealth(r.id, { doneDate: RG.date, examinedCount: o.ex, followupNeeded: !!o.fu });
+            var lb = !!o.lb && S().hcLegalType(r);
+            S().completeHealth(r.id, { doneDate: RG.date, received: RG.received, examinedCount: o.ex, followupNeeded: !!o.fu || lb, laborReport: lb });
             if (S().attachEvidence('hc', r.id, '결과보고서', RG.file.name)) n++;
         };
         picked.forEach(function (r) { finish(r, RG.sel[r.id]); });
@@ -376,9 +395,11 @@
             chips: function (t) {
                 var rows = t.rows, tg = 0, ex = 0, fu = 0;
                 rows.forEach(function (r) { tg += r.targetCount || 0; ex += r.examinedCount || 0; if (r.followupNeeded) fu++; });
+                var lab = rows.filter(function (r) { return S().hcLaborReport(r); });
                 return [
                     { label: '결과 안내', text: '1. ' + t.year + '년 건강검진 실시 결과를 붙임과 같이 알려 드립니다.\n  가. 대상: 붙임 별지의 ' + rows.length + '건(대상 ' + tg + '명 · 수검 ' + ex + '명 · 미검진 ' + (tg - ex) + '명)\n  나. 사후관리 대상이 있는 검진: ' + fu + '건' },
-                    { label: '후속 요청', text: '2. 미검진자는 추가검진을, 사후관리 대상이 있는 부서는 실시일부터 30일 안에 조치하시고 중대재해 통합관리시스템 › 작업환경·건강 › 건강검진에서 완료 처리하여 주시기 바랍니다.' },
+                    { label: '후속 요청', text: '2. 미검진자는 추가검진을, 사후관리 대상이 있는 부서는 사후관리 조치를 하시고 중대재해 통합관리시스템 › 작업환경·건강 › 건강검진에서 완료 처리하여 주시기 바랍니다.' +
+                        (lab.length ? '\n  가. 근로 금지·제한, 작업전환 등 소견이 있는 검진(' + lab.map(function (r) { return r.dept; }).join(', ') + ')은 ' + lab.map(function (r) { return S().hcLaborDue(r); }).sort()[0] + '까지 조치하여 주시기 바랍니다(결과표를 받은 날부터 30일 안에 노동관서에 조치결과를 보고합니다).' : '') },
                     { label: '개인 결과', text: '3. 개인별 검진 결과는 검진기관이 본인에게 통보하며, 본인 동의 없이 공개하거나 다른 목적으로 사용할 수 없습니다.' }
                 ];
             },

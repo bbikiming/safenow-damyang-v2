@@ -149,16 +149,19 @@
         }
     }
 
-    /* 반기별 결과 안내 공문 줄 — 재난안전과 담당자에게만. 결과가 들어온 사업장부터 보낸다
+    /* 반기별 결과 안내 공문 줄 — 보내기는 재난안전과 담당자만, 보낸 공문 보기는 전 부서를 보는 사람
+       (재난안전과장·팀장·군수)도. 결과가 들어온 사업장부터 보낸다
        (반기 전체를 기다리면 노출기준 초과 건의 60일 법정 기한 안에 부서가 알지 못한다).
        무엇이 남았는지는 사업장 이름으로 밝힌다. */
     function noticeLines() {
-        if (!canOwner()) return '';
+        var own = canOwner();
+        if (!own && !(R() && R().scope && R().scope() === 'all')) return '';
         var halves = state.half ? [state.half] : ['H1', 'H2'];
         var html = halves.map(function (h) {
             var st = S().halfStat(state.year, h);
             if (!st.total && !st.docs.length) return '';
             var key = state.year + '|' + h;
+            var nd = S().noticeDue('we', st.notice);
             var docs = st.docs.map(function (d, i) {
                 return '<button type="button" class="btn btn-sm btn-outline" onclick="WENVDOC.openDoc(\'' + key + '\',\'' + d.sid + '\')">' +
                     (st.docs.length > 1 ? (i + 1) + '차 ' : '') + '공문 보기 · ' + esc(d.status) + '</button>';
@@ -167,9 +170,10 @@
             return '<div class="sh-card" style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2) var(--sp-3);margin-bottom:var(--stack-tight);">' +
                 '<b>' + esc(state.year) + ' ' + halfName(h) + ' 결과 안내</b>' +
                 '<span style="color:var(--text-gray);">측정 ' + st.done + ' / ' + st.total + '곳 · 공문 보냄 ' + st.sent + '곳</span>' +
-                (st.notice.length
+                (st.notice.length && own
                     ? '<button type="button" class="btn btn-sm btn-outline" data-step="notice-' + h + '" onclick="WENVDOC.open(\'' + key + '\')">결과 안내 공문 (' + st.notice.length + '곳)</button>'
                     : '') +
+                (nd && own ? '<span class="sh-st ' + (V().daysTo(nd) < 0 ? 'danger' : 'warning') + '">공문 기한 ' + esc(nd) + ' — 노출기준 초과 포함</span>' : '') +
                 docs +
                 (pend ? '<span class="file-hint" style="flex-basis:100%;">측정 전: ' + pend + ' — 결과가 들어오면 다음 공문으로 보냅니다.</span>' : '') +
             '</div>';
@@ -266,14 +270,15 @@
                         '<select class="form-select" id="rg-res-' + sk + '" aria-label="' + esc(c.name) + ' 측정 결과" onchange="WENV.rgRedraw()" style="width:auto;">' +
                             '<option value="적정"' + (imp ? '' : ' selected') + '>적정</option><option value="개선 필요"' + (imp ? ' selected' : '') + '>개선 필요</option></select>' +
                         (imp ? '<input type="text" class="form-input" id="rg-req-' + sk + '" placeholder="개선 요구사항" style="flex:1 1 220px;" value="' + esc(o.req || '') + '">' +
-                            '<label class="file-hint" for="rg-due-' + sk + '">조치기한</label><input type="date" class="form-input" id="rg-due-' + sk + '" style="width:auto;" value="' + esc(o.due || S().addDays(S().TODAY, 30)) + '">' +
+                            '<label class="file-hint" for="rg-due-' + sk + '">조치기한</label><input type="date" class="form-input" id="rg-due-' + sk + '" style="width:auto;" value="' + esc(o.due || S().addDays(RG.date || S().TODAY, 30)) + '">' +
                             '<label><input type="checkbox" id="rg-ex-' + sk + '"' + (o.exceed ? ' checked' : '') + '> 노출기준 초과</label>' : '') +
                     '</div>' : '') +
             '</div>';
         }).join('');
         var y = String(RG.date).slice(0, 4), h = halfOfDate(RG.date);
         V().openModal('작업환경측정 결과 등록',
-            '<p class="file-hint" style="margin-bottom:var(--sp-3);">측정기관이 보낸 결과보고서를 올리고 사업장마다 결과를 고릅니다. 저장하면 끝이고, 재난안전과가 결과 안내 공문을 보냅니다.</p>' +
+            '<p class="file-hint" style="margin-bottom:var(--sp-3);">측정기관이 보낸 결과보고서를 올리고 사업장마다 결과를 고릅니다. ' +
+                (canOwner() ? '저장한 뒤 결과 안내 공문을 보냅니다.' : '저장하면 끝입니다. 재난안전과가 위탁한 측정이면 재난안전과가 결과 안내 공문을 보냅니다.') + '</p>' +
             '<label class="form-label">결과보고서 <span style="color:var(--status-danger-fg)">*</span></label>' +
             (RG.file ? '<p style="margin-bottom:var(--sp-2);">' + S().icon('file') + ' <b>' + esc(RG.file.name) + '</b></p>' : '') +
             V().uploadDrop('파일을 끌어다 놓거나 클릭하여 업로드', null, { hint: true, pick: 'WENV.rgPick' }) +

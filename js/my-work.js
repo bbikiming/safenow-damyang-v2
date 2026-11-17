@@ -571,8 +571,10 @@
                         out.push({
                             id: 'WE-NOTICE-' + t.year + t.half, cat: 'inspection',
                             title: t.year + '년 ' + hl + ' 작업환경측정 결과 안내 공문 기안',
-                            sub: '결과가 들어온 ' + t.rows.length + '곳 — ' + t.rows.map(function (r) { return r.site; }).join(' · '),
-                            due: t.rows.map(function (r) { return r.done; }).sort()[0] || '', status: 'IN_PROGRESS',
+                            sub: '결과가 들어온 ' + t.rows.length + '곳 — ' + t.rows.map(function (r) { return r.site; }).join(' · ') +
+                                (t.due ? ' · 노출기준 초과 포함 — 부서가 60일 기한 안에 개선하도록 바로 보냅니다' : ''),
+                            /* 기한은 공문에 실을 행의 법정 기한 중 가장 이른 날(DYSH.noticeDue) — 없으면 기한 없음 */
+                            due: t.due || '', status: 'IN_PROGRESS',
                             dept: state.deptId, dept_label: shDept,
                             href: 'work-env.html?year=' + t.year, atype: 'menu', action: '공문 기안하러 가기', destLabel: '작업환경측정', remind: false
                         });
@@ -602,10 +604,22 @@
                         out.push({
                             id: 'HC-NOTICE-' + t.year, cat: 'inspection',
                             title: t.year + '년 건강검진 결과 안내 공문 기안',
-                            sub: '결과가 들어온 ' + t.rows.length + '건 — ' + t.rows.map(function (r) { return r.dept + ' ' + r.type; }).join(' · '),
-                            due: t.rows.map(function (r) { return r.done; }).sort()[0] || '', status: 'IN_PROGRESS',
+                            sub: '결과가 들어온 ' + t.rows.length + '건 — ' + t.rows.map(function (r) { return r.dept + ' ' + r.type; }).join(' · ') +
+                                (t.due ? ' · 노동관서 보고 대상 포함 — 부서가 30일 기한 안에 조치하도록 바로 보냅니다' : ''),
+                            due: t.due || '', status: 'IN_PROGRESS',
                             dept: state.deptId, dept_label: hcDept,
                             href: 'health-exam.html?year=' + t.year, atype: 'menu', action: '공문 기안하러 가기', destLabel: '건강검진', remind: false
+                        });
+                        return;
+                    }
+                    if (t.kind === 'labor') {
+                        out.push({
+                            id: 'HC-LABOR-' + t.row.id, cat: 'inspection',
+                            title: t.row.dept + ' ' + t.row.type + ' — 사후관리 조치결과 노동관서 제출',
+                            sub: '결과표 받은 날 ' + Sh2.hcReceived(t.row) + ' · 30일 안에 조치 증명 서류 또는 실시 계획 제출',
+                            due: t.due, status: 'IN_PROGRESS',
+                            dept: state.deptId, dept_label: hcDept,
+                            href: 'health-exam-detail.html?id=' + encodeURIComponent(t.row.id), atype: 'menu', action: '제출일 기록하러 가기', destLabel: '건강검진 상세', remind: false
                         });
                         return;
                     }
@@ -613,7 +627,7 @@
                     out.push({
                         id: 'HC-' + t.kind.toUpperCase() + '-' + r.id, cat: 'improve',
                         title: r.dept + ' ' + r.type + ' — ' + (t.kind === 'extra' ? '미검진자 추가검진' : '사후관리'),
-                        sub: t.kind === 'extra' ? '미검진 ' + Sh2.hcUnexamined(r) + '명' : '사후관리 대상 조치 — 실시일부터 30일 안에',
+                        sub: t.kind === 'extra' ? '미검진 ' + Sh2.hcUnexamined(r) + '명' : (Sh2.hcLaborReport(r) ? '사후관리 대상 조치 — 노동관서 보고 대상(결과표 받은 날부터 30일)' : '사후관리 대상 조치'),
                         due: t.due, status: 'IN_PROGRESS',
                         dept: state.deptId, dept_label: hcDept,
                         href: 'health-exam-detail.html?id=' + encodeURIComponent(r.id),

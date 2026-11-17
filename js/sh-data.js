@@ -24,7 +24,7 @@
             등록 주체(regBy)를 더했다(기획-작업환경측정-첨부·공문흐름-20261116-v2). */
     /* v7 — 건강검진도 결과 안내 공문(hcDocs)·결과보고서 파일 이름(reportFiles)·등록 주체(regBy)를 더했다
             (작업환경측정과 같은 «결과 등록 → 결과 안내 공문» 2단계, 2026-11-16). */
-    var SKEY = 'damyangShV7';
+    var SKEY = 'damyangShV8';
     /* 기준일·기준연도 — DYV2.today() 단일 출처 (시연일 변경은 common.js DEMO_TODAY 한 줄) */
     var TODAY = (global.DYV2 && global.DYV2.today) ? global.DYV2.today() : '2026-11-13';
     var CURYEAR = Number(TODAY.slice(0, 4));
@@ -264,7 +264,7 @@
            이 스토어가 가진 개인 단위 값은 대상자 수·수검자 수뿐이다. */
         var health = [
             { id: 'HC-2026-01', year: 2026, type: '일반건강검진', dept: '건설과',
-              agency: '담양군보건소', planned: '2026-04-10', done: '2026-04-15',
+              agency: '담양군보건소', planned: '2026-04-10', done: '2026-04-15', received: '2026-04-30',
               targetCount: 24, examinedCount: 24, evidence: true,
               followupNeeded: true, followupDone: true, followupResult: '유소견 1명 2차검사 실시 — 정상 종결(2026-05-12)',
               owner: '건설과 · 박현장', reason: '', extraExamDate: '2026-05-08',
@@ -277,7 +277,7 @@
                 { at: '2026-03-20', actor: '박현장', event: '검진 계획 수립 · 담양군보건소 위탁' }
               ] },
             { id: 'HC-2026-02', year: 2026, type: '일반건강검진', dept: '환경과',
-              agency: '국민건강보험공단(지정검진기관)', planned: '2026-03-18', done: '2026-03-22',
+              agency: '국민건강보험공단(지정검진기관)', planned: '2026-03-18', done: '2026-03-22', received: '2026-04-05',
               targetCount: 18, examinedCount: 18, evidence: true,
               followupNeeded: false, followupDone: false, followupResult: '',
               owner: '환경과 · 최보건', reason: '', extraExamDate: '',
@@ -288,7 +288,7 @@
                 { at: '2026-02-25', actor: '최보건', event: '검진 계획 수립' }
               ] },
             { id: 'HC-2026-03', year: 2026, type: '특수건강진단', dept: '물순환사업소',
-              agency: '(주)녹십자헬스케어 특수검진센터', planned: '2026-05-10', done: '2026-05-14',
+              agency: '(주)녹십자헬스케어 특수검진센터', planned: '2026-05-10', done: '2026-05-14', received: '2026-05-28',
               targetCount: 12, examinedCount: 12, evidence: true,
               followupNeeded: true, followupDone: true,
               followupResult: '소음성 난청 요관찰 2명 — 청력보호구 지급·청력 재검(8월) 결과 변화 없음, 관찰 유지',
@@ -303,21 +303,23 @@
                 { at: '2026-04-15', actor: '서담당', event: '특수검진 대상자 선정(염소·소음 노출 12명)' }
               ] },
             { id: 'HC-2026-04', year: 2026, type: '특수건강진단', dept: '공공시설사업소',
-              agency: '(주)녹십자헬스케어 특수검진센터', planned: '2026-06-05', done: '2026-07-08',
+              agency: '(주)녹십자헬스케어 특수검진센터', planned: '2026-06-05', done: '2026-07-08', received: '2026-07-20',
               targetCount: 15, examinedCount: 15, evidence: true,
-              followupNeeded: true, followupDone: true, followupResult: '염소 노출 유소견 1명 — 직업환경의학 상담·호흡보호구 지급, 8월 재검 정상',
+              followupNeeded: true, followupDone: true, followupResult: '염소 노출 작업전환 소견 1명 — 비노출 공정으로 작업전환·호흡보호구 지급, 8월 재검 정상',
+              laborReport: true, laborSubmittedAt: '2026-08-12',
               owner: '공공시설사업소 · 한담당',
               reason: '위탁 검진기관 예약 지연 — 재예약 진행', extraExamDate: '',
               carcinogen: false, targetBasis: '특수건강진단 대상(유해인자 노출자)',
               history: [
-                { at: '2026-08-04', actor: '한담당', event: '사후관리 완료 · 유소견 1명 상담·보호구 지급 후 재검 정상' },
-                { at: '2026-07-20', actor: '한담당', event: '실시 증빙 등록 · 사후관리 대상 확인(유소견 1)' },
+                { at: '2026-08-12', actor: '박안전', event: '노동관서 제출 기록 · 2026-08-12 (사후관리 조치결과 보고서)' },
+                { at: '2026-08-04', actor: '한담당', event: '사후관리 완료 · 작업전환 소견 1명 비노출 공정 전환·보호구 지급' },
+                { at: '2026-07-20', actor: '박안전', event: '결과 등록 · 결과 통보서 받음 · 사후관리 대상(작업전환 소견 1) · 노동관서 보고 대상' },
                 { at: '2026-07-08', actor: '(주)녹십자헬스케어', event: '특수검진 실시(수검 15/15)' },
                 { at: '2026-06-08', actor: '한담당', event: '미완료 사유 등록(검진기관 예약 지연) · 2026-07-08 재예약' },
                 { at: '2026-05-01', actor: '한담당', event: '특수검진 대상자 선정(15명) · 예정일 2026-06-05' }
               ] },
             { id: 'HC-2026-05', year: 2026, type: '일반건강검진', dept: '문화체육과',
-              agency: '국민건강보험공단(지정검진기관)', planned: '2026-07-30', done: '2026-07-30',
+              agency: '국민건강보험공단(지정검진기관)', planned: '2026-07-30', done: '2026-07-30', received: '2026-08-12',
               targetCount: 9, examinedCount: 9, evidence: true,
               followupNeeded: false, followupDone: false, followupResult: '',
               owner: '문화체육과 · 오세영', reason: '', extraExamDate: '',
@@ -328,7 +330,7 @@
                 { at: '2026-06-25', actor: '오세영', event: '검진 계획 수립 · 개인별 검진 안내(예정일 2026-07-30)' }
               ] },
             { id: 'HC-2026-06', year: 2026, type: '특수건강진단', dept: '건설과',
-              agency: '(주)녹십자헬스케어 특수검진센터', planned: '2026-05-25', done: '2026-05-28',
+              agency: '(주)녹십자헬스케어 특수검진센터', planned: '2026-05-25', done: '2026-05-28', received: '2026-06-05',
               targetCount: 8, examinedCount: 8, evidence: true,
               followupNeeded: false, followupDone: false, followupResult: '',
               owner: '건설과 · 박현장', reason: '', extraExamDate: '',
@@ -339,7 +341,7 @@
                 { at: '2026-04-30', actor: '박현장', event: '특수검진 대상자 선정(분진·소음 노출 8명)' }
               ] },
             { id: 'HC-2026-07', year: 2026, type: '일반건강검진', dept: '담양읍',
-              agency: '국민건강보험공단(지정검진기관)', planned: '2026-09-09', done: '2026-09-10',
+              agency: '국민건강보험공단(지정검진기관)', planned: '2026-09-09', done: '2026-09-10', received: '2026-09-24',
               targetCount: 5, examinedCount: 5, evidence: true,
               followupNeeded: false, followupDone: false, followupResult: '',
               owner: '담양읍 · 배주민', reason: '', extraExamDate: '',
@@ -350,7 +352,7 @@
                 { at: '2026-08-14', actor: '배주민', event: '검진 계획 수립(예정일 2026-09-09)' }
               ] },
             { id: 'HC-2026-08', year: 2026, type: '일반건강검진', dept: '보건소',
-              agency: '담양군보건소', planned: '2026-10-14', done: '2026-10-16',
+              agency: '담양군보건소', planned: '2026-10-14', done: '2026-10-16', received: '2026-10-30',
               targetCount: 11, examinedCount: 10, evidence: true,
               followupNeeded: false, followupDone: false, followupResult: '',
               owner: '보건소 · 윤담당', reason: '1명 병가 중 — 복귀 후 추가검진', extraExamDate: '2026-11-27',
@@ -361,13 +363,13 @@
                 { at: '2026-09-22', actor: '윤담당', event: '검진 계획 수립(예정일 2026-10-14)' }
               ] },
             { id: 'HC-2026-09', year: 2026, type: '특수건강진단', dept: '환경과',
-              agency: '(주)녹십자헬스케어 특수검진센터', planned: '2026-10-27', done: '2026-10-29',
+              agency: '(주)녹십자헬스케어 특수검진센터', planned: '2026-10-27', done: '2026-10-29', received: '2026-11-10',
               targetCount: 6, examinedCount: 6, evidence: true,
-              followupNeeded: true, followupDone: false, followupResult: '',
+              followupNeeded: true, followupDone: false, followupResult: '', laborReport: true,
               owner: '환경과 · 최보건', reason: '', extraExamDate: '',
               carcinogen: true, targetBasis: '특수건강진단 대상(자원순환센터 결정질 실리카 분진 노출자)',
               history: [
-                { at: '2026-11-10', actor: '최보건', event: '실시 증빙 등록 · 사후관리 대상 확인(흉부 요관찰 1명) · 2차검사 예약 2026-11-20' },
+                { at: '2026-11-10', actor: '박안전', event: '결과 등록 · 결과 통보서 받음 · 사후관리 대상(직업병 확진 의뢰 소견 1명) · 노동관서 보고 대상' },
                 { at: '2026-10-29', actor: '(주)녹십자헬스케어', event: '특수검진 실시(수검 6/6)' },
                 { at: '2026-10-05', actor: '최보건', event: '특수검진 대상자 선정(선별라인 분진 노출 6명)' }
               ] },
@@ -382,7 +384,7 @@
               ] },
             /* ── 2025 (지난 기록) ── */
             { id: 'HC-2025-01', year: 2025, type: '일반건강검진', dept: '건설과',
-              agency: '담양군보건소', planned: '2025-04-12', done: '2025-04-16',
+              agency: '담양군보건소', planned: '2025-04-12', done: '2025-04-16', received: '2025-04-30',
               targetCount: 22, examinedCount: 22, evidence: true,
               followupNeeded: true, followupDone: true,
               followupResult: '2차검사 정상 종결', owner: '건설과 · 박현장', reason: '', extraExamDate: '2025-05-07',
@@ -393,7 +395,7 @@
                 { at: '2025-04-16', actor: '담양군보건소', event: '단체검진 실시(수검 21/22)' }
               ] },
             { id: 'HC-2025-02', year: 2025, type: '특수건강진단', dept: '물순환사업소',
-              agency: '(주)녹십자헬스케어 특수검진센터', planned: '2025-05-20', done: '2025-05-22',
+              agency: '(주)녹십자헬스케어 특수검진센터', planned: '2025-05-20', done: '2025-05-22', received: '2025-06-05',
               targetCount: 12, examinedCount: 12, evidence: true,
               followupNeeded: true, followupDone: true, followupResult: '소음 요관찰 1명 — 청력보호구 지급·관찰 유지',
               owner: '물순환사업소 · 서담당', reason: '', extraExamDate: '',
@@ -403,7 +405,7 @@
                 { at: '2025-05-22', actor: '(주)녹십자헬스케어', event: '특수검진 실시(수검 12/12)' }
               ] },
             { id: 'HC-2025-03', year: 2025, type: '특수건강진단', dept: '공공시설사업소',
-              agency: '(주)녹십자헬스케어 특수검진센터', planned: '2025-06-11', done: '2025-06-12',
+              agency: '(주)녹십자헬스케어 특수검진센터', planned: '2025-06-11', done: '2025-06-12', received: '2025-06-26',
               targetCount: 14, examinedCount: 14, evidence: true,
               followupNeeded: false, followupDone: false, followupResult: '',
               owner: '공공시설사업소 · 한담당', reason: '', extraExamDate: '',
@@ -448,13 +450,20 @@
                 by: '박안전', byUid: 'u_jjt2', dept: '재난안전과', sample: true };
         }
         var hcDocs = [
-            hdoc('HCN-2025-0001', 2025, '2025-12-10', ['HC-2025-01', 'HC-2025-02', 'HC-2025-03'], 1),
-            hdoc('HCN-2026-0001', 2026, '2026-07-03', ['HC-2026-01', 'HC-2026-02', 'HC-2026-03', 'HC-2026-06'], 1),
-            hdoc('HCN-2026-0002', 2026, '2026-08-07', ['HC-2026-04', 'HC-2026-05'], 2),
-            hdoc('HCN-2026-0003', 2026, '2026-11-05', ['HC-2026-07', 'HC-2026-08', 'HC-2026-09'], 3)
+            /* 결과 통보서가 들어온 뒤 바로 보낸다 — 부서는 공문을 받고 추가검진·사후관리를 시작한다.
+               HC-2026-09(환경과 특수, 11-10 결과표 수령)는 아직 보내지 않았다 — 노동관서 보고 대상이라
+               공문 기한이 12-10(받은 날 + 30일)이다(실습 자리). */
+            hdoc('HCN-2025-0001', 2025, '2025-05-07', ['HC-2025-01'], 1),
+            hdoc('HCN-2025-0002', 2025, '2025-06-09', ['HC-2025-02'], 2),
+            hdoc('HCN-2025-0003', 2025, '2025-07-01', ['HC-2025-03'], 3),
+            hdoc('HCN-2026-0001', 2026, '2026-05-04', ['HC-2026-02', 'HC-2026-01'], 1),
+            hdoc('HCN-2026-0002', 2026, '2026-06-08', ['HC-2026-03', 'HC-2026-06'], 2),
+            hdoc('HCN-2026-0003', 2026, '2026-07-22', ['HC-2026-04'], 3),
+            hdoc('HCN-2026-0004', 2026, '2026-09-25', ['HC-2026-05', 'HC-2026-07'], 4),
+            hdoc('HCN-2026-0005', 2026, '2026-11-03', ['HC-2026-08'], 5)
         ];
 
-        return { workenv: workenv, health: health, weDocs: weDocs, hcDocs: hcDocs, seqWE: 13, seqHC: 13, seqWEN: 2, seqHCN: 3 };
+        return { workenv: workenv, health: health, weDocs: weDocs, hcDocs: hcDocs, seqWE: 13, seqHC: 13, seqWEN: 2, seqHCN: 8 };
     }
 
     function load() {
@@ -475,6 +484,12 @@
     function actorNow() {
         var R = global.DYROLE;
         return (R && R.actorLabel) ? R.actorLabel() : '시스템';
+    }
+    /* 새 건의 담당자 — 그 부서 담당자가 직접 등록하면 그 사람, 아니면 «담당자»(부서가 정한다) */
+    function ownerFor(dept) {
+        var R = global.DYROLE, p = R && R.current ? R.current() : null;
+        var did = global.DYV2 && global.DYV2.deptIdOf ? global.DYV2.deptIdOf(dept) : dept;
+        return (dept || '') + ' · ' + (p && p.tier === 'staff' && p.deptId && p.deptId === did ? p.name : '담당자');
     }
     function pushHist(rec, event, actor) {
         (rec.history = rec.history || []).unshift({ at: TODAY, actor: actor || actorNow(), event: event });
@@ -511,8 +526,12 @@
             return null;
         }
         if (kind === 'hc') {
-            if (rec.followupNeeded && !rec.followupDone && rec.done) {
-                return { label: '조치결과 제출기한', date: addDays(rec.done, 30) };
+            /* 시행규칙 §210③·④ — 특수·수시·임시건강진단에서 근로 금지·제한, 작업전환, 근로시간 단축,
+               직업병 확진 의뢰 소견이 있는 결과표를 **받은 날**부터 30일 안에 사후관리 조치결과 보고서를
+               관할 지방고용노동관서에 낸다(사업주 = 재난안전과). 종전에는 «사후관리 대상 전부 · 실시일 + 30일»
+               이라 일반검진에도 법정 기한이 붙고, 결과표가 실시일 + 30일 안에 오는 탓에 받는 날 이미 지나 있었다. */
+            if (hcLaborReport(rec) && rec.done && !rec.laborSubmittedAt) {
+                return { label: '노동관서 제출기한', date: hcLaborDue(rec) };
             }
             return null;
         }
@@ -527,7 +546,7 @@
             dept: o.dept || '', siteId: o.siteId || '', site: o.site || o.dept || '',
             siteTargetState: o.siteTargetState || '검토 중', subject: o.subject || '', vendor: o.vendor || '미지정',
             planned: o.planned || '', done: '', report: false, result: null, improveReq: '', improveDue: '',
-            improveDone: false, beforePhoto: false, afterPhoto: false, owner: (o.dept || '') + ' · 담당자',
+            improveDone: false, beforePhoto: false, afterPhoto: false, owner: ownerFor(o.dept),
             reason: '', expectedDone: '', carcinogen: !!o.carcinogen,
             /* 등록 주체 — 재난안전과 담당자가 등록하면 'owner'(위탁 측정 → 결과 안내 공문 대상),
                부서 담당자가 등록하면 'dept'(자체 측정 → 공문 없이 결과 첨부로 끝). 화면이 정하지 않고 접속자로 판정한다. */
@@ -660,6 +679,17 @@
      *   improve — 개선 필요 · 미완료이고 부서에 알려진 것(결과 안내 공문을 보냈거나, 부서가 직접 맡긴 측정)
      *   notice  — (주관부서) 결과가 들어왔는데 아직 공문에 싣지 않은 행이 있는 반기
      *   labor   — (주관부서) 노출기준 초과 건의 노동관서 제출 기한 */
+    /* 결과 안내 공문의 기한 — 공문에 실을 행 중 법정 기한이 걸린 것의 가장 이른 날.
+     *   we: 노출기준 초과 → 시료채취 + 60일(§188③) · hc: 법정 보고 대상 → 결과표 받은 날 + 30일(§210④)
+     * 부서는 공문을 받아야 조치를 시작하므로, 공문이 늦으면 법정 기한 안에 개선·조치를 못 한다.
+     * 법정 기한이 걸린 행이 없으면 ''(기한 없음) — 날짜를 지어내지 않는다. */
+    function noticeDue(kind, rows) {
+        var ds = (rows || []).map(function (r) {
+            if (kind === 'we') return r.exceed && r.done ? addDays(r.done, 60) : '';
+            return hcLaborReport(r) ? hcLaborDue(r) : '';
+        }).filter(Boolean).sort();
+        return ds[0] || '';
+    }
     function weTodos(deptId) {
         var V = global.DYV2, R = global.DYROLE, out = [];
         var owner = R && R.OWNER_DEPT ? R.OWNER_DEPT : 'safety';
@@ -674,7 +704,7 @@
             workEnv().forEach(function (r) { halves[r.year + '|' + r.half] = { year: r.year, half: r.half }; });
             Object.keys(halves).sort().forEach(function (k) {
                 var h = halves[k], rows = noticeRows(h.year, h.half);
-                if (rows.length) out.push({ kind: 'notice', year: h.year, half: h.half, rows: rows });
+                if (rows.length) out.push({ kind: 'notice', year: h.year, half: h.half, rows: rows, due: noticeDue('we', rows) });
             });
             workEnv().forEach(function (r) {
                 var due = legalSubmitDue('we', r);
@@ -737,7 +767,7 @@
         var rec = { id: 'HC-' + yearOf(o.planned) + '-N' + d.seqHC, year: yearOf(o.planned), type: o.type || '일반건강검진',
             dept: o.dept || '', agency: o.agency || '미지정', planned: o.planned || '', done: '',
             targetCount: o.targetCount || 0, examinedCount: 0, evidence: false, followupNeeded: false, followupDone: false,
-            followupResult: '', owner: (o.dept || '') + ' · 담당자', reason: '', extraExamDate: '',
+            followupResult: '', owner: ownerFor(o.dept), reason: '', extraExamDate: '',
             regBy: (global.DYROLE && global.DYROLE.canAct && global.DYROLE.canAct(global.DYROLE.OWNER_DEPT)) ? 'owner' : 'dept',
             reportFiles: [],
             carcinogen: !!o.carcinogen,
@@ -757,9 +787,9 @@
         if (unexamined > 0) {
             return isPast(r.extraExamDate) && r.extraExamDate ? STATUS.OVERDUE : STATUS.SUPPLEMENT;
         }
-        if (r.followupNeeded && !r.followupDone) {
-            /* 유소견자 조치결과 30일 제출기한 초과 시 '기한 초과'(작업환경측정 개선기한과 대칭) */
-            var fdue = r.done ? addDays(r.done, 30) : '';
+        if ((r.followupNeeded && !r.followupDone) || (hcLaborReport(r) && !r.laborSubmittedAt)) {
+            /* 법정 보고 대상만 기한 초과가 된다 — 결과표를 받은 날 + 30일(§210④) */
+            var fdue = hcLaborReport(r) && !r.laborSubmittedAt ? hcLaborDue(r) : '';
             return (fdue && isPast(fdue)) ? STATUS.OVERDUE : STATUS.SUPPLEMENT;
         }
         return STATUS.DONE;
@@ -771,6 +801,21 @@
         return Math.round((r.examinedCount || 0) / r.targetCount * 100);
     }
     function hcFollowup(r) { return !!r.followupNeeded && !r.followupDone; }
+    /* 법정 보고 대상 검진 유형(§210③) — 이 시스템의 유형은 일반·특수 둘이지만 수시·임시가 생겨도 같은 판정이다 */
+    var HC_LEGAL_TYPES = { '특수건강진단': 1, '수시건강진단': 1, '임시건강진단': 1 };
+    function hcLegalType(r) { return !!(r && HC_LEGAL_TYPES[r.type]); }
+    function hcLaborReport(r) { return !!(r && r.laborReport && hcLegalType(r) && r.done); }
+    /* 결과 통보서를 받은 날 — 없던 옛 행은 실시일로 본다(기한을 늦추는 쪽으로 추정하지 않는다) */
+    function hcReceived(r) { return (r && (r.received || r.done)) || ''; }
+    function hcLaborDue(r) { return hcReceived(r) ? addDays(hcReceived(r), 30) : ''; }
+    /* 부서 사후관리 기한 — 법정 보고 대상이면 노동관서 제출기한, 아니면 법정 기한 없음('') */
+    function hcFollowupDue(r) { return hcLaborReport(r) ? hcLaborDue(r) : ''; }
+    function setHcLaborSubmit(id, date) {
+        var r = healthOf(id); if (!r || !hcLaborReport(r) || !date) return null;
+        r.laborSubmittedAt = date;
+        pushHist(r, '노동관서 제출 기록 · ' + date + ' (사후관리 조치결과 보고서)');
+        save(); return r;
+    }
 
     function healthSummary(rows) {
         rows = rows || health();
@@ -841,6 +886,9 @@
         if (opts.doneDate) r.done = opts.doneDate;
         if (opts.examinedCount != null) r.examinedCount = Math.min(r.targetCount || 0, opts.examinedCount);
         if (opts.followupNeeded != null) { r.followupNeeded = !!opts.followupNeeded; if (!r.followupNeeded) { r.followupDone = false; r.followupResult = ''; } }
+        if (opts.received) r.received = opts.received;
+        if (opts.laborReport != null) r.laborReport = !!(r.followupNeeded && opts.laborReport && hcLegalType(r));
+        if (!r.laborReport) r.laborSubmittedAt = '';
         pushHist(r, '결과 수정 · ' + before + ' → ' + r.examinedCount + '/' + r.targetCount + (r.followupNeeded ? ' · 사후관리 대상' : ''));
         save(); return r;
     }
@@ -853,14 +901,20 @@
             var did = V && V.deptIdOf ? V.deptIdOf(r.dept) : r.dept;
             if (did !== deptId || !r.done || !(hcLockOf(r.id) || regByOf(r) === 'dept')) return;
             if (hcUnexamined(r) > 0) out.push({ kind: 'extra', row: r, due: r.extraExamDate || '' });
-            else if (hcFollowup(r)) out.push({ kind: 'followup', row: r, due: addDays(r.done, 30) });
+            else if (hcFollowup(r)) out.push({ kind: 'followup', row: r, due: hcFollowupDue(r) });
         });
         if (deptId === owner) {
             var years = {};
             health().forEach(function (r) { years[r.year] = 1; });
             Object.keys(years).sort().forEach(function (y) {
                 var rows = hcNoticeRows(y);
-                if (rows.length) out.push({ kind: 'notice', year: Number(y), rows: rows });
+                if (rows.length) out.push({ kind: 'notice', year: Number(y), rows: rows, due: noticeDue('hc', rows) });
+            });
+            /* 노동관서 제출은 공문과 따로 간다 — 결과를 등록하는 순간 생긴다(작업환경측정 labor 와 같다) */
+            health().forEach(function (r) {
+                var due = legalSubmitDue('hc', r);
+                /* 부서가 직접 등록한 검진도 노동관서 보고는 사업주(재난안전과)가 한다 — 작업환경측정 labor 와 같다 */
+                if (due) out.push({ kind: 'labor', row: r, due: due.date });
             });
         }
         return out;
@@ -964,9 +1018,14 @@
                검진은 유소견자가 나와도 사후관리 축이 영영 열리지 않았다(완료 버튼이
                hcFollowup 을 보고 나오는데 그 값이 늘 false 였다). */
             if (opts.followupNeeded != null) r.followupNeeded = !!opts.followupNeeded;
-            pushHist(r, '검진 실시 완료 (수검 ' + r.examinedCount + '/' + r.targetCount + ')'
-                + (r.followupNeeded ? ' · 사후관리 대상' : ''));
+            r.received = opts.received || TODAY;
+            r.laborReport = !!(r.followupNeeded && opts.laborReport && hcLegalType(r));
+            pushHist(r, '검진 실시 완료 (수검 ' + r.examinedCount + '/' + r.targetCount + ' · 결과표 받은 날 ' + r.received + ')'
+                + (r.followupNeeded ? ' · 사후관리 대상' : '') + (r.laborReport ? ' · 노동관서 보고 대상' : ''));
         } else if (hcUnexamined(r) > 0 && opts.examinedCount != null) {
+            /* 추가검진은 누적 수검자를 늘리기만 한다 — 줄이는 것은 결과 수정(공문 전)의 몫이다.
+               공문을 보낸 뒤 줄이면 공문 별지의 수검 인원과 기록이 갈린다. */
+            if (opts.examinedCount < (r.examinedCount || 0)) return null;
             r.examinedCount = Math.min(r.targetCount, opts.examinedCount);
             pushHist(r, '추가검진 반영 (수검 ' + r.examinedCount + '/' + r.targetCount + ')');
         } else if (hcFollowup(r)) {
@@ -1003,7 +1062,7 @@
         /* 건강검진 */
         health: health, healthOf: healthOf, addHealth: addHealth, effHealth: effHealth, hcRate: hcRate,
         hcUnexamined: hcUnexamined, hcFollowup: hcFollowup,
-        hcDocs: hcDocs, hcLockOf: hcLockOf, hcYearRows: hcYearRows, hcNoticeRows: hcNoticeRows, hcYearStat: hcYearStat,
+        hcDocs: hcDocs, hcLockOf: hcLockOf, hcLegalType: hcLegalType, hcLaborReport: hcLaborReport, hcReceived: hcReceived, hcLaborDue: hcLaborDue, hcFollowupDue: hcFollowupDue, setHcLaborSubmit: setHcLaborSubmit, noticeDue: noticeDue, hcYearRows: hcYearRows, hcNoticeRows: hcNoticeRows, hcYearStat: hcYearStat,
         hcReportFiles: hcReportFiles, saveHcNotice: saveHcNotice, nextHcNoticeNo: nextHcNoticeNo,
         editHealthResult: editHealthResult, hcTodos: hcTodos,
         healthSummary: healthSummary, healthLink: healthLink,
