@@ -1363,76 +1363,86 @@
             const pad2 = n => String(n).padStart(2, '0');
             const nowStamp = () => { const d = new Date(); return PROTO_TODAY + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()); };
             const addDays = (dateStr, n) => { const dt = new Date((dateStr || PROTO_TODAY) + 'T00:00:00Z'); if (isNaN(dt.getTime())) return '2026-07-31'; dt.setUTCDate(dt.getUTCDate() + n); return dt.toISOString().slice(0, 10); };
-            const pushHist = (o, stage, text) => { o.history = o.history || []; o.history.push({ stage: stage, actor: '박안전', text: text || '', at: nowStamp() }); };
+            /* 이력·처리자·제출자는 **로그인 계정**이다 — '박안전'·'김대표' 고정이면 누가 처리했든 같은 이름이 남는다 */
+            const me = () => (window.DYROLE && DYROLE.current) ? DYROLE.current() : { name: '담당자', deptId: '', deptName: '', tier: 'staff' };
+            const actorName = () => me().name || '담당자';
+            const pushHist = (o, stage, text) => { o.history = o.history || []; o.history.push({ stage: stage, actor: actorName(), text: text || '', at: nowStamp() }); };
             /* 레거시 레코드(status:'처리중', plan/progress/result) → 5단계 상태 + history[] 마이그레이션 (최초 1회) */
             function migrateVoice(o) {
-                if (o.status === '처리중') o.status = o.link ? '개선조치중' : '점검중';
+                if (o.status === '처리중') o.status = '조치중';
                 if (!o.history) {
                     const h = [{ stage: '접수', actor: '박안전', text: '의견 접수 — ' + (o.via || '온라인') + ' 경로', at: (o.date || PROTO_TODAY) + ' 09:00' }];
-                    if (o.plan) h.push({ stage: o.link ? '개선조치 생성' : '현장점검 생성', actor: '박안전', text: o.plan, at: (o.date || PROTO_TODAY) + ' 10:00' });
+                    if (o.plan) h.push({ stage: '조치 진행', actor: '박안전', text: o.plan, at: (o.date || PROTO_TODAY) + ' 10:00' });
                     (o.progress || []).forEach(p => h.push({ stage: '경과', actor: '박안전', text: p.text, at: (p.date || o.date || PROTO_TODAY) + ' 11:00' }));
                     if (o.status === '완료' && o.result) h.push({ stage: '완료', actor: '박안전', text: o.result, at: (o.date || PROTO_TODAY) + ' 15:00' });
                     if (o.status === '반려' && o.rejectReason) h.push({ stage: '반려', actor: '박안전', text: o.rejectReason, at: (o.date || PROTO_TODAY) + ' 15:00' });
                     o.history = h;
                 }
-                if (o.inspectLink && !o.inspect) o.inspect = { kind: '특별점검', date: addDays(o.date, 3), owner: o.owner || '재난안전과' };
                 if (o.status === '완료') { o.completedAt = o.completedAt || ((o.date || PROTO_TODAY) + ' 15:00'); o.completedBy = o.completedBy || '박안전'; }
             }
             /* ===== SSOT (window.OPINION_STATE) ===== */
             if (!window.OPINION_STATE) {
                 /* 예시 자료 — 2026-01~11 접수된 의견(2026-11-13 기준). 작성자·담당부서는 조직도 실인물·실부서.
-                   지난 건은 처리가 끝났고(완료·반려), 11월 접수분만 접수대기·점검중·개선조치중이다. */
+                   지난 건은 처리가 끝났고(완료·반려), 11월 접수분만 접수대기·조치중이다. 완료 건의 증빙 파일은 예시 파일명이다. */
                 const H = (stage, at, text, actor) => ({ stage: stage, actor: actor || '박안전', text: text, at: at });
-                const V0 = (o) => Object.assign({ via: '온라인', location: '-', owner: '', inspectLink: false, inspect: null, link: '', plan: '', progress: [], result: '' }, o);
+                const V0 = (o) => Object.assign({ via: '온라인', location: '-', owner: '', action: null, files: [], plan: '', progress: [], result: '' }, o);
                 /* 완료 건 — 접수 → 조치 → 완료 이력을 날짜대로 */
-                const done = (o, how, doneAt, result) => V0(Object.assign(o, { status: '완료', result: result, completedAt: doneAt + ' 16:30', completedBy: '박안전',
-                    history: [H('접수', o.date + ' 09:10', '의견 접수 — ' + (o.via || '온라인') + ' 경로'), how, H('완료', doneAt + ' 16:30', result)] }));
+                const done = (o, how, doneAt, result) => {
+                    const files = [{ name: o.id + '_조치결과_' + (o.owner || '재난안전과') + '.pdf', size: 412000 }];
+                    const fin = H('완료', doneAt + ' 16:30', result + ' · 증빙 1건'); fin.files = files;
+                    return V0(Object.assign(o, { status: '완료', result: result, completedAt: doneAt, completedBy: '박안전', files: files,
+                        action: { deptId: V.deptIdOf(o.owner || ''), dept: o.owner || '', plan: (how.text || '').replace(/^조치 부서 [^ ]+ · /, '').replace(/ · 예정 [0-9-]+$/, '') || '', due: '', startedAt: (how.at || '').slice(0, 10), doneAt: doneAt },
+                        history: [H('접수', o.date + ' 09:10', '의견 접수 — ' + (o.via || '온라인') + ' 경로'), how, fin] }));
+                };
                 const seed = [
                     V0({ id: 'OPN-24', cat: '아차사고', title: '정수장 약품 투입실 바닥 미끄럼 — 작업자 넘어질 뻔함', author: '서한별', date: '2026-11-12', status: '접수대기', location: '담양정수장 약품 투입실',
                          content: '응집제 보충 중 바닥에 흘린 약품 때문에 미끄러질 뻔했습니다. 미끄럼 방지 매트와 바닥 배수 정비가 필요합니다.',
                          history: [H('접수', '2026-11-12 08:52', '의견 접수 — 온라인 경로')] }),
-                    V0({ id: 'OPN-23', cat: '위험신고', title: '담양종합체육관 관람석 계단 손잡이 고정 풀림', author: '오세영', date: '2026-11-10', status: '점검중', location: '담양종합체육관 2층 관람석',
-                         content: '관람석 B구역 계단 손잡이 2곳의 고정볼트가 풀려 흔들립니다. 주말 대회 전에 점검이 필요합니다.', owner: '문화체육과', inspectLink: true,
-                         inspect: { kind: '특별점검', date: '2026-11-17', owner: '문화체육과 · 주무관 / 한지훈' },
-                         history: [H('접수', '2026-11-10 10:05', '의견 접수 — 온라인 경로'), H('현장점검 생성', '2026-11-11 09:30', '현장점검 생성 — 특별점검 · 담당 문화체육과 · 주무관 / 한지훈 · 예정 2026-11-17')] }),
-                    V0({ id: 'OPN-22', cat: '안전제안', title: '도로 보수 현장 야간 작업 경광등 추가 배치 제안', author: '박서준', date: '2026-11-05', status: '개선조치중', via: '오프라인', location: '군도 5호선 보수 구간',
-                         content: '해가 빨리 져 17시 이후 작업 구간 진입 차량이 작업자를 늦게 봅니다. 구간 시작·끝에 경광등을 1대씩 더 두면 좋겠습니다.', owner: '건설과', link: 'IMP-2611',
-                         history: [H('접수', '2026-11-05 14:20', '의견 접수 — 오프라인 경로(담당자 대리 등록)'), H('개선조치 생성', '2026-11-06 10:10', '개선조치 IMP-2611 생성 — 담당 건설과 · 안전관리팀장 / 정안전 · 예정 2026-11-27')] }),
-                    V0({ id: 'OPN-21', cat: '청취조사', title: '하반기 의견청취 — 동절기 방한 보호구 지급 시기', author: '곽문석', date: '2026-10-29', status: '개선조치중', via: '오프라인',
-                         content: '현장 근무자 방한장갑·방한화 지급이 매년 12월 중순이라 늦습니다. 11월 중 지급을 요청합니다.', owner: '재난안전과', link: 'IMP-2608',
-                         history: [H('접수', '2026-10-29 15:00', '의견 접수 — 오프라인 경로(하반기 의견청취 간담회)'), H('개선조치 생성', '2026-10-30 09:40', '개선조치 IMP-2608 생성 — 담당 재난안전과 · 안전관리 주무관 / 박안전 · 예정 2026-11-20'),
-                                   H('경과', '2026-11-09 11:20', '방한 보호구 구매 요청 완료 — 11-18 납품 예정')] }),
+                    V0({ id: 'OPN-23', cat: '위험신고', title: '담양종합체육관 관람석 계단 손잡이 고정 풀림', author: '오세영', date: '2026-11-10', status: '조치중', location: '담양종합체육관 2층 관람석',
+                         content: '관람석 B구역 계단 손잡이 2곳의 고정볼트가 풀려 흔들립니다. 주말 대회 전에 점검이 필요합니다.', owner: '문화체육과',
+                         action: { deptId: 'culture', dept: '문화체육과', plan: '11/17 현장 특별점검 후 손잡이 고정볼트 재시공 — 주말 대회 전 마무리', due: '2026-11-21', startedAt: '2026-11-11', startedBy: '박안전' },
+                         history: [H('접수', '2026-11-10 10:05', '의견 접수 — 온라인 경로'), H('조치 진행', '2026-11-11 09:30', '조치 부서 문화체육과 · 11/17 현장 특별점검 후 손잡이 고정볼트 재시공 — 주말 대회 전 마무리 · 예정 2026-11-21')] }),
+                    V0({ id: 'OPN-22', cat: '안전제안', title: '도로 보수 현장 야간 작업 경광등 추가 배치 제안', author: '박서준', date: '2026-11-05', status: '조치중', via: '오프라인', location: '군도 5호선 보수 구간',
+                         content: '해가 빨리 져 17시 이후 작업 구간 진입 차량이 작업자를 늦게 봅니다. 구간 시작·끝에 경광등을 1대씩 더 두면 좋겠습니다.', owner: '건설과',
+                         action: { deptId: 'construct', dept: '건설과', plan: '도로 보수 현장 야간 작업 구간 시작·끝에 경광등 1대씩 추가 배치 — 건설과에 공문으로 요청', due: '2026-11-27', startedAt: '2026-11-06', startedBy: '박안전' },
+                         history: [H('접수', '2026-11-05 14:20', '의견 접수 — 오프라인 경로(담당자 대리 등록)'), H('조치 진행', '2026-11-06 10:10', '조치 부서 건설과 · 도로 보수 현장 야간 작업 구간 시작·끝에 경광등 1대씩 추가 배치 — 건설과에 공문으로 요청 · 예정 2026-11-27')] }),
+                    V0({ id: 'OPN-21', cat: '청취조사', title: '하반기 의견청취 — 동절기 방한 보호구 지급 시기', author: '곽문석', date: '2026-10-29', status: '조치중', via: '오프라인',
+                         content: '현장 근무자 방한장갑·방한화 지급이 매년 12월 중순이라 늦습니다. 11월 중 지급을 요청합니다.', owner: '재난안전과',
+                         action: { deptId: 'safety', dept: '재난안전과', plan: '동절기 방한 보호구(방한장갑·방한화) 11월 중 지급', due: '2026-11-20', startedAt: '2026-10-30', startedBy: '박안전' },
+                         history: [H('접수', '2026-10-29 15:00', '의견 접수 — 오프라인 경로(하반기 의견청취 간담회)'), H('조치 진행', '2026-10-30 09:40', '조치 부서 재난안전과 · 동절기 방한 보호구(방한장갑·방한화) 11월 중 지급 · 예정 2026-11-20'),
+                                   H('경과', '2026-11-09 11:20', '방한 보호구 구매 요청 완료 — 11-18 납품 예정'),
+                                   H('경과', '2026-11-14 10:20', '방한장갑·방한화 11-18 납품 확정 — 현장 근무자 64명 부서별 배부 계획 수립')] }),
                     done({ id: 'OPN-20', cat: '위험신고', title: '하수처리장 맨홀 뚜껑 잠금장치 파손', author: '오수질', date: '2026-10-21', location: '담양공공하수처리시설 유입동',
                            content: '유입동 앞 맨홀 뚜껑 잠금장치가 부서져 열린 채로 있습니다. 추락 위험이 있습니다.', owner: '물순환사업소' },
-                         H('개선조치 생성', '2026-10-21 13:40', '개선조치 IMP-2597 생성 — 담당 물순환사업소 · 수질관리팀장 / 남수질 · 예정 2026-10-28'), '2026-10-24',
+                         H('조치 진행', '2026-10-21 13:40', '조치 부서 물순환사업소 · 부서에 조치 요청(공문) · 예정 2026-10-28'), '2026-10-24',
                          '잠금장치 교체 완료(10-24) · 같은 형식 맨홀 6개소 일제 점검, 추가 이상 없음'),
                     done({ id: 'OPN-19', cat: '아차사고', title: '예초기 작업 중 비산물에 보행자 맞을 뻔', author: '민설비', date: '2026-10-14', via: '오프라인', location: '관방제림 산책로',
                            content: '산책로 옆 예초 작업 중 돌이 튀어 지나가던 주민이 맞을 뻔했습니다.', owner: '공공시설사업소' },
-                         H('현장점검 생성', '2026-10-15 09:20', '현장점검 생성 — 특별점검 · 담당 공공시설사업소 · 시설안전 담당 / 한담당 · 예정 2026-10-17'), '2026-10-20',
+                         H('조치 진행', '2026-10-15 09:20', '조치 부서 공공시설사업소 · 현장 특별점검 후 조치 · 예정 2026-10-17'), '2026-10-20',
                          '비산 방지망 사용 · 작업 구간 통제 인원 1명 배치를 예초 작업 기준에 반영(10-20)'),
                     done({ id: 'OPN-18', cat: '안전제안', title: '쓰레기 수거차량 후방카메라 설치 제안', author: '김지도', date: '2026-09-30', location: '자원순환센터',
                            content: '수거차량 후진 시 뒤에서 작업하는 상차원이 보이지 않습니다. 후방카메라와 후진 경보음 설치를 제안합니다.', owner: '환경과' },
-                         H('개선조치 생성', '2026-10-02 10:00', '개선조치 IMP-2584 생성 — 담당 환경과 · 환경지도팀장 / 조환경 · 예정 2026-10-31'), '2026-10-28',
+                         H('조치 진행', '2026-10-02 10:00', '조치 부서 환경과 · 부서에 조치 요청(공문) · 예정 2026-10-31'), '2026-10-28',
                          '수거차량 7대 후방카메라·후진 경보음 설치 완료(10-28)'),
                     done({ id: 'OPN-17', cat: '청취조사', title: '체육시설 위탁 운영 종사자 간담회 — 야간 혼자 문단속', author: '한지훈', date: '2026-09-16', via: '오프라인', location: '담양종합체육관',
                            content: '상반기 점검 미이행 조치로 연 위탁 운영 종사자 간담회 의견입니다. 야간 마감을 혼자 해 사고가 나도 알릴 사람이 없습니다.', owner: '문화체육과' },
-                         H('개선조치 생성', '2026-09-17 11:00', '개선조치 IMP-2570 생성 — 담당 문화체육과 · 주무관 / 한지훈 · 예정 2026-09-30'), '2026-09-29',
+                         H('조치 진행', '2026-09-17 11:00', '조치 부서 문화체육과 · 부서에 조치 요청(공문) · 예정 2026-09-30'), '2026-09-29',
                          '10월부터 야간 마감 2인 1조 근무 적용 · 위탁 운영사와 근무표 변경 합의(09-29)'),
                     done({ id: 'OPN-16', cat: '위험신고', title: '정수장 염소 저장실 환기팬 가동 불량', author: '하정수', date: '2026-09-03', location: '담양정수장 염소 저장실',
                            content: '환기팬에서 소음이 나고 가끔 멈춥니다. 염소가스 누출 시 환기가 되지 않을 수 있습니다.', owner: '물순환사업소' },
-                         H('개선조치 생성', '2026-09-03 15:10', '개선조치 IMP-2561 생성 — 담당 물순환사업소 · 정수팀장 / 문정수 · 예정 2026-09-12'), '2026-09-10',
+                         H('조치 진행', '2026-09-03 15:10', '조치 부서 물순환사업소 · 부서에 조치 요청(공문) · 예정 2026-09-12'), '2026-09-10',
                          '환기팬 교체(09-10) · 가스누출 경보기 작동 시험 정상'),
                     done({ id: 'OPN-15', cat: '아차사고', title: '폭염 중 도로 포장 작업자 어지럼증 호소', author: '이준호', date: '2026-08-19', via: '오프라인', location: '창평면 도로 보수 현장',
                            content: '오후 2시 포장 작업 중 작업자 1명이 어지럼증을 호소해 쉬게 했습니다.', owner: '건설과' },
-                         H('현장점검 생성', '2026-08-19 16:00', '현장점검 생성 — 특별점검 · 담당 건설과 · 안전관리팀장 / 정안전 · 예정 2026-08-20'), '2026-08-20',
+                         H('조치 진행', '2026-08-19 16:00', '조치 부서 건설과 · 현장 특별점검 후 조치 · 예정 2026-08-20'), '2026-08-20',
                          '폭염특보 시 14~17시 옥외작업 중지 · 현장 그늘막·생수·이온음료 비치(08-20)'),
                     done({ id: 'OPN-14', cat: '안전제안', title: '행정복지센터 민원실 소화기 위치 표지 개선', author: '배주민', date: '2026-08-05', location: '담양읍 행정복지센터 1층',
                            content: '민원실 소화기가 기둥 뒤에 있어 찾기 어렵습니다. 눈에 띄는 표지가 필요합니다.', owner: '담양읍' },
-                         H('개선조치 생성', '2026-08-06 09:30', '개선조치 IMP-2538 생성 — 담당 담양읍 · 주민복지 담당 / 배주민 · 예정 2026-08-14'), '2026-08-12',
+                         H('조치 진행', '2026-08-06 09:30', '조치 부서 담양읍 · 부서에 조치 요청(공문) · 예정 2026-08-14'), '2026-08-12',
                          '축광 소화기 표지 4곳 부착(08-12)'),
                     done({ id: 'OPN-13', cat: '위험신고', title: '보건소 옥상 출입문 상시 개방', author: '백지영', date: '2026-07-22', location: '보건소 옥상',
                            content: '옥상 출입문이 늘 열려 있고 난간이 낮습니다. 추락 위험이 있습니다.', owner: '보건소' },
-                         H('개선조치 생성', '2026-07-23 10:20', '개선조치 IMP-2519 생성 — 담당 보건소 · 보건행정 주무관 / 이보건 · 예정 2026-07-31'), '2026-07-29',
+                         H('조치 진행', '2026-07-23 10:20', '조치 부서 보건소 · 부서에 조치 요청(공문) · 예정 2026-07-31'), '2026-07-29',
                          '옥상 출입문 잠금장치 설치 · 열쇠는 시설 담당 관리(07-29)'),
                     done({ id: 'OPN-12', cat: '청취조사', title: '장마철 배수로 정비 작업 우천 중지 기준 문의', author: '박현장', date: '2026-07-08', via: '오프라인',
                            content: '비가 올 때 작업을 언제 멈춰야 하는지 현장마다 판단이 다릅니다.', owner: '건설과' },
@@ -1444,11 +1454,11 @@
                          history: [H('접수', '2026-06-24 11:30', '의견 접수 — 온라인 경로'), H('반려', '2026-06-26 14:00', '청사 주차장 재포장 공사(8월 시행)에 보행 통로 도색이 포함되어 있어 별도 조치와 중복 — 공사 일정 회신')] }),
                     done({ id: 'OPN-10', cat: '아차사고', title: '사다리 작업 중 미끄러짐', author: '한운영', date: '2026-06-10', via: '오프라인', location: '공공시설사업소 자재창고',
                            content: '선반 위 자재를 꺼내다 사다리 다리가 미끄러졌습니다. 다친 사람은 없습니다.', owner: '공공시설사업소' },
-                         H('개선조치 생성', '2026-06-11 09:00', '개선조치 IMP-2488 생성 — 담당 공공시설사업소 · 시설안전 담당 / 한담당 · 예정 2026-06-19'), '2026-06-17',
+                         H('조치 진행', '2026-06-11 09:00', '조치 부서 공공시설사업소 · 부서에 조치 요청(공문) · 예정 2026-06-19'), '2026-06-17',
                          'A형 사다리 미끄럼 방지 고무·아웃트리거 부착 · 2인 1조 작업 지침 배포(06-17)'),
                     done({ id: 'OPN-09', cat: '위험신고', title: '담양천 산책로 안전난간 부식', author: '서담당', date: '2026-05-27', location: '담양천 산책로',
                            content: '산책로 안전난간 하부가 부식돼 기대면 흔들립니다.', owner: '물순환사업소' },
-                         H('개선조치 생성', '2026-05-28 10:00', '개선조치 IMP-2471 생성 — 담당 물순환사업소 · 시설 담당 / 서담당 · 예정 2026-06-15'), '2026-06-12',
+                         H('조치 진행', '2026-05-28 10:00', '조치 부서 물순환사업소 · 부서에 조치 요청(공문) · 예정 2026-06-15'), '2026-06-12',
                          '부식 난간 32m 교체(06-12)'),
                     done({ id: 'OPN-08', cat: '청취조사', title: '집합교육 일정 사전 공지 요청', author: '김도현', date: '2026-05-13', owner: '재난안전과',
                            content: '집합교육 공지가 1주 전에 와서 현장 일정을 빼기 어렵습니다.' },
@@ -1456,23 +1466,23 @@
                          '집합교육은 3주 전 공지를 원칙으로 정하고 교육 화면에 미리 등록(05-20)'),
                     done({ id: 'OPN-07', cat: '안전제안', title: '분진 작업 방진마스크 규격 상향', author: '정수빈', date: '2026-04-22', location: '자원순환센터 선별장',
                            content: '선별장 분진이 심해 지금 마스크로는 부족합니다.', owner: '환경과' },
-                         H('개선조치 생성', '2026-04-23 10:40', '개선조치 IMP-2433 생성 — 담당 환경과 · 유해·위험요인 담당 주무관 / 정환경 · 예정 2026-05-08'), '2026-05-06',
+                         H('조치 진행', '2026-04-23 10:40', '조치 부서 환경과 · 부서에 조치 요청(공문) · 예정 2026-05-08'), '2026-05-06',
                          '특급 방진마스크로 교체 지급(05-06) · 작업환경측정 시 분진 항목 추가'),
                     done({ id: 'OPN-06', cat: '위험신고', title: '체육관 지하 기계실 누수', author: '오세영', date: '2026-04-08', location: '담양종합체육관 지하 기계실',
                            content: '기계실 천장에서 물이 떨어져 분전반 근처가 젖어 있습니다.', owner: '문화체육과' },
-                         H('개선조치 생성', '2026-04-08 15:30', '개선조치 IMP-2410 생성 — 담당 문화체육과 · 주무관 / 한지훈 · 예정 2026-04-17'), '2026-04-15',
+                         H('조치 진행', '2026-04-08 15:30', '조치 부서 문화체육과 · 부서에 조치 요청(공문) · 예정 2026-04-17'), '2026-04-15',
                          '배관 누수 보수 · 분전반 방수 커버 설치(04-15)'),
                     done({ id: 'OPN-05', cat: '아차사고', title: '수거차량 상차 중 손 끼임 위험', author: '김지도', date: '2026-03-25', via: '오프라인', location: '자원순환센터',
                            content: '압축 장치 작동 중 손이 들어갈 뻔했습니다.', owner: '환경과' },
-                         H('개선조치 생성', '2026-03-26 09:10', '개선조치 IMP-2386 생성 — 담당 환경과 · 환경지도팀장 / 조환경 · 예정 2026-04-10'), '2026-04-07',
+                         H('조치 진행', '2026-03-26 09:10', '조치 부서 환경과 · 부서에 조치 요청(공문) · 예정 2026-04-10'), '2026-04-07',
                          '압축 장치 양손 조작 버튼 점검 · 상차원 안전교육 실시(04-07)'),
                     done({ id: 'OPN-04', cat: '청취조사', title: '해빙기 절개지 점검 요청', author: '박현장', date: '2026-03-11', via: '오프라인', owner: '건설과',
                            content: '해빙기 낙석 우려 절개지 점검을 요청합니다.' },
-                         H('현장점검 생성', '2026-03-12 09:00', '현장점검 생성 — 정기점검 · 담당 건설과 · 현장안전 담당 주무관 / 박현장 · 예정 2026-03-18'), '2026-03-19',
+                         H('조치 진행', '2026-03-12 09:00', '조치 부서 건설과 · 현장 정기점검 후 조치 · 예정 2026-03-18'), '2026-03-19',
                          '절개지 5개소 점검 · 1개소 낙석 방지망 보수(03-19)'),
                     done({ id: 'OPN-03', cat: '안전제안', title: '전기실 절연매트 추가 비치', author: '민설비', date: '2026-02-24', location: '군청 본관 전기실',
                            content: '수배전반 앞 절연매트가 낡아 갈라졌습니다.', owner: '공공시설사업소' },
-                         H('개선조치 생성', '2026-02-25 10:00', '개선조치 IMP-2342 생성 — 담당 공공시설사업소 · 주무관 / 민설비 · 예정 2026-03-06'), '2026-03-04',
+                         H('조치 진행', '2026-02-25 10:00', '조치 부서 공공시설사업소 · 부서에 조치 요청(공문) · 예정 2026-03-06'), '2026-03-04',
                          '절연매트 교체(03-04)'),
                     V0({ id: 'OPN-02', cat: '위험신고', title: '시가지 빙판길 제설함 부족', author: '배주민', date: '2026-02-10', status: '반려', location: '담양읍 시가지', owner: '담양읍',
                          content: '읍 시가지 이면도로에 제설함이 부족해 빙판길 미끄럼 사고가 우려됩니다.',
@@ -1480,7 +1490,7 @@
                          history: [H('접수', '2026-02-10 09:40', '의견 접수 — 온라인 경로'), H('반려', '2026-02-12 15:20', '제설함 설치·관리는 건설과 소관 — 건설과 제설 대책(02-12 제설함 12개소 추가)으로 처리되어 종결')] }),
                     done({ id: 'OPN-01', cat: '청취조사', title: '동절기 현장 근무 보호구 의견', author: '곽문석', date: '2026-01-20', via: '오프라인', owner: '재난안전과',
                            content: '한파 때 현장 근무자 방한 보호구가 부족합니다.' },
-                         H('개선조치 생성', '2026-01-21 10:00', '개선조치 IMP-2305 생성 — 담당 재난안전과 · 안전관리 주무관 / 박안전 · 예정 2026-01-30'), '2026-01-28',
+                         H('조치 진행', '2026-01-21 10:00', '조치 부서 재난안전과 · 부서에 조치 요청(공문) · 예정 2026-01-30'), '2026-01-28',
                          '방한장갑·방한화 추가 지급(01-28)'),
                 ];
                 window.OPINION_STATE = {
@@ -1554,7 +1564,8 @@
                         checklists: [
                             { id: 'CHK-08', cat: '용역', date: '2026-11-11', inspector: '김안전', result: '미흡', appr: '미상신', items: [
                                 { q: '도급 시 안전·보건 협의체를 구성·운영하였는가', r: '확인' },
-                                { q: '작업장 합동 순회점검(2일 1회)을 실시하였는가', r: '미흡', note: '10월 셋째 주 1회 누락 — 11월부터 점검표에 일자 기록' },
+                                { q: '작업장 합동 순회점검(2일 1회)을 실시하였는가', r: '미흡', note: '10월 셋째 주 1회 누락 — 11월부터 점검표에 일자 기록', owner: '물순환사업소', plan: '11월부터 합동 순회점검 일자를 점검표에 기록 — 물순환사업소 회신 공문으로 확인',
+                                  action: { deptId: 'water', dept: '물순환사업소', plan: '11월부터 합동 순회점검 일자를 점검표에 기록 — 물순환사업소 회신 공문으로 확인', state: 'OPEN', result: '', doneAt: '', doneBy: '', files: [] } },
                                 { q: '수급인에게 안전·보건 정보를 사전 제공하였는가', r: '확인' },
                                 { q: '종사자 의견청취를 실시하고 결과를 반영하였는가', r: '확인' },
                             ] },
@@ -1603,27 +1614,31 @@
             const DEPTS = (V.deptNames ? V.deptNames() : ['재난안전과']).concat(['미배정']);
             const CHK_CATS = ['용역', '구매설치', '위탁사업', '기타'];
             const CHK_QS = ['도급 시 안전·보건 협의체를 구성·운영하였는가', '작업장 합동 순회점검을 주기적으로 실시하였는가', '수급인에게 안전·보건 정보를 사전 제공하였는가', '종사자 의견청취를 실시하고 결과를 반영하였는가', '안전보건 협의체 결과를 게시·공유하였는가'];
-            /* 5단계 상태 (DESIGN-TOKENS §5): 접수대기 → 점검중 | 개선조치중 → 완료 (+반려) */
-            const ST_ORDER = ['접수대기', '점검중', '개선조치중', '완료', '반려'];
-            const ST_COLOR = { '접수대기': 'neutral', '점검중': 'info', '개선조치중': 'warning', '완료': 'success', '반려': 'danger' };
+            /* 상태 (2026-11-18): 접수대기 → 조치중 → 완료 (+반려). 종전 점검중·개선조치중은 조치중으로 합쳤다 */
+            const ST_ORDER = ['접수대기', '조치중', '완료', '반려'];
+            const ST_COLOR = { '접수대기': 'neutral', '조치중': 'warning', '완료': 'success', '반려': 'danger' };
             const catChip = c => '<span class="chip-status ' + ({ '아차사고': 'warning', '안전제안': 'info', '위험신고': 'purple', '청취조사': 'success' }[c] || 'neutral') + '">' + c + '</span>';
             const stChip = st => '<span class="chip-status ' + (ST_COLOR[st] || 'neutral') + '">' + st + '</span>';
-            /* 개선조치중 의견: 연계된 개선조치가 종결되면 자동으로 완료 전이 (렌더 시점 동기화) */
-            function syncAutoTransition() {
-                const imps = E.improvements();
-                S.VOICES.forEach(o => {
-                    if (o.status === '개선조치중' && o.link) {
-                        const imp = imps.find(x => x.id === o.link);
-                        if (imp && imp.status === '종결') {
-                            o.status = '완료';
-                            o.completedAt = nowStamp(); o.completedBy = '박안전';
-                            o.result = o.result || ('개선조치 ' + o.link + ' 종결 — 조치 완료');
-                            pushHist(o, '완료', '개선조치 ' + o.link + ' 완료 — 자동 전이');
-                        }
-                    }
-                });
-            }
-            syncAutoTransition();
+            /* 옛 저장분 → 조치중 하나로(2026-11-18). 현장점검(inspect)·개선조치 연계(link)·조치 요청(action.state)은
+               «조치 부서 + 조치 계획»으로 옮긴다 — 다른 메뉴에 남는 건이 없다. */
+            S.VOICES.forEach(o => {
+                if (o.status === '점검중' || o.status === '개선조치중' || o.status === '처리중') o.status = '조치중';
+                if (!o.action && (o.inspect || o.link) && o.owner) {
+                    const ins = o.inspect || {};
+                    o.action = { deptId: V.deptIdOf(o.owner), dept: o.owner, plan: o.inspect ? (ins.kind || '현장점검') + ' 후 조치' + (ins.date ? '(점검 ' + ins.date + ')' : '') : o.title, due: '', startedAt: o.date };
+                }
+                if (o.action && o.action.state) {
+                    const x = o.action;
+                    o.action = { deptId: x.deptId || V.deptIdOf(x.dept), dept: x.dept, plan: x.plan || x.desc || o.title, due: x.due || '', startedAt: (x.requestedAt || o.date || '').slice(0, 10) };
+                }
+                delete o.link; delete o.inspect; delete o.inspectLink;
+            });
+            /* 점검결과지 미흡 문항 — 옛 조치 요청(REQ·SUBMIT·RETURNED) → 조치중(OPEN), 확인 완료(DONE) → 완료 */
+            (S.COUNCIL.checklists || []).forEach(c => (c.items || []).forEach(it => {
+                const x = it.action; if (!x || x.state === 'OPEN' || (x.state === 'DONE' && x.plan !== undefined)) return;
+                it.action = { deptId: x.deptId || V.deptIdOf(x.dept), dept: x.dept, plan: it.plan || x.desc || it.q, state: x.state === 'DONE' ? 'DONE' : 'OPEN', result: x.result || '', doneAt: (x.confirmAt || '').slice(0, 10), doneBy: x.confirmBy || '', files: x.files || [] };
+                it.plan = it.action.plan;
+            }));
             const apprColor = a => ({ '미상신': 'neutral', '결재중': 'info', '승인완료': 'success', '반려': 'danger' }[a] || 'neutral');
             const apprChip = a => '<span class="chip-status ' + apprColor(a) + '">' + (a || '미상신') + '</span>';
             const chkResultChip = r => (r === '미흡' ? '<span class="chip-status danger">미흡</span>' : '<span class="chip-status success">적합</span>');
@@ -1635,14 +1650,40 @@
                 '<div class="pdf-sec">점검 항목</div><ol class="pdf-list">' + c.items.map(it => '<li>' + V.esc(it.q) + ' — <b>' + it.r + '</b>' + (it.note ? ' (' + V.esc(it.note) + ')' : '') + '</li>').join('') + '</ol>' +
                 '<div class="pdf-sign">시행일 ' + c.date + '<br><br><b>담양군수</b> (직인)</div>' +
                 '</div>';
-            const linkChips = o => (o.inspectLink ? '<span class="chip-mini wt-elec"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:3px;" aria-hidden="true"><path d="M9 15a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M15 9a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/></svg>안전점검 연동</span> ' : '') + (o.link ? '<span class="chip-mini pdca"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px; margin-right:3px;" aria-hidden="true"><path d="M9 15a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1 1"/><path d="M15 9a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1-1"/></svg>개선조치 연동</span>' : '');
+            /* 조치중 건은 상태 칩 옆에 «n일째»(조치 진행을 저장한 날부터) — 알림은 보내지 않는다 */
+            const ageNote = o => (o.status === '조치중' && o.action && o.action.startedAt) ? ' <span class="opn-muted" style="font-size:var(--fs-12); white-space:nowrap;">' + (Math.max(0, -V.daysTo(o.action.startedAt)) + 1) + '일째</span>' : '';
             const find = id => S.VOICES.find(x => x.id === id);
+
+            /* ===== 권한 (CLAUDE.md §12 · 정의서 §6) — 2026-11-18 단순화 =====
+               · 의견 등록(온라인)  — 전 직원
+               · 처리 일체(처리 선택·조치 완료·계획 수정·경과·반려·재처리)·오프라인 대리 등록 — 재난안전과 담당자
+               · 위원회·협의체 기록·점검결과지·미흡 문항 조치 완료 — 재난안전과 담당자
+               부서 담당자는 등록·조회만 한다(조치 결과는 공문·메신저로 회신). 관리·감독 계층은 조회만.
+               진입 함수에도 같은 판정을 건다 — 버튼만 숨기면 전역 호출로 뚫린다. */
+            const OWNER = (window.DYROLE && DYROLE.OWNER_DEPT) || 'safety';
+            const staffIn = id => !window.DYROLE || (!!id && me().tier === 'staff' && me().deptId === id);
+            const canProcess = () => staffIn(OWNER);
+            const canManage = () => staffIn(OWNER);
+            const MSG_PROC = '의견 처리는 재난안전과 담당자가 합니다';
+            const MSG_MANAGE = '위원회·협의체 기록과 점검결과지는 재난안전과 담당자가 관리합니다';
+            const gate = (ok, msg) => { if (ok) return false; V.toast(msg); return true; };
+            const manageNote = () => canManage() ? '' : '<p class="file-hint" style="margin:0 0 12px;">' + MSG_MANAGE + ' — 이 화면은 조회만 합니다.</p>';
+            const mgTh = () => canManage() ? '<th>관리</th>' : '';
+            const mgTd = h => canManage() ? '<td>' + h + '</td>' : '';
+            const mgBtn = h => canManage() ? h : '';
+            /* 조회 범위 — 신고자 실명이 남의 부서에 보이지 않게 한다(OPN-05). 전 부서 범위가 아니면
+               우리 부서가 담당한 건과 내가 낸 건만 보인다. */
+            const visible = o => {
+                if (!window.DYROLE || DYROLE.scope() === 'all') return true;
+                const id = V.deptIdOf(o.owner || '');
+                return (!!id && DYROLE.inScope(id)) || o.author === actorName();
+            };
             const nextNum = arr => { let m = 0; arr.forEach(x => { const g = /(\d+)$/.exec(x.id || ''); if (g && +g[1] > m) m = +g[1]; }); return m + 1; };
 
             /* ===== 라우터 ===== */
             PG.opnGo = (tab, view, id) => { if (tab) S.tab = tab; if (view) S.view = view; if (id !== undefined) S.id = id; render(); };
             PG.opnTab = name => PG.opnGo(name, 'list', null);
-            PG.opnOpen = id => PG.opnGo(S.tab, 'detail', id);
+            PG.opnOpen = id => { const o = find(id); if (o && !visible(o)) { V.toast('조회 범위 밖의 의견입니다'); return; } S.pickFiles = []; PG.opnGo(S.tab, 'detail', id); };
             PG.opnBack = () => PG.opnGo(S.tab, 'list', null);
             PG.opnNew = () => PG.opnGo('voice', 'form', null);
             PG.opnPage = p => { S.page = p < 1 ? 1 : p; render(); };
@@ -1655,7 +1696,7 @@
                 if (!author) return;
                 const online = via === '온라인';
                 author.readOnly = online;
-                author.value = online ? '김대표' : '';
+                author.value = online ? actorName() : '';
                 author.placeholder = online ? 'SSO 로그인 사용자 자동 입력' : '서면·구두 의견 제출자명 입력';
             };
             /* 화면 내 2차 탭 (위원회 3탭 / 협의체 2탭) — 탭 상태는 페이지 내 유지 */
@@ -1671,11 +1712,12 @@
                 const loc = ((document.getElementById('opn-loc') || {}).value || '').trim();
                 const content = ((document.getElementById('opn-content') || {}).value || '').trim();
                 if (!cat) { V.toast('분류를 선택하세요'); return; }
+                if (via === '오프라인' && !canProcess()) { V.toast('오프라인(서면·구두) 의견은 재난안전과 담당자가 대리 등록합니다'); return; }
                 if (via === '오프라인' && !author) { V.toast('오프라인 의견 제출자명을 입력하세요'); return; }
                 if (!title) { V.toast('제목을 입력하세요'); return; }
                 if (!content) { V.toast('상세내용을 입력하세요'); return; }
-                const writer = author || (via === '온라인' ? '김대표' : '(현장 종사자)');
-                const rec = { id: 'OPN-' + nextNum(S.VOICES), cat: cat, title: title, location: loc || '-', content: content, author: writer, date: PROTO_TODAY, status: '접수대기', via: via, owner: '', inspectLink: false, inspect: null, link: '', result: '', history: [] };
+                const writer = via === '온라인' ? actorName() : author;
+                const rec = { id: 'OPN-' + nextNum(S.VOICES), cat: cat, title: title, location: loc || '-', content: content, author: writer, date: PROTO_TODAY, status: '접수대기', via: via, owner: '', action: null, files: [], result: '', history: [] };
                 pushHist(rec, '접수', '의견 접수 — ' + via + ' 경로');
                 S.VOICES.unshift(rec);
                 S.page = 1; PG.opnGo('voice', 'list', null);
@@ -1683,8 +1725,10 @@
                 V.toast('의견이 등록되었습니다' + (via === '오프라인' ? ' (담당자 대리 등록)' : ''));
             };
 
-            /* ===== 처리: 상세 화면 인라인 '처리 카드'에서 조치 방법 선택 → 상태 전이 ===== */
-            const deptOf = s => (String(s || '').split(' · ')[0] || s || '').trim();
+            /* ===== 처리 (2026-11-18 단순화 — 전달-개발-의견청취-조치처리단순화) =====
+               조치 진행 / 바로 완료 / 반려. 안전점검·개선조치를 따로 만들지 않는다(개선조치는 위험성평가 소관).
+               재난안전과 담당자가 조치 부서·계획을 적고, 끝나면 조치 결과 + 증빙 파일(필수)로 이 의견 안에서 닫는다.
+               부서와 주고받는 일은 공문·메신저로 하고, 그 결과(회신 공문·사진)를 파일로 남긴다. */
             const valOf = elId => ((document.getElementById(elId) || {}).value || '').trim();
             /* 라디오 선택 시: 카드 강조 토글 + 인라인 폼 펼침 + 저장 버튼 활성화 */
             PG.opnActSel = radio => {
@@ -1695,70 +1739,175 @@
                 });
                 const btn = document.getElementById('opn-act-save'); if (btn) btn.disabled = false;
             };
+            /* 조직도(부서) 선택 콜백 — ORGPICK 'dept' 는 부서명을 준다 */
+            const setVal = (elId, v) => { const el = document.getElementById(elId); if (el) el.value = v; };
+            PG.opnPickPDept = v => setVal('opn-p-dept', v);
+            PG.opnPickQDept = v => setVal('opn-q-dept', v);
+            PG.opnPickEDept = v => setVal('opn-e-dept', v);
+            const deptField = (fid, inputId, cb, val, ph) => '<span class="orgpick-field" id="' + fid + '" style="display:flex; flex-direction:column; gap:6px;">' +
+                '<span style="display:flex; gap:6px; align-items:center;"><input id="' + inputId + '" type="text" readonly placeholder="' + (ph || '조직도에서 선택') + '" value="' + V.esc(val || '') + '" style="flex:1; min-width:0;">' +
+                '<button type="button" class="btn btn-sm btn-outline" onclick="ORGPICK.toggle(\'' + fid + '\',\'dept\',\'' + cb + '\')">조직도</button></span></span>';
+
+            /* ── 증빙 파일 — 공용 업로드 칸(일반 증빙 프로필). 고른 파일은 창이 닫힐 때까지 S.pickFiles 에 둔다 ── */
+            const fmtSize = n => !n ? '' : n >= 1048576 ? (n / 1048576).toFixed(1) + 'MB' : Math.max(1, Math.round(n / 1024)) + 'KB';
+            const pickedHtml = () => (S.pickFiles || []).length
+                ? (S.pickFiles || []).map((f, i) => '<span class="att-chip">' + V.esc(f.name) + ' <span class="att-sub">' + fmtSize(f.size) + '</span><button type="button" class="att-chip-x" onclick="PG.opnFileRm(' + i + ')" aria-label="' + V.esc(f.name) + ' 빼기">&times;</button></span>').join('')
+                : '<span class="opn-muted" style="font-size:var(--fs-12);">올린 파일이 없습니다</span>';
+            const drawPicked = () => { const el = document.getElementById('opn-files-list'); if (el) el.innerHTML = pickedHtml(); };
+            PG.opnFilesPicked = items => {
+                const max = (V.FILE_LIMITS && V.FILE_LIMITS.maxCount) || 10;
+                const all = (S.pickFiles || []).concat(items || []);
+                if (all.length > max) V.toast('파일은 최대 ' + max + '개까지 올립니다');
+                S.pickFiles = all.slice(0, max); drawPicked();
+            };
+            PG.opnFileRm = i => { (S.pickFiles || []).splice(i, 1); drawPicked(); };
+            const fileDrop = label => V.uploadDrop('<div class="dz-title">' + label + '</div>', null, { pick: 'PG.opnFilesPicked', multiple: true, hint: true, profile: 'general' }) +
+                '<div id="opn-files-list" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;">' + pickedHtml() + '</div>';
+            /* 올린 파일 내려받기 — key 로 파일 묶음을 찾는다(v:의견 · h:의견:이력 · c:점검결과지:문항) */
+            function filesOf(key) {
+                const p = String(key || '').split(':');
+                if (p[0] === 'v') { const o = find(p[1]); return o && o.files; }
+                if (p[0] === 'h') { const o = find(p[1]); const h = o && (o.history || [])[+p[2]]; return h && h.files; }
+                if (p[0] === 'c') { const c = S.COUNCIL.checklists.find(x => x.id === p[1]); const it = c && c.items[+p[2]]; return it && it.action && it.action.files; }
+                return null;
+            }
+            PG.opnDl = (key, j) => {
+                const f = (filesOf(key) || [])[j]; if (!f) return;
+                if (!f.file) { V.notReady('예시 파일 내려받기', '문서관리 연계'); return; }
+                const u = URL.createObjectURL(f.file); const a = document.createElement('a');
+                a.href = u; a.download = f.name; a.click(); setTimeout(() => URL.revokeObjectURL(u), 1000);
+            };
+            const fileLinks = (files, key) => (files || []).length
+                ? '<div style="display:flex; flex-wrap:wrap; gap:6px;">' + files.map((f, j) => '<button type="button" class="btn btn-sm btn-outline" onclick="PG.opnDl(\'' + key + '\',' + j + ')">' + V.esc(f.name) + (f.size ? ' <span class="opn-muted">' + fmtSize(f.size) + '</span>' : '') + '</button>').join('') + '</div>'
+                : '<span class="opn-muted">-</span>';
+            /* 조치 결과 입력 칸(결과·완료일·증빙) — 바로 완료·조치 완료·미흡 문항 완료 공용 */
+            const doneFieldsHtml = (pre, resultVal) =>
+                '<label class="opn-inl-full">조치 결과 <span class="req">*</span><textarea id="' + pre + '-result" placeholder="무엇을 언제 어떻게 조치했는지 입력하세요">' + V.esc(resultVal || '') + '</textarea></label>' +
+                '<div class="opn-inl-grid"><label><span>완료일 <span class="req">*</span></span><input type="date" id="' + pre + '-date" max="' + PROTO_TODAY + '" value="' + PROTO_TODAY + '"></label></div>' +
+                '<div class="opn-inl-full"><div class="opn-flabel" style="margin-bottom:6px;">증빙 파일 <span class="req">*</span> <span class="opn-muted" style="font-weight:400;">부서 회신 공문 · 조치 전후 사진 · 점검 기록 등</span></div>' +
+                fileDrop('증빙 파일을 끌어다 놓거나 눌러서 선택하세요') + '</div>';
+            /* 검사 — 통과하면 {result, date, files} */
+            function readDone(pre) {
+                const result = valOf(pre + '-result');
+                const date = valOf(pre + '-date');
+                const files = (S.pickFiles || []).slice();
+                if (!result) { V.toast('조치 결과를 입력하세요'); return null; }
+                if (!date || date > PROTO_TODAY) { V.toast('완료일은 오늘 이전으로 정하세요'); return null; }
+                if (!files.length) { V.toast('증빙 파일을 1개 이상 올리세요'); return null; }
+                return { result: result, date: date, files: files };
+            }
+            function finishVoice(o, d) {
+                o.status = '완료'; o.result = d.result; o.completedAt = d.date; o.completedBy = actorName(); o.files = d.files;
+                if (o.action) { o.action.doneAt = d.date; }
+                pushHist(o, '완료', d.result + ' · 증빙 ' + d.files.length + '건');
+                o.history[o.history.length - 1].files = d.files;
+                S.pickFiles = [];
+                E.notify('의견 처리 결과 회신 — "' + o.title + '" (' + o.author + ')');
+            }
+            const notifyDept = (o, dept) => E.notify('조치 부서 지정 안내 — "' + o.title + '" (' + dept + ' · 조치 결과는 재난안전과에 회신)');
+
             PG.opnActSave = id => {
+                if (gate(canProcess(), MSG_PROC)) return;
                 const o = find(id); if (!o) return;
+                if (o.status !== '접수대기') { V.toast('접수대기 상태에서만 처리 방법을 정합니다'); return; }
                 const act = (document.querySelector('input[name=opn-act]:checked') || {}).value;
-                if (!act) { V.toast('조치 방법을 선택하세요'); return; }
-                if (act === 'inspect') {
-                    const kind = valOf('opn-i-kind') || '특별점검';
-                    const date = valOf('opn-i-date') || addDays(PROTO_TODAY, 7);
-                    const owner = valOf('opn-i-owner');
-                    const note = valOf('opn-i-note');
-                    o.status = '점검중'; o.inspectLink = true; o.owner = deptOf(owner) || o.owner;
-                    o.inspect = { kind: kind, date: date, owner: owner };
-                    pushHist(o, '현장점검 생성', '현장점검 생성 — ' + kind + ' · 담당 ' + owner + ' · 예정 ' + date + (note ? ' · 확인사항: ' + note : ''));
-                    render(); V.toast('현장점검이 생성되었습니다 — 안전점검 연동');
-                } else if (act === 'improve') {
-                    const owner = valOf('opn-m-owner');
-                    const due = valOf('opn-m-due') || addDays(PROTO_TODAY, 14);
-                    const desc = valOf('opn-m-desc');
-                    if (!desc) { V.toast('개선 내용을 입력하세요'); return; }
-                    const imp = E.addImprovement({ title: desc.split('\n')[0], sourceMenu: '의견청취', sourceDoc: o.id, owner: owner, due: due });
-                    o.status = '개선조치중'; o.link = imp.id; o.owner = deptOf(owner) || o.owner;
-                    pushHist(o, '개선조치 생성', '개선조치 ' + imp.id + ' 생성 — 담당 ' + owner + ' · 예정 ' + due);
-                    render(); V.toast('개선조치 ' + imp.id + ' 생성 — 개선조치 메뉴에 집계');
+                if (!act) { V.toast('처리 방법을 선택하세요'); return; }
+                if (act === 'plan') {
+                    const dept = valOf('opn-p-dept'), plan = valOf('opn-p-plan'), due = valOf('opn-p-due');
+                    if (!dept || !V.deptIdOf(dept)) { V.toast('조치 부서를 조직도에서 고르세요'); return; }
+                    if (!plan) { V.toast('조치 계획을 입력하세요'); return; }
+                    if (due && due < PROTO_TODAY) { V.toast('조치 예정일은 오늘 이후로 정하세요'); return; }
+                    o.status = '조치중'; o.owner = dept;
+                    o.action = { deptId: V.deptIdOf(dept), dept: dept, plan: plan, due: due, startedAt: PROTO_TODAY, startedBy: actorName() };
+                    pushHist(o, '조치 진행', '조치 부서 ' + dept + ' · ' + plan + (due ? ' · 예정 ' + due : ''));
+                    notifyDept(o, dept);
+                    render(); V.toast('조치 진행으로 저장했습니다 — 끝나면 결과와 증빙 파일로 완료합니다');
+                } else if (act === 'done') {
+                    const dept = valOf('opn-q-dept');
+                    if (dept && !V.deptIdOf(dept)) { V.toast('조치 부서를 조직도에서 다시 고르세요'); return; }
+                    const d = readDone('opn-q'); if (!d) return;
+                    if (dept) { o.owner = dept; o.action = { deptId: V.deptIdOf(dept), dept: dept, plan: '', due: '', startedAt: d.date, startedBy: actorName() }; }
+                    finishVoice(o, d);
+                    render(); V.toast('완료 처리되었습니다 — 작성자에게 결과 회신');
                 } else if (act === 'reject') {
                     const reason = valOf('opn-r-reason');
                     if (!reason) { V.toast('반려 사유를 입력하세요'); return; }
                     if (!window.confirm('반려 처리하시겠습니까? 되돌리려면 재처리해야 합니다.')) return;
                     o.status = '반려'; o.rejectReason = reason;
                     pushHist(o, '반려', reason);
-                    render(); V.toast('반려 처리되었습니다');
+                    E.notify('의견 반려 안내 — "' + o.title + '" (' + o.author + ') · 사유: ' + reason);
+                    render(); V.toast('반려 처리되었습니다 — 작성자에게 사유 안내');
                 }
             };
-            /* 경과 추가 — 이력에만 기록 */
+            /* 조치 완료 — 조치중 건. 결과 + 증빙 파일(필수) */
+            PG.opnDone = id => {
+                if (gate(canProcess(), MSG_PROC)) return;
+                const o = find(id); if (!o || o.status !== '조치중') return;
+                S.pickFiles = [];
+                V.openModal('조치 완료 — ' + V.esc(o.title),
+                    '<div class="preset-form-grid" style="margin-bottom:12px;"><span class="k">조치 부서</span><div>' + V.esc((o.action && o.action.dept) || o.owner || '-') + '</div>' +
+                    '<span class="k">조치 계획</span><div>' + V.esc((o.action && o.action.plan) || '-') + '</div></div>' +
+                    '<div class="opn-act-form">' + doneFieldsHtml('opn-d') + '</div>',
+                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button><button class="btn btn-primary" id="opn-done-save">조치 완료</button>');
+                document.getElementById('opn-done-save').addEventListener('click', () => {
+                    if (gate(canProcess(), MSG_PROC)) return;
+                    const d = readDone('opn-d'); if (!d) return;
+                    finishVoice(o, d);
+                    V.closeModal(); render(); V.toast('완료 처리되었습니다 — 작성자에게 결과 회신');
+                });
+            };
+            PG.opnComplete = PG.opnDone;  /* 옛 진입점 — 같은 판정 */
+            /* 계획 수정 — 조치 부서·계획·예정일. 바꾸기 전 값은 이력에 남는다 */
+            PG.opnPlanEdit = id => {
+                if (gate(canProcess(), MSG_PROC)) return;
+                const o = find(id); if (!o || o.status !== '조치중') return;
+                const a = o.action || {};
+                V.openModal('계획 수정 — ' + V.esc(o.title),
+                    '<div class="opn-act-form"><div class="opn-inl-grid">' +
+                    '<label><span>조치 부서 <span class="req">*</span></span>' + deptField('opn-e-deptfield', 'opn-e-dept', 'PG.opnPickEDept', a.dept || o.owner) + '</label>' +
+                    '<label>조치 예정일<input type="date" id="opn-e-due" min="' + PROTO_TODAY + '" value="' + (a.due || '') + '"></label></div>' +
+                    '<label class="opn-inl-full">조치 계획 <span class="req">*</span><textarea id="opn-e-plan">' + V.esc(a.plan || '') + '</textarea></label></div>',
+                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button><button class="btn btn-primary" id="opn-plan-save">저장</button>');
+                document.getElementById('opn-plan-save').addEventListener('click', () => {
+                    if (gate(canProcess(), MSG_PROC)) return;
+                    const dept = valOf('opn-e-dept'), plan = valOf('opn-e-plan'), due = valOf('opn-e-due');
+                    if (!dept || !V.deptIdOf(dept)) { V.toast('조치 부서를 조직도에서 고르세요'); return; }
+                    if (!plan) { V.toast('조치 계획을 입력하세요'); return; }
+                    if (due && due < PROTO_TODAY && due !== a.due) { V.toast('조치 예정일은 오늘 이후로 정하세요'); return; }
+                    const before = '이전: ' + (a.dept || '-') + ' · ' + (a.plan || '-') + (a.due ? ' · 예정 ' + a.due : '');
+                    const moved = dept !== a.dept;
+                    o.action = Object.assign({}, a, { deptId: V.deptIdOf(dept), dept: dept, plan: plan, due: due });
+                    o.owner = dept;
+                    pushHist(o, '계획 수정', '조치 부서 ' + dept + ' · ' + plan + (due ? ' · 예정 ' + due : '') + ' (' + before + ')');
+                    if (moved) notifyDept(o, dept);
+                    V.closeModal(); render(); V.toast('조치 계획을 고쳤습니다' + (moved ? ' — ' + dept + '에 안내 알림' : ''));
+                });
+            };
+            /* 경과 추가 — 중간에 받은 회신·사진을 남기는 자리(파일 선택) */
             PG.opnProgress = id => {
-                const o = find(id); if (!o) return;
+                if (gate(canProcess(), MSG_PROC)) return;
+                const o = find(id); if (!o || o.status !== '조치중') return;
+                S.pickFiles = [];
                 V.openModal('경과 추가 — ' + V.esc(o.title),
-                    '<div class="preset-form-grid"><span class="k">경과 내용</span><textarea id="opn-prog" placeholder="진행 상황을 입력하세요"></textarea></div>',
+                    '<div class="opn-act-form"><label class="opn-inl-full">경과 내용 <span class="req">*</span><textarea id="opn-prog" placeholder="진행 상황을 입력하세요"></textarea></label>' +
+                    '<div class="opn-inl-full"><div class="opn-flabel" style="margin-bottom:6px;">파일 <span class="opn-muted" style="font-weight:400;">(선택)</span></div>' + fileDrop('받은 회신·사진이 있으면 끌어다 놓거나 눌러서 선택하세요') + '</div></div>',
                     '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button><button class="btn btn-primary" id="opn-prog-save">추가</button>');
                 document.getElementById('opn-prog-save').addEventListener('click', () => {
-                    const t = ((document.getElementById('opn-prog') || {}).value || '').trim();
+                    const t = valOf('opn-prog');
                     if (!t) { V.toast('경과 내용을 입력하세요'); return; }
-                    pushHist(o, '경과', t);
+                    const files = (S.pickFiles || []).slice();
+                    pushHist(o, '경과', t + (files.length ? ' · 파일 ' + files.length + '건' : ''));
+                    if (files.length) o.history[o.history.length - 1].files = files;
+                    S.pickFiles = [];
                     V.closeModal(); render(); V.toast('경과가 추가되었습니다');
                 });
             };
-            /* 완료 처리 — 수동 완료(데모) */
-            PG.opnComplete = id => {
-                const o = find(id); if (!o) return;
-                V.openModal('완료 처리 — ' + V.esc(o.title),
-                    '<div class="preset-form-grid"><span class="k">처리 결과</span><textarea id="opn-result" placeholder="처리 결과를 입력하세요">' + V.esc(o.result || '') + '</textarea></div>',
-                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button><button class="btn btn-primary" id="opn-done-save">완료 처리</button>');
-                document.getElementById('opn-done-save').addEventListener('click', () => {
-                    o.result = ((document.getElementById('opn-result') || {}).value || '').trim();
-                    o.status = '완료'; o.completedAt = nowStamp(); o.completedBy = '박안전';
-                    pushHist(o, '완료', o.result || '조치 완료');
-                    V.closeModal(); render();
-                    E.notify('의견 처리 결과 회신 — "' + o.title + '" 조치 완료');
-                    V.toast('완료 처리되었습니다 — 작성자에게 결과 회신');
-                });
-            };
-            /* 재처리 — 완료/반려를 접수대기로 되돌림 */
+            /* 재처리 — 완료/반려를 접수대기로 되돌림. 지난 계획·결과·파일은 이력에 남는다 */
             PG.opnReopen = id => {
-                const o = find(id); if (!o) return;
-                if (!window.confirm('처리를 취소하고 접수대기 상태로 되돌리시겠습니까?')) return;
-                o.status = '접수대기'; o.inspectLink = false; o.inspect = null; o.link = ''; o.rejectReason = ''; o.result = ''; o.completedAt = null; o.completedBy = null;
+                if (gate(canProcess(), MSG_PROC)) return;
+                const o = find(id); if (!o || (o.status !== '완료' && o.status !== '반려')) return;
+                if (!window.confirm('처리를 취소하고 접수대기 상태로 되돌리시겠습니까? 지난 처리 내용은 이력에 남습니다.')) return;
+                o.status = '접수대기'; o.action = null; o.files = []; o.rejectReason = ''; o.result = ''; o.completedAt = null; o.completedBy = null; o.owner = '';
                 pushHist(o, '재처리', '처리를 취소하고 접수대기로 되돌림');
                 render(); V.toast('접수대기로 되돌렸습니다');
             };
@@ -1766,7 +1915,7 @@
             /* ===== 위원회 회의록 (목록 클릭 → 상세 페이지) / 협의체 공유 ===== */
             PG.opnMeetingOpen = round => PG.opnGo('committee', 'mdetail', round);
             /* 회의록 작성/편집 — 참석자는 작성 시에만 조직도에서 클릭 즉시 토글 */
-            PG.opnMtgFormOpen = round => { S.mtgDraft = null; PG.opnGo('committee', 'mform', (round == null ? '__new__' : round)); };
+            PG.opnMtgFormOpen = round => { if (gate(canManage(), MSG_MANAGE)) return; S.mtgDraft = null; PG.opnGo('committee', 'mform', (round == null ? '__new__' : round)); };
             PG.opnMtgFormCancel = () => { S.mtgDraft = null; PG.opnGo('committee', 'list', null); };
             function attChipsHtml() {
                 return (S.mtgDraft && S.mtgDraft.attendees.length) ? S.mtgDraft.attendees.map((a, ix) => '<span class="att-chip">' + V.esc(a.name) + ' <span class="att-sub">' + V.esc(a.dept) + (a.position ? (' ' + V.esc(a.position)) : '') + '</span><button type="button" class="att-chip-x" onclick="PG.opnMtgRemAtt(' + ix + ')" aria-label="참석자 제외">&times;</button></span>').join('') : '<span class="att-empty">아래 조직도에서 참석자를 클릭해 추가하세요.</span>';
@@ -1787,6 +1936,7 @@
             const decisionRow = val => '<div class="goal-row"><input type="text" class="mf-decision" value="' + V.esc(val) + '" placeholder="의결사항을 입력하세요"><button type="button" class="goal-del" onclick="this.closest(\'.goal-row\').remove()" aria-label="삭제">×</button></div>';
             PG.opnMtgDecisionAdd = () => { const l = document.getElementById('mf-decisions'); if (!l) return; l.insertAdjacentHTML('beforeend', decisionRow('')); const ii = l.querySelectorAll('input'); if (ii.length) ii[ii.length - 1].focus(); };
             PG.opnMtgFormSave = () => {
+                if (gate(canManage(), MSG_MANAGE)) return;
                 const round = ((document.getElementById('mf-round') || {}).value || '').trim();
                 if (!round) { V.toast('회차를 입력하세요'); return; }
                 const editing = S.mtgDraft && S.mtgDraft.key !== '__new__';
@@ -1804,6 +1954,7 @@
                 V.toast('회의록이 ' + (editing ? '수정' : '작성') + '되었습니다' + (linkAgenda && decisions.length ? ' — 의결사항 ' + decisions.length + '건이 안건 부서이행 현황에 등록되었습니다' : ''));
             };
             PG.opnMtgConfirm = round => {
+                if (gate(canManage(), MSG_MANAGE)) return;
                 const mt = (S.COMMITTEE.meetings || []).find(x => x.round === round); if (!mt) return;
                 if (!window.confirm('이 회의록을 확정하시겠습니까? 확정 후에는 편집할 수 없습니다.')) return;
                 mt.status = '확정'; render(); V.toast('회의록이 확정되었습니다');
@@ -1811,6 +1962,7 @@
 
             /* ===== 위원 구성 / 안건 부서이행 / 협의체 운영 — 관리(CRUD) ===== */
             function memberModal(scope, i) {
+                if (gate(canManage(), MSG_MANAGE)) return;
                 const isCouncil = scope === 'council';
                 const list = isCouncil ? S.COUNCIL.members : S.COMMITTEE.members;
                 const ex = i >= 0 ? list[i] : null;
@@ -1841,8 +1993,9 @@
             }
             PG.opnMemberAdd = scope => memberModal(scope, -1);
             PG.opnMemberEdit = (scope, i) => memberModal(scope, i);
-            PG.opnMemberDel = (scope, i) => { const list = scope === 'council' ? S.COUNCIL.members : S.COMMITTEE.members; if (!window.confirm('이 위원을 삭제하시겠습니까?')) return; list.splice(i, 1); render(); V.toast('위원이 삭제되었습니다'); };
+            PG.opnMemberDel = (scope, i) => { if (gate(canManage(), MSG_MANAGE)) return; const list = scope === 'council' ? S.COUNCIL.members : S.COMMITTEE.members; if (!window.confirm('이 위원을 삭제하시겠습니까?')) return; list.splice(i, 1); render(); V.toast('위원이 삭제되었습니다'); };
             function agendaModal(i) {
+                if (gate(canManage(), MSG_MANAGE)) return;
                 const list = S.COMMITTEE.agendaItems; const ex = i >= 0 ? list[i] : null;
                 const stOpts = ['진행', '완료', '지연'].map(s => '<option' + (ex && ex.status === s ? ' selected' : '') + '>' + s + '</option>').join('');
                 V.openModal((ex ? '안건 이행 수정' : '안건 추가') + ' — 산업안전보건위원회',
@@ -1866,8 +2019,9 @@
             }
             PG.opnAgendaAdd = () => agendaModal(-1);
             PG.opnAgendaEdit = i => agendaModal(i);
-            PG.opnAgendaDel = i => { if (!window.confirm('이 안건을 삭제하시겠습니까?')) return; S.COMMITTEE.agendaItems.splice(i, 1); render(); V.toast('안건이 삭제되었습니다'); };
+            PG.opnAgendaDel = i => { if (gate(canManage(), MSG_MANAGE)) return; if (!window.confirm('이 안건을 삭제하시겠습니까?')) return; S.COMMITTEE.agendaItems.splice(i, 1); render(); V.toast('안건이 삭제되었습니다'); };
             PG.opnCouncilCycle = () => {
+                if (gate(canManage(), MSG_MANAGE)) return;
                 V.openModal('협의체 운영 주기 변경',
                     '<div class="preset-form-grid"><span class="k">운영 주기</span><select id="co-cycle">' + ['월간', '분기', '반기', '수시'].map(c => '<option' + (S.COUNCIL.cycle === c ? ' selected' : '') + '>' + c + '</option>').join('') + '</select></div>',
                     '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button><button class="btn btn-primary" id="co-cycle-save">저장</button>');
@@ -1876,6 +2030,7 @@
 
             /* ===== 협의체 운영 결과 기록 — 단일 모달 CRUD (라이트, 회의록만큼 무겁게 만들지 않음) ===== */
             function councilResultModal(i) {
+                if (gate(canManage(), MSG_MANAGE)) return;
                 const list = S.COUNCIL.results || (S.COUNCIL.results = []);
                 const ex = i >= 0 ? list[i] : null;
                 const stOpts = ['진행중', '완료'].map(s => '<option' + (ex && ex.status === s ? ' selected' : '') + '>' + s + '</option>').join('');
@@ -1898,10 +2053,11 @@
             }
             PG.opnResultAdd = () => councilResultModal(-1);
             PG.opnResultEdit = i => councilResultModal(i);
-            PG.opnResultDel = i => { if (!window.confirm('이 운영 결과를 삭제하시겠습니까?')) return; S.COUNCIL.results.splice(i, 1); render(); V.toast('운영 결과가 삭제되었습니다'); };
+            PG.opnResultDel = i => { if (gate(canManage(), MSG_MANAGE)) return; if (!window.confirm('이 운영 결과를 삭제하시겠습니까?')) return; S.COUNCIL.results.splice(i, 1); render(); V.toast('운영 결과가 삭제되었습니다'); };
 
             /* ===== 점검결과지 (협의체 점검표) — 생성·수정·조회(상세)·삭제 + 온나라 결재 + PDF ===== */
             function opnChkModal(ex) {
+                if (gate(canManage(), MSG_MANAGE)) return;
                 const isEdit = !!ex;
                 /* 문항별 담당부서 선택 콜백 — ORGPICK 은 전역 함수 경로 문자열을 부르므로 문항마다 진입점을 둔다 */
                 CHK_QS.forEach((q, i) => { PG['opnChkOwnerPick' + i] = name => { const el = document.getElementById('opn-chk-owner-' + i); if (el) el.value = name; }; });
@@ -1909,13 +2065,13 @@
                 const itemsHtml = CHK_QS.map((q, i) => {
                     const saved = (ex && ex.items[i]) ? ex.items[i].r : '확인';
                     const savedOwner = (ex && ex.items[i] && ex.items[i].owner) || '';
-                    const savedDue = (ex && ex.items[i] && ex.items[i].due) || '2026-07-31';
+                    const savedPlan = (ex && ex.items[i] && (ex.items[i].plan || (ex.items[i].action && ex.items[i].action.plan))) || '';
                     return '<div class="opn-chk-row" style="flex-direction:column; align-items:stretch; gap:8px;">' +
                         '<div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">' +
                         '<div class="opn-chk-q">' + (i + 1) + '. ' + q + '</div><div class="opn-chk-opts">' +
                         ['확인', '미흡', '해당없음'].map(r => '<label><input type="radio" name="opn-chk-' + i + '" value="' + r + '" onchange="PG.opnChkToggleFix(' + i + ',this.value)"' + (r === saved ? ' checked' : '') + '> ' + r + '</label>').join('') + '</div></div>' +
                         '<div id="opn-chk-fix-' + i + '" style="display:' + (saved === '미흡' ? 'flex' : 'none') + '; align-items:flex-start; gap:8px; padding-top:8px; border-top:1px dashed var(--gray-200); flex-wrap:wrap;">' +
-                        '<span style="font-size:var(--fs-12); color:var(--text-gray);">담당부서</span>' +
+                        '<span style="font-size:var(--fs-12); color:var(--text-gray);">조치 부서</span>' +
                         /* 담당부서는 공용 조직도(ORGPICK)에서 고른다 — 종전에는 화면이 자체 부서 4개를
                            박아 두고 드롭다운으로 골랐다(CLAUDE.md §3 위반 · 기획확인 4차 «부서 선택», 2026-10-06) */
                         '<span class="orgpick-field" id="opn-chk-ownerfield-' + i + '" style="display:inline-flex;flex-direction:column;gap:6px;flex:0 1 auto;min-width:0;">' +
@@ -1923,15 +2079,15 @@
                                 '<input id="opn-chk-owner-' + i + '" type="text" class="opn-filter" readonly placeholder="조직도에서 선택" value="' + savedOwner + '">' +
                                 '<button type="button" class="btn btn-sm btn-outline" onclick="ORGPICK.toggle(\'opn-chk-ownerfield-' + i + '\',\'dept\',\'PG.opnChkOwnerPick' + i + '\')">조직도</button>' +
                             '</span></span>' +
-                        '<span style="font-size:var(--fs-12); color:var(--text-gray);">기한</span>' +
-                        '<input id="opn-chk-due-' + i + '" type="date" class="opn-filter" value="' + savedDue + '">' +
+                        '<span style="font-size:var(--fs-12); color:var(--text-gray);">조치 계획</span>' +
+                        '<input id="opn-chk-plan-' + i + '" type="text" class="opn-filter" style="flex:1 1 220px; min-width:0;" placeholder="무엇을 어떻게 고칠지" value="' + V.esc(savedPlan) + '">' +
                         '</div>' +
                         '</div>';
                 }).join('');
                 V.openModal((isEdit ? '점검결과지 수정' : '점검결과지 생성') + ' — 의견청취·협의체 점검표',
                     '<div class="preset-form-grid"><span class="k">점검 구분</span><select id="opn-chk-cat">' + catOpts + '</select>' +
                     '<span class="k">점검일</span><input id="opn-chk-date" type="date" value="' + (ex ? ex.date : '2026-06-30') + '"></div>' +
-                    '<div style="margin-top:12px; font-size:var(--fs-12); color:var(--text-gray);">문항별로 확인 / 미흡 / 해당없음을 선택하세요. 미흡 선택 시 담당부서·기한을 지정하며, 확정 시 개선조치로 자동 연계됩니다.</div>' +
+                    '<div style="margin-top:12px; font-size:var(--fs-12); color:var(--text-gray);">문항별로 확인 / 미흡 / 해당없음을 선택하세요. 미흡을 고르면 조치 부서와 조치 계획을 적습니다. 조치가 끝나면 이 점검결과지 상세의 [미흡 문항 조치 완료]에서 결과와 증빙 파일로 닫습니다.</div>' +
                     '<div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">' + itemsHtml + '</div>',
                     '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button><button class="btn btn-primary" id="opn-chk-save">' + (isEdit ? '수정 저장' : '점검결과지 등록') + '</button>');
                 document.getElementById('opn-chk-save').addEventListener('click', () => {
@@ -1942,24 +2098,67 @@
                         const it = { q: q, r: r };
                         if (r === '미흡') {
                             it.owner = (document.getElementById('opn-chk-owner-' + i) || {}).value || '';
-                            it.due = (document.getElementById('opn-chk-due-' + i) || {}).value || '2026-07-31';
+                            it.plan = ((document.getElementById('opn-chk-plan-' + i) || {}).value || '').trim();
                         }
                         return it;
                     });
                     const unfit = newItems.filter(x => x.r === '미흡').length;
-                    /* 미흡 문항은 개선조치로 연계되므로 담당부서가 비면 받을 곳이 없다 */
-                    const noOwner = newItems.findIndex(x => x.r === '미흡' && !x.owner);
-                    if (noOwner !== -1) { V.toast((noOwner + 1) + '번 문항(미흡)의 담당부서를 조직도에서 고르세요'); return; }
+                    const noOwner = newItems.findIndex(x => x.r === '미흡' && (!x.owner || !V.deptIdOf(x.owner)));
+                    if (noOwner !== -1) { V.toast((noOwner + 1) + '번 문항(미흡)의 조치 부서를 조직도에서 고르세요'); return; }
+                    const noPlan = newItems.findIndex(x => x.r === '미흡' && !x.plan);
+                    if (noPlan !== -1) { V.toast((noPlan + 1) + '번 문항(미흡)의 조치 계획을 입력하세요'); return; }
+                    /* 조치를 완료한 문항은 미흡·조치 부서를 바꿀 수 없다(OPN-11) — 올린 결과·증빙이 소리 없이 사라지지 않게 */
+                    if (isEdit) {
+                        for (let i = 0; i < newItems.length; i++) {
+                            const old = ex.items[i] && ex.items[i].action;
+                            if (!old || old.state !== 'DONE') continue;
+                            if (newItems[i].r !== '미흡' || newItems[i].owner !== old.dept) { V.toast((i + 1) + '번 문항은 조치를 완료해 미흡·조치 부서를 바꿀 수 없습니다'); return; }
+                        }
+                    }
+                    /* 미흡 문항은 개선조치를 만들지 않는다(개선조치는 위험성평가 소관) — 조치 부서·계획을 문항에 두고 여기서 닫는다 */
+                    let asked = 0;
+                    newItems.forEach((it, i) => {
+                        if (it.r !== '미흡') return;
+                        const prev = isEdit && ex.items[i] ? ex.items[i] : null;
+                        const old = prev && prev.action;
+                        if (prev && prev.note) it.note = prev.note;
+                        if (old && old.state === 'DONE') { it.action = old; it.plan = old.plan; return; }
+                        it.action = { deptId: V.deptIdOf(it.owner), dept: it.owner, plan: it.plan, state: 'OPEN', result: '', doneAt: '', doneBy: '', files: [] };
+                        if (!old || old.dept !== it.owner) { asked++; E.notify('조치 부서 지정 안내 — 점검결과지 ' + (i + 1) + '번 문항 (' + it.owner + ' · 조치 결과는 재난안전과에 회신)'); }
+                    });
                     if (isEdit) {
                         ex.cat = cat; ex.date = date; ex.items = newItems; ex.result = unfit ? '미흡' : '적합';
-                        V.closeModal(); render(); V.toast('점검결과지가 수정되었습니다' + (unfit ? ' — 미흡 ' + unfit + '건' : ''));
+                        V.closeModal(); render(); V.toast('점검결과지가 수정되었습니다' + (asked ? ' — 조치 부서 안내 ' + asked + '건' : ''));
                     } else {
-                        S.COUNCIL.checklists.unshift({ id: 'CHK-' + String(nextNum(S.COUNCIL.checklists)).padStart(2, '0'), cat: cat, date: date, inspector: '김안전', result: unfit ? '미흡' : '적합', appr: '미상신', items: newItems });
-                        if (unfit) { newItems.forEach(it => { if (it.r === '미흡') E.addImprovement({ title: '[협의체 점검 미흡] ' + it.q, sourceMenu: '의견청취·협의체', sourceDoc: cat + ' 점검표', owner: it.owner, due: it.due }); }); }
-                        V.closeModal(); render(); V.toast('점검결과지가 등록되었습니다' + (unfit ? ' — 미흡 ' + unfit + '건 개선조치 연계' : ''));
+                        S.COUNCIL.checklists.unshift({ id: 'CHK-' + String(nextNum(S.COUNCIL.checklists)).padStart(2, '0'), cat: cat, date: date, inspector: actorName(), result: unfit ? '미흡' : '적합', appr: '미상신', items: newItems });
+                        V.closeModal(); render(); V.toast('점검결과지가 등록되었습니다' + (unfit ? ' — 미흡 ' + unfit + '건 조치중' : ''));
                     }
                 });
             }
+            /* 미흡 문항 조치 완료 — 끝나지 않은 문항을 골라 결과 + 증빙 파일로 한 번에 닫는다(한 회신 공문으로 여러 문항이 끝나는 경우).
+               점검결과지 결재 상태와 별개로 진행한다. */
+            PG.opnChkFixDone = id => {
+                if (gate(canManage(), MSG_MANAGE)) return;
+                const c = S.COUNCIL.checklists.find(x => x.id === id); if (!c) return;
+                const open = c.items.map((it, i) => ({ it: it, i: i })).filter(x => x.it.r === '미흡' && x.it.action && x.it.action.state !== 'DONE');
+                if (!open.length) { V.toast('조치중인 미흡 문항이 없습니다'); return; }
+                S.pickFiles = [];
+                V.openModal('미흡 문항 조치 완료 — ' + V.esc(c.id),
+                    '<div class="opn-flabel" style="margin-bottom:6px;">완료할 문항 <span class="req">*</span></div>' +
+                    '<div style="display:flex; flex-direction:column; gap:6px; margin-bottom:12px;">' + open.map(x =>
+                        '<label style="display:flex; gap:8px; align-items:flex-start;"><input type="checkbox" class="opn-fix-ck" value="' + x.i + '"' + (open.length === 1 ? ' checked' : '') + '><span><b>' + (x.i + 1) + '. ' + V.esc(x.it.q) + '</b><br><span class="opn-muted" style="font-size:var(--fs-12);">' + V.esc(x.it.action.dept || '-') + ' · ' + V.esc(x.it.action.plan || '-') + '</span></span></label>').join('') + '</div>' +
+                    '<div class="opn-act-form">' + doneFieldsHtml('opn-cf') + '</div>',
+                    '<button class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button><button class="btn btn-primary" id="opn-cf-save">조치 완료</button>');
+                document.getElementById('opn-cf-save').addEventListener('click', () => {
+                    if (gate(canManage(), MSG_MANAGE)) return;
+                    const picked = Array.prototype.slice.call(document.querySelectorAll('.opn-fix-ck:checked')).map(el => +el.value);
+                    if (!picked.length) { V.toast('완료할 문항을 고르세요'); return; }
+                    const d = readDone('opn-cf'); if (!d) return;
+                    picked.forEach(i => { const a = c.items[i].action; a.state = 'DONE'; a.result = d.result; a.doneAt = d.date; a.doneBy = actorName(); a.files = d.files.slice(); });
+                    S.pickFiles = [];
+                    V.closeModal(); render(); V.toast('미흡 문항 ' + picked.length + '건 조치 완료');
+                });
+            };
             PG.opnChkToggleFix = (i, val) => { const el = document.getElementById('opn-chk-fix-' + i); if (el) el.style.display = val === '미흡' ? 'flex' : 'none'; };
             PG.opnChkNew = () => opnChkModal(null);
             PG.opnChkEdit = id => {
@@ -1969,6 +2168,7 @@
             };
             PG.opnChkOpen = id => PG.opnGo('council', 'cdetail', id);
             PG.opnChkDel = id => {
+                if (gate(canManage(), MSG_MANAGE)) return;
                 const c = S.COUNCIL.checklists.find(x => x.id === id); if (!c) return;
                 if (c.appr === '결재중' || c.appr === '승인완료') { V.toast('결재중·승인완료된 점검결과지는 삭제할 수 없습니다'); return; }
                 if (!window.confirm('이 점검결과지를 삭제하시겠습니까? 삭제 후 되돌릴 수 없습니다.')) return;
@@ -1976,7 +2176,7 @@
             };
             /* 상신 전에 **결재선을 지정한다** — 종전에는 누르는 즉시 결재중이 됐다. */
             PG.opnChkOnnara = id => {
-                if (actGate('점검결과지 결재 상신')) return;
+                if (gate(canManage(), MSG_MANAGE)) return;
                 const c = S.COUNCIL.checklists.find(x => x.id === id); if (!c) return;
                 apprSubmit('의견청취 점검결과지 ' + id, snap => {
                     c.appr = '결재중';
@@ -2016,12 +2216,12 @@
             /* ===== 페이지별 상단 통계 ===== */
             /* 탭① 의견청취·건의함 — 상태별 카운트 바 (클릭 시 목록 필터, 전체=해제) */
             function voiceCountBar() {
-                const cnt = st => S.VOICES.filter(o => o.status === st).length;
+                const VIS = S.VOICES.filter(visible);
+                const cnt = st => VIS.filter(o => o.status === st).length;
                 const segs = [
-                    ['', '전체', S.VOICES.length],
+                    ['', '전체', VIS.length],
                     ['접수대기', '접수대기', cnt('접수대기')],
-                    ['점검중', '점검중', cnt('점검중')],
-                    ['개선조치중', '개선조치중', cnt('개선조치중')],
+                    ['조치중', '조치중', cnt('조치중')],
                     ['완료', '완료', cnt('완료')],
                 ];
                 return '<div class="opn-countbar">' + segs.map(s =>
@@ -2047,7 +2247,7 @@
 
             /* ===== 탭1: 의견청취·건의함 목록 ===== */
             function renderVoiceList() {
-                let list = S.VOICES.slice();
+                let list = S.VOICES.filter(visible);
                 if (S.fkw && S.fkw.trim()) { const kw = S.fkw.trim(); list = list.filter(o => (o.title || '').indexOf(kw) !== -1 || (o.author || '').indexOf(kw) !== -1); }
                 if (S.fcat) list = list.filter(o => o.cat === S.fcat);
                 if (S.fstatus) list = list.filter(o => o.status === S.fstatus);
@@ -2059,9 +2259,9 @@
                 const pageRows = list.slice(start, start + PER);
                 const kwSearch = '<input type="text" class="opn-filter" style="width:170px;" placeholder="제목, 작성자 검색" value="' + V.esc(S.fkw || '') + '" onchange="PG.opnSetKw(this.value)" onkeydown="if(event.key===\'Enter\')PG.opnSetKw(this.value)">';
                 const catFilter = '<select onchange="PG.opnSetCat(this.value)" class="opn-filter" style="margin-left:6px;"><option value="">전체 분류</option>' + CATS.map(c => '<option' + (S.fcat === c ? ' selected' : '') + '>' + c + '</option>').join('') + '</select>';
-                const stFilter = '<select onchange="PG.opnSetStatus(this.value)" class="opn-filter" style="margin-left:6px;"><option value="">전체 상태</option>' + ['접수대기', '점검중', '개선조치중', '완료', '반려'].map(s => '<option' + (S.fstatus === s ? ' selected' : '') + '>' + s + '</option>').join('') + '</select>';
+                const stFilter = '<select onchange="PG.opnSetStatus(this.value)" class="opn-filter" style="margin-left:6px;"><option value="">전체 상태</option>' + ST_ORDER.map(s => '<option' + (S.fstatus === s ? ' selected' : '') + '>' + s + '</option>').join('') + '</select>';
                 const deptFilter = '<select onchange="PG.opnSetDept(this.value)" class="opn-filter" style="margin-left:6px;"><option value="">전체 부서</option>' + DEPTS.map(d => '<option' + (S.fdept === d ? ' selected' : '') + '>' + d + '</option>').join('') + '</select>';
-                const body = pageRows.length ? pageRows.map(o => '<tr style="cursor:pointer;" onclick="PG.opnOpen(\'' + o.id + '\')"><td>' + catChip(o.cat) + '</td><td><b>' + V.esc(o.title) + '</b> ' + linkChips(o) + '</td><td>' + V.esc(o.author) + '</td><td class="opn-hide-sm">' + (o.owner ? V.esc(o.owner) : '<span class="opn-muted">미배정</span>') + '</td><td>' + o.date + '</td><td>' + stChip(o.status) + '</td></tr>').join('') : '<tr><td colspan="6" style="text-align:center; color:var(--text-gray); padding:30px;">해당 조건의 의견이 없습니다.</td></tr>';
+                const body = pageRows.length ? pageRows.map(o => '<tr style="cursor:pointer;" onclick="PG.opnOpen(\'' + o.id + '\')"><td>' + catChip(o.cat) + '</td><td><b>' + V.esc(o.title) + '</b>' + '</td><td>' + V.esc(o.author) + '</td><td class="opn-hide-sm">' + (o.owner ? V.esc(o.owner) : '<span class="opn-muted">-</span>') + '</td><td>' + o.date + '</td><td>' + stChip(o.status) + ageNote(o) + '</td></tr>').join('') : '<tr><td colspan="6" style="text-align:center; color:var(--text-gray); padding:30px;">해당 조건의 의견이 없습니다.</td></tr>';
                 let pager = '';
                 if (tot > 0) {
                     let btns = '';
@@ -2069,7 +2269,7 @@
                     pager = '<div class="opn-pager"><span class="opn-pager-info">총 ' + tot + '건 중 ' + (start + 1) + '-' + (start + pageRows.length) + '건</span><span class="opn-pager-btns">' + (S.page > 1 ? '<button class="opn-page-btn" onclick="PG.opnPage(' + (S.page - 1) + ')">‹</button>' : '') + btns + (S.page < pages ? '<button class="opn-page-btn" onclick="PG.opnPage(' + (S.page + 1) + ')">›</button>' : '') + '</span></div>';
                 }
                 const actions = '<span style="display:flex; align-items:center; gap:0; flex-wrap:wrap;">' + kwSearch + catFilter + stFilter + deptFilter + '<button class="btn btn-sm btn-primary" style="margin-left:8px;" onclick="PG.opnNew()">+ 의견 등록</button></span>';
-                return sectionCard('의견청취 · 건의함', '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>분류</th><th>제목</th><th>작성자</th><th class="opn-hide-sm">담당부서</th><th>등록일</th><th>상태</th></tr></thead><tbody>' + body + '</tbody></table></div>' + pager, actions);
+                return sectionCard('의견청취 · 건의함', '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>분류</th><th>제목</th><th>작성자</th><th class="opn-hide-sm">조치 부서</th><th>등록일</th><th>상태</th></tr></thead><tbody>' + body + '</tbody></table></div>' + pager, actions);
             }
 
             /* ===== 탭1: 의견 등록 폼 (온·오프라인 병행) ===== */
@@ -2077,14 +2277,14 @@
                 const head = '<div class="opn-form-head"><button class="btn btn-sm btn-outline" onclick="PG.opnBack()">‹ 목록</button><h2>의견 등록</h2></div>';
                 const writer = sectionCard('등록자 정보',
                     '<div class="opn-form-grid">' +
-                    '<div class="opn-field"><label class="opn-flabel">등록 담당자</label><div class="opn-readonly">김대표</div></div>' +
-                    '<div class="opn-field"><label class="opn-flabel">담당 부서</label><div class="opn-readonly">재난안전과 중대재해팀</div></div>' +
+                    '<div class="opn-field"><label class="opn-flabel">등록 담당자</label><div class="opn-readonly">' + V.esc(actorName()) + '</div></div>' +
+                    '<div class="opn-field"><label class="opn-flabel">소속 부서</label><div class="opn-readonly">' + V.esc(me().deptName || '-') + '</div></div>' +
                     '</div>', '');
                 const info = sectionCard('의견 정보',
                     '<div class="opn-form-grid">' +
                     '<div class="opn-field"><label class="opn-flabel" for="opn-cat">분류 <span class="req">*</span></label><select id="opn-cat" class="opn-select"><option value="">선택하세요</option>' + CATS.map(c => '<option>' + c + '</option>').join('') + '</select></div>' +
-                    '<div class="opn-field"><label class="opn-flabel" for="opn-via">접수경로</label><select id="opn-via" class="opn-select" onchange="PG.opnVia(this.value)"><option value="온라인">온라인(본인 등록)</option><option value="오프라인">오프라인(담당자 대리)</option></select></div>' +
-                    '<div class="opn-field"><label class="opn-flabel" for="opn-author">제출자</label><input id="opn-author" class="opn-input" type="text" value="김대표" readonly placeholder="SSO 로그인 사용자 자동 입력"></div>' +
+                    '<div class="opn-field"><label class="opn-flabel" for="opn-via">접수경로</label><select id="opn-via" class="opn-select" onchange="PG.opnVia(this.value)"><option value="온라인">온라인(본인 등록)</option>' + (canProcess() ? '<option value="오프라인">오프라인(담당자 대리)</option>' : '') + '</select></div>' +
+                    '<div class="opn-field"><label class="opn-flabel" for="opn-author">제출자</label><input id="opn-author" class="opn-input" type="text" value="' + V.esc(actorName()) + '" readonly placeholder="SSO 로그인 사용자 자동 입력"></div>' +
                     '<div class="opn-field"><label class="opn-flabel" for="opn-loc">발생장소</label><input id="opn-loc" class="opn-input" type="text" maxlength="50" placeholder="발생 장소를 입력하세요" oninput="var c=document.getElementById(\'cnt-loc\');if(c)c.textContent=this.value.length+\'/50\';"><div class="opn-counter" id="cnt-loc">0/50</div></div>' +
                     '<div class="opn-field full"><label class="opn-flabel" for="opn-title">제목 <span class="req">*</span></label><input id="opn-title" class="opn-input" type="text" maxlength="50" placeholder="제목을 입력하세요" oninput="var c=document.getElementById(\'cnt-title\');if(c)c.textContent=this.value.length+\'/50\';"><div class="opn-counter" id="cnt-title">0/50</div></div>' +
                     '</div>', '');
@@ -2104,12 +2304,9 @@
             }
 
             /* ===== 탭1: 상세 — 2:1 레이아웃 + 상태별 처리 카드 (민원처리형) ===== */
-            const OWNERS = ['재난안전과 · 홍길동', '재난안전과 · 김안전', '건설과 · 박현장', '환경과 · 최보건'];
-            const INSPECT_KINDS = ['특별점검', '일상점검', '주간점검', '합동점검', '순회점검'];
-            const ownerOpts = () => OWNERS.map(p => '<option>' + p + '</option>').join('');
-            const HIST_DOT = { '접수': 'neutral', '현장점검 생성': 'info', '개선조치 생성': 'warning', '경과': 'info', '완료': 'success', '반려': 'danger', '재처리': 'neutral' };
+            const HIST_DOT = { '접수': 'neutral', '조치 진행': 'warning', '계획 수정': 'neutral', '경과': 'info', '완료': 'success', '반려': 'danger', '재처리': 'neutral' };
             function renderVoiceDetail(o) {
-                if (!o) return renderVoiceList();
+                if (!o || !visible(o)) return renderVoiceList();
                 /* ① 의견 정보 */
                 const infoCard = sectionCard(o.id + ' · 의견 상세',
                     '<div class="preset-form-grid">' +
@@ -2117,79 +2314,86 @@
                     '<span class="k">제목</span><div style="font-weight:var(--fw-bold);">' + V.esc(o.title) + '</div>' +
                     '<span class="k">작성자 / 경로</span><div>' + V.esc(o.author) + ' · ' + V.esc(o.via || '온라인') + '</div>' +
                     '<span class="k">작성일</span><div>' + o.date + '</div>' +
-                    '<span class="k">담당부서</span><div>' + (o.owner ? V.esc(o.owner) : '<span class="opn-muted">미배정</span>') + '</div>' +
+                    '<span class="k">조치 부서</span><div>' + (o.owner ? V.esc(o.owner) : '<span class="opn-muted">처리 전</span>') + '</div>' +
                     '<span class="k">발생장소</span><div>' + V.esc(o.location || '-') + '</div>' +
                     '<span class="k">상세내용</span><div>' + V.esc(o.content || '-') + '</div>' +
                     '<span class="k">첨부 사진</span><div><span class="opn-muted">첨부된 사진이 없습니다</span></div>' +
                     '</div>', '');
-                /* ② 처리 카드 (상태별 5-view) */
+                /* ② 처리 카드 (상태별) — 누가 무엇을 하는지는 버튼 유무와 한 줄 안내로 말한다 */
                 const procHead = '<div class="opn-proc-head"><span class="opn-proc-title">처리</span><span class="opn-proc-status">현재 상태 ' + stChip(o.status) + '</span></div>';
+                const waitNote = t => '<span class="opn-muted" style="font-size:var(--fs-12); align-self:center;">' + t + '</span>';
+                const myDept = !!(o.action && o.action.deptId) && window.DYROLE && me().deptId === o.action.deptId && o.action.deptId !== OWNER;
+                const procNote = waitNote(myDept ? '처리는 재난안전과 담당자가 합니다 — 조치 결과는 공문·메신저로 재난안전과에 회신해 주세요' : '처리는 재난안전과 담당자가 합니다');
+                const reopenFoot = canProcess() ? '<div class="opn-proc-foot"><button class="btn btn-outline" onclick="PG.opnReopen(\'' + o.id + '\')">재처리</button></div>' : '';
                 let procBody;
                 if (o.status === '접수대기') {
-                    const opt = (val, name, desc, form) =>
-                        '<div class="opn-act-opt" data-act="' + val + '">' +
-                        '<label class="opn-act-head"><input type="radio" name="opn-act" value="' + val + '" onchange="PG.opnActSel(this)"><span class="opn-act-name">' + name + '</span><span class="opn-act-desc">' + desc + '</span></label>' +
-                        '<div class="opn-act-form" id="opn-actf-' + val + '" hidden>' + form + '</div></div>';
-                    const inspectForm = '<div class="opn-inl-grid">' +
-                        '<label>점검 종류<select id="opn-i-kind">' + INSPECT_KINDS.map((k, ix) => '<option' + (ix === 0 ? ' selected' : '') + '>' + k + '</option>').join('') + '</select></label>' +
-                        '<label>점검 예정일<input type="date" id="opn-i-date" value="' + addDays(PROTO_TODAY, 7) + '"></label>' +
-                        '<label>담당자<select id="opn-i-owner">' + ownerOpts() + '</select></label></div>' +
-                        '<label class="opn-inl-full">점검 시 확인사항<textarea id="opn-i-note">' + V.esc(o.content || '') + '</textarea></label>';
-                    const improveForm = '<div class="opn-inl-grid">' +
-                        '<label>담당자<select id="opn-m-owner">' + ownerOpts() + '</select></label>' +
-                        '<label>완료 예정일<input type="date" id="opn-m-due" value="' + addDays(PROTO_TODAY, 14) + '"></label></div>' +
-                        '<label class="opn-inl-full">개선 내용<textarea id="opn-m-desc">' + V.esc(o.title || '') + '</textarea></label>';
-                    const rejectForm = '<label class="opn-inl-full">반려 사유<textarea id="opn-r-reason" placeholder="반려 사유를 입력하세요"></textarea></label>' +
-                        '<div class="opn-banner danger" style="margin-top:8px;">반려 사유가 기록되며, 되돌리려면 재처리해야 합니다.</div>';
-                    procBody = '<div class="opn-banner warn">접수 대기 중 — 의견을 검토하고 조치 방법을 선택하세요.</div>' +
-                        '<div class="opn-act-list">' +
-                        opt('inspect', '현장점검 실시', '안전점검이 자동 생성됩니다.', inspectForm) +
-                        opt('improve', '개선조치 바로 생성', '개선조치 메뉴에 조치 항목이 자동 생성됩니다.', improveForm) +
-                        opt('reject', '반려', '반려 사유를 기록하고 종결합니다.', rejectForm) +
-                        '</div>' +
-                        '<div class="opn-proc-foot"><button class="btn btn-primary" id="opn-act-save" disabled onclick="PG.opnActSave(\'' + o.id + '\')">저장</button></div>';
-                } else if (o.status === '점검중') {
-                    const ins = o.inspect || {};
-                    procBody = '<div class="opn-banner info">현장점검 진행 중 — 점검이 완료되면 자동으로 상태가 변경됩니다.</div>' +
-                        '<div class="opn-linkcard"><div class="opn-linkcard-badges"><span class="chip-mini wt-elec">안전점검 연동</span> <span class="chip-mini wt">점검예정</span></div>' +
-                        '<div class="opn-linkcard-title">[의견청취] ' + V.esc(o.title) + '</div>' +
-                        '<div class="opn-linkcard-meta">' + V.esc(ins.kind || '특별점검') + ' · 담당 ' + V.esc(ins.owner || o.owner || '-') + ' · 예정 ' + (ins.date || '-') + '</div>' +
-                        '<button class="btn btn-sm btn-outline" onclick="DYV2.notReady(\'점검 상세 보기\', \'안전점검 메뉴 연동\')">점검 상세 보기</button></div>' +
-                        '<div class="opn-proc-foot"><button class="btn btn-outline" onclick="PG.opnProgress(\'' + o.id + '\')">경과 추가</button><button class="btn btn-primary" onclick="PG.opnComplete(\'' + o.id + '\')">완료 처리</button></div>';
-                } else if (o.status === '개선조치중') {
-                    const imp = E.improvements().find(x => x.id === o.link) || {};
-                    procBody = '<div class="opn-banner warn">개선조치 진행 중 — 개선조치가 완료되면 자동으로 상태가 변경됩니다.</div>' +
-                        '<div class="opn-linkcard"><div class="opn-linkcard-badges"><span class="chip-mini pdca">의견청취 연동</span> <span class="chip-mini wt-attach">' + (imp.status === '종결' ? '종결' : '조치중') + '</span></div>' +
-                        '<div class="opn-linkcard-title">' + V.esc(imp.title || o.title) + '</div>' +
-                        '<div class="opn-linkcard-meta">담당 ' + V.esc(imp.owner || o.owner || '-') + ' · 예정 ' + (imp.due || '-') + '</div></div>' +
-                        '<div class="opn-proc-foot"><button class="btn btn-outline" onclick="PG.opnProgress(\'' + o.id + '\')">경과 추가</button><button class="btn btn-primary" onclick="PG.opnComplete(\'' + o.id + '\')">완료 처리</button></div>';
+                    if (!canProcess()) {
+                        procBody = '<div class="opn-banner warn">접수 대기 중 — 재난안전과 담당자가 검토해 처리합니다.</div>';
+                    } else {
+                        const opt = (val, name, desc, form) =>
+                            '<div class="opn-act-opt" data-act="' + val + '">' +
+                            '<label class="opn-act-head"><input type="radio" name="opn-act" value="' + val + '" onchange="PG.opnActSel(this)"><span class="opn-act-name">' + name + '</span><span class="opn-act-desc">' + desc + '</span></label>' +
+                            '<div class="opn-act-form" id="opn-actf-' + val + '" hidden>' + form + '</div></div>';
+                        const planForm = '<div class="opn-inl-grid">' +
+                            '<label><span>조치 부서 <span class="req">*</span></span>' + deptField('opn-p-deptfield', 'opn-p-dept', 'PG.opnPickPDept', '') + '</label>' +
+                            '<label>조치 예정일<input type="date" id="opn-p-due" min="' + PROTO_TODAY + '"></label></div>' +
+                            '<label class="opn-inl-full">조치 계획 <span class="req">*</span><textarea id="opn-p-plan" placeholder="예: 11/25 현장 합동점검 후 미끄럼방지 패드 교체 요청">' + V.esc(o.title || '') + '</textarea></label>';
+                        const doneForm = '<div class="opn-inl-grid"><label>조치 부서' + deptField('opn-q-deptfield', 'opn-q-dept', 'PG.opnPickQDept', '', '선택 — 조직도에서 선택') + '</label></div>' +
+                            doneFieldsHtml('opn-q');
+                        const rejectForm = '<label class="opn-inl-full">반려 사유 <span class="req">*</span><textarea id="opn-r-reason" placeholder="조치가 필요 없다고 본 이유를 입력하세요"></textarea></label>' +
+                            '<div class="opn-banner danger" style="margin-top:8px;">반려 사유가 기록되며, 되돌리려면 재처리해야 합니다.</div>';
+                        procBody = '<div class="opn-banner warn">접수 대기 중 — 의견을 검토하고 처리 방법을 선택하세요.</div>' +
+                            '<div class="opn-act-list">' +
+                            opt('plan', '조치 진행', '조치 부서와 계획을 기록합니다. 부서와는 공문·메신저로 주고받고, 끝나면 결과와 증빙 파일로 완료합니다.', planForm) +
+                            opt('done', '바로 완료', '이미 조치했거나 답변으로 끝나는 건 — 결과와 증빙 파일을 올리면 바로 완료됩니다.', doneForm) +
+                            opt('reject', '반려', '조치가 필요 없다고 본 이유를 기록하고 종결합니다.', rejectForm) +
+                            '</div>' +
+                            '<div class="opn-proc-foot"><button class="btn btn-primary" id="opn-act-save" disabled onclick="PG.opnActSave(\'' + o.id + '\')">저장</button></div>';
+                    }
+                } else if (o.status === '조치중') {
+                    const a = o.action || { dept: o.owner };
+                    const days = a.startedAt ? Math.max(0, -V.daysTo(a.startedAt)) + 1 : 0;
+                    procBody = '<div class="opn-banner info">조치 진행 중 — ' + V.esc(a.dept || '조치 부서') + V.josa(a.dept || '조치 부서', '과', '와') + ' 공문·메신저로 처리하고, 끝나면 결과와 증빙 파일을 올려 완료합니다.</div>' +
+                        '<div class="opn-linkcard"><div class="preset-form-grid">' +
+                        '<span class="k">조치 부서</span><div>' + V.esc(a.dept || '-') + '</div>' +
+                        '<span class="k">조치 계획</span><div>' + V.esc(a.plan || '-') + '</div>' +
+                        '<span class="k">조치 예정일</span><div>' + (a.due || '-') + (a.due && V.daysTo(a.due) < 0 ? ' <span class="chip-status danger">예정일 지남</span>' : '') + '</div>' +
+                        '<span class="k">진행</span><div>' + (a.startedAt ? a.startedAt + ' 시작 · ' + days + '일째' : '-') + '</div>' +
+                        '</div></div>' +
+                        '<div class="opn-proc-foot">' + (canProcess()
+                            ? '<button class="btn btn-outline" onclick="PG.opnProgress(\'' + o.id + '\')">경과 추가</button><button class="btn btn-outline" onclick="PG.opnPlanEdit(\'' + o.id + '\')">계획 수정</button><button class="btn btn-primary" onclick="PG.opnDone(\'' + o.id + '\')">조치 완료</button>'
+                            : procNote) + '</div>';
                 } else if (o.status === '완료') {
-                    procBody = '<div class="opn-banner success">처리 완료 — 의견 처리 및 조치가 완료되었습니다.</div>' +
-                        '<div class="opn-done-summary"><div><span class="opn-done-k">처리 완료일</span><b>' + (o.completedAt || '-') + '</b></div><div><span class="opn-done-k">처리자</span><b>' + V.esc(o.completedBy || '-') + '</b></div></div>' +
+                    procBody = '<div class="opn-banner success">처리 완료 — 조치 결과와 증빙이 기록되었습니다.</div>' +
+                        '<div class="opn-done-summary"><div><span class="opn-done-k">완료일</span><b>' + (o.completedAt || '-') + '</b></div><div><span class="opn-done-k">처리자</span><b>' + V.esc(o.completedBy || '-') + '</b></div><div><span class="opn-done-k">조치 부서</span><b>' + V.esc((o.action && o.action.dept) || o.owner || '-') + '</b></div></div>' +
                         (o.result ? '<div class="opn-proc-note">' + V.esc(o.result) + '</div>' : '') +
-                        '<div class="opn-proc-foot"><button class="btn btn-outline" onclick="PG.opnReopen(\'' + o.id + '\')">재처리</button></div>';
+                        '<div style="margin-top:8px;"><div class="opn-flabel" style="margin-bottom:6px;">증빙 파일</div>' + fileLinks(o.files, 'v:' + o.id) + '</div>' +
+                        reopenFoot;
                 } else { /* 반려 */
                     procBody = '<div class="opn-banner danger">반려 처리됨 — 반려 사유가 기록되었습니다.</div>' +
-                        '<div class="opn-proc-note">' + V.esc(o.rejectReason || '-') + '</div>' +
-                        '<div class="opn-proc-foot"><button class="btn btn-outline" onclick="PG.opnReopen(\'' + o.id + '\')">재처리</button></div>';
+                        '<div class="opn-proc-note">' + V.esc(o.rejectReason || '-') + '</div>' + reopenFoot;
                 }
                 const procCard = '<div class="card opn-proc-card"><div class="card-body">' + procHead + procBody + '</div></div>';
-                /* ④ 처리 이력 */
+                /* ③ 처리 이력 */
                 const hist = (o.history || []);
                 const histCard = sectionCard('처리 이력',
                     hist.length
-                        ? '<ul class="opn-hist">' + hist.map(h => '<li class="opn-hist-item"><span class="opn-hist-dot ' + (HIST_DOT[h.stage] || 'neutral') + '"></span><div class="opn-hist-body"><div class="opn-hist-head"><span class="opn-hist-stage">' + V.esc(h.stage) + '</span><span class="opn-hist-at">' + V.esc(h.at) + '</span></div>' + (h.text ? '<div class="opn-hist-text">' + V.esc(h.text) + '</div>' : '') + '<div class="opn-hist-actor">' + V.esc(h.actor) + '</div></div></li>').join('') + '</ul>'
+                        ? '<ul class="opn-hist">' + hist.map((h, hi) => '<li class="opn-hist-item"><span class="opn-hist-dot ' + (HIST_DOT[h.stage] || 'neutral') + '"></span><div class="opn-hist-body"><div class="opn-hist-head"><span class="opn-hist-stage">' + V.esc(h.stage) + '</span><span class="opn-hist-at">' + V.esc(h.at) + '</span></div>' + (h.text ? '<div class="opn-hist-text">' + V.esc(h.text) + '</div>' : '') + ((h.files || []).length ? '<div style="margin-top:4px;">' + fileLinks(h.files, 'h:' + o.id + ':' + hi) + '</div>' : '') + '<div class="opn-hist-actor">' + V.esc(h.actor) + '</div></div></li>').join('') + '</ul>'
                         : '<p class="opn-muted" style="font-size:var(--fs-13);">처리 이력이 없습니다.</p>', '');
-                /* ⑤ 연동 정보 */
+                /* ④ 조치 정보 — 다른 메뉴로 가는 링크는 두지 않는다 */
                 let linkInner;
-                if (!o.inspectLink && !o.link) {
-                    linkInner = '<div class="opn-linkempty"><span>조치 선택 후 연동 정보가 표시됩니다</span></div>';
+                if (!o.action) {
+                    linkInner = '<div class="opn-linkempty"><span>처리 방법을 정하면 표시됩니다</span></div>';
                 } else {
-                    linkInner = '';
-                    if (o.inspectLink) { const ins = o.inspect || {}; linkInner += '<div class="opn-mini"><div class="opn-mini-badges"><span class="chip-mini wt-elec">안전점검</span> <span class="chip-mini wt">점검예정</span></div><div class="opn-mini-title">[의견청취] ' + V.esc(o.title) + '</div><div class="opn-mini-meta">담당 ' + V.esc(ins.owner || o.owner || '-') + ' · 예정 ' + (ins.date || '-') + '</div><button class="btn btn-sm btn-outline" onclick="DYV2.notReady(\'점검 상세 보기\', \'안전점검 메뉴 연동\')">바로가기</button></div>'; }
-                    if (o.link) { const imp = E.improvements().find(x => x.id === o.link) || {}; linkInner += '<div class="opn-mini"><div class="opn-mini-badges"><span class="chip-mini pdca">개선조치</span> <span class="chip-mini wt-attach">' + (imp.status === '종결' ? '종결' : '조치중') + '</span></div><div class="opn-mini-title">' + V.esc(imp.title || o.title) + '</div><div class="opn-mini-meta">' + V.esc(o.link) + ' · 예정 ' + (imp.due || '-') + '</div></div>'; }
+                    const a = o.action;
+                    linkInner = '<div class="preset-form-grid">' +
+                        '<span class="k">조치 부서</span><div>' + V.esc(a.dept || '-') + '</div>' +
+                        (a.plan ? '<span class="k">조치 계획</span><div>' + V.esc(a.plan) + '</div>' : '') +
+                        (a.due ? '<span class="k">예정일</span><div>' + a.due + '</div>' : '') +
+                        (o.status === '완료' ? '<span class="k">조치 결과</span><div>' + V.esc(o.result || '-') + '</div><span class="k">증빙</span><div>' + (o.files || []).length + '건</div>' : '') +
+                        '</div>';
                 }
-                const linkCard = sectionCard('연동 정보', linkInner, '');
+                const linkCard = sectionCard('조치 정보', linkInner, '');
                 const header = '<div class="pol-detail-top"><button class="btn btn-sm btn-outline" onclick="PG.opnBack()">‹ 목록</button></div>';
                 return header + '<div class="opn-detail-grid"><div class="opn-detail-main">' + infoCard + procCard + '</div><div class="opn-detail-side">' + histCard + linkCard + '</div></div>';
             }
@@ -2197,22 +2401,22 @@
             /* ===== 탭2: 산업안전보건위원회 운영 ===== */
             function renderCommittee() {
                 const C = S.COMMITTEE;
-                const memRows = C.members.map((m, i) => '<tr><td>' + V.esc(m.role) + '</td><td>' + V.esc(m.dept) + '</td><td>' + V.esc(m.position) + '</td><td>' + V.esc(m.name) + '</td><td><button class="btn btn-sm btn-outline" onclick="PG.opnMemberEdit(\'committee\',' + i + ')">수정</button> <button class="btn btn-sm btn-outline" onclick="PG.opnMemberDel(\'committee\',' + i + ')">삭제</button></td></tr>').join('');
+                const memRows = C.members.map((m, i) => '<tr><td>' + V.esc(m.role) + '</td><td>' + V.esc(m.dept) + '</td><td>' + V.esc(m.position) + '</td><td>' + V.esc(m.name) + '</td>' + mgTd('<button class="btn btn-sm btn-outline" onclick="PG.opnMemberEdit(\'committee\',' + i + ')">수정</button> <button class="btn btn-sm btn-outline" onclick="PG.opnMemberDel(\'committee\',' + i + ')">삭제</button>') + '</tr>').join('');
                 const memCard = sectionCard('위원 구성 현황 <span class="chip-mini wt" style="margin-left:6px;">산안법 §24</span>',
-                    '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>구분</th><th>부서</th><th>직책</th><th>성명</th><th>관리</th></tr></thead><tbody>' + memRows + '</tbody></table></div><p style="font-size:var(--fs-12); color:var(--text-gray); margin:8px 0 0;">근로자·사용자 대표 동수 구성 (산안법 §24)</p>',
-                    '<button class="btn btn-sm btn-primary" onclick="PG.opnMemberAdd(\'committee\')">+ 위원 추가</button>');
+                    '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>구분</th><th>부서</th><th>직책</th><th>성명</th>' + mgTh() + '</tr></thead><tbody>' + memRows + '</tbody></table></div><p style="font-size:var(--fs-12); color:var(--text-gray); margin:8px 0 0;">근로자·사용자 대표 동수 구성 (산안법 §24)</p>',
+                    mgBtn('<button class="btn btn-sm btn-primary" onclick="PG.opnMemberAdd(\'committee\')">+ 위원 추가</button>'));
                 const agStChip = s => '<span class="chip-status ' + (s === '완료' ? 'success' : s === '지연' ? 'danger' : 'info') + '">' + s + '</span>';
-                const agRows = (C.agendaItems || []).map((a, i) => '<tr><td>' + V.esc(a.agenda) + '</td><td>' + V.esc(a.dept) + '</td><td>' + a.due + '</td><td>' + agStChip(a.status) + '</td><td><button class="btn btn-sm btn-outline" onclick="PG.opnAgendaEdit(' + i + ')">수정</button> <button class="btn btn-sm btn-outline" onclick="PG.opnAgendaDel(' + i + ')">삭제</button></td></tr>').join('');
+                const agRows = (C.agendaItems || []).map((a, i) => '<tr><td>' + V.esc(a.agenda) + '</td><td>' + V.esc(a.dept) + '</td><td>' + a.due + '</td><td>' + agStChip(a.status) + '</td>' + mgTd('<button class="btn btn-sm btn-outline" onclick="PG.opnAgendaEdit(' + i + ')">수정</button> <button class="btn btn-sm btn-outline" onclick="PG.opnAgendaDel(' + i + ')">삭제</button>') + '</tr>').join('');
                 const agendaCard = sectionCard('안건 부서이행 현황 <span class="chip-mini wt" style="margin-left:6px;">산안법 §24</span>',
-                    '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>의결 안건</th><th>담당부서</th><th>이행기한</th><th>이행상태</th><th>관리</th></tr></thead><tbody>' + agRows + '</tbody></table></div>',
-                    '<button class="btn btn-sm btn-primary" onclick="PG.opnAgendaAdd()">+ 안건 추가</button>');
+                    '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>의결 안건</th><th>담당부서</th><th>이행기한</th><th>이행상태</th>' + mgTh() + '</tr></thead><tbody>' + agRows + '</tbody></table></div>',
+                    mgBtn('<button class="btn btn-sm btn-primary" onclick="PG.opnAgendaAdd()">+ 안건 추가</button>'));
                 const meetHead = '<tr><th>회차</th><th>유형</th><th>일시</th><th>참석</th><th>주요 안건</th><th>상태</th></tr>';
                 const meetBody = C.meetings.map(mt => '<tr style="cursor:pointer;" onclick="PG.opnMeetingOpen(\'' + mt.round + '\')"><td><b>' + mt.round + '</b></td><td><span class="chip-mini wt-elec">' + mt.type + '</span></td><td>' + mt.date + '</td><td>' + (mt.attendeeList || []).length + '명</td><td><span class="opn-agenda">' + V.esc(mt.agenda) + '</span></td><td><span class="chip-status ' + (mt.status === '확정' ? 'success' : 'info') + '">' + (mt.status || '작성') + '</span></td></tr>').join('');
-                const meetCard = sectionCard('회의록 (정기·수시) <span class="opn-muted" style="font-size:var(--fs-12); font-weight:400;">— 행 클릭 시 상세 보기</span>', '<div style="overflow-x:auto;"><table class="table-figma"><thead>' + meetHead + '</thead><tbody>' + meetBody + '</tbody></table></div>', '<button class="btn btn-sm btn-primary" onclick="PG.opnMtgFormOpen(null)">회의록 작성</button>');
+                const meetCard = sectionCard('회의록 (정기·수시) <span class="opn-muted" style="font-size:var(--fs-12); font-weight:400;">— 행 클릭 시 상세 보기</span>', '<div style="overflow-x:auto;"><table class="table-figma"><thead>' + meetHead + '</thead><tbody>' + meetBody + '</tbody></table></div>', mgBtn('<button class="btn btn-sm btn-primary" onclick="PG.opnMtgFormOpen(null)">회의록 작성</button>'));
                 const cmtTab = S.cmtTab || 'member';
                 const tabBar = '<div class="psub-tabs opn-inpage-tabs">' + [['member', '위원 구성'], ['agenda', '안건 부서이행'], ['meeting', '회의록']].map(t => '<button type="button" class="psub-tab' + (cmtTab === t[0] ? ' is-active' : '') + '" onclick="PG.opnCmtTab(\'' + t[0] + '\')">' + t[1] + '</button>').join('') + '</div>';
                 const pane = cmtTab === 'agenda' ? agendaCard : cmtTab === 'meeting' ? meetCard : memCard;
-                return tabBar + pane;
+                return manageNote() + tabBar + pane;
             }
 
             /* ===== 탭2: 회의록 상세 보기 페이지 ===== */
@@ -2229,7 +2433,7 @@
                     '<span class="k">의결사항</span>' + ((mt.decisions && mt.decisions.length) ? '<ol style="margin:0; padding-left:18px;">' + mt.decisions.map(d => '<li>' + V.esc(d) + '</li>').join('') + '</ol>' : '<div class="opn-muted" style="font-size:var(--fs-13);">등록된 의결사항이 없습니다.</div>') +
                     '<span class="k">상태</span><div><span class="chip-status ' + (isFixed ? 'success' : 'info') + '">' + (mt.status || '작성') + '</span></div>' +
                     '</div>';
-                const acts = isFixed
+                const acts = (!isFixed && !canManage()) ? '<span class="opn-muted" style="font-size:var(--fs-12); align-self:center;">' + MSG_MANAGE + '</span>' : isFixed
                     ? '<span class="opn-muted" style="font-size:var(--fs-12); align-self:center;">확정된 회의록입니다 — 편집할 수 없습니다.</span>'
                     : '<button class="btn btn-sm btn-outline" onclick="PG.opnMtgFormOpen(\'' + mt.round + '\')">편집</button>' +
                       '<button class="btn btn-sm btn-primary" onclick="PG.opnMtgConfirm(\'' + mt.round + '\')">확정 처리</button>';
@@ -2270,26 +2474,26 @@
             /* ===== 탭3: 안전보건 협의체 · 점검표 ===== */
             function renderCouncil() {
                 const C = S.COUNCIL;
-                const coRows = C.members.map((m, i) => '<tr><td>' + V.esc(m.role) + '</td><td>' + V.esc(m.dept) + '</td><td>' + V.esc(m.position) + '</td><td>' + V.esc(m.name) + '</td><td><button class="btn btn-sm btn-outline" onclick="PG.opnMemberEdit(\'council\',' + i + ')">수정</button> <button class="btn btn-sm btn-outline" onclick="PG.opnMemberDel(\'council\',' + i + ')">삭제</button></td></tr>').join('');
+                const coRows = C.members.map((m, i) => '<tr><td>' + V.esc(m.role) + '</td><td>' + V.esc(m.dept) + '</td><td>' + V.esc(m.position) + '</td><td>' + V.esc(m.name) + '</td>' + mgTd('<button class="btn btn-sm btn-outline" onclick="PG.opnMemberEdit(\'council\',' + i + ')">수정</button> <button class="btn btn-sm btn-outline" onclick="PG.opnMemberDel(\'council\',' + i + ')">삭제</button>') + '</tr>').join('');
                 const memCard = sectionCard('안전보건 협의체 운영 <span class="chip-mini wt" style="margin-left:6px;">산안법 §64</span>',
-                    '<div class="preset-form-grid" style="margin-bottom:12px;"><span class="k">운영 주기</span><div style="display:flex; gap:8px; align-items:center;">' + C.cycle + ' <button class="btn btn-sm btn-outline" onclick="PG.opnCouncilCycle()">주기 변경</button></div></div>' +
-                    '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>구분</th><th>부서/소속</th><th>직책</th><th>성명</th><th>관리</th></tr></thead><tbody>' + coRows + '</tbody></table></div>',
-                    '<button class="btn btn-sm btn-primary" onclick="PG.opnMemberAdd(\'council\')">+ 위원 추가</button>');
-                const resRows = (C.results || []).map((r, i) => '<tr><td>' + V.esc(r.round) + '</td><td>' + r.date + '</td><td>' + V.esc(r.content) + '</td><td>' + V.esc(r.result) + '</td><td><span class="chip-status ' + (r.status === '완료' ? 'success' : 'info') + '">' + r.status + '</span></td><td><button class="btn btn-sm btn-outline" onclick="PG.opnResultEdit(' + i + ')">수정</button> <button class="btn btn-sm btn-outline" onclick="PG.opnResultDel(' + i + ')">삭제</button></td></tr>').join('');
+                    '<div class="preset-form-grid" style="margin-bottom:12px;"><span class="k">운영 주기</span><div style="display:flex; gap:8px; align-items:center;">' + C.cycle + mgBtn(' <button class="btn btn-sm btn-outline" onclick="PG.opnCouncilCycle()">주기 변경</button>') + '</div></div>' +
+                    '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>구분</th><th>부서/소속</th><th>직책</th><th>성명</th>' + mgTh() + '</tr></thead><tbody>' + coRows + '</tbody></table></div>',
+                    mgBtn('<button class="btn btn-sm btn-primary" onclick="PG.opnMemberAdd(\'council\')">+ 위원 추가</button>'));
+                const resRows = (C.results || []).map((r, i) => '<tr><td>' + V.esc(r.round) + '</td><td>' + r.date + '</td><td>' + V.esc(r.content) + '</td><td>' + V.esc(r.result) + '</td><td><span class="chip-status ' + (r.status === '완료' ? 'success' : 'info') + '">' + r.status + '</span></td>' + mgTd('<button class="btn btn-sm btn-outline" onclick="PG.opnResultEdit(' + i + ')">수정</button> <button class="btn btn-sm btn-outline" onclick="PG.opnResultDel(' + i + ')">삭제</button>') + '</tr>').join('');
                 const resultCard = sectionCard('협의체 운영 결과 <span class="chip-mini wt" style="margin-left:6px;">산안법 §64</span>',
-                    '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>회차</th><th>일자</th><th>참석·논의 내용</th><th>결과 요약</th><th>상태</th><th>관리</th></tr></thead><tbody>' + (resRows || '<tr><td colspan="6" style="text-align:center; color:var(--text-gray); padding:20px;">등록된 운영 결과가 없습니다.</td></tr>') + '</tbody></table></div>',
-                    '<button class="btn btn-sm btn-primary" onclick="PG.opnResultAdd()">+ 운영 결과 등록</button>');
+                    '<div style="overflow-x:auto;"><table class="table-figma"><thead><tr><th>회차</th><th>일자</th><th>참석·논의 내용</th><th>결과 요약</th><th>상태</th>' + mgTh() + '</tr></thead><tbody>' + (resRows || '<tr><td colspan="6" style="text-align:center; color:var(--text-gray); padding:20px;">등록된 운영 결과가 없습니다.</td></tr>') + '</tbody></table></div>',
+                    mgBtn('<button class="btn btn-sm btn-primary" onclick="PG.opnResultAdd()">+ 운영 결과 등록</button>'));
                 const chkRows = C.checklists.map(c => {
-                    const editableRow = (c.appr === '미상신' || c.appr === '반려');
+                    const editableRow = (c.appr === '미상신' || c.appr === '반려') && canManage();
                     const acts = '<button class="btn btn-sm btn-outline" onclick="PG.opnChkOpen(\'' + c.id + '\')">조회</button>' +
                         (editableRow ? ' <button class="btn btn-sm btn-outline" onclick="PG.opnChkEdit(\'' + c.id + '\')">수정</button> <button class="btn btn-sm btn-outline" onclick="PG.opnChkDel(\'' + c.id + '\')">삭제</button>' : '');
                     return [c.cat, c.date, c.inspector, (c.result === '미흡' ? '<span class="chip-status danger">미흡 ' + c.items.filter(i => i.r === '미흡').length + '건</span>' : '<span class="chip-status success">적합</span>'), apprChip(c.appr), acts];
                 });
-                const chkCard = sectionCard('의견청취 점검표 <span class="chip-mini wt" style="margin-left:6px;">용역·구매설치·위탁사업·기타</span>', tbl(['점검 구분', '점검일', '점검자', '결과', '온나라 결재', ''], chkRows), '<button class="btn btn-sm btn-primary" onclick="PG.opnChkNew()">+ 점검결과지 생성</button>');
+                const chkCard = sectionCard('의견청취 점검표 <span class="chip-mini wt" style="margin-left:6px;">용역·구매설치·위탁사업·기타</span>', tbl(['점검 구분', '점검일', '점검자', '결과', '온나라 결재', ''], chkRows), mgBtn('<button class="btn btn-sm btn-primary" onclick="PG.opnChkNew()">+ 점검결과지 생성</button>'));
                 const cnlTab = S.cnlTab || 'council';
                 const tabBar = '<div class="psub-tabs opn-inpage-tabs">' + [['council', '협의체 운영'], ['check', '점검표']].map(t => '<button type="button" class="psub-tab' + (cnlTab === t[0] ? ' is-active' : '') + '" onclick="PG.opnCnlTab(\'' + t[0] + '\')">' + t[1] + '</button>').join('') + '</div>';
                 const pane = cnlTab === 'check' ? chkCard : (memCard + resultCard);
-                return tabBar + pane;
+                return manageNote() + tabBar + pane;
             }
 
             /* ===== 탭3: 점검결과지 상세 (온나라 결재 + PDF 미리보기) — 다른 메뉴와 동일 패턴 ===== */
@@ -2307,7 +2511,9 @@
                     '</div>';
                 const pdfPanel = '<div class="pol-pdf-wrap"><div class="pol-pdf-tools"><span style="font-size:var(--fs-12); font-weight:700; color:var(--text-gray);">PDF 미리보기</span><span style="display:flex; gap:6px;"><button class="btn btn-sm btn-outline" onclick="PG.opnChkPdfFull(\'' + c.id + '\')">전체화면</button><button class="btn btn-sm btn-primary" onclick="PG.opnChkPdfDownload()">PDF 다운로드</button></span></div>' + chkPdfPaper(c) + '</div>';
                 let acts = '<div class="pol-detail-actions">';
-                if (editable) {
+                if (!canManage()) {
+                    acts += '<span class="opn-muted" style="font-size:var(--fs-12); align-self:center;">' + MSG_MANAGE + '</span>';
+                } else if (editable) {
                     acts += '<button class="btn btn-sm btn-outline" onclick="PG.opnChkEdit(\'' + c.id + '\')">수정</button>';
                     acts += canAct()
                         ? '<button class="btn btn-sm btn-primary" onclick="PG.opnChkOnnara(\'' + c.id + '\')">온나라 결재 상신</button>'
@@ -2318,7 +2524,24 @@
                 acts += '</div>';
                 const header = '<div class="pol-detail-top"><button class="btn btn-sm btn-outline" onclick="PG.opnGo(\'council\',\'list\',null)">‹ 목록</button>' + acts + '</div>';
                 const main = sectionCard('점검결과지 ' + c.id + ' · ' + V.esc(c.cat), '<div class="pol-detail-grid"><div class="pol-detail-info">' + info + '</div>' + pdfPanel + '</div>', '');
-                return header + main;
+                /* 미흡 문항 조치 — 조치 부서·계획을 문항에 두고, 재난안전과가 결과 + 증빙 파일로 닫는다(여러 문항을 한 번에) */
+                const fixRows = c.items.map((it, i) => {
+                    if (it.r !== '미흡') return '';
+                    const a = it.action;
+                    if (!a) return '<div class="opn-linkcard" style="margin-top:8px;">' + (i + 1) + '. ' + V.esc(it.q) + ' <span class="opn-muted" style="font-size:var(--fs-12);">— 조치 기록 없음(이전 점검결과지)</span></div>';
+                    const done = a.state === 'DONE';
+                    return '<div class="opn-linkcard" style="margin-top:8px;"><div style="font-weight:var(--fw-bold); margin-bottom:6px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">' + (i + 1) + '. ' + V.esc(it.q) + ' ' + stChip(done ? '완료' : '조치중') + '</div>' +
+                        '<div class="preset-form-grid"><span class="k">조치 부서</span><div>' + V.esc(a.dept || '-') + '</div>' +
+                        '<span class="k">조치 계획</span><div>' + V.esc(a.plan || '-') + '</div>' +
+                        (done ? '<span class="k">조치 결과</span><div>' + V.esc(a.result || '-') + '<div class="opn-muted" style="font-size:var(--fs-12);">완료 ' + V.esc(a.doneAt || '-') + (a.doneBy ? ' · ' + V.esc(a.doneBy) : '') + '</div></div>' +
+                            '<span class="k">증빙 파일</span><div>' + fileLinks(a.files, 'c:' + c.id + ':' + i) + '</div>' : '') +
+                        '</div></div>';
+                }).join('');
+                const openN = c.items.filter(it => it.r === '미흡' && it.action && it.action.state !== 'DONE').length;
+                const fixAct = !openN ? '' : canManage()
+                    ? '<button class="btn btn-sm btn-primary" onclick="PG.opnChkFixDone(\'' + c.id + '\')">미흡 문항 조치 완료</button>'
+                    : '<span class="opn-muted" style="font-size:var(--fs-12);">조치 완료는 재난안전과 담당자가 합니다</span>';
+                return header + main + (fixRows ? sectionCard('미흡 문항 조치' + (openN ? ' <span class="opn-muted" style="font-size:var(--fs-12); font-weight:400;">— 조치중 ' + openN + '건</span>' : ''), fixRows, fixAct) : '');
             }
 
             /* ===== 디스패치 (탭 전환은 SNB 페이지 이동으로 일어남) ===== */
