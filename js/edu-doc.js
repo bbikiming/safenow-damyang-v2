@@ -114,10 +114,10 @@
     /* ===================== 제목 · 수신 · 안내 ===================== */
     function yearOf(c) { return String((c && c.date) || V().today()).slice(0, 4); }
     /* 교육 제목에 이미 연도가 있으면 다시 붙이지 않는다(«2026 2026년 …» 방지) */
-    function withYear(c, text) { var y = yearOf(c); return /^\s*\d{4}/.test(text) ? text : y + ' ' + text; }
+    function withYear(c, text) { var y = yearOf(c); return /(^|[^0-9])(19|20)\d{2}([^0-9]|$)/.test(text) ? text : y + ' ' + text; }   /* 제목 어디에든 연도가 있으면 붙이지 않는다 — «2026 [QA] 2026 …» (2026-11-18 개발서버 점검) */
     function titleOf(t) {
         if (!t) return '';
-        if (t.kind === 'NOTICE') return withYear(t.c, t.c.desc) + ' 집합교육 ' + (t.sub === '취소' ? '취소 안내' : t.sub === '변경' ? '변경 안내' : '실시 안내');
+        if (t.kind === 'NOTICE') return withYear(t.c, t.c.desc) + (/집합교육\s*$/.test(t.c.desc || '') ? ' ' : ' 집합교육 ') + (t.sub === '취소' ? '취소 안내' : t.sub === '변경' ? '변경 안내' : '실시 안내');
         if (t.kind === 'ENROLL') return t.c.desc + ' 참석자 등록부 제출(' + deptName(t.deptId) + ')';
         if (t.kind === 'TRIP') return t.c.desc + ' 출장 결과 보고';
         if (t.kind === 'QUARTER') return E().quarterLabel(t.q) + ' 안전보건교육 실시 결과 보고(' + deptName(t.deptId) + ')';

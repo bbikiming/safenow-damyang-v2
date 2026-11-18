@@ -175,7 +175,7 @@
         state.mount.innerHTML = ro + tabs + unkNote + ownerNote + filters + groupBar +
             '<div class="edu-card"><div class="edu-scroll"><table class="table-figma table-compact"><thead><tr>' +
                 headerCk +
-                '<th>이름</th><th>부서</th><th>고용형태</th><th>채용일</th><th>필요시간</th><th>이수일</th><th>상태</th><th></th>' +
+                '<th>이름</th><th>부서</th><th>고용형태</th><th>' + (SUP_MODE ? '기준일(지정일)' : '채용일') + '</th><th>필요시간</th><th>이수일</th><th>상태</th><th></th>' +
             '</tr></thead><tbody>' + body + '</tbody></table></div></div>';
     }
 

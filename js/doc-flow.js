@@ -713,9 +713,12 @@
         function paperHtml(t, doc) {
             var src = doc || F;
             var annex = (src.annex && cfg.annexes) ? cfg.annexes(t, doc) : [];
+            /* 별지 번호는 지면 «붙임» 목록의 순번과 같아야 한다 — 고른 파일이 앞에 서므로 그 수만큼 민다
+               («1. 교육일지 2. 이수자 명단»인데 별지가 «[붙임 1] 이수자 명단»이던 결함, 2026-11-18 개발서버 점검) */
+            var fileCount = (src.attach || []).filter(function (x) { return x.on; }).length;
             return paperMain(t, doc) + annex.map(function (a, i) {
                 return '<div class="pdf-paper pdf-doc pdf-gm pdf-gm-annex">' +
-                    '<div class="pdf-gm-annex-h">[붙임 ' + (i + 1) + '] ' + esc(a.title) + '</div>' + a.html + '</div>';
+                    '<div class="pdf-gm-annex-h">[붙임 ' + (fileCount + i + 1) + '] ' + esc(a.title) + '</div>' + a.html + '</div>';
             }).join('');
         }
 
