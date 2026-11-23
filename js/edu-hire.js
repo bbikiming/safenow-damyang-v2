@@ -35,9 +35,10 @@
     /* ===== 조작 권한 — 판정은 DYEDU(DYROLE.canAct 파생) 한 곳이다 =====
      * 이수 기록의 등록·수정·회수는 그 사람이 속한 부서의 담당자(주관부서 담당자는 전 부서)가
      * 한다. 관리·감독 계층은 조회만 한다. 진입·저장 양쪽에 같은 판정을 건다. */
-    function deny(deptId) { toast(E().denyMsg(deptId)); }
+    /* 채용시교육은 그 사람 소속 부서만 올리고 고친다 — 거절 문구도 그 말을 한다(ownDenyMsg) */
+    function deny(deptId) { toast(E().ownDenyMsg(deptId)); }
     /* 채용시교육 기록은 그 사람 **소속 부서 담당자**가 올리고 고친다 — 재난안전과도 남의 부서 기록은 올리지 않는다.
-       기록은 그 부서가 실시 결과 보고 공문으로 보내기 때문이다(2026-11-16 · 기획 v2 §10 N) */
+       대리 등록은 없다(2026-11-16 · 기획 v2 §10 N) */
     function canActWorker(workerId) { var w = E().workerOf(workerId); return !!w && E().canActOwnDept(w.deptId); }
     /* 기록의 등록 주체 표기 — '재난안전과'로 박으면 부서 담당자가 올린 기록도 재난안전과가 올린 것이 된다 */
     function actorDept() {
@@ -48,7 +49,7 @@
     /* tab: 'all' 전체 | 'undone' 미이수 | 'done' 이수
      *   ※ 구 '교육 건' 탭은 2026-07-30 회의에서 제거 확정 — 발주처: "이 교육 건 지워버리고
      *      미이수랑 이수만 나오게끔… 전체가 200명, 미이수 50명, 이수 150명 그런 식으로".
-     *      다시 만들지 말 것. 채용시교육의 공문은 **이수 처리된 교육 건 단위**로 기안한다(SCR-EDU-002 §6).
+     *      다시 만들지 말 것. 교육 공문은 걷었다(2026-11-23) — 등록하면 끝이다.
      * groupBy: 'dept' 부서별 | 'hire' 채용일(월)별 | 'none' 안 묶기 */
     var B = null; /* 일괄 이수처리 폼 */
     var A = null; /* 채용시 교육 추가 폼 (자체교육과 동일 구성 · EDUFORM) */
@@ -128,7 +129,7 @@
                     : '')
             : '');
         /* 재난안전과에는 한 줄만 — 필터 줄 안에 두면 필터가 세 줄로 밀리고, 조회 계층에는 readOnlyNote 가 같은 말을 한다(2차 통화 검토 C-2) */
-        var ownerNote = owner ? '<p class="file-hint" style="margin:0 0 10px;">채용시교육은 각 부서 담당자가 등록하고 실시 결과 보고 공문을 보냅니다. 재난안전과는 결과를 봅니다.</p>' : '';
+        var ownerNote = owner ? '<p class="file-hint" style="margin:0 0 10px;">채용시교육은 각 부서 담당자가 등록합니다. 재난안전과는 결과를 봅니다.</p>' : '';
         var filters = EDUFILTER.bar(fields, { count: list.length, unit: '명', reset: 'EDUH.resetF()', actions: actions });
 
         /* 묶어보기 — 부서별 / 채용일별 / 안 묶기. 보이는 부서가 하나면 «부서별»은 묶음이 하나뿐이라 뺀다 */
@@ -251,7 +252,7 @@
             ? '<input type="checkbox"' + (state.checked[w.id] ? ' checked' : '') +
                 ' onchange="EDUH.toggle(\'' + w.id + '\', this.checked)" aria-label="' + esc(w.name) + ' 선택">'
             : '';
-        /* 수정·공문은 **이수 기록이 있을 때만** 낸다 — 종전에는 «미이수가 아니면» 냈는데,
+        /* [등록 취소]는 **이수 기록이 있을 때만** 낸다 — 종전에는 «미이수가 아니면» 냈는데,
            지정일이 없어 판정 불가(UNKNOWN)인 사람은 기록이 없어도 미이수가 아니라서 빈 이수일로
            수정 창이 열리고 저장이 «이수일을 입력하세요»로 거절됐다. */
         return '<tr>' +
@@ -269,34 +270,61 @@
                     ? '<div class="edu-hire-via">특별교육 이수로 갈음' +
                         (global.DYLAW && DYLAW.basisLine ? ' ' + DYLAW.basisLine('oshr-26', { compact: true }) : '') + '</div>'
                     : '') + '</td>' +
-            /* 갈음 건에는 채용시 이수기록이 없다 — 고칠 기록도, 이 화면에서 올릴 공문도 없다
-               (특별교육의 수정·공문은 기타교육 화면 소관이다) */
-            /* [결재 상태 칩] [공문 보기] 둘만(2차 통화) — [이수 수정]·행의 [공문 기안]·자물쇠 버튼은 걷었다.
-               특별교육으로 갈음한 줄은 그 특별교육(기타교육) 공문을 보인다 — 채용시교육 공문은 없다 */
+            /* 갈음 건에는 채용시 이수기록이 없다 — 고칠 기록이 없다(특별교육의 등록 취소는 기타교육 화면 소관이다) */
+            /* 이 사람의 채용시교육 기록 — «등록 {사람} · {날짜}» · 그 부서 담당자에게 [등록 취소](이 사람만 — 2026-11-23 D-1) */
             '<td class="col-action">' + (hs.via === '특별교육' && hs.viaCourseId
-                    ? (global.EDUDOC ? global.EDUDOC.runCtl(E().courseOf(hs.viaCourseId), { dash: true }) : '') + ' <span class="file-hint">기타교육으로 등록</span>'
-                    : (hs.lastDate && hs.hireRecords ? docBtnHtml(w) : '')) + '</td>' +
+                    ? '<span class="file-hint">기타교육으로 등록</span>'
+                    : (hs.lastDate && hs.hireRecords ? rowCtl(w) : '')) + '</td>' +
         '</tr>';
     }
-    /* 공문 — 채용시교육은 사람 행 화면이라 교육 카드가 없다. 그 사람이 이수한
-       **교육 건**의 공문으로 연결한다(단위는 교육 1건, SCR-EDU-002 §6).
-       한 건에 여러 명이 묶인 경우 같은 공문을 공유한다 — 건이 하나이기 때문이다. */
+    /* 채용시교육은 사람 행 화면이라 교육 카드가 없다 — 그 사람이 이수한 **가장 최근 교육 건**의 등록 줄을 보인다 */
     function docCourseOf(workerId) {
-        /* 가장 최근 교육일의 기록 — 배열 순서가 아니라 날짜로 고른다(여러 묶음에 걸친 사람에게 엉뚱한 공문이 보이지 않게) */
+        /* 가장 최근 교육일의 기록 — 배열 순서가 아니라 날짜로 고른다(여러 묶음에 걸친 사람에게 엉뚱한 건이 보이지 않게) */
         var recs = E().records().filter(function (r) { return r.workerId === workerId && r.kind === 'HIRE'; })
             .sort(function (a, b) { return String(a.date || '').localeCompare(String(b.date || '')); });
         return recs.length ? recs[recs.length - 1].courseId : '';
     }
-    function docBtnHtml(w) {
-        if (!global.EDUDOC) return '';
-        var cid = docCourseOf(w.id);
-        if (!cid) return '';
-        /* 그 교육 건(등록 묶음)의 실시 결과 보고 공문 — 옛 기록은 실시 결과 공문 또는 «이전 방식» */
-        return global.EDUDOC.runCtl(E().courseOf(cid), { dash: true });
+    /* 교육 건 이름 — 사람별 건은 «… · 이름»이 붙어 있어 묶음 이름을 먼저 쓰고, 없으면 이름 꼬리를 뗀다 */
+    function hireTitle(c) { return c.batchTitle || String(c.desc || '').replace(/\s·\s[^·]+$/, ''); }
+    function rowCtl(w) {
+        var c = E().courseOf(docCourseOf(w.id));
+        if (!c) return '';
+        /* 인사기록에서 옮겨 온 이수 기록은 다시 만들 수 없어 등록 취소를 내지 않는다 */
+        if (c.imported) return '<span class="file-hint">인사기록 이관</span>';
+        return EDUFORM.regLine(c) + (canActWorker(w.id)
+            ? ' <button type="button" class="edu-cancel-link" title="이 사람의 이 교육 기록만 지웁니다" onclick="EDUH.confirmRemoveOne(\'' + esc(w.id) + '\')">등록 취소</button>' : '');
     }
-    /* [이수 수정]·이수 기록 삭제는 걷었다(2차 통화 «공문으로 남는데 수정은 어차피 불가능 — 필요 없다»).
-       고치는 길은 공문 전·반려 때 [공문 보기] 창의 «등록 취소»(묶음 전체) 하나다 — 한 사람만 빼면
-       아직 보내지 않은 묶음 공문의 대상이 조용히 줄어든다. 되살리지 말 것. */
+    /* [이수 수정]은 걷었다(2차 통화). 고치는 길은 [등록 취소] 후 다시 등록 하나 — 채용시교육은 한 번에 여러 명을 올리므로
+       **이 사람만** 지운다(2026-11-23 D-1 — 묶음 전체 취소는 «공문이 묶음 단위»여서 생긴 제약이었다).
+       한 건에 여러 명이 묶였으면 그 사람 몫만 빼고, 남는 사람이 없으면 교육 건까지 거둔다(DYEDU.removeWorkerFromCourse). */
+    function confirmRemoveOne(workerId) {
+        var w = E().workerOf(workerId), c = w ? E().courseOf(docCourseOf(workerId)) : null;
+        if (!w || !c) return;
+        if (!canActWorker(workerId)) { deny(w.deptId); return; }
+        if (c.imported) { toast('인사기록에서 옮겨 온 이수 기록은 등록 취소하지 않습니다.'); return; }
+        var recs = E().records().filter(function (r) { return r.courseId === c.id && r.workerId === workerId; });
+        var hrs = Math.round(recs.reduce(function (n, r) { return n + (+r.hours || 0); }, 0) * 10) / 10;
+        V().openModal('등록 취소',
+            '<p style="font-size:var(--fs-13);margin:0 0 8px;"><b>' + esc(w.name) + '</b> · ' + esc(hireTitle(c)) + ' · ' + esc(c.date) + '</p>' +
+            '<div class="check-notice">이 사람의 이 교육 이수기록 <b>' + recs.length + '건</b>(이수시간 <b>' + hrs + 'h</b>)을 지웁니다. 다시 미이수로 보일 수 있습니다. 바른 내용으로 다시 등록하세요. 되돌릴 수 없습니다.</div>',
+            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
+            '<button type="button" class="btn btn-primary" onclick="EDUH.doRemoveOne(\'' + esc(workerId) + '\')">등록 취소</button>');
+    }
+    function doRemoveOne(workerId) {
+        var w = E().workerOf(workerId), cid = w ? docCourseOf(workerId) : '';
+        if (!w || !cid) { V().closeModal(); return; }
+        if (!canActWorker(workerId)) { V().closeModal(); deny(w.deptId); return; }
+        var c = E().courseOf(cid);
+        if (c && c.imported) { V().closeModal(); toast('인사기록에서 옮겨 온 이수 기록은 등록 취소하지 않습니다.'); return; }
+        var hrs = Math.round(E().records().filter(function (x) { return x.courseId === cid && x.workerId === workerId; }).reduce(function (n, x) { return n + (+x.hours || 0); }, 0) * 10) / 10;
+        var r = E().removeWorkerFromCourse(cid, workerId);
+        if (r) E().logCancel({ by: global.DYROLE && global.DYROLE.actorLabel ? global.DYROLE.actorLabel() : actorDept(), deptId: w.deptId, what: '채용시교육 등록 취소(1명)', title: (c ? hireTitle(c) : '') + ' · ' + w.name, courses: r.courseRemoved ? 1 : 0, records: r.records, hours: hrs });
+        if (r && !r.courseRemoved && c) E().pushCourseHistory(cid, { type: 'STATUS', by: global.DYROLE && global.DYROLE.actorLabel ? global.DYROLE.actorLabel() : actorDept(), memo: '등록 취소 — ' + w.name + ' 이수기록 ' + r.records + '건 회수' });
+        V().closeModal();
+        if (!r) { toast('등록을 취소하지 못했습니다.'); return; }
+        toast(w.name + ' 등록을 취소했습니다 · 이수기록 ' + r.records + '건 회수');
+        render();
+    }
 
     function setTab(t) { state.tab = t; state.checked = {}; state.fDone = ''; render(); }
     function setF(k, v) { state['f' + k] = v; state.checked = {}; EDUFILTER.rerender(render); }
@@ -398,7 +426,7 @@
                 (B.evidenceName ? '<p style="font-size:var(--fs-12);color:var(--text-gray);margin:4px 0 0;">선택됨: ' + esc(B.evidenceName) + '</p>' : '') + '</div>';
         V().openModal('선택 교육기록 등록 · ' + B.ids.length + '명', body,
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-            '<button type="button" class="btn btn-primary" onclick="EDUH.doBulk()">저장하고 공문 작성 →</button>');
+            '<button type="button" class="btn btn-primary" onclick="EDUH.doBulk()">저장</button>');
     }
     /* 각자 채용일로 되돌리면 이수일이 사람마다 달라지므로 묶기는 자동 해제된다 */
     function setBulkMode(useHire) { captureBulk(); B.useHireDate = useHire; if (useHire) B.merge = false; renderBulk(); }
@@ -418,14 +446,14 @@
         B.instructor = document.getElementById('eh-b-inst').value.trim();
         B.desc = document.getElementById('eh-b-desc').value.trim() || '채용시 안전보건교육';
         var count = 0, made = 0, completed = 0, lastMade = null;
-        /* 등록 묶음 — 이번 저장으로 생기는 교육 건 전부가 공문 하나(2차 통화 R-1) */
+        /* 등록 묶음 — 이번 저장으로 생기는 교육 건 전부(2차 통화 R-1) */
         var batch = 'B' + Date.now().toString(36);
 
         if (B.merge) {
             /* 한 건으로 묶기 — 필요시간이 같은 인원끼리 교육 건 1개.
              * 여러 부서가 섞이면 deptId 는 비우고(집합교육과 동일 — 주관부서 소관) 부서별 신청 행으로
              * 나눈다. **한 부서뿐이면 그 부서 건이다** — 비우면 주관부서 소관으로 읽혀, 자기 부서
-             * 사람만 묶은 부서 담당자가 자기 건을 고치지도 공문을 기안하지도 못한다. */
+             * 사람만 묶은 부서 담당자가 자기 건을 고치지 못한다. */
             bulkGroups().forEach(function (g) {
                 var gDepts = {};
                 g.ids.forEach(function (id) { var w = E().workerOf(id); if (w) gDepts[w.deptId] = true; });
@@ -559,7 +587,7 @@
             EDUFORM.renderAttach(A, 'EDUH', 'done');
         V().openModal((SUP_MODE ? '관리감독자 ' : '') + '채용시 교육 추가', body,
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-            '<button type="button" class="btn btn-primary" onclick="EDUH.doAdd()">저장하고 공문 작성 →</button>');
+            '<button type="button" class="btn btn-primary" onclick="EDUH.doAdd()">저장</button>');
     }
     /* 회차·첨부 위임 래퍼 (EDUFORM 공용) */
     function sessTab(i) { captureAdd(); A.sIdx = i; renderAdd(); }
@@ -615,12 +643,10 @@
         reportDone(count + '명 교육기록 등록 · 이수 완료 ' + completed + '명' + (late ? ' · 지연 ' + late + '명' : ''), lastMade, batch);
     }
 
-        /* 저장하고 바로 실시 결과 보고 공문(등록 한 번 = 공문 한 번 — 2차 통화 «추가 버튼 누를 때 무조건 연계»).
-       닫아도 기록·이수는 남고 공문만 «미기안» */
-    function reportDone(msg, c, batch) {
-        toast(msg);
-        if (c && global.EDUDOC) { global.EDUDOC.open(E().keyRun(batch || E().batchOf(c))); return; }
+    /* 등록하면 끝이다 — 이수는 바로 반영된다(교육 공문 걷음, 2026-11-23) */
+    function reportDone(msg) {
         V().closeModal();
+        toast(msg);
     }
     /* 미이수 탭에서 고를 수 있는 사람 — 내 부서 사람만(재난안전과도 자기 부서 몫만) */
     function selectablePool() { return pool().filter(function (w) { return canActWorker(w.id); }).length; }
@@ -628,10 +654,8 @@
         SUP_MODE = !!(opts && opts.supMode);
         state.mount = document.getElementById(mountId);
         if (!state.mount) return;
-        if (global.EDUDOC) global.EDUDOC.registerRefresh(render);
+        EDUFORM.registerRefresh(render);
         render();
-        /* ?doc=R|묶음 — 내 할일 «공문 보내기» 카드에서 그 공문 창을 바로 연다 */
-        if (global.EDUDOC && global.EDUDOC.openFromQuery) global.EDUDOC.openFromQuery();
     }
     global.EDUH = {
         init: init, setTab: setTab, setF: setF, resetF: resetF,
@@ -640,6 +664,7 @@
         openBulk: openBulk, setBulkMode: setBulkMode, setBulkMerge: setBulkMerge, doBulk: doBulk, pickEvidence: pickEvidence,
         /* 채용시 교육 추가 (EDUFORM 공용 구성) */
         openAdd: openAdd, doAdd: doAdd, aToggle: aToggle, aToggleDept: aToggleDept, aDept: aDept,
+        confirmRemoveOne: confirmRemoveOne, doRemoveOne: doRemoveOne,
         sessTab: sessTab, sessAdd: sessAdd, sessDel: sessDel, sessSync: sessSync,
         addFile: addFile, delFile: delFile
     };

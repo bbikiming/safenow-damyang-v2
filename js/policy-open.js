@@ -20,7 +20,7 @@
                공개구분 기본값을 정할 비공개 세부 기준 하나다(EXT-21). id 는 화면 매핑 키라 그대로 둔다. */
             id: 'doc-org', kind: 'data', menu: '공문·보고서',
             title: '담양군 비공개 세부 기준(공문 공개구분)',
-            now: '공개구분은 기관정보가 아니라 문서마다 정하는 값입니다. 기준을 받기 전에는 업무별 임시 기본값(교육 공문·인력 평가 결과 보고는 부분공개 제6호, 그 밖은 공개)을 연계로 넘기고, 바꾸려면 온나라에서 바꿉니다. 기관정보·관인·처리과 기호는 온나라가 정본이라 담양군에 요청하지 않습니다 — 미리보기 지면은 미등록·자리표시로 두고 상신은 막지 않습니다.',
+            now: '공개구분은 기관정보가 아니라 문서마다 정하는 값입니다. 기준을 받기 전에는 업무별 임시 기본값(인력 평가 결과 보고는 부분공개 제6호, 그 밖은 공개)을 연계로 넘기고, 바꾸려면 온나라에서 바꿉니다. 기관정보·관인·처리과 기호는 온나라가 정본이라 담양군에 요청하지 않습니다 — 미리보기 지면은 미등록·자리표시로 두고 상신은 막지 않습니다.',
             options: [{ k: 'waiting', label: '자료 대기' }, { k: 'received', label: '수신 완료' }]
         },
         {
@@ -72,9 +72,9 @@
             options: [{ k: 'waiting', label: '규격 대기' }, { k: 'received', label: '규격 수신' }]
         },
         {
-            id: 'official-letter', kind: 'data', menu: '위험성평가·안전보건교육',
+            id: 'official-letter', kind: 'data', menu: '위험성평가·이행점검 등 공문',
             title: '담양군 공문 샘플',
-            now: '샘플은 나중에 받습니다. 그전에는 표준 별지 제1호서식 지면으로 초안을 만들되 공식 문서번호·관인·서식 적합 판정은 하지 않습니다. 두 도메인이 같은 공용 골격(DYDOC)을 쓰므로 샘플이 오면 본문 문구만 맞춥니다.',
+            now: '샘플은 나중에 받습니다. 그전에는 표준 별지 제1호서식 지면으로 초안을 만들되 공식 문서번호·관인·서식 적합 판정은 하지 않습니다. 샘플이 오면 본문 문구만 맞춥니다.',
             options: [{ k: 'later', label: '추후 제공' }, { k: 'received', label: '수신 완료' }]
         },
         {
@@ -138,18 +138,17 @@
         'base-targets': ['material-scope'],
         'sbm-org': ['dept-list', 'hr-sync'], 'sbm-comply': ['dept-list', 'law-list'], 'sbm-policy': ['dept-list'],
         'work-admin': ['dept-list', 'onnara'], 'work-dept': ['dept-list', 'hr-sync'], 'my-work': ['dept-list'],
-        /* 공문을 쓰는 교육 화면은 위험성평가와 같은 외부 의존을 진다 —
-           비공개 세부 기준(doc-org) · 온나라 연계(onnara) · 공문 샘플(official-letter).
-           갭이 그 화면에서 안 보이면 시연 중에 처음 발견된다.
+        /* 교육 화면은 인사 연동(hr-sync)만 진다 — 교육 공문을 걷어(2026-11-23) 공문 쪽 외부 의존
+           (비공개 세부 기준 · 온나라 연계 · 공문 샘플)은 교육 화면에 걸리지 않는다.
            ※ 'edu-reg-detail' 을 넣지 않는 이유 — 그 화면은 data-dy-page 가 'edu-reg' 라
              별도 page id 가 아니고, DYLAW.MAP 에도 키가 없어 selfCheck() 가 경고를 낸다. */
-        'edu-reg': ['hr-sync', 'doc-org', 'onnara', 'official-letter'],
-        'edu-etc': ['hr-sync', 'doc-org', 'onnara', 'official-letter'],
-        'edu-hire': ['hr-sync', 'doc-org', 'onnara', 'official-letter'],
-        'edu-sup': ['hr-sync', 'doc-org', 'onnara', 'official-letter'],
-        'edu-sup-hire': ['hr-sync', 'doc-org', 'onnara', 'official-letter'],
-        'edu-sup-etc': ['hr-sync', 'doc-org', 'onnara', 'official-letter'],
-        'edu-approval': ['doc-org', 'onnara', 'official-letter'],
+        'edu-reg': ['hr-sync'],
+        'edu-etc': ['hr-sync'],
+        'edu-hire': ['hr-sync'],
+        'edu-sup': ['hr-sync'],
+        'edu-sup-hire': ['hr-sync'],
+        'edu-sup-etc': ['hr-sync'],
+        'edu-approval': [],
         'edu-workers': ['hr-sync'], 'edu-status': ['hr-sync'],
         'admin-law': ['law-list', 'law-api'],
         'docs-archive': ['doc-retain'],

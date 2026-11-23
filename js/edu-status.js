@@ -115,7 +115,7 @@
     }
 
     /* 개인별 결재 열은 **없다** — 한 사람 이수 확인서는 결재가 아니라 증명서라
-       보고서·제증명이 발급한다(SCR-EDU-005 §6). 공문은 과정마다 각 교육 화면이 보낸다(2026-11-16). */
+       보고서·제증명이 발급한다(SCR-EDU-005 §6). 교육 공문은 걷었다(2026-11-23). */
 
     function render() {
         if (!state.mount) return;
@@ -420,7 +420,6 @@
             if (q.get('short') === '1') { state.fStatus = 'short'; state.view = 'detail'; }
             if (q.get('status')) { state.fStatus = q.get('status'); state.view = 'detail'; }
         }
-        if (global.EDUDOC) global.EDUDOC.registerRefresh(render);
         render();
         if (deniedDept) V().toast(E().deptName(deniedDept) + ' 부서원의 개인 이수이력은 열람할 수 없습니다.');
     }

@@ -3,6 +3,7 @@
    ---------------------------------------------------------------------
    자체교육(EDUR)·채용시교육(EDUH)이 '동일한 팝업 구성'을 공유하도록,
    회차(일자 탭)·첨부파일·교육 사진 UI 와 그 캡처·검증을 단일 출처로 제공한다.
+   부서 실시 교육(자체·채용시·기타)의 등록 줄(«등록 {사람} · {날짜}» + [등록 취소])도 여기 한 곳이다(2026-11-23).
    화면 모듈은 자기 F(폼 객체)와 네임스페이스 문자열(inline onclick 위임용)만 넘긴다.
 
    폼 객체 규약: F.sessions:[{date,start,end}] · F.sIdx · F.files:[{name}] · F.photos:[{name}]
@@ -241,12 +242,74 @@
     /* 서명부는 한 파일이다 — 공용 안내(DYV2.fileHint)의 개수만 «1개»로 바꿔 쓴다(업로드 칸 모양은 그대로, §2) */
     function oneFile(html) { return String(html || '').replace(/(<b>최대<\/b> )\d+개/, function (m, p) { return p + '1개'; }); }
 
+    /* ===== 부서 실시 교육(자체 · 채용시 · 기타)의 등록 줄 — 공문 대신 «누가 언제 올렸나» (2026-11-23) =====
+     * 교육 공문은 걷었다(기획-안전보건교육-온나라공문제거-20261123-v1). 기록의 출처는 등록한 사람·날짜다.
+     * 고치는 길은 «등록 취소 → 다시 등록» 하나 — 언제든, 그 부서 담당자만(D-1). 화면 셋이 이 한 곳을 쓴다. */
+    var R = function () { return global.DYROLE; };
+    function q(s) { return esc(s).replace(/'/g, '&#39;'); }
+    var REFRESH = [];
+    function registerRefresh(fn) { if (typeof fn === 'function' && REFRESH.indexOf(fn) === -1) REFRESH.push(fn); }
+    function refresh() { REFRESH.forEach(function (fn) { try { fn(); } catch (e) {} }); }
+    function regInfo(c) {
+        var h = (c && c.history || []).filter(function (x) { return x.type === 'CREATE'; })[0];
+        var by = (h && h.by) || (c && c.createdBy) || '';
+        var at = (c && c.regAt) || (h && String(h.at || '').slice(0, 10)) || (c && c.date) || '';
+        return { by: by, at: at };
+    }
+    function regLine(c) {
+        var ri = regInfo(c);
+        if (!ri.by && !ri.at) return '';
+        return '<span class="file-hint">등록 ' + esc(ri.by || '') + (ri.at ? ' · ' + esc(String(ri.at).slice(5)) : '') + '</span>';
+    }
+    /* 부서 실시 교육만 — 집합교육은 이 길로 지우지 않는다(DYEDU.cancelRun 도 같은 판정) */
+    function canCancelRun(c) { return !!c && E().isDeptRun(c) && !c.imported && c.kind !== 'HIRE' && c.kind !== 'SUP_HIRE' && E().canActOwnDept(E().reportDeptOf(c)); }
+    function runLine(c) {
+        if (!c) return '';
+        var cancel = canCancelRun(c)
+            ? ' <button type="button" class="edu-cancel-link" onclick="EDUFORM.confirmCancelRun(\'' + q(E().batchOf(c)) + '\')">등록 취소</button>' : '';
+        return regLine(c) + cancel;
+    }
+    function batchTitle(list) {
+        var c = list[0] || {};
+        var base = c.batchTitle || String(c.desc || '').replace(/\s·\s[^·]+$/, '');
+        return base + (list.length > 1 ? ' (' + list.length + '건)' : '');
+    }
+    /* 등록 취소 — 묶음 전체(한 번 저장으로 생긴 교육 건) · 회수되는 이수시간·인원을 수로 밝힌다(§4 «CRUD 는 회수 경로까지») */
+    function confirmCancelRun(batchId) {
+        var list = E().batchCourses(batchId);
+        if (!list.length) return;
+        if (!E().isDeptRun(list[0])) { V().toast('집합교육은 교육 카드의 [삭제]로 지웁니다.'); return; }
+        if (!canCancelRun(list[0])) { V().toast(E().ownDenyMsg(E().reportDeptOf(list[0]))); return; }
+        var recList = E().records().filter(function (r) { return list.some(function (c) { return c.id === r.courseId; }); });
+        var people = {}; recList.forEach(function (r) { people[r.workerId] = 1; });
+        var hrs = Math.round(recList.reduce(function (n, r) { return n + (+r.hours || 0); }, 0) * 10) / 10;
+        V().openModal('등록 취소',
+            '<p style="font-size:var(--fs-13);margin:0 0 8px;"><b>' + esc(batchTitle(list)) + '</b></p>' +
+            '<div class="check-notice">이 등록' + (list.length > 1 ? '(교육 ' + list.length + '건 — 한 번에 등록한 묶음)' : '') + '과 이수기록 <b>' + recList.length + '건</b>(' + Object.keys(people).length + '명 · 이수시간 합계 <b>' + hrs + 'h</b>)을 지웁니다. 그 사람들은 다시 미이수로 보입니다. 바른 내용으로 다시 등록하세요. 되돌릴 수 없습니다.</div>',
+            '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
+            '<button type="button" class="btn btn-primary" onclick="EDUFORM.doCancelRun(\'' + q(batchId) + '\')">등록 취소</button>');
+    }
+    function doCancelRun(batchId) {
+        var list = E().batchCourses(batchId);
+        if (!list.length || !canCancelRun(list[0])) { V().closeModal(); return; }
+        var c0 = list[0], recs = E().records().filter(function (r) { return list.some(function (c) { return c.id === r.courseId; }); });
+        var r = E().cancelRun(batchId);
+        if (r) E().logCancel({ by: global.DYROLE && global.DYROLE.actorLabel ? global.DYROLE.actorLabel() : '', deptId: E().reportDeptOf(c0), what: E().kindLabel(c0.kind) + ' 등록 취소',
+            title: batchTitle(list), courses: r.courses, records: r.records, hours: Math.round(recs.reduce(function (n, x) { return n + (+x.hours || 0); }, 0) * 10) / 10 });
+        V().closeModal();
+        V().toast(r ? '등록을 취소했습니다 · 교육 ' + r.courses + '건 · 이수기록 ' + r.records + '건 회수' : '등록을 찾지 못했습니다.');
+        refresh();
+    }
+
     global.EDUFORM = {
         MAX_SESSIONS: MAX_SESSIONS, newSession: newSession,
         renderSessions: renderSessions, captureSessions: captureSessions,
         sessAdd: sessAdd, sessDel: sessDel, sessionPayload: sessionPayload, totalHours: totalHours,
         ATTACH_SLOTS: ATTACH_SLOTS,
         renderAttach: renderAttach, addFile: addFile, delFile: delFile,
-        hoursBlockHtml: hoursBlockHtml, captureHours: captureHours, hoursPayload: hoursPayload, oneFile: oneFile
+        hoursBlockHtml: hoursBlockHtml, captureHours: captureHours, hoursPayload: hoursPayload, oneFile: oneFile,
+        /* 부서 실시 교육 등록 줄 · 등록 취소 (2026-11-23) */
+        regInfo: regInfo, regLine: regLine, runLine: runLine, canCancelRun: canCancelRun,
+        confirmCancelRun: confirmCancelRun, doCancelRun: doCancelRun, registerRefresh: registerRefresh, refresh: refresh
     };
 })(window);

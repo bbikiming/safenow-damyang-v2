@@ -4,7 +4,7 @@
    docs/planning/기획-안전보건교육-재설계-v1.md §9 스키마 반영.
    순수 계산 함수(cycleOf/requiredHours/hireHours)를 분리해 법 해석 변경 시
    함수만 교체 가능하도록 구성. 기준일은 DYV2.today()(CLAUDE.md §11).
-   예시 자료는 «2026-11-13 까지 운영한 시스템» 모양이다 — 1~10월 집합교육 완료·공문 회신,
+   예시 자료는 «2026-11-13 까지 운영한 시스템» 모양이다 — 1~10월 집합교육 완료(교육 공문은 2026-11-23 걷음),
    11월 교육(C-M11) 등록부 받는 중, 12월 교육(C-M12) 교육 전.
    근로자 조직은 DYV2.ORG 파생 + 계약직/일용 목업 시드.
 
@@ -15,7 +15,7 @@
 
     /* r5 — 2026-07-30 회의: 기타교육 분류를 법정 3유형으로 재정의(구 5종 폐지) ·
      * 첨부 슬롯(file.slot) 도입. 구 etcType 이 남으면 필터·표시가 어긋나므로 버전 범프. */
-    var SKEY = 'damyangEduV1r19';  /* r19 — 관리감독자 정기교육 예시 회차 09:30~17:30(8h, 11-17) · r18 — r18 — 엑셀 업로드 걷음(예시 출처 엑셀 → 직접등록, 11-17) ·  r17 — 2차 통화 검토 반영(11-17): 작업내용 변경 미이수 예시를 물순환사업소로 · 등록일(regAt) */
+    var SKEY = 'damyangEduV1r21';  /* r21 — 관리감독자 기타교육 예시 등록자를 그 부서 담당자로 · 인사기록 이관 기록 데이터 계층 가드(11-23 감사) · r20 — 교육 공문 걷음(11-23): 예시 공문·공문 저장소 제거 · 등록부 flow 표시 제거 · r19 — 관리감독자 정기교육 예시 회차 09:30~17:30(8h, 11-17) · r18 — r18 — 엑셀 업로드 걷음(예시 출처 엑셀 → 직접등록, 11-17) ·  r17 — 2차 통화 검토 반영(11-17): 작업내용 변경 미이수 예시를 물순환사업소로 · 등록일(regAt) */
     /* r16 — 2차 통화(11-16 17:24): 부서 실시 교육 등록 묶음(batchId) · 현업업무(duties) · 작업내용 변경 이력(dutyLog) · 분기 보고 걷음 */
      /* r15 — 공문 저장을 이 스토어로 옮김(docs) · 과정별 공문 흐름(flow 2) · 12월 집합교육 «안내 공문 전» · 4분기 부서 실시 교육 분기 보고 대상 (2026-11-16 임영준 주무관 통화) */
      /* r14 — 주기 전환을 2027-01-01 로 미룸(답신 3-2): 2026 은 개인별 주기 · 독촉 이력(사람·메모)·재난안전과 현업 시드를 그 기준으로 맞춤 (2026-11-13) */
@@ -195,7 +195,7 @@
         return { need: need, done: doneHours, lastDate: lastDate, status: status, anchor: anchor,
                  anchorKind: w.category === 'SUPERVISOR' ? '지정일' : '채용일',
                  /* via — '' 채용시 이수기록 · '특별교육' 시행규칙 §26① 갈음. 갈음 건에는 채용시
-                    이수기록이 없으므로 화면이 «이수 수정»·공문 진입을 내지 않는다. */
+                    이수기록이 없으므로 화면이 [등록 취소]를 내지 않는다(고칠 기록은 기타교육 화면 소관). */
                  via: via, viaCourseId: viaCourseId, hireRecords: rec.length };
     }
 
@@ -322,7 +322,6 @@
         safety: '박안전', plan: '한열람', acct: '최회계', env: '정환경', culture: '한지훈', finance: '최재무',
         health: '이보건', construct: '박현장', facility: '한담당', water: '하정수', town_damyang: '배주민'
     };
-    var STAFF_UID = { '박안전': 'u_jjt2', '정환경': 'u_env2', '하정수': 'u_wat3', '한담당': 'u_fac2', '박현장': 'u_con2', '이보건': 'u_hlth2' };
     function staffOf(deptId) { return DEPT_STAFF[deptId] || '박안전'; }
     /* 교육 첨부 칸 이름 — 저장 코드(file.slot)를 화면·공문 붙임 후보에 그대로 내지 않는다(§15).
        등록 폼의 칸 이름(EDUFORM.ATTACH_SLOTS)과 같은 말이다 */
@@ -332,47 +331,12 @@
     function seed() {
         var workers = orgWorkers().concat(seedContractWorkers());
         var wById = {}; workers.forEach(function (w) { wById[w.id] = w; });
-        var courses = [], enrolls = [], records = [], docSeed = [];
+        var courses = [], enrolls = [], records = [];
         function dn(id) { return deptName(id); }
         function hist(c, at, by, memo, type) { c.history.push({ type: type || 'STATUS', at: at, by: by, memo: memo }); }
-        /* 공문 예시 — 화면 흐름(기안 → 미리보기 → 온나라로 보내기)을 거친 결과의 모양 그대로.
-           상태는 온나라 연계 회신으로 바뀐 값이다(보낸 직후 «기안함 전송» → 상신 «결재중» → «결재완료/반려»). */
-        function doc(c, at, by, status, extra) {
-            var dept = (by === '박안전') ? '재난안전과' : dn(c.deptId || 'safety');
-            var att = (c.files || []).map(function (f) { return { label: f.name, meta: slotLabel(f.slot), on: true }; });
-            var seen = {};
-            enrolls.forEach(function (e) {
-                if (e.courseId !== c.id || !e.signFile || seen[e.signFile]) return;
-                seen[e.signFile] = 1;
-                att.push({ label: e.signFile, meta: e.bulk ? '일괄 등록 참석자 서명부' : dn(e.deptId) + ' 참석자 서명부', on: true });
-            });
-            /* 온나라 붙임 한도(별지 포함 5개 — DYDOC ATTACH_LIMIT)를 예시 공문도 지킨다. 이수자 명단 별지가 한 자리를
-               쓰므로 파일은 4개까지 — 교육 첨부 → 일괄 등록 서명부 → 부서 서명부 순으로 싣는다.
-               (화면이 6개째를 막는데 예시 공문에 10개가 붙어 있으면 실습하는 사람이 무엇이 맞는지 모른다) */
-            att = att.slice(0, 4);
-            var recs = records.filter(function (r) { return r.courseId === c.id; });
-            var depts = {}; recs.forEach(function (r) { depts[(wById[r.workerId] || {}).deptId] = 1; });
-            var d = {
-                courseId: c.id, at: at, status: status, docType: '내부결재',
-                title: c.date.slice(0, 4) + '년 안전보건교육 실시 결과 보고 — ' + c.desc, to: '',
-                /* 관련 근거는 본문에 쓰지 않는다 — 고른 근거(basis)를 지면의 «근거» 줄이 싣는다(DYDOC) */
-                body: '1. ' + c.desc + (global.DYV2 && global.DYV2.josa ? global.DYV2.josa(c.desc, '을', '를') : '을(를)') + ' 아래와 같이 실시하였기에 그 결과를 보고합니다.\n' +
-                      '  가. 일시: ' + (c.sessions && c.sessions.length > 1 ? c.sessions[0].date + ' 외 ' + (c.sessions.length - 1) + '일' : c.date + ' ' + c.time + '~' + (c.endTime || endOf(c.time, c.hours))) + ' (' + c.hours + '시간)\n' +
-                      '  나. 장소: ' + (c.place || '-') + '\n' +
-                      '  다. 강사: ' + (c.instructor || '-') + '\n' +
-                      '  라. 실시 결과: ' + Object.keys(depts).length + '개 부서 ' + recs.length + '명 이수\n' +
-                      '2. 미참석자는 다음 교육 또는 부서 자체교육으로 보충하겠습니다.',
-                attach: att, annex: true, basis: ['osh-29'], line: [], lineText: '',
-                by: by, byUid: STAFF_UID[by] || '', dept: dept
-            };
-            Object.keys(extra || {}).forEach(function (k) { d[k] = extra[k]; });
-            docSeed.push(d);
-            return d;
-        }
-
         /* ───────── 1. 현업근로자 정기교육(집합) — 매월 1회, 재난안전과 박안전 운영 ─────────
          * 1~10월은 끝났다: 교육 뒤 부서가 등록부를 올리고(일부는 재난안전과 일괄 등록)
-         * → 등록 기한 무렵 종료 처리 → 실시 결과 공문을 온나라로 보냈다.
+         * → 등록 기한 무렵 종료 처리.
          * 11월(11-11)은 등록부를 받는 중이고 12월은 교육 전이다. */
         var MONTHLY = [
             { m: '01', date: '2026-01-16', h: 2, topic: '동절기 한랭질환·빙판길 넘어짐 예방', inst: '안전보건공단 광주광역본부 위촉강사', place: '군청 대회의실' },
@@ -473,11 +437,11 @@
             ids.forEach(function (wid) { records.push({ workerId: wid, courseId: id, kind: 'REG', hours: hours, date: date }); });
             return c;
         }
-        var sCul = selfCourse('C-SELF-CULTU', 'culture', '2026-06-17', '10:00', 4, '체육시설 운영 현장 안전교육 (상반기)', '문화체육과 체육시설팀 한지훈', '담양종합체육관 회의실', ['w_cul_c1'], '한지훈');
-        var sEnv = selfCourse('C-SELF-ENV', 'env', '2026-09-24', '09:00', 6, '하반기 자원순환 현장 안전교육 (수거·선별 작업)', '환경과 보건관리자 최보건', '환경과 회의실', ['w_env_c1', 'w_env_c2', 'w_env_c3', 'w_env_c4', 'w_env_c5'], '정환경');
-        var sFac = selfCourse('C-SELF-FACIL', 'facility', '2026-10-08', '09:00', 6, '환경시설 운영 현장 안전교육 (하반기)', '공공시설사업소 시설안전 담당 한담당', '공공시설사업소 교육장', ['w_fac_c1', 'w_fac_c2', 'w_fac_c3'], '한담당');
-        var sWat = selfCourse('C-SELF-WATER', 'water', '2026-10-21', '09:00', 6, '정수장 약품 취급·밀폐공간 현장 안전교육 (하반기)', '물순환사업소 정수팀장 문정수', '물순환사업소 교육장', ['w_wat_c1', 'w_wat_c2', 'w_wat_c3', 'w_wat_c4'], '하정수');
-        var sCon = selfCourse('C-SELF-CONST', 'construct', '2026-11-04', '09:00', 6, '동절기 도로 보수·제설 작업 안전교육', '건설과 안전관리팀장 정안전', '건설과 회의실', ['w_con_c1', 'w_con_c2', 'w_con_c3', 'w_con_c4'], '박현장');
+        selfCourse('C-SELF-CULTU', 'culture', '2026-06-17', '10:00', 4, '체육시설 운영 현장 안전교육 (상반기)', '문화체육과 체육시설팀 한지훈', '담양종합체육관 회의실', ['w_cul_c1'], '한지훈');
+        selfCourse('C-SELF-ENV', 'env', '2026-09-24', '09:00', 6, '하반기 자원순환 현장 안전교육 (수거·선별 작업)', '환경과 보건관리자 최보건', '환경과 회의실', ['w_env_c1', 'w_env_c2', 'w_env_c3', 'w_env_c4', 'w_env_c5'], '정환경');
+        selfCourse('C-SELF-FACIL', 'facility', '2026-10-08', '09:00', 6, '환경시설 운영 현장 안전교육 (하반기)', '공공시설사업소 시설안전 담당 한담당', '공공시설사업소 교육장', ['w_fac_c1', 'w_fac_c2', 'w_fac_c3'], '한담당');
+        selfCourse('C-SELF-WATER', 'water', '2026-10-21', '09:00', 6, '정수장 약품 취급·밀폐공간 현장 안전교육 (하반기)', '물순환사업소 정수팀장 문정수', '물순환사업소 교육장', ['w_wat_c1', 'w_wat_c2', 'w_wat_c3', 'w_wat_c4'], '하정수');
+        selfCourse('C-SELF-CONST', 'construct', '2026-11-04', '09:00', 6, '동절기 도로 보수·제설 작업 안전교육', '건설과 안전관리팀장 정안전', '건설과 회의실', ['w_con_c1', 'w_con_c2', 'w_con_c3', 'w_con_c4'], '박현장');
 
         /* ───────── 3. 관리감독자 정기교육 — 상·하반기 각 8h(외부 위탁) ───────── */
         function supCourse(id, date, desc, created, regs, closeAt, status) {
@@ -501,7 +465,7 @@
             }
             return c;
         }
-        var sr1 = supCourse('C-SR1', '2026-03-20', '2026 관리감독자 정기교육 1차 (상반기 8h)', '2026-02-24', [
+        supCourse('C-SR1', '2026-03-20', '2026 관리감독자 정기교육 1차 (상반기 8h)', '2026-02-24', [
             { dept: 'safety', ids: ['w_u_safe1', 'w_u_jjt1'], at: '2026-03-23' },
             { dept: 'env', ids: ['w_u_env1', 'w_u_env6'], at: '2026-03-23' },
             { dept: 'water', ids: ['w_u_wat1', 'w_u_wat5', 'w_u_wat7'], at: '2026-03-24' },
@@ -510,7 +474,7 @@
             { dept: 'health', ids: ['w_u_hlth1'], at: '2026-03-25' },
             { dept: 'town_damyang', ids: ['w_u_twn1'], at: '2026-03-26' }
         ], '2026-03-30', 'DONE');
-        var sr2 = supCourse('C-SR2', '2026-10-23', '2026 관리감독자 정기교육 2차 (하반기 8h)', '2026-09-28', [
+        supCourse('C-SR2', '2026-10-23', '2026 관리감독자 정기교육 2차 (하반기 8h)', '2026-09-28', [
             { dept: 'safety', ids: ['w_u_safe1', 'w_u_jjt1'], at: '2026-10-26' },
             { dept: 'plan', ids: ['w_u_plan1'], at: '2026-10-26' },
             { dept: 'env', ids: ['w_u_env1'], at: '2026-10-27' },
@@ -561,14 +525,14 @@
         /* C-H1·C-H2 — 공공시설사업소 기존 기록(시스템 도입 전 부서가 따로 관리하던 것) */
         hireCourse('C-H1', 'facility', '2024-07-25', 'w_fac_c1', '안전보건공단 위탁', '한담당');
         hireCourse('C-H2', 'facility', '2025-07-30', 'w_fac_c2', '안전보건공단 위탁', '한담당');
-        var hWat3 = hireCourse('C-H3', 'water', '2026-01-15', 'w_wat_c3', '물순환사업소 정수팀장 문정수', '하정수');
-        var hEnv3 = hireCourse('C-H4', 'env', '2026-01-29', 'w_env_c3', '환경과 보건관리자 최보건', '정환경');
+        hireCourse('C-H3', 'water', '2026-01-15', 'w_wat_c3', '물순환사업소 정수팀장 문정수', '하정수');
+        hireCourse('C-H4', 'env', '2026-01-29', 'w_env_c3', '환경과 보건관리자 최보건', '정환경');
         hireCourse('C-H5', 'facility', '2026-02-20', 'w_fac_c3', '공공시설사업소 시설안전 담당 한담당', '한담당');
         hireCourse('C-H6', 'construct', '2026-02-27', 'w_con_c3', '건설과 안전관리팀장 정안전', '박현장');
         hireCourse('C-H7', 'water', '2026-05-08', 'w_wat_c4', '물순환사업소 정수팀장 문정수', '하정수');
         hireCourse('C-H8', 'env', '2026-06-15', 'w_env_c5', '환경과 보건관리자 최보건', '정환경');
         hireCourse('C-H9', 'env', '2026-07-14', 'w_env_c4', '환경과 환경지도팀장 조환경', '정환경');   /* 채용 나흘 뒤 — 지연 이수 */
-        var hCon4 = hireCourse('C-H10', 'construct', '2026-09-14', 'w_con_c4', '건설과 안전관리팀장 정안전', '박현장');
+        hireCourse('C-H10', 'construct', '2026-09-14', 'w_con_c4', '건설과 안전관리팀장 정안전', '박현장');
         hireCourse('C-H11', 'facility', '2026-10-27', 'w_fac_c4', '공공시설사업소 시설안전 담당 한담당', '한담당');
 
         /* ───────── 5. 기타 교육(법정 3유형) — 작업내용 변경 시 · 특별교육 ─────────
@@ -582,7 +546,7 @@
                       specialWorkNos: o.works || [], specialWorkOtherReason: '',
                       files: [{ name: o.file, slot: 'log' }], status: 'DONE', createdBy: o.by === '박안전' ? '재난안전과' : dn(o.dept), history: [] };
             if (o.sessions) c.sessions = o.sessions;
-            /* 관리감독자 기타교육은 재난안전과가 등록한다(운영가이드 §7-1) — 부서는 대상 부서일 뿐이다 */
+            /* 부서 실시 교육은 그 부서가 등록한다(2026-11-16 2차 통화 · 대리 등록 없음) — 예시 등록자도 그 부서 담당자 */
             var regBy = o.by === '박안전' ? SAFETY : dn(o.dept) + ' ' + o.by;
             hist(c, o.date + ' 17:30', regBy, (c.kind === 'SUP_ETC' ? '관리감독자 기타 교육' : '기타 교육') + ' 등록', 'CREATE');
             hist(c, o.date + ' 17:31', o.by === '박안전' ? SAFETY : dn(o.dept), o.type + ' 진행 처리 · ' + o.ids.length + '명 카운트');
@@ -591,85 +555,32 @@
             o.ids.forEach(function (wid) { records.push({ workerId: wid, courseId: o.id, kind: 'ETC', hours: o.hours, date: (o.sessions ? o.sessions[o.sessions.length - 1].date : o.date) }); });
             return c;
         }
-        var e5 = etcCourse({ id: 'C-E5', type: '작업내용 변경 시 교육', dept: 'env', date: '2026-03-18', start: '14:00', hours: 2,
+        etcCourse({ id: 'C-E5', type: '작업내용 변경 시 교육', dept: 'env', date: '2026-03-18', start: '14:00', hours: 2,
             inst: '환경과 환경지도팀장 조환경', place: '환경과 회의실', by: '정환경', ids: ['w_env_c1', 'w_env_c2'],
             desc: '자원순환팀 → 환경지도팀 배치 전환에 따른 작업내용 변경 교육', file: '작업변경교육_일지_20260318.pdf' });
-        var e1 = etcCourse({ id: 'C-E1', type: '작업내용 변경 시 교육', dept: 'water', date: '2026-04-08', start: '10:00', hours: 2,
+        etcCourse({ id: 'C-E1', type: '작업내용 변경 시 교육', dept: 'water', date: '2026-04-08', start: '10:00', hours: 2,
             inst: '물순환사업소장 오순환', place: '물순환사업소 교육장', by: '하정수', ids: ['w_wat_c1', 'w_wat_c2'],
             desc: '정수장 → 하수처리장 배치 전환에 따른 작업내용 변경 교육', file: '작업변경교육_일지_20260408.pdf' });
-        var e3 = etcCourse({ id: 'C-E3', type: '특별교육', dept: 'water', date: '2026-05-21', start: '09:00', hours: 4, works: [34],
+        etcCourse({ id: 'C-E3', type: '특별교육', dept: 'water', date: '2026-05-21', start: '09:00', hours: 4, works: [34],
             inst: '한국안전기술원 (위탁)', place: '정수장 현장', by: '하정수', ids: ['w_wat_c1', 'w_wat_c3', 'w_wat_c4'],
             desc: '밀폐공간(정수장 침전지·맨홀) 작업 특별교육 — 최초 작업 전 4시간', file: '특별교육_일지_20260521.pdf' });
         etcCourse({ id: 'C-E4', type: '특별교육', dept: 'water', date: '2026-07-15', start: '09:00', hours: 12, works: [34],
             sessions: [{ date: '2026-07-15', start: '09:00', end: '15:00' }, { date: '2026-07-16', start: '09:00', end: '15:00' }],
             inst: '한국안전기술원 (위탁)', place: '물순환사업소 교육장', by: '하정수', ids: ['w_wat_c1', 'w_wat_c3', 'w_wat_c4'],
             desc: '밀폐공간 작업 특별교육 — 나머지 12시간 (3개월 내 분할 실시)', file: '특별교육_일지_20260715_16.pdf' });
-        var e6 = etcCourse({ id: 'C-E6', type: '특별교육', dept: 'health', date: '2026-09-09', start: '13:00', hours: 4, works: [35],
+        etcCourse({ id: 'C-E6', type: '특별교육', dept: 'health', date: '2026-09-09', start: '13:00', hours: 4, works: [35],
             inst: '보건소 보건담당 윤담당', place: '보건소 교육실', by: '이보건', ids: ['w_hlth_c1'],
             desc: '방역 소독약품(관리대상 유해물질) 취급 작업 특별교육 — 최초 4시간', file: '특별교육_일지_20260909.pdf' });
         etcCourse({ id: 'C-E2', type: '작업내용 변경 시 교육', dept: 'facility', date: '2026-10-29', start: '15:00', hours: 1.5,
             inst: '공공시설사업소장 임시설', place: '공공시설사업소', by: '한담당', ids: ['w_fac_c1', 'w_fac_c4'],
             desc: '환경시설 점검 업무 전환 교육 — 계약직·일용 혼재', file: '작업변경교육_일지_20261029.pdf' });
         /* 관리감독자 기타교육 — 같은 모듈을 supMode 로 재사용하는 화면이라 대상이 없으면 화면이 빈다 */
-        var se1 = etcCourse({ id: 'C-SE1', kind: 'SUP_ETC', type: '작업내용 변경 시 교육', dept: 'construct', date: '2026-04-23', start: '14:00', hours: 2,
-            inst: '대한산업안전협회 전남지회 (위탁)', place: '건설과 회의실', by: '박안전', ids: ['w_u_con1', 'w_u_con6'],
+        etcCourse({ id: 'C-SE1', kind: 'SUP_ETC', type: '작업내용 변경 시 교육', dept: 'construct', date: '2026-04-23', start: '14:00', hours: 2,
+            inst: '대한산업안전협회 전남지회 (위탁)', place: '건설과 회의실', by: '박현장', ids: ['w_u_con1', 'w_u_con6'],
             desc: '도로보수 → 교량점검 감독 업무 전환에 따른 교육', file: '감독자_작업변경교육_20260423.pdf' });
         etcCourse({ id: 'C-SE2', kind: 'SUP_ETC', type: '특별교육', dept: 'water', date: '2026-08-20', start: '09:00', hours: 4, works: [34],
-            inst: '한국안전기술원 (위탁)', place: '물순환사업소 교육장', by: '박안전', ids: ['w_u_wat5', 'w_u_wat7'],
+            inst: '한국안전기술원 (위탁)', place: '물순환사업소 교육장', by: '하정수', ids: ['w_u_wat5', 'w_u_wat7'],
             desc: '밀폐공간 작업 감독자 특별교육 — 최초 4시간', file: '감독자_특별교육_20260820.pdf' });
-
-        /* ───────── 6. 실시 결과 공문 — 온나라로 보낸 기록 ─────────
-         * 상태는 연계 회신으로 바뀐 값이다. 6월은 한 번 반려돼(붙임 누락) 고쳐 다시 보냈다.
-         * 공공시설사업소 자체교육은 반려된 채 다시 보내기 전이다(잠금 풀림). 11월 4일 이후 끝난 교육은 아직 기안 전이다.
-         * 기안은 전부 재난안전과 박안전이다 — 부서가 등록한 자체·채용시·기타 교육도 실시 결과 공문은 재난안전과가 쓴다
-         * (2026-11-13 기획 답신 3-3 «지금대로»). */
-        var C = {}; courses.forEach(function (c) { C[c.id] = c; });
-        var MDOC = {
-            '01': ['2026-01-27', '결재완료'], '02': ['2026-02-24', '결재완료'], '03': ['2026-03-24', '결재완료'],
-            '04': ['2026-04-28', '결재완료'], '05': ['2026-05-26', '결재완료'], '06': ['2026-06-23', '반려'],
-            '07': ['2026-07-21', '결재완료'], '08': ['2026-08-25', '결재완료'], '09': ['2026-09-22', '결재완료'],
-            '10': ['2026-10-27', '결재중']
-        };
-        var pend = [];
-        Object.keys(MDOC).forEach(function (m) { pend.push({ c: C['C-M' + m], at: MDOC[m][0], by: '박안전', st: MDOC[m][1] }); });
-        pend.push({ c: C['C-M06'], at: '2026-06-26', by: '박안전', st: '결재완료' });     /* 반려 뒤 다시 보냄 */
-        pend.push({ c: sr1, at: '2026-04-02', by: '박안전', st: '결재완료' });
-        pend.push({ c: sr2, at: '2026-11-05', by: '박안전', st: '기안함 전송' });
-        pend.push({ c: e5, at: '2026-03-20', by: '박안전', st: '결재완료' });
-        pend.push({ c: e1, at: '2026-04-10', by: '박안전', st: '결재완료' });
-        pend.push({ c: e3, at: '2026-05-26', by: '박안전', st: '결재완료' });
-        pend.push({ c: se1, at: '2026-04-27', by: '박안전', st: '결재완료' });     /* 관리감독자 기타교육 — 재난안전과가 등록·기안 */
-        pend.push({ c: e6, at: '2026-09-14', by: '박안전', st: '결재완료' });
-        pend.push({ c: hWat3, at: '2026-01-20', by: '박안전', st: '결재완료' });
-        pend.push({ c: hEnv3, at: '2026-02-03', by: '박안전', st: '결재완료' });
-        pend.push({ c: hCon4, at: '2026-09-17', by: '박안전', st: '결재완료' });
-        pend.push({ c: sCul, at: '2026-06-22', by: '박안전', st: '결재완료' });
-        pend.push({ c: sEnv, at: '2026-09-29', by: '박안전', st: '결재완료' });
-        pend.push({ c: sFac, at: '2026-10-13', by: '박안전', st: '반려' });
-        pend.push({ c: sWat, at: '2026-10-26', by: '박안전', st: '결재중' });
-        pend.sort(function (a, b) { return a.at.localeCompare(b.at); });
-        var seq = 2600;
-        pend.forEach(function (p) {
-            seq++;
-            var dept = p.by === '박안전' ? '재난안전과' : dn(p.c.deptId);
-            var no = dept + '-' + seq;
-            var extra = { no: no, sid: no + '-' + docSeed.filter(function (d) { return d.courseId === p.c.id; }).length };
-            if (p.st === '결재완료') { extra.doneAt = addDays(p.at, 2 + (seq % 4)); extra.regNo = dept + '-' + (seq * 3 + 1100); }
-            /* 반려 사유는 그 공문에 실제로 빠진 것과 맞아야 한다 — 다시 기안하는 사람이 사유대로 고칠 수 있게 */
-            if (p.st === '반려') {
-                extra.rejectAt = addDays(p.at, 1);
-                if (p.c.kind === 'REG_SELF') {
-                    extra.attach = [];          /* 올려 둔 교육일지·사진 파일을 붙이지 않고 보냈다 */
-                    extra.rejectReason = '교육일지·교육사진 붙임 누락 — 올려 둔 교육일지·사진 파일을 붙여 다시 올릴 것';
-                } else {
-                    extra.annex = false;        /* 이수자 명단 별지를 빼고 보냈다 */
-                    extra.rejectReason = '이수자 명단(붙임 별지) 누락 — 별지를 붙여 다시 올릴 것';
-                }
-            }
-            doc(p.c, p.at, p.by, p.st, extra);
-            hist(p.c, p.at + ' 15:20', dept + ' ' + p.by, '공문 온나라로 보냄 — ' + p.c.date.slice(0, 4) + '년 안전보건교육 실시 결과 보고 — ' + p.c.desc + ' (' + no + ')');
-            if (p.st === '반려') hist(p.c, extra.rejectAt + ' 10:05', '온나라 연계', '공문 반려 — ' + extra.rejectReason);
-        });
 
         /* ───────── 7. 미이수 독촉 이력(9~11월) — 재난안전과 박안전이 보냈다 ───────── */
         var reminders = [
@@ -679,10 +590,11 @@
             { at: '2026-10-30 09:40', by: SAFETY, deptId: 'health', workerIds: ['w_hlth_c1'], memo: '정기교육 12시간 중 3시간 · 부서 자체교육 계획 회신 요청' },
             { at: '2026-11-06 16:15', by: SAFETY, deptId: 'construct', workerIds: ['w_con_c1', 'w_con_c2'], memo: '12시간 중 9시간 · 11월 집합교육(11-11) 참석 요청' }
         ];
-        /* ───────── 8. 과정별 공문 흐름(2026-11-16) — 전환 뒤 만든 기록에만 flow: 2 ─────────
-         * 그 전 기록은 «이전 방식»(공문 할 일 없음)이다. 실습 자리를 남긴다:
-         *   · 12월 집합교육 — 등록만 하고 교육 안내 공문(①)을 아직 안 보냈다
-         *   · 4분기 부서 실시 교육 중 실시 결과 공문이 없는 건 — 부서 «실시 결과 보고 공문 보내기» 할 일(실습 자리) */
+        /* ───────── 8. flow: 2 — 지금 진행 중인 집합교육 ─────────
+         * 교육 공문은 걷었다(2026-11-23 — 11-20 팀장 보고 «여기에만 기록 남겨도 된다»). flow 2 는
+         * «종료 뒤에도 미등록 부서에 등록부 할 일이 남는 교육» · «재난안전과 서명부·출장 결과 보고 할 일이 생기는 교육»을
+         * 가르는 표시로만 남는다 — 1~10월 집합교육은 이미 끝난 기록이라 할 일을 만들지 않는다.
+         *   · 11월 집합교육(등록부 받는 중) · 12월 집합교육(교육 전) · 12월 관리감독자 보충교육 */
         /* 현업업무(고시 제2020-62호 별표 1) — 예시 근로자에 부서에 맞는 업무를 넣는다(예시 자료).
            보건소 방역 인원은 6가지 어디에도 딱 맞지 않아 비워 둔다 — «업무 미지정» 갭의 예시다 */
         var DUTY_BY_DEPT = { env: [3], water: [1], facility: [1], construct: [2], safety: [1], culture: [1], town_damyang: [3] };
@@ -695,39 +607,13 @@
         var wFac = wById.w_fac_c1, wWat = wById.w_wat_c2;
         if (wFac) { wFac.duties = [1, 4]; wFac.dutyLog.push({ at: '2026-10-27', from: [1], to: [1, 4], by: '공공시설사업소 한담당', savedAt: '2026-10-27 09:40' }); }
         if (wWat) { wWat.duties = [1, 4]; wWat.dutyLog.push({ at: '2026-11-10', from: [1], to: [1, 4], by: '물순환사업소 하정수', savedAt: '2026-11-10 14:05' }); }
-        var hasDoc = {}; docSeed.forEach(function (d) { hasDoc[d.courseId] = 1; });
         courses.forEach(function (c) {
-            if (c.id === 'C-M12') { c.flow = 2; return; }
-            /* 진행 중인 11월 집합교육 · 12월 관리감독자 보충교육 — 안내 공문(①)은 이미 보냈다(아래 예시 공문) */
-            if (c.id === 'C-M11' || c.id === 'C-SR3') { c.flow = 2; return; }
-            if (!c.deptId || hasDoc[c.id]) return;
-            if (c.kind === 'REG_GROUP' || c.kind === 'SUP_REG') return;
-            if ((c.date || '') >= '2026-10-01') { c.flow = 2; c.byDept = c.deptId; c.batchId = c.id; }
-        });
-        var docs = {};
-        [['C-M11', '2026-10-21', '결재완료'], ['C-SR3', '2026-11-07', '결재중']].forEach(function (n, i) {
-            var c = courses.filter(function (x) { return x.id === n[0]; })[0]; if (!c) return;
-            seq++;
-            var no = '재난안전과-' + seq;
-            docs['N|' + c.id] = [{ kind: 'NOTICE', sub: '', sid: no + '-0', no: no, at: n[1], status: n[2], docType: '외부발송', to: '수신자 참조',
-                title: (/^\d{4}/.test(c.desc) ? '' : c.date.slice(0, 4) + ' ') + c.desc + ' 집합교육 실시 안내',
-                body: '1. ' + c.desc + '을 아래와 같이 실시하오니 대상 부서 직원이 참석하도록 협조하여 주시기 바랍니다.\n  가. 일시: ' + c.date + ' ' + c.time + '\n  나. 장소: ' + (c.place || '-') + '\n2. 교육이 끝나면 참석자 등록부를 시스템에 올리고 제출 공문을 보내 주시기 바랍니다.',
-                attach: (c.files || []).map(function (f) { return { label: f.name, meta: slotLabel(f.slot), on: true }; }), annex: false, basis: ['osh-29'],
-                line: [], lineText: '', by: '박안전', byUid: 'u_jjt2', dept: '재난안전과',
-                regNo: n[2] === '결재완료' ? '재난안전과-' + (seq * 3 + 1100) : undefined, doneAt: n[2] === '결재완료' ? addDays(n[1], 2) : undefined }];
-            c.history.push({ type: 'STATUS', at: n[1] + ' 15:10', by: SAFETY, memo: '교육 안내 공문 온나라로 보냄 (' + no + ')' });
-            c.history.sort(function (a, b) { return a.at.localeCompare(b.at); });
-        });
-        docSeed.forEach(function (x) {
-            var d = {}; Object.keys(x).forEach(function (k) { if (k !== 'courseId') d[k] = x[k]; });
-            d.kind = 'RESULT';
-            (docs[x.courseId] = docs[x.courseId] || []).push(d);
+            if (c.id === 'C-M11' || c.id === 'C-M12' || c.id === 'C-SR3') c.flow = 2;
         });
         return {
             seqW: 100, seqC: 30, seqR: 30,
             workers: workers, courses: courses, enrolls: enrolls, records: records,
-            reminders: reminders, docSeed: docSeed, docSeq: seq,
-            docs: docs, noAttend: {}, docRemind: []
+            reminders: reminders, noAttend: {}, docRemind: []
         };
     }
 
@@ -922,12 +808,12 @@
             specialWorkOtherReason: o.specialWorkOtherReason || '',
             files: o.files || [], photos: o.photos || [], status: o.status || 'OPEN',
             createdBy: o.createdBy || '', history: o.history || [],
-            /* 과정별 공문 흐름(2026-11-16) — 이 시스템에서 새로 만든 교육은 전부 새 흐름이다.
+            /* flow 2 = 이 시스템에서 새로 만든 교육(종료 뒤 등록부 할 일 · 서명부·출장 보고 할 일의 대상).
                byDept = 등록한 부서(id). createdBy 는 부서 이름 글자라 판정에 쓰지 않는다 */
             flow: 2, byDept: o.byDept || o.deptId || ownerDept(),
-            /* 시스템에 등록한 날 — 실시 결과 보고 공문 할 일의 기한은 교육일이 아니라 이날 + 7일이다(지난 교육을 올리면 바로 «지연»이 되던 결함) */
+            /* 시스템에 등록한 날 — 목록의 «등록 {사람} · {날짜}» 표시가 쓴다 */
             regAt: o.regAt || today(),
-            /* 등록 묶음 — 한 번 저장으로 생긴 부서 실시 교육 건은 공문(실시 결과 보고) 하나로 보낸다(2차 통화 R-1) */
+            /* 등록 묶음 — 한 번 저장으로 생긴 부서 실시 교육 건. [등록 취소]가 묶음 단위로 지운다 */
             batchId: o.batchId || undefined, batchTitle: o.batchTitle || undefined
         };
         if (!c.batchId) c.batchId = c.id;
@@ -1048,11 +934,16 @@
         var ci = -1;
         for (var i = 0; i < d.courses.length; i++) if (d.courses[i].id === id) { ci = i; break; }
         if (ci < 0) return null;
+        /* 인사기록에서 옮겨 온 이수 기록은 다시 만들 수 없어 지우지 않는다(cancelRun · removeWorkerFromCourse 와 같은 판정) */
+        if (d.courses[ci].imported) return null;
         var enrollCnt = d.enrolls.filter(function (e) { return e.courseId === id; }).length;
         var recordCnt = d.records.filter(function (r) { return r.courseId === id; }).length;
         d.courses.splice(ci, 1);
         d.enrolls = d.enrolls.filter(function (e) { return e.courseId !== id; });
         d.records = d.records.filter(function (r) { return r.courseId !== id; });
+        /* 그 교육에 딸린 부서 표시(참석자 없음)·독촉 기록도 함께 거둔다 — 지운 교육을 가리키는 기록이 남지 않게 */
+        if (d.noAttend) delete d.noAttend[id];
+        if (d.docRemind) d.docRemind = d.docRemind.filter(function (r) { return r.ref !== 'A|' + id; });
         save();
         return { enrolls: enrollCnt, records: recordCnt };
     }
@@ -1061,6 +952,8 @@
      * 남은 대상자가 없으면 빈 교육 건은 함께 회수한다.
      * 반환 = { records: 회수된 이수기록 수, courseRemoved: 교육 건까지 삭제됐는지 } */
     function removeWorkerFromCourse(courseId, workerId) {
+        /* 인사기록에서 옮겨 온 이수 기록은 다시 만들 수 없어 지우지 않는다(cancelRun 과 같은 판정) */
+        var oc = courseOf(courseId); if (oc && oc.imported) return null;
         var d = load(), recCnt = 0;
         d.records = d.records.filter(function (r) {
             if (r.courseId === courseId && r.workerId === workerId) { recCnt++; return false; }
@@ -1087,6 +980,7 @@
     }
     /* 참석자 등록부 등록 취소 — 교육이 이미 종료(DONE)된 뒤라면 해당 부서 근로자의 이수기록도 회수 */
     function removeEnroll(courseId, deptId) {
+        var oc0 = courseOf(courseId); if (oc0 && oc0.imported) return null;
         var d = load();
         var target = d.enrolls.filter(function (e) { return e.courseId === courseId && e.deptId === deptId; });
         if (!target.length) return null;
@@ -1172,16 +1066,7 @@
         if (hi) return hi;
         if (hasEnroll(o.courseId, o.deptId)) return deptName(o.deptId) + (global.DYV2 && global.DYV2.josa ? global.DYV2.josa(deptName(o.deptId), '은', '는') : '은(는)') + ' 이미 등록된 부서입니다 — 등록 취소 후 다시 등록하세요.';
         if (c && c.status === 'OPEN' && isGroupCourse(c) && !enrollOpen(c)) return '교육이 끝난 뒤(' + lastSessionDate(c) + '부터) 참석자 등록부를 올립니다.';
-        var lk = docLock(o.courseId);
-        if (lk) return '공문이 ' + lk + ' 상태라 등록부를 더 받지 않습니다 — 온나라에서 반려·반송되면 다시 열립니다.';
         return '';
-    }
-    /* 실시 결과 공문을 온나라로 보낸 교육 — 등록부를 더 받지 않는다(별지 명단이 열 때마다 이수기록에서
-       다시 파생되므로, 보낸 뒤에 늘면 이미 보낸 공문의 명단이 바뀐다). 판정은 EDUDOC.lockOf 한 곳. */
-    function docLock(courseId) {
-        /* 이전 방식(실시 결과 공문)으로 보낸 교육만 — 새 흐름의 등록부 잠금은 부서마다 따로다(enrollLock) */
-        var lk = lockAt(courseId);
-        return lk;
     }
     function addEnroll(o) {
         var d = load();
@@ -1193,7 +1078,6 @@
         if (oc && oc.status === 'OPEN' && isGroupCourse(oc) && !enrollOpen(oc)) return false;
         /* 실제 참석시간 — 0 < h ≤ 교육 합계(공통값·사람별 모두). 화면이 검사를 빠뜨려도 여기서 막는다 */
         if (enrollHoursIssue(o)) return false;
-        if (docLock(o.courseId)) return false;
         var wids = (o.workerIds || []).slice();
         var hoursBy = null;
         Object.keys(o.hoursBy || {}).forEach(function (k) {
@@ -1214,7 +1098,8 @@
             bulk: !!o.bulk,
             /* 재난안전과가 올린 한 장 서명부를 골라 쓴 등록부(signFrom: 'course') — 파일은 교육(signSheet)에 하나 */
             signFrom: o.signFrom || undefined,
-            /* 전환(2026-11-16) 뒤 저장한 집합교육 등록부는 «참석자 등록부 제출» 공문(②)을 보내야 끝난다 */
+            /* 2026-11-16 뒤 규칙(그 부서만 올리고 고친다)으로 올린 집합교육 등록부 — 옛 등록부(재난안전과 일괄·대리 등록)와
+               고치는 주체가 다르다(EDURD.canCancel). 공문 표시가 아니다 */
             flow: isGroupFlow(oc) ? 2 : undefined
         });
         /* 참석자 없음으로 해 둔 부서가 등록부를 올리면 그 표시는 걷는다 */
@@ -1226,6 +1111,7 @@
     /* 완료 교육의 등록부 정정 — 원행을 지우지 않고 취소 상태·사유를 보존한다.
      * 이수 집계에서는 연결 기록만 제외하고, 취소된 등록부는 감사 이력으로 남는다. */
     function cancelCompletedEnroll(courseId, deptId, reason, by) {
+        var oc0 = courseOf(courseId); if (oc0 && oc0.imported) return null;
         var d = load();
         var target = d.enrolls.filter(function (e) {
             return e.courseId === courseId && e.deptId === deptId && e.status !== 'CANCELLED';
@@ -1281,7 +1167,7 @@
     /* 집합교육인가 — 인정시간이 교육 합계가 아니라 **등록부 실제 참석시간**인 교육 */
     function isGroupCourse(c) { return !!c && (c.kind === 'REG_GROUP' || c.kind === 'SUP_REG'); }
     /* 재난안전과가 여는 집합교육만 — 관리감독자 자체교육도 kind 가 SUP_REG 라(부서 있음) isGroupCourse 로는 갈리지 않는다.
-       과정별 공문 흐름(①②③)은 이것으로만 판정한다. 부서 자체교육은 실시 결과 보고(④, 등록 묶음 공문) 쪽이다(2026-11-16 코드 리뷰) */
+       예정·변경·취소 알림 · 서명부 · 출장 결과 보고서 · 등록부 할 일은 이것으로만 판정한다. 부서 자체교육은 부서 실시 교육(등록 묶음) 쪽이다 */
     function isGroupFlow(c) { return !!c && (c.kind === 'REG_GROUP' || (c.kind === 'SUP_REG' && !c.deptId)); }
     /* 그 근로자가 속한 (취소되지 않은) 등록부 */
     function enrollOfWorker(courseId, workerId) {
@@ -1368,8 +1254,6 @@
             if (!isGroupFlow(c)) return;
             /* 교육이 끝나기 전에는 할 일이 아니다 — 끝난 날 생기고 등록 기한을 단다 */
             if (c.status === 'OPEN' && !enrollOpen(c)) return;
-            /* 교육 안내 공문(①)을 보내지 않은 교육은 부서가 모른다 — 등록부 할 일도 없다 */
-            if (!noticeSent(c)) return;
             /* 그 교육의 모집단이 없는 부서에는 할 일을 내지 않는다 — 등록 창이 «대상자가 없습니다»라
                끝낼 수 없는 할 일이 된다(예정 안내 deptUpcoming 과 같은 판정) */
             if (courseTargetDepts(c).indexOf(deptId) === -1) return;
@@ -1377,21 +1261,7 @@
             if (en.some(function (e) { return e.courseId === c.id && e.deptId === deptId; })) return;
             out.push({ kind: 'apply', course: c, due: enrollDue(c) });
         });
-        /* 등록부는 저장했는데 «참석자 등록부 제출» 공문(②)을 아직 안 보냈다 — 종료 뒤에도 남는다 */
-        en.forEach(function (e) {
-            if (e.deptId !== deptId || e.flow !== 2) return;
-            var c = courseOf(e.courseId); if (!c || c.status === 'CANCELLED') return;
-            var st = docState(keyEnroll(c.id, deptId));
-            if (st === 'sent') return;
-            out.push({ kind: st === 'returned' ? 'enrollResend' : 'enrollDoc', course: c, due: enrollDue(c), status: st });
-        });
-        /* 부서 실시 교육(자체·채용시·기타) — 등록 묶음마다 실시 결과 보고 공문(2차 통화 · 등록 한 번 = 공문 한 번) */
-        runBatches(deptId).forEach(function (b) {
-            var st = docState(keyRun(b.batchId));
-            if (st === 'sent') return;
-            out.push({ kind: st === 'returned' ? 'runResend' : 'runDoc', batchId: b.batchId, course: b.list[0], list: b.list, due: runDue(b.list[0]), status: st });
-        });
-        /* 재난안전과 담당자 몫 — 교육 안내 · 변경·취소 안내 · 서명부 · 출장 결과 보고 */
+        /* 재난안전과 담당자 몫 — 서명부 올리기 · 출장 결과 보고서 */
         if (deptId === ownerDept()) ownerTodos().forEach(function (t) { out.push(t); });
         reminders().forEach(function (r) {
             if (r.deptId !== deptId) return;
@@ -1407,8 +1277,8 @@
     /* ===== 예정 교육 — 교육 전인 집합교육을 대상 부서에 미리 알린다 (2026-11-13 X-1 확정) =====
      * 할 일이 아니다 — deptTodos 에 넣지 않는다. 내 할일은 «예정 교육» 묶음으로 따로 보이고
      * 지연·이번주·전체 수와 대시보드 부서 할 일 수에 들어가지 않는다. 교육이 끝나는 날(마지막 회차)
-     * 사라지고, 그날부터 «참석자 등록부 등록» 할 일이 생긴다(enrollOpen). 참석 안내 자체는 지금처럼
-     * 바깥 공문으로 한다 — 이 알림은 일시·장소를 미리 보이는 것뿐이다.
+     * 사라지고, 그날부터 «참석자 등록부 등록» 할 일이 생긴다(enrollOpen). 교육을 등록하는 순간부터 보인다
+     * (교육 공문은 걷었다 — 2026-11-23). 공문이 필요하면 담당자가 온나라에서 직접 쓴다.
      * 대상 부서 = 그 교육의 모집단(현업근로자 교육 = 관리감독자 아닌 사람 · 관리감독자 교육 = 관리감독자)이
      * 있는 부서. 등록부 모집단 판정(populationOfKind)과 같은 갈래다. */
     function courseTargetDepts(c) {
@@ -1434,22 +1304,26 @@
     function deptUpcoming(deptId) {
         if (!deptId) return [];
         return courses({ status: 'OPEN' }).filter(function (c) {
-            return isUpcoming(c) && noticeSent(c) && courseTargetDepts(c).indexOf(deptId) !== -1;
+            return isUpcoming(c) && courseTargetDepts(c).indexOf(deptId) !== -1;
         }).sort(function (a, b) { return (a.date || '').localeCompare(b.date || ''); });
     }
-    /* 등록 직후 대상 부서 알림함에 «집합교육 예정 안내» — 받는 부서 사람에게만 보인다(toDept).
+    /* 등록 직후 대상 부서 알림함에 «집합교육 예정 안내»(변경 · 취소 포함) — 받는 부서 사람에게만 보인다(toDept).
      * 오늘이 마지막 회차 날이면 보내지 않는다(이미 등록부를 받는 중이라 «예정»이 아니다). 보낸 부서 수를 돌려준다. */
     function notifyUpcoming(courseId) {
-        var c = courseOf(courseId), L = global.DYLayout;
-        if (!isUpcoming(c) || !L || !L.ntfPush) return 0;
-        /* 받는 부서 = 교육 안내 공문(①) 수신 부서 — 보내는 재난안전과는 뺀다 */
-        var depts = noticeRecipients(c);
-        var head = arguments[1] === '취소' ? '집합교육 취소 안내 — ' : arguments[1] === '변경' ? '집합교육 변경 안내 — ' : '집합교육 예정 안내 — ';
+        var c = courseOf(courseId), L = global.DYLayout, why = arguments[1] || '';
+        /* 예정 안내는 교육 전에만. 변경·취소 안내는 부르는 쪽이 «이미 알린 교육인가»를 판정한다 —
+           날짜를 과거로 옮기거나 교육 당일 지울 때도 이미 안내받은 부서에 알려야 한다 */
+        if (!c || !isGroupFlow(c) || !L || !L.ntfPush) return 0;
+        if (!why && !isUpcoming(c)) return 0;
+        /* 받는 부서 = 대상 부서(모집단이 있는 부서) — 보내는 재난안전과는 뺀다 */
+        var depts = noticeRecipients(c), sub = why;
+        var head = sub === '취소' ? '집합교육 취소 안내 — ' : sub === '변경' ? '집합교육 변경 안내 — ' : '집합교육 예정 안내 — ';
         depts.forEach(function (deptId) {
             try {
                 L.ntfPush({ cat: 'edu', catLabel: '교육', toDept: deptId,
-                    title: head +  + (c.desc || kindLabel(c.kind)) + ' · ' + upcomingWhen(c) + (c.place ? ' · ' + c.place : ''),
-                    href: 'edu-reg-detail.html?id=' + encodeURIComponent(c.id), work: 'my-work.html', basis: 'osh-29' });
+                    title: head + (c.desc || kindLabel(c.kind)) + ' · ' + upcomingWhen(c) + (c.place ? ' · ' + c.place : ''),
+                    /* 취소(삭제)면 상세가 사라진다 — 목록으로 보낸다 */
+                    href: sub === '취소' ? (c.kind === 'SUP_REG' ? 'edu-sup.html' : 'edu-reg.html') : 'edu-reg-detail.html?id=' + encodeURIComponent(c.id), work: 'my-work.html', basis: 'osh-29' });
             } catch (e) {}
         });
         return depts.length;
@@ -1521,6 +1395,14 @@
     }
     /* 거절 사유 — 누가 하는지를 밝힌다. «권한이 없습니다»로 뭉뚱그리면 다음에 누구를
        찾아가야 할지 모른다 */
+    /* 그 부서만 하는 일(참석자 등록부 · 부서 실시 교육 등록·등록 취소)의 거절 문구 — canActOwnDept 와 짝이다.
+       denyMsg 는 «또는 재난안전과 담당자»라고 말하는데 이 일들은 재난안전과도 대신하지 않는다(대리 등록·대리 취소 없음) */
+    function ownDenyMsg(deptId) {
+        var r = role(), p = r && r.current ? r.current() : null;
+        var d = deptId || (p && p.deptId) || ownerDept(), n = deptName(d);
+        if (p && p.tier !== 'staff' && !(p.tier === 'super' && p.deptId === d && !hasPractitioner(d))) return '관리·감독 계층은 조회만 합니다 — 등록·수정은 담당자가 합니다.';
+        return n + ' 기록은 ' + n + ' 담당자가 올리고 고칩니다 — 대리 등록·대리 취소는 없습니다.';
+    }
     function denyMsg(deptId) {
         var r = role(), p = r && r.current ? r.current() : null;
         if (p && p.tier !== 'staff') return '관리·감독 계층은 조회만 합니다 — 등록·수정은 담당자가 합니다.';
@@ -1694,35 +1576,12 @@
 
 
     /* =====================================================================
-     * 과정별 공문 흐름 (2026-11-16 임영준 주무관 통화 · 기획 v2)
-     *   ① 교육 안내(NOTICE) — 재난안전과 → 대상 부서 · 집합교육 등록 직후
-     *   ② 참석자 등록부 제출(ENROLL) — 부서 → 재난안전과 · 등록부 저장 직후
-     *   ③ 출장 결과 보고(TRIP) — 재난안전과 내부결재 · 교육이 끝난 날부터
-     *   ④ 실시 결과 보고(RUN) — 부서 → 재난안전과 · 등록 한 번 = 공문 한 번(자체·채용시·기타, 2차 통화)
-     *   (이전 방식) 분기 실시 결과 보고(QUARTER) — 걷었다. 이미 보낸 것만 열람·잠금
-     * 공문 저장은 이 스토어(docs) 한 곳이다 — 내 할일·대시보드처럼 공문 모듈(EDUDOC)을 싣지 않는
-     * 화면도 같은 판정을 쓰게. 키: 교육 id(이전 방식 실시 결과) · 'N|교육' · 'E|교육|부서' · 'T|교육' · 'Q|부서|YYYY-Qn'.
-     * 상태 판정: 기안함 전송·결재중·결재완료 = 보냄(잠금) / 반려·반송 = 돌아옴(잠금 풀림) / 없음 = 미기안.
+     * 교육 공문은 걷었다 (2026-11-23 — 11-20 팀장 보고 «여기에만 기록 남겨도 된다»)
+     *   근거·정본: docs/planning/기획-안전보건교육-온나라공문제거-20261123-v1.md
+     *   교육은 등록하면 끝이다 — 기록의 정본은 이 시스템이다. 공문이 필요하면 담당자가 온나라에서 직접 쓴다.
+     *   남는 것: 출장 결과 보고서(공문 없이 · 저장하면 끝) · 서명부 올리기 · 등록 취소(묶음) · 독촉.
+     *   종전 «과정마다 온나라 공문»(11-16 · 공문 일곱 종 · 공문 잠금 · 공문 할 일)을 되살리지 말 것.
      * ===================================================================== */
-    var DOC_SWITCH = '2026-11-16';
-    var SENT_ST = { '기안함 전송': 1, '결재중': 1, '결재완료': 1 };
-    function docStore() { var d = load(); if (!d.docs) d.docs = {}; if (!d.docSeq) d.docSeq = 2600; return d; }
-    function docsAt(key) { return (docStore().docs[key] || []); }
-    function latestAt(key) { var a = docsAt(key); return a.length ? a[a.length - 1] : null; }
-    function pushDocAt(key, doc) { var d = docStore(); (d.docs[key] = d.docs[key] || []).push(doc); save(); }
-    function nextDocSeq() { var d = docStore(); d.docSeq = (d.docSeq || 2600) + 1; save(); return d.docSeq; }
-    function docState(key) {
-        var x = latestAt(key);
-        if (!x) return 'none';
-        if (SENT_ST[x.status]) return 'sent';
-        return (x.status === '반려' || x.status === '반송') ? 'returned' : 'none';
-    }
-    function lockAt(key) { var x = latestAt(key); return x && SENT_ST[x.status] ? x.status : null; }
-    function everSent(key) { return docsAt(key).some(function (x) { return SENT_ST[x.status] || x.status === '반려' || x.status === '반송'; }); }
-    function keyNotice(cid) { return 'N|' + cid; }
-    function keyEnroll(cid, deptId) { return 'E|' + cid + '|' + deptId; }
-    function keyTrip(cid) { return 'T|' + cid; }
-    function keyQuarter(deptId, q) { return 'Q|' + deptId + '|' + q; }
 
     /* ---- 사람 판정 ---- */
     function me() { var r = role(); return r && r.current ? r.current() : null; }
@@ -1736,8 +1595,8 @@
         if (!n) return true;
         return (n.members || []).some(function (m) { return !m.lead && !LEAD_RE.test(m.role || ''); });
     }
-    /* 그 부서 공문(②·④)을 보낼 사람 — 그 부서 담당자. 실무자 계정이 없는 부서만 부서장(이행점검 결과 제출과 같은 규칙).
-       canActDept 를 쓰지 않는다 — 그 함수는 재난안전과 담당자에게 전 부서를 연다(대리 기안 없음). */
+    /* 그 부서 기록(등록부 · 부서 실시 교육)을 올리고 고치는 사람 — 그 부서 담당자. 실무자 계정이 없는 부서만 부서장.
+       canActDept 를 쓰지 않는다 — 그 함수는 재난안전과 담당자에게 전 부서를 연다(대리 등록 없음). */
     function canActOwnDept(deptId) {
         var p = me(); if (!p) return true;
         if (!deptId || p.deptId !== deptId) return false;
@@ -1745,34 +1604,20 @@
         return p.tier === 'super' && !hasPractitioner(deptId);
     }
 
-    /* ---- ① 교육 안내 ---- */
     function isFlow2(c) { return !!c && c.flow === 2; }
-    /* 부서에 알린 교육인가 — 이전 방식 교육은 안내가 이미 나간 것으로 본다. 한 번이라도 보낸 교육은
-       반려·반송돼도 부서에 계속 보인다(이미 알림을 받은 부서에서 갑자기 사라지면 더 헷갈린다) */
-    function noticeSent(c) {
-        if (!c || !isGroupFlow(c)) return true;
-        if (!isFlow2(c)) return true;
-        return everSent(keyNotice(c.id));
-    }
-    function noticeState(c) {
-        if (!c || !isGroupFlow(c) || !isFlow2(c)) return 'legacy';
-        if (c.noticeDirty) return 'dirty';
-        return docState(keyNotice(c.id));
-    }
+    /* 대상 부서 — 예정·변경·취소 알림을 받는 부서(보내는 재난안전과는 뺀다) */
     function noticeRecipients(c) { return courseTargetDepts(c).filter(function (d) { return d !== ownerDept(); }); }
-    function visibleCourse(c) {
-        if (!c) return false;
-        if (noticeSent(c)) return true;
-        var p = me();
-        return !p || p.deptId === ownerDept();
-    }
-    /* ③ 출장 결과 보고 · 서명부 */
+
+    /* ---- 출장 결과 보고서 · 서명부 ---- */
+    /* 출장 결과 보고서 — 재난안전과 담당자가 교육이 끝난 날부터 쓴다(공문 없음 · 저장하면 끝 · 언제든 고친다).
+       교육 자료 · 교육 사진 · 참석 인원(대략, 이수 판정에 쓰지 않는다). 부서에는 보이지 않는다 */
     function tripOf(c) { return (c && c.trip) || null; }
-    function tripState(c) { return c && c.trip ? docState(keyTrip(c.id)) : 'nodata'; }
     function setTrip(cid, o) {
         var c = courseOf(cid); if (!c) return null;
-        if (lockAt(keyTrip(cid))) return null;
+        var edit = !!c.trip;
         c.trip = { headcount: +o.headcount, files: (o.files || []).slice(), by: o.by || '', at: nowTs() };
+        c.history = c.history || [];
+        c.history.push({ type: 'STATUS', at: nowTs(), by: o.by || '', memo: '출장 결과 보고서 ' + (edit ? '수정' : '저장') + ' — 참석 인원 ' + c.trip.headcount + '명(대략)' });
         save(); return c.trip;
     }
     function setSignSheet(cid, o) {
@@ -1788,13 +1633,6 @@
         d.noAttend[cid] = d.noAttend[cid] || {};
         if (on) d.noAttend[cid][deptId] = { by: by || '', at: nowTs() }; else delete d.noAttend[cid][deptId];
         save();
-    }
-    function enrollLock(cid, deptId) { return lockAt(keyEnroll(cid, deptId)); }
-    /* 회차(일시·시간)는 부서가 등록부 공문(②)을 한 곳이라도 보낸 뒤 잠근다 — 실제 참석시간이 실려 나갔다 */
-    function sessionLock(cid) {
-        var hit = null;
-        enrolls(cid).forEach(function (e) { var lk = enrollLock(cid, e.deptId); if (lk) hit = lk; });
-        return hit;
     }
 
     /* ---- 분기 판정 도우미(업무 자동발행 «분기 실시 결과 제출» 판정이 쓴다) ---- */
@@ -1815,114 +1653,58 @@
     var DEPT_RUN = { REG_SELF: 1, ETC: 1, SUP_ETC: 1, HIRE: 1, SUP_HIRE: 1 };
     function isDeptRun(c) { return !!c && (DEPT_RUN[c.kind] || (c.kind === 'SUP_REG' && !!c.deptId)); }
     function reportDeptOf(c) { return (c && (c.byDept || c.deptId)) || ownerDept(); }
-    /* 이전 방식(이번 주 v2) 분기 보고에 실려 나간 교육 — 그 보고로 잠기고 그 보고를 연다. 새로 만들지 않는다 */
-    function reportedKeyOf(courseId) {
-        var d = docStore(), hit = null;
-        Object.keys(d.docs).forEach(function (k) {
-            if (k.indexOf('Q|') !== 0) return;
-            (d.docs[k] || []).forEach(function (x) {
-                if (SENT_ST[x.status] && (x.courseIds || []).indexOf(courseId) !== -1) hit = { key: k, doc: x };
-            });
-        });
-        return hit;
-    }
-    /* ---- 부서 실시 교육 실시 결과 보고 — 등록 묶음 = 공문 하나 (2차 통화 R-1) ---- */
-    function keyRun(batchId) { return 'R|' + batchId; }
+
+    /* ---- 부서 실시 교육 등록 묶음 — 한 번 저장으로 생긴 교육 건(채용시 여러 명 등) ---- */
     function batchOf(c) { return (c && (c.batchId || c.id)) || ''; }
     function batchCourses(batchId) {
         return load().courses.filter(function (c) { return batchOf(c) === batchId && c.status !== 'CANCELLED'; })
             .sort(function (a, b) { return String(a.id).localeCompare(String(b.id)); });
     }
-    /* 이 교육 건의 공문 — 새 흐름은 등록 묶음 공문, 이번 주 분기 보고에 실린 건은 그 보고, 옛 기록은 실시 결과 공문(교육 id) */
-    function runDocKey(c) {
-        if (!c) return '';
-        if (isFlow2(c) && isDeptRun(c)) { var h = reportedKeyOf(c.id); return h ? h.key : keyRun(batchOf(c)); }
-        return c.id;
+    /* 등록 취소 — 묶음 전체 · 언제든(공문 조건 없음 — 2026-11-23 D-1). 권한은 화면이 canActOwnDept 로 본다 */
+    /* 등록 취소 기록 — 등록 취소는 교육 건을 지우므로 그 건의 이력도 함께 사라진다. 누가 언제 무엇을 지웠는지는
+       여기 남긴다(화면에는 내지 않는다 — 운영은 감사 로그로). 2026-11-23 */
+    function logCancel(o) {
+        var d = load(); d.cancelLog = d.cancelLog || [];
+        d.cancelLog.push({ at: nowTs(), by: o.by || '', deptId: o.deptId || '', what: o.what || '', title: o.title || '', courses: o.courses || 0, records: o.records || 0, hours: o.hours || 0 });
+        save();
     }
-    function reportLock(courseId) {
-        var c = courseOf(courseId); if (!c) return null;
-        var h = reportedKeyOf(courseId); if (h) return h.doc.status;
-        return lockAt(keyRun(batchOf(c)));
-    }
-    /* 실시 결과 보고 공문 기한 — 등록한 날 + 7일(참석자 등록부 제출 기한 기본값 7일과 같다). 등록일이 없는 예시 기록은 교육일 */
-    var RUN_DUE_DAYS = 7;
-    function runDue(c) { return addDays((c && (c.regAt || c.date)) || today(), RUN_DUE_DAYS); }
-    /* 그 부서의 새 흐름 부서 실시 교육 묶음(분기 보고에 이미 실린 것 제외) */
-    function runBatches(deptId) {
-        var by = {}, order = [];
-        load().courses.forEach(function (c) {
-            if (!isFlow2(c) || !isDeptRun(c) || c.status === 'CANCELLED' || reportDeptOf(c) !== deptId || reportedKeyOf(c.id)) return;
-            var b = batchOf(c);
-            if (!by[b]) { by[b] = []; order.push(b); }
-            by[b].push(c);
-        });
-        return order.map(function (b) { return { batchId: b, list: by[b] }; });
-    }
-    /* 등록 취소 — 공문을 보내기 전이거나 반려·반송일 때만, 묶음 전체(공문이 묶음 단위다) */
+    function cancelLog() { return (load().cancelLog || []).slice(); }
     function cancelRun(batchId) {
         var list = batchCourses(batchId);
-        if (!list.length || lockAt(keyRun(batchId))) return null;
+        if (!list.length) return null;
+        /* 부서 실시 교육 묶음만 — 집합교육 번호를 넣으면 부서 등록부까지 통째로 지워진다(집합교육 삭제는 EDUR 의 조건을 지난다) */
+        if (!list.every(isDeptRun)) return null;
+        /* 인사기록에서 옮겨 온 이수 기록은 다시 만들 수 없어 등록 취소하지 않는다 */
+        if (list.some(function (c) { return c.imported; })) return null;
+        /* 채용시는 그 사람 기록만 거둔다(D-1 — removeWorkerFromCourse) · 묶음째 지우지 않는다 */
+        if (list.some(function (c) { return c.kind === 'HIRE' || c.kind === 'SUP_HIRE'; })) return null;
         var r = { courses: 0, records: 0 };
-        /* 반려·반송된 공문은 지우지 않는다(온나라에 남아 있다) — «등록 취소»로 표시해 결재 이력의 반려 수에서 뺀다.
-           등록이 사라지면 그 공문을 다시 그릴 대상도 없으므로, 보낸 내용(제목·대상)을 공문에 남겨 둔다 */
-        var docsAt = (load().docs || {})['R|' + batchId] || [];
-        docsAt.forEach(function (d) { if (!d.withdrawn) { d.withdrawn = nowTs(); d.withdrawnScope = list.map(function (c) { return c.desc; }).join(' · '); } });
         list.forEach(function (c) { var x = removeCourse(c.id); if (x) { r.courses++; r.records += x.records; } });
-        if (docsAt.length) save();
         return r;
     }
-    /* 업무 자동발행 «분기 실시 결과 제출» — 그 분기 부서 실시 교육 공문을 모두 보냈는가 · 0건이면 null(대상 아님, §14-2) */
+    /* 업무 자동발행 «분기 실시 결과 제출» — 그 분기에 부서 실시 교육 기록이 있으면 완료 · 0건이면 null(대상 아님, §14-2) */
     function quarterDone(deptId, q) {
-        var list = load().courses.filter(function (c) { return isFlow2(c) && isDeptRun(c) && c.status !== 'CANCELLED' && reportDeptOf(c) === deptId && quarterOf(c.date) === q; });
-        if (!list.length) return null;
-        return list.every(function (c) { return !!reportedKeyOf(c.id) || docState(keyRun(batchOf(c))) === 'sent'; });
+        var list = load().courses.filter(function (c) { return isDeptRun(c) && c.status !== 'CANCELLED' && reportDeptOf(c) === deptId && quarterOf(c.date) === q; });
+        return list.length ? true : null;
     }
-    /* 그 달 집합교육 ② 보냄(또는 참석자 없음) — 이전 방식 등록부는 등록부 자체로 */
+    /* 그 달 집합교육 등록부를 올렸다(또는 참석자 없음) */
     function monthDone(deptId, mm) {
         return load().courses.some(function (c) {
             if (!isGroupFlow(c) || String(c.date || '').slice(0, 7) !== mm) return false;
             if (noAttendOf(c.id, deptId)) return true;
-            return enrolls(c.id).some(function (e) {
-                if (e.deptId !== deptId) return false;
-                return e.flow !== 2 || docState(keyEnroll(c.id, deptId)) === 'sent';
-            });
+            return enrolls(c.id).some(function (e) { return e.deptId === deptId; });
         });
     }
-    /* ---- 재난안전과 담당자 할 일 ---- */
+    /* ---- 재난안전과 담당자 할 일 — 서명부 올리기 · 출장 결과 보고서 ---- */
     function ownerTodos() {
         var out = [];
         load().courses.forEach(function (c) {
-            if (!isGroupFlow(c) || !isFlow2(c) || c.status === 'DONE') return;
-            if (c.status === 'CANCELLED') {
-                if (c.noticeDirty === '취소' && everSent(keyNotice(c.id))) out.push({ kind: 'notice', sub: '취소', course: c, due: c.date });
-                return;
-            }
-            var ns = noticeState(c);
-            if (ns === 'none' || ns === 'returned') out.push({ kind: 'notice', sub: '', course: c, due: c.date, status: ns });
-            else if (ns === 'dirty') out.push({ kind: 'notice', sub: c.noticeDirty === '취소' ? '취소' : '변경', course: c, due: c.date });
-            if (!enrollOpen(c) || !noticeSent(c)) return;
-            if (!c.signSheet) out.push({ kind: 'sign', course: c, due: enrollDue(c) });
-        });
-        load().courses.forEach(function (c) {
             if (!isGroupFlow(c) || !isFlow2(c) || c.status === 'CANCELLED') return;
             if (c.status === 'OPEN' && !enrollOpen(c)) return;
-            if (!noticeSent(c)) return;
-            var ts = tripState(c);
-            if (ts === 'sent') return;
-            out.push({ kind: 'trip', course: c, due: enrollDue(c), status: ts });
+            if (c.status === 'OPEN' && !c.signSheet) out.push({ kind: 'sign', course: c, due: enrollDue(c) });
+            if (!c.trip) out.push({ kind: 'trip', course: c, due: enrollDue(c) });
         });
         return out;
-    }
-    /* 교육 취소 — 교육 전에만 · 사유 필수. 상태 «취소»로 남기고 할 일·이수 집계에서 뺀다 */
-    function cancelCourse(cid, reason, by) {
-        var c = courseOf(cid); if (!c) return null;
-        if (!String(reason || '').trim()) return null;
-        if (c.status !== 'OPEN' || enrollOpen(c)) return null;
-        c.status = 'CANCELLED'; c.cancelReason = reason; c.cancelledAt = nowTs();
-        c.noticeDirty = everSent(keyNotice(cid)) ? '취소' : '';
-        c.history = c.history || [];
-        c.history.push({ type: 'STATUS', at: nowTs(), by: by || '', memo: '교육 취소 · 사유 ' + reason });
-        save(); return c;
     }
 
     global.DYEDU = {
@@ -1952,9 +1734,6 @@
         reminders: reminders, addReminder: addReminder, deptTodos: deptTodos,
         deptUpcoming: deptUpcoming, courseTargetDepts: courseTargetDepts, isUpcoming: isUpcoming,
         upcomingWhen: upcomingWhen, upcomingTitle: upcomingTitle, notifyUpcoming: notifyUpcoming,
-        /* 실시 결과 공문 예시 — 교육 공문 저장소(EDUDOC)가 비어 있을 때 처음 채우는 값.
-           교육 예시와 같은 곳에서 만들어야 이력·잠금·붙임이 서로 맞는다 */
-        seedDocs: function () { var d = load(); return { docs: (d.docSeed || []).slice(), seq: d.docSeq || 2600 }; },
         lastSessionDate: lastSessionDate, enrollDue: enrollDue, enrollOpen: enrollOpen, enrollDays: enrollDays,
         groupHoursConflicts: groupHoursConflicts,
         /* 계산 */
@@ -1970,20 +1749,17 @@
         deptName: deptName, deptCandidates: deptCandidates,
         /* 조작 권한 — DYROLE.canAct 파생 (부서 없는 건 = 주관부서 소관) */
         courseDeptOf: courseDeptOf, canActDept: canActDept, canActCourse: canActCourse,
-        canRegister: canRegister, canPickDept: canPickDept, defaultDeptId: defaultDeptId, denyMsg: denyMsg,
-        /* 과정별 공문 흐름(2026-11-16) */
-        DOC_SWITCH: DOC_SWITCH, docsAt: docsAt, latestAt: latestAt, pushDocAt: pushDocAt, nextDocSeq: nextDocSeq,
-        docState: docState, lockAt: lockAt, everSent: everSent,
-        keyNotice: keyNotice, keyEnroll: keyEnroll, keyTrip: keyTrip, keyQuarter: keyQuarter,
+        canRegister: canRegister, canPickDept: canPickDept, defaultDeptId: defaultDeptId, denyMsg: denyMsg, ownDenyMsg: ownDenyMsg,
+        /* 등록부 · 출장 결과 보고서 · 등록 묶음 (교육 공문은 걷었다 — 2026-11-23) */
         isOwnerStaff: isOwnerStaff, canActOwnDept: canActOwnDept, isFlow2: isFlow2, isGroupCourse: isGroupFlow,
-        noticeSent: noticeSent, noticeState: noticeState, noticeRecipients: noticeRecipients, visibleCourse: visibleCourse,
-        tripOf: tripOf, tripState: tripState, setTrip: setTrip, setSignSheet: setSignSheet,
-        noAttendOf: noAttendOf, setNoAttend: setNoAttend, enrollLock: enrollLock, sessionLock: sessionLock,
+        noticeRecipients: noticeRecipients,
+        tripOf: tripOf, setTrip: setTrip, setSignSheet: setSignSheet,
+        noAttendOf: noAttendOf, setNoAttend: setNoAttend,
         quarterOf: quarterOf, quarterLabel: quarterLabel, quarterEnd: quarterEnd, quarterOpen: quarterOpen,
-        isDeptRun: isDeptRun, reportDeptOf: reportDeptOf, reportedKeyOf: reportedKeyOf, reportLock: reportLock,
-        keyRun: keyRun, batchOf: batchOf, batchCourses: batchCourses, runDocKey: runDocKey, runBatches: runBatches, runDue: runDue, cancelRun: cancelRun,
+        isDeptRun: isDeptRun, reportDeptOf: reportDeptOf,
+        batchOf: batchOf, batchCourses: batchCourses, cancelRun: cancelRun, logCancel: logCancel, cancelLog: cancelLog,
         DUTY_TYPES: DUTY_TYPES, DUTY_SOURCE: DUTY_SOURCE, dutyOf: dutyOf, dutyIssue: dutyIssue, isDutyWorker: isDutyWorker, dutyMissing: dutyMissing,
         dutyStats: dutyStats, dutyChanges: dutyChanges, changePending: changePending, changeEduRecord: changeEduRecord, CHANGE_EDU: CHANGE_EDU,
-        quarterDone: quarterDone, monthDone: monthDone, ownerTodos: ownerTodos, cancelCourse: cancelCourse
+        quarterDone: quarterDone, monthDone: monthDone, ownerTodos: ownerTodos
     };
 })(window);

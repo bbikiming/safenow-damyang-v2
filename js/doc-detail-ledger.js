@@ -191,7 +191,7 @@
         out += '<div class="dd-pdf">' +
             (d.src === 'onnara'
                 ? '<b>온나라 PDF</b> <span class="dx-nodoc">원본 PDF 미연계 — 온나라 연동 후 제공됩니다. ' +
-                  '시스템에서 상신한 공문은 해당 도메인 화면(안전보건교육 결재 이력 · 위험성평가 공문)에서 지면으로 확인합니다.</span>'
+                  '시스템에서 상신한 공문은 해당 업무 화면(위험성평가 공문 등)에서 지면으로 확인합니다.</span>'
                 : '<b>온나라 PDF</b> <span class="dx-nodoc">이 문서의 출처가 온나라가 아닙니다.</span>') +
         '</div>';
         return out;

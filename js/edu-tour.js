@@ -85,9 +85,8 @@
         return c.id + ' · ' + (c.date || '') + ' · ' + (c.status !== 'OPEN' ? '종료' : (E().enrollOpen && E().enrollOpen(c) ? '등록부 받는 중' : '교육 전'));
     }
 
-    /* 과정별 공문 흐름(2026-11-16 임영준 주무관 통화) — 7걸음.
-       진행 판정은 지금처럼 데이터 파생(공문 기록 존재)이다 — 손으로 처리해도 단계가 넘어간다. */
-    function sent(key) { return E().docState && E().docState(key) === 'sent'; }
+    /* 6걸음 — 교육 공문은 걷었다(2026-11-23 · 11-20 팀장 보고). 등록하면 끝이다.
+       진행 판정은 데이터 파생(기록 존재)이다 — 손으로 처리해도 단계가 넘어간다. */
     function myDept() { var p = curP(); return p ? p.deptId : ''; }
     var STEPS = [
         {
@@ -99,51 +98,37 @@
             clickPath: [
                 '[＋ 집합교육 등록]',
                 '일자·시작~종료 시각을 회차 탭에 적습니다 — 교육 시간은 회차에서 자동 계산됩니다',
-                '제목·강사·장소 · 등록부 기한을 채우고 참석자 명단·교육 자료를 붙인 뒤 [저장하고 안내 공문 작성 →]'
+                '제목·강사·장소 · 등록부 기한을 채우고 참석자 명단·교육 자료를 붙인 뒤 [저장]'
             ],
-            desc: '교육을 저장하면 같은 창이 교육 안내 공문으로 바뀝니다.',
-            script: '등록하고 바로 온나라 기안을 탑니다 — 과정마다 문서대장에 기록이 남습니다.',
-            modalGuide: '<b>이어서 다음 단계를 시연하려면 교육 일자를 오늘 또는 지난 날짜로</b> 넣으세요. 제목·일자를 확인하고 <b>[저장하고 안내 공문 작성 →]</b>을 누르세요.',
+            desc: '저장하는 순간 대상 부서에 교육이 보이고 예정 안내 알림이 갑니다.',
+            script: '교육 기록은 이 시스템에 남습니다 — 등록하면 끝입니다.',
+            modalGuide: '<b>이어서 다음 단계를 시연하려면 교육 일자를 오늘 또는 지난 날짜로</b> 넣으세요. 제목·일자를 확인하고 <b>[저장]</b>을 누르세요.',
             actionLabel: '집합교육 등록 열기',
             action: function () { global.EDUR.openCreate('group'); },
             done: function () { return !!demoCourse(); },
             note: function () { return courseLabel(); }
         },
         {
-            key: 'notice', label: '안내 공문', page: 'edu-reg.html',
-            persona: ownerP, href: function () { return 'edu-reg.html'; },
-            selector: '[data-tour="edu-notice"], .edu-course-card [onclick*="EDUDOC.open(\'N|"]',
-            title: '① 교육 안내 공문을 온나라로',
-            where: '교육 카드의 <b>[안내 공문 작성]</b>',
-            clickPath: ['수신은 대상 부서 전부로 정해져 있습니다', '본문은 조각(교육 개요·참석 대상·등록부 제출 안내)을 눌러 씁니다', '[문서 미리보기 →] → [온나라로 보내기] → [보내기]'],
-            desc: '보내는 순간 대상 부서 내 할일에 예정 교육이 뜹니다. 보내기 전에는 부서에 교육이 보이지 않습니다.',
-            script: '각 부서에 뿌리는 안내도 공문 연계기안으로 나갑니다.',
-            actionLabel: '안내 공문 작성 열기',
-            action: function () { var c = demoCourse(); if (c && global.EDUDOC) global.EDUDOC.open(E().keyNotice(c.id)); },
-            done: function () { var c = demoCourse(); return !!c && E().noticeSent(c); },
-            note: function () { var c = demoCourse(); if (!c) return '교육 등록 후'; return E().noticeSent(c) ? '안내 보냄' : '보내기 전'; }
-        },
-        {
             key: 'apply', label: '등록부', page: 'edu-reg-detail.html',
             persona: deptP, href: function () { return 'edu-reg-detail.html?id=' + encodeURIComponent(courseId() || 'C-M11'); },
-            selector: '[data-tour="apply"], [data-tour="enroll-send"]',
-            title: '② 부서가 참석자 등록부 → 제출 공문',
+            selector: '[data-tour="apply"]',
+            title: '부서가 참석자 등록부를 올린다',
             where: '교육 상세의 <b>[＋ 참석자 등록부 등록]</b>',
             clickPath: [
                 '부서는 우리 부서로 정해져 있습니다 — 실제 온 사람을 체크합니다',
                 '서명부 — 재난안전과가 올린 서명부를 고르거나 직접 올립니다',
-                '[저장하고 공문 작성 →] — 같은 창이 제출 공문으로 바뀝니다 → 미리보기 → [온나라로 보내기]',
+                '[등록] — 우리 부서 할 일이 끝납니다',
                 '아무도 참석하지 않았으면 [참석자 없음]'
             ],
-            desc: '등록부를 저장하고 제출 공문을 보내야 부서 할 일이 끝납니다.',
-            script: '서명부만 올리고 끝나는 것이 아니라 그 과정도 연계를 탑니다.',
-            modalGuide: '근로자를 선택하고 서명부를 고른 뒤 <b>[저장하고 공문 작성 →]</b>을 누르세요.',
+            desc: '등록부를 저장하면 부서 할 일이 끝납니다.',
+            script: '참석한 사람 · 실제 참석시간 · 서명부 세 가지만 올립니다.',
+            modalGuide: '근로자를 선택하고 서명부를 고른 뒤 <b>[등록]</b>을 누르세요.',
             actionLabel: '참석자 등록부 등록 열기',
             action: function () { if (global.EDURD) global.EDURD.openApply(); else if (global.EDUR) global.EDUR.openApply(courseId()); },
             done: function () {
                 var id = courseId(); if (!id) return false;
-                if (myDeptOnly()) return sent(E().keyEnroll(id, myDept())) || !!E().noAttendOf(id, myDept());
-                return E().enrolls(id).some(function (e) { return e.flow !== 2 || sent(E().keyEnroll(id, e.deptId)); });
+                if (myDeptOnly()) return E().enrolls(id).some(function (e) { return e.deptId === myDept(); }) || !!E().noAttendOf(id, myDept());
+                return E().enrolls(id).length > 0;
             },
             note: function () {
                 var id = courseId(); if (!id) return '교육 등록 후';
@@ -155,15 +140,15 @@
             key: 'trip', label: '출장 결과', page: 'edu-reg-detail.html',
             persona: ownerP, href: function () { return 'edu-reg-detail.html?id=' + encodeURIComponent(courseId() || 'C-M11'); },
             selector: '[data-tour="edu-trip"]',
-            title: '③ 재난안전과 출장 결과 보고서',
+            title: '재난안전과 출장 결과 보고서',
             where: '교육 상세의 <b>[출장 결과 보고서 작성]</b>(재난안전과에는 등록부 대신 이 버튼)',
-            clickPath: ['교육 자료(등록 때 파일을 불러옵니다) · 교육 사진 · 참석 인원(대략)', '[저장하고 공문 작성 →] → 미리보기 → [온나라로 보내기]'],
+            clickPath: ['교육 자료(등록 때 파일을 불러옵니다) · 교육 사진 · 참석 인원(대략)', '[저장]하면 끝납니다'],
             desc: '재난안전과는 참석자 등록부를 올리지 않고 출장 결과 보고서를 씁니다. 참석 인원은 보고용이고 이수는 부서 등록부로 셉니다.',
             script: '재난안전과 담당자 화면에는 [참석자 등록부 등록] 자리에 [출장 결과 보고서 작성]이 있습니다.',
             actionLabel: '출장 결과 보고서 열기',
             action: function () { if (global.EDURD) global.EDURD.openTrip(); },
-            done: function () { var c = demoCourse(); return !!c && E().tripState(c) === 'sent'; },
-            note: function () { var c = demoCourse(); if (!c) return '교육 등록 후'; var st = E().tripState(c); return st === 'sent' ? '보고 보냄' : c.trip ? '작성함 · 보내기 전' : '작성 전'; }
+            done: function () { var c = demoCourse(); return !!c && !!c.trip; },
+            note: function () { var c = demoCourse(); if (!c) return '교육 등록 후'; return c.trip ? '저장함' : '작성 전'; }
         },
         {
             key: 'close', label: '종료', page: 'edu-reg-detail.html',
@@ -172,8 +157,8 @@
             selector: '[data-tour="close"]',
             title: '교육 종료 처리로 이수시간 카운트',
             where: '상세 화면의 <b>[교육 종료 처리]</b>',
-            clickPath: ['남은 것(미등록·미기안 부서 수 · 출장 결과 보고)을 확인합니다', '[교육 종료 처리] → [종료 처리]'],
-            desc: '등록부에 오른 참석자 전원에게 실제 참석시간이 반영됩니다. 남은 공문은 종료 뒤에도 할 일로 남습니다.',
+            clickPath: ['남은 것(등록부 미등록 부서 수 · 출장 결과 보고서)을 확인합니다', '[교육 종료 처리] → [종료 처리]'],
+            desc: '등록부에 오른 참석자 전원에게 실제 참석시간이 반영됩니다. 미등록 부서의 할 일은 종료 뒤에도 남습니다.',
             script: '종료 처리 한 번으로 등록부에 오른 참석자 전원의 이수시간이 반영됩니다.',
             actionLabel: '교육 종료 처리 열기',
             action: function () { global.EDURD.closeCourse(); },
@@ -187,7 +172,7 @@
             title: '이수현황에 반영된 결과 확인',
             where: '<b>부서별 이수 현황</b> 카드',
             clickPath: ['부서별 완료율이 올라간 것을 확인합니다', '[대상자별 상세]에서 주기·필요·인정·미달을 봅니다'],
-            desc: '이수는 이수 기록으로 셉니다 — 공문과 별개입니다.',
+            desc: '이수는 등록부·이수 기록으로 셉니다.',
             script: '종료 처리한 인원의 인정시간이 바로 반영됩니다.',
             actionLabel: '대상자별 상세 보기',
             action: function () { global.EDUS.setView('detail'); },
@@ -198,35 +183,35 @@
             key: 'report', label: '부서 교육', page: 'edu-reg.html',
             persona: deptP, href: function () { return 'edu-reg.html?tab=self'; },
             selector: '[data-tour="self-create"]',
-            title: '④ 부서 교육 등록 → 실시 결과 보고 공문',
+            title: '부서가 자체·채용시·기타교육을 등록',
             where: '자체교육 탭의 <b>[＋ 자체교육 등록]</b>(채용시·기타교육도 같다)',
-            clickPath: ['교육을 입력하고 [저장하고 공문 작성 →] — 같은 창이 실시 결과 보고 공문으로 바뀝니다', '미리보기 → [온나라로 보내기] — 재난안전과는 결재 상태와 [공문 보기]로 검토만 합니다'],
-            desc: '자체·채용시·기타교육은 부서가 등록하면서 바로 공문을 보냅니다(등록 한 번 = 공문 한 번).',
-            script: '«추가 버튼 누를 때 무조건 연계를 타야» — 등록과 공문이 한 흐름입니다.',
+            clickPath: ['교육을 입력하고 [저장] — 이수가 바로 반영됩니다', '잘못 넣었으면 카드의 [등록 취소] 후 다시 등록합니다 — 재난안전과는 목록에서 결과만 봅니다'],
+            desc: '자체·채용시·기타교육은 부서가 등록하면 끝입니다.',
+            script: '등록 한 번으로 끝납니다 — 기록은 이 시스템에 남습니다.',
             actionLabel: '자체교육 화면으로',
             action: function () { location.href = 'edu-reg.html?tab=self'; },
             done: function () {
                 var d = myDeptOnly() ? myDept() : ((global.DYROLE && global.DYROLE.OWNER_DEPT) || 'safety');
-                return E().load().courses.some(function (c) { return E().isFlow2(c) && E().isDeptRun(c) && E().reportDeptOf(c) === d && sent(E().keyRun(E().batchOf(c))); });
+                return E().load().courses.some(function (c) { return E().isFlow2(c) && E().isDeptRun(c) && E().reportDeptOf(c) === d; });
             },
-            note: function () { return '부서 실시 교육 공문'; }
+            note: function () { return '부서 실시 교육 등록'; }
         }
     ];
 
     var T = global.DYTOUR.define({
         key: 'edu', ns: 'EDUTOUR', skey: 'dy-edu-tour-v1', steps: STEPS, ownerPersona: 'staff', pageLabels: { 'edu-reg.html': '정기교육', 'edu-reg-detail.html': '정기교육 상세', 'edu-status.html': '이수현황' },
-        stepsClass: '',                /* 5단계가 되어 4열 고정을 푼다(위험성평가와 같은 유연 배치) */
+        stepsClass: '',                /* 4열 고정을 푼 유연 배치(위험성평가와 같다) */
         
         kicker: function () { return '안전보건교육'; },
         flowTitle: function () { return '안전보건교육 — 전체 흐름 ' + STEPS.length + '걸음'; },
         flowNote: function () {
             return '추적 중인 교육: <b>' + V().esc(courseLabel()) + '</b>' +
                 ' — 새로 등록하면 그 교육을 따라갑니다.<br>' +
-                '재난안전과 담당자(안내 공문 · 출장 결과 보고 · 종료)와 부서 담당자(참석자 등록부 · 제출 공문 · 부서 교육 실시 결과 보고)가 나눠 합니다 — 공문을 보내야 그 일이 끝납니다.';
+                '재난안전과 담당자(집합교육 등록 · 출장 결과 보고서 · 종료)와 부서 담당자(참석자 등록부 · 부서 교육 등록)가 나눠 합니다 — 등록하면 그 일이 끝납니다.';
         },
         barTitle: function () { return '안전보건교육 사용법 — ' + STEPS.length + '걸음'; },
         barDesc: function () {
-            return '집합교육 등록·안내 공문 → 부서 등록부·제출 공문 → 출장 결과 보고 → 종료 처리 → 이수현황 → 부서 교육 실시 결과 보고까지 ' +
+            return '집합교육 등록 → 부서 참석자 등록부 → 출장 결과 보고서 → 종료 처리 → 이수현황 → 부서 교육 등록까지 ' +
                 '실제 화면 흐름 그대로 안내합니다. <b>어디를 누를지</b> 짚어 드립니다.';
         }
     });
@@ -259,7 +244,6 @@
     };
     T.restoreAndStart = function () {
         E().reset();
-        if (global.EDUDOC && global.EDUDOC.reset) global.EDUDOC.reset();   /* 공문도 함께 회수 — 안 지우면 재시연 때 잠긴 채 남는다 */
         V().closeModal();
         T.go(0);
     };
@@ -268,15 +252,13 @@
         if (T.view() === 'read') { toast('조회 전용 관점에서는 예시 데이터를 되돌릴 수 없습니다.'); return; }
         T.stop();
         V().openModal('예시 데이터 되돌리기',
-            '<p style="font-size:var(--fs-13);line-height:1.6;">교육 등록·참석자 등록부·종료 처리·실시 결과 공문(결재 이력)과 근로자 명단·독촉 이력 데이터를 처음 상태로 되돌립니다.</p>',
+            '<p style="font-size:var(--fs-13);line-height:1.6;">교육 등록·참석자 등록부·출장 결과 보고서·종료 처리와 근로자 명단·독촉 이력 데이터를 처음 상태로 되돌립니다.</p>',
             '<button class="btn btn-secondary" type="button" onclick="DYV2.closeModal()">취소</button>' +
             '<button class="btn btn-primary" type="button" onclick="EDUTOUR.confirmReset()">되돌리기</button>');
     };
     T.confirmReset = function () {
         if (T.view() === 'read') { toast('조회 전용 관점에서는 예시 데이터를 되돌릴 수 없습니다.'); return; }
         E().reset();
-        /* 공문도 함께 되돌린다 — 교육만 되돌리면 지운 교육의 공문이 결재 이력에 남는다 */
-        if (global.EDUDOC && global.EDUDOC.reset) global.EDUDOC.reset();
         T.stop();
         location.reload();
     };

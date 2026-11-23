@@ -260,7 +260,7 @@
                     /* 이행점검은 아래 «배포» 블록이 카드를 낸다 — 날짜 자동발행 카드는 내지 않는다(중복 방지) */
                     if (cax) return;
                     /* 교육 자동발행 카드(W-EDU-*)도 내지 않는다 — 교육 할 일은 DYEDU.deptTodos 가 낸다(같은 집합교육·같은 분기에
-                       카드가 둘 셋 뜨던 중복, 2026-11-16). 완료 판정(업무 관리 › 이행 관리)은 같은 기준(② · ④ 보냄)을 쓴다 */
+                       카드가 둘 셋 뜨던 중복, 2026-11-16). 완료 판정은 DYEDU.monthDone · quarterDone(등록부 · 실시 기록이 있는가 — 교육 공문은 2026-11-23 걷음)을 쓴다 */
                     if (t.tpl && /^W-EDU-/.test(t.tpl.id)) return;
                     var mine = me && t.assign.to === me.uid;
                     var unassigned = t.unassigned && !t.done;
@@ -469,46 +469,15 @@
                     var det = cc ? 'edu-reg-detail.html?id=' + encodeURIComponent(cc.id) : '';
                     var base = { cat: 'edu', status: 'IN_PROGRESS', dept: state.deptId, dept_label: Edu.deptName(state.deptId), atype: 'menu', remind: false };
                     var push = function (o) { var x = {}; Object.keys(base).forEach(function (k) { x[k] = base[k]; }); Object.keys(o).forEach(function (k) { x[k] = o[k]; }); out.push(x); };
-                    /* 과정별 공문 흐름(2026-11-16) — 공문을 보내야 끝나는 할 일. 주 버튼이 그 창을 곧바로 연다 */
-                    if (t.kind === 'enrollDoc' || t.kind === 'enrollResend') {
-                        push({ id: 'EDU-EDOC-' + cc.id, title: cc.desc + ' — ' + (t.kind === 'enrollResend' ? '등록부 공문 다시 보내기' : '등록부 공문 보내기'),
-                            sub: t.kind === 'enrollResend' ? '온나라에서 돌아왔습니다 — 사유를 보고 고쳐 다시 보냅니다' : '참석자 등록부는 저장했습니다 — 제출 공문을 온나라로 보내야 등록이 끝납니다',
-                            due: t.due || cc.date, href: det, action: t.kind === 'enrollResend' ? '다시 보내러 가기' : '공문 보내러 가기', destLabel: '교육 상세' });
-                        return;
-                    }
-                    /* 부서 실시 교육(자체·채용시·기타) 실시 결과 보고 공문 — 등록 한 번 = 공문 한 번(2차 통화).
-                       주 버튼은 그 화면에서 그 공문 창을 바로 연다(?doc=R|묶음 — 검수 L-5) */
-                    if (t.kind === 'runDoc' || t.kind === 'runResend') {
-                        var rc = t.course, sup = rc.kind === 'SUP_REG' || rc.kind === 'SUP_ETC';
-                        var hireSup = rc.kind === 'HIRE' && (t.list || []).some(function (c) {
-                            return Edu.enrolls(c.id).some(function (e) { return (e.workerIds || []).some(function (wid) { var w = Edu.workerOf(wid); return w && w.category === 'SUPERVISOR'; }); });
-                        });
-                        var page = rc.kind === 'HIRE' ? (hireSup ? 'edu-sup-hire.html' : 'edu-hire.html')
-                            : (rc.kind === 'ETC' || rc.kind === 'SUP_ETC') ? (sup ? 'edu-sup-etc.html' : 'edu-etc.html')
-                            : (sup ? 'edu-sup.html?tab=self' : 'edu-reg.html?tab=self');
-                        var label = rc.kind === 'HIRE' ? '채용시교육' : (rc.kind === 'ETC' || rc.kind === 'SUP_ETC') ? '기타교육' : '자체교육';
-                        var nm = (rc.batchTitle || String(rc.desc || '').replace(/\s·\s[^·]+$/, '')) + ((t.list || []).length > 1 ? ' (' + t.list.length + '건)' : '');
-                        push({ id: 'EDU-RUN-' + t.batchId, title: nm + ' — ' + label + ' 실시 결과 보고 ' + (t.kind === 'runResend' ? '다시 보내기' : '공문 보내기'),
-                            sub: t.kind === 'runResend' ? '온나라에서 돌아왔습니다 — 사유를 보고 고쳐 다시 보냅니다' : '교육 기록과 이수는 저장됐습니다 — 실시 결과 보고 공문을 온나라로 보내야 끝납니다',
-                            due: t.due, href: page + (page.indexOf('?') === -1 ? '?' : '&') + 'doc=' + encodeURIComponent('R|' + t.batchId),
-                            action: t.kind === 'runResend' ? '다시 보내러 가기' : '공문 보내러 가기', destLabel: label });
-                        return;
-                    }
-                    if (t.kind === 'notice') {
-                        push({ id: 'EDU-NOTICE-' + cc.id, title: cc.desc + ' — ' + (t.sub ? t.sub + ' 안내 공문 보내기' : '교육 안내 공문 보내기'),
-                            sub: t.sub ? '이미 안내를 받은 부서에 ' + t.sub + ' 사실을 공문으로 알립니다' : '안내 공문을 보내야 대상 부서에 교육이 알려집니다' + (t.status === 'returned' ? ' — 온나라에서 돌아왔습니다' : ''),
-                            due: t.due, href: det, action: '공문 보내러 가기', destLabel: '교육 상세' });
-                        return;
-                    }
                     if (t.kind === 'sign') {
                         push({ id: 'EDU-SIGN-' + cc.id, title: cc.desc + ' — 서명부 올리기',
                             sub: '한 장 서명부를 올리면 부서가 등록부에서 골라 씁니다', due: t.due, href: det, action: '서명부 올리러 가기', destLabel: '교육 상세' });
                         return;
                     }
                     if (t.kind === 'trip') {
-                        push({ id: 'EDU-TRIP-' + cc.id, title: cc.desc + ' — 출장 결과 보고서 ' + (cc.trip ? '공문 보내기' : '작성'),
-                            sub: '교육 자료 · 교육 사진 · 참석 인원을 적고 출장 결과 보고 공문을 보냅니다', due: t.due,
-                            href: det + (cc.trip ? '' : '&trip=1'), action: cc.trip ? '공문 보내러 가기' : '보고서 쓰러 가기', destLabel: '교육 상세' });
+                        push({ id: 'EDU-TRIP-' + cc.id, title: cc.desc + ' — 출장 결과 보고서 작성',
+                            sub: '교육 자료 · 교육 사진 · 참석 인원(대략)을 적어 저장합니다', due: t.due,
+                            href: det + '&trip=1', action: '보고서 쓰러 가기', destLabel: '교육 상세' });
                         return;
                     }
                     if (t.kind === 'apply') {
@@ -689,8 +658,7 @@
                 return {
                     id: 'EDU-UPCOMING-' + c.id, cat: 'edu', notice: true,
                     title: Edu.upcomingTitle(c),
-                    sub: '참석 안내는 공문으로 따로 옵니다 · 교육이 끝나면(' + String(Edu.lastSessionDate(c)).slice(5) +
-                         ') 참석자 등록부 등록 할 일이 생깁니다',
+                    sub: '교육이 끝나면(' + String(Edu.lastSessionDate(c)).slice(5) + ') 참석자 등록부 등록 할 일이 생깁니다',
                     due: c.date, status: 'NOTICE',
                     dept: state.deptId, dept_label: Edu.deptName(state.deptId),
                     href: 'edu-reg-detail.html?id=' + encodeURIComponent(c.id),

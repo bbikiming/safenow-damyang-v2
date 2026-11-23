@@ -704,7 +704,8 @@
             { id: 'edu-sup-hire', section: '관리감독자',    label: '채용시교육',      icon: 'user',  href: 'edu-sup-hire.html', screen: 'EDU-SUP-HIRE / SFR-008·004' },
             { id: 'edu-sup-etc',  section: '관리감독자',    label: '기타 교육',       icon: 'user',  href: 'edu-sup-etc.html',  screen: 'EDU-SUP-ETC / SFR-008·004' },
             { id: 'edu-status',   section: '교육 현황·관리', label: '이수현황',        icon: 'chart', href: 'edu-status.html',   screen: 'EDU-STATUS / SFR-008·004' },
-            { id: 'edu-approval', section: '교육 현황·관리', label: '결재 이력',       icon: 'file',  href: 'edu-approval.html', screen: 'EDU-APV-LOG' },
+            /* 결재 이력 — 교육 공문을 걷어(2026-11-23) 메뉴에서 뺐다. 주소로는 열린다(은퇴 안내). 되살리지 말 것 */
+            { id: 'edu-approval', section: '교육 현황·관리', label: '결재 이력',       icon: 'file',  href: 'edu-approval.html', screen: 'EDU-APV-LOG', hidden: true },
         ]},
 
         /* ⑥ 작업환경·건강 — RFP 안전·보건관리 인력/보건조치 (SFR-010)

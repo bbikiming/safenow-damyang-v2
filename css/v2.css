@@ -3313,7 +3313,6 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 /* 공문 컨트롤 자리 — 교육 목록·상세·채용시 4개 모듈이 쓰는 래퍼인데 규칙이 없었다.
    안에 [공문 기안] 버튼 / 상태 배지 + [문서 보기] + 안내 문구가 번갈아 들어오므로,
    간격을 문자열 공백에 맡기지 않고 좁은 폭에서 줄바꿈되게 한다. */
-.edu-doc-slot { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 
 /* ── 기안문 지면 보강 — 새 계열이 아니라 .pdf-doc-* 패밀리 modifier 2개 ── */
 /* base .pdf-sign 은 우측정렬이라 공문 발신명의(중앙)가 나오지 않는다 */
@@ -4934,7 +4933,6 @@ p > .dx-note-gap { display: inline; }
 .dy-now-bar.is-wait .dy-now-bar-k { color: var(--text-gray); }
 
 /* ===== 안전보건교육 과정별 공문 흐름 (2026-11-16) — 상세 공문 요약 · 취소된 교육 ===== */
-.edu-docsum { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1-5); color: var(--text-gray); }
 .edu-course-card.is-muted { opacity: .72; }
 .edu-course-card.is-muted .edu-course-title { text-decoration: line-through; text-decoration-color: var(--text-gray); }
 /* 부서 실시 교육 «등록 취소» — 주 버튼([공문 보내기]·[다시 보내기]) 옆 보조 링크(2차 통화 검수 L-6: 같은 무게로 나란히 두지 않는다) */

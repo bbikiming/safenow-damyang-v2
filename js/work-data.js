@@ -488,8 +488,8 @@
             if (kind === 'EDU') {
                 var E = global.DYEDU; if (!E) return null;
                 if (arg === 'month') {
-                    /* 그 달 집합교육 ② 등록부 제출 공문을 보냈는가(또는 참석자 없음) — 판정은 DYEDU 한 곳(2026-11-16).
-                       이전 방식 등록부는 등록부 자체로 본다 */
+                    /* 그 달 집합교육 참석자 등록부를 올렸는가(또는 참석자 없음) — 판정은 DYEDU 한 곳(교육 공문 걷음 2026-11-23).
+                       */
                     return E.monthDone ? E.monthDone(deptId, periodKey) : false;
                 }
                 /* ── 판정 기준이 업무마다 다르다 (MUST) ────────────────────
@@ -498,7 +498,7 @@
                  * 38~56% 인 부서는 **영원히 미완료**로 남아 회수율이 늘 0이 된다.
                  * 반대로 '미이수 조치'(W-EDU-CHK)는 미이수자가 0이 되어야 끝난다.
                  * 그래서 두 판정을 나눈다. */
-                /* 분기 실시 결과 제출 = 그 분기 부서 실시 교육(자체·채용시·기타)의 실시 결과 보고 공문을 모두 보냈는가. 실시 교육 0건이면 대상 아님(null) */
+                /* 분기 실시 결과 제출 = 그 분기 부서 실시 교육(자체·채용시·기타) 기록이 있는가(교육 공문 걷음 2026-11-23). 실시 교육 0건이면 대상 아님(null) */
                 if (arg === 'quarter' && E.quarterDone && periodKey >= '2026-Q4') return E.quarterDone(deptId, periodKey);
                 if (arg === 'quarter' || arg === 'half') {
                     var s0 = periodStartOf(tpl, periodKey), e0 = periodEndOf(tpl, periodKey);

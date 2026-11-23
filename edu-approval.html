@@ -9,15 +9,20 @@
     <link rel="stylesheet" href="./css/style.css">
     <link rel="stylesheet" href="./css/v2.css">
 </head>
+<!-- 2026-11-23 — 교육 공문을 걷었다(11-20 팀장 보고 «여기에만 기록 남겨도 된다»).
+     이 화면이 보여 주던 교육 공문이 더는 생기지 않아 메뉴에서 뺐다(NAV hidden). 주소·즐겨찾기로 온 사람에게
+     대체 화면을 밝힌다. 근거: docs/planning/기획-안전보건교육-온나라공문제거-20261123-v1.md (D-4) -->
 <body data-dy-page="edu-approval"
       data-page-title="결재 이력"
-      data-page-subtitle="안전보건교육에서 온나라로 보낸 공문을 봅니다.">
+      data-page-subtitle="메뉴에서 뺀 화면입니다 — 교육은 이제 공문 없이 등록하면 끝납니다. 이수 결과는 이수현황에서 봅니다.">
     <main>
-        <div class="check-notice">
-            안전보건교육에서 온나라로 보낸 공문을 조회합니다. 집합교육은 교육 안내 · 참석자 등록부 제출(부서) · 출장 결과 보고가, 부서가 실시한 교육(자체·채용시·기타)은 등록할 때마다 실시 결과 보고(부서)가 온나라 기안함으로 나갑니다.
-            행의 <b>[공문 보기]</b>로 보낸 공문을 다시 보고, 검토·결재 지정과 진행은 <b>온나라</b>에서 합니다.
+        <div class="edu-card">
+            <div class="v2-empty">
+                안전보건교육은 온나라 공문 없이 이 시스템에 등록하면 끝납니다. 교육 기록은 각 교육 화면과 <b>이수현황</b>에 남습니다.<br>
+                이전에 보낸 교육 공문은 그 교육 상세에서 봅니다.
+                <div style="margin-top:12px;"><a class="btn btn-primary btn-sm" href="edu-status.html">이수현황으로</a></div>
+            </div>
         </div>
-        <div id="eal-root"></div>
     </main>
 
     <div id="toast" class="toast" role="status"></div>
@@ -27,19 +32,5 @@
     <script src="./js/help-center.js"></script><!-- DYHELP: 화면 도움말 -->
     <script src="./js/policy-open.js"></script><!-- 외부 자료·연계 준비사항 (DYPOLICY) -->
     <script src="./js/common.js"></script>
-    <script src="./js/org-pick.js"></script>
-    <script src="./js/edu-data.js"></script>
-    <script src="./js/doc-flow.js"></script><!-- 공문 공용 골격 (DYDOC) -->
-    <script src="./js/edu-doc.js"></script><!-- 교육 공문 (EDUDOC) -->
-    <script src="./js/edu-filter.js"></script>
-    <script src="./js/edu-apv-log.js"></script>
-    <script src="./js/tour-core.js"></script><!-- 단계별 안내 공용 엔진 (DYTOUR) -->
-    <script src="./js/edu-tour.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            window.EDUAPVLOG.init('eal-root');
-            window.EDUTOUR.boot();
-        });
-    </script>
 </body>
 </html>

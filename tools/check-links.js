@@ -46,7 +46,9 @@ const RETIRED = new Set(['docs-preset.html', 'docs-exec.html', 'work-admin.html'
     'docs-archive.html', 'doc-detail.html',
     /* 2026-09-10 — 개선조치는 독립 메뉴가 아니다(2026-07-30 회의). 대장·상세 화면으로
        내보내던 링크(시설물 상세 «보기»·대시보드·의견청취·도움말)를 전부 걷었다. */
-    'rsk-imp.html', 'rsk-imp-detail.html']);
+    'rsk-imp.html', 'rsk-imp-detail.html',
+    /* 2026-11-23 — 교육 공문을 걷어(11-20 팀장 보고) 교육 결재 이력은 보여 줄 공문이 없다. 주소로만 열린다 */
+    'edu-approval.html']);
 /* 없어진 대메뉴 이름 — 링크 문구에 남으면 사용자가 찾을 수 없는 곳을 찾는다 */
 const DEAD_MENU_TEXT = ['업무문서 >', '업무문서 &gt;', '시설물 안전관리', '예산관리 >', '(구)업무관리',
     '기본정보 >', '기본정보 &gt;', '시설물 관리 >', '시설물 관리 &gt;'];

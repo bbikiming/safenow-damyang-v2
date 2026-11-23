@@ -64,7 +64,7 @@
             actions: (E().canRegister() ? '<button type="button" class="btn btn-primary" onclick="EDUE.openCreate()">＋ ' + (E().isOwnerStaff() ? '우리 부서 기타 교육 등록' : '기타 교육 등록') + '</button>' : '')
         });
         /* 재난안전과에는 한 줄만 — 필터 줄 안에 두면 필터가 세 줄로 밀리고, 조회 계층에는 readOnlyNote 가 같은 말을 한다(2차 통화 검토 C-2) */
-        var ownerNote = E().isOwnerStaff() ? '<p class="file-hint" style="margin:0 0 10px;">기타 교육은 각 부서 담당자가 등록하고 실시 결과 보고 공문을 보냅니다. 재난안전과는 결과를 봅니다.</p>' : '';
+        var ownerNote = E().isOwnerStaff() ? '<p class="file-hint" style="margin:0 0 10px;">기타 교육은 각 부서 담당자가 등록합니다. 재난안전과는 결과를 봅니다.</p>' : '';
 
         var cards = list.length ? list.map(cardHtml).join('') :
             '<div class="edu-card"><div class="v2-empty">' +
@@ -140,9 +140,9 @@
         return '<div class="edu-course-card">' +
             '<div class="edu-course-head">' +
                 '<div class="edu-course-title">' + typeBadge + deptChip + esc(c.desc) + ' ' + shortChip + workChip + '</div>' +
-                /* [결재 상태 칩] [공문 보기] 둘만(2차 통화) — 그 부서 담당자에게만 [공문 보내기]·[다시 보내기]·«등록 취소».
-                   [상세]·[수정]·[삭제]·자물쇠 버튼은 걷었다 */
-                '<div class="edu-course-actions">' + (global.EDUDOC ? global.EDUDOC.runCtl(c) : '') +
+                /* «등록 {사람} · {날짜}» · 그 부서 담당자에게만 [등록 취소](언제든 — 2026-11-23 D-1).
+                   [상세]·[수정]·[삭제]는 걷었다(2차 통화) */
+                '<div class="edu-course-actions">' + EDUFORM.runLine(c) +
                 '</div>' +
             '</div>' +
             '<div class="edu-course-meta">' +
@@ -181,8 +181,8 @@
         preselectChange();
         renderCreate();
     }
-    /* [수정]·[삭제]·[상세]는 걷었다(2차 통화 «결재 상태 칩 + 공문 보기 둘만»). 고치는 길은 공문 전·반려 때
-       [공문 보기] 창의 «등록 취소»(묶음 전체) 하나다 — 판정은 EDUDOC.runCtl · DYEDU.cancelRun 한 곳. 되살리지 말 것. */
+    /* [수정]·[삭제]·[상세]는 걷었다(2차 통화). 고치는 길은 [등록 취소](묶음 전체) 후 다시 등록 하나 —
+       언제든 그 부서 담당자가 한다(교육 공문 걷음, 2026-11-23). 판정은 EDUFORM.runLine · DYEDU.cancelRun 한 곳. 되살리지 말 것. */
     /* 선택한 교육 분류의 법정 최소 교육시간 + 대상 작업 안내.
      * 발주처 원칙 — "법을 기준으로 해서 판단해서 눌러가지고 하는 것보다는 이 법에 근거해서
      * 만들어 놓은 상태에서 그 법의 근거를 적어두는 게 나아요": 담당자에게 조문을 읽혀
@@ -263,9 +263,9 @@
                     '<div class="orgpick-field" id="ee-deptfield"><div style="display:flex;gap:8px;align-items:center;">' +
                         '<input type="text" class="form-input" value="' + esc(E().deptName(F.deptId)) + '" readonly aria-label="부서" style="flex:1;background:var(--gray-50);">' +
                         /* 부서는 주관부서 담당자만 고른다 — 그 밖의 담당자는 소속 부서로 고정 */
-                        /* 누구든 소속 부서로 고정 — 남의 부서 실시 결과 보고 공문이 섞이지 않게(2026-11-16) */
+                        /* 누구든 소속 부서로 고정 — 대리 등록 없음(2026-11-16) */
                     '</div>' +
-                    '<p class="file-hint">소속 부서로 등록합니다 — 저장하면 실시 결과 보고 공문으로 이어집니다.</p>' +
+                    '<p class="file-hint">소속 부서로 등록합니다.</p>' +
                     '</div></div>' +
             '</div>' +
             typeGuideHtml(F.etcType) + specialWorksPickerHtml() +
@@ -292,7 +292,7 @@
             EDUFORM.renderAttach(F, 'EDUE', 'done');
         V().openModal((SUP_MODE ? '관리감독자 ' : '') + '기타 교육 등록', body,
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">취소</button>' +
-            '<button type="button" class="btn btn-primary" onclick="EDUE.doCreate()">저장하고 공문 작성 →</button>');
+            '<button type="button" class="btn btn-primary" onclick="EDUE.doCreate()">저장</button>');
     }
     /* 재렌더 전 입력값 보존 — 원본은 체크·부서 변경 시 타이핑 값이 유실됐다(이식 시 보완) */
     function captureCreate() {
@@ -320,8 +320,8 @@
     function delFile(i) { captureCreate(); EDUFORM.delFile(F, i); renderCreate(); }
     function doCreate() {
         captureCreate();
-        /* 새 등록은 소속 부서로만 — 전역 호출로 남의 부서를 넣어도 막는다(실시 결과 보고 공문이 섞인다) */
-        if (!E().canActOwnDept(F.deptId)) { deny(F.deptId); return; }
+        /* 새 등록은 소속 부서로만 — 전역 호출로 남의 부서를 넣어도 막는다(대리 등록 없음) */
+        if (!E().canActOwnDept(F.deptId)) { toast(E().ownDenyMsg(F.deptId)); return; }
         /* **셀렉트에서 감추는 것만으로는 부족하다** — 전역 호출(EDUE.pickType)로 뚫린다.
            별표4 제1호의2 에 없는 유형이 관리감독자 교육으로 저장되면, 그 뒤로는 화면이
            법에 없는 의무를 이수기록으로 들고 있게 된다(CLAUDE.md §4 저장 경로 가드). */
@@ -331,7 +331,7 @@
                 : '교육 종류를 다시 선택하세요.');
             return;
         }
-        if (!F.date || !F.time || !F.hours || !F.desc) { toast('일자·시각·시간·내용을 모두 입력하세요.'); return; }
+        if (!F.date || !F.time || !F.hours || !F.desc) { toast('일자·시각·시간·제목을 모두 입력하세요.'); return; }
         var specialNos = Object.keys(F.specialWorkNos || {}).filter(function (k) { return F.specialWorkNos[k]; });
         if (F.etcType === '특별교육' && !specialNos.length && !F.specialWorkOtherReason) { toast('특별교육 대상 작업을 1건 이상 선택하세요.'); return; }
         if (F.etcType === '특별교육' && F.specialWorkOtherReason === '내용 입력 필요') { toast('기타 대상 작업 내용을 입력하세요.'); return; }
@@ -361,10 +361,9 @@
             E().pushCourseHistory(c.id, { type: 'STATUS', by: E().deptName(F.deptId),
                 memo: '법정 최소 교육시간 미달 ' + short.length + '명 (실시 ' + F.hours + 'h · 최소 ' + short[0].need + 'h)' });
         }
-        if (short.length) toast('법정 최소 교육시간 미달 ' + short.length + '명 — 기록은 남기고 목록에 표시합니다.');
+        /* 등록하면 끝이다 — 이수는 바로 반영된다(교육 공문 걷음, 2026-11-23) */
+        toast(short.length ? '법정 최소 교육시간 미달 ' + short.length + '명 — 기록은 남기고 목록에 표시합니다.' : F.etcType + '을 등록했습니다 · ' + ids.length + '명 이수 반영');
         render();
-        /* 저장하고 바로 실시 결과 보고 공문(등록 한 번 = 공문 한 번 — 2차 통화) */
-        if (global.EDUDOC) global.EDUDOC.open(E().keyRun(E().batchOf(c)));
     }
 
     function init(mountId, opts) {
@@ -372,11 +371,10 @@
         SUP_MODE = !!opts.supMode;
         state.mount = document.getElementById(mountId);
         if (!state.mount) return;
-        if (global.EDUDOC) global.EDUDOC.registerRefresh(render);
+        EDUFORM.registerRefresh(render);
         render();
         var qs = new URLSearchParams(location.search);
-        /* ?doc=R|묶음 — 내 할일 «공문 보내기» · ?type=change&worker= — 작업내용 변경 이력에서 */
-        if (global.EDUDOC && global.EDUDOC.openFromQuery) global.EDUDOC.openFromQuery();
+        /* ?type=change&worker= — 작업내용 변경 이력에서 */
         if (qs.get('type') === 'change' && E().canRegister()) setTimeout(function () { openCreate({ type: 'change', worker: qs.get('worker') || '' }); }, 0);
     }
     global.EDUE = {
