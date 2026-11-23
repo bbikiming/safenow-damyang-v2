@@ -3393,6 +3393,42 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .pdf-gm-annex-note { margin-top: 20px; font-size: var(--fs-12); color: var(--text-gray); line-height: 1.7; }
 /* 인쇄 시 별지는 새 장으로 */
 @media print { .pdf-gm-annex { break-before: page; page-break-before: always; } }
+/* 온나라 기안문 모양 지면 (DYDOC 전용 modifier — 2026-11-23 · 표본 = 재난안전과 시행문).
+ * 위험성평가 공문(DYRSKDOC, 동결)이 같은 .pdf-gm 을 쓰므로 기존 규칙은 바꾸지 않고 이 아래에만 더한다. */
+.pdf-gm-onnara .pdf-gm-slogan { text-align: center; font-size: var(--fs-12); margin-bottom: var(--sp-2); }
+.pdf-gm-onnara .pdf-gm-top { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); margin-bottom: var(--sp-6); }
+.pdf-gm-onnara .pdf-gm-top .pdf-gm-org { flex: 1; margin-bottom: 0; }
+.pdf-gm-onnara .pdf-gm-logo { flex: none; width: 64px; height: 48px; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px dashed var(--card-line); border-radius: var(--radius-sm); font-size: var(--fs-12); color: var(--text-gray); }
+.pdf-gm-onnara .pdf-gm-head { border-top: none; border-bottom: none; padding: 0; margin-bottom: var(--sp-4); }
+.pdf-gm-onnara .pdf-gm-row + .pdf-gm-row { border-top: none; }
+.pdf-gm-onnara .pdf-gm-row { padding: var(--sp-0-5) 0; }
+.pdf-gm-onnara .pdf-gm-row .k { letter-spacing: 0; width: 40px; font-weight: var(--fw-regular); }
+.pdf-gm-onnara .pdf-gm-title-row { border-bottom: 1px solid var(--text-black); padding-bottom: var(--sp-1); }
+.pdf-gm-onnara .pdf-gm-title-row .v b { font-weight: var(--fw-regular); }
+.pdf-gm-onnara .pdf-gm-via-row .v { color: var(--text-black); }
+.pdf-gm-onnara .pdf-gm-attach-k { letter-spacing: 0; font-weight: var(--fw-regular); }
+.pdf-gm-onnara .pdf-gm-issuer { margin: var(--sp-12) 0 var(--sp-8); font-size: var(--fs-18); }
+.pdf-gm-onnara .pdf-gm-foot { border-top: 8px solid var(--card-line); padding-top: var(--sp-2); }
+.pdf-gm-onnara .pdf-gm-signrow { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-8); font-size: var(--fs-12); color: var(--text-black); padding-bottom: var(--sp-2); }
+.pdf-gm-onnara .pdf-gm-signcell { display: inline-flex; align-items: baseline; gap: var(--sp-2); position: relative; }
+.pdf-gm-onnara .pdf-gm-signcell .v { font-weight: var(--fw-bold); }
+.pdf-gm-onnara .pdf-gm-signdate { font-size: var(--fs-12); }
+.pdf-gm-onnara .pdf-gm-frow, .pdf-gm-onnara .pdf-gm-frow2 { border-top: none; }
+.pdf-gm-onnara .pdf-gm-frow .k { letter-spacing: 0; width: auto; min-width: 40px; font-weight: var(--fw-regular); }
+.pdf-gm-onnara .pdf-gm-frow .v { flex: 0 1 auto; min-width: 0; margin-right: var(--sp-8); }
+.pdf-gm-onnara .pdf-gm-bottom { text-align: center; font-size: var(--fs-12); padding-top: var(--sp-2); }
+.pdf-gm-auto { color: var(--text-gray); font-style: italic; }
+/* 붙임 파일 — 기안문 지면 아래 따로 */
+.pdf-gm-files { margin-top: var(--sp-4); border: 1px solid var(--card-line); border-radius: var(--radius-sm); background: var(--surface); padding: var(--sp-3) var(--sp-4); }
+.pdf-gm-files-h { font-size: var(--fs-13); font-weight: var(--fw-bold); color: var(--text-black); margin-bottom: var(--sp-2); }
+.pdf-gm-files ul { list-style: none; margin: 0; padding: 0; }
+.pdf-gm-file { border-top: 1px dashed var(--card-line); padding: var(--sp-2) 0; font-size: var(--fs-13); }
+.pdf-gm-file summary { cursor: pointer; }
+.pdf-gm-file-no { flex: none; display: inline-block; min-width: 52px; font-weight: var(--fw-bold); color: var(--text-black); }
+.pdf-gm-file-n { color: var(--text-black); margin-right: var(--sp-2); word-break: break-all; }
+.pdf-gm-file-m { color: var(--text-gray); font-size: var(--fs-12); }
+.pdf-gm-file details .pdf-paper { margin-top: var(--sp-2); }
 
 /* 항목 삽입 버튼 — 수치 삽입 칩과 구분 */
 .rskdoc-ins.is-item { min-width: 44px; font-family: inherit; font-weight: var(--fw-bold); }

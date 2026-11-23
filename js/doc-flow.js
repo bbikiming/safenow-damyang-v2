@@ -614,17 +614,6 @@
             var m = (doc.byUid && V().orgMemberByUid) ? V().orgMemberByUid(doc.byUid) : null;
             return { name: doc.by || (m && m.name) || '', role: (m && m.role) || '' };
         }
-        function signLineHtml(L, doc) {
-            var p = drafterOf(doc);
-            if (SIMPLE) return '<div class="pdf-gm-sign"><span class="pdf-gm-sign-i"><b>기안자</b> ' + esc(p.role || '담당') + ' ' + esc(p.name) +
-                '</span><span class="pdf-gm-sign-i"><span class="pdf-dash">검토·결재 — 온나라 기안함에서 지정</span></span></div>';
-            var cols = [{ t: '기안자', r: p.role || '담당', n: p.name }].concat(L.map(function (s, i) {
-                return { t: i === L.length - 1 ? '결재권자' : '검토자', r: s.role || '', n: s.name || '' };
-            }));
-            return '<div class="pdf-gm-sign">' + cols.map(function (c) {
-                return '<span class="pdf-gm-sign-i"><b>' + esc(c.t) + '</b> ' + esc(c.r) + ' ' + esc(c.n || '(미지정)') + '</span>';
-            }).join('') + '</div>';
-        }
         function bodyDocHtml(text) {
             var s = String(text || '');
             if (!s.trim()) return '<p class="pdf-gm-empty">(본문 미입력)</p>';
@@ -666,60 +655,101 @@
             return '<div class="pdf-gm-row"><span class="k">근거</span><span class="v">' +
                 keys.map(function (k) { return esc(basisLabel(t, k)); }).join('<br>') + '</span></div>';
         }
+        /* ===== 지면 — 실제 온나라 기안문 모양(2026-11-23 · 11-20 회의 «미리보기를 실제 온나라 기안문처럼, 붙임은 따로») =====
+         * 표본: 재난안전과 시행문(2026-11-18 «…보안조치 이행결과 제출»). 이 시스템이 온나라로 보내는 것은 **수신 · 제목 · 본문(글자) · 붙임 파일**
+         * 넷뿐이고, 머리(표어 · 로고 · 기관명) · 발신명의 · 서명란 · 시행번호 · 기관정보 · 하단 문구는 온나라 기안기와 결재가 채운다.
+         * 그래서 그 자리는 값을 지어내지 않고 «온나라가 채움»으로 둔다(기관정보를 담양군에 받지 않는다 — EXT-01).
+         * 붙임은 본문 지면에 이어 그리지 않고 지면 아래 «붙임 파일» 묶음으로 따로 보인다 — 온나라에도 개별 파일로 간다.
+         * 위험성평가 공문(DYRSKDOC, 동결)은 옛 지면 그대로다 — 새 규칙은 .pdf-gm-onnara 아래에만 둔다. */
+        function filledBy(what) { return '<span class="pdf-gm-auto">' + esc(what || '온나라가 채움') + '</span>'; }
+        function deptOfDoc(doc) {
+            var p = persona();
+            var m = (doc && doc.byUid && V().orgMemberByUid) ? V().orgMemberByUid(doc.byUid) : null;
+            return (m && m.deptName) || (doc ? '' : (p.deptName || myDeptName()));
+        }
+        /* 발신명의 — 부서 시행문은 그 부서장 명의다(표본 «재난안전과장»). 직위명은 부서 이름에서 만든다(과 → 과장 · 사업소 → 사업소장) */
+        function issuerOf(doc) { var d = deptOfDoc(doc); return d ? d + '장' : ''; }
+        function signRowHtml(L, doc) {
+            var p = drafterOf(doc);
+            var cells = [{ k: p.role || '담당', v: esc(p.name) }];
+            if (SIMPLE) {
+                cells.push({ k: '검토', v: filledBy('온나라 기안함에서 지정') });
+                cells.push({ k: '결재', v: filledBy('온나라 기안함에서 지정') });
+            } else {
+                L.forEach(function (s) { cells.push({ k: s.role || '', v: s.name ? esc(s.name) : '<span class="pdf-dash">(미지정)</span>' }); });
+            }
+            return '<div class="pdf-gm-signrow">' + cells.map(function (c, i) {
+                return '<span class="pdf-gm-signcell"><span class="k">' + esc(c.k) + '</span><b class="v">' + c.v + '</b>' +
+                    (i === cells.length - 1 ? '<span class="pdf-gm-signdate">' + filledBy('결재일') + '</span>' : '') + '</span>';
+            }).join('') + '</div>';
+        }
         function paperMain(t, doc) {
             var src = doc || F;
             var L = doc ? doc.line : line();
             var out = src.docType === '외부발송';
             var no = doc && doc.no ? doc.no : '';
-            /* 결재완료로 회신된 문서는 온나라가 준 생산등록번호·결재일을 싣는다 — «임시 채번»은 결재 전 연계 번호에만 붙인다(2026-11-13) */
+            /* 결재완료로 회신된 문서는 온나라가 준 생산등록번호·결재일을 싣는다 — 결재 전에는 연계 번호뿐이다(2026-11-13) */
             var prod = doc && doc.status === '결재완료' ? (doc.prodNo || doc.regNo || '') : '';
             var noCell = prod
                 ? esc(prod) + '(' + esc(doc.apprDate || doc.doneAt || (doc.at ? String(doc.at).slice(0, 10) : today())) + ')'
                 : no
-                ? esc(no) + '(' + esc(doc.at ? String(doc.at).slice(0, 10) : today()) + ')' +
-                  ' <span class="pdf-note">임시 채번 — 실제 번호는 온나라가 부여</span>'
-                : '<span class="pdf-dash">(온나라 상신 시 부여)</span>';
-            return '<div class="pdf-paper pdf-doc pdf-gm">' +
-                '<div class="pdf-gm-org">담 양 군</div>' +
+                ? filledBy('결재 뒤 온나라가 부여') + ' <span class="pdf-note">연계 번호 ' + esc(no) + '</span>'
+                : filledBy('결재 뒤 온나라가 부여');
+            var rcv = recipientNames(t, doc);
+            /* 수신 — 한 곳이면 그 이름(표본 «행정과장»), 여럿이면 «수신자 참조» + 결문의 수신자 목록(시행규칙 §4) */
+            var to = !out ? '내부결재'
+                : rcv.length > 1 ? '수신자 참조'
+                : rcv.length === 1 ? esc(rcv[0])
+                : (src.to && src.to !== '수신자 참조' ? esc(src.to) : '<span class="pdf-dash">(수신자 미지정)</span>');
+            return '<div class="pdf-paper pdf-doc pdf-gm pdf-gm-onnara">' +
+                '<div class="pdf-gm-slogan">' + filledBy('기관 표어 — 온나라 서식') + '</div>' +
+                '<div class="pdf-gm-top"><span class="pdf-gm-logo">로고</span><div class="pdf-gm-org">담 양 군</div><span class="pdf-gm-logo">군 상징</span></div>' +
                 '<div class="pdf-gm-head">' +
-                    '<div class="pdf-gm-row"><span class="k">수신</span><span class="v">' +
-                        (out ? (esc(src.to || '') || '<span class="pdf-dash">(수신자 미지정)</span>') + '<span class="pdf-gm-via">(경유)</span>' : '내부결재') +
-                    '</span></div>' +
-                    '<div class="pdf-gm-row"><span class="k">제목</span><span class="v"><b>' +
+                    '<div class="pdf-gm-row"><span class="k">수신</span><span class="v">' + to + '</span></div>' +
+                    (out ? '<div class="pdf-gm-row pdf-gm-via-row"><span class="v">(경유)</span></div>' : '') +
+                    '<div class="pdf-gm-row pdf-gm-title-row"><span class="k">제목</span><span class="v"><b>' +
                         (esc(src.title || '') || '<span class="pdf-dash">(제목 미입력)</span>') + '</b></span></div>' +
                     basisRowHtml(t, src) +
                 '</div>' +
                 bodyDocHtml(src.body) +
                 attachDocHtml(attachNames(t, doc)) +
-                (out ? '<div class="pdf-gm-issuer">담 양 군 수<span class="pdf-doc-seal">관인</span></div>' : '') +
-                /* 수신자 목록(선택) — «수신자 참조»로 보낼 때 받는 부서를 지면에 적는다(cfg.recipientsOf) */
-                ((out && recipientNames(t, doc).length)
-                    ? '<div class="pdf-gm-frow"><span class="k">수신자</span><span class="v">' + recipientNames(t, doc).map(esc).join(', ') + '</span></div>'
-                    : '') +
+                (out ? '<div class="pdf-gm-issuer">' + (esc(issuerOf(doc)).split('').join(' ') || filledBy('발신명의')) + '</div>' : '') +
                 '<div class="pdf-gm-foot">' +
-                    signLineHtml(L, doc) +
+                    signRowHtml(L, doc) +
                     '<div class="pdf-gm-frow"><span class="k">협조자</span><span class="v"><span class="pdf-dash">-</span></span></div>' +
                     '<div class="pdf-gm-frow"><span class="k">시행</span><span class="v">' + noCell + '</span>' +
                         (out ? '<span class="k">접수</span><span class="v"><span class="pdf-dash">-</span></span>' : '') + '</div>' +
-                    (out
-                        ? '<div class="pdf-gm-frow2">우 <span class="pdf-dash">우편번호 미등록</span> ' +
-                              '<span class="pdf-dash">전남 담양군 담양읍 (주소 미등록)</span> / www.damyang.go.kr</div>' +
-                          '<div class="pdf-gm-frow2">전화 <span class="pdf-dash">미등록</span> / 팩스 <span class="pdf-dash">미등록</span> / ' +
-                              '<span class="pdf-dash">담당자 전자우편 미등록</span> / 공개구분 <span class="pdf-dash">미확정</span></div>'
+                    ((out && rcv.length > 1)
+                        ? '<div class="pdf-gm-frow"><span class="k">수신자</span><span class="v">' + rcv.map(esc).join(', ') + '</span></div>'
                         : '') +
+                    '<div class="pdf-gm-frow2">우편번호 · 주소 · 누리집 ' + filledBy('온나라 기관정보') + '</div>' +
+                    '<div class="pdf-gm-frow2">전화 · 팩스 · 전자우편 ' + filledBy('온나라 기관정보') + ' / 공개구분 ' +
+                        esc(cfg.publicity || '공개') + ' <span class="pdf-note">업무별 기본값 — 바꾸려면 온나라에서</span></div>' +
+                    '<div class="pdf-gm-bottom">' + filledBy('하단 문구 — 온나라 서식') + '</div>' +
                 '</div>' +
             '</div>';
         }
-        function paperHtml(t, doc) {
+        function fmtSize(n) { return n == null ? '' : n >= 1024 * 1024 ? (Math.round(n / 1024 / 1024 * 10) / 10) + 'MB' : Math.max(1, Math.round(n / 1024)) + 'KB'; }
+        /* 붙임 파일 — 본문 지면에 이어 그리지 않는다. 온나라에도 기안문과 따로 개별 파일로 간다(11-20 회의 R38·R40).
+           별지(표)는 PDF 로 만들어 붙이므로 펼쳐서 내용을 본다. 번호는 지면 «붙임» 목록의 순번과 같다. */
+        function attachPanelHtml(t, doc) {
             var src = doc || F;
+            var files = (src.attach || []).filter(function (x) { return x.on; });
             var annex = (src.annex && cfg.annexes) ? cfg.annexes(t, doc) : [];
-            /* 별지 번호는 지면 «붙임» 목록의 순번과 같아야 한다 — 고른 파일이 앞에 서므로 그 수만큼 민다
-               («1. 교육일지 2. 이수자 명단»인데 별지가 «[붙임 1] 이수자 명단»이던 결함, 2026-11-18 개발서버 점검) */
-            var fileCount = (src.attach || []).filter(function (x) { return x.on; }).length;
-            return paperMain(t, doc) + annex.map(function (a, i) {
-                return '<div class="pdf-paper pdf-doc pdf-gm pdf-gm-annex">' +
-                    '<div class="pdf-gm-annex-h">[붙임 ' + (fileCount + i + 1) + '] ' + esc(a.title) + '</div>' + a.html + '</div>';
-            }).join('');
+            if (!files.length && !annex.length) return '';
+            var rows = files.map(function (a, i) {
+                return '<li class="pdf-gm-file"><span class="pdf-gm-file-no">붙임 ' + (i + 1) + '</span><span class="pdf-gm-file-n">' + esc(a.label) + '</span>' +
+                    '<span class="pdf-gm-file-m">' + (a.size != null ? fmtSize(a.size) : '올린 파일') + '</span></li>';
+            }).concat(annex.map(function (a, i) {
+                return '<li class="pdf-gm-file"><details><summary><span class="pdf-gm-file-no">붙임 ' + (files.length + i + 1) + '</span>' +
+                    '<span class="pdf-gm-file-n">' + esc(a.title) + '.pdf</span><span class="pdf-gm-file-m">PDF로 만들어 붙임 · 펼쳐 보기</span></summary>' +
+                    '<div class="pdf-paper pdf-doc pdf-gm pdf-gm-annex">' + a.html + '</div></details></li>';
+            }));
+            return '<div class="pdf-gm-files"><div class="pdf-gm-files-h">붙임 파일 ' + rows.length + '개 — 기안문과 따로, 온나라에 개별 파일로 함께 갑니다</div>' +
+                '<ul>' + rows.join('') + '</ul></div>';
+        }
+        function paperHtml(t, doc) {
+            return paperMain(t, doc) + attachPanelHtml(t, doc);
         }
 
         function preview() {
