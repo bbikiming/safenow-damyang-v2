@@ -623,7 +623,8 @@
             if (!list.length) return '<p class="pdf-gm-end">끝.</p>';
             return '<div class="pdf-gm-attach"><span class="pdf-gm-attach-k">붙임</span>' +
                 '<span class="pdf-gm-attach-v">' + list.map(function (n, i) {
-                    return (i + 1) + '. ' + esc(n) + ' 1부.' +
+                    /* 붙임이 하나면 번호 없이(표본 «붙임  ○○ 1부.  끝.»), 둘 이상이면 1. 2. 로 매긴다 */
+                    return (list.length > 1 ? (i + 1) + '. ' : '') + esc(n) + ' 1부.' +
                         (i === list.length - 1 ? '<span class="pdf-gm-endmark">끝.</span>' : '');
                 }).join('<br>') + '</span></div>';
         }

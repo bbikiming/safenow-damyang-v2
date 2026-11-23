@@ -3417,6 +3417,17 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .pdf-gm-onnara .pdf-gm-frow, .pdf-gm-onnara .pdf-gm-frow2 { border-top: none; }
 .pdf-gm-onnara .pdf-gm-frow .k { letter-spacing: 0; width: auto; min-width: 40px; font-weight: var(--fw-regular); }
 .pdf-gm-onnara .pdf-gm-frow .v { flex: 0 1 auto; min-width: 0; margin-right: var(--sp-8); }
+/* 실제 시행문(재난안전과 2026-11-18)과 같은 배치 — 본문 아래는 한 줄 띄우고 바로 붙임,
+   발신명의·서명란은 쪽 아래로 붙는다(화면에서만 A4 비율 — 인쇄는 종이가 정한다). 결재일은 마지막 결재자 이름 위. */
+.pdf-gm-onnara .pdf-gm-body, .pdf-gm-onnara .pdf-gm-empty { min-height: 0; }
+.pdf-gm-onnara .pdf-gm-attach { margin-top: var(--sp-6); }
+.pdf-gm-onnara .pdf-gm-signrow { padding-top: var(--sp-4); }
+.pdf-gm-onnara .pdf-gm-signdate { position: absolute; right: 0; bottom: 100%; white-space: nowrap; }
+@media screen {
+  .pdf-paper.pdf-gm-onnara { display: flex; flex-direction: column; aspect-ratio: 210 / 297; }
+  .pdf-gm-onnara > .pdf-gm-issuer { margin-top: auto; padding-top: var(--sp-12); }
+  .pdf-gm-onnara > .pdf-gm-attach + .pdf-gm-foot, .pdf-gm-onnara > .pdf-gm-body + .pdf-gm-foot, .pdf-gm-onnara > .pdf-gm-empty + .pdf-gm-foot { margin-top: auto; }
+}
 .pdf-gm-onnara .pdf-gm-bottom { text-align: center; font-size: var(--fs-12); padding-top: var(--sp-2); }
 .pdf-gm-auto { color: var(--text-gray); font-style: italic; }
 /* 붙임 파일 — 기안문 지면 아래 따로 */
