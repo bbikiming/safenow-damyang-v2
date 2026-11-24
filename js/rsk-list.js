@@ -1874,7 +1874,7 @@
     function setupReqDoc() {
         if (!global.DYDOC || global.RSKREQ) return;
         DYDOC.define({
-            ns: 'RSKREQ', lkey: 'dy-rskreq-apprline-v1', simple: true, attachSource: '부서별 설문조사표 양식(같은 양식으로 합치기)',
+            ns: 'RSKREQ', lkey: 'dy-rskreq-apprline-v1', simple: true, attachSource: () => '정기 위험성평가 부서 목록의 설문조사표 칸에서 부서별 양식을 공통 양식으로 바꿔 서로 다른 양식을 4개 이하로 줄이세요.',
             targetOf: reqTarget,
             subjectOf: function (t) { return t.kind === 'S' ? '설문조사표 제출 요청' : (t.kind === 'X' ? '추가 개선조치 요청' : '개선조치 요청'); },
             titleOf: function (t) {

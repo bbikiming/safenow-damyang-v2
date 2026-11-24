@@ -612,7 +612,7 @@
         function drafterOf(doc) {
             if (!doc) { var p = persona(); return { name: p.name, role: p.role || '담당' }; }
             var m = (doc.byUid && V().orgMemberByUid) ? V().orgMemberByUid(doc.byUid) : null;
-            return { name: doc.by || (m && m.name) || '', role: (m && m.role) || '' };
+            return { name: doc.by || (m && m.name) || '', role: doc.byRole || (m && m.role) || '' };
         }
         function bodyDocHtml(text) {
             var s = String(text || '');
@@ -628,12 +628,18 @@
                         (i === list.length - 1 ? '<span class="pdf-gm-endmark">끝.</span>' : '');
                 }).join('<br>') + '</span></div>';
         }
+        /* 별지 — 보낸 공문은 **보낼 때 만든 별지 그대로**(doc.annexSnap) 그린다. 칸 값(조치기한 · 받는 사람 · 측정·검진 값)이
+           보낸 뒤 바뀌어도 이미 나간 별지는 그대로여야 한다(기획-공문미리보기 §4-5). 스냅샷이 없는 옛 공문만 도메인에 다시 묻는다. */
+        function annexList(t, doc) {
+            var src = doc || F;
+            if (!src || !src.annex) return [];
+            if (doc && doc.annexSnap) return doc.annexSnap;
+            return cfg.annexes ? (cfg.annexes(t, doc) || []) : [];
+        }
         function attachNames(t, doc) {
             var src = doc || F;
             var names = (src.attach || []).filter(function (x) { return x.on; }).map(function (x) { return x.label; });
-            if (src.annex && cfg.annexes) {
-                cfg.annexes(t, doc).forEach(function (x) { names.push(x.title); });
-            }
+            annexList(t, doc).forEach(function (x) { names.push(x.title); });
             return names;
         }
         /* 관련 근거 — 담당자가 기안 폼에서 **고른 것만** 지면에 싣는다. 하나도 안 골랐으면 줄 자체가 없다.
@@ -668,7 +674,7 @@
             var m = (doc && doc.byUid && V().orgMemberByUid) ? V().orgMemberByUid(doc.byUid) : null;
             /* 보낸 공문은 **보낼 때 저장한 부서**로 그린다 — 인사이동 뒤 다시 열어도 발신명의가 바뀌지 않게(기획 §4-5).
                옛 저장분(dept 없음)만 조직도에서 되찾는다. */
-            if (doc) return doc.dept || (m && m.deptName) || '';
+            if (doc) return doc.dept || '';   /* 부서를 남기지 않은 옛 공문은 «발신명의» 자리표시 — 지금 조직도로 채우지 않는다 */
             return p.deptName || myDeptName();
         }
         /* 발신명의 — 부서 시행문은 그 부서장 명의다(표본 «재난안전과장»). 직위명은 부서 이름에서 만든다(과 → 과장 · 사업소 → 사업소장) */
@@ -717,7 +723,7 @@
                 '</div>' +
                 bodyDocHtml(src.body) +
                 attachDocHtml(attachNames(t, doc)) +
-                (out ? '<div class="pdf-gm-issuer">' + (esc(issuerOf(doc)).split('').join(' ') || filledBy('발신명의')) + '</div>' : '') +
+                (out ? '<div class="pdf-gm-issuer">' + (esc(issuerOf(doc)).split('').join(' ') || filledBy('발신명의 — 온나라 서식')) + '</div>' : '') +
                 '<div class="pdf-gm-foot">' +
                     signRowHtml(L, doc) +
                     '<div class="pdf-gm-frow"><span class="k">협조자</span><span class="v"><span class="pdf-dash">-</span></span></div>' +
@@ -739,7 +745,7 @@
         function attachPanelHtml(t, doc) {
             var src = doc || F;
             var files = (src.attach || []).filter(function (x) { return x.on; });
-            var annex = (src.annex && cfg.annexes) ? cfg.annexes(t, doc) : [];
+            var annex = annexList(t, doc);
             if (!files.length && !annex.length) return '';
             var rows = files.map(function (a, i) {
                 return '<li class="pdf-gm-file"><span class="pdf-gm-file-no">붙임 ' + (i + 1) + '</span><span class="pdf-gm-file-n">' + esc(a.label) + '</span>' +
@@ -747,9 +753,12 @@
             }).concat(annex.map(function (a, i) {
                 return '<li class="pdf-gm-file"><details><summary><span class="pdf-gm-file-no">붙임 ' + (files.length + i + 1) + '</span>' +
                     '<span class="pdf-gm-file-n">' + esc(a.title) + '.pdf</span><span class="pdf-gm-file-m">PDF로 만들어 붙임 · 펼쳐 보기</span></summary>' +
-                    '<div class="pdf-paper pdf-doc pdf-gm pdf-gm-annex">' + a.html + '</div></details></li>';
+                    '<div class="pdf-paper pdf-doc pdf-gm pdf-gm-annex"><div class="pdf-gm-annex-h">붙임 ' + (files.length + i + 1) + '  ' + esc(a.title) + '</div>' + a.html + '</div></details></li>';
             }));
-            return '<div class="pdf-gm-files"><div class="pdf-gm-files-h pdf-noprint">붙임 파일 ' + rows.length + '개 — 기안문과 따로, 온나라에 개별 파일로 함께 갑니다</div>' +
+            /* 반영 전에 보낸 공문은 보낸 때의 별지를 남기지 않았다 — 지금 기록으로 그리고 그 사실을 밝힌다(§5) */
+            var oldNote = (doc && annex.length && !doc.annexSnap)
+                ? '<div class="pdf-gm-files-h pdf-noprint">보낸 때의 별지가 남아 있지 않아 지금 기록으로 보입니다</div>' : '';
+            return '<div class="pdf-gm-files">' + oldNote + '<div class="pdf-gm-files-h pdf-noprint">붙임 파일 ' + rows.length + '개 — 기안문과 따로, 온나라에 개별 파일로 함께 갑니다</div>' +
                 '<ul>' + rows.join('') + '</ul></div>';
         }
         function paperHtml(t, doc) {
@@ -769,7 +778,7 @@
             var sendWhy = (!SIMPLE && !lineReady().ok) ? lineReady().why + ' [← 수정]에서 결재선을 고치세요.'
                 : attachIssue() ? attachIssue() + (SIMPLE && cfg.attachSource
                     /* 붙임이 고정된 단순 기안은 기안 창에 붙임을 빼는 수단이 없다 — 파일을 받은 원천 화면을 가리킨다(기획-공문미리보기 §7) */
-                    ? ' ' + cfg.attachSource + '에서 붙임 파일을 줄이세요.' : ' [← 수정]에서 붙임을 줄이세요.') : '';
+                    ? ' ' + (typeof cfg.attachSource === 'function' ? cfg.attachSource(t) : cfg.attachSource + '에서 붙임 파일을 줄이세요.') : ' [← 수정]에서 붙임을 줄이세요.') : '';
             V().openModal('문서 미리보기 — ' + esc(F.title),
                 /* 좁은 화면에서 지면이 왼쪽으로 밀리는 것을 막는 래퍼 — 규칙은 .rskdoc-preview(css/v2.css) */
                 '<div class="rskdoc-preview">' +
@@ -843,8 +852,10 @@
                 /* 온나라로 넘어가는 결재선 — **계정 식별자(uid) 배열**이다. 이름은 표시용이라
                    함께 담되, 연계가 붙으면 키가 되는 것은 uid 다(SCR-ADMIN-001 §4). */
                 line: SIMPLE ? [] : line().slice(), lineText: SIMPLE ? '' : lineText(),
-                by: persona().name, byUid: persona().uid || '', dept: myDeptName()
+                by: persona().name, byUid: persona().uid || '', byRole: persona().role || '', dept: myDeptName()
             };
+            /* 보낸 별지를 그대로 남긴다 — 다시 열 때 지금 값으로 바뀌지 않게(§4-5) */
+            if (doc.annex && cfg.annexes) doc.annexSnap = (cfg.annexes(t, doc) || []).map(function (a) { return { title: a.title, html: a.html }; });
             cfg.save(t, doc);
             V().closeModal();
             /* 상신 직후 값은 생산등록번호가 아니라 «연계 번호»다 — 문서번호는 결재가 끝나야 생긴다

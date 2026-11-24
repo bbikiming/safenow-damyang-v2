@@ -3335,7 +3335,7 @@
                 const dn = (id) => (DEPTCHK.depts().filter(d => d.id === id)[0] || {}).name || id;
                 DYDOC.define({
                     /* 단순 기안 — 결재선을 받지 않고(운영 결정 2026-11-06), 문서 종류·수신·붙임은 고정해 보여만 준다 */
-                    ns: 'CMPDOC', lkey: 'dy-cmpdoc-apprline-v1', simple: true, attachSource: '[배포 내용 고치기]의 점검 양식',
+                    ns: 'CMPDOC', lkey: 'dy-cmpdoc-apprline-v1', simple: true, attachSource: () => '[기안 버리기] 뒤 [점검 배포]에서 점검 양식을 ' + PG.cmpFormMax() + '개 이하로 다시 올리세요.',
                     targetOf: (key) => {
                         const pend = DEPTCHK.flow.pending(key), dist = DEPTCHK.flow.dist(key);
                         const src = pend || dist; if (!src) return null;
@@ -3442,7 +3442,7 @@
             /* 배포 양식은 시달 공문의 붙임으로 그대로 간다 — 공문 붙임 한도(별지 «점검 대상 부서» 1개 포함) 안에서만 받는다.
                공문 화면에는 붙임을 빼는 수단이 없어, 여기서 막지 않으면 보낼 수 없는 공문이 된다(기획-공문미리보기 §7). */
             PG.cmpFormMax = () => Math.max(1, ((window.DYDOC && DYDOC.ATTACH_LIMIT && DYDOC.ATTACH_LIMIT.count) || 5) - 1);
-            PG.cmpDistAdd = (files) => { PG._cmpDistCap(); const mx = PG.cmpFormMax(); const all = PG._DF.forms.concat(files || []); if (all.length > mx) V.toast('점검표 양식은 ' + mx + '개까지 붙일 수 있습니다 — 공문 붙임 한도(별지 포함 ' + (mx + 1) + '개)'); PG._DF.forms = all.slice(0, mx); PG._DF.formsChanged = true; PG._cmpDistRender(); };
+            PG.cmpDistAdd = (files) => { PG._cmpDistCap(); const mx = PG._DF.edit ? 10 : PG.cmpFormMax(); const all = PG._DF.forms.concat(files || []); if (all.length > mx) V.toast('점검표 양식은 ' + mx + '개까지 붙일 수 있습니다 — 공문 붙임 한도(별지 포함 ' + (mx + 1) + '개)'); PG._DF.forms = all.slice(0, mx); PG._DF.formsChanged = true; PG._cmpDistRender(); };
             PG.cmpDistDel = (i) => { PG._cmpDistCap(); PG._DF.forms.splice(i, 1); PG._DF.formsChanged = true; PG._cmpDistRender(); };
             /* 지난 회차 양식 이어받기 — 이름에 박힌 회차(«2026년_상반기»)를 이번 회차로 바꾸고 판 표기를 뗀다.
                상반기 이름 그대로 하반기에 배포하면 부서가 «지난번 양식을 잘못 받았다»고 읽는다(2026-11-13 실습 점검).
@@ -3466,7 +3466,8 @@
                     '<div class="dchk-mrow"><label class="form-label">점검 양식 <span style="color:var(--status-danger-fg)">*</span></label>' +
                         V.uploadDrop('<b>부서가 내려받을 점검표</b> <span style="font-size:var(--fs-12);color:var(--text-gray);">클릭 또는 끌어놓기</span>',
                             null, { hint: true, multiple: true, pick: 'PG.cmpDistAdd', style: 'padding:12px;' }) +
-                        '<p class="file-hint">점검표 양식 ' + F.forms.length + ' / ' + PG.cmpFormMax() + '개 — 시달 공문에 별지 «점검 대상 부서»와 함께 붙습니다(붙임 ' + (PG.cmpFormMax() + 1) + '개까지)</p>' +
+                        (F.edit ? '<p class="file-hint">점검표 양식 ' + F.forms.length + '개 — 이미 보낸 시달 공문의 붙임은 바뀌지 않습니다</p>'
+                            : '<p class="file-hint">점검표 양식 ' + F.forms.length + ' / ' + PG.cmpFormMax() + '개 — 시달 공문에 별지 «점검 대상 부서»와 함께 붙습니다(붙임 ' + (PG.cmpFormMax() + 1) + '개까지)</p>') +
                         (F.forms.length ? '<ul class="dchk-shots">' + F.forms.map((f, i) =>
                             '<li><span class="dchk-shot is-plain">파일</span><span class="dchk-shot-n">' + esc(f.name) + '</span>' +
                             '<button type="button" class="edu-attach-del" onclick="PG.cmpDistDel(' + i + ')" aria-label="' + esc(f.name) + ' 빼기">×</button></li>').join('') + '</ul>' : '') +

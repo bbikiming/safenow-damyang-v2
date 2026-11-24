@@ -297,7 +297,7 @@
                 ? '<div class="edu-modal-row"><label class="form-label" for="er-enrolldays">참석자 등록부 기한 <span style="color:var(--status-danger-fg)">*</span></label>' +
                     '<div style="display:flex;align-items:center;gap:8px;">마지막 회차가 끝난 뒤 ' +
                     '<input type="number" class="form-input" id="er-enrolldays" min="1" max="30" value="' + esc(F.enrollDays) + '" style="width:90px;"> 일 안에</div>' +
-                    '<p class="file-hint">부서는 교육이 끝난 날부터 참석자·실제 참석시간·서명부 스캔을 올립니다. 기한이 지나도 종료 처리 전까지 받습니다.</p></div>'
+                    '<p class="file-hint">부서는 교육이 끝난 날부터 참석자·실제 참석시간·서명부 스캔을 올립니다. 기한이 지나도 받고, 종료 뒤에도 [＋ 등록부 추가]로 받습니다.</p></div>'
                 : '') +
             /* 첨부 — 집합은 [참석자 명단·교육 자료] 2칸, 자체는 [교육일지 및 교육사진 등] 1칸 (2026-07-30 회의) */
             EDUFORM.renderAttach(F, 'EDUR', F.mode === 'group' ? 'group' : 'done') +
