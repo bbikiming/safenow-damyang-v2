@@ -666,7 +666,10 @@
         function deptOfDoc(doc) {
             var p = persona();
             var m = (doc && doc.byUid && V().orgMemberByUid) ? V().orgMemberByUid(doc.byUid) : null;
-            return (m && m.deptName) || (doc ? '' : (p.deptName || myDeptName()));
+            /* 보낸 공문은 **보낼 때 저장한 부서**로 그린다 — 인사이동 뒤 다시 열어도 발신명의가 바뀌지 않게(기획 §4-5).
+               옛 저장분(dept 없음)만 조직도에서 되찾는다. */
+            if (doc) return doc.dept || (m && m.deptName) || '';
+            return p.deptName || myDeptName();
         }
         /* 발신명의 — 부서 시행문은 그 부서장 명의다(표본 «재난안전과장»). 직위명은 부서 이름에서 만든다(과 → 과장 · 사업소 → 사업소장) */
         function issuerOf(doc) { var d = deptOfDoc(doc); return d ? d + '장' : ''; }
@@ -746,7 +749,7 @@
                     '<span class="pdf-gm-file-n">' + esc(a.title) + '.pdf</span><span class="pdf-gm-file-m">PDF로 만들어 붙임 · 펼쳐 보기</span></summary>' +
                     '<div class="pdf-paper pdf-doc pdf-gm pdf-gm-annex">' + a.html + '</div></details></li>';
             }));
-            return '<div class="pdf-gm-files"><div class="pdf-gm-files-h">붙임 파일 ' + rows.length + '개 — 기안문과 따로, 온나라에 개별 파일로 함께 갑니다</div>' +
+            return '<div class="pdf-gm-files"><div class="pdf-gm-files-h pdf-noprint">붙임 파일 ' + rows.length + '개 — 기안문과 따로, 온나라에 개별 파일로 함께 갑니다</div>' +
                 '<ul>' + rows.join('') + '</ul></div>';
         }
         function paperHtml(t, doc) {
@@ -764,7 +767,9 @@
             var t = cfg.targetOf(F.id);
             /* 상신을 막는 사유 — 결재선과 붙임 한도. 미리보기 자체는 막지 않고 버튼 자리에 사유를 쓴다 */
             var sendWhy = (!SIMPLE && !lineReady().ok) ? lineReady().why + ' [← 수정]에서 결재선을 고치세요.'
-                : attachIssue() ? attachIssue() + ' [← 수정]에서 붙임을 줄이세요.' : '';
+                : attachIssue() ? attachIssue() + (SIMPLE && cfg.attachSource
+                    /* 붙임이 고정된 단순 기안은 기안 창에 붙임을 빼는 수단이 없다 — 파일을 받은 원천 화면을 가리킨다(기획-공문미리보기 §7) */
+                    ? ' ' + cfg.attachSource + '에서 붙임 파일을 줄이세요.' : ' [← 수정]에서 붙임을 줄이세요.') : '';
             V().openModal('문서 미리보기 — ' + esc(F.title),
                 /* 좁은 화면에서 지면이 왼쪽으로 밀리는 것을 막는 래퍼 — 규칙은 .rskdoc-preview(css/v2.css) */
                 '<div class="rskdoc-preview">' +
@@ -779,7 +784,14 @@
                 { variant: 'wide', headHtml: '<button type="button" class="btn btn-sm btn-outline pdf-noprint" onclick="' + NS + '.print()">PDF 저장 / 인쇄</button>' });
         }
         function back() { if (!F) return; renderDraft(); }
-        function print() { global.print(); }
+        /* [PDF 저장 / 인쇄] — 기안문 + 별지를 각 쪽으로 찍는다(기획 §5·§9-3). 접힌 <details> 안 내용은
+           인쇄 CSS 만으로는 나오지 않아 인쇄 동안만 펼치고, 끝나면 원래대로 접는다. 묶음 안내문은 찍지 않는다(.pdf-noprint). */
+        function print() {
+            var ds = Array.prototype.slice.call(document.querySelectorAll('.pdf-gm-files details'));
+            var was = ds.map(function (d) { return d.open; });
+            ds.forEach(function (d) { d.open = true; });
+            try { global.print(); } finally { ds.forEach(function (d, i) { d.open = was[i]; }); }
+        }
 
         /* ===================== 상신 =====================
          * 확인 단계는 **되돌릴 수 없다는 사실만** 말한다. 문서·붙임·결재선은 바로 앞
@@ -927,5 +939,5 @@
         '</div>';
     }
 
-    global.DYDOC = { define: define, approvalLine: approvalLine, stepLabel: stepLabel, sentHtml: sentHtml };
+    global.DYDOC = { define: define, approvalLine: approvalLine, stepLabel: stepLabel, sentHtml: sentHtml, ATTACH_LIMIT: ATTACH_LIMIT };
 })(window);

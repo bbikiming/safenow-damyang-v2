@@ -3393,6 +3393,12 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .pdf-gm-annex-note { margin-top: 20px; font-size: var(--fs-12); color: var(--text-gray); line-height: 1.7; }
 /* 인쇄 시 별지는 새 장으로 */
 @media print { .pdf-gm-annex { break-before: page; page-break-before: always; } }
+/* 붙임 파일 묶음 인쇄 — 기안문 뒤에 별지만 각 쪽으로(DYDOC print() 가 인쇄 동안 <details> 를 펼친다).
+   올린 파일 줄과 «PDF로 만들어 붙임 · 펼쳐 보기» 안내는 종이에 찍지 않는다(기획-공문미리보기 §5). */
+@media print {
+  .pdf-gm-files { border: none; padding: 0; margin: 0; background: none; }
+  .pdf-gm-files li:not(:has(details)), .pdf-gm-files summary { display: none; }
+}
 /* 온나라 기안문 모양 지면 (DYDOC 전용 modifier — 2026-11-23 · 표본 = 재난안전과 시행문).
  * 위험성평가 공문(DYRSKDOC, 동결)이 같은 .pdf-gm 을 쓰므로 기존 규칙은 바꾸지 않고 이 아래에만 더한다. */
 .pdf-gm-onnara .pdf-gm-slogan { text-align: center; font-size: var(--fs-12); margin-bottom: var(--sp-2); }

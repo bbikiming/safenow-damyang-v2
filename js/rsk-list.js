@@ -1874,7 +1874,7 @@
     function setupReqDoc() {
         if (!global.DYDOC || global.RSKREQ) return;
         DYDOC.define({
-            ns: 'RSKREQ', lkey: 'dy-rskreq-apprline-v1', simple: true,
+            ns: 'RSKREQ', lkey: 'dy-rskreq-apprline-v1', simple: true, attachSource: '부서별 설문조사표 양식(같은 양식으로 합치기)',
             targetOf: reqTarget,
             subjectOf: function (t) { return t.kind === 'S' ? '설문조사표 제출 요청' : (t.kind === 'X' ? '추가 개선조치 요청' : '개선조치 요청'); },
             titleOf: function (t) {
