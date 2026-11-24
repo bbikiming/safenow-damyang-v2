@@ -152,7 +152,7 @@
                 (c.photos && c.photos.length ? '<div class="edu-detail-files">교육 사진 ' + c.photos.length + '장 · ' + FORM().fileLinks(c.photos, '📷') + '</div>' : '') +
                 tripSum +
                 (c.status === 'CANCELLED' ? '<div class="check-notice" style="margin-top:8px;">취소된 교육입니다' + (c.cancelReason ? ' — 사유: ' + esc(c.cancelReason) : '') + '</div>' : '') +
-                (c.signSheet && c.signSheet.file ? '<div class="edu-detail-files">✍ 재난안전과 서명부 ' + (ownerView || E().canSeePerson(myDept) ? FORM().fileLink({ name: c.signSheet.file, fid: c.signSheet.fid || '' }, '') : '') + ' · ' + esc(c.signSheet.at || '') + '</div>' : '') +
+                (c.signSheet && c.signSheet.file ? '<div class="edu-detail-files">✍ 재난안전과 서명부 ' + (ownerView ? FORM().fileLink({ name: c.signSheet.file, fid: c.signSheet.fid || '' }, '') : esc(c.signSheet.file) + ' <span class="file-hint">여러 부서 서명이 한 장에 있어 재난안전과만 내려받습니다</span>') + ' · ' + esc(c.signSheet.at || '') + '</div>' : '') +
                 (actions ? '<div class="edu-detail-actions">' + actions + '</div>' : '') +
             '</div>';
 
