@@ -323,7 +323,7 @@
     function sessDel(i) { captureCreate(); EDUFORM.sessDel(F, i); renderCreate(); }
     function sessSync() { captureCreate(); renderCreate(); }
     /* 첨부·사진 위임 래퍼 */
-    function addFile(slot) { captureCreate(); EDUFORM.addFile(F, slot); renderCreate(); }
+    function addFile(slot, items) { captureCreate(); EDUFORM.addFile(F, slot, items); renderCreate(); }
     function delFile(i) { captureCreate(); EDUFORM.delFile(F, i); renderCreate(); }
 
     function renderSelfTargets() {
@@ -657,8 +657,8 @@
                 '<div style="color:var(--text-gray);margin-top:4px;">' +
                     '일정 ' + esc(E().courseDateTime(c)) + ' · ' + c.hours + 'h · 강사 ' + esc(c.instructor || '-') + ' · 장소 ' + esc(c.place || '-') +
                 '</div>' +
-                ((c.files && c.files.length) ? '<div style="font-size:var(--fs-12);color:var(--main-dark);margin-top:6px;">📎 ' + c.files.map(function (f) { return esc(f.name); }).join(' · ') + '</div>' : '') +
-                ((c.photos && c.photos.length) ? '<div style="font-size:var(--fs-12);color:var(--main-dark);margin-top:4px;">📷 교육 사진 ' + c.photos.length + '장 · ' + c.photos.map(function (p) { return esc(p.name); }).join(' · ') + '</div>' : '') +
+                ((c.files && c.files.length) ? '<div style="font-size:var(--fs-12);margin-top:6px;">' + EDUFORM.fileLinks(c.files) + '</div>' : '') +
+                ((c.photos && c.photos.length) ? '<div style="font-size:var(--fs-12);margin-top:4px;">교육 사진 ' + c.photos.length + '장 · ' + EDUFORM.fileLinks(c.photos, '📷') + '</div>' : '') +
             '</div>' +
             '<label class="form-label">등록 현황</label>' +
             '<div class="edu-scroll"><table class="table-figma table-compact"><thead><tr>' +

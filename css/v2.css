@@ -1756,6 +1756,11 @@ textarea.bgt-in { resize: vertical; min-height: 44px; line-height: 1.5; text-ali
 .edu-attach-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .edu-attach-list li { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--surface-alt); border: 1px solid var(--card-line); border-radius: var(--radius-md); }
 .edu-attach-name { flex: 1; min-width: 0; font-size: var(--fs-12); color: var(--text-black); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 교육 기록 파일 이름 — 누르면 내려받는다(2026-11-24). 글자 링크 모양 · 터치 대상은 줄 높이로 */
+.edu-file-link { display: inline; padding: 0; border: none; background: none; font: inherit; font-size: var(--fs-12);
+  color: var(--main-dark); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; word-break: break-all; text-align: left; }
+.edu-file-link:hover { color: var(--main); }
+.edu-file-link:focus-visible { outline: 2px solid var(--main); outline-offset: 2px; border-radius: var(--radius-xs); }
 .edu-attach-del { flex: none; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;
     background: transparent; border: 1px solid var(--card-line); border-radius: var(--radius-xs);
     font-size: var(--fs-14); color: var(--text-gray); cursor: pointer; line-height: 1; }

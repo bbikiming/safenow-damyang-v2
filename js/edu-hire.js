@@ -594,7 +594,7 @@
     function sessAdd() { captureAdd(); if (!EDUFORM.sessAdd(A)) toast('교육 일자는 최대 ' + EDUFORM.MAX_SESSIONS + '일까지 추가할 수 있습니다.'); renderAdd(); }
     function sessDel(i) { captureAdd(); EDUFORM.sessDel(A, i); renderAdd(); }
     function sessSync() { captureAdd(); renderAdd(); }
-    function addFile(slot) { captureAdd(); EDUFORM.addFile(A, slot); renderAdd(); }
+    function addFile(slot, items) { captureAdd(); EDUFORM.addFile(A, slot, items); renderAdd(); }
     function delFile(i) { captureAdd(); EDUFORM.delFile(A, i); renderAdd(); }
     function aToggle(id, on) {
         if (on && !canActWorker(id)) { deny((E().workerOf(id) || {}).deptId); return; }

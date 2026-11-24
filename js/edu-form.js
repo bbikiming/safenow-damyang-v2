@@ -162,7 +162,7 @@
             .filter(function (x) { return slotOf(x.f, slots) === slotKey; });
         if (!rows.length) return '';
         return '<ul class="edu-attach-list">' + rows.map(function (x) {
-            return '<li><span class="edu-attach-name">📎 ' + esc(x.f.name) + '</span>' +
+            return '<li><span class="edu-attach-name">' + fileLink(x.f) + '</span>' +
                 '<button type="button" class="edu-attach-del" onclick="' + ns + '.delFile(' + x.i + ')" aria-label="' + esc(x.f.name) + ' 삭제">×</button></li>';
         }).join('') + '</ul>';
     }
@@ -174,17 +174,57 @@
                     (s.note ? ' <span class="edu-drop-sub">(' + s.note + ')</span>' : '') + '</label>' +
                 V().uploadDrop(
                     '<b>' + (s.drop || '파일 첨부') + '</b> <span class="edu-drop-sub">' + s.sub + ' (클릭 또는 끌어놓기)</span>',
-                    ns + '.addFile(\'' + s.key + '\')', { hint: true, style: 'padding:12px;' }) +
+                    null, { hint: true, multiple: true, style: 'padding:12px;',
+                        pick: pickPath(ns + '_' + s.key, function (items) { var m = global[ns]; if (m && m.addFile) m.addFile(s.key, items); }) }) +
                 fileListHtml(F.files, ns, s.key, slots) +
             '</div>';
         }).join('');
     }
-    function addFile(F, slotKey) {
+    /* ===== 교육 기록 파일 — 올린 파일을 실제로 받아 두고, 이름을 누르면 내려받는다 (2026-11-24) =====
+     * 교육 기록의 정본은 이 시스템이다 — 기록으로 남긴 파일(교육 첨부 · 서명부 · 출장 결과 보고서 · 부서 실시 교육 증빙)은
+     * 다시 열 수 있어야 한다. 파일은 메모리에 두고, 1MB 이하는 이 브라우저 세션에도 남긴다(이행점검 제출 파일과 같은 방식).
+     * 저장 레코드에는 이름 · 크기 · 파일 번호(fid)만 싣는다. 파일 번호가 없는 것은 예시 자료라 내려받을 파일이 없다 — 받은 척하지 않는다. */
+    var FKEY = 'dy-edu-files-v1', FMEM = {}, KEEP_MAX = 1024 * 1024;
+    function fstore() { try { return JSON.parse(global.sessionStorage.getItem(FKEY) || '{}'); } catch (e) { return {}; } }
+    function keep(it) {
+        var id = 'EF' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+        var f = it && it.file;
+        if (f) {
+            FMEM[id] = f;
+            if (f.size <= KEEP_MAX && global.FileReader) {
+                var r = new FileReader();
+                r.onload = function () { try { var s = fstore(); s[id] = r.result; global.sessionStorage.setItem(FKEY, JSON.stringify(s)); } catch (e) { /* 용량 초과 — 메모리로만 */ } };
+                r.readAsDataURL(f);
+            }
+        }
+        return { name: it.name, size: it.size || null, fid: f ? id : '' };
+    }
+    function openFile(fid, name) {
+        if (!fid) { V().toast('예시 자료라 내려받을 파일이 없습니다.'); return; }
+        var f = FMEM[fid];
+        if (f) { V().download(name || f.name, f); return; }
+        var d = fstore()[fid];
+        if (!d) { V().toast('이 브라우저에 파일이 남아 있지 않습니다 — 1MB가 넘는 파일은 다시 올려야 내려받을 수 있습니다.'); return; }
+        fetch(d).then(function (r) { return r.blob(); }).then(function (b) { V().download(name || 'file', b); })
+            .catch(function () { V().toast('파일을 열지 못했습니다.'); });
+    }
+    /* 파일 이름 링크 — 누르면 내려받는다. icon 은 «📎»(기본) · «📷» · «✍» */
+    function fileLink(f, icon) {
+        if (!f || !f.name) return '';
+        return '<button type="button" class="edu-file-link" onclick="EDUFORM.openFile(\'' + q(f.fid || '') + '\',\'' + q(f.name) + '\')" title="' + q(f.name) + ' 내려받기">' +
+            (icon == null ? '📎 ' : icon ? icon + ' ' : '') + esc(f.name) + '</button>';
+    }
+    function fileLinks(arr, icon) { return (arr || []).filter(function (f) { return f && f.name; }).map(function (f) { return fileLink(f, icon); }).join(' '); }
+    /* 업로드 칸이 고른 파일을 받을 전역 경로 — DYV2.uploadDrop({pick}) 은 경로 문자열로 콜백을 찾는다 */
+    var PICK = {};
+    function pickPath(key, fn) { PICK[key] = fn; return 'EDUFORM.PICK.' + key; }
+    function addFile(F, slotKey, items) {
         F.files = F.files || [];
-        if (F.files.length >= V().FILE_LIMITS.maxCount) { V().toast('첨부는 최대 ' + V().FILE_LIMITS.maxCount + '개까지 가능합니다.'); return; }
-        var key = slotKey || 'log';
-        var n = F.files.filter(function (f) { return f.slot === key; }).length + 1;
-        F.files.push({ name: (SLOT_FILENAME[key] || '첨부') + '_' + n + '.pdf', slot: key });
+        var key = slotKey || 'log', max = V().FILE_LIMITS.maxCount;
+        (items || []).forEach(function (it) {
+            if (F.files.length >= max) { V().toast('첨부는 최대 ' + max + '개까지 가능합니다.'); return; }
+            var k = keep(it); k.slot = key; F.files.push(k);
+        });
     }
     function delFile(F, i) { if (F.files) F.files.splice(i, 1); }
 
@@ -259,7 +299,9 @@
     function regLine(c) {
         var ri = regInfo(c);
         if (!ri.by && !ri.at) return '';
-        return '<span class="file-hint">등록 ' + esc(ri.by || '') + (ri.at ? ' · ' + esc(String(ri.at).slice(5)) : '') + '</span>';
+        var files = (c && c.files || []).concat(c && c.photos || []);
+        return '<span class="file-hint">등록 ' + esc(ri.by || '') + (ri.at ? ' · ' + esc(String(ri.at).slice(5)) : '') + '</span>' +
+            (files.length ? ' ' + fileLinks(files) : '');
     }
     /* 부서 실시 교육만 — 집합교육은 이 길로 지우지 않는다(DYEDU.cancelRun 도 같은 판정) */
     function canCancelRun(c) { return !!c && E().isDeptRun(c) && !c.imported && c.kind !== 'HIRE' && c.kind !== 'SUP_HIRE' && E().canActOwnDept(E().reportDeptOf(c)); }
@@ -307,6 +349,8 @@
         sessAdd: sessAdd, sessDel: sessDel, sessionPayload: sessionPayload, totalHours: totalHours,
         ATTACH_SLOTS: ATTACH_SLOTS,
         renderAttach: renderAttach, addFile: addFile, delFile: delFile,
+        /* 교육 기록 파일 — 받아 두기 · 내려받기 · 이름 링크 (2026-11-24) */
+        keep: keep, openFile: openFile, fileLink: fileLink, fileLinks: fileLinks, PICK: PICK, pickPath: pickPath,
         hoursBlockHtml: hoursBlockHtml, captureHours: captureHours, hoursPayload: hoursPayload, oneFile: oneFile,
         /* 부서 실시 교육 등록 줄 · 등록 취소 (2026-11-23) */
         regInfo: regInfo, regLine: regLine, runLine: runLine, canCancelRun: canCancelRun,

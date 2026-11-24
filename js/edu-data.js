@@ -1087,7 +1087,7 @@
         d.enrolls.push({
             courseId: o.courseId, deptId: o.deptId,
             workerIds: wids,
-            signFile: o.signFile || '', actualHours: o.actualHours == null || o.actualHours === '' ? null : +o.actualHours,
+            signFile: o.signFile || '', signFid: o.signFid || '', actualHours: o.actualHours == null || o.actualHours === '' ? null : +o.actualHours,
             /* 사람별 실제 참석시간 — 공통값과 다른 사람만(없으면 키 자체가 없다) */
             hoursBy: hoursBy || undefined,
             status: 'ACTIVE', at: o.at || today(),
@@ -1622,7 +1622,7 @@
     }
     function setSignSheet(cid, o) {
         var c = courseOf(cid); if (!c) return null;
-        c.signSheet = o ? { file: o.file, by: o.by || '', at: nowTs(), size: o.size || null } : null;
+        c.signSheet = o ? { file: o.file, fid: o.fid || '', by: o.by || '', at: nowTs(), size: o.size || null } : null;
         if (o && o.skip) c.signSheet = { skip: true, by: o.by || '', at: nowTs() };
         save(); return c.signSheet;
     }

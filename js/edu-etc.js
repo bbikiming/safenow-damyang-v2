@@ -316,7 +316,7 @@
     function toggleTarget(id, on) { captureCreate(); if (on) F.workerIds[id] = true; else delete F.workerIds[id]; renderCreate(); }
     function toggleSpecialWork(no, on) { captureCreate(); if (on) F.specialWorkNos[String(no)] = true; else delete F.specialWorkNos[String(no)]; renderCreate(); }
     function toggleSpecialOther(on) { captureCreate(); F.specialWorkOtherReason = on ? (F.specialWorkOtherReason || '내용 입력 필요') : ''; renderCreate(); }
-    function addFile(slot) { captureCreate(); EDUFORM.addFile(F, slot); renderCreate(); }
+    function addFile(slot, items) { captureCreate(); EDUFORM.addFile(F, slot, items); renderCreate(); }
     function delFile(i) { captureCreate(); EDUFORM.delFile(F, i); renderCreate(); }
     function doCreate() {
         captureCreate();

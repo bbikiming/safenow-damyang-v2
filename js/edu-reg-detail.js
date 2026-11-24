@@ -121,7 +121,8 @@
         var tripSum = '';
         if (flow2 && ownerView && c.trip) {
             var tp = (c.trip.files || []).filter(function (f) { return f.slot === 'photo'; }).length;
-            tripSum = '<div class="edu-detail-files">🧾 출장 결과 보고서 — 참석 인원 약 <b>' + esc(c.trip.headcount) + '</b>명 · 교육 자료 ' + ((c.trip.files || []).length - tp) + '건 · 교육 사진 ' + tp + '장 · ' + esc(c.trip.by || '') + ' ' + esc(String(c.trip.at || '').slice(0, 16)) + '</div>';
+            tripSum = '<div class="edu-detail-files">🧾 출장 결과 보고서 — 참석 인원 약 <b>' + esc(c.trip.headcount) + '</b>명 · 교육 자료 ' + ((c.trip.files || []).length - tp) + '건 · 교육 사진 ' + tp + '장 · ' + esc(c.trip.by || '') + ' ' + esc(String(c.trip.at || '').slice(0, 16)) +
+                (c.trip.files && c.trip.files.length ? '<div style="margin-top:4px;">' + FORM().fileLinks(c.trip.files.filter(function (f) { return f.slot !== 'photo'; })) + ' ' + FORM().fileLinks(c.trip.files.filter(function (f) { return f.slot === 'photo'; }), '📷') + '</div>' : '') + '</div>';
         }
         var summary =
             '<div class="edu-detail-head">' +
@@ -147,11 +148,11 @@
                                 (s.end ? '~' + esc(s.end) : '') + ' (' + E().sessionHours(s) + 'h)';
                         }).join(' · ') + '</div>'
                     : '') +
-                (c.files && c.files.length ? '<div class="edu-detail-files">📎 ' + c.files.map(function (f) { return esc(f.name); }).join(' · ') + '</div>' : '') +
-                (c.photos && c.photos.length ? '<div class="edu-detail-files">📷 교육 사진 ' + c.photos.length + '장 · ' + c.photos.map(function (p) { return esc(p.name); }).join(' · ') + '</div>' : '') +
+                (c.files && c.files.length ? '<div class="edu-detail-files">' + FORM().fileLinks(c.files) + '</div>' : '') +
+                (c.photos && c.photos.length ? '<div class="edu-detail-files">교육 사진 ' + c.photos.length + '장 · ' + FORM().fileLinks(c.photos, '📷') + '</div>' : '') +
                 tripSum +
                 (c.status === 'CANCELLED' ? '<div class="check-notice" style="margin-top:8px;">취소된 교육입니다' + (c.cancelReason ? ' — 사유: ' + esc(c.cancelReason) : '') + '</div>' : '') +
-                (c.signSheet && c.signSheet.file ? '<div class="edu-detail-files">✍ 재난안전과 서명부 ' + (ownerView || E().canSeePerson(myDept) ? esc(c.signSheet.file) : '') + ' · ' + esc(c.signSheet.at || '') + '</div>' : '') +
+                (c.signSheet && c.signSheet.file ? '<div class="edu-detail-files">✍ 재난안전과 서명부 ' + (ownerView || E().canSeePerson(myDept) ? FORM().fileLink({ name: c.signSheet.file, fid: c.signSheet.fid || '' }, '') : '') + ' · ' + esc(c.signSheet.at || '') + '</div>' : '') +
                 (actions ? '<div class="edu-detail-actions">' + actions + '</div>' : '') +
             '</div>';
 
@@ -185,7 +186,7 @@
                 '<td>' + (e.workerIds || []).length + '명</td>' +
                 '<td>' + hoursCell(e, c) + '</td>' +
                 '<td>' + (e.signFrom === 'course' ? '<span style="color:var(--text-gray);font-size:var(--fs-12);">재난안전과 서명부</span>' : !e.signFile ? '<span style="color:var(--text-gray);">-</span>'
-                    : seeSign ? '<span style="color:var(--main-dark);font-size:var(--fs-12);">📎 ' + esc(e.signFile) + '</span>'
+                    : seeSign ? '<span style="font-size:var(--fs-12);">' + FORM().fileLink({ name: e.signFile, fid: e.signFid || '' }) + '</span>'
                     : '<span style="color:var(--text-gray);font-size:var(--fs-12);">제출됨</span>') + '</td>' +
                 '<td>' + esc(e.at) + '</td>' +
                 '<td class="col-action">' + (cancelled
@@ -292,10 +293,10 @@
                 /* 업로드 칸은 전 화면 공용 모양 하나(uploadDrop) — 버튼 하나짜리를 두지 않는다
                    (기획확인 4차 D-1, 2026-10-06). 고른 뒤에는 파일명과 [×]로 바꾼다. */
                 (G.signFile
-                    ? '<span style="color:var(--main-dark);font-weight:var(--fw-bold);font-size:var(--fs-12);">' + esc(G.signFile) + '</span> ' +
+                    ? '<span style="font-weight:var(--fw-bold);font-size:var(--fs-12);">' + FORM().fileLink({ name: G.signFile, fid: G.signFid || '' }) + '</span> ' +
                       '<button type="button" class="btn btn-sm btn-outline" onclick="EDURD.applyClearSign()" aria-label="서명부 지우기">×</button>' +
                       FORM().oneFile(V().fileHint())
-                    : FORM().oneFile(V().uploadDrop('<b>서명부 스캔을 끌어다 놓거나 눌러서 선택</b>', 'EDURD.applyAttachSign()', { hint: true })))) +
+                    : FORM().oneFile(V().uploadDrop('<b>서명부 스캔을 끌어다 놓거나 눌러서 선택</b>', null, { hint: true, pick: 'EDURD.applyPickSign' })))) +
             '</div>' +
             /* 대상자는 있는데 아무도 참석하지 않았다 — 할 일을 끝낸다(이수 기록은 생기지 않는다) */
             (c.status !== 'CANCELLED' ? '<p class="file-hint" style="margin-top:10px;">우리 부서에서 아무도 참석하지 않았으면 <button type="button" class="btn btn-outline btn-sm" onclick="EDURD.setNoAttend()">참석자 없음</button> — 할 일이 끝납니다.</p>' : '') +
@@ -338,8 +339,10 @@
         captureApply(); G.deptId = id; G.workerIds = {}; renderApply();
     }
     function applyToggle(id, on) { captureApply(); if (on) G.workerIds[id] = true; else delete G.workerIds[id]; renderApply(); }
-    function applyAttachSign() { captureApply(); G.signFile = E().deptName(G.deptId) + '_' + dayKey(E().courseOf(state.courseId)) + '_참석자서명부.pdf'; renderApply(); }
-    function applyClearSign() { captureApply(); G.signFile = ''; renderApply(); }
+    /* 서명부 스캔 — 실제 파일을 받아 두고(이름을 누르면 내려받는다) 등록부에 파일 번호를 남긴다 */
+    function applyPickSign(items) { captureApply(); var k = items && items[0] ? FORM().keep(items[0]) : null; if (k) { G.signFile = k.name; G.signFid = k.fid; } renderApply(); }
+    function applyAttachSign() { applyPickSign([{ name: E().deptName(G.deptId) + '_' + dayKey(E().courseOf(state.courseId)) + '_참석자서명부.pdf' }]); }
+    function applyClearSign() { captureApply(); G.signFile = ''; G.signFid = ''; renderApply(); }
     function doApply() {
         if (!E().canActOwnDept(G.deptId)) { denyOwn(G.deptId); return; }
         captureApply();
@@ -363,7 +366,7 @@
            반환값을 보지 않으면 저장되지 않았는데 «신청 완료»가 뜨고 이수기록만 붙는다. */
         /* 재난안전과가 다른 부서 몫을 대신 올리면 «대리 등록»으로 남긴다(부서 담당자가 없는 부서용) */
         var pr = global.DYROLE && global.DYROLE.current ? global.DYROLE.current() : null;
-        var enr = { courseId: state.courseId, deptId: G.deptId, workerIds: ids, signFile: useCourseSign ? '' : G.signFile, signFrom: useCourseSign ? 'course' : undefined,
+        var enr = { courseId: state.courseId, deptId: G.deptId, workerIds: ids, signFile: useCourseSign ? '' : G.signFile, signFid: useCourseSign ? '' : (G.signFid || ''), signFrom: useCourseSign ? 'course' : undefined,
                     actualHours: hp.actualHours, hoursBy: hp.hoursBy, at: E().today(),
                     by: pr ? pr.name : '', proxy: false };
         /* 저장 거절 사유는 창 안에 남긴다 — 토스트만으로 끝내면 무엇을 고칠지 놓친다 */
@@ -466,25 +469,26 @@
         var c = E().courseOf(state.courseId); if (!c) return;
         if (!E().isOwnerStaff()) { toast('서명부는 재난안전과 담당자가 올립니다.'); return; }
         if (!E().enrollOpen(c) && c.status !== 'DONE') { toast('교육이 끝난 뒤 올립니다.'); return; }
-        SG = { file: c.signSheet && c.signSheet.file || '' };
+        SG = { file: c.signSheet && c.signSheet.file || '', fid: c.signSheet && c.signSheet.fid || '' };
         renderSign();
     }
     function renderSign() {
         var c = E().courseOf(state.courseId);
         V().openModal('서명부 올리기 — ' + esc(c.desc),
             '<p class="file-hint" style="margin:0 0 8px;">교육 때 받은 서명부를 한 번 올리면 부서가 등록부 창에서 «재난안전과가 올린 서명부 사용»으로 골라 씁니다(파일을 새로 받지 않습니다).</p>' +
-            (SG.file ? '<span style="color:var(--main-dark);font-weight:var(--fw-bold);font-size:var(--fs-12);">' + esc(SG.file) + '</span> <button type="button" class="btn btn-sm btn-outline" onclick="EDURD.signClear()" aria-label="서명부 지우기">×</button>'
-                : V().uploadDrop('<b>서명부 스캔을 끌어다 놓거나 눌러서 선택</b>', 'EDURD.signPick()', { hint: true })),
+            (SG.file ? '<span style="font-weight:var(--fw-bold);font-size:var(--fs-12);">' + FORM().fileLink({ name: SG.file, fid: SG.fid || '' }) + '</span> <button type="button" class="btn btn-sm btn-outline" onclick="EDURD.signClear()" aria-label="서명부 지우기">×</button>'
+                : V().uploadDrop('<b>서명부 스캔을 끌어다 놓거나 눌러서 선택</b>', null, { hint: true, pick: 'EDURD.signPickFiles' })),
             '<button type="button" class="btn btn-outline" onclick="EDURD.signSkip()">필요 없음(부서가 따로 받음)</button>' +
             '<button type="button" class="btn btn-secondary" onclick="DYV2.closeModal()">닫기</button>' +
             '<button type="button" class="btn btn-primary" onclick="EDURD.doSign()">저장</button>');
     }
-    function signPick() { SG.file = String(E().courseOf(state.courseId).date || '').replace(/-/g, '') + '_집합교육_서명부.pdf'; renderSign(); }
-    function signClear() { SG.file = ''; renderSign(); }
+    function signPickFiles(items) { var k = items && items[0] ? FORM().keep(items[0]) : null; if (k) { SG.file = k.name; SG.fid = k.fid; } renderSign(); }
+    function signPick() { signPickFiles([{ name: String(E().courseOf(state.courseId).date || '').replace(/-/g, '') + '_집합교육_서명부.pdf' }]); }
+    function signClear() { SG.file = ''; SG.fid = ''; renderSign(); }
     function doSign() {
         var c = E().courseOf(state.courseId); if (!c || !E().isOwnerStaff()) return;
         if (!SG.file) { toast('서명부를 올려 주세요.'); return; }
-        E().setSignSheet(c.id, { file: SG.file, by: actor() });
+        E().setSignSheet(c.id, { file: SG.file, fid: SG.fid || '', by: actor() });
         E().pushCourseHistory(c.id, { type: 'STATUS', by: actor(), memo: '서명부 올림 — ' + SG.file });
         /* 아직 등록부를 안 올린 대상 부서에 알린다 — 그 부서는 이걸로 할 일이 있다 */
         var L = global.DYLayout, n = 0;
@@ -508,7 +512,7 @@
         if (!E().isFlow2(c) || (c.status === 'OPEN' && !E().enrollOpen(c))) { toast('교육이 끝난 날부터 씁니다.'); return; }
         var t = c.trip || {};
         /* 교육 자료는 등록 때 올린 파일을 참조로 불러온다 — 두 벌 만들지 않는다 */
-        var mats = (t.files || (c.files || []).filter(function (f) { return f.slot === 'material'; }).map(function (f) { return { name: f.name, slot: 'material', ref: true }; }));
+        var mats = (t.files || (c.files || []).filter(function (f) { return f.slot === 'material'; }).map(function (f) { return { name: f.name, fid: f.fid || '', size: f.size || null, slot: 'material', ref: true }; }));
         TR = { headcount: t.headcount || '', files: mats.filter(function (f) { return f.slot !== 'photo'; }), photos: (t.files || []).filter(function (f) { return f.slot === 'photo'; }) };
         renderTrip();
     }
@@ -516,14 +520,14 @@
     function renderTrip() {
         var c = E().courseOf(state.courseId);
         var list = function (arr, kind) {
-            return arr.map(function (f, i) { return '<div style="font-size:var(--fs-12);">📎 ' + esc(f.name) + (f.ref ? ' <span class="file-hint">등록 때 올린 파일</span>' : '') +
+            return arr.map(function (f, i) { return '<div style="font-size:var(--fs-12);">' + FORM().fileLink(f, kind === 'photos' ? '📷' : null) + (f.ref ? ' <span class="file-hint">등록 때 올린 파일</span>' : '') +
                 ' <button type="button" class="btn btn-sm btn-outline" onclick="EDURD.tripDel(\'' + kind + '\',' + i + ')" aria-label="빼기">×</button></div>'; }).join('');
         };
         V().openModal('출장 결과 보고서 — ' + esc(c.desc),
             '<div class="edu-modal-row"><label class="form-label">교육 자료 <span style="color:var(--status-danger-fg)">*</span></label>' + list(TR.files, 'files') +
-                V().uploadDrop('<b>교육 자료를 끌어다 놓거나 눌러서 선택</b>', 'EDURD.tripAdd(\'files\')', { hint: true }) + '</div>' +
+                V().uploadDrop('<b>교육 자료를 끌어다 놓거나 눌러서 선택</b>', null, { hint: true, multiple: true, pick: 'EDURD.tripPickFiles' }) + '</div>' +
             '<div class="edu-modal-row"><label class="form-label">교육 사진 <span style="color:var(--status-danger-fg)">*</span></label>' + list(TR.photos, 'photos') +
-                V().uploadDrop('<b>교육 사진을 끌어다 놓거나 눌러서 선택</b>', 'EDURD.tripAdd(\'photos\')', { hint: true, profile: 'image' }) + '</div>' +
+                V().uploadDrop('<b>교육 사진을 끌어다 놓거나 눌러서 선택</b>', null, { hint: true, multiple: true, profile: 'image', pick: 'EDURD.tripPickPhotos' }) + '</div>' +
             '<div class="edu-modal-row"><label class="form-label" for="erd-trip-n">참석 인원 <span style="color:var(--status-danger-fg)">*</span></label>' +
                 '<div style="display:flex;align-items:center;gap:8px;"><input type="number" class="form-input" id="erd-trip-n" min="1" value="' + esc(TR.headcount) + '" style="width:120px;"> 명 ' +
                 '<span class="file-hint">대략적인 수 · 참고: 등록부 기준 ' + enrolledCount(c) + '명(현재)</span></div>' +
@@ -539,6 +543,14 @@
         else TR.files.push({ name: day + '_교육자료_' + (TR.files.length + 1) + '.pdf', slot: 'material' });
         renderTrip();
     }
+    /* 실제 파일 — 받아 두고 이름을 누르면 내려받는다 */
+    function tripPick(kind, items) {
+        tripCap();
+        (items || []).forEach(function (it) { var k = FORM().keep(it); k.slot = kind === 'photos' ? 'photo' : 'material'; TR[kind].push(k); });
+        renderTrip();
+    }
+    function tripPickFiles(items) { tripPick('files', items); }
+    function tripPickPhotos(items) { tripPick('photos', items); }
     function tripDel(kind, i) { tripCap(); TR[kind].splice(i, 1); renderTrip(); }
     function doTrip() {
         tripCap();
@@ -611,11 +623,11 @@
     }
     global.EDURD = {
         init: init, openApply: openApply, applyPickDept: applyPickDept, applyToggle: applyToggle,
-        applyAttachSign: applyAttachSign, applyClearSign: applyClearSign, doApply: doApply, hoursOpen: hoursOpen,
+        applyAttachSign: applyAttachSign, applyPickSign: applyPickSign, applyClearSign: applyClearSign, doApply: doApply, hoursOpen: hoursOpen,
         confirmCancel: confirmCancel, doCancel: doCancel, remind: remind,
         applySignFrom: applySignFrom, setNoAttend: setNoAttend, undoNoAttend: undoNoAttend,
-        openSign: openSign, signPick: signPick, signClear: signClear, doSign: doSign, signSkip: signSkip,
-        openTrip: openTrip, tripAdd: tripAdd, tripDel: tripDel, doTrip: doTrip,
+        openSign: openSign, signPick: signPick, signPickFiles: signPickFiles, signClear: signClear, doSign: doSign, signSkip: signSkip,
+        openTrip: openTrip, tripAdd: tripAdd, tripPickFiles: tripPickFiles, tripPickPhotos: tripPickPhotos, tripDel: tripDel, doTrip: doTrip,
         closeCourse: closeCourse, doClose: doClose
     };
 })(window);
